@@ -69,7 +69,7 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
 
             mods {
-                academy { // On utilise "main" ici au lieu de "academy" ou "${mod_id}"
+                academy {
                     source sourceSets.main
                 }
             }

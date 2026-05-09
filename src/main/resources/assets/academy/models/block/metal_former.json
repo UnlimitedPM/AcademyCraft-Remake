@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "top": "academy:block/metal_former_top",
+    "bottom": "academy:block/metal_former_bottom",
+    "front": "academy:block/metal_former_front",
+    "side": "academy:block/metal_former_left",
+    "back": "academy:block/metal_former_back"
+  }
+}

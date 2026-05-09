@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "academy:item/phase_liquid_mat"
+    "layer0": "academy:block/phase_liquid"
   }
 }

@@ -50,7 +50,7 @@ authors="UnlimitedPM" #optional
 # The description text for the mod (multi line!) (#mandatory)
 description='''Remake du mod AcademyCraft mais en 1.20.1'''
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
-[[dependencies.${mod_id}]] #optional
+[[dependencies.academy]] #optional
     # the modid of the dependency
     modId="forge" #mandatory
     # Does this dependency have to exist - if not, ordering below must be specified
@@ -64,7 +64,7 @@ description='''Remake du mod AcademyCraft mais en 1.20.1'''
     # Side this dependency is applied on - BOTH, CLIENT, or SERVER
     side="BOTH"
 # Here's another dependency
-[[dependencies.${mod_id}]]
+[[dependencies.academy]]
     modId="minecraft"
     mandatory=true
     # This version range declares a minimum of the current minecraft version up to but not including the next major version

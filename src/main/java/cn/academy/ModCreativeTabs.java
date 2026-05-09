@@ -19,11 +19,35 @@ public class ModCreativeTabs {
                     .icon(() -> new ItemStack(ModItems.LOGO.get())) // L'icône de l'onglet
                     .title(Component.translatable("itemGroup.academy_tab")) // Le nom (clé de traduction)
                     .displayItems((parameters, output) -> {
-                        // Blocs[cite: 1]
+                        // BLOCKS
+
+                        // Minerais
                         output.accept(ModBlocks.CONSTRAINT_METAL_ORE.get());
                         output.accept(ModBlocks.CRYSTAL_ORE.get());
                         output.accept(ModBlocks.IMAGSIL_ORE.get());
                         output.accept(ModBlocks.RESO_ORE.get());
+
+                        // Structures et Machines
+                        output.accept(ModBlocks.MACHINE_FRAME.get());
+                        output.accept(ModBlocks.IMAG_FUSOR.get());
+                        output.accept(ModBlocks.METAL_FORMER.get());
+                        output.accept(ModBlocks.PHASE_GEN.get());
+                        output.accept(ModBlocks.SOLAR_GEN.get());
+                        output.accept(ModBlocks.WINDGEN_MAIN.get());
+
+                        // Réseau
+                        output.accept(ModBlocks.MATRIX.get());
+                        output.accept(ModBlocks.NODE_BASIC.get());
+                        output.accept(ModBlocks.NODE_STANDARD.get());
+                        output.accept(ModBlocks.NODE_ADVANCED.get());
+
+                        // Développement
+                        output.accept(ModBlocks.DEV_NORMAL.get());
+                        output.accept(ModBlocks.DEV_ADVANCED.get());
+                        output.accept(ModBlocks.ABILITY_INTERFERER.get());
+                        output.accept(ModBlocks.CAT_ENGINE.get());
+
+                        // ITEMS
 
                         // Cristaux et Métaux[cite: 1]
                         output.accept(ModItems.CRYSTAL_LOW.get());
@@ -52,6 +76,7 @@ public class ModCreativeTabs {
                         // Unités et DIVERS[cite: 1]
                         output.accept(ModItems.MATTER_UNIT.get());
                         output.accept(ModItems.MATTER_UNIT_PHASE.get());
+                        output.accept(ModItems.IMAG_PHASE.get());
                         output.accept(ModItems.ENERGY_UNIT.get());
                         output.accept(ModItems.WINDGEN_FAN.get());
                         output.accept(ModItems.COIN.get());
@@ -80,8 +105,12 @@ public class ModCreativeTabs {
                         output.accept(ModItems.FACTOR_VEC.get());
 
                         // Phase Liquid et Logo
-                        output.accept(ModItems.PHASE_LIQUID_MAT.get());
+                        output.accept(ModItems.IMAG_PHASE.get());
                         output.accept(ModItems.LOGO.get());
+
+                        // --- ÉNERGIE ET DEBUG ---
+                        output.accept(ModItems.ENERGY_UNIT.get());
+                        output.accept(ModItems.DEBUG_CHARGER.get());
                     })
                     .build());
 

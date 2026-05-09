@@ -1,16 +1,29 @@
 package cn.academy;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+
 
 import java.util.List;
 
@@ -40,12 +53,19 @@ public class ModItems {
     public static final RegistryObject<Item> MAGNETIC_COIL = ITEMS.register("magnetic_coil", () -> new Item(new Item.Properties()));
 
 
-    // --- UNITÉS ET CORES ---[cite: 1]
-    public static final RegistryObject<Item> MATTER_UNIT = ITEMS.register("matter_unit", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> MATTER_UNIT_PHASE = ITEMS.register("matter_unit_phase_liquid", () -> new Item(new Item.Properties()));
+    // --- UNITÉS ET CORES ---
+    // UNE SEULE FOIS MATTER_UNIT ICI
+    // 1. L'unité vide bridée à 16
+    public static final RegistryObject<Item> MATTER_UNIT = ITEMS.register("matter_unit",
+            () -> new EmptyUnitItem(new Item.Properties().stacksTo(16)));
+
+    // 2. L'unité de phase bridée à 16
+    public static final RegistryObject<Item> MATTER_UNIT_PHASE = ITEMS.register("matter_unit_phase_liquid",
+            () -> new PhaseUnitItem(ModBlocks.PHASE_LIQUID_BLOCK.get(), new Item.Properties().stacksTo(16)));
     public static final RegistryObject<Item> MAT_CORE_0 = ITEMS.register("mat_core_0", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAT_CORE_1 = ITEMS.register("mat_core_1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAT_CORE_2 = ITEMS.register("mat_core_2", () -> new Item(new Item.Properties()));
+
     public static final RegistryObject<Item> ENERGY_UNIT = ITEMS.register("energy_unit",
             () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> WINDGEN_FAN = ITEMS.register("windgen_fan", () -> new Item(new Item.Properties()));
@@ -78,8 +98,9 @@ public class ModItems {
             () -> new TooltipItem("ac.ability.vecmanip.name"));
 
     // --- LIQUIDE ET LOGO ---
-    public static final RegistryObject<Item> PHASE_LIQUID_MAT = ITEMS.register("phase_liquid_mat",
-            () -> new Item(new Item.Properties()));
+    // On utilise BlockItem pour faire le lien entre l'objet dans la main et le bloc au sol
+    public static final RegistryObject<Item> IMAG_PHASE = ITEMS.register("imag_phase",
+            () -> new BlockItem(ModBlocks.PHASE_LIQUID_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<Item> LOGO = ITEMS.register("logo",
             () -> new Item(new Item.Properties()));
 
@@ -88,6 +109,86 @@ public class ModItems {
     public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player", () -> new TooltipItem("ac.app.media_player.name"));
     public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter", () -> new TooltipItem("ac.app.freq_transmitter.name"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings", () -> new TooltipItem("ac.app.settings.name"));
+
+    // --- CLASSE : L'UNITÉ VIDE (Capture corrigée) ---
+    public static class EmptyUnitItem extends Item {
+        public EmptyUnitItem(Properties props) { super(props); }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
+            ItemStack itemstack = player.getItemInHand(hand);
+
+            // On cherche le liquide sous le regard du joueur
+            net.minecraft.world.phys.BlockHitResult hitResult = getPlayerPOVHitResult(world, player, net.minecraft.world.level.ClipContext.Fluid.SOURCE_ONLY);
+
+            if (hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+                BlockPos pos = hitResult.getBlockPos();
+
+                // Si le fluide visé est notre liquide de phase
+                if (world.getFluidState(pos).getFluidType() == ModFluids.PHASE_LIQUID_TYPE.get()) {
+                    if (!world.isClientSide) {
+                        world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+                        itemstack.shrink(1);
+
+                        ItemStack filled = new ItemStack(ModItems.MATTER_UNIT_PHASE.get());
+                        if (!player.getInventory().add(filled)) {
+                            player.drop(filled, false);
+                        }
+                    }
+                    return InteractionResultHolder.sidedSuccess(itemstack, world.isClientSide());
+                }
+            }
+            return InteractionResultHolder.pass(itemstack);
+        }
+    }
+
+    // --- CLASSE : L'UNITÉ DE PHASE (Pose + Recyclage) ---
+    public static class PhaseUnitItem extends BlockItem {
+        public PhaseUnitItem(net.minecraft.world.level.block.Block block, Properties props) {
+            super(block, props);
+        }
+
+        // Force l'item à utiliser "item.academy.matter_unit_phase_liquid"
+        @Override
+        public String getDescriptionId() {
+            return "item.academy.matter_unit_phase_liquid";
+        }
+
+        @Override
+        public InteractionResult useOn(UseOnContext context) {
+            // On enregistre l'item actuel pour savoir s'il faut le remplacer
+            ItemStack itemstack = context.getItemInHand();
+            InteractionResult result = super.useOn(context);
+
+            // Si la pose a réussi
+            if (result == InteractionResult.SUCCESS || result == InteractionResult.CONSUME) {
+                Player player = context.getPlayer();
+                if (player != null && !player.getAbilities().instabuild) {
+                    // On donne l'unité vide
+                    ItemStack emptyUnit = new ItemStack(ModItems.MATTER_UNIT.get());
+                    if (!player.getInventory().add(emptyUnit)) {
+                        player.drop(emptyUnit, false);
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+    public static final RegistryObject<Item> DEBUG_CHARGER = ITEMS.register("debug_charger",
+            () -> new Item(new Item.Properties()) {
+                @Override
+                public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+                    ItemStack energyUnit = player.getOffhandItem(); // Energy Unit en main gauche
+                    if (energyUnit.getItem() == ModItems.ENERGY_UNIT.get()) {
+                        CompoundTag tag = energyUnit.getOrCreateTag();
+                        float current = tag.getFloat("ac_energy");
+                        tag.putFloat("ac_energy", Math.min(current + 5000, 10000)); // Ajoute 50%
+                        return InteractionResultHolder.success(player.getItemInHand(hand));
+                    }
+                    return InteractionResultHolder.pass(player.getItemInHand(hand));
+                }
+            });
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
