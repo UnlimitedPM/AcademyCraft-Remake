@@ -1,6 +1,14 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "loader": "forge:obj",
+  "model": "academy:models/windgen_main.obj",
+  "flip_v": true,
+  "ambientocclusion": false,
   "textures": {
-    "all": "academy:models/windgen_main"
+    "base": "academy:block/windgen_main_model",
+    "particle": "academy:block/windgen_main_model"
+  },
+  "transform": {
+    "translation": [-2.5, 0, -2.5],
+    "rotation": [0, 180, 0]
   }
 }

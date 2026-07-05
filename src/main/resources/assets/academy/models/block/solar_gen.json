@@ -1,6 +1,14 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "loader": "forge:obj",
+  "model": "academy:models/solar.obj",
+  "flip_v": true,
+  "ambientocclusion": false,
   "textures": {
-    "all": "academy:models/solar_gen"
+    "base": "academy:block/solar_model",
+    "particle": "academy:block/solar_model"
+  },
+  "transform": {
+    "translation": [-0.98, -1.5, -1],
+    "scale": [0.014, 0.014, 0.014]
   }
 }

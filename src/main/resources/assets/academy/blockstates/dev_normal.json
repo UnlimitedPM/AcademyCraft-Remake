@@ -1,5 +1,16 @@
 {
   "variants": {
-    "": { "model": "academy:block/dev_normal" }
+    "part=base,facing=north": { "model": "academy:block/developer_normal" },
+    "part=base,facing=south": { "model": "academy:block/developer_normal", "y": 180 },
+    "part=base,facing=west":  { "model": "academy:block/developer_normal", "y": 270 },
+    "part=base,facing=east":  { "model": "academy:block/developer_normal", "y": 90 },
+
+    "part=f_top": { "model": "academy:block/dev_normal_dummy" },
+    "part=m_bot": { "model": "academy:block/dev_normal_dummy" },
+    "part=m_mid": { "model": "academy:block/dev_normal_dummy" },
+    "part=m_top": { "model": "academy:block/dev_normal_dummy" },
+    "part=b_bot": { "model": "academy:block/dev_normal_dummy" },
+    "part=b_mid": { "model": "academy:block/dev_normal_dummy" },
+    "part=b_top": { "model": "academy:block/dev_normal_dummy" }
   }
 }

@@ -1,0 +1,5 @@
+newmtl 02___Default
+map_Kd #base
+
+newmtl Indicator
+map_Kd #view

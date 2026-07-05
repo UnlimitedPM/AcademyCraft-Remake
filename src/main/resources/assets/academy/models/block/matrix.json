@@ -1,6 +1,13 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "loader": "forge:obj",
+  "model": "academy:models/matrix.obj",
+  "flip_v": true,
+  "ambientocclusion": false,
   "textures": {
-    "all": "academy:block/matrix"
+    "base": "academy:block/matrix_model",
+    "particle": "academy:block/matrix_model"
+  },
+  "transform": {
+    "translation": [0, 0, 1]
   }
 }

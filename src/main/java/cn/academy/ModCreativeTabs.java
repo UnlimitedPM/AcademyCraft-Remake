@@ -31,9 +31,12 @@ public class ModCreativeTabs {
                         output.accept(ModBlocks.MACHINE_FRAME.get());
                         output.accept(ModBlocks.IMAG_FUSOR.get());
                         output.accept(ModBlocks.METAL_FORMER.get());
-                        output.accept(ModBlocks.PHASE_GEN.get());
+                        output.accept(ModBlocks.PHASE_GENERATOR.get());
                         output.accept(ModBlocks.SOLAR_GEN.get());
+                        output.accept(ModBlocks.WINDGEN_BASE.get());
+                        output.accept(ModBlocks.WINDGEN_PILLAR.get());
                         output.accept(ModBlocks.WINDGEN_MAIN.get());
+
 
                         // Réseau
                         output.accept(ModBlocks.MATRIX.get());

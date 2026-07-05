@@ -1,10 +1,12 @@
 {
-  "parent": "minecraft:block/orientable_with_bottom",
+  "parent": "minecraft:block/cube",
   "textures": {
-    "top": "academy:block/metal_former_top",
-    "bottom": "academy:block/metal_former_bottom",
-    "front": "academy:block/metal_former_front",
-    "side": "academy:block/metal_former_left",
-    "back": "academy:block/metal_former_back"
+    "particle": "academy:block/metal_former_front",
+    "up": "academy:block/metal_former_top",
+    "down": "academy:block/metal_former_bottom",
+    "north": "academy:block/metal_former_front",
+    "south": "academy:block/metal_former_back",
+    "east": "academy:block/metal_former_right",
+    "west": "academy:block/metal_former_left"
   }
 }

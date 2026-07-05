@@ -1,0 +1,16 @@
+{
+  "loader": "forge:obj",
+  "model": "academy:models/developer_normal.obj",
+  "flip_v": true,
+  "ambientocclusion": false,
+  "textures": {
+    "base": "academy:block/developer_normal_model",
+    "particle": "academy:block/developer_normal_model"
+  },
+  "transform": {
+    "translation": [-0.214, -0.75, -0.256],
+    "scale": 0.5
+  },
+  "gui_light": "front",
+  "shade": false
+}

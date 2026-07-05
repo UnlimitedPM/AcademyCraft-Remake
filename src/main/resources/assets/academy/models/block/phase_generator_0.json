@@ -1,0 +1,14 @@
+{
+  "loader": "forge:obj",
+  "model": "academy:models/ip_gen.obj",
+  "flip_v": true,
+  "ambientocclusion": false,
+  "textures": {
+    "base": "academy:block/ip_gen0_model",
+    "view": "academy:block/ip_gen0_model",
+    "particle": "academy:block/ip_gen0_model"
+  },
+  "transform": {
+    "translation": [0.5, 0, 0.5]
+  }
+}

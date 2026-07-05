@@ -7,7 +7,7 @@
   "block.academy.machine_frame": "Machine Frame",
   "block.academy.imag_fusor": "Imag Fusor",
   "block.academy.metal_former": "Metal Former",
-  "block.academy.phase_gen": "Phase Generator",
+  "block.academy.phase_generator": "Phase Generator",
   "block.academy.solar_gen": "Solar Generator",
   "block.academy.cat_engine": "Toast and Cat",
   "block.academy.matrix": "Wireless Imag Matrix",
@@ -18,12 +18,13 @@
   "block.academy.windgen_pillar": "Wind Generator Pillar",
   "block.academy.windgen_main": "Wind Generator",
   "block.academy.dev_normal": "Normal Ability Developer",
-  "block.academy.dev_advanced": "Advanced Ability Developer",
+  "block.academy.developer_advanced": "Advanced Ability Developer",
   "block.academy.ability_interferer": "Ability Interferer",
   "block.academy.phase_liquid": "Imag Phase Liquid",
 
 
 
+  "item.academy.phase_generator": "Phase Generator",
   "item.academy.crystal_low": "Low-purity Imag Crystal",
   "item.academy.crystal_normal": "Mid-purity Imag Crystal",
   "item.academy.crystal_pure": "High-purity Imag Crystal",

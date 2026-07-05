@@ -53,6 +53,16 @@ public class ModItems {
     public static final RegistryObject<Item> MAGNETIC_COIL = ITEMS.register("magnetic_coil", () -> new Item(new Item.Properties()));
 
 
+    // Machines
+    public static final RegistryObject<Item> IMAG_FUSOR = ITEMS.register("imag_fusor",
+            () -> new BlockItem(ModBlocks.IMAG_FUSOR.get(), new Item.Properties()));
+    public static final RegistryObject<Item> METAL_FORMER = ITEMS.register("metal_former",
+            () -> new BlockItem(ModBlocks.METAL_FORMER.get(), new Item.Properties()));
+    public static final RegistryObject<Item> PHASE_GENERATOR = ITEMS.register("phase_generator",
+            () -> new BlockItem(ModBlocks.PHASE_GENERATOR.get(), new Item.Properties()));
+    public static final RegistryObject<Item> MATRIX = ITEMS.register("matrix",
+            () -> new BlockItem(ModBlocks.MATRIX.get(), new Item.Properties()));
+
     // --- UNITÉS ET CORES ---
     // UNE SEULE FOIS MATTER_UNIT ICI
     // 1. L'unité vide bridée à 16
@@ -70,6 +80,11 @@ public class ModItems {
             () -> new Item(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> WINDGEN_FAN = ITEMS.register("windgen_fan", () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> WINDGEN_BASE = ITEMS.register("windgen_base",
+            () -> new BlockItem(ModBlocks.WINDGEN_BASE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> WINDGEN_MAIN = ITEMS.register("windgen_main",
+            () -> new BlockItem(ModBlocks.WINDGEN_MAIN.get(), new Item.Properties()));
+
     // --- OUTILS ET DIVERS ---[cite: 1]
     public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new Item(new Item.Properties()));
@@ -78,6 +93,12 @@ public class ModItems {
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> DEV_NORMAL_ITEM = ITEMS.register("dev_normal",
+            () -> new BlockItem(ModBlocks.DEV_NORMAL.get(), new Item.Properties()));
+    public static final RegistryObject<Item> DEV_ADVANCED_ITEM = ITEMS.register("developer_advanced",
+            () -> new BlockItem(ModBlocks.DEV_ADVANCED.get(), new Item.Properties()));
+    public static final RegistryObject<Item> CAT_ENGINE = ITEMS.register("cat_engine",
+            () -> new BlockItem(ModBlocks.CAT_ENGINE.get(), new Item.Properties()));
 
     // --- MÉDIAS (MUSIQUES) --- [cite: 13]
     public static final RegistryObject<Item> MEDIA_RAILGUN = ITEMS.register("media_only_my_railgun",

@@ -1,3 +1,6 @@
 {
-  "parent": "academy:block/cat_engine"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "academy:block/cat_engine"
+  }
 }
