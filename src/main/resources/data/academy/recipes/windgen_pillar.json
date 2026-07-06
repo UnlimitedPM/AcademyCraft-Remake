@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "I",
+    "R",
+    "I"
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "I": {
+      "item": "academy:iron_bars"
+    }
+  },
+  "result": {
+    "item": "academy:windgen_pillar",
+    "count": 1
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RRR",
+    " I "
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "I": {
+      "item": "academy:reinforced_iron_plate"
+    }
+  },
+  "result": {
+    "item": "academy:data_chip",
+    "count": 1
+  }
+}

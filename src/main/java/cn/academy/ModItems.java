@@ -62,6 +62,12 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.PHASE_GENERATOR.get(), new Item.Properties()));
     public static final RegistryObject<Item> MATRIX = ITEMS.register("matrix",
             () -> new BlockItem(ModBlocks.MATRIX.get(), new Item.Properties()));
+    public static final RegistryObject<Item> NODE_BASIC = ITEMS.register("node_basic",
+            () -> new BlockItem(ModBlocks.NODE_BASIC.get(), new Item.Properties()));
+    public static final RegistryObject<Item> NODE_STANDARD = ITEMS.register("node_standard",
+            () -> new BlockItem(ModBlocks.NODE_STANDARD.get(), new Item.Properties()));
+    public static final RegistryObject<Item> NODE_ADVANCED = ITEMS.register("node_advanced",
+            () -> new BlockItem(ModBlocks.NODE_ADVANCED.get(), new Item.Properties()));
 
     // --- UNITÉS ET CORES ---
     // UNE SEULE FOIS MATTER_UNIT ICI
@@ -99,6 +105,8 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.DEV_ADVANCED.get(), new Item.Properties()));
     public static final RegistryObject<Item> CAT_ENGINE = ITEMS.register("cat_engine",
             () -> new BlockItem(ModBlocks.CAT_ENGINE.get(), new Item.Properties()));
+    public static final RegistryObject<Item> ABILITY_INTERFERER = ITEMS.register("ability_interferer",
+            () -> new BlockItem(ModBlocks.ABILITY_INTERFERER.get(), new Item.Properties()));
 
     // --- MÉDIAS (MUSIQUES) --- [cite: 13]
     public static final RegistryObject<Item> MEDIA_RAILGUN = ITEMS.register("media_only_my_railgun",

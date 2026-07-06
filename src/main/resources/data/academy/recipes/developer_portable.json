@@ -1,0 +1,38 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DGA",
+    "BIE",
+    "CLC"
+  ],
+  "key": {
+    "A": {
+      "item": "academy:calc_chip"
+    },
+    "G": {
+      "item": "minecraft:glass_pane"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    },
+    "B": {
+      "item": "academy:brain_component"
+    },
+    "I": {
+      "item": "academy:info_component"
+    },
+    "E": {
+      "item": "academy:energy_convert_component"
+    },
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "L": {
+      "item": "academy:crystal_low"
+    }
+  },
+  "result": {
+    "item": "academy:developer_portable",
+    "count": 1
+  }
+}

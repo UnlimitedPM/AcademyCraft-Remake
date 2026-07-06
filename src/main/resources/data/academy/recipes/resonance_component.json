@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CMC",
+    " R "
+  ],
+  "key": {
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "M": {
+      "item": "academy:reso_crystal"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "academy:resonance_component",
+    "count": 1
+  }
+}

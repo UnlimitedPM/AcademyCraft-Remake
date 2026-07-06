@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CCC",
+    "GDG",
+    "SHN"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glowstone"
+    },
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "D": {
+      "item": "academy:dev_normal"
+    },
+    "S": {
+      "item": "academy:node_standard"
+    },
+    "H": {
+      "item": "academy:crystal_pure"
+    },
+    "N": {
+      "item": "academy:reso_crystal"
+    }
+  },
+  "result": {
+    "item": "academy:developer_advanced",
+    "count": 1
+  }
+}

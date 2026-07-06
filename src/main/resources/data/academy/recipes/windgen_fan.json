@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " R ",
+    "RIR",
+    " R "
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_bars"
+    },
+    "R": {
+      "item": "minecraft:reinforced_iron_plate"
+    }
+  },
+  "result": {
+    "item": "academy:windgen_fan",
+    "count": 1
+  }
+}

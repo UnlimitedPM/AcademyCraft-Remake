@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "DMD",
+    "CUC"
+  ],
+  "key": {
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "U": {
+      "item": "academy:matter_unit_empty"
+    },
+    "M": {
+      "item": "academy:machine_frame"
+    },
+    "D": {
+      "item": "academy:calc_chip"
+    },
+    "S": {
+      "item": "minecraft:shears"
+    }
+  },
+  "result": {
+    "item": "academy:metal_former",
+    "count": 1
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CLC",
+    "AMA",
+    "CUC"
+  ],
+  "key": {
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "L": {
+      "item": "academy:crystal_low"
+    },
+    "A": {
+      "item": "academy:calc_chip"
+    },
+    "M": {
+      "item": "academy:machine_frame"
+    },
+    "U": {
+      "item": "academy:matter_unit_empty"
+    }
+  },
+  "result": {
+    "item": "academy:imag_fusor",
+    "count": 1
+  }
+}

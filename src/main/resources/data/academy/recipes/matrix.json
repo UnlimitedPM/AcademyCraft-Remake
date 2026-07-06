@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " I ",
+    "RMR",
+    "DID"
+  ],
+  "key": {
+    "I": {
+      "item": "academy:reso_crystal"
+    },
+    "M": {
+      "item": "academy:machine_frame"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "academy:matrix",
+    "count": 1
+  }
+}

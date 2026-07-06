@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    "CLC",
+    " D "
+  ],
+  "key": {
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "L": {
+      "item": "academy:crystal_low"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    }
+  },
+  "result": {
+    "item": "academy:energy_unit",
+    "count": 1
+  }
+}

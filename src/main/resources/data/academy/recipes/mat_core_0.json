@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " L ",
+    "CID",
+    " E "
+  ],
+  "key": {
+    "I": {
+      "item": "academy:reso_crystal"
+    },
+    "C": {
+      "item": "academy:calc_chip"
+    },
+    "E": {
+      "item": "academy:energy_convert_component"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    },
+    "L": {
+      "item": "academy:crystal_low"
+    }
+  },
+  "result": {
+    "item": "academy:mat_core_0",
+    "count": 1
+  }
+}

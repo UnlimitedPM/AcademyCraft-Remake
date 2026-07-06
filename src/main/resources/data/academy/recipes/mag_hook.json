@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " I ",
+    "III",
+    " I "
+  ],
+  "key": {
+    "I": {
+      "item": "academy:reinforced_iron_plate"
+    }
+  },
+  "result": {
+    "item": "academy:mag_hook",
+    "count": 3
+  }
+}

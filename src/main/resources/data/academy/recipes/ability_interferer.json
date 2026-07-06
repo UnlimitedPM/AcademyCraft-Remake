@@ -1,0 +1,29 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " E ",
+    "BMN",
+    " C "
+  ],
+  "key": {
+    "E": {
+      "item": "academy:energy_convert_component"
+    },
+    "B": {
+      "item": "academy:brain_component"
+    },
+    "M": {
+      "item": "academy:machine_frame"
+    },
+    "C": {
+      "item": "academy:calc_chip"
+    },
+    "N": {
+      "item": "minecraft:noteblock"
+    }
+  },
+  "result": {
+    "item": "academy:ability_interferer",
+    "count": 1
+  }
+}

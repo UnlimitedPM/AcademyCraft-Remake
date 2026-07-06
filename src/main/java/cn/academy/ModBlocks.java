@@ -29,11 +29,17 @@ public class ModBlocks {
     public static final RegistryObject<Block> CONSTRAINT_METAL_ORE = registerBlock("constraint_metal",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.IRON_ORE).sound(SoundType.STONE)));
     public static final RegistryObject<Block> CRYSTAL_ORE = registerBlock("crystal_ore",
-            () -> new Block(BlockBehaviour.Properties.copy(Blocks.DIAMOND_ORE).sound(SoundType.STONE)));
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(3.0f)
+                    .sound(SoundType.STONE)
+                    .requiresCorrectToolForDrops()));
     public static final RegistryObject<Block> IMAGSIL_ORE = registerBlock("imagsil_ore",
             () -> new Block(BlockBehaviour.Properties.copy(Blocks.IRON_ORE).sound(SoundType.STONE)));
     public static final RegistryObject<Block> RESO_ORE = registerBlock("reso_ore",
-            () -> new Block(BlockBehaviour.Properties.copy(Blocks.EMERALD_ORE).sound(SoundType.STONE)));
+            () -> new Block(BlockBehaviour.Properties.of()
+                    .strength(3.0f)
+                    .sound(SoundType.STONE)
+                    .requiresCorrectToolForDrops()));
 
     // --- MACHINES ET STRUCTURES ---
     public static final RegistryObject<Block> MACHINE_FRAME = registerBlock("machine_frame",
@@ -69,12 +75,26 @@ public class ModBlocks {
     // --- RÉSEAU SANS FIL ---
     public static final RegistryObject<Block> MATRIX = BLOCKS.register("matrix",
             () -> new MatrixBlock(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).noOcclusion()));
-    public static final RegistryObject<Block> NODE_BASIC = registerBlock("node_basic",
-            () -> new Block(BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL)));
-    public static final RegistryObject<Block> NODE_STANDARD = registerBlock("node_standard",
-            () -> new Block(BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL)));
-    public static final RegistryObject<Block> NODE_ADVANCED = registerBlock("node_advanced",
-            () -> new Block(BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL)));
+    public static final RegistryObject<Block> NODE_BASIC = BLOCKS.register("node_basic",
+            () -> new NodeBasicBlock(BlockBehaviour.Properties.of()
+                    .strength(3.0f)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL) // Optionnel: pour le bruit de métal comme les autres
+            ));
+
+    public static final RegistryObject<Block> NODE_STANDARD = BLOCKS.register("node_standard",
+            () -> new NodeStandardBlock(BlockBehaviour.Properties.of()
+                    .strength(3.0f)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL)
+            ));
+
+    public static final RegistryObject<Block> NODE_ADVANCED = BLOCKS.register("node_advanced",
+            () -> new NodeAdvancedBlock(BlockBehaviour.Properties.of()
+                    .strength(3.0f)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL)
+            ));
 
     // --- ÉOLIENNE ---
     public static final RegistryObject<WindgenBaseBlock> WINDGEN_BASE = BLOCKS.register("windgen_base",
@@ -98,15 +118,12 @@ public class ModBlocks {
                     .noOcclusion()
             ));
     // Dans ModBlocks.java, remplacez la section ABILITY_INTERFERER par celle-ci :
-    public static final RegistryObject<Block> ABILITY_INTERFERER = registerBlock("ability_interferer",
-            () -> new Block(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL)) {
-                public static final BooleanProperty ON = BooleanProperty.create("on");
-
-                @Override
-                protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-                    builder.add(ON);
-                }
-            });
+    public static final RegistryObject<Block> ABILITY_INTERFERER = BLOCKS.register("ability_interferer",
+            () -> new AbilityInterfererBlock(BlockBehaviour.Properties.of()
+                    .strength(4.0f)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL)
+            ));
 
     public static final RegistryObject<LiquidBlock> PHASE_LIQUID_BLOCK = BLOCKS.register("phase_liquid",
             () -> new LiquidBlock(ModFluids.SOURCE_PHASE_LIQUID, BlockBehaviour.Properties.copy(Blocks.WATER).noLootTable()));

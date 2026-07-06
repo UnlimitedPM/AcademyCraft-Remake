@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "FFF",
+    "PCP",
+    "FFF"
+  ],
+  "key": {
+    "FFF": { "item": "minecraft:iron_ingot" },
+    "P": { "item": "minecraft:piston" },
+    "C": { "item": "minecraft:cod" } // Un poisson pour attirer le chat !
+  },
+  "result": {
+    "item": "academy:cat_engine",
+    "count": 1
+  }
+}

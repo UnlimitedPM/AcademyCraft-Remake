@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " N ",
+    "CMC",
+    " N "
+  ],
+  "key": {
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "N": {
+      "item": "academy:machine_frame"
+    },
+    "M": {
+      "item": "academy:energy_convert_component"
+    }
+  },
+  "result": {
+    "item": "academy:windgen_main",
+    "count": 1
+  }
+}

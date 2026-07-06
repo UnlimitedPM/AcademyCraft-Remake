@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    "CMC",
+    " D "
+  ],
+  "key": {
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "M": {
+      "item": "academy:crystal_normal"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    }
+  },
+  "result": {
+    "item": "academy:energy_unit",
+    "count": 2
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    "CGC",
+    " C "
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "C": {
+      "item": "academy:constraint_plate"
+    }
+  },
+  "result": {
+    "item": "academy:matter_unit_empty",
+    "count": 4
+  }
+}

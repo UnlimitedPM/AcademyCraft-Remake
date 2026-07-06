@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " G ",
+    "RAR",
+    " G "
+  ],
+  "key": {
+    "A": {
+      "item": "academy:calc_chip"
+    },
+    "G": {
+      "item": "minecraft:gold_nugget"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "academy:brain_component",
+    "count": 1
+  }
+}

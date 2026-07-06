@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "academy:dev_normal",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "academy:dev_normal",
+              "properties": {
+                "part": "base"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

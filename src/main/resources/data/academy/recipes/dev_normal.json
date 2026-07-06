@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " D ",
+    "MBP",
+    "NFR"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:bed"
+    },
+    "P": {
+      "item": "minecraft:piston"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "D": {
+      "item": "academy:developer_portable"
+    },
+    "M": {
+      "item": "academy:mat_core_0"
+    },
+    "N": {
+      "item": "academy:crystal_normal"
+    },
+    "F": {
+      "item": "academy:machine_frame"
+    }
+  },
+  "result": {
+    "item": "academy:dev_normal",
+    "count": 1
+  }
+}

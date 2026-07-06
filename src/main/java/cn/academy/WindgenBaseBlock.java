@@ -3,6 +3,7 @@ package cn.academy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -32,38 +33,61 @@ public class WindgenBaseBlock extends Block {
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(POWERED, false)
-                .setValue(HALF, DoubleBlockHalf.LOWER)); // Par défaut en bas
+                .setValue(HALF, DoubleBlockHalf.LOWER));
     }
 
-    // --- LOGIQUE DE PLACEMENT ---
+    // --- LOGIQUE DE PLACEMENT (Évite d'écraser les blocs) ---
     @Nullable
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         BlockPos pos = context.getClickedPos();
         Level level = context.getLevel();
-        // Vérifie si l'espace au-dessus est libre
+
+        // Sécurité maximale : si on dépasse la hauteur limite ou si le bloc du dessus n'est pas remplaçable, on refuse la pose
         if (pos.getY() < level.getMaxBuildHeight() - 1 && level.getBlockState(pos.above()).canBeReplaced(context)) {
-            return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection()).setValue(POWERED, false).setValue(HALF, DoubleBlockHalf.LOWER);
+            return this.defaultBlockState()
+                    .setValue(FACING, context.getHorizontalDirection())
+                    .setValue(POWERED, false)
+                    .setValue(HALF, DoubleBlockHalf.LOWER);
         }
         return null;
     }
 
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
-        // Place automatiquement la partie haute
-        level.setBlock(pos.above(), state.setValue(HALF, DoubleBlockHalf.UPPER), 3);
+        // Double vérification pour s'assurer qu'on n'écrase rien de force
+        BlockPos dummyPos = pos.above();
+        if (level.getBlockState(dummyPos).getBlock() != this) {
+            level.setBlock(dummyPos, state.setValue(HALF, DoubleBlockHalf.UPPER), 3);
+        }
     }
 
-    // --- LOGIQUE DE DESTRUCTION ---
+    // --- LOGIQUE DE DESTRUCTION (Anti-duplication) ---
     @Override
     public BlockState updateShape(BlockState state, Direction facing, BlockState facingState, LevelAccessor level, BlockPos currentPos, BlockPos facingPos) {
         DoubleBlockHalf half = state.getValue(HALF);
-        // Si la partie opposée est supprimée, on détruit ce bloc
+        // Si le bloc du dessus ou du dessous est cassé, on s'autodétruit
         if (facing.getAxis() == Direction.Axis.Y && (half == DoubleBlockHalf.LOWER == (facing == Direction.UP))) {
             return facingState.is(this) && facingState.getValue(HALF) != half ? state : Blocks.AIR.defaultBlockState();
-        } else {
-            return super.updateShape(state, facing, facingState, level, currentPos, facingPos);
         }
+        return super.updateShape(state, facing, facingState, level, currentPos, facingPos);
+    }
+
+    // Empêche la moitié du haut (UPPER) de faire tomber un item en mode survie
+    @Override
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        if (!level.isClientSide && player.isCreative()) {
+            DoubleBlockHalf half = state.getValue(HALF);
+            if (half == DoubleBlockHalf.UPPER) {
+                BlockPos blockpos = pos.below();
+                BlockState blockstate = level.getBlockState(blockpos);
+                if (blockstate.is(state.getBlock()) && blockstate.getValue(HALF) == DoubleBlockHalf.LOWER) {
+                    level.setBlock(blockpos, Blocks.AIR.defaultBlockState(), 35);
+                    level.levelEvent(player, 2001, blockpos, Block.getId(blockstate));
+                }
+            }
+        }
+        super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
@@ -71,7 +95,6 @@ public class WindgenBaseBlock extends Block {
         builder.add(FACING, POWERED, HALF);
     }
 
-    // --- RENDU ET COLLISION ---
     @Override
     public VoxelShape getOcclusionShape(BlockState state, BlockGetter world, BlockPos pos) {
         return Shapes.empty();

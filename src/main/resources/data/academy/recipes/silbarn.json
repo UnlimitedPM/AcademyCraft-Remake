@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {
+      "item": "academy:imag_silicon_piece"
+    },
+    {
+      "item": "academy:imag_silicon_piece"
+    }
+  ],
+  "result": {
+    "item": "academy:silbarn",
+    "count": 1
+  }
+}

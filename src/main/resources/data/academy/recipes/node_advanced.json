@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "I",
+    "R",
+    "N"
+  ],
+  "key": {
+    "I": {
+      "item": "academy:crystal_pure"
+    },
+    "R": {
+      "item": "academy:resonance_component"
+    },
+    "N": {
+      "item": "academy:node_standard"
+    }
+  },
+  "result": {
+    "item": "academy:node_advanced",
+    "count": 1
+  }
+}

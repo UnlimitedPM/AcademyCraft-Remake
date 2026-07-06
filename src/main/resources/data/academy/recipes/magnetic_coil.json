@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "CIC",
+    "CIC",
+    "RDR"
+  ],
+  "key": {
+    "I": {
+      "item": "academy:reso_crystal"
+    },
+    "C": {
+      "item": "academy:constraint_plate"
+    },
+    "R": {
+      "item": "academy:reinforced_iron_plate"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    }
+  },
+  "result": {
+    "item": "academy:magnetic_coil",
+    "count": 1
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DGD",
+    "PBP",
+    "IRI"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:glass_pane"
+    },
+    "I": {
+      "item": "academy:info_component"
+    },
+    "P": {
+      "item": "academy:reinforced_iron_plate"
+    },
+    "B": {
+      "item": "academy:brain_component"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "item": "academy:terminal_installer",
+    "count": 1
+  }
+}
