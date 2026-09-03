@@ -28,6 +28,7 @@ public class AcademyCraft {
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus); // <-- LA LIGNE MAGIQUE QUI MANQUAIT
         ModCreativeTabs.register(modEventBus);
+        modEventBus.addListener(cn.academy.ability.AbilityInit::init);
 
         MinecraftForge.EVENT_BUS.register(this);
     }

@@ -1,4 +1,7 @@
 {
+  "key.categories.academy": "Academy Craft",
+  "key.academy.activate_skill": "Activate Ability",
+
   "block.academy.constraint_metal": "Constraint Metal Ore",
   "block.academy.crystal_ore": "Imag Crystal Ore",
   "block.academy.imagsil_ore": "Imag Silicon Ore",
