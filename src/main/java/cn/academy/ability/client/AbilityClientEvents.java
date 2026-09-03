@@ -5,6 +5,7 @@ import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
+import cn.academy.ability.meltdowner.MeltdownerCategory;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
 import cn.academy.ability.teleporter.TeleporterCategory;
@@ -39,6 +40,12 @@ public class AbilityClientEvents {
         }
         if (AbilityKeyBindings.ACTIVATE_PENETRATE_TP.consumeClick()) {
             send(TeleporterCategory.NAME, "penetrate_teleport");
+        }
+        if (AbilityKeyBindings.ACTIVATE_MELTDOWNER.consumeClick()) {
+            send(MeltdownerCategory.NAME, "meltdowner");
+        }
+        if (AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB.consumeClick()) {
+            send(MeltdownerCategory.NAME, "electron_bomb");
         }
     }
 

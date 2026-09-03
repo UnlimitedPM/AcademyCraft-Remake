@@ -40,6 +40,14 @@ public class AbilityKeyBindings {
             "key.academy.activate_penetrate_tp", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_L, "key.categories.academy");
 
+    public static final KeyMapping ACTIVATE_MELTDOWNER = new KeyMapping(
+            "key.academy.activate_meltdowner", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_Y, "key.categories.academy");
+
+    public static final KeyMapping ACTIVATE_ELECTRON_BOMB = new KeyMapping(
+            "key.academy.activate_electron_bomb", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_U, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -48,5 +56,7 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_BODY_INTENSIFY);
         event.register(ACTIVATE_SHIFT_TP);
         event.register(ACTIVATE_PENETRATE_TP);
+        event.register(ACTIVATE_MELTDOWNER);
+        event.register(ACTIVATE_ELECTRON_BOMB);
     }
 }
