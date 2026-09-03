@@ -4,7 +4,9 @@ import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
+import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -43,6 +45,9 @@ public class ActivateSkillPacket {
                 if (!data.hasLearned(category)) return;
                 if (data.consumeControlPoint(skill.getCpCost())) {
                     skill.onActivate(player, data);
+                } else {
+                    player.displayClientMessage(
+                            Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
                 }
             });
         });

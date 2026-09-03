@@ -9,6 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -17,6 +18,10 @@ import net.minecraftforge.network.PacketDistributor;
 
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public class AbilityEvents {
+
+    /** CP regenerated per tick (server), and how often the client is re-synced. */
+    private static final float CP_REGEN_PER_TICK = 0.25f; // 5 CP/sec
+    private static final int SYNC_INTERVAL_TICKS = 20;
 
     @SubscribeEvent
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
@@ -44,6 +49,19 @@ public class AbilityEvents {
             player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
                     AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data)));
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (!(event.player instanceof ServerPlayer player)) return;
+        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            if (data.getControlPoint() >= data.getMaxControlPoint()) return;
+            data.tickRegen(CP_REGEN_PER_TICK);
+            if (player.tickCount % SYNC_INTERVAL_TICKS == 0) {
+                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+            }
+        });
     }
 
     @SubscribeEvent
