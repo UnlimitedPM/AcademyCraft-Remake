@@ -10,7 +10,7 @@
       "item": "minecraft:iron_bars"
     },
     "R": {
-      "item": "minecraft:reinforced_iron_plate"
+      "item": "academy:reinforced_iron_plate"
     }
   },
   "result": {
