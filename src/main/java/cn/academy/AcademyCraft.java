@@ -28,6 +28,7 @@ public class AcademyCraft {
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus); // <-- LA LIGNE MAGIQUE QUI MANQUAIT
         ModCreativeTabs.register(modEventBus);
+        ModMenus.register(modEventBus);
         modEventBus.addListener(cn.academy.ability.AbilityInit::init);
 
         MinecraftForge.EVENT_BUS.register(this);
@@ -46,6 +47,12 @@ public class AcademyCraft {
         @SubscribeEvent
         public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerBlockEntityRenderer(ModBlockEntities.CAT_ENGINE.get(), CatEngineRenderer::new);
+        }
+
+        @SubscribeEvent
+        public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
+            event.enqueueWork(() ->
+                    net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.SOLAR_GEN.get(), SolarGenScreen::new));
         }
     }
 }

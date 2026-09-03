@@ -14,6 +14,10 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("cat_engine", () ->
                     BlockEntityType.Builder.of(CatEngineBlockEntity::new, ModBlocks.CAT_ENGINE.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<SolarGenBlockEntity>> SOLAR_GEN =
+            BLOCK_ENTITIES.register("solar_gen", () ->
+                    BlockEntityType.Builder.of(SolarGenBlockEntity::new, ModBlocks.SOLAR_GEN.get()).build(null));
+
     // AJOUTE CETTE MÉTHODE :
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
