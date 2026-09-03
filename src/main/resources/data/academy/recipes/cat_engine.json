@@ -6,9 +6,9 @@
     "FFF"
   ],
   "key": {
-    "FFF": { "item": "minecraft:iron_ingot" },
+    "F": { "item": "minecraft:iron_ingot" },
     "P": { "item": "minecraft:piston" },
-    "C": { "item": "minecraft:cod" } // Un poisson pour attirer le chat !
+    "C": { "item": "minecraft:cod" }
   },
   "result": {
     "item": "academy:cat_engine",
