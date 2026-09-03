@@ -32,11 +32,21 @@ public class AbilityKeyBindings {
             "key.academy.activate_body_intensify", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_J, "key.categories.academy");
 
+    public static final KeyMapping ACTIVATE_SHIFT_TP = new KeyMapping(
+            "key.academy.activate_shift_tp", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_K, "key.categories.academy");
+
+    public static final KeyMapping ACTIVATE_PENETRATE_TP = new KeyMapping(
+            "key.academy.activate_penetrate_tp", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_L, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
         event.register(ACTIVATE_ARC_GEN);
         event.register(ACTIVATE_RAILGUN);
         event.register(ACTIVATE_BODY_INTENSIFY);
+        event.register(ACTIVATE_SHIFT_TP);
+        event.register(ACTIVATE_PENETRATE_TP);
     }
 }

@@ -4,6 +4,8 @@
   "key.academy.activate_arc_gen": "Activate Arc Gen",
   "key.academy.activate_railgun": "Activate Railgun",
   "key.academy.activate_body_intensify": "Activate Body Intensify",
+  "key.academy.activate_shift_tp": "Activate Shift Teleport",
+  "key.academy.activate_penetrate_tp": "Activate Penetrate Teleport",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
   "block.academy.crystal_ore": "Imag Crystal Ore",

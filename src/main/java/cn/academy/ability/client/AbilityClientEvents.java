@@ -7,6 +7,7 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
+import cn.academy.ability.teleporter.TeleporterCategory;
 import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
@@ -32,6 +33,12 @@ public class AbilityClientEvents {
         }
         if (AbilityKeyBindings.ACTIVATE_BODY_INTENSIFY.consumeClick()) {
             send(ElectromasterCategory.NAME, "body_intensify");
+        }
+        if (AbilityKeyBindings.ACTIVATE_SHIFT_TP.consumeClick()) {
+            send(TeleporterCategory.NAME, "shift_tp");
+        }
+        if (AbilityKeyBindings.ACTIVATE_PENETRATE_TP.consumeClick()) {
+            send(TeleporterCategory.NAME, "penetrate_teleport");
         }
     }
 
