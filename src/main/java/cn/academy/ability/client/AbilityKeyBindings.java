@@ -10,8 +10,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * Single generic "activate skill" key for now, pilot-bound to Vecmanip/vec_accel in
- * {@link AbilityClientEvents}. Will be replaced by a per-preset key system later.
+ * Temporary one-key-per-skill scheme until the preset/key-mapping system is ported.
+ * Wiring lives in {@link AbilityClientEvents}.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class AbilityKeyBindings {
@@ -20,8 +20,23 @@ public class AbilityKeyBindings {
             "key.academy.activate_skill", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_R, "key.categories.academy");
 
+    public static final KeyMapping ACTIVATE_ARC_GEN = new KeyMapping(
+            "key.academy.activate_arc_gen", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_G, "key.categories.academy");
+
+    public static final KeyMapping ACTIVATE_RAILGUN = new KeyMapping(
+            "key.academy.activate_railgun", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_H, "key.categories.academy");
+
+    public static final KeyMapping ACTIVATE_BODY_INTENSIFY = new KeyMapping(
+            "key.academy.activate_body_intensify", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_J, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
+        event.register(ACTIVATE_ARC_GEN);
+        event.register(ACTIVATE_RAILGUN);
+        event.register(ACTIVATE_BODY_INTENSIFY);
     }
 }

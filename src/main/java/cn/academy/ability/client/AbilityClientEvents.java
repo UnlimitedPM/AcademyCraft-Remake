@@ -4,6 +4,7 @@ import cn.academy.AcademyCraft;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
+import cn.academy.ability.electromaster.ElectromasterCategory;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
 import cn.academy.ability.vecmanip.VecmanipCategory;
@@ -18,12 +19,26 @@ public class AbilityClientEvents {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-        if (!AbilityKeyBindings.ACTIVATE_SKILL.consumeClick()) return;
 
-        // Pilot wiring: hardcode Vecmanip/vec_accel until the preset/key-mapping system is ported.
-        Category category = CategoryManager.INSTANCE.getCategory(VecmanipCategory.NAME);
+        // Pilot wiring: hardcode one key per skill until the preset/key-mapping system is ported.
+        if (AbilityKeyBindings.ACTIVATE_SKILL.consumeClick()) {
+            send(VecmanipCategory.NAME, "vec_accel");
+        }
+        if (AbilityKeyBindings.ACTIVATE_ARC_GEN.consumeClick()) {
+            send(ElectromasterCategory.NAME, "arc_gen");
+        }
+        if (AbilityKeyBindings.ACTIVATE_RAILGUN.consumeClick()) {
+            send(ElectromasterCategory.NAME, "railgun");
+        }
+        if (AbilityKeyBindings.ACTIVATE_BODY_INTENSIFY.consumeClick()) {
+            send(ElectromasterCategory.NAME, "body_intensify");
+        }
+    }
+
+    private static void send(String categoryName, String skillName) {
+        Category category = CategoryManager.INSTANCE.getCategory(categoryName);
         if (category == null) return;
-        Skill skill = category.getSkill("vec_accel");
+        Skill skill = category.getSkill(skillName);
         if (skill == null) return;
         AbilityNetwork.CHANNEL.sendToServer(new ActivateSkillPacket(category.getCategoryId(), skill.getId()));
     }

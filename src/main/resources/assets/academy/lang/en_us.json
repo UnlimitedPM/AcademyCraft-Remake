@@ -1,6 +1,9 @@
 {
   "key.categories.academy": "Academy Craft",
-  "key.academy.activate_skill": "Activate Ability",
+  "key.academy.activate_skill": "Activate Ability (Vecmanip)",
+  "key.academy.activate_arc_gen": "Activate Arc Gen",
+  "key.academy.activate_railgun": "Activate Railgun",
+  "key.academy.activate_body_intensify": "Activate Body Intensify",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
   "block.academy.crystal_ore": "Imag Crystal Ore",
