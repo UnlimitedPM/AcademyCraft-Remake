@@ -15,7 +15,8 @@ public final class CategoryManager {
     private final List<Category> categories = new ArrayList<>();
     private boolean baked = false;
 
-    private CategoryManager() {}
+    /** Visible au paquet pour que les tests unitaires partent d'un etat propre. */
+    CategoryManager() {}
 
     public void register(Category category) {
         if (baked) throw new IllegalStateException("Cannot register category after bake()");

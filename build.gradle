@@ -131,6 +131,13 @@ dependencies {
     // The group id is ignored when searching -- in this case, it is "blank"
     // implementation fg.deobf("blank:coolmod-${mc_version}:${coolmod_version}")
 
+    // Tests unitaires JUnit : couvrent la logique qui n'a pas besoin d'un jeu
+    // demarre (etat des Control Points, registre des categories, calculs).
+    // Pour tout ce qui touche au monde ou aux registres, utiliser les GameTests
+    // (tache runGameTestServer) plutot que d'essayer de bricoler un bootstrap.
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
     // For more info:
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
@@ -194,4 +201,14 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+// Les tests JUnit doivent afficher les resultats meme quand tout passe, et
+// echouer clairement sinon.
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
+    }
 }
