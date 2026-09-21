@@ -70,6 +70,17 @@ public class SolarGenMenu extends AbstractContainerMenu {
         return blockEntity.getMaxEnergyStored();
     }
 
+    /**
+     * Vrai si le generateur est raccorde a un noeud du reseau.
+     *
+     * L'etat est lu directement sur le block entity : il est synchronise par la
+     * mise a jour de bloc que le generateur envoie quand il change, ce qui evite
+     * un emplacement de donnee supplementaire.
+     */
+    public boolean isLinkedToNode() {
+        return blockEntity.isLinked();
+    }
+
     @Override
     public ItemStack quickMoveStack(Player player, int index) {
         ItemStack result = ItemStack.EMPTY;

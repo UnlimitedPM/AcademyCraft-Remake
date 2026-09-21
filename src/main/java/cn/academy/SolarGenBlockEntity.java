@@ -1,39 +1,75 @@
 package cn.academy;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import cn.academy.energy.BlockEntityScan;
+import cn.academy.energy.EnergyGenerator;
+import cn.academy.energy.ImagNetworkData;
+import cn.academy.energy.NodeBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.network.chat.Component;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.EnergyStorage;
+import net.minecraftforge.energy.IEnergyStorage;
 import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 /**
- * Port of original TileSolarGen: charges an inserted energy-storing item during daytime
- * while exposed to the sky, and pushes any surplus Forge Energy to adjacent blocks.
+ * Generateur solaire. Portage de {@code TileSolarGen} et de {@code TileGeneratorBase}.
+ *
+ * Il produit 3 unites par tick en plein jour avec vue sur le ciel, 0,6 sous la
+ * pluie, rien la nuit. Ces valeurs etaient auparavant inventees dans le port
+ * (32 000 de tampon, 20 par tick) : elles sont ici remises sur celles de
+ * l'original ({@code brightLev * 3.0}, tampon 1 000, bande passante 100 =
+ * {@code IFConstants.LATENCY_MK2}).
+ *
+ * Le tampon est un {@code double}, comme dans l'original : 0,6 par tick sous la
+ * pluie ne survivrait pas a un tampon entier.
+ *
+ * <h2>Deux façons de fournir son energie</h2>
+ *
+ * Le generateur appartient a un <b>noeud sans fil</b> — il en cherche un tout
+ * seul et s'y raccorde — et le noeud vient chercher l'energie chaque tick via
+ * {@link #provideEnergy}. Il pousse aussi son surplus vers les blocs adjacents
+ * qui exposent du Forge Energy : c'est un ajout du port, l'original n'ayant que
+ * le sans-fil, mais cela evite de devoir poser un noeud pour tester le bloc.
  */
-public class SolarGenBlockEntity extends BlockEntity implements MenuProvider {
+public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, EnergyGenerator {
 
     public static final int SLOT_BATTERY = 0;
-    private static final int CAPACITY = 32000;
-    private static final int GENERATION_PER_TICK = 20;
-    private static final int MAX_EXTRACT = 200;
+
+    /** Tampon du generateur, reprit de TileSolarGen. */
+    private static final double BUFFER_SIZE = 1000.0d;
+
+    /** Energie transmissible par tick. IFConstants.LATENCY_MK2. */
+    private static final double BANDWIDTH = 100.0d;
+
+    /** Production par tick en plein soleil. */
+    private static final double GENERATION = 3.0d;
+
+    /** Facteur applique sous la pluie. */
+    private static final double RAIN_FACTOR = 0.2d;
+
+    /** Rayon de recherche d'un noeud, reprit de WirelessHelper.getNodesInRange. */
+    private static final double NODE_SEARCH_RANGE = 20.0d;
+
+    /** Cadence de recherche d'un noeud, en ticks. */
+    private static final int NODE_SEARCH_INTERVAL = 100;
 
     private final ItemStackHandler inventory = new ItemStackHandler(1) {
         @Override
@@ -42,60 +78,230 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider {
         }
     };
 
-    private final EnergyStorage energy = new EnergyStorage(CAPACITY, 0, MAX_EXTRACT);
+    private double energy;
+
+    /** Vrai quand ce generateur est raccorde a un noeud du reseau. */
+    private boolean linked;
+
+    private int searchTicker;
 
     private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
-    private final LazyOptional<EnergyStorage> energyCap = LazyOptional.of(() -> energy);
+    private final LazyOptional<IEnergyStorage> energyCap = LazyOptional.of(ForgeEnergyAdapter::new);
 
     public SolarGenBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.SOLAR_GEN.get(), pos, state);
     }
 
-    public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, SolarGenBlockEntity be) {
-        if (level.isClientSide) return;
+    // ------------------------------------------------------------------
+    // Tick
+    // ------------------------------------------------------------------
 
-        if (be.canGenerate(level, pos)) {
-            be.energy.receiveEnergy(GENERATION_PER_TICK, false);
-        }
+    public static void tick(Level level, BlockPos pos, BlockState state, SolarGenBlockEntity be) {
+        if (!(level instanceof ServerLevel server)) return;
+
+        double produced = be.getGeneration(level, pos);
+        if (produced > 0.0d) be.addEnergy(produced);
 
         be.chargeBatterySlot();
         be.pushToNeighbors(level, pos);
+
+        if (++be.searchTicker >= NODE_SEARCH_INTERVAL) {
+            be.searchTicker = 0;
+            be.ensureLinked(server);
+        }
     }
 
-    private boolean canGenerate(net.minecraft.world.level.Level level, BlockPos pos) {
-        long time = level.getDayTime() % 24000;
-        boolean isDay = time >= 0 && time <= 12500;
-        return isDay && !level.isRaining() && level.canSeeSky(pos.above());
+    /**
+     * Production d'un tick. Reprise de {@code TileSolarGen.getGeneration} :
+     * jour et vue sur le ciel, divisé par cinq sous la pluie.
+     */
+    private double getGeneration(Level level, BlockPos pos) {
+        if (!canGenerate(level, pos)) return 0.0d;
+        return GENERATION * (level.isRaining() ? RAIN_FACTOR : 1.0d);
     }
 
+    private boolean canGenerate(Level level, BlockPos pos) {
+        long time = level.getDayTime() % 24000L;
+        boolean isDay = time >= 0L && time <= 12500L;
+        return isDay && level.canSeeSky(pos.above());
+    }
+
+    /** Ajoute a l'energie du tampon, sans jamais le depasser. */
+    private void addEnergy(double amount) {
+        energy = Math.min(BUFFER_SIZE, energy + amount);
+        setChanged();
+    }
+
+    /** Renseigne le tampon directement (utilise par les tests). */
+    public void setEnergy(double amount) {
+        energy = Math.min(BUFFER_SIZE, Math.max(0.0d, amount));
+        setChanged();
+    }
+
+    /** Slot batterie : le tampon recharge l'objet insere. */
     private void chargeBatterySlot() {
         var stack = inventory.getStackInSlot(SLOT_BATTERY);
+        if (stack.isEmpty() || energy <= 0.0d) return;
+
         stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int accepted = cap.receiveEnergy(Math.min(MAX_EXTRACT, energy.getEnergyStored()), false);
-            if (accepted > 0) energy.extractEnergy(accepted, false);
+            int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
+            if (accepted > 0) {
+                energy -= accepted;
+                setChanged();
+            }
         });
     }
 
-    private void pushToNeighbors(net.minecraft.world.level.Level level, BlockPos pos) {
+    /** Pousse le surplus vers les blocs adjacents qui acceptent du Forge Energy. */
+    private void pushToNeighbors(Level level, BlockPos pos) {
         for (Direction dir : Direction.values()) {
-            if (energy.getEnergyStored() <= 0) return;
+            if (energy <= 0.0d) return;
             var neighbor = level.getBlockEntity(pos.relative(dir));
             if (neighbor == null) continue;
             neighbor.getCapability(ForgeCapabilities.ENERGY, dir.getOpposite()).ifPresent(cap -> {
                 if (!cap.canReceive()) return;
-                int toSend = Math.min(MAX_EXTRACT, energy.getEnergyStored());
-                int accepted = cap.receiveEnergy(toSend, false);
-                if (accepted > 0) energy.extractEnergy(accepted, false);
+                int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
+                if (accepted > 0) {
+                    energy -= accepted;
+                    setChanged();
+                }
             });
         }
     }
 
+    // ------------------------------------------------------------------
+    // EnergyGenerator
+    // ------------------------------------------------------------------
+
+    @Override
+    public double provideEnergy(double requested) {
+        if (requested <= 0.0d) return 0.0d;
+        double given = Math.min(requested, energy);
+        if (given > 0.0d) {
+            energy -= given;
+            setChanged();
+        }
+        return given;
+    }
+
+    @Override
+    public double getBandwidth() {
+        return BANDWIDTH;
+    }
+
+    // ------------------------------------------------------------------
+    // Raccordement au noeud
+    // ------------------------------------------------------------------
+
+    public boolean isLinked() {
+        return linked;
+    }
+
+    /**
+     * Verifie le raccordement et le repare au besoin : detache d'un noeud
+     * disparu, hors de portee ou plein, puis cherche le noeud le plus proche
+     * capable de l'accueillir.
+     */
+    private void ensureLinked(ServerLevel level) {
+        ImagNetworkData data = ImagNetworkData.get(level);
+
+        BlockPos nodePos = data.nodeOf(worldPosition);
+        if (nodePos != null) {
+            NodeBlockEntity node = nodeAt(level, nodePos);
+            if (node != null && accepts(node, data)) {
+                setLinked(true);
+                return;
+            }
+            data.unlinkUser(worldPosition);
+        }
+
+        setLinked(false);
+
+        NodeBlockEntity found = BlockEntityScan.nearest(level, worldPosition, NODE_SEARCH_RANGE,
+                NodeBlockEntity.class, node -> accepts(node, data));
+        if (found != null && data.linkUser(found.getBlockPos(), worldPosition)) {
+            setLinked(true);
+        }
+    }
+
+    /** Un noeud nous accepte s'il est a portee et qu'il lui reste de la place. */
+    private boolean accepts(NodeBlockEntity node, ImagNetworkData data) {
+        double range = node.getRange();
+        if (worldPosition.distSqr(node.getBlockPos()) > range * range) return false;
+        return data.userCount(node.getBlockPos()) < node.getCapacity();
+    }
+
+    @Nullable
+    private static NodeBlockEntity nodeAt(Level level, BlockPos pos) {
+        if (!level.isLoaded(pos)) return null;
+        return level.getBlockEntity(pos) instanceof NodeBlockEntity node ? node : null;
+    }
+
+    /**
+     * Change l'etat de raccordement et previent le client.
+     *
+     * Le drapeau n'est pas dans un menu mais dans le block entity : il faut donc
+     * une mise a jour de bloc, sinon l'ecran continuerait d'afficher l'ancien etat
+     * jusqu'au prochain rechargement du monde.
+     */
+    private void setLinked(boolean value) {
+        if (linked == value) return;
+        linked = value;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Capacites Forge
+    // ------------------------------------------------------------------
+
     public int getEnergyStored() {
-        return energy.getEnergyStored();
+        return (int) energy;
     }
 
     public int getMaxEnergyStored() {
-        return energy.getMaxEnergyStored();
+        return (int) BUFFER_SIZE;
+    }
+
+    /** Vue Forge Energy du tampon : les machines voisines peuvent venir y puiser. */
+    private final class ForgeEnergyAdapter implements IEnergyStorage {
+        @Override
+        public int receiveEnergy(int toReceive, boolean simulate) {
+            return 0; // un generateur ne se recharge pas par ce chemin
+        }
+
+        @Override
+        public int extractEnergy(int toExtract, boolean simulate) {
+            if (toExtract <= 0) return 0;
+            double given = Math.min(toExtract, energy);
+            if (!simulate && given > 0.0d) {
+                energy -= given;
+                setChanged();
+            }
+            return (int) given;
+        }
+
+        @Override
+        public int getEnergyStored() {
+            return (int) energy;
+        }
+
+        @Override
+        public int getMaxEnergyStored() {
+            return (int) BUFFER_SIZE;
+        }
+
+        @Override
+        public boolean canExtract() {
+            return true;
+        }
+
+        @Override
+        public boolean canReceive() {
+            return false;
+        }
     }
 
     @Nonnull
@@ -113,18 +319,24 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider {
         energyCap.invalidate();
     }
 
+    // ------------------------------------------------------------------
+    // Persistance
+    // ------------------------------------------------------------------
+
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.put("inventory", inventory.serializeNBT());
-        tag.putInt("energy", energy.getEnergyStored());
+        tag.putDouble("energy", energy);
+        tag.putBoolean("linked", linked);
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
         inventory.deserializeNBT(tag.getCompound("inventory"));
-        energy.receiveEnergy(tag.getInt("energy"), false);
+        energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
+        linked = tag.getBoolean("linked");
     }
 
     @Override

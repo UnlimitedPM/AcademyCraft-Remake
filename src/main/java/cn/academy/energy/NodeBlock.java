@@ -3,6 +3,7 @@ package cn.academy.energy;
 import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -64,6 +65,21 @@ public class NodeBlock extends Block implements EntityBlock {
         return (lvl, pos, st, be) -> {
             if (be instanceof NodeBlockEntity node) NodeBlockEntity.serverTick(lvl, pos, st, node);
         };
+    }
+
+    /**
+     * Detache le noeud de son Matrix et de ses generateurs / recepteurs.
+     *
+     * Le detachement se fait sur la donnee de sauvegarde et non sur le block
+     * entity : au moment ou onRemove est appele, rien ne garantit que celui-ci
+     * soit encore en place.
+     */
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && level instanceof ServerLevel server) {
+            ImagNetworkData.get(server).removeNode(pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 
     /**

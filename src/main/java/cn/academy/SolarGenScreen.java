@@ -41,5 +41,7 @@ public class SolarGenScreen extends AbstractContainerScreen<SolarGenMenu> {
         graphics.drawString(font, title, 8, 6, 0x404040, false);
         graphics.drawString(font, menu.getEnergyStored() + " / " + menu.getMaxEnergyStored() + " FE",
                 8, imageHeight - 96, 0x404040, false);
+        graphics.drawString(font, menu.isLinkedToNode() ? "Noeud: raccorde" : "Noeud: aucun",
+                8, imageHeight - 84, 0x404040, false);
     }
 }

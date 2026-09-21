@@ -3,24 +3,27 @@ package cn.academy.energy;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+
 import cn.academy.ModBlockEntities;
 import cn.academy.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.common.util.LazyOptional;
@@ -68,6 +71,9 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
      */
     private static final int LINK_CHECK_INTERVAL = 100;
 
+    /** Energie maximale qu'un generateur ou recepteur peut echanger par tick. */
+    private static final int USER_CHECK_INTERVAL = 20;
+
     private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
@@ -90,6 +96,11 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
     private int syncTicker;
 
     private int linkTicker;
+
+    private int userTicker;
+
+    /** Melange generateurs et recepteurs, comme le shuffle de l'original. */
+    private final Random shuffleRandom = new Random();
 
     private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
     private final LazyOptional<IEnergyStorage> energyCap = LazyOptional.of(ForgeEnergyAdapter::new);
@@ -127,6 +138,16 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         return getNodeType().getBandwidth();
     }
 
+    /** Nombre de generateurs et recepteurs que ce noeud accepte. */
+    public int getCapacity() {
+        return getNodeType().getMaxLinks();
+    }
+
+    /** Portee du signal : jusqu'ou un generateur ou recepteur peut se raccorder. */
+    public double getRange() {
+        return getNodeType().getRange();
+    }
+
     /** Ramene une valeur dans [0, capacite]. */
     private double clamp(double value) {
         if (value <= 0.0d) return 0.0d;
@@ -146,6 +167,10 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         node.chargeFromItem();
         node.dischargeToItem();
 
+        // Les generateurs remplissent le noeud, les recepteurs le vident. C'est
+        // le pendant de NodeConn.tick() dans l'original.
+        if (level instanceof ServerLevel server) node.exchangeWithUsers(server);
+
         // L'etat visuel n'est mis a jour que par intermittence, comme dans
         // l'original : inutile de generer une mise a jour de bloc chaque tick.
         if (++node.syncTicker >= SYNC_INTERVAL) {
@@ -156,6 +181,74 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         if (++node.linkTicker >= LINK_CHECK_INTERVAL) {
             node.linkTicker = 0;
             node.ensureLinked(level, pos);
+        }
+
+        if (++node.userTicker >= USER_CHECK_INTERVAL) {
+            node.userTicker = 0;
+            if (level instanceof ServerLevel server) node.refreshUsers(server, pos);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Generateurs et recepteurs raccordes au noeud
+    // ------------------------------------------------------------------
+
+    /**
+     * Un tick d'echange avec les generateurs et recepteurs raccordes.
+     *
+     * Le calcul lui-meme est dans {@link NodeConnection} : ici on ne fait que
+     * traduire des positions en machines, et retirer les raccordements dont la
+     * machine a disparu.
+     */
+    private void exchangeWithUsers(ServerLevel level) {
+        Set<BlockPos> positions = new HashSet<>(ImagNetworkData.get(level).usersOf(worldPosition));
+        if (positions.isEmpty()) return;
+
+        List<EnergyGenerator> generators = new ArrayList<>();
+        List<EnergyReceiver> receivers = new ArrayList<>();
+
+        for (BlockPos userPos : positions) {
+            BlockEntity be = level.isLoaded(userPos) ? level.getBlockEntity(userPos) : null;
+            if (be instanceof EnergyGenerator generator) {
+                generators.add(generator);
+            } else if (be instanceof EnergyReceiver receiver) {
+                receivers.add(receiver);
+            } else {
+                // La machine a disparu, ou elle n'echange plus rien : le
+                // raccordement ne veut plus rien dire.
+                ImagNetworkData.get(level).unlinkUser(userPos);
+            }
+        }
+
+        if (generators.isEmpty() && receivers.isEmpty()) return;
+
+        NodeConnection.Result result = NodeConnection.tick(this, generators, receivers, shuffleRandom);
+        if (result.received() != 0.0d || result.supplied() != 0.0d) setChanged();
+    }
+
+    /**
+     * Verifie que les machines raccordees existent encore et sont toujours a
+     * portee, et qu'il n'y en a pas plus que la capacite du noeud.
+     */
+    private void refreshUsers(ServerLevel level, BlockPos pos) {
+        ImagNetworkData data = ImagNetworkData.get(level);
+
+        List<BlockPos> valid = new ArrayList<>();
+        for (BlockPos userPos : new HashSet<>(data.usersOf(worldPosition))) {
+            BlockEntity be = level.isLoaded(userPos) ? level.getBlockEntity(userPos) : null;
+            boolean usable = (be instanceof EnergyGenerator || be instanceof EnergyReceiver)
+                    && pos.distSqr(userPos) <= getRange() * getRange();
+            if (usable) valid.add(userPos);
+            else data.unlinkUser(userPos);
+        }
+
+        // Capacite : le NodeConn de l'original refusait simplement les
+        // raccordements au-dela. Ici on retire les machines les plus eloignees,
+        // qui sont les moins utiles.
+        int capacity = getCapacity();
+        if (valid.size() > capacity) {
+            valid.sort(Comparator.comparingDouble(userPos -> pos.distSqr(userPos)));
+            for (int i = capacity; i < valid.size(); i++) data.unlinkUser(valid.get(i));
         }
     }
 
@@ -205,32 +298,11 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
      */
     @Nullable
     private MatrixBlockEntity findMatrix(Level level, BlockPos pos) {
-        int radius = Mth.ceil(MatrixBlockEntity.MAX_RANGE);
-        double maxDistSq = MatrixBlockEntity.MAX_RANGE * MatrixBlockEntity.MAX_RANGE;
-
-        ChunkPos min = new ChunkPos(SectionPos.blockToSectionCoord(pos.getX() - radius),
-                                    SectionPos.blockToSectionCoord(pos.getZ() - radius));
-        ChunkPos max = new ChunkPos(SectionPos.blockToSectionCoord(pos.getX() + radius),
-                                    SectionPos.blockToSectionCoord(pos.getZ() + radius));
-
-        MatrixBlockEntity best = null;
-        double bestDistSq = maxDistSq;
-
-        for (int cx = min.x; cx <= max.x; cx++) {
-            for (int cz = min.z; cz <= max.z; cz++) {
-                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
-                if (chunk == null) continue;
-                for (BlockEntity be : chunk.getBlockEntities().values()) {
-                    if (!(be instanceof MatrixBlockEntity matrix) || !matrix.isWorking()) continue;
-                    double distSq = be.getBlockPos().distSqr(pos);
-                    if (distSq <= bestDistSq && matrix.canReach(pos)) {
-                        bestDistSq = distSq;
-                        best = matrix;
-                    }
-                }
-            }
-        }
-        return best;
+        // Le rayon de recherche est la portee maximale theorique d'un Matrix, car
+        // sa portee reelle depend du coeur insere, qu'on ne connait pas avant de
+        // l'avoir trouve.
+        return BlockEntityScan.nearest(level, pos, MatrixBlockEntity.MAX_RANGE, MatrixBlockEntity.class,
+                matrix -> matrix.isWorking() && matrix.canReach(pos));
     }
 
     @Nullable

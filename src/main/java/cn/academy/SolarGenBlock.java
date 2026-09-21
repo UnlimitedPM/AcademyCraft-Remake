@@ -2,6 +2,7 @@ package cn.academy;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -76,5 +77,17 @@ public class SolarGenBlock extends Block implements EntityBlock {
             NetworkHooks.openScreen(serverPlayer, blockEntity, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /**
+     * Retire le generateur du reseau. Le detachement se fait sur la donnee de
+     * sauvegarde et non sur le block entity, qui peut deja avoir disparu.
+     */
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && level instanceof ServerLevel server) {
+            cn.academy.energy.ImagNetworkData.get(server).unlinkUser(pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 }

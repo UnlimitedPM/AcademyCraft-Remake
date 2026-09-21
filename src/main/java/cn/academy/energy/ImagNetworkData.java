@@ -2,10 +2,8 @@ package cn.academy.energy;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import net.minecraft.core.BlockPos;
@@ -16,22 +14,28 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
 /**
- * Liens entre les Matrix et les noeuds sans fil d'un monde.
+ * Les raccordements sans fil d'un monde.
  *
  * Remplace {@code WiWorldData} de la 1.12.2, qui etait un {@code WorldSavedData}.
  * En 1.20.1 l'equivalent est {@link SavedData}, attache au niveau par
  * {@link #get(ServerLevel)}.
  *
- * La table est volontairement separee en deux sens :
+ * <h2>Deux tables</h2>
+ *
  * <ul>
- *   <li>{@code nodesByMatrix} est la donnee utile, elle est sauvegardee ;</li>
- *   <li>{@code matrixByNode} est un index inverse, reconstruit au chargement,
- *       qui evite de parcourir tous les reseaux quand un noeud demande a qui il
- *       est raccorde.</li>
+ *   <li>Matrix vers noeuds : c'est le reseau energetique proprement dit, celui
+ *       qui equilibre les energies ;</li>
+ *   <li>noeud vers utilisateurs : les generateurs et recepteurs raccordes a un
+ *       noeud. Une meme position n'y figure qu'une fois, puisque un bloc est
+ *       soit generateur soit recepteur, jamais les deux. Le type se reconnait a
+ *       l'interface implementee par le block entity.</li>
  * </ul>
  *
- * Le NBT est lisible et ecrivable sans niveau ni block entity : la classe se
- * teste donc entierement en JUnit (voir {@code ImagNetworkDataTest}).
+ * Les deux tables sont tenues dans les deux sens : {@code byOwner} est la donnee
+ * sauvegardee, {@code ownerOf} est un index inverse reconstruit au chargement.
+ * Sans lui il faudrait parcourir tous les raccordements du monde pour repondre a
+ * "a qui cette machine est-elle raccordee ?", question posee a chaque fois qu'un
+ * bloc est casse.
  */
 public class ImagNetworkData extends SavedData {
 
@@ -43,11 +47,14 @@ public class ImagNetworkData extends SavedData {
     private static final String TAG_NODES = "nodes";
     private static final String TAG_NODE_POS = "node";
 
-    /** Noeuds raccordes a chaque Matrix. Indexe par position du Matrix. */
-    private final Map<BlockPos, Set<BlockPos>> nodesByMatrix = new HashMap<>();
+    private static final String TAG_NODE_USERS = "node_users";
+    private static final String TAG_USER_POS = "user";
 
-    /** Index inverse : Matrix auquel chaque noeud est raccorde. */
-    private final Map<BlockPos, BlockPos> matrixByNode = new HashMap<>();
+    /** Noeuds raccordes a chaque Matrix. */
+    private final Links matrixToNodes = new Links();
+
+    /** Generateurs et recepteurs raccordes a chaque noeud. */
+    private final Links nodeToUsers = new Links();
 
     // ------------------------------------------------------------------
     // Acces au niveau
@@ -59,41 +66,31 @@ public class ImagNetworkData extends SavedData {
     }
 
     // ------------------------------------------------------------------
-    // Lecture
+    // Matrix vers noeuds
     // ------------------------------------------------------------------
 
-    /** Noeuds raccordes a ce Matrix, dans l'ordre d'ajout. */
+    /** Noeuds raccordes a ce Matrix. */
     public Set<BlockPos> nodesOf(BlockPos matrix) {
-        Set<BlockPos> nodes = nodesByMatrix.get(matrix);
-        return nodes == null ? Collections.emptySet() : Collections.unmodifiableSet(nodes);
+        return matrixToNodes.childrenOf(matrix);
     }
 
     /** Matrix auquel ce noeud est raccorde, ou {@code null}. */
     public BlockPos matrixOf(BlockPos node) {
-        return matrixByNode.get(node);
+        return matrixToNodes.ownerOf(node);
     }
 
     public boolean isLinked(BlockPos node) {
-        return matrixByNode.containsKey(node);
+        return matrixToNodes.isLinked(node);
     }
 
     public int nodeCount(BlockPos matrix) {
-        return nodesOf(matrix).size();
+        return matrixToNodes.childCount(matrix);
     }
 
     /** Nombre de Matrix ayant au moins un noeud. */
     public int matrixCount() {
-        return nodesByMatrix.size();
+        return matrixToNodes.ownerCount();
     }
-
-    /** Toutes les positions de Matrix connues (pratique pour les tests et le debogage). */
-    public List<BlockPos> matrices() {
-        return new ArrayList<>(nodesByMatrix.keySet());
-    }
-
-    // ------------------------------------------------------------------
-    // Ecriture
-    // ------------------------------------------------------------------
 
     /**
      * Raccorde un noeud a un Matrix. Un noeud n'est jamais raccorde a deux
@@ -102,47 +99,76 @@ public class ImagNetworkData extends SavedData {
      * @return vrai si le raccordement a change quelque chose
      */
     public boolean link(BlockPos matrix, BlockPos node) {
-        BlockPos previous = matrixByNode.get(node);
-        if (matrix.equals(previous)) return false;
-
-        if (previous != null) removeNodeFromMatrix(previous, node);
-
-        nodesByMatrix.computeIfAbsent(matrix.immutable(), k -> new LinkedHashSet<>()).add(node.immutable());
-        matrixByNode.put(node.immutable(), matrix.immutable());
-        setDirty();
-        return true;
+        return matrixToNodes.link(matrix, node);
     }
 
-    /** Detache un noeud, quel que soit le Matrix auquel il etait raccorde. */
+    /** Detache un noeud de son Matrix, quel qu'il soit. */
     public boolean unlink(BlockPos node) {
-        BlockPos matrix = matrixByNode.remove(node);
-        if (matrix == null) return false;
-        removeNodeFromMatrix(matrix, node);
-        setDirty();
-        return true;
+        return matrixToNodes.unlink(node);
     }
 
     /**
      * Supprime un Matrix et detache tous ses noeuds.
+     *
      * @return les noeuds qui etaient raccordes, pour que l'appelant puisse les
      *         remettre en recherche d'un nouveau Matrix
      */
     public Set<BlockPos> removeMatrix(BlockPos matrix) {
-        Set<BlockPos> removed = nodesByMatrix.remove(matrix);
-        if (removed == null) return Collections.emptySet();
-
-        for (BlockPos node : removed) {
-            matrixByNode.remove(node);
-        }
-        setDirty();
-        return new LinkedHashSet<>(removed);
+        return matrixToNodes.removeOwner(matrix);
     }
 
-    private void removeNodeFromMatrix(BlockPos matrix, BlockPos node) {
-        Set<BlockPos> nodes = nodesByMatrix.get(matrix);
-        if (nodes == null) return;
-        nodes.remove(node);
-        if (nodes.isEmpty()) nodesByMatrix.remove(matrix);
+    /** Toutes les positions de Matrix connues. */
+    public List<BlockPos> matrices() {
+        return matrixToNodes.owners();
+    }
+
+    // ------------------------------------------------------------------
+    // Noeud vers generateurs / recepteurs
+    // ------------------------------------------------------------------
+
+    /** Generateurs et recepteurs raccordes a ce noeud. */
+    public Set<BlockPos> usersOf(BlockPos node) {
+        return nodeToUsers.childrenOf(node);
+    }
+
+    /** Noeud auquel cette machine est raccordee, ou {@code null}. */
+    public BlockPos nodeOf(BlockPos user) {
+        return nodeToUsers.ownerOf(user);
+    }
+
+    public boolean isUserLinked(BlockPos user) {
+        return nodeToUsers.isLinked(user);
+    }
+
+    public int userCount(BlockPos node) {
+        return nodeToUsers.childCount(node);
+    }
+
+    /**
+     * Raccorde un generateur ou un recepteur a un noeud. Une machine n'est
+     * jamais raccordee a deux noeuds.
+     *
+     * @return vrai si le raccordement a change quelque chose
+     */
+    public boolean linkUser(BlockPos node, BlockPos user) {
+        return nodeToUsers.link(node, user);
+    }
+
+    /** Detache une machine de son noeud, quel qu'il soit. */
+    public boolean unlinkUser(BlockPos user) {
+        return nodeToUsers.unlink(user);
+    }
+
+    /**
+     * Supprime un noeud, detache ses machines et le retire de son Matrix.
+     *
+     * @return les machines qui etaient raccordees, pour qu'elles puissent s'en
+     *         chercher un autre
+     */
+    public Set<BlockPos> removeNode(BlockPos node) {
+        Set<BlockPos> detached = nodeToUsers.removeOwner(node);
+        matrixToNodes.unlink(node);
+        return detached;
     }
 
     // ------------------------------------------------------------------
@@ -151,44 +177,131 @@ public class ImagNetworkData extends SavedData {
 
     @Override
     public CompoundTag save(CompoundTag tag) {
-        ListTag matrices = new ListTag();
-        for (Map.Entry<BlockPos, Set<BlockPos>> entry : nodesByMatrix.entrySet()) {
-            CompoundTag matrixTag = new CompoundTag();
-            matrixTag.putLong(TAG_MATRIX_POS, entry.getKey().asLong());
-
-            ListTag nodes = new ListTag();
-            for (BlockPos node : entry.getValue()) {
-                CompoundTag nodeTag = new CompoundTag();
-                nodeTag.putLong(TAG_NODE_POS, node.asLong());
-                nodes.add(nodeTag);
-            }
-            matrixTag.put(TAG_NODES, nodes);
-            matrices.add(matrixTag);
-        }
-        tag.put(TAG_MATRICES, matrices);
+        tag.put(TAG_MATRICES, matrixToNodes.save(TAG_MATRIX_POS, TAG_NODES, TAG_NODE_POS));
+        tag.put(TAG_NODE_USERS, nodeToUsers.save(TAG_NODE_POS, TAG_NODES, TAG_USER_POS));
         return tag;
     }
 
     public static ImagNetworkData load(CompoundTag tag) {
         ImagNetworkData data = new ImagNetworkData();
-        ListTag matrices = tag.getList(TAG_MATRICES, Tag.TAG_COMPOUND);
-
-        for (int i = 0; i < matrices.size(); i++) {
-            CompoundTag matrixTag = matrices.getCompound(i);
-            BlockPos matrix = BlockPos.of(matrixTag.getLong(TAG_MATRIX_POS));
-
-            ListTag nodes = matrixTag.getList(TAG_NODES, Tag.TAG_COMPOUND);
-            for (int j = 0; j < nodes.size(); j++) {
-                BlockPos node = BlockPos.of(nodes.getCompound(j).getLong(TAG_NODE_POS));
-                // On passe par link() pour que les deux index restent coherents,
-                // meme si le fichier sauvegarde est incoherent.
-                data.link(matrix, node);
-            }
-        }
+        data.matrixToNodes.load(tag.getList(TAG_MATRICES, Tag.TAG_COMPOUND),
+                TAG_MATRIX_POS, TAG_NODES, TAG_NODE_POS);
+        data.nodeToUsers.load(tag.getList(TAG_NODE_USERS, Tag.TAG_COMPOUND),
+                TAG_NODE_POS, TAG_NODES, TAG_USER_POS);
 
         // Le chargement n'est pas une modification : rien a sauvegarder tant que
-        // personne ne touche aux liens.
+        // personne ne touche aux raccordements.
         data.setDirty(false);
         return data;
+    }
+
+    // ------------------------------------------------------------------
+    // Table de raccordements, dans les deux sens
+    // ------------------------------------------------------------------
+
+    /**
+     * Une table proprietaire vers enfants, plus son index inverse.
+     *
+     * Les deux sens sont maintenus ensemble et jamais separes : c'est la seule
+     * facon d'eviter qu'ils divergent, et c'est ce qui permet de reparer un
+     * fichier de sauvegarde incoherent au chargement plutot que de le charger
+     * tel quel.
+     */
+    private static final class Links {
+
+        private final java.util.Map<BlockPos, Set<BlockPos>> byOwner = new java.util.HashMap<>();
+        private final java.util.Map<BlockPos, BlockPos> ownerOf = new java.util.HashMap<>();
+
+        Set<BlockPos> childrenOf(BlockPos owner) {
+            Set<BlockPos> children = byOwner.get(owner);
+            return children == null ? Collections.emptySet() : Collections.unmodifiableSet(children);
+        }
+
+        BlockPos ownerOf(BlockPos child) {
+            return ownerOf.get(child);
+        }
+
+        boolean isLinked(BlockPos child) {
+            return ownerOf.containsKey(child);
+        }
+
+        int childCount(BlockPos owner) {
+            return childrenOf(owner).size();
+        }
+
+        int ownerCount() {
+            return byOwner.size();
+        }
+
+        List<BlockPos> owners() {
+            return new ArrayList<>(byOwner.keySet());
+        }
+
+        boolean link(BlockPos owner, BlockPos child) {
+            BlockPos previous = ownerOf.get(child);
+            if (owner.equals(previous)) return false;
+
+            if (previous != null) detach(previous, child);
+
+            byOwner.computeIfAbsent(owner.immutable(), k -> new LinkedHashSet<>()).add(child.immutable());
+            ownerOf.put(child.immutable(), owner.immutable());
+            return true;
+        }
+
+        boolean unlink(BlockPos child) {
+            BlockPos owner = ownerOf.remove(child);
+            if (owner == null) return false;
+            detach(owner, child);
+            return true;
+        }
+
+        Set<BlockPos> removeOwner(BlockPos owner) {
+            Set<BlockPos> removed = byOwner.remove(owner);
+            if (removed == null) return Collections.emptySet();
+
+            for (BlockPos child : removed) ownerOf.remove(child);
+            return new LinkedHashSet<>(removed);
+        }
+
+        private void detach(BlockPos owner, BlockPos child) {
+            Set<BlockPos> children = byOwner.get(owner);
+            if (children == null) return;
+            children.remove(child);
+            if (children.isEmpty()) byOwner.remove(owner);
+        }
+
+        ListTag save(String ownerKey, String childrenKey, String childKey) {
+            ListTag list = new ListTag();
+            for (java.util.Map.Entry<BlockPos, Set<BlockPos>> entry : byOwner.entrySet()) {
+                CompoundTag ownerTag = new CompoundTag();
+                ownerTag.putLong(ownerKey, entry.getKey().asLong());
+
+                ListTag children = new ListTag();
+                for (BlockPos child : entry.getValue()) {
+                    CompoundTag childTag = new CompoundTag();
+                    childTag.putLong(childKey, child.asLong());
+                    children.add(childTag);
+                }
+                ownerTag.put(childrenKey, children);
+                list.add(ownerTag);
+            }
+            return list;
+        }
+
+        void load(ListTag owners, String ownerKey, String childrenKey, String childKey) {
+            for (int i = 0; i < owners.size(); i++) {
+                CompoundTag ownerTag = owners.getCompound(i);
+                BlockPos owner = BlockPos.of(ownerTag.getLong(ownerKey));
+
+                ListTag children = ownerTag.getList(childrenKey, Tag.TAG_COMPOUND);
+                for (int j = 0; j < children.size(); j++) {
+                    BlockPos child = BlockPos.of(children.getCompound(j).getLong(childKey));
+                    // On passe par link() plutot que de remplir les deux index a
+                    // la main : un fichier incoherent, par exemple le meme enfant
+                    // declare sous deux proprietaires, est ainsi nettoye.
+                    link(owner, child);
+                }
+            }
+        }
     }
 }

@@ -705,6 +705,126 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    // ------------------------------------------------------------------
+    // Reseau energetique : generateurs et recepteurs raccordes a un noeud
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void solarGeneratorIsAnEnergyGenerator(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.SOLAR_GEN.get());
+        var solar = (cn.academy.SolarGenBlockEntity) helper.getBlockEntity(rel);
+
+        // Valeurs de l'original : tampon 1000, bande passante LATENCY_MK2 = 100.
+        assertValue(helper, 1000, solar.getMaxEnergyStored(), "tampon du generateur solaire");
+        assertClose(helper, 100.0d, solar.getBandwidth(), "bande passante du generateur solaire");
+
+        solar.setEnergy(500.0d);
+        assertClose(helper, 250.0d, solar.provideEnergy(250.0d), "energie fournie sur demande");
+        assertClose(helper, 250.0d, solar.getEnergyStored(), "ce qui reste dans le tampon");
+
+        // On ne peut pas fournir plus que ce qu'on a.
+        assertClose(helper, 250.0d, solar.provideEnergy(900.0d), "le tampon se vide");
+        assertClose(helper, 0.0d, solar.getEnergyStored(), "tampon vide");
+        assertClose(helper, 0.0d, solar.provideEnergy(100.0d), "un tampon vide ne fournit rien");
+        helper.succeed();
+    }
+
+    /** Le generateur doit trouver le noeud tout seul, comme un noeud trouve son Matrix. */
+    @GameTest(template = "empty")
+    public static void solarGeneratorFindsANearbyNode(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+        var solar = (cn.academy.SolarGenBlockEntity) helper.getBlockEntity(solarRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+        assertTrue(helper, !ImagNetworkData.get(level).isUserLinked(solarAbs),
+                "un generateur fraichement pose ne doit etre raccorde a rien");
+
+        // La recherche n'a lieu que tous les 100 ticks.
+        for (int i = 0; i < 100; i++) {
+            cn.academy.SolarGenBlockEntity.tick(level, solarAbs, helper.getBlockState(solarRel), solar);
+        }
+
+        assertValue(helper, helper.absolutePos(nodeRel), ImagNetworkData.get(level).nodeOf(solarAbs),
+                "noeud trouve par le generateur");
+        assertTrue(helper, solar.isLinked(), "le generateur doit se savoir raccorde");
+        helper.succeed();
+    }
+
+    /**
+     * Le vrai test du raccordement : l'energie du generateur doit arriver dans le
+     * noeud. C'est le seul endroit ou le generateur, le noeud, le registre des
+     * raccordements et l'algorithme d'echange travaillent ensemble.
+     */
+    @GameTest(template = "empty")
+    public static void solarGeneratorFeedsItsNode(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+        var node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+        var solar = (cn.academy.SolarGenBlockEntity) helper.getBlockEntity(solarRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+
+        for (int i = 0; i < 100; i++) {
+            cn.academy.SolarGenBlockEntity.tick(level, solarAbs, helper.getBlockState(solarRel), solar);
+        }
+        assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(solarAbs),
+                "le generateur doit avoir trouve le noeud avant de lui fournir quoi que ce soit");
+
+        // On fixe le tampon : la production reelle depend de l'heure du monde et
+        // du ciel au-dessus de la structure de test, deux choses qu'on ne veut pas
+        // avoir a deviner ici.
+        solar.setEnergy(500.0d);
+        node.setEnergy(0.0d);
+
+        // Bande passante 100 des deux cotes : 100 par tick, soit 500 en 5 ticks.
+        for (int i = 0; i < 5; i++) {
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        assertClose(helper, 500.0d, node.getEnergy(), "energie recue par le noeud");
+        assertClose(helper, 0.0d, solar.getEnergyStored(), "tampon du generateur vide");
+        helper.succeed();
+    }
+
+    /** Un generateur casse ne doit pas laisser de raccordement fantome. */
+    @GameTest(template = "empty")
+    public static void nodeDropsUsersThatDisappeared(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+        var node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+        ImagNetworkData.get(level).linkUser(nodeAbs, solarAbs);
+        assertValue(helper, 1, ImagNetworkData.get(level).userCount(nodeAbs), "raccordement de depart");
+
+        // Le generateur disparait. Le noeud ne doit pas le garder dans sa liste :
+        // sinon un generateur casse continuerait de compter dans la capacite.
+        helper.setBlock(solarRel, net.minecraft.world.level.block.Blocks.AIR);
+        for (int i = 0; i < 20; i++) {
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        assertValue(helper, 0, ImagNetworkData.get(level).userCount(nodeAbs),
+                "le noeud doit oublier une machine disparue");
+        helper.succeed();
+    }
+
     /** Pose un Matrix et rend son block entity, en verifiant qu'il existe. */
     private static MatrixBlockEntity placeMatrix(GameTestHelper helper, BlockPos rel) {
         helper.setBlock(rel, ModBlocks.MATRIX.get());
