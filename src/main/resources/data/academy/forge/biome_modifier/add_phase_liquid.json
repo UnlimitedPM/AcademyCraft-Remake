@@ -1,0 +1,9 @@
+{
+  "type": "academy:configured_features",
+  "onlyWhen": "phase_liquid",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "academy:phase_liquid_lake"
+  ],
+  "step": "lakes"
+}

@@ -3,16 +3,16 @@ package cn.academy.gametest;
 import cn.academy.AcademyCraft;
 import cn.academy.ModBlocks;
 import cn.academy.ModItems;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.levelgen.feature.LakeFeature;
 import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraftforge.gametest.GameTestHolder;
 import net.minecraftforge.gametest.PrefixGameTestTemplate;
@@ -102,6 +102,136 @@ public final class AcademyGameTests {
             ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, ore);
             assertTrue(helper, configured.containsKey(rl), "configured_feature manquante : " + rl);
             assertTrue(helper, placed.containsKey(rl), "placed_feature manquante : " + rl);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * La feature du liquide Phase doit etre declaree ET pointer sur notre fluide.
+     * C'est le seul vrai contenu de notre cote : la forme de la poche est generee
+     * par le {@code minecraft:lake} vanilla.
+     */
+    @GameTest(template = "empty")
+    public static void phaseLiquidLakeUsesOurFluid(GameTestHelper helper) {
+        var access = helper.getLevel().getServer().registryAccess();
+        var configured = access.registryOrThrow(Registries.CONFIGURED_FEATURE);
+        var placed = access.registryOrThrow(Registries.PLACED_FEATURE);
+
+        ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "phase_liquid_lake");
+        assertTrue(helper, configured.containsKey(rl), "configured_feature manquante : " + rl);
+        assertTrue(helper, placed.containsKey(rl), "placed_feature manquante : " + rl);
+
+        var holder = configured.getHolder(ResourceKey.create(Registries.CONFIGURED_FEATURE, rl)).orElse(null);
+        assertTrue(helper, holder != null, "configured_feature academy:phase_liquid_lake introuvable");
+        assertTrue(helper, holder.value().config() instanceof LakeFeature.Configuration,
+                "academy:phase_liquid_lake devrait utiliser minecraft:lake");
+
+        var lake = (LakeFeature.Configuration) holder.value().config();
+        var fluidState = lake.fluid().getState(helper.getLevel().getRandom(), helper.absolutePos(BlockPos.ZERO));
+        assertTrue(helper, fluidState.is(ModBlocks.PHASE_LIQUID_BLOCK.get()),
+                "la feature ne place pas academy:phase_liquid mais " + fluidState);
+        helper.succeed();
+    }
+
+    /** Le bloc de liquide Phase doit pouvoir etre pose et relu. */
+    @GameTest(template = "empty")
+    public static void phaseLiquidBlockCanBePlaced(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        var state = ModBlocks.PHASE_LIQUID_BLOCK.get().defaultBlockState();
+        boolean set = helper.getLevel().setBlock(helper.absolutePos(rel), state, 3);
+        var readBack = helper.getBlockState(rel);
+        assertTrue(helper, set, "setBlock a refuse la pose de academy:phase_liquid");
+        assertTrue(helper, readBack.is(ModBlocks.PHASE_LIQUID_BLOCK.get()),
+                "le bloc phase_liquid n'a pas survecu a la pose, lu : " + readBack);
+        helper.succeed();
+    }
+
+    /**
+     * Test de bout en bout : on place reellement la feature dans un volume de
+     * pierre (structure {@code stone_vault}) et on verifie que des blocs de
+     * liquide Phase apparaissent.
+     *
+     * On appelle la <b>configured</b> feature et non la placed feature : les
+     * modifiers de placement ({@code height_range}, {@code in_square},
+     * {@code rarity_filter}) deplacent l'origine, la feature ecrirait donc
+     * ailleurs que dans la zone observee.
+     */
+    @GameTest(template = "stone_vault")
+    public static void phaseLiquidLakeActuallyPlacesFluid(GameTestHelper helper) {
+        var access = helper.getLevel().getServer().registryAccess();
+        ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "phase_liquid_lake");
+        var holder = access.registryOrThrow(Registries.CONFIGURED_FEATURE)
+                .getHolder(ResourceKey.create(Registries.CONFIGURED_FEATURE, rl)).orElse(null);
+        assertTrue(helper, holder != null, "configured feature academy:phase_liquid_lake introuvable");
+
+        // La feature occupe 16x16x8 a partir de (origine - 4). Placee en (2, 8, 2),
+        // elle tient entierement dans le volume de pierre 20x12x20.
+        BlockPos origin = new BlockPos(2, 8, 2);
+
+        int stoneBefore = 0;
+        for (int x = origin.getX(); x < origin.getX() + 16; x++) {
+            for (int y = origin.getY() - 4; y < origin.getY() + 4; y++) {
+                for (int z = origin.getZ(); z < origin.getZ() + 16; z++) {
+                    if (helper.getBlockState(new BlockPos(x, y, z))
+                            .is(net.minecraft.world.level.block.Blocks.STONE)) {
+                        stoneBefore++;
+                    }
+                }
+            }
+        }
+        assertTrue(helper, stoneBefore > 0,
+                "la structure stone_vault n'a pas ete chargee [pierre = " + stoneBefore + "]");
+
+        boolean placedOk = holder.value().place(
+                helper.getLevel(),
+                helper.getLevel().getChunkSource().getGenerator(),
+                net.minecraft.util.RandomSource.create(20260921L),
+                helper.absolutePos(origin));
+        assertTrue(helper, placedOk, "la feature a refuse de se placer dans la pierre");
+
+        int fluidBlocks = 0;
+        int airAfter = 0;
+        java.util.Set<String> autres = new java.util.TreeSet<>();
+        for (int x = origin.getX(); x < origin.getX() + 16; x++) {
+            for (int y = origin.getY() - 4; y < origin.getY() + 4; y++) {
+                for (int z = origin.getZ(); z < origin.getZ() + 16; z++) {
+                    var st = helper.getBlockState(new BlockPos(x, y, z));
+                    if (st.is(ModBlocks.PHASE_LIQUID_BLOCK.get())) fluidBlocks++;
+                    else if (st.isAir()) airAfter++;
+                    else if (!st.is(net.minecraft.world.level.block.Blocks.STONE)) autres.add(st.toString());
+                }
+            }
+        }
+        assertTrue(helper, fluidBlocks > 0,
+                "aucun bloc academy:phase_liquid genere dans la poche"
+                        + " [air = " + airAfter + ", autres = " + autres + "]");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void phaseLiquidBiomeModifierRespectsConfig(GameTestHelper helper) {
+        var access = helper.getLevel().getServer().registryAccess();
+        var biomes = access.registryOrThrow(Registries.BIOME);
+        var placed = access.registryOrThrow(Registries.PLACED_FEATURE);
+
+        var plains = biomes.getHolder(ResourceKey.create(Registries.BIOME,
+                ResourceLocation.withDefaultNamespace("plains"))).orElse(null);
+        assertTrue(helper, plains != null, "biome minecraft:plains introuvable");
+        var lake = placed.getHolder(ResourceKey.create(Registries.PLACED_FEATURE,
+                ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "phase_liquid_lake"))).orElse(null);
+        assertTrue(helper, lake != null, "placed feature academy:phase_liquid_lake introuvable");
+
+        boolean present = plains.value().getGenerationSettings().features().stream()
+                .anyMatch(list -> list.contains(lake));
+
+        if (cn.academy.Config.generatePhaseLiquid) {
+            assertTrue(helper, present,
+                    "academy:phase_liquid_lake absent de minecraft:plains alors que "
+                            + "generatePhaseLiquid = true (biome modifier non applique)");
+        } else {
+            assertTrue(helper, !present,
+                    "academy:phase_liquid_lake present dans minecraft:plains alors que "
+                            + "generatePhaseLiquid = false");
         }
         helper.succeed();
     }

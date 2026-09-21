@@ -156,6 +156,42 @@ function buildPlatformStructure(size, height, floorBlock) {
   return w.toBuffer();
 }
 
+/**
+ * Structure de test entierement remplie d'un meme bloc.
+ * Sert aux tests qui ont besoin de creuser dans de la matiere solide
+ * (par ex. verifier qu'une poche de fluide se genere bien dans la pierre).
+ *
+ * @param {number} sizeX taille en X
+ * @param {number} sizeY taille en Y
+ * @param {number} sizeZ taille en Z
+ * @param {string} blockId bloc de remplissage
+ */
+function buildFilledStructure(sizeX, sizeY, sizeZ, blockId) {
+  const w = new NbtWriter();
+  w.rootCompoundStart();
+  w.int('DataVersion', DATA_VERSION);
+  w.intList('size', [sizeX, sizeY, sizeZ]);
+  w.compoundList('palette', [
+    (w2) => w2.string('Name', 'minecraft:air'),
+    (w2) => w2.string('Name', blockId),
+  ]);
+  const blocks = [];
+  for (let y = 0; y < sizeY; y++) {
+    for (let x = 0; x < sizeX; x++) {
+      for (let z = 0; z < sizeZ; z++) {
+        blocks.push((w2) => {
+          w2.intList('pos', [x, y, z]);
+          w2.int('state', 1); // index 1 = bloc de remplissage
+        });
+      }
+    }
+  }
+  w.compoundList('blocks', blocks);
+  w.compoundList('entities', []);
+  w.rootCompoundEnd();
+  return w.toBuffer();
+}
+
 // --- generation -------------------------------------------------------------
 if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -165,6 +201,11 @@ const structures = [
   { name: 'empty', buffer: buildAirStructure(3) },
   // `platform` : sol en pierre 7x7, pour les futurs tests de blocs.
   { name: 'platform', buffer: buildPlatformStructure(7, 4, 'minecraft:stone') },
+  // `stone_vault` : 20x12x20 de pierre. Les tests de generation y placent une
+  // feature et verifient que le bloc attendu apparait. La feature de lac occupe
+  // 16x16x8 a partir de (origin - 4) : placee en (2, 8, 2), elle tient
+  // entierement dans ce volume.
+  { name: 'stone_vault', buffer: buildFilledStructure(20, 12, 20, 'minecraft:stone') },
 ];
 
 for (const { name, buffer } of structures) {
