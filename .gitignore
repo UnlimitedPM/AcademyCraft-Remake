@@ -50,3 +50,5 @@ logs/
 Thumbs.db
 # Sorties du validateur offline
 /validate-out.txt
+/gametest.log
+.git-commit-msg.tmp
