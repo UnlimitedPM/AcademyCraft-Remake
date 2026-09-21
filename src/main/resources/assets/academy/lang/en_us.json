@@ -98,6 +98,11 @@
 
   "container.academy.matrix": "Wireless Imag Matrix",
 
+  "academy.metal_former.mode.plate": "Rolling",
+  "academy.metal_former.mode.incise": "Cutting",
+  "academy.metal_former.mode.etch": "Etching",
+  "academy.metal_former.mode.refine": "Refining",
+
 
 
   "itemGroup.academy_tab": "AcademyCraft Remake"

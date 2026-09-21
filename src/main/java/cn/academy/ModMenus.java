@@ -17,6 +17,9 @@ public class ModMenus {
     public static final RegistryObject<MenuType<MatrixMenu>> MATRIX =
             MENUS.register("matrix", () -> IForgeMenuType.create(MatrixMenu::new));
 
+    public static final RegistryObject<MenuType<MetalFormerMenu>> METAL_FORMER =
+            MENUS.register("metal_former", () -> IForgeMenuType.create(MetalFormerMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

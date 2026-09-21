@@ -1,7 +1,5 @@
 package cn.academy;
 
-import java.util.function.IntSupplier;
-
 import cn.academy.energy.MatrixBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -9,7 +7,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -98,44 +95,9 @@ public class MatrixMenu extends AbstractContainerMenu {
         addDataSlot(buffer);
     }
 
-    /**
-     * Un entier du block entity, synchronise au client.
-     *
-     * Cote serveur {@link #get()} interroge directement le block entity ; cote
-     * client, ou le paquet de synchronisation appelle {@link #set(int)}, c'est la
-     * valeur recue qui est renvoyee. La valeur du client n'est jamais reinjectee
-     * dans le block entity : le serveur reste la seule source de verite.
-     */
-    private static final class SyncedInt extends DataSlot {
-
-        private final IntSupplier serverValue;
-        private int clientValue;
-        private boolean hasClientValue;
-
-        SyncedInt(IntSupplier serverValue) {
-            this.serverValue = serverValue;
-        }
-
-        @Override
-        public int get() {
-            return hasClientValue ? clientValue : serverValue.getAsInt();
-        }
-
-        @Override
-        public void set(int value) {
-            clientValue = value;
-            hasClientValue = true;
-        }
-
-        int value() {
-            return get();
-        }
-    }
-
     // ------------------------------------------------------------------
     // Ce que l'ecran affiche
     // ------------------------------------------------------------------
-
     public int getCoreLevel() {
         return coreLevel.value();
     }

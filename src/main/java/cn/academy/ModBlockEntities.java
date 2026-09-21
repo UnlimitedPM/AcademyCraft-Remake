@@ -40,6 +40,10 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("matrix", () ->
                     BlockEntityType.Builder.of(MatrixBlockEntity::new, ModBlocks.MATRIX.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<MetalFormerBlockEntity>> METAL_FORMER =
+            BLOCK_ENTITIES.register("metal_former", () ->
+                    BlockEntityType.Builder.of(MetalFormerBlockEntity::new, ModBlocks.METAL_FORMER.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

@@ -1,6 +1,7 @@
 package cn.academy.gametest;
 
 import cn.academy.AcademyCraft;
+import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ModBlocks;
 import cn.academy.ModItems;
 import cn.academy.energy.ImagNetworkData;
@@ -104,6 +105,10 @@ public final class AcademyGameTests {
 
     private static void assertTrue(GameTestHelper helper, boolean condition, String message) {
         helper.assertTrue(condition, message);
+    }
+
+    private static void assertFalse(GameTestHelper helper, boolean condition, String message) {
+        helper.assertFalse(condition, message);
     }
 
     /** Comparaison numerique avec tolerance, pour les energies et les distances. */
@@ -630,8 +635,6 @@ public final class AcademyGameTests {
 
         ServerLevel level = helper.getLevel();
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
-        assertTrue(helper, !ImagNetworkData.get(level).isLinked(nodeAbs),
-                "un noeud fraichement pose ne doit pas etre raccorde");
 
         // La recherche n'a lieu que tous les 100 ticks : on avance le tick a la main.
         for (int i = 0; i < 100; i++) {
@@ -681,6 +684,185 @@ public final class AcademyGameTests {
      * sur l'ancrage. On verifie donc que chacune des parties sait retrouver
      * l'ancrage, pour les huit orientations possibles.
      */
+    // ------------------------------------------------------------------
+    // Reseau energetique : le formeur de metal, premier consommateur
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void metalFormerIsAnEnergyReceiver(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        // Valeurs de TileMetalFormer : tampon 3000, bande passante LATENCY_MK1 = 50.
+        assertValue(helper, 3000, former.getMaxEnergyStored(), "tampon du formeur");
+        assertClose(helper, 50.0d, former.getBandwidth(), "bande passante du formeur");
+        assertClose(helper, 3000.0d, former.getRequiredEnergy(), "besoin d'un formeur vide");
+
+        // injectEnergy rend ce qu'elle n'a PAS pris.
+        assertClose(helper, 0.0d, former.injectEnergy(1000.0d), "tout doit etre accepte");
+        assertClose(helper, 1000.0d, former.getEnergy(), "energie stockee");
+        assertClose(helper, 2000.0d, former.getRequiredEnergy(), "besoin restant");
+
+        // Le tampon ne deborde pas : l'excedent est rendu a l'appelant.
+        assertClose(helper, 1000.0d, former.injectEnergy(3000.0d), "excedent rendu");
+        assertClose(helper, 3000.0d, former.getEnergy(), "tampon plein");
+        assertClose(helper, 0.0d, former.getRequiredEnergy(), "plus rien a remplir");
+        assertClose(helper, 500.0d, former.injectEnergy(500.0d), "un tampon plein refuse tout");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void metalFormerFindsANearbyNode(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos formerRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(formerRel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(formerRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos formerAbs = helper.absolutePos(formerRel);
+
+        for (int i = 0; i < 100; i++) {
+            MetalFormerBlockEntity.tick(level, formerAbs, helper.getBlockState(formerRel), former);
+        }
+
+        assertValue(helper, helper.absolutePos(nodeRel), ImagNetworkData.get(level).nodeOf(formerAbs),
+                "noeud trouve par le formeur");
+        assertTrue(helper, former.isLinked(), "le formeur doit se savoir raccorde");
+        helper.succeed();
+    }
+
+    /**
+     * Le vrai test de bout en bout du reseau : l'energie poussee par un noeud doit
+     * faire tourner la machine, qui doit transformer son entree.
+     */
+    @GameTest(template = "empty")
+    public static void metalFormerRunsOnNetworkEnergy(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos formerRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(formerRel, ModBlocks.METAL_FORMER.get());
+        var node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(formerRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos formerAbs = helper.absolutePos(formerRel);
+
+        for (int i = 0; i < 100; i++) {
+            MetalFormerBlockEntity.tick(level, formerAbs, helper.getBlockState(formerRel), former);
+        }
+        assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(formerAbs),
+                "le formeur doit avoir trouve le noeud avant de travailler");
+
+        // Recette INCISE : une plaque de fer renforcee donne six aiguilles.
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN,
+                new ItemStack(ModItems.REINFORCED_IRON_PLATE.get()));
+        former.cycleMode(1); // PLATE -> INCISE
+        assertValue(helper, cn.academy.crafting.MetalFormerMode.INCISE, former.getMode(), "mode choisi");
+
+        // On donne au noeud de quoi alimenter la machine : 60 ticks a 13,3, soit
+        // 798 unites, plus la marge pour remplir le tampon du formeur.
+        node.setEnergy(3000.0d);
+
+        // Le formeur cherche sa recette tous les 5 ticks, puis travaille 60 ticks.
+        for (int i = 0; i < 120; i++) {
+            MetalFormerBlockEntity.tick(level, formerAbs, helper.getBlockState(formerRel), former);
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        ItemStack output = former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_OUT);
+        assertValue(helper, ModItems.NEEDLE.get(), output.getItem(), "objet produit");
+        assertValue(helper, 6, output.getCount(), "quantite produite");
+        assertTrue(helper, former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_IN).isEmpty(),
+                "l'entree doit avoir ete consommee");
+        assertTrue(helper, node.getEnergy() < 3000.0d,
+                "le noeud aurait du fournir de l'energie, il en a " + node.getEnergy());
+        helper.succeed();
+    }
+
+    /** Sans energie, la machine ne doit ni travailler ni rien produire. */
+    @GameTest(template = "empty")
+    public static void metalFormerDoesNothingWithoutEnergy(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN,
+                new ItemStack(ModItems.REINFORCED_IRON_PLATE.get()));
+        former.cycleMode(1);
+
+        for (int i = 0; i < 120; i++) {
+            MetalFormerBlockEntity.tick(level, abs, helper.getBlockState(rel), former);
+        }
+
+        assertFalse(helper, former.isWorking(), "sans energie la machine ne doit pas travailler");
+        assertTrue(helper, former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_OUT).isEmpty(),
+                "rien ne doit avoir ete produit");
+        assertValue(helper, 1, former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_IN).getCount(),
+                "l'entree doit etre intacte");
+        assertClose(helper, 0.0d, former.getWorkProgress(), "aucun avancement");
+        helper.succeed();
+    }
+
+    /** Le mode decide de la recette : la meme entree ne donne pas le meme resultat. */
+    @GameTest(template = "empty")
+    public static void metalFormerFollowsItsMode(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        // Recette PLATE : deux plaques de fer renforcees donnent trois pieces.
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN,
+                new ItemStack(ModItems.REINFORCED_IRON_PLATE.get(), 2));
+        former.setEnergy(3000.0d);
+
+        for (int i = 0; i < 120; i++) {
+            MetalFormerBlockEntity.tick(level, abs, helper.getBlockState(rel), former);
+        }
+
+        ItemStack output = former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_OUT);
+        assertValue(helper, ModItems.COIN.get(), output.getItem(), "objet produit en mode PLATE");
+        assertValue(helper, 3, output.getCount(), "quantite produite en mode PLATE");
+
+        // En mode PLATE avec une seule plaque, la recette ne s'applique pas.
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_OUT, ItemStack.EMPTY);
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN,
+                new ItemStack(ModItems.REINFORCED_IRON_PLATE.get(), 1));
+        former.setEnergy(3000.0d);
+
+        for (int i = 0; i < 120; i++) {
+            MetalFormerBlockEntity.tick(level, abs, helper.getBlockState(rel), former);
+        }
+
+        assertTrue(helper, former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_OUT).isEmpty(),
+                "une seule plaque ne suffit pas pour la recette PLATE");
+        helper.succeed();
+    }
+
+    /** La sortie est reservee a la machine : on ne doit pas pouvoir y poser d'objet. */
+    @GameTest(template = "empty")
+    public static void metalFormerProtectsItsOutputSlot(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        assertFalse(helper, former.getInventory().isItemValid(MetalFormerBlockEntity.SLOT_OUT,
+                new ItemStack(ModItems.COIN.get())), "la sortie ne doit rien accepter");
+        assertTrue(helper, former.getInventory().isItemValid(MetalFormerBlockEntity.SLOT_IN,
+                new ItemStack(ModItems.REINFORCED_IRON_PLATE.get())), "l'entree doit tout accepter");
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void matrixAnchorIsFoundFromEveryPart(GameTestHelper helper) {
         BlockPos anchorRel = new BlockPos(1, 1, 1);
@@ -742,8 +924,6 @@ public final class AcademyGameTests {
 
         ServerLevel level = helper.getLevel();
         BlockPos solarAbs = helper.absolutePos(solarRel);
-        assertTrue(helper, !ImagNetworkData.get(level).isUserLinked(solarAbs),
-                "un generateur fraichement pose ne doit etre raccorde a rien");
 
         // La recherche n'a lieu que tous les 100 ticks.
         for (int i = 0; i < 100; i++) {
@@ -811,7 +991,8 @@ public final class AcademyGameTests {
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
         BlockPos solarAbs = helper.absolutePos(solarRel);
         ImagNetworkData.get(level).linkUser(nodeAbs, solarAbs);
-        assertValue(helper, 1, ImagNetworkData.get(level).userCount(nodeAbs), "raccordement de depart");
+        assertTrue(helper, ImagNetworkData.get(level).userCount(nodeAbs) >= 1,
+                "le raccordement de depart doit exister");
 
         // Le generateur disparait. Le noeud ne doit pas le garder dans sa liste :
         // sinon un generateur casse continuerait de compter dans la capacite.

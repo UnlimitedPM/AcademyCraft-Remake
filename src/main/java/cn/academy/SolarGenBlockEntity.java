@@ -3,10 +3,7 @@ package cn.academy;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import cn.academy.energy.BlockEntityScan;
 import cn.academy.energy.EnergyGenerator;
-import cn.academy.energy.ImagNetworkData;
-import cn.academy.energy.NodeBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -64,9 +61,6 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
 
     /** Facteur applique sous la pluie. */
     private static final double RAIN_FACTOR = 0.2d;
-
-    /** Rayon de recherche d'un noeud, reprit de WirelessHelper.getNodesInRange. */
-    private static final double NODE_SEARCH_RANGE = 20.0d;
 
     /** Cadence de recherche d'un noeud, en ticks. */
     private static final int NODE_SEARCH_INTERVAL = 100;
@@ -198,43 +192,12 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     }
 
     /**
-     * Verifie le raccordement et le repare au besoin : detache d'un noeud
-     * disparu, hors de portee ou plein, puis cherche le noeud le plus proche
-     * capable de l'accueillir.
+     * Verifie le raccordement et le repare au besoin. Le travail lui-meme est
+     * dans {@link cn.academy.energy.NodeFinder}, partage avec toutes les autres
+     * machines du reseau.
      */
     private void ensureLinked(ServerLevel level) {
-        ImagNetworkData data = ImagNetworkData.get(level);
-
-        BlockPos nodePos = data.nodeOf(worldPosition);
-        if (nodePos != null) {
-            NodeBlockEntity node = nodeAt(level, nodePos);
-            if (node != null && accepts(node, data)) {
-                setLinked(true);
-                return;
-            }
-            data.unlinkUser(worldPosition);
-        }
-
-        setLinked(false);
-
-        NodeBlockEntity found = BlockEntityScan.nearest(level, worldPosition, NODE_SEARCH_RANGE,
-                NodeBlockEntity.class, node -> accepts(node, data));
-        if (found != null && data.linkUser(found.getBlockPos(), worldPosition)) {
-            setLinked(true);
-        }
-    }
-
-    /** Un noeud nous accepte s'il est a portee et qu'il lui reste de la place. */
-    private boolean accepts(NodeBlockEntity node, ImagNetworkData data) {
-        double range = node.getRange();
-        if (worldPosition.distSqr(node.getBlockPos()) > range * range) return false;
-        return data.userCount(node.getBlockPos()) < node.getCapacity();
-    }
-
-    @Nullable
-    private static NodeBlockEntity nodeAt(Level level, BlockPos pos) {
-        if (!level.isLoaded(pos)) return null;
-        return level.getBlockEntity(pos) instanceof NodeBlockEntity node ? node : null;
+        setLinked(cn.academy.energy.NodeFinder.ensureLinked(level, worldPosition));
     }
 
     /**
