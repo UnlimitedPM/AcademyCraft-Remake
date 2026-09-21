@@ -100,6 +100,17 @@ const menus = scanJava('ModMenus.java').names;
 const fluidRegs = scanJava('ModFluids.java').names;
 const tabs = scanJava('ModCreativeTabs.java').names;
 
+// FLUIDS.register(...) et FLUID_TYPES.register(...) sont dans le meme fichier :
+// seuls les seconds portent une cle de langue.
+const fluidTypes = new Set();
+{
+  const fluidsSrc = readText(path.join(SRC, 'ModFluids.java')) ?? '';
+  for (const line of fluidsSrc.split(/\r?\n/)) {
+    const m = line.match(/\bFLUID_TYPES\.register\(\s*"([a-z][a-z0-9_]*)"/);
+    if (m) fluidTypes.add(m[1]);
+  }
+}
+
 // Bloc de fluide : pas d'item, pas de blockstate, pas de loot table.
 const blocksNeedingNoItem = new Set(['phase_liquid']);
 
@@ -113,9 +124,10 @@ for (const b of [...blocks].sort()) {
   }
 }
 
-// Tout item a besoin d'un modele d'item (y compris les BlockItem :
-// models/item/<bloc>.json avec un parent vers academy:block/<bloc>).
-const needsItemModel = new Set(items);
+// Tout item a besoin d'un modele d'item, y compris les BlockItem crees
+// implicitement par registerBlock : models/item/<bloc>.json avec un parent vers
+// academy:block/<bloc>.
+const needsItemModel = new Set([...items, ...autoBlockItems]);
 
 
 // ---------------------------------------------------------------------------
@@ -170,12 +182,27 @@ function resolveModelRef(refPath, fromFile, depth = 0) {
   }
   const model = parsed.value;
 
-  if (model.parent) {
-    const parent = String(model.parent);
-    if (parent.startsWith(`${MODID}:`)) {
-      resolveModelRef(parent.slice(MODID.length + 1), file, depth + 1);
+  // Le parent, mais aussi les sous-modeles references ailleurs : les entrees
+  // "overrides" d'un modele d'item pointent vers d'autres modeles
+  // (icone pleine / a moitie / vide, face avant / arriere d'une piece...).
+  const referenced = [];
+  const collectModels = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) return node.forEach(collectModels);
+    for (const [key, value] of Object.entries(node)) {
+      if (key === 'model' && typeof value === 'string') referenced.push(value);
+      else collectModels(value);
     }
-    // parent sans namespace ou minecraft:/forge: => vanilla, ignore
+  };
+  collectModels(model);
+  if (typeof model.parent === 'string') referenced.push(model.parent);
+
+  for (const ref of referenced) {
+    if (ref.startsWith(`minecraft:`) || ref.startsWith('forge:')) continue;
+    // Les modeles OBJ de Forge sont references avec leur extension
+    // ("academy:models/ip_gen.obj") : ce ne sont pas des .json a resoudre.
+    if (/\.(obj|json)$/i.test(ref)) continue;
+    if (ref.startsWith(`${MODID}:`)) resolveModelRef(ref.slice(MODID.length + 1), file, depth + 1);
   }
 
   if (model.textures && typeof model.textures === 'object') {
@@ -194,14 +221,19 @@ function resolveModelRef(refPath, fromFile, depth = 0) {
   }
 }
 
-// Les blockstates pointent vers des modeles de bloc
+// Les blockstates des blocs enregistres sont les points d'entree des modeles de
+// bloc. Ceux qui ne correspondent a aucun bloc sont signales a part
+// ("blockstate orphelin") : ce sont des restes, Minecraft les ignore.
 for (const file of walk(blockstateDir, (f) => f.endsWith('.json'))) {
+  const stem = path.basename(file, '.json');
   const parsed = readJson(file);
   const name = path.basename(file);
   if (parsed.broken) {
     add('CASSE', 'json', name, parsed.broken);
     continue;
   }
+  if (!blocks.has(stem)) continue; // orphelin : deja signale au §2
+
   const models = [];
   const collect = (node) => {
     if (!node || typeof node !== 'object') return;
@@ -217,17 +249,29 @@ for (const file of walk(blockstateDir, (f) => f.endsWith('.json'))) {
   }
 }
 
-// Tous les modeles de bloc / d'item doivent etre eux-memes valides + textures resolues
-const allModelFiles = [
-  ...walk(path.join(ASSETS, 'models/block'), (f) => f.endsWith('.json')),
-  ...walk(path.join(ASSETS, 'models/item'), (f) => f.endsWith('.json')),
-];
-for (const file of allModelFiles) {
-  const rel = norm(path.relative(path.join(ASSETS, 'models'), file)).replace(/\.json$/, '');
-  if (!modelRefs.has(rel)) {
-    // modele non atteint depuis un blockstate/item : on le scanne quand meme
-    resolveModelRef(rel, file);
+// Les modeles d'item sont les points d'entree cote item : ils ne sont
+// references par aucun JSON, mais par le registre d'items.
+for (const i of [...needsItemModel].sort()) {
+  resolveModelRef(`item/${i}`, path.join(itemModelDir, `${i}.json`));
+}
+
+// Modeles orphelins : fichiers jamais atteints depuis un blockstate ou un item.
+// A calculer AVANT la passe de validation du §4ter, qui elle parcourt tout.
+const orphans = [];
+{
+  const modelsRoot = path.join(ASSETS, 'models');
+  for (const file of walk(modelsRoot, (f) => f.endsWith('.json'))) {
+    const rel = norm(path.relative(modelsRoot, file)).replace(/\.json$/, '');
+    if (!modelRefs.has(rel)) orphans.push(rel);
   }
+}
+for (const o of orphans.sort()) add('INFO', 'modele orphelin', o);
+
+// Passes separees, uniquement pour valider le contenu : un modele mort dont la
+// texture est cassee reste un probleme a signaler.
+for (const file of walk(path.join(ASSETS, 'models'), (f) => f.endsWith('.json'))) {
+  const rel = norm(path.relative(path.join(ASSETS, 'models'), file)).replace(/\.json$/, '');
+  if (!modelRefs.has(rel)) resolveModelRef(rel, file);
 }
 
 for (const { ref, from } of unresolved) {
@@ -253,15 +297,6 @@ for (const [rel, sources] of [...textureRefs].sort()) {
     );
 }
 
-// Modeles orphelins (fichiers jamais references)
-const referencedModelNames = new Set([...modelRefs]);
-const orphans = [];
-for (const file of walk(path.join(ASSETS, 'models'), (f) => f.endsWith('.json'))) {
-  const rel = norm(path.relative(path.join(ASSETS, 'models'), file)).replace(/\.json$/, '');
-  if (!referencedModelNames.has(rel)) orphans.push(rel);
-}
-for (const o of orphans.sort()) add('INFO', 'modele orphelin', o);
-
 // ---------------------------------------------------------------------------
 // 5. Langue
 // ---------------------------------------------------------------------------
@@ -286,16 +321,30 @@ if (lang.missing) {
     if (keys.has(k)) add('OK', 'lang item', i);
     else add('MANQUANT', 'lang item', i, k);
   }
-  for (const f of [...fluidRegs].sort()) {
+  // Seuls les FluidType ont une cle de langue (les ids de Fluid n'en ont pas),
+  // et le code peut remplacer cette cle via descriptionId("...").
+  const fluidsSrcText = readText(path.join(SRC, 'ModFluids.java')) ?? '';
+  const declaredDescriptionIds = [...fluidsSrcText.matchAll(/descriptionId\(\s*"([^"]+)"/g)]
+    .map((m) => m[1]);
+  for (const f of [...fluidTypes].sort()) {
     const k = `fluid_type.${MODID}.${f}`;
     if (keys.has(k)) add('OK', 'lang fluid', f);
-    else add('INFO', 'lang fluid', f, k);
+    else if (declaredDescriptionIds.some((d) => keys.has(d))) {
+      add('OK', 'lang fluid', f);
+    } else {
+      add('INFO', 'lang fluid', f, `${k} (ou descriptionId explicite)`);
+    }
   }
   for (const t of [...tabs].sort()) {
-    const candidates = [
+    // La cle reelle est celle passee a Component.translatable("...") dans
+    // ModCreativeTabs.java : on la lit au lieu de la deviner.
+    const tabSource = readText(path.join(SRC, 'ModCreativeTabs.java')) ?? '';
+    const declaredKeys = [...tabSource.matchAll(/Component\.translatable\(\s*"([^"]+)"/g)].map((m) => m[1]);
+    const candidates = [...new Set([
+      ...declaredKeys,
       `itemGroup.${MODID}.${t}`,
-      `itemGroup.${MODID}.${t.replace(/_tab$/, '')}`,
-    ];
+      `itemGroup.${t}`,
+    ])];
     if (candidates.some((c) => keys.has(c))) add('OK', 'lang tab', t);
     else add('INFO', 'lang tab', t, candidates.join(' | '));
   }
