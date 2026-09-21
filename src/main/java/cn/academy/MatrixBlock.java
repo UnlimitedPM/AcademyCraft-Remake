@@ -1,7 +1,10 @@
 package cn.academy;
 
+import cn.academy.energy.ImagNetworkData;
+import cn.academy.energy.MatrixBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -9,14 +12,18 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.util.StringRepresentable;
 import org.jetbrains.annotations.Nullable;
 
-public class MatrixBlock extends HorizontalDirectionalBlock {
+public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final EnumProperty<MatrixPart> PART = EnumProperty.create("part", MatrixPart.class);
 
     public MatrixBlock(Properties props) {
@@ -109,6 +116,15 @@ public class MatrixBlock extends HorizontalDirectionalBlock {
             Direction back = facing.getOpposite();
             MatrixPart part = state.getValue(PART);
 
+            // Le reseau est detache en premier, et sans passer par le block
+            // entity : au moment ou onRemove est appele, rien ne garantit que
+            // celui-ci soit encore en place. La donnee de sauvegarde suffit.
+            // Les noeuds se rendront compte tout seuls au bout de quelques
+            // secondes et chercheront un autre Matrix.
+            if (part == MatrixPart.B_F_R && level instanceof ServerLevel server) {
+                ImagNetworkData.get(server).removeMatrix(pos);
+            }
+
             if (part == MatrixPart.B_F_R) {
                 // La base part, on nettoie tout le reste en silence
                 for (MatrixPart p : MatrixPart.values()) {
@@ -135,5 +151,29 @@ public class MatrixBlock extends HorizontalDirectionalBlock {
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING, PART);
+    }
+
+    // ------------------------------------------------------------------
+    // Block entity
+    // ------------------------------------------------------------------
+
+    /**
+     * Un seul block entity pour le multi-bloc : celui de la partie d'ancrage
+     * {@code B_F_R}. Les sept autres parties n'en ont pas, sinon chacune aurait
+     * son propre tampon et son propre reseau.
+     */
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return state.getValue(PART) == MatrixPart.B_F_R ? new MatrixBlockEntity(pos, state) : null;
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        if (level.isClientSide || state.getValue(PART) != MatrixPart.B_F_R) return null;
+        return (lvl, pos, st, be) -> {
+            if (be instanceof MatrixBlockEntity matrix) MatrixBlockEntity.serverTick(lvl, pos, st, matrix);
+        };
     }
 }

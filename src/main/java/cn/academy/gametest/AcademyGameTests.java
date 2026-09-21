@@ -3,6 +3,9 @@ package cn.academy.gametest;
 import cn.academy.AcademyCraft;
 import cn.academy.ModBlocks;
 import cn.academy.ModItems;
+import cn.academy.energy.ImagNetworkData;
+import cn.academy.energy.MatrixBlockEntity;
+import cn.academy.energy.NodeBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -10,6 +13,8 @@ import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.feature.LakeFeature;
@@ -402,6 +407,281 @@ public final class AcademyGameTests {
         assertTrue(helper, node.getEnergy() < 10000.0d,
                 "le noeud aurait du se decharger, energie = " + node.getEnergy());
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Reseau energetique : le Matrix sans fil
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void matrixHasABlockEntity(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.MATRIX.get());
+
+        var be = helper.getBlockEntity(rel);
+        assertTrue(helper, be instanceof MatrixBlockEntity,
+                "matrix doit porter un MatrixBlockEntity, trouve : " + be);
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void matrixNeedsACoreAndThreePlates(GameTestHelper helper) {
+        MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));
+
+        assertTrue(helper, !matrix.isWorking(), "un Matrix vide ne doit pas fonctionner");
+        assertValue(helper, 0, matrix.getCapacity(), "capacite sans coeur");
+        assertClose(helper, 0.0d, matrix.getBandwidth(), "bande passante sans coeur");
+        assertClose(helper, 0.0d, matrix.getRange(), "portee sans coeur");
+
+        // Les trois plaques sans coeur ne suffisent pas.
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+        assertTrue(helper, !matrix.isWorking(), "trois plaques sans coeur ne suffisent pas");
+
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_1.get()));
+        assertTrue(helper, matrix.isWorking(), "coeur plus trois plaques = Matrix actif");
+
+        // Une plaque en moins et tout s'arrete.
+        matrix.getInventory().setStackInSlot(1, ItemStack.EMPTY);
+        assertTrue(helper, !matrix.isWorking(), "deux plaques ne suffisent pas");
+        helper.succeed();
+    }
+
+    /**
+     * Les chiffres viennent de TileMatrix : capacite 8 x niveau, bande passante
+     * 60 x niveau au carre, portee 24 x racine du niveau.
+     */
+    @GameTest(template = "empty")
+    public static void matrixStatsFollowTheCoreLevel(GameTestHelper helper) {
+        MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_0.get()));
+        assertValue(helper, 1, matrix.getCoreLevel(), "niveau de mat_core_0");
+        assertValue(helper, 8, matrix.getCapacity(), "capacite niveau 1");
+        assertClose(helper, 60.0d, matrix.getBandwidth(), "bande passante niveau 1");
+        assertClose(helper, 24.0d, matrix.getRange(), "portee niveau 1");
+
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_1.get()));
+        assertValue(helper, 2, matrix.getCoreLevel(), "niveau de mat_core_1");
+        assertValue(helper, 16, matrix.getCapacity(), "capacite niveau 2");
+        assertClose(helper, 240.0d, matrix.getBandwidth(), "bande passante niveau 2");
+        assertClose(helper, 24.0d * Math.sqrt(2.0d), matrix.getRange(), "portee niveau 2");
+
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_2.get()));
+        assertValue(helper, 3, matrix.getCoreLevel(), "niveau de mat_core_2");
+        assertValue(helper, 24, matrix.getCapacity(), "capacite niveau 3");
+        assertClose(helper, 540.0d, matrix.getBandwidth(), "bande passante niveau 3");
+        assertClose(helper, MatrixBlockEntity.MAX_RANGE, matrix.getRange(), "portee niveau 3");
+        helper.succeed();
+    }
+
+    /** La portee depend du coeur : un noeud trop loin ne peut pas etre raccorde. */
+    @GameTest(template = "empty")
+    public static void matrixRangeLimitsLinking(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        MatrixBlockEntity matrix = placeMatrix(helper, rel);
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_0.get()));
+
+        BlockPos anchor = helper.absolutePos(rel);
+        // Portee 24 au niveau 1 : a 10 blocs on est dedans, a 30 on est dehors.
+        assertTrue(helper, matrix.canReach(anchor.offset(10, 0, 0)), "un noeud a 10 blocs doit etre a portee");
+        assertTrue(helper, matrix.canReach(anchor.offset(0, 10, 10)), "la portee tient compte de la hauteur");
+        assertTrue(helper, !matrix.canReach(anchor.offset(30, 0, 0)), "un noeud a 30 blocs doit etre hors portee");
+
+        // Sans coeur la portee est nulle : plus rien n'est a portee.
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, ItemStack.EMPTY);
+        assertTrue(helper, !matrix.canReach(anchor.offset(1, 0, 0)), "sans coeur rien n'est a portee");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void matrixAcceptsOnlyPlatesAndCores(GameTestHelper helper) {
+        MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));
+        var inventory = matrix.getInventory();
+        ItemStack stone = new ItemStack(net.minecraft.world.item.Items.STONE);
+
+        assertTrue(helper, inventory.isItemValid(0, new ItemStack(ModItems.CONSTRAINT_PLATE.get())),
+                "une plaque de contrainte doit etre acceptee en emplacement 0");
+        assertTrue(helper, inventory.isItemValid(2, new ItemStack(ModItems.CONSTRAINT_PLATE.get())),
+                "une plaque de contrainte doit etre acceptee en emplacement 2");
+        assertTrue(helper, !inventory.isItemValid(0, stone),
+                "la pierre ne doit pas entrer dans un emplacement de plaque");
+
+        assertTrue(helper, inventory.isItemValid(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_2.get())),
+                "un coeur de matrice doit etre accepte");
+        assertTrue(helper, !inventory.isItemValid(MatrixBlockEntity.SLOT_CORE, stone),
+                "la pierre ne doit pas entrer dans l'emplacement du coeur");
+
+        // Un emplacement de plaque n'accepte pas un coeur : les deux roles sont
+        // distincts, comme dans l'original.
+        assertTrue(helper, !inventory.isItemValid(1, new ItemStack(ModItems.MAT_CORE_0.get())),
+                "un coeur ne doit pas entrer dans un emplacement de plaque");
+        helper.succeed();
+    }
+
+    /** Un Matrix sans coeur ne peut atteindre personne : ses liens doivent tomber. */
+    @GameTest(template = "empty")
+    public static void matrixDropsLinksItCannotHonour(GameTestHelper helper) {
+        BlockPos matrixRel = new BlockPos(0, 1, 0);
+        BlockPos nodeRel = new BlockPos(2, 1, 2);
+        MatrixBlockEntity matrix = placeMatrix(helper, matrixRel);
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+
+        ServerLevel level = helper.getLevel();
+        ImagNetworkData data = ImagNetworkData.get(level);
+        BlockPos matrixAbs = helper.absolutePos(matrixRel);
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        data.link(matrixAbs, nodeAbs);
+        assertTrue(helper, data.isLinked(nodeAbs), "le lien de depart doit exister");
+
+        MatrixBlockEntity.serverTick(level, matrixAbs, helper.getBlockState(matrixRel), matrix);
+
+        assertTrue(helper, !data.isLinked(nodeAbs),
+                "un Matrix inactif doit lacher ses noeuds au lieu de les garder pour rien");
+        helper.succeed();
+    }
+
+    /**
+     * Le vrai test du reseau : deux noeuds a des niveaux tres differents doivent
+     * se rapprocher. C'est le seul endroit ou le Matrix, le registre des liens et
+     * l'algorithme d'equilibrage travaillent ensemble.
+     */
+    @GameTest(template = "empty")
+    public static void matrixBalancesItsLinkedNodes(GameTestHelper helper) {
+        BlockPos matrixRel = new BlockPos(0, 1, 0);
+        BlockPos fullRel = new BlockPos(1, 1, 0);
+        BlockPos emptyRel = new BlockPos(2, 1, 0);
+
+        MatrixBlockEntity matrix = placeMatrix(helper, matrixRel);
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_2.get()));
+
+        helper.setBlock(fullRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(emptyRel, ModBlocks.NODE_BASIC.get());
+        NodeBlockEntity full = (NodeBlockEntity) helper.getBlockEntity(fullRel);
+        NodeBlockEntity empty = (NodeBlockEntity) helper.getBlockEntity(emptyRel);
+
+        full.setEnergy(full.getMaxEnergy());
+        empty.setEnergy(0.0d);
+
+        ServerLevel level = helper.getLevel();
+        ImagNetworkData data = ImagNetworkData.get(level);
+        BlockPos matrixAbs = helper.absolutePos(matrixRel);
+        data.link(matrixAbs, helper.absolutePos(fullRel));
+        data.link(matrixAbs, helper.absolutePos(emptyRel));
+
+        // On mesure sur l'ensemble du reseau et non sur nos deux noeuds : les
+        // tests partagent le meme monde, un noeud voisin peut venir s'ajouter.
+        java.util.List<NodeBlockEntity> network = new java.util.ArrayList<>();
+        for (BlockPos nodePos : data.nodesOf(matrixAbs)) {
+            if (level.getBlockEntity(nodePos) instanceof NodeBlockEntity member) network.add(member);
+        }
+        double totalBefore = 0.0d;
+        for (NodeBlockEntity member : network) totalBefore += member.getEnergy();
+        double bufferBefore = matrix.getBuffer();
+
+        for (int i = 0; i < 300; i++) {
+            MatrixBlockEntity.serverTick(level, matrixAbs, helper.getBlockState(matrixRel), matrix);
+        }
+
+        assertTrue(helper, empty.getEnergy() > 0.0d,
+                "le noeud vide aurait du recevoir de l'energie, energie = " + empty.getEnergy());
+        assertTrue(helper, full.getEnergy() < full.getMaxEnergy(),
+                "le noeud plein aurait du ceder de l'energie, energie = " + full.getEnergy());
+
+        double gap = Math.abs(full.getEnergy() - empty.getEnergy());
+        assertTrue(helper, gap < 500.0d,
+                "les deux noeuds auraient du converger, ecart restant = " + gap);
+
+        // L'invariant du reseau : ce que les noeuds ont gagne ou perdu se
+        // retrouve dans le tampon, ni plus ni moins.
+        double totalAfter = 0.0d;
+        for (NodeBlockEntity member : network) totalAfter += member.getEnergy();
+        assertClose(helper, totalAfter - totalBefore, matrix.getBuffer() - bufferBefore,
+                "energie deplacee vers le tampon");
+        helper.succeed();
+    }
+
+    /** Un noeud pose a cote d'un Matrix actif doit s'y raccorder tout seul. */
+    @GameTest(template = "empty")
+    public static void nodeFindsANearbyMatrix(GameTestHelper helper) {
+        BlockPos matrixRel = new BlockPos(1, 1, 0);
+        // Le noeud est colle au Matrix : c'est forcement le plus proche, donc
+        // celui qu'il doit choisir.
+        BlockPos nodeRel = new BlockPos(2, 1, 0);
+
+        MatrixBlockEntity matrix = placeMatrix(helper, matrixRel);
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_2.get()));
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        NodeBlockEntity node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        assertTrue(helper, !ImagNetworkData.get(level).isLinked(nodeAbs),
+                "un noeud fraichement pose ne doit pas etre raccorde");
+
+        // La recherche n'a lieu que tous les 100 ticks : on avance le tick a la main.
+        for (int i = 0; i < 100; i++) {
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        assertValue(helper, helper.absolutePos(matrixRel), ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "Matrix trouve par le noeud");
+        assertTrue(helper, node.isConnected(), "le noeud doit se savoir raccorde");
+        helper.succeed();
+    }
+
+    /**
+     * Un Matrix sans coeur ne doit raccrocher personne.
+     *
+     * L'assertion porte sur <b>notre</b> Matrix et non sur l'absence de
+     * raccordement du noeud : les tests partagent le meme monde, et un Matrix
+     * bien equipe d'une structure voisine serait a portee de recherche. Le
+     * voisinage est donc ignore volontairement, on ne juge que notre bloc.
+     */
+    @GameTest(template = "empty")
+    public static void nodeIgnoresAnInactiveMatrix(GameTestHelper helper) {
+        BlockPos matrixRel = new BlockPos(1, 1, 0);
+        BlockPos nodeRel = new BlockPos(2, 1, 0);
+
+        placeMatrix(helper, matrixRel);
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        NodeBlockEntity node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        for (int i = 0; i < 200; i++) {
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        assertValue(helper, 0, ImagNetworkData.get(level).nodeCount(helper.absolutePos(matrixRel)),
+                "un Matrix sans coeur ne doit attirer aucun noeud");
+        // On ne verifie pas que le noeud se croit deconnecte : il a pu se
+        // raccorder a un Matrix d'une structure voisine, ce qui est legitime.
+        // Ce qui compte ici est que le notre n'ait rien attire.
+        helper.succeed();
+    }
+
+    /** Pose un Matrix et rend son block entity, en verifiant qu'il existe. */
+    private static MatrixBlockEntity placeMatrix(GameTestHelper helper, BlockPos rel) {
+        helper.setBlock(rel, ModBlocks.MATRIX.get());
+        var be = helper.getBlockEntity(rel);
+        assertTrue(helper, be instanceof MatrixBlockEntity,
+                "matrix doit porter un MatrixBlockEntity, trouve : " + be);
+        return (MatrixBlockEntity) be;
     }
 
     // ------------------------------------------------------------------

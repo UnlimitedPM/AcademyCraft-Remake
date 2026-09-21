@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.energy.MatrixBlockEntity;
 import cn.academy.energy.NodeBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -30,7 +31,15 @@ public class ModBlockEntities {
                             ModBlocks.NODE_STANDARD.get(),
                             ModBlocks.NODE_ADVANCED.get()).build(null));
 
-    // AJOUTE CETTE MÉTHODE :
+    /**
+     * Le Matrix n'a de block entity que sur son bloc d'ancrage : le type est
+     * declare sur le bloc entier, mais {@code MatrixBlock.newBlockEntity}
+     * renvoie {@code null} pour les sept autres parties du multi-bloc.
+     */
+    public static final RegistryObject<BlockEntityType<MatrixBlockEntity>> MATRIX =
+            BLOCK_ENTITIES.register("matrix", () ->
+                    BlockEntityType.Builder.of(MatrixBlockEntity::new, ModBlocks.MATRIX.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }
