@@ -1,0 +1,11 @@
+{
+  "type": "forge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "academy:constraint_metal",
+    "academy:crystal_ore",
+    "academy:imagsil_ore",
+    "academy:reso_ore"
+  ],
+  "step": "underground_ores"
+}
