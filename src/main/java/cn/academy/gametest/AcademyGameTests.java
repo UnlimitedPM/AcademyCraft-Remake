@@ -101,6 +101,18 @@ public final class AcademyGameTests {
         helper.assertTrue(condition, message);
     }
 
+    /** Comparaison numerique avec tolerance, pour les energies et les distances. */
+    private static void assertClose(GameTestHelper helper, double expected, double actual, String what) {
+        helper.assertTrue(Math.abs(expected - actual) < 1.0e-6,
+                what + " : attendu " + expected + ", trouve " + actual);
+    }
+
+    /** Comparaison exacte, pour les enums et les proprietes de bloc. */
+    private static void assertValue(GameTestHelper helper, Object expected, Object actual, String what) {
+        helper.assertTrue(java.util.Objects.equals(expected, actual),
+                what + " : attendu " + expected + ", trouve " + actual);
+    }
+
     // ------------------------------------------------------------------
     // Worldgen : les minerais doivent exister dans les registres de datapack.
     // ------------------------------------------------------------------
@@ -246,6 +258,149 @@ public final class AcademyGameTests {
                     "academy:phase_liquid_lake present dans minecraft:plains alors que "
                             + "generatePhaseLiquid = false");
         }
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Reseau energetique : les noeuds sans fil
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void wirelessNodesAreBlockEntities(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+
+        var be = helper.getBlockEntity(rel);
+        assertTrue(helper, be instanceof cn.academy.energy.NodeBlockEntity,
+                "node_basic doit porter un NodeBlockEntity, trouve : " + be);
+
+        var node = (cn.academy.energy.NodeBlockEntity) be;
+        assertValue(helper, cn.academy.energy.NodeType.BASIC, node.getNodeType(), "qualite du noeud");
+        assertClose(helper, 15000.0d, node.getMaxEnergy(), "capacite du noeud basic");
+        assertClose(helper, 150.0d, node.getBandwidth(), "bande passante du noeud basic");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void wirelessNodeTypeComesFromTheBlock(GameTestHelper helper) {
+        BlockPos standard = new BlockPos(1, 1, 1);
+        BlockPos advanced = new BlockPos(2, 1, 1);
+        helper.setBlock(standard, ModBlocks.NODE_STANDARD.get());
+        helper.setBlock(advanced, ModBlocks.NODE_ADVANCED.get());
+
+        assertValue(helper, cn.academy.energy.NodeType.STANDARD,
+                ((cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(standard)).getNodeType(),
+                "node_standard");
+        assertValue(helper, cn.academy.energy.NodeType.ADVANCED,
+                ((cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(advanced)).getNodeType(),
+                "node_advanced");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void wirelessNodeStoresAndClampsEnergy(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        node.setEnergy(5000.0d);
+        assertClose(helper, 5000.0d, node.getEnergy(), "energie stockee");
+
+        // Au-dela de la capacite, la valeur est ramenee au maximum.
+        node.setEnergy(1.0e9d);
+        assertClose(helper, 15000.0d, node.getEnergy(), "energie plafonnee a la capacite");
+
+        // Sous zero, on retombe a zero.
+        node.setEnergy(-42.0d);
+        assertClose(helper, 0.0d, node.getEnergy(), "energie negative ramenee a zero");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void wirelessNodeEnergySurvivesReload(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_ADVANCED.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        node.setEnergy(12345.0d);
+        node.setConnected(true);
+
+        var reloaded = new cn.academy.energy.NodeBlockEntity(helper.absolutePos(rel),
+                helper.getBlockState(rel));
+        reloaded.load(node.saveWithoutMetadata());
+
+        assertClose(helper, 12345.0d, reloaded.getEnergy(), "energie apres rechargement");
+        assertTrue(helper, reloaded.isConnected(), "etat de connexion apres rechargement");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void wirelessNodeUpdatesItsBlockState(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        assertValue(helper, 0,
+                helper.getBlockState(rel).getValue(cn.academy.energy.NodeBlock.ENERGY_LEVEL),
+                "palier initial");
+
+        // La synchronisation de l'etat visuel n'a lieu que tous les 10 ticks,
+        // comme dans l'original : on fait donc avancer le tick manuellement.
+        node.setEnergy(15000.0d);
+        for (int i = 0; i < 10; i++) {
+            cn.academy.energy.NodeBlockEntity.serverTick(
+                    helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), node);
+        }
+        assertValue(helper, 4,
+                helper.getBlockState(rel).getValue(cn.academy.energy.NodeBlock.ENERGY_LEVEL),
+                "palier apres remplissage complet");
+
+        node.setEnergy(0.0d);
+        for (int i = 0; i < 10; i++) {
+            cn.academy.energy.NodeBlockEntity.serverTick(
+                    helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), node);
+        }
+        assertValue(helper, 0,
+                helper.getBlockState(rel).getValue(cn.academy.energy.NodeBlock.ENERGY_LEVEL),
+                "palier apres vidage");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void wirelessNodeChargesAndDischargesEnergyUnits(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        // Slot 0 : une unite d'energie pleine charge le noeud.
+        net.minecraft.world.item.ItemStack full = new net.minecraft.world.item.ItemStack(ModItems.ENERGY_UNIT.get());
+        cn.academy.ModItems.EnergyUnit.charge(full, cn.academy.ModItems.EnergyUnit.MAX_ENERGY);
+        node.getInventory().setStackInSlot(cn.academy.energy.NodeBlockEntity.SLOT_CHARGE_IN, full);
+
+        cn.academy.energy.NodeBlockEntity.serverTick(
+                helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), node);
+
+        assertTrue(helper, node.getEnergy() > 0.0d,
+                "le noeud aurait du se charger depuis l'unite d'energie, energie = " + node.getEnergy());
+        assertTrue(helper, cn.academy.ModItems.EnergyUnit.getEnergy(full) < cn.academy.ModItems.EnergyUnit.MAX_ENERGY,
+                "l'unite d'energie aurait du se decharger");
+
+        // Slot 1 : le noeud charge une unite vide. On vide d'abord le slot 0,
+        // sinon l'unite de charge continue d'alimenter le noeud pendant qu'il se
+        // decharge, et les deux mouvements s'annulent.
+        node.getInventory().setStackInSlot(cn.academy.energy.NodeBlockEntity.SLOT_CHARGE_IN,
+                net.minecraft.world.item.ItemStack.EMPTY);
+        node.setEnergy(10000.0d);
+        net.minecraft.world.item.ItemStack empty = new net.minecraft.world.item.ItemStack(ModItems.ENERGY_UNIT.get());
+        node.getInventory().setStackInSlot(cn.academy.energy.NodeBlockEntity.SLOT_CHARGE_OUT, empty);
+
+        cn.academy.energy.NodeBlockEntity.serverTick(
+                helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), node);
+
+        assertTrue(helper, cn.academy.ModItems.EnergyUnit.getEnergy(empty) > 0.0f,
+                "l'unite vide aurait du se charger depuis le noeud");
+        assertTrue(helper, node.getEnergy() < 10000.0d,
+                "le noeud aurait du se decharger, energie = " + node.getEnergy());
         helper.succeed();
     }
 

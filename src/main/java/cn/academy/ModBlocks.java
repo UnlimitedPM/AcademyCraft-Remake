@@ -1,5 +1,7 @@
 package cn.academy;
 
+import cn.academy.energy.NodeBlock;
+import cn.academy.energy.NodeType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -76,21 +78,21 @@ public class ModBlocks {
     public static final RegistryObject<Block> MATRIX = BLOCKS.register("matrix",
             () -> new MatrixBlock(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).noOcclusion()));
     public static final RegistryObject<Block> NODE_BASIC = BLOCKS.register("node_basic",
-            () -> new NodeBasicBlock(BlockBehaviour.Properties.of()
+            () -> new NodeBlock(NodeType.BASIC, BlockBehaviour.Properties.of()
                     .strength(3.0f)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL) // Optionnel: pour le bruit de métal comme les autres
             ));
 
     public static final RegistryObject<Block> NODE_STANDARD = BLOCKS.register("node_standard",
-            () -> new NodeStandardBlock(BlockBehaviour.Properties.of()
+            () -> new NodeBlock(NodeType.STANDARD, BlockBehaviour.Properties.of()
                     .strength(3.0f)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL)
             ));
 
     public static final RegistryObject<Block> NODE_ADVANCED = BLOCKS.register("node_advanced",
-            () -> new NodeAdvancedBlock(BlockBehaviour.Properties.of()
+            () -> new NodeBlock(NodeType.ADVANCED, BlockBehaviour.Properties.of()
                     .strength(3.0f)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL)
