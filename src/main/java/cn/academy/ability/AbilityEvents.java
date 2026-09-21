@@ -32,7 +32,7 @@ public class AbilityEvents {
     @SubscribeEvent
     public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof Player) {
-            event.addCapability(new ResourceLocation(AcademyCraft.MOD_ID, "ability_data"), new AbilityDataProvider());
+            event.addCapability(ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "ability_data"), new AbilityDataProvider());
         }
     }
 

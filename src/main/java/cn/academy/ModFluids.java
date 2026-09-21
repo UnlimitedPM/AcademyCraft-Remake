@@ -31,8 +31,8 @@ public class ModFluids {
                 public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
                     consumer.accept(new IClientFluidTypeExtensions() {
                         // Syntaxe compatible 1.20.1 pour éviter les erreurs de version
-                        private static final ResourceLocation STILL = new ResourceLocation(AcademyCraft.MOD_ID, "block/phase_liquid");
-                        private static final ResourceLocation FLOW = new ResourceLocation(AcademyCraft.MOD_ID, "block/phase_liquid");
+                        private static final ResourceLocation STILL = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/phase_liquid");
+                        private static final ResourceLocation FLOW = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/phase_liquid");
 
                         @Override
                         public ResourceLocation getStillTexture() { return STILL; }

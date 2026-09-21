@@ -210,14 +210,51 @@ public class ModItems {
                 public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
                     ItemStack energyUnit = player.getOffhandItem(); // Energy Unit en main gauche
                     if (energyUnit.getItem() == ModItems.ENERGY_UNIT.get()) {
-                        CompoundTag tag = energyUnit.getOrCreateTag();
-                        float current = tag.getFloat("ac_energy");
-                        tag.putFloat("ac_energy", Math.min(current + 5000, 10000)); // Ajoute 50%
+                        EnergyUnit.charge(energyUnit, EnergyUnit.MAX_ENERGY * 0.5f);
                         return InteractionResultHolder.success(player.getItemInHand(hand));
                     }
                     return InteractionResultHolder.pass(player.getItemInHand(hand));
                 }
             });
+
+    /**
+     * Etat de l'unite d'energie, porte par le NBT {@code ac_energy}.
+     *
+     * L'original (1.12.2) utilisait {@code ItemEnergyBase(10000, 20)} avec des
+     * degats d'objet pour l'icone. En 1.20.1 on stocke l'energie en NBT et on
+     * expose l'etat via la propriete d'item {@code academy:energy}
+     * (voir {@link ModItemProperties}).
+     */
+    public static final class EnergyUnit {
+        private EnergyUnit() {}
+
+        public static final float MAX_ENERGY = 10000f;
+        public static final float BANDWIDTH = 20f;
+        private static final String KEY = "ac_energy";
+
+        public static float getEnergy(ItemStack stack) {
+            return stack.getTag() != null ? stack.getTag().getFloat(KEY) : 0f;
+        }
+
+        /** Ajoute de l'energie sans depasser {@link #MAX_ENERGY}. Retourne le nouveau niveau. */
+        public static float charge(ItemStack stack, float amount) {
+            float updated = Math.min(getEnergy(stack) + amount, MAX_ENERGY);
+            stack.getOrCreateTag().putFloat(KEY, updated);
+            return updated;
+        }
+
+        /** Retire de l'energie. Retourne la quantite reellement retiree. */
+        public static float discharge(ItemStack stack, float amount) {
+            float available = getEnergy(stack);
+            float taken = Math.min(available, amount);
+            stack.getOrCreateTag().putFloat(KEY, available - taken);
+            return taken;
+        }
+
+        public static boolean isFull(ItemStack stack) {
+            return getEnergy(stack) >= MAX_ENERGY;
+        }
+    }
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

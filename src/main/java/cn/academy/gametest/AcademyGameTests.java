@@ -99,7 +99,7 @@ public final class AcademyGameTests {
         var placed = access.registryOrThrow(Registries.PLACED_FEATURE);
 
         for (String ore : new String[]{"constraint_metal", "crystal_ore", "imagsil_ore", "reso_ore"}) {
-            ResourceLocation rl = new ResourceLocation(AcademyCraft.MOD_ID, ore);
+            ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, ore);
             assertTrue(helper, configured.containsKey(rl), "configured_feature manquante : " + rl);
             assertTrue(helper, placed.containsKey(rl), "placed_feature manquante : " + rl);
         }
@@ -114,7 +114,7 @@ public final class AcademyGameTests {
     public static void oreBlocksHaveLootTables(GameTestHelper helper) {
         var lootData = helper.getLevel().getServer().getLootData();
         for (String ore : new String[]{"constraint_metal", "crystal_ore", "imagsil_ore", "reso_ore"}) {
-            ResourceLocation rl = new ResourceLocation(AcademyCraft.MOD_ID, "blocks/" + ore);
+            ResourceLocation rl = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "blocks/" + ore);
             assertTrue(helper, lootData.getElementOptional(LootDataType.TABLE, rl).isPresent(),
                     "loot table manquante : " + rl);
         }

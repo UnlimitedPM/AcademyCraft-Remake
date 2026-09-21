@@ -394,9 +394,68 @@ if (!mainSrc) {
     ['ModBlockEntities', 'ModBlockEntities'],
     ['ModCreativeTabs', 'ModCreativeTabs'],
     ['ModMenus', 'ModMenus'],
+    ['ConfigurableFeatureBiomeModifier', 'ConfigurableFeatureBiomeModifier'],
   ]) {
-    if (new RegExp(`${cls}\\.register\\s*\\(`).test(mainSrc)) add('OK', 'registre branche', label);
+    if (new RegExp(`${cls}\\.(?:SERIALIZERS\\.)?register\\s*\\(`).test(mainSrc)) add('OK', 'registre branche', label);
     else add('CASSE', 'registre branche', label, `${cls}.register(...) absent de AcademyCraft.java -> le contenu est invisible en jeu`);
+  }
+  if (/Config\.SPEC/.test(mainSrc)) add('OK', 'registre branche', 'Config.SPEC');
+  else add('CASSE', 'registre branche', 'Config.SPEC', 'Config.SPEC non enregistre -> aucun fichier de config cree');
+}
+
+// ---------------------------------------------------------------------------
+// 9bis. Hooks publiques jamais appeles. Meme famille de bug que ci-dessus :
+//       une methode d'initialisation existe mais personne ne l'appelle.
+//       Les methodes @SubscribeEvent sont appelees par Forge par reflexion :
+//       elles ne comptent pas.
+// ---------------------------------------------------------------------------
+const HOOK_METHOD = /^\s*public\s+static\s+void\s+([a-zA-Z][a-zA-Z0-9_]*)\s*\(/;
+// Les tests sont invoques par le framework via reflexion, pas par du code.
+const hookFiles = walk(SRC, (f) => /\.java$/.test(f) && !/[\\/]gametest[\\/]/.test(f));
+
+const allSourceFiles = walk(SRC, (f) => f.endsWith('.java'));
+
+for (const file of hookFiles) {
+  const src = readText(file) ?? '';
+  const fileLabel = norm(path.relative(SRC, file));
+  const lines = src.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(HOOK_METHOD);
+    if (!m) continue;
+    const name = m[1];
+    if (name === 'register') continue; // deja couvert par le test 9
+
+    // Remonte les annotations juste au-dessus pour detecter @SubscribeEvent.
+    let annotated = false;
+    for (let j = i - 1; j >= 0; j--) {
+      const prev = lines[j].trim();
+      if (prev === '') continue;
+      if (prev.startsWith('@')) {
+        if (/@SubscribeEvent/.test(prev)) annotated = true;
+        continue;
+      }
+      break;
+    }
+    if (annotated) continue;
+
+    // Appel direct (X.name() ) ou reference de methode (X::name).
+    const outside = allSourceFiles
+      .filter((f) => f !== file)
+      .map((f) => readText(f) ?? '')
+      .join('\n');
+    const called =
+      new RegExp(`(?:\\.|::)${name}\\s*(?:\\(|[,;)])`).test(outside) ||
+      new RegExp(`\\b${name}\\s*\\(`).test(outside);
+
+    if (called) add('OK', 'hook appele', `${fileLabel}#${name}`);
+    else
+      add(
+        'CASSE',
+        'hook jamais appele',
+        `${fileLabel}#${name}`,
+        "methode publique d'initialisation que personne n'appelle (code mort en jeu)",
+      );
   }
 }
 

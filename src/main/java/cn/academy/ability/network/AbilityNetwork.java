@@ -10,7 +10,7 @@ public class AbilityNetwork {
     private static final String PROTOCOL_VERSION = "1";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(AcademyCraft.MOD_ID, "ability_main"),
+            ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "ability_main"),
             () -> PROTOCOL_VERSION,
             PROTOCOL_VERSION::equals,
             PROTOCOL_VERSION::equals

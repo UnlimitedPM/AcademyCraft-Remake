@@ -20,8 +20,8 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 public class AcademyCraft {
     public static final String MOD_ID = "academy";
 
-    public AcademyCraft() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public AcademyCraft(FMLJavaModLoadingContext context) {
+        IEventBus modEventBus = context.getModEventBus();
 
         ModFluids.register(modEventBus);
         ModBlocks.register(modEventBus);
@@ -34,20 +34,19 @@ public class AcademyCraft {
         modEventBus.addListener(cn.academy.ability.AbilityInit::init);
 
         // Sans cette ligne, le fichier config/academy-common.toml n'est jamais cree.
-        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
-                net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
+        context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
     }
 
-    // Garde tes événements de gameplay ici (Forge Bus)
+    // Garde tes ??v??nements de gameplay ici (Forge Bus)
     @SubscribeEvent
     public void onBucketFill(FillBucketEvent event) { /* ... */ }
 
     @SubscribeEvent
     public void onLivingTick(LivingEvent.LivingTickEvent event) { /* ... */ }
 
-    // DÉPLACE LE RENDU ICI (Mod Bus + Client Only)
+    // D??PLACE LE RENDU ICI (Mod Bus + Client Only)
     @Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
@@ -57,8 +56,12 @@ public class AcademyCraft {
 
         @SubscribeEvent
         public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
-            event.enqueueWork(() ->
-                    net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.SOLAR_GEN.get(), SolarGenScreen::new));
+            event.enqueueWork(() -> {
+                net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.SOLAR_GEN.get(), SolarGenScreen::new);
+                // Sans cet appel, l'unite d'energie gardait toujours sa texture pleine :
+                // la propriete d'item "academy:energy" n'etait jamais enregistree.
+                ModItemProperties.addCustomItemProperties();
+            });
         }
     }
 }

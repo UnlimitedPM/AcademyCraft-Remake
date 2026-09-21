@@ -3,21 +3,24 @@ package cn.academy;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 
+/**
+ * Proprietes d'item cote client (choix de texture selon l'etat).
+ *
+ * Doit etre appele depuis {@code FMLClientSetupEvent} : sans cet appel la
+ * propriete n'est jamais enregistree et l'objet garde toujours la meme texture.
+ */
 public class ModItemProperties {
-    public static void addCustomItemProperties() {
-        // Version corrigée sans warning : on fusionne les deux strings avec ":"
-        ItemProperties.register(ModItems.ENERGY_UNIT.get(),
-                new ResourceLocation(AcademyCraft.MOD_ID + ":energy"),
-                (stack, level, entity, seed) -> {
-                    if (stack.getTag() != null && stack.getTag().contains("ac_energy")) {
-                        float energy = stack.getTag().getFloat("ac_energy");
-                        float maxEnergy = 10000.0f;
-                        float ratio = energy / maxEnergy;
 
-                        if (ratio >= 1.0f) return 1.0f; // Texture "full"
-                        if (ratio >= 0.1f) return 0.5f; // Texture "half"
-                    }
-                    return 0.0f; // Texture "empty"
+    public static void addCustomItemProperties() {
+        // academy:energy pilote la texture de l'unite d'energie :
+        // 1.0 = pleine, 0.5 = a moitie, 0.0 = vide.
+        ItemProperties.register(ModItems.ENERGY_UNIT.get(),
+                ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "energy"),
+                (stack, level, entity, seed) -> {
+                    float ratio = ModItems.EnergyUnit.getEnergy(stack) / ModItems.EnergyUnit.MAX_ENERGY;
+                    if (ratio >= 1.0f) return 1.0f;
+                    if (ratio > 0.0f) return 0.5f;
+                    return 0.0f;
                 });
     }
 }
