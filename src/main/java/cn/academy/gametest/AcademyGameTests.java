@@ -675,6 +675,36 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Le Matrix est un multi-bloc 2x2x2 : le clic du joueur peut tomber sur
+     * n'importe laquelle des huit parties, mais le block entity et l'ecran sont
+     * sur l'ancrage. On verifie donc que chacune des parties sait retrouver
+     * l'ancrage, pour les huit orientations possibles.
+     */
+    @GameTest(template = "empty")
+    public static void matrixAnchorIsFoundFromEveryPart(GameTestHelper helper) {
+        BlockPos anchorRel = new BlockPos(1, 1, 1);
+        helper.setBlock(anchorRel, ModBlocks.MATRIX.get());
+        BlockPos anchorAbs = helper.absolutePos(anchorRel);
+
+        for (net.minecraft.core.Direction facing : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            for (cn.academy.MatrixBlock.MatrixPart part : cn.academy.MatrixBlock.MatrixPart.values()) {
+                net.minecraft.world.level.block.state.BlockState state = ModBlocks.MATRIX.get()
+                        .defaultBlockState()
+                        .setValue(cn.academy.MatrixBlock.FACING, facing)
+                        .setValue(cn.academy.MatrixBlock.PART, part);
+
+                net.minecraft.core.Direction left = facing.getCounterClockWise();
+                net.minecraft.core.Direction back = facing.getOpposite();
+                BlockPos partAbs = anchorAbs.above(part.y).relative(left, part.l).relative(back, part.b);
+
+                assertValue(helper, anchorAbs, cn.academy.MatrixBlock.anchorOf(partAbs, state),
+                        "ancrage retrouve depuis " + part + " facing " + facing);
+            }
+        }
+        helper.succeed();
+    }
+
     /** Pose un Matrix et rend son block entity, en verifiant qu'il existe. */
     private static MatrixBlockEntity placeMatrix(GameTestHelper helper, BlockPos rel) {
         helper.setBlock(rel, ModBlocks.MATRIX.get());

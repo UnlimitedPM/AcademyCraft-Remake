@@ -14,6 +14,9 @@ public class ModMenus {
     public static final RegistryObject<MenuType<SolarGenMenu>> SOLAR_GEN =
             MENUS.register("solar_gen", () -> IForgeMenuType.create(SolarGenMenu::new));
 
+    public static final RegistryObject<MenuType<MatrixMenu>> MATRIX =
+            MENUS.register("matrix", () -> IForgeMenuType.create(MatrixMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

@@ -58,6 +58,7 @@ public class AcademyCraft {
         public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
             event.enqueueWork(() -> {
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.SOLAR_GEN.get(), SolarGenScreen::new);
+                net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.MATRIX.get(), MatrixScreen::new);
                 // Sans cet appel, l'unite d'energie gardait toujours sa texture pleine :
                 // la propriete d'item "academy:energy" n'etait jamais enregistree.
                 ModItemProperties.addCustomItemProperties();

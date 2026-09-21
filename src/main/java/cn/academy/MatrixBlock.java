@@ -5,6 +5,9 @@ import cn.academy.energy.MatrixBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -20,7 +23,9 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.util.StringRepresentable;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
 public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlock {
@@ -78,6 +83,37 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
         }
     }
 
+    /**
+     * Position de la partie d'ancrage ({@code B_F_R}) du multi-bloc, vue depuis
+     * n'importe laquelle de ses huit parties.
+     *
+     * C'est la seule partie qui porte le block entity : tout ce qui veut
+     * l'atteindre (ouverture de l'ecran, destruction, detachement du reseau)
+     * doit passer par ici, quelle que soit la partie cliquee.
+     */
+    public static BlockPos anchorOf(BlockPos pos, BlockState state) {
+        MatrixPart part = state.getValue(PART);
+        Direction facing = state.getValue(FACING);
+        Direction left = facing.getCounterClockWise();
+        Direction back = facing.getOpposite();
+        return pos.below(part.y)
+                .relative(left.getOpposite(), part.l)
+                .relative(back.getOpposite(), part.b);
+    }
+
+    // --- OUVERTURE DE L'ECRAN ---
+    @Override
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
+                                 InteractionHand hand, BlockHitResult hit) {
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+            BlockPos anchor = anchorOf(pos, state);
+            if (level.getBlockEntity(anchor) instanceof MatrixBlockEntity matrix) {
+                NetworkHooks.openScreen(serverPlayer, matrix, buf -> buf.writeBlockPos(anchor));
+            }
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
     // --- GESTION DE LA CASSE ET ANTI-DUPLICATION ---
     @Override
     public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
@@ -88,9 +124,7 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
             MatrixPart part = state.getValue(PART);
 
             // On retrouve le point d'ancrage principal (B_F_R)
-            BlockPos anchor = pos.below(part.y)
-                    .relative(left.getOpposite(), part.l)
-                    .relative(back.getOpposite(), part.b);
+            BlockPos anchor = anchorOf(pos, state);
 
             BlockState anchorState = level.getBlockState(anchor);
 
@@ -136,9 +170,7 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
                 }
             } else {
                 // Un dummy part, on détruit la base SANS drop
-                BlockPos anchor = pos.below(part.y)
-                        .relative(left.getOpposite(), part.l)
-                        .relative(back.getOpposite(), part.b);
+                BlockPos anchor = anchorOf(pos, state);
                 BlockState anchorState = level.getBlockState(anchor);
                 if (anchorState.is(this) && anchorState.getValue(PART) == MatrixPart.B_F_R) {
                     level.setBlock(anchor, Blocks.AIR.defaultBlockState(), 35); // Pas de drop

@@ -13,12 +13,18 @@ import javax.annotation.Nullable;
 
 import cn.academy.ModBlockEntities;
 import cn.academy.ModItems;
+import cn.academy.MatrixMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -51,7 +57,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * {@code null} pour les sept autres. Sans cela on aurait huit block entities
  * pour un seul Matrix, chacun avec son propre tampon.
  */
-public class MatrixBlockEntity extends BlockEntity {
+public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
 
     public static final int SLOT_PLATE_FIRST = 0;
     public static final int SLOT_PLATE_COUNT = 3;
@@ -141,23 +147,42 @@ public class MatrixBlockEntity extends BlockEntity {
 
     /** Le Matrix n'est actif que coeur insere et les trois plaques en place. */
     public boolean isWorking() {
-        return getCoreLevel() > 0 && getPlateCount() == SLOT_PLATE_COUNT;
+        return isWorking(getCoreLevel(), getPlateCount());
+    }
+
+    /**
+     * Le calcul est expose en statique pour que l'ecran puisse l'appliquer aux
+     * valeurs qu'il recoit par le reseau, sans avoir a recopier les formules.
+     */
+    public static boolean isWorking(int coreLevel, int plateCount) {
+        return coreLevel > 0 && plateCount == SLOT_PLATE_COUNT;
     }
 
     /** Nombre de noeuds que le Matrix accepte. 8 par niveau de coeur. */
     public int getCapacity() {
-        return isWorking() ? 8 * getCoreLevel() : 0;
+        return capacityFor(getCoreLevel(), getPlateCount());
+    }
+
+    public static int capacityFor(int coreLevel, int plateCount) {
+        return isWorking(coreLevel, plateCount) ? 8 * coreLevel : 0;
     }
 
     /** Energie deplacable par tick. 60 fois le niveau de coeur, au carre. */
     public double getBandwidth() {
-        int level = getCoreLevel();
-        return isWorking() ? level * level * 60.0d : 0.0d;
+        return bandwidthFor(getCoreLevel(), getPlateCount());
+    }
+
+    public static double bandwidthFor(int coreLevel, int plateCount) {
+        return isWorking(coreLevel, plateCount) ? coreLevel * coreLevel * 60.0d : 0.0d;
     }
 
     /** Portee du signal, en blocs. 24 par racine du niveau de coeur. */
     public double getRange() {
-        return isWorking() ? 24.0d * Math.sqrt(getCoreLevel()) : 0.0d;
+        return rangeFor(getCoreLevel(), getPlateCount());
+    }
+
+    public static double rangeFor(int coreLevel, int plateCount) {
+        return isWorking(coreLevel, plateCount) ? 24.0d * Math.sqrt(coreLevel) : 0.0d;
     }
 
     public double getBuffer() {
@@ -281,6 +306,21 @@ public class MatrixBlockEntity extends BlockEntity {
         inventory.deserializeNBT(tag.getCompound("inventory"));
         buffer = tag.getDouble("buffer");
         needsRelink = true;
+    }
+
+    // ------------------------------------------------------------------
+    // Ouverture de l'ecran
+    // ------------------------------------------------------------------
+
+    @Override
+    public Component getDisplayName() {
+        return Component.translatable("container.academy.matrix");
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new MatrixMenu(containerId, playerInventory, this);
     }
 
     @Override
