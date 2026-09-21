@@ -51,8 +51,14 @@ public final class AcademyGameTests {
 
     @GameTest(template = "empty")
     public static void craftingRecipesAreLoaded(GameTestHelper helper) {
+        // Un echantillon couvrant chaque famille de recette.
         for (String id : new String[]{"academy:constraint_plate", "academy:machine_frame", "academy:solar_gen",
-                "academy:node_basic", "academy:energy_unit"}) {
+                "academy:node_basic", "academy:energy_unit",
+                // Recipes alternatives et objets d'application, portes depuis
+                // default.recipe de la 1.12.2 et longtemps manquants ici.
+                "academy:calc_chip2", "academy:energy_unit2", "academy:energy_unit3",
+                "academy:dev_normal2", "academy:app_skill_tree",
+                "academy:app_media_player", "academy:app_freq_transmitter"}) {
             assertRecipe(helper, id, RecipeType.CRAFTING);
         }
         helper.succeed();
@@ -72,8 +78,15 @@ public final class AcademyGameTests {
                 .filter(r -> r.getType() == RecipeType.CRAFTING)
                 .filter(r -> r.getId().getNamespace().equals(AcademyCraft.MOD_ID))
                 .count();
-        assertTrue(helper, crafting >= 40,
-                "seulement " + crafting + " recipes de crafting 'academy' chargees (>= 40 attendues)");
+        long smelting = helper.getLevel().getServer().getRecipeManager().getRecipes().stream()
+                .filter(r -> r.getType() == RecipeType.SMELTING)
+                .filter(r -> r.getId().getNamespace().equals(AcademyCraft.MOD_ID))
+                .count();
+        // 48 recettes de craft et 3 de fonte (default.recipe de la 1.12.2).
+        assertTrue(helper, crafting >= 48,
+                "seulement " + crafting + " recipes de crafting 'academy' chargees (>= 48 attendues)");
+        assertTrue(helper, smelting >= 3,
+                "seulement " + smelting + " recipes de fonte 'academy' chargees (>= 3 attendues)");
         helper.succeed();
     }
 

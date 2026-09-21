@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "NNN",
+    " D ",
+    " I "
+  ],
+  "key": {
+    "N": {
+      "item": "minecraft:note_block"
+    },
+    "D": {
+      "item": "academy:data_chip"
+    },
+    "I": {
+      "item": "academy:info_component"
+    }
+  },
+  "result": {
+    "item": "academy:app_media_player",
+    "count": 1
+  }
+}

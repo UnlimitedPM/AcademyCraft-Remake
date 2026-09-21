@@ -1,0 +1,41 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ABC",
+    "DEF",
+    "GHI"
+  ],
+  "key": {
+    "A": {
+      "item": "academy:brain_component"
+    },
+    "B": {
+      "item": "academy:info_component"
+    },
+    "C": {
+      "item": "academy:energy_convert_component"
+    },
+    "D": {
+      "item": "academy:mat_core_0"
+    },
+    "E": {
+      "tag": "minecraft:beds"
+    },
+    "F": {
+      "item": "minecraft:piston"
+    },
+    "G": {
+      "item": "academy:crystal_normal"
+    },
+    "H": {
+      "item": "academy:machine_frame"
+    },
+    "I": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "result": {
+    "item": "academy:dev_normal",
+    "count": 1
+  }
+}
