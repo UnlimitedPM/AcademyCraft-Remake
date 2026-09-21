@@ -14,8 +14,13 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
     private final Map<String, Integer> categoryLevels = new HashMap<>();
 
-    private float controlPoint = 100f;
-    private float maxControlPoint = 100f;
+    private float controlPoint = cn.academy.Config.startingControlPoint();
+    private float maxControlPoint = (float) cn.academy.Config.controlPointMax;
+
+    /** Plafond courant, relu depuis la config a chaque appel (rechargement a chaud). */
+    public static float configuredMax() {
+        return (float) cn.academy.Config.controlPointMax;
+    }
 
     public int getCategoryLevel(Category category) {
         return categoryLevels.getOrDefault(category.getName(), 0);
@@ -35,6 +40,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
     public float getMaxControlPoint() {
         return maxControlPoint;
+    }
+
+    /**
+     * Reapplique le plafond de la config. Appele a chaque tick par
+     * {@code AbilityEvents} : un rechargement de config a chaud est donc pris en
+     * compte sur les joueurs deja connectes.
+     */
+    public void clampToConfiguredMax() {
+        maxControlPoint = configuredMax();
+        if (controlPoint > maxControlPoint) controlPoint = maxControlPoint;
     }
 
     public boolean consumeControlPoint(float amount) {
@@ -73,6 +88,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
             categoryLevels.put(key, levels.getInt(key));
         }
         controlPoint = tag.getFloat("cp");
-        maxControlPoint = tag.contains("maxCp") ? tag.getFloat("maxCp") : 100f;
+        maxControlPoint = tag.contains("maxCp") ? tag.getFloat("maxCp") : configuredMax();
     }
 }

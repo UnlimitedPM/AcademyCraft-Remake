@@ -43,7 +43,7 @@ public class ElectronBombSkill extends Skill {
         AABB area = new AABB(target, target).inflate(RADIUS);
         List<LivingEntity> nearby = player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         for (LivingEntity living : nearby) {
-            living.hurt(player.damageSources().indirectMagic(player, player), DAMAGE);
+            living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
         }
     }
 }

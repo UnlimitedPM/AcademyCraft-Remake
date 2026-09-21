@@ -29,7 +29,13 @@ public class AcademyCraft {
         ModBlockEntities.register(modEventBus); // <-- LA LIGNE MAGIQUE QUI MANQUAIT
         ModCreativeTabs.register(modEventBus);
         ModMenus.register(modEventBus);
+        // Types de biome modifier du mod (honore les options de generation de la config).
+        cn.academy.worldgen.ConfigurableFeatureBiomeModifier.SERIALIZERS.register(modEventBus);
         modEventBus.addListener(cn.academy.ability.AbilityInit::init);
+
+        // Sans cette ligne, le fichier config/academy-common.toml n'est jamais cree.
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
+                net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
     }

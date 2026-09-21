@@ -35,7 +35,7 @@ public class ArcGenSkill extends Skill {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
-        living.hurt(player.damageSources().indirectMagic(player, player), DAMAGE);
+        living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
         if (random.nextFloat() < IGNITE_CHANCE) {
             living.setSecondsOnFire(IGNITE_TICKS / 20);
         }

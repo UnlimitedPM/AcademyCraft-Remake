@@ -7,6 +7,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
@@ -127,6 +128,56 @@ public final class AcademyGameTests {
         long acBlocks = blocks.keySet().stream()
                 .filter(id -> id.getNamespace().equals(AcademyCraft.MOD_ID)).count();
         assertTrue(helper, acBlocks >= 21, "seulement " + acBlocks + " blocs 'academy' enregistres (>= 21 attendus)");
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Biome modifier : les minerais doivent etre effectivement injectes dans
+    // les biomes, et l'option de config doit etre respectee.
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void oreBiomeModifierRespectsConfig(GameTestHelper helper) {
+        var access = helper.getLevel().getServer().registryAccess();
+        var biomes = access.registryOrThrow(Registries.BIOME);
+        var placed = access.registryOrThrow(Registries.PLACED_FEATURE);
+
+        var plainsKey = ResourceKey.create(Registries.BIOME, ResourceLocation.withDefaultNamespace("plains"));
+        var oreKey = ResourceKey.create(Registries.PLACED_FEATURE,
+                ResourceLocation.tryParse(AcademyCraft.MOD_ID + ":crystal_ore"));
+
+        var plains = biomes.getHolder(plainsKey).orElse(null);
+        assertTrue(helper, plains != null, "biome minecraft:plains introuvable");
+        var ore = placed.getHolder(oreKey).orElse(null);
+        assertTrue(helper, ore != null, "placed feature academy:crystal_ore introuvable");
+
+        boolean present = plains.value().getGenerationSettings().features().stream()
+                .anyMatch(list -> list.contains(ore));
+
+        if (cn.academy.Config.generateOres) {
+            assertTrue(helper, present,
+                    "academy:crystal_ore absent des generation settings de minecraft:plains "
+                            + "alors que generateOres = true (biome modifier non applique)");
+        } else {
+            assertTrue(helper, !present,
+                    "academy:crystal_ore present dans minecraft:plains alors que generateOres = false");
+        }
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Config : les valeurs doivent etre chargees (pas les 0 par defaut).
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void configValuesAreLoaded(GameTestHelper helper) {
+        assertTrue(helper, cn.academy.Config.controlPointMax >= 1.0d,
+                "controlPointMax non charge depuis la config : " + cn.academy.Config.controlPointMax);
+        assertTrue(helper, cn.academy.Config.damageScale >= 0.0d,
+                "damageScale non charge depuis la config : " + cn.academy.Config.damageScale);
+        assertTrue(helper, cn.academy.Config.controlPointSyncInterval >= 1,
+                "controlPointSyncInterval non charge depuis la config : "
+                        + cn.academy.Config.controlPointSyncInterval);
         helper.succeed();
     }
 }

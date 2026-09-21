@@ -54,4 +54,14 @@ public abstract class Skill {
     public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
         return event.getAmount();
     }
+
+    /**
+     * Applique le multiplicateur global de degats ({@code general.damageScale}) a
+     * une valeur de degats de base. Les competences actives doivent passer par ici
+     * plutot que d'appeler {@code hurt()} avec leur constante brute, afin que le
+     * reglage de config reste effectif partout.
+     */
+    protected static float scaled(float baseDamage) {
+        return baseDamage * (float) cn.academy.Config.damageScale;
+    }
 }

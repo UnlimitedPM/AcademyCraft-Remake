@@ -30,7 +30,7 @@ public class RailgunSkill extends Skill {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
-        living.hurt(player.damageSources().indirectMagic(player, player), DAMAGE);
+        living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
         Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
         living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
         living.hurtMarked = true;

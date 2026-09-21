@@ -1,5 +1,6 @@
 {
-  "type": "forge:add_features",
+  "type": "academy:configured_features",
+  "onlyWhen": "ores",
   "biomes": "#minecraft:is_overworld",
   "features": [
     "academy:constraint_metal",

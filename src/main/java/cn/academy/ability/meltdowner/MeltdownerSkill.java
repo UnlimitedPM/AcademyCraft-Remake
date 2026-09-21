@@ -28,6 +28,6 @@ public class MeltdownerSkill extends Skill {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
-        living.hurt(player.damageSources().indirectMagic(player, player), DAMAGE);
+        living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
     }
 }

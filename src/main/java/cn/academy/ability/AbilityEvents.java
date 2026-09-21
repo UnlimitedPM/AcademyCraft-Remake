@@ -19,9 +19,10 @@ import net.minecraftforge.network.PacketDistributor;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public class AbilityEvents {
 
-    /** CP regenerated per tick (server), and how often the client is re-synced. */
-    private static final float CP_REGEN_PER_TICK = 0.25f; // 5 CP/sec
-    private static final int SYNC_INTERVAL_TICKS = 20;
+    /** Intervalle de resynchronisation des CP vers le client, en ticks. */
+    private static int syncInterval() {
+        return cn.academy.Config.controlPointSyncInterval;
+    }
 
     @SubscribeEvent
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
@@ -56,9 +57,13 @@ public class AbilityEvents {
         if (event.phase != TickEvent.Phase.END) return;
         if (!(event.player instanceof ServerPlayer player)) return;
         player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            if (data.getControlPoint() >= data.getMaxControlPoint()) return;
-            data.tickRegen(CP_REGEN_PER_TICK);
-            if (player.tickCount % SYNC_INTERVAL_TICKS == 0) {
+            // Le plafond vient de la config : on le reapplique a chaque tick pour
+            // qu'un rechargement de config soit pris en compte sans reconnexion.
+            data.clampToConfiguredMax();
+            if (data.getControlPoint() < data.getMaxControlPoint()) {
+                data.tickRegen((float) cn.academy.Config.controlPointRegenPerTick);
+            }
+            if (player.tickCount % syncInterval() == 0) {
                 AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
             }
         });
