@@ -44,6 +44,10 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("metal_former", () ->
                     BlockEntityType.Builder.of(MetalFormerBlockEntity::new, ModBlocks.METAL_FORMER.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<ImagFusorBlockEntity>> IMAG_FUSOR =
+            BLOCK_ENTITIES.register("imag_fusor", () ->
+                    BlockEntityType.Builder.of(ImagFusorBlockEntity::new, ModBlocks.IMAG_FUSOR.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

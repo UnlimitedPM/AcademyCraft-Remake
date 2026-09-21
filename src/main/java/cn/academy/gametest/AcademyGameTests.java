@@ -1,8 +1,10 @@
 package cn.academy.gametest;
 
 import cn.academy.AcademyCraft;
+import cn.academy.ImagFusorBlockEntity;
 import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ModBlocks;
+import cn.academy.ModFluids;
 import cn.academy.ModItems;
 import cn.academy.energy.ImagNetworkData;
 import cn.academy.energy.MatrixBlockEntity;
@@ -860,6 +862,195 @@ public final class AcademyGameTests {
                 new ItemStack(ModItems.COIN.get())), "la sortie ne doit rien accepter");
         assertTrue(helper, former.getInventory().isItemValid(MetalFormerBlockEntity.SLOT_IN,
                 new ItemStack(ModItems.REINFORCED_IRON_PLATE.get())), "l'entree doit tout accepter");
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Reseau energetique : le fusor d'Imag, second consommateur
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void imagFusorIsAnEnergyReceiver(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.IMAG_FUSOR.get());
+        var fusor = (ImagFusorBlockEntity) helper.getBlockEntity(rel);
+
+        // Valeurs de TileImagFusor : tampon 2000, bande passante LATENCY_MK1 = 50,
+        // cuve 8000, 1000 mB par unite de phase.
+        assertValue(helper, 2000, fusor.getMaxEnergyStored(), "tampon du fusor");
+        assertClose(helper, 50.0d, fusor.getBandwidth(), "bande passante du fusor");
+        assertValue(helper, 8000, fusor.getTankSize(), "capacite de la cuve");
+        assertValue(helper, 1000, ImagFusorBlockEntity.PER_UNIT, "phase par unite");
+        assertValue(helper, 120, ImagFusorBlockEntity.WORK_TICKS, "duree d'une fusion");
+        assertClose(helper, 12.0d, ImagFusorBlockEntity.CONSUME_PER_TICK, "cout par tick");
+
+        // injectEnergy rend ce qu'elle n'a PAS pris, d'ou le zero.
+        assertClose(helper, 0.0d, fusor.injectEnergy(1000.0d), "tout doit etre accepte");
+        assertClose(helper, 1000.0d, fusor.getEnergy(), "energie stockee");
+        assertClose(helper, 500.0d, fusor.injectEnergy(1500.0d), "excedent rendu");
+        assertClose(helper, 2000.0d, fusor.getEnergy(), "tampon plein");
+        helper.succeed();
+    }
+
+    /** Les unites de phase fondent dans la cuve et ressortent vides. */
+    @GameTest(template = "empty")
+    public static void imagFusorMeltsPhaseUnits(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.IMAG_FUSOR.get());
+        var fusor = (ImagFusorBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        fusor.getInventory().setStackInSlot(ImagFusorBlockEntity.SLOT_IMAG_INPUT,
+                new ItemStack(ModItems.MATTER_UNIT_PHASE.get(), 3));
+
+        for (int i = 0; i < 3; i++) {
+            ImagFusorBlockEntity.tick(level, abs, helper.getBlockState(rel), fusor);
+        }
+
+        assertValue(helper, 3000, fusor.getLiquidAmount(), "phase obtenue en fondant trois unites");
+        assertTrue(helper, fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_IMAG_INPUT).isEmpty(),
+                "les unites pleines doivent avoir ete consommees");
+
+        ItemStack empties = fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_IMAG_OUTPUT);
+        assertValue(helper, ModItems.MATTER_UNIT.get(), empties.getItem(), "unite vide rendue");
+        assertValue(helper, 3, empties.getCount(), "nombre d'unites vides rendues");
+        helper.succeed();
+    }
+
+    /** La jauge pleine, une unite de plus ne doit pas etre perdue. */
+    @GameTest(template = "empty")
+    public static void imagFusorDoesNotMeltIntoAFullTank(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.IMAG_FUSOR.get());
+        var fusor = (ImagFusorBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        fusor.setLiquidAmount(8000);
+        fusor.getInventory().setStackInSlot(ImagFusorBlockEntity.SLOT_IMAG_INPUT,
+                new ItemStack(ModItems.MATTER_UNIT_PHASE.get(), 1));
+
+        for (int i = 0; i < 5; i++) {
+            ImagFusorBlockEntity.tick(level, abs, helper.getBlockState(rel), fusor);
+        }
+
+        assertValue(helper, 8000, fusor.getLiquidAmount(), "la cuve reste pleine");
+        assertValue(helper, 1, fusor.getInventory()
+                        .getStackInSlot(ImagFusorBlockEntity.SLOT_IMAG_INPUT).getCount(),
+                "l'unite doit rester intacte tant que la cuve est pleine");
+        helper.succeed();
+    }
+
+    /**
+     * Le vrai test de bout en bout : le noeud alimente le fusor, la cuve est
+     * remplie d'unites de phase, et le cristal de basse purete doit ressortir en
+     * cristal de purete moyenne apres 3000 mB et 120 ticks.
+     */
+    @GameTest(template = "empty")
+    public static void imagFusorRefinesCrystalOnNetworkEnergy(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos fusorRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(fusorRel, ModBlocks.IMAG_FUSOR.get());
+        var node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+        var fusor = (ImagFusorBlockEntity) helper.getBlockEntity(fusorRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos fusorAbs = helper.absolutePos(fusorRel);
+
+        for (int i = 0; i < 100; i++) {
+            ImagFusorBlockEntity.tick(level, fusorAbs, helper.getBlockState(fusorRel), fusor);
+        }
+        assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(fusorAbs),
+                "le fusor doit avoir trouve le noeud avant de travailler");
+
+        // Recette documentee dans imag_fusor.md : 3000 mB pour passer de la basse
+        // purete a la purete moyenne.
+        fusor.getInventory().setStackInSlot(ImagFusorBlockEntity.SLOT_INPUT,
+                new ItemStack(ModItems.CRYSTAL_LOW.get()));
+        fusor.setLiquidAmount(3000);
+        node.setEnergy(2000.0d);
+
+        // 120 ticks de fusion, plus la recherche de recette.
+        for (int i = 0; i < 200; i++) {
+            ImagFusorBlockEntity.tick(level, fusorAbs, helper.getBlockState(fusorRel), fusor);
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        ItemStack output = fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_OUTPUT);
+        assertValue(helper, ModItems.CRYSTAL_NORMAL.get(), output.getItem(), "cristal affine");
+        assertValue(helper, 1, output.getCount(), "quantite produite");
+        assertTrue(helper, fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_INPUT).isEmpty(),
+                "le cristal de depart doit avoir ete consomme");
+        assertValue(helper, 0, fusor.getLiquidAmount(), "la phase doit avoir ete consommee");
+        assertTrue(helper, node.getEnergy() < 2000.0d,
+                "le noeud aurait du fournir de l'energie, il en a " + node.getEnergy());
+        helper.succeed();
+    }
+
+    /** Sans assez de phase, la fusion ne doit pas demarrer. */
+    @GameTest(template = "empty")
+    public static void imagFusorNeedsEnoughPhaseLiquid(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.IMAG_FUSOR.get());
+        var fusor = (ImagFusorBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        fusor.getInventory().setStackInSlot(ImagFusorBlockEntity.SLOT_INPUT,
+                new ItemStack(ModItems.CRYSTAL_LOW.get()));
+        fusor.setEnergy(2000.0d);
+        // 2999 mB : juste un de moins que ce que la recette demande.
+        fusor.setLiquidAmount(2999);
+
+        for (int i = 0; i < 200; i++) {
+            ImagFusorBlockEntity.tick(level, abs, helper.getBlockState(rel), fusor);
+        }
+
+        assertFalse(helper, fusor.isWorking(), "2999 mB ne suffisent pas pour une recette a 3000");
+        assertTrue(helper, fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_OUTPUT).isEmpty(),
+                "rien ne doit avoir ete produit");
+        assertValue(helper, 1, fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_INPUT).getCount(),
+                "le cristal de depart doit etre intact");
+        assertValue(helper, 2999, fusor.getLiquidAmount(), "la phase doit etre intacte");
+        helper.succeed();
+    }
+
+    /** La cuve n'accepte que la phase, et les sorties n'acceptent rien. */
+    @GameTest(template = "empty")
+    public static void imagFusorProtectsItsSlots(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.IMAG_FUSOR.get());
+        var fusor = (ImagFusorBlockEntity) helper.getBlockEntity(rel);
+        var inventory = fusor.getInventory();
+
+        assertTrue(helper, inventory.isItemValid(ImagFusorBlockEntity.SLOT_IMAG_INPUT,
+                new ItemStack(ModItems.MATTER_UNIT_PHASE.get())), "l'unite de phase doit etre acceptee");
+        assertFalse(helper, inventory.isItemValid(ImagFusorBlockEntity.SLOT_IMAG_INPUT,
+                new ItemStack(ModItems.MATTER_UNIT.get())), "l'unite vide ne doit pas entrer");
+        assertFalse(helper, inventory.isItemValid(ImagFusorBlockEntity.SLOT_OUTPUT,
+                new ItemStack(ModItems.CRYSTAL_NORMAL.get())), "la sortie ne doit rien accepter");
+        assertFalse(helper, inventory.isItemValid(ImagFusorBlockEntity.SLOT_IMAG_OUTPUT,
+                new ItemStack(ModItems.MATTER_UNIT.get())), "les unites vides sont posees par la machine");
+        helper.succeed();
+    }
+
+    /** La cuve refuse tout fluide qui n'est pas la phase. */
+    @GameTest(template = "empty")
+    public static void imagFusorRefusesOtherFluids(GameTestHelper helper) {
+        assertTrue(helper, ImagFusorBlockEntity.isPhaseLiquid(ModFluids.SOURCE_PHASE_LIQUID.get()),
+                "le fluide du mod doit etre reconnu");
+        assertTrue(helper, ImagFusorBlockEntity.isPhaseLiquid(ModFluids.FLOWING_PHASE_LIQUID.get()),
+                "le fluide courant doit etre reconnu aussi");
+        assertFalse(helper, ImagFusorBlockEntity.isPhaseLiquid(
+                        net.minecraft.world.level.material.Fluids.WATER),
+                "l'eau ne doit pas etre acceptee");
         helper.succeed();
     }
 
