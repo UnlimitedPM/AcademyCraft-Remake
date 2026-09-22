@@ -244,6 +244,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return getCategoryLevel(category) > 0;
     }
 
+    /**
+     * Les categories que ce joueur connait, par leur nom.
+     *
+     * <p>Ce que la donnee retient vraiment : les niveaux sont ranges par <b>nom</b>, pour
+     * qu'une categorie disparue ne fasse pas tomber une sauvegarde. C'est ce qui permet de
+     * decider sans registre — et donc de relire la decision en test unitaire.
+     */
+    public Map<String, Integer> getCategoryLevels() {
+        return Map.copyOf(categoryLevels);
+    }
+
     public float getControlPoint() {
         return controlPoint;
     }

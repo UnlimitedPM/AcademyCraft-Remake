@@ -1,9 +1,11 @@
 package cn.academy;
 
+import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DevelopActionLevel;
+import cn.academy.ability.develop.DevelopActionReset;
 import cn.academy.ability.develop.DevelopProgress;
 import cn.academy.ability.develop.Developer;
 import cn.academy.ability.develop.DeveloperType;
@@ -53,6 +55,18 @@ public class DeveloperMenu extends AbstractContainerMenu {
      * {@link #clickMenuButton}.
      */
     public static final int SKILL_BUTTON_BASE = 100;
+
+    /**
+     * L'identifiant du bouton de changement de categorie.
+     *
+     * <p>Un bouton de conteneur ne transporte qu'un entier, et les deux espaces existants
+     * — les categories, qui tiennent dans les petites valeurs, et les competences, qui
+     * commencent a cent — sont pris. Celui-ci est donc au large.
+     */
+    public static final int RESET_BUTTON = 4096;
+
+    /** Le joueur, pour les conditions qui lisent ce qu'il a en main. */
+    private final Player player;
 
     private final Developer developer;
     private final DeveloperType type;
@@ -113,6 +127,7 @@ public class DeveloperMenu extends AbstractContainerMenu {
     public DeveloperMenu(int containerId, Inventory playerInventory, @Nullable Developer developer) {
         super(ModMenus.DEVELOPER.get(), containerId);
         this.developer = developer;
+        this.player = playerInventory.player;
         this.portable = developer == null;
         this.type = developer == null ? DeveloperType.PORTABLE : developer.getDeveloperType();
         this.access = developer instanceof DeveloperBlockEntity be
@@ -167,6 +182,13 @@ public class DeveloperMenu extends AbstractContainerMenu {
     public boolean clickMenuButton(Player player, int buttonId) {
         if (!(player instanceof ServerPlayer serverPlayer)) return false;
         if (developer == null) return false;
+
+        // Le changement de categorie est offert quand la main du joueur le permet : ce
+        // n'est pas un identifiant de competence, donc il ne se deduit pas de la cible.
+        if (buttonId == RESET_BUTTON) {
+            DevelopActionReset reset = DevelopActionReset.find(serverPlayer, getDeveloperType());
+            return reset != null && developer.startDeveloping(serverPlayer, reset);
+        }
 
         if (buttonId < SKILL_BUTTON_BASE) {
             return developer.startDeveloping(serverPlayer, buttonId, -1);
@@ -284,6 +306,24 @@ public class DeveloperMenu extends AbstractContainerMenu {
     /** Vrai si cet ecran est celui de l'objet portable, et non d'une machine. */
     public boolean isPortable() {
         return portable;
+    }
+
+    /**
+     * Vrai si le joueur peut changer de categorie maintenant.
+     *
+     * <p>C'est la meme fonction que le serveur appellera au clic : l'ecran ne rejoue pas
+     * les regles, il demande.
+     */
+    public boolean canReset() {
+        if (isDeveloping()) return false;
+        return DevelopActionReset.find(player, getDeveloperType()) != null;
+    }
+
+    /** Le prix annonce du changement de categorie, en stimulations. */
+    public int getResetStimulations() {
+        AbilityData data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElse(null);
+        return data == null ? 0 : DevelopActionReset.stimulationsFor(data);
     }
 
     // ------------------------------------------------------------------

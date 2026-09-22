@@ -41,6 +41,17 @@ public class DevelopActionLevel implements DevelopAction {
     }
 
     @Override
+    public int getCategoryId() {
+        return category.getCategoryId();
+    }
+
+    /** -1 : c'est le niveau de la categorie qui monte, pas une competence. */
+    @Override
+    public int getSkillId() {
+        return -1;
+    }
+
+    @Override
     public int getStimulations(Player player) {
         return 5 * (levelOf(player) + 1);
     }

@@ -43,6 +43,17 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
     /** Competence visee, ou -1 si c'est le niveau de la categorie qui monte. */
     private int skillId = -1;
 
+    /**
+     * L'action en cours, non sauvegardee.
+     *
+     * <p>Le changement de categorie ne se deduit pas d'un identifiant : il faut l'avoir
+     * decidee, avec ce que le joueur avait en main. On la garde donc pendant qu'elle se
+     * deroule, et un rechargement la perd — l'apprentissage echoue alors, comme pour une
+     * machine.
+     */
+    @Nullable
+    private DevelopAction decided;
+
     /** Le porteur, non sauvegarde : il est repose a l'attachement de la capacite. */
     @Nullable
     private Player owner;
@@ -113,20 +124,24 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
     @Override
     public boolean startDeveloping(ServerPlayer player, int requestedCategoryId,
                                    int requestedSkillId) {
-        if (progress.isDeveloping()) return false;
-        // Sans objet en main, il n'y a rien pour payer : l'original refusait de la meme
-        // facon, en ne trouvant simplement pas d'objet.
-        if (heldItem() == null) return false;
-
         Category category = CategoryManager.INSTANCE.getCategory(requestedCategoryId);
         if (category == null) return false;
 
         DevelopAction candidate = buildAction(category, requestedSkillId);
-        if (candidate == null) return false;
+        return candidate != null && startDeveloping(player, candidate);
+    }
+
+    @Override
+    public boolean startDeveloping(ServerPlayer player, DevelopAction candidate) {
+        if (progress.isDeveloping()) return false;
+        // Sans objet en main, il n'y a rien pour payer : l'original refusait de la meme
+        // facon, en ne trouvant simplement pas d'objet.
+        if (heldItem() == null) return false;
         if (!candidate.validate(player, getDeveloperType())) return false;
 
-        categoryId = requestedCategoryId;
-        skillId = requestedSkillId;
+        categoryId = candidate.getCategoryId();
+        skillId = candidate.getSkillId();
+        decided = candidate;
         progress.begin(candidate.getStimulations(player));
         return true;
     }
@@ -167,6 +182,7 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
         progress.finish(success);
         categoryId = -1;
         skillId = -1;
+        decided = null;
     }
 
     @Override
@@ -178,11 +194,13 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
         progress.finish(false);
         categoryId = -1;
         skillId = -1;
+        decided = null;
     }
 
-    /** L'action visee, refabriquee a partir de la categorie : rien n'est sauvegarde. */
+    /** L'action en cours, ou celle qu'on peut reconstruire a partir de la cible. */
     @Nullable
     private DevelopAction action() {
+        if (decided != null) return decided;
         Category category = CategoryManager.INSTANCE.getCategory(categoryId);
         if (category == null) return null;
         return buildAction(category, skillId);
@@ -190,6 +208,10 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
 
     @Nullable
     private static DevelopAction buildAction(Category category, int targetSkillId) {
+        // Un changement de categorie ne se reconstruit pas : il se decide avec ce que le
+        // joueur a en main. Une donnee rechargee ne le retrouve donc pas, et
+        // l'apprentissage echoue — c'est le prix de ne pas sauvegarder d'action.
+        if (targetSkillId == DevelopActionReset.SKILL_ID) return null;
         if (targetSkillId < 0) return new DevelopActionLevel(category);
         Skill skill = category.getSkill(targetSkillId);
         return skill == null ? null : new DevelopActionSkill(skill);

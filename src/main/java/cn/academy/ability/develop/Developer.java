@@ -38,7 +38,16 @@ public interface Developer {
     int getSkillId();
 
     /**
-     * Lance un apprentissage.
+     * Lance un apprentissage deja decide.
+     *
+     * <p>C'est le chemin qu'emprunte le changement de categorie : il ne se deduit pas
+     * d'un identifiant de competence, puisque c'est la main du joueur qui le decide, et
+     * il doit donc etre construit avant d'etre lance.
+     */
+    boolean startDeveloping(net.minecraft.server.level.ServerPlayer player, DevelopAction action);
+
+    /**
+     * Lance un apprentissage en le designant par sa cible.
      *
      * @param skillId l'identifiant de la competence dans sa categorie, ou -1 pour faire
      *                monter la categorie d'un cran

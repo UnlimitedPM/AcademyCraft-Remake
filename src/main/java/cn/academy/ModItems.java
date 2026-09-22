@@ -123,14 +123,16 @@ public class ModItems {
             () -> new TooltipItem("ac.media.sisters_noise.desc"));
 
     // --- FACTEURS D'INDUCTION (Nom :  | Descriptions : ) ---
+    // L'original n'en avait qu'un, dont la categorie vivait dans les metadonnees. La
+    // 1.20.1 n'en a plus : d'ou quatre objets, dont la classe retient la categorie.
     public static final RegistryObject<Item> FACTOR_ELECTRO = ITEMS.register("factor_electromaster",
-            () -> new TooltipItem("ac.ability.electromaster.name"));
+            () -> new FactorItem("electromaster"));
     public static final RegistryObject<Item> FACTOR_MELT = ITEMS.register("factor_meltdowner",
-            () -> new TooltipItem("ac.ability.meltdowner.name"));
+            () -> new FactorItem("meltdowner"));
     public static final RegistryObject<Item> FACTOR_TELE = ITEMS.register("factor_teleporter",
-            () -> new TooltipItem("ac.ability.teleporter.name"));
+            () -> new FactorItem("teleporter"));
     public static final RegistryObject<Item> FACTOR_VEC = ITEMS.register("factor_vecmanip",
-            () -> new TooltipItem("ac.ability.vecmanip.name"));
+            () -> new FactorItem("vecmanip"));
 
     // --- LIQUIDE ET LOGO ---
     // On utilise BlockItem pour faire le lien entre l'objet dans la main et le bloc au sol

@@ -16,6 +16,18 @@ import net.minecraft.world.entity.player.Player;
  */
 public interface DevelopAction {
 
+    /**
+     * La categorie visee.
+     *
+     * <p>Le port range la cible d'un apprentissage dans ces deux nombres, et les sauvegarde
+     * a la place de l'action elle-meme : c'est ce qui permet a une machine rechargee de
+     * savoir ce qu'elle etait en train de faire.
+     */
+    int getCategoryId();
+
+    /** La competence visee, ou -1 pour le niveau de la categorie. */
+    int getSkillId();
+
     /** Nombre de stimulations necessaires a cet apprentissage. */
     int getStimulations(Player player);
 

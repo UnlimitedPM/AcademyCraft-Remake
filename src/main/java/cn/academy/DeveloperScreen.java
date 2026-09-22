@@ -83,6 +83,19 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
     private static final int ENERGY_X = 8;
     private static final int ENERGY_WIDTH = 10;
 
+    /**
+     * Le bouton de changement de categorie, en haut a droite.
+     *
+     * Il n'est pas dans la liste : la liste est la meme pour tout le monde, alors que ce
+     * bouton n'apparait que si la main du joueur le permet. Une ligne de plus selon
+     * l'inventaire ferait glisser toutes celles du dessous, c'est-a-dire la position des
+     * emplacements du serveur et du client a la fois.
+     */
+    private static final int RESET_X = 124;
+    private static final int RESET_Y = 4;
+    private static final int RESET_WIDTH = 48;
+    private static final int RESET_HEIGHT = 12;
+
     private static final int BAR_X = 24;
     private static final int BAR_Y = 96;
     private static final int BAR_WIDTH = 136;
@@ -147,6 +160,23 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
         drawEnergyBar(graphics);
         drawList(graphics, mouseX, mouseY);
         drawProgressBar(graphics);
+        drawResetButton(graphics);
+    }
+
+    /**
+     * Le bouton de changement de categorie : gris quand il ne peut rien faire, et la
+     * ligne s'explique au survol.
+     */
+    private void drawResetButton(GuiGraphics graphics) {
+        int x = leftPos + RESET_X;
+        int y = topPos + RESET_Y;
+        boolean open = menu.canReset();
+        graphics.fill(x, y, x + RESET_WIDTH, y + RESET_HEIGHT, HOLE);
+        if (open) {
+            graphics.fill(x + 1, y + 1, x + RESET_WIDTH - 1, y + RESET_HEIGHT - 1, BUTTON_ON);
+        }
+        graphics.drawString(font, Component.translatable("academy.developer.reset"), x + 4, y + 2,
+                open ? 0xFFFFFFFF : 0xFF909090, false);
     }
 
     private void drawEnergyBar(GuiGraphics graphics) {
@@ -304,6 +334,17 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Le bouton de changement de categorie d'abord : il n'est sur aucune ligne.
+        if (button == 0 && menu.canReset()) {
+            int x = leftPos + RESET_X;
+            int y = topPos + RESET_Y;
+            if (mouseX >= x && mouseX < x + RESET_WIDTH
+                    && mouseY >= y && mouseY < y + RESET_HEIGHT) {
+                develop(DeveloperMenu.RESET_BUTTON);
+                return true;
+            }
+        }
+
         if (button == 0 && hovered != null && isActionable(hovered)) {
             int x = leftPos + BUTTON_X;
             int y = rowY(hovered) + (ROW_HEIGHT - BUTTON_HEIGHT) / 2;
@@ -318,6 +359,14 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
     /** La position verticale d'une ligne, en coordonnees d'ecran. */
     private int rowY(Row row) {
         return topPos + LIST_TOP + rows.indexOf(row) * ROW_HEIGHT - scroll;
+    }
+
+    /** La souris est-elle sur le bouton de changement de categorie ? */
+    private boolean isOverResetButton(double mouseX, double mouseY) {
+        int x = leftPos + RESET_X;
+        int y = topPos + RESET_Y;
+        return mouseX >= x && mouseX < x + RESET_WIDTH
+                && mouseY >= y && mouseY < y + RESET_HEIGHT;
     }
 
     private boolean isActionable(Row row) {
@@ -375,6 +424,20 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
+
+        if (isOverResetButton(mouseX, mouseY)) {
+            List<Component> lines = new ArrayList<>();
+            lines.add(Component.translatable("academy.developer.reset"));
+            lines.add(Component.translatable("academy.developer.reset.tooltip")
+                    .withStyle(ChatFormatting.GRAY));
+            if (menu.canReset()) {
+                lines.add(Component.translatable("academy.developer.cost",
+                        menu.getResetStimulations(),
+                        (long) menu.getDeveloperType().getTotalCost(menu.getResetStimulations())));
+            }
+            graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
+            return;
+        }
 
         if (hovered != null) {
             List<Component> lines = tooltipFor(hovered);

@@ -162,6 +162,9 @@
   "academy.developer.cost": "%s stimulations, %s Imag",
   "academy.developer.progress": "Level progress %s%% - use your abilities to fill it",
   "academy.developer.maxed": "At maximum level",
+
+  "academy.developer.reset": "Change",
+  "academy.developer.reset.tooltip": "Forget this category and take another: hold a magnetic coil, carry an induction factor, and use the advanced developer",
   "academy.developer.skill_exp": "Experience %s%%",
 
   "academy.learn.level": "Requires category level %s",

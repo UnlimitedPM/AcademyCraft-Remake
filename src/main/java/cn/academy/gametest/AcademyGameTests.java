@@ -1863,6 +1863,78 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Changer de categorie : la machine avancee, une bobine en main, un facteur au sac.
+     *
+     * C'est le troisieme apprentissage du developpeur, et le seul qu'une machine normale ne
+     * sait pas mener. L'original demandait trois choses a la fois : un joueur deja avance
+     * (niveau 3), la bobine magnetique en main — elle est consommee — et un facteur
+     * d'induction d'une autre categorie dans l'inventaire, qui dit vers quoi on bascule et
+     * disparait lui aussi.
+     *
+     * Le port doit en plus choisir <b>quelle</b> categorie on quitte : l'original n'en
+     * avait qu'une, ici c'est la plus haute. Le JUnit fige ce choix, ce test le fait
+     * aboutir pour de vrai, jusqu'a la consommation des deux objets.
+     */
+    @GameTest(template = "empty")
+    public static void changerDeCategorieOublieLAncienneEtConsommeLesObjets(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.DEV_ADVANCED.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        var developer = (DeveloperBlockEntity) helper.getBlockEntity(rel);
+        BlockPos abs = helper.absolutePos(rel);
+
+        var player = ownPlayer(helper, "transfuge");
+        var ability = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        var from = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0); // electromaster
+        var to = cn.academy.ability.CategoryManager.INSTANCE.getCategory(1);   // meltdowner
+        ability.setCategoryLevel(from, 3);
+        ability.setCategoryLevel(to, 0);
+
+        // Sans rien en main, rien n'est possible.
+        assertTrue(helper, cn.academy.ability.develop.DevelopActionReset.find(player,
+                        cn.academy.ability.develop.DeveloperType.ADVANCED) == null,
+                "sans bobine, rien ne s'ouvre");
+
+        // La bobine seule ne suffit pas : c'est le facteur qui dit vers quoi on bascule.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(ModItems.MAGNETIC_COIL.get()));
+        assertTrue(helper, cn.academy.ability.develop.DevelopActionReset.find(player,
+                        cn.academy.ability.develop.DeveloperType.ADVANCED) == null,
+                "il manque le facteur");
+
+        player.getInventory().add(new ItemStack(ModItems.FACTOR_MELT.get()));
+
+        // La machine normale ne sait pas le faire, meme avec tout ce qu'il faut.
+        assertTrue(helper, cn.academy.ability.develop.DevelopActionReset.find(player,
+                        cn.academy.ability.develop.DeveloperType.NORMAL) == null,
+                "une machine normale ne change pas de categorie");
+
+        var reset = cn.academy.ability.develop.DevelopActionReset.find(player,
+                cn.academy.ability.develop.DeveloperType.ADVANCED);
+        assertTrue(helper, reset != null, "la machine avancee, la bobine et le facteur : c'est ouvert");
+        assertValue(helper, from, reset.getAbandoned(), "on quitte la categorie la plus haute");
+        assertValue(helper, to, reset.getAdopted(), "pour celle du facteur");
+        assertValue(helper, 30, reset.getStimulations(player), "dix stimulations par niveau oublie");
+
+        // Et l'apprentissage va jusqu'au bout, sur la machine.
+        developer.setEnergy(200_000.0d);
+        assertTrue(helper, developer.startDeveloping(player, reset), "la machine doit accepter");
+        for (int i = 0; i < 800 && developer.getState() == DevState.DEVELOPING; i++) {
+            DeveloperBlockEntity.tick(helper.getLevel(), abs, helper.getBlockState(rel), developer);
+        }
+
+        assertValue(helper, DevState.DONE, developer.getState(), "l'apprentissage doit aboutir");
+        assertValue(helper, 0, ability.getCategoryLevel(from), "l'ancienne categorie est oubliee");
+        assertValue(helper, 2, ability.getCategoryLevel(to),
+                "la nouvelle prend le niveau precedent, un cran en moins");
+        assertTrue(helper, player.getMainHandItem().isEmpty(), "la bobine est consommee");
+        assertTrue(helper, cn.academy.FactorItem.otherCategoryIn(player, from) == null,
+                "et le facteur a disparu lui aussi");
+        helper.succeed();
+    }
+
+    /**
      * Les tutoriels livres, et les objets qui les ouvrent.
      *
      * <p>Le contenu lui-meme se relit dans les ressources, en JUnit. Ce que JUnit ne

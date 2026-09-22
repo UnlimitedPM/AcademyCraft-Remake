@@ -239,13 +239,22 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
      * @return vrai si l'apprentissage a pu demarrer
      */
     public boolean startDeveloping(ServerPlayer player, int requestedCategoryId, int requestedSkillId) {
-        if (progress.isDeveloping()) return false;
-
         Category category = CategoryManager.INSTANCE.getCategory(requestedCategoryId);
         if (category == null) return false;
 
         DevelopAction candidate = buildAction(category, requestedSkillId);
-        if (candidate == null) return false;
+        return candidate != null && startDeveloping(player, candidate);
+    }
+
+    /**
+     * Lance un apprentissage deja decide.
+     *
+     * <p>Le changement de categorie passe par la : il se decide avec ce que le joueur a
+     * en main, et non avec un identifiant de competence.
+     */
+    @Override
+    public boolean startDeveloping(ServerPlayer player, DevelopAction candidate) {
+        if (progress.isDeveloping()) return false;
 
         // Au niveau maximal il n'y a plus rien a faire, et une competence deja
         // apprise n'a plus rien a apprendre. L'ecran grise deja ces lignes, donc ce
@@ -254,8 +263,8 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         if (!candidate.validate(player, type)) return false;
 
         action = candidate;
-        categoryId = requestedCategoryId;
-        skillId = requestedSkillId;
+        categoryId = candidate.getCategoryId();
+        skillId = candidate.getSkillId();
         student = player.getUUID();
         studentRef = player;
         studentName = player.getGameProfile().getName();
@@ -273,6 +282,10 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
      */
     @Nullable
     private static DevelopAction buildAction(Category category, int targetSkillId) {
+        // Le changement de categorie ne se reconstruit pas : il se decide avec ce que le
+        // joueur a en main, et une machine rechargee n'a pas de joueur sous la main. Elle
+        // marquera donc l'apprentissage en echec, ce que le chargement detecte juste apres.
+        if (targetSkillId == cn.academy.ability.develop.DevelopActionReset.SKILL_ID) return null;
         if (targetSkillId < 0) return new DevelopActionLevel(category);
         Skill skill = category.getSkill(targetSkillId);
         return skill == null ? null : new DevelopActionSkill(skill);

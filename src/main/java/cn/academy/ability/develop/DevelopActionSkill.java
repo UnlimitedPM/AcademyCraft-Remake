@@ -35,6 +35,16 @@ public class DevelopActionSkill implements DevelopAction {
     }
 
     @Override
+    public int getCategoryId() {
+        return skill.getCategory().getCategoryId();
+    }
+
+    @Override
+    public int getSkillId() {
+        return skill.getId();
+    }
+
+    @Override
     public int getStimulations(Player player) {
         return skill.getLearningStims();
     }
