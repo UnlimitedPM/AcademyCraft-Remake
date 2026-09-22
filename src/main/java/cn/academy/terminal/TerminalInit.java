@@ -1,6 +1,7 @@
 package cn.academy.terminal;
 
 import cn.academy.terminal.app.AppAbout;
+import cn.academy.terminal.app.AppMediaPlayer;
 import cn.academy.terminal.app.AppSettings;
 import cn.academy.terminal.app.AppSkillTree;
 import cn.academy.terminal.app.AppTutorial;
@@ -27,6 +28,9 @@ public class TerminalInit {
             // Ajoutee a la fin : l'identifiant d'une application est sa place, et un
             // identifiant deja sauvegarde chez un joueur ne doit pas changer de sens.
             AppRegistry.INSTANCE.register(AppSettings.INSTANCE);
+            // Le lecteur media, a la fin lui aussi : l'original en faisait une application
+            // ordinaire, ouverte depuis le terminal.
+            AppRegistry.INSTANCE.register(AppMediaPlayer.INSTANCE);
             AppRegistry.INSTANCE.bake();
         });
     }

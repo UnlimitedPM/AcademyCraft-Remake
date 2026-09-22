@@ -43,6 +43,12 @@ public class AbilityNetwork {
                 cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::encode,
                 cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::decode,
                 cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::handle);
+        // Les morceaux du lecteur media, pour la meme raison : c'est le serveur qui decide
+        // ce que le joueur possede, et le client qui l'affiche.
+        CHANNEL.registerMessage(nextId++, cn.academy.misc.media.network.SyncMediaPacket.class,
+                cn.academy.misc.media.network.SyncMediaPacket::encode,
+                cn.academy.misc.media.network.SyncMediaPacket::decode,
+                cn.academy.misc.media.network.SyncMediaPacket::handle);
 
         // Les prereglages : leur etat descend au client, et les deux gestes qui les
         // modifient remontent — changer de prereglage, poser une competence sur une touche.

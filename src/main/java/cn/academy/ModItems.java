@@ -114,13 +114,15 @@ public class ModItems {
     public static final RegistryObject<Item> ABILITY_INTERFERER = ITEMS.register("ability_interferer",
             () -> new BlockItem(ModBlocks.ABILITY_INTERFERER.get(), new Item.Properties()));
 
-    // --- MÉDIAS (MUSIQUES) --- [cite: 13]
+    // --- MÉDIAS (MUSIQUES) ---
+    // Chacun donne son morceau au joueur, comme l'objet MediaItem de l'original : il faut
+    // avoir installe l'application, et le morceau ne s'obtient qu'une fois.
     public static final RegistryObject<Item> MEDIA_RAILGUN = ITEMS.register("media_only_my_railgun",
-            () -> new TooltipItem("ac.media.only_my_railgun.desc"));
+            () -> new MediaItem("only_my_railgun"));
     public static final RegistryObject<Item> MEDIA_JUDGELIGHT = ITEMS.register("media_level5_judgelight",
-            () -> new TooltipItem("ac.media.level5_judgelight.desc"));
+            () -> new MediaItem("level5_judgelight"));
     public static final RegistryObject<Item> MEDIA_SISTERS_NOISE = ITEMS.register("media_sisters_noise",
-            () -> new TooltipItem("ac.media.sisters_noise.desc"));
+            () -> new MediaItem("sisters_noise"));
 
     // --- FACTEURS D'INDUCTION (Nom :  | Descriptions : ) ---
     // L'original n'en avait qu'un, dont la categorie vivait dans les metadonnees. La
@@ -144,8 +146,12 @@ public class ModItems {
     // --- APPLICATIONS () ---
     public static final RegistryObject<Item> APP_SKILL_TREE = ITEMS.register("app_skill_tree",
             () -> new AppInstallerItem("skill_tree"));
-    public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player", () -> new TooltipItem("ac.app.media_player.name"));
-    public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter", () -> new TooltipItem("ac.app.freq_transmitter.name"));
+    public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player",
+            () -> new AppInstallerItem("media_player"));
+    // L'Emetteur de frequence n'a toujours pas d'objet utilisable : la 1.20.1 ne connait
+    // plus les blocs sans fil de l'original, et le raccordement s'y fait tout seul.
+    public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter",
+            () -> new TooltipItem("ac.app.freq_transmitter.name"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings",
             () -> new AppInstallerItem("settings"));
 
@@ -207,6 +213,15 @@ public class ModItems {
                         ItemStack filled = new ItemStack(ModItems.MATTER_UNIT_PHASE.get());
                         if (!player.getInventory().add(filled)) {
                             player.drop(filled, false);
+                        }
+
+                        // « Une unite de matiere remplie de phase » : c'est le succes que
+                        // l'original accordait ici meme, en postant son evenement de
+                        // moisson. L'unite va directement dans l'inventaire, donc aucun
+                        // ramassage n'aura lieu : le succes se donne a la source.
+                        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                            cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
+                                    cn.academy.advancements.AcademyAdvancements.GETTING_PHASE);
                         }
                     }
                     return InteractionResultHolder.sidedSuccess(itemstack, world.isClientSide());
@@ -382,6 +397,65 @@ public class ModItems {
                 // l'usage de l'objet qui compte, pas l'ecran qui s'ouvre.
                 cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
                         cn.academy.advancements.AcademyAdvancements.OPEN_MISAKA_CLOUD);
+            }
+            return InteractionResultHolder.success(stack);
+        }
+    }
+
+    /**
+     * Un morceau du lecteur media, sous forme d'objet.
+     *
+     * <p>Portage de {@code MediaItem}. Un clic droit installe le morceau pour le joueur, a
+     * trois conditions pres — l'application doit etre installee, le morceau ne doit pas etre
+     * deja possede, et il faut alors en perdre un. Les trois reponses de l'original sont
+     * gardees telles quelles, avec ses trois messages.
+     *
+     * <p>L'original portait tous ses morceaux dans un seul objet et rangeait le morceau
+     * choisi dans les metadonnees. La 1.20.1 n'en a plus : chaque morceau a donc son objet,
+     * comme les quatre facteurs d'induction.
+     */
+    public static class MediaItem extends TooltipItem {
+
+        private final String mediaId;
+
+        public MediaItem(String mediaId) {
+            super("ac.media." + mediaId + ".desc");
+            this.mediaId = mediaId;
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (level.isClientSide) return InteractionResultHolder.success(stack);
+
+            cn.academy.misc.media.Media media = cn.academy.misc.media.MediaManager.get(mediaId);
+            if (media == null) return InteractionResultHolder.pass(stack);
+
+            boolean hasApp = player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA)
+                    .map(data -> data.isInstalled(cn.academy.terminal.app.AppMediaPlayer.INSTANCE))
+                    .orElse(false);
+            if (!hasApp) {
+                player.displayClientMessage(Component.translatable("ac.media.notinstalled"), false);
+                return InteractionResultHolder.success(stack);
+            }
+
+            cn.academy.misc.media.MediaAcquireData data = cn.academy.misc.media.MediaTracker.of(player);
+            if (data == null) return InteractionResultHolder.pass(stack);
+
+            Component name = Component.translatable(media.titleKey());
+            if (data.isInstalled(media)) {
+                player.displayClientMessage(Component.translatable("ac.media.haveone", name), false);
+                return InteractionResultHolder.success(stack);
+            }
+
+            data.install(media);
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+            player.displayClientMessage(Component.translatable("ac.media.acquired", name), false);
+
+            // Le client affiche ce qu'il possede : c'est le serveur seul qui vient de
+            // decider, et lui seul peut le lui dire.
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                cn.academy.misc.media.MediaTracker.sync(serverPlayer);
             }
             return InteractionResultHolder.success(stack);
         }

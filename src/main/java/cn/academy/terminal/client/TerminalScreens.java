@@ -26,6 +26,7 @@ public final class TerminalScreens {
         // Les reglages n'ont pas d'ecran a eux : leur matiere, ce sont les prereglages de
         // touches, et l'ecran qui les regle est le meme que celui de la touche dediee.
         AppScreens.register(AppSettings.INSTANCE, PresetEditScreen::new);
+        AppScreens.register(cn.academy.terminal.app.AppMediaPlayer.INSTANCE, MediaPlayerScreen::new);
 
         // Le seul chemin neutre vers un ecran, pour ce qui n'est pas le terminal :
         // l'objet MisakaCloud ouvre le tutoriel sans passer par la grille.

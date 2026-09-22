@@ -4759,20 +4759,23 @@ public final class AcademyGameTests {
         var skillTree = cn.academy.terminal.app.AppSkillTree.INSTANCE;
         var tutorial = cn.academy.terminal.app.AppTutorial.INSTANCE;
         var settings = cn.academy.terminal.app.AppSettings.INSTANCE;
+        var mediaPlayer = cn.academy.terminal.app.AppMediaPlayer.INSTANCE;
 
         assertTrue(helper, registry.isBaked(), "le registre doit etre ferme apres l'initialisation");
 
         // L'ordre du registre donne les identifiants : il suit les priorites de
         // l'original, « A propos » en premier, et une application s'ajoute a la fin.
-        assertValue(helper, 4, registry.size(), "quatre applications sont portees");
+        assertValue(helper, 5, registry.size(), "cinq applications sont portees");
         assertValue(helper, "about", registry.get(0).getName(), "la premiere application");
         assertValue(helper, "skill_tree", registry.get(1).getName(), "la deuxieme application");
         assertValue(helper, "tutorial", registry.get(2).getName(), "la troisieme application");
         assertValue(helper, "settings", registry.get(3).getName(), "la quatrieme application");
+        assertValue(helper, "media_player", registry.get(4).getName(), "la cinquieme application");
         assertValue(helper, 0, about.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
         assertValue(helper, 1, skillTree.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
         assertValue(helper, 2, tutorial.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
         assertValue(helper, 3, settings.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
+        assertValue(helper, 4, mediaPlayer.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
 
         assertTrue(helper, registry.getByName("about") == about,
                 "la recherche par nom doit rendre la meme instance");
@@ -4781,6 +4784,8 @@ public final class AcademyGameTests {
         assertTrue(helper, registry.getByName("tutorial") == tutorial,
                 "la recherche par nom doit rendre la meme instance");
         assertTrue(helper, registry.getByName("settings") == settings,
+                "la recherche par nom doit rendre la meme instance");
+        assertTrue(helper, registry.getByName("media_player") == mediaPlayer,
                 "la recherche par nom doit rendre la meme instance");
 
         assertTrue(helper, about.isPreInstalled(),
@@ -4794,14 +4799,72 @@ public final class AcademyGameTests {
         assertValue(helper, "ac.app.skill_tree.name", skillTree.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.tutorial.name", tutorial.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.settings.name", settings.getDisplayKey(), "cle de langue du nom");
+        assertValue(helper, "ac.app.media_player.name", mediaPlayer.getDisplayKey(), "cle de langue du nom");
 
         // Et les applications qui n'ont pas de contenu a montrer ne sont pas enregistrees :
-        // une icone qui n'ouvre rien serait pire qu'une icone absente.
-        assertTrue(helper, registry.getByName("media_player") == null,
-                "les applications non portees ne doivent pas etre enregistrees");
+        // une icone qui n'ouvre rien serait pire qu'une icone absente. L'Emetteur de
+        // frequence n'a plus d'objet utilisable depuis la 1.20.1, le raccordement s'y
+        // faisant tout seul.
         assertTrue(helper, registry.getByName("freq_transmitter") == null,
                 "les applications non portees ne doivent pas etre enregistrees");
         helper.succeed();
+    }
+
+    /**
+     * Un objet de musique donne son morceau, et seulement dans les formes.
+     *
+     * <p>L'original repondait trois choses a ce clic droit : « tu n'as pas l'application »,
+     * « tu l'as deja », ou « le voila ». Le port garde les trois, et le morceau ne se perd
+     * qu'une fois — c'est ce que ce test suit, du refus jusqu'a la liste.
+     */
+    @GameTest(template = "empty")
+    public static void unMorceauSInstalleParSonObjet(GameTestHelper helper) {
+        Player player = ownPlayer(helper, "media");
+        player.getAbilities().instabuild = false;
+
+        // Sans l'application, l'objet se garde : c'est la premiere reponse de l'original.
+        ItemStack track = new ItemStack(ModItems.MEDIA_RAILGUN.get(), 2);
+        player.setItemInHand(InteractionHand.MAIN_HAND, track);
+        track.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertFalse(helper, mediaOf(player).isInstalled("only_my_railgun"),
+                "sans l'application, le morceau ne s'installe pas");
+        assertValue(helper, 2, track.getCount(), "et l'objet n'est pas consomme");
+
+        // Le terminal, puis l'application : l'objet installe alors le morceau.
+        ItemStack installer = new ItemStack(ModItems.TERMINAL_INSTALLER.get(), 1);
+        player.setItemInHand(InteractionHand.MAIN_HAND, installer);
+        installer.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        ItemStack app = new ItemStack(ModItems.APP_MEDIA_PLAYER.get(), 1);
+        player.setItemInHand(InteractionHand.MAIN_HAND, app);
+        app.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertTrue(helper, appInstalled(player) || installedApp(player, "media_player"),
+                "l'application du lecteur doit s'installer");
+
+        player.setItemInHand(InteractionHand.MAIN_HAND, track);
+        track.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertTrue(helper, mediaOf(player).isInstalled("only_my_railgun"),
+                "le morceau doit s'installer");
+        assertValue(helper, 1, track.getCount(), "un objet sur deux doit etre consomme");
+
+        // Et une deuxieme fois ne donne rien de plus.
+        track.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertValue(helper, 1, track.getCount(), "un morceau deja possede ne consomme plus rien");
+        assertValue(helper, 1, mediaOf(player).count(), "et la liste ne grandit pas");
+        helper.succeed();
+    }
+
+    /** Les morceaux d'un joueur, ou un etat vide s'il n'a pas la capacite. */
+    private static cn.academy.misc.media.MediaAcquireData mediaOf(Player player) {
+        return player.getCapability(cn.academy.misc.media.MediaCapability.MEDIA_DATA)
+                .map(cn.academy.misc.media.MediaCapability.Holder::get)
+                .orElseGet(cn.academy.misc.media.MediaAcquireData::new);
+    }
+
+    /** Si ce joueur a installe cette application, par son nom. */
+    private static boolean installedApp(Player player, String name) {
+        var data = terminalOf(player);
+        var app = cn.academy.terminal.AppRegistry.INSTANCE.getByName(name);
+        return data != null && app != null && data.isInstalled(app);
     }
 
     /**
