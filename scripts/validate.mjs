@@ -100,6 +100,32 @@ const menus = scanJava('ModMenus.java').names;
 const fluidRegs = scanJava('ModFluids.java').names;
 const tabs = scanJava('ModCreativeTabs.java').names;
 
+// Entites : le registre est nouveau, et il porte un piege propre a Forge. Le nom passe a
+// `build(...)` (celui du datafixer) doit etre celui du `register(...)` (celui du registre)
+// : les deux se ressemblent tant qu'un desalignement ne se verrait qu'a l'ouverture d'un
+// monde deja sauvegarde, donc jamais pendant le developpement.
+const entities = new Set();
+const entityBuildNames = new Map();
+{
+  const src = readText(path.join(SRC, 'ModEntities.java')) ?? '';
+  const paired =
+    /ENTITIES\.register\(\s*"([a-z][a-z0-9_]*)"[\s\S]{0,800}?\.build\(\s*"([a-z][a-z0-9_]*)"\s*\)/g;
+  for (const m of src.matchAll(paired)) {
+    entities.add(m[1]);
+    entityBuildNames.set(m[1], m[2]);
+  }
+  for (const m of src.matchAll(/ENTITIES\.register\(\s*"([a-z][a-z0-9_]*)"/g)) {
+    entities.add(m[1]);
+  }
+}
+for (const [id, built] of entityBuildNames) {
+  if (id !== built) {
+    add('CASSE', 'entite', id, `build("${built}") ne porte pas le nom du registre`);
+  } else {
+    add('OK', 'entite', id);
+  }
+}
+
 // FLUIDS.register(...) et FLUID_TYPES.register(...) sont dans le meme fichier :
 // seuls les seconds portent une cle de langue.
 const fluidTypes = new Set();
@@ -546,6 +572,7 @@ const summary = {
   registries: {
     blocks: blocks.size,
     items: items.size,
+    entities: entities.size,
     blockEntities: blockEntities.size,
     menus: menus.size,
     fluids: fluidRegs.size,
@@ -575,7 +602,7 @@ if (AS_JSON) {
     `${C.gray}Racine : ${MOD_ROOT}${C.reset}`,
   );
   out.push(
-    `Registres : ${blocks.size} blocs | ${items.size} items | ${blockEntities.size} block entities | ${menus.size} menus | ${fluidRegs.size} fluides | ${tabs.size} onglets | ${recipeCount} recipes`,
+    `Registres : ${blocks.size} blocs | ${items.size} items | ${entities.size} entites | ${blockEntities.size} block entities | ${menus.size} menus | ${fluidRegs.size} fluides | ${tabs.size} onglets | ${recipeCount} recipes`,
   );
 
   const byLevel = {};

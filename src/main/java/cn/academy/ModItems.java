@@ -98,7 +98,7 @@ public class ModItems {
 
     // --- OUTILS ET DIVERS ---[cite: 1]
     public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new SilbarnItem());
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",
@@ -145,6 +145,41 @@ public class ModItems {
     public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player", () -> new TooltipItem("ac.app.media_player.name"));
     public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter", () -> new TooltipItem("ac.app.freq_transmitter.name"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings", () -> new TooltipItem("ac.app.settings.name"));
+
+    /**
+     * La bille de silicium : l'objet qu'on lance, portage de {@code ItemSilbarn}.
+     *
+     * Un objet qui ne sert a rien tout seul, et qui n'existe que pour la salve de rayons :
+     * on le jette ou l'on veut que la salve explose. Il se consomme au lancer, comme
+     * l'original, sauf en creatif.
+     *
+     * Le son est celui d'un oeuf lance. L'original le jouait en excluant le lanceur
+     * ({@code world.playSound(player, ...)}) : le port le fait entendre a tout le monde,
+     * celui qui lance compris — une main qui ne s'entend pas lancer est une main qui fait
+     * douter du clic.
+     */
+    public static class SilbarnItem extends Item {
+        public SilbarnItem() {
+            super(new Item.Properties());
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    net.minecraft.sounds.SoundEvents.EGG_THROW, net.minecraft.sounds.SoundSource.PLAYERS,
+                    0.5f, 0.4f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
+
+            if (!level.isClientSide) {
+                level.addFreshEntity(new cn.academy.entity.EntitySilbarn(level, player));
+            }
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
+            return InteractionResultHolder.success(stack);
+        }
+    }
 
     // --- CLASSE : L'UNITÉ VIDE (Capture corrigée) ---
     public static class EmptyUnitItem extends Item {

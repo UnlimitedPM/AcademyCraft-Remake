@@ -26,6 +26,7 @@ public class AcademyCraft {
         ModFluids.register(modEventBus);
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
+        ModEntities.register(modEventBus);
         ModBlockEntities.register(modEventBus); // <-- LA LIGNE MAGIQUE QUI MANQUAIT
         ModCreativeTabs.register(modEventBus);
         ModMenus.register(modEventBus);
@@ -53,6 +54,9 @@ public class AcademyCraft {
         @SubscribeEvent
         public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerBlockEntityRenderer(ModBlockEntities.CAT_ENGINE.get(), CatEngineRenderer::new);
+            // La bille de silicium : la premiere entite du mod, et donc son premier rendu
+            // d'entite. Sans cette ligne, l'objet se lancerait sans qu'on voie rien.
+            event.registerEntityRenderer(ModEntities.SILBARN.get(), cn.academy.client.SilbarnRenderer::new);
         }
 
         @SubscribeEvent

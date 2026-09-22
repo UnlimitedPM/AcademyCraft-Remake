@@ -1786,6 +1786,92 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * La bille de silicium, la premiere entite du mod.
+     *
+     * Son cycle de vie ne se lit qu'avec un monde : elle vole, elle se pose sur un bloc,
+     * elle disparait dix ticks plus tard. C'est aussi ce que la salve de rayons ira
+     * chercher — une bille <b>posee</b>, et rien d'autre — donc le drapeau qui distingue
+     * les deux etats merite d'etre fige ici.
+     */
+    @GameTest(template = "empty")
+    public static void laBilleLanceeFlottePuisTombeEtSePose(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos floor = new BlockPos(2, 1, 2);
+        helper.setBlock(floor, net.minecraft.world.level.block.Blocks.STONE);
+        BlockPos abs = helper.absolutePos(floor);
+
+        var ball = new cn.academy.entity.EntitySilbarn(level, fakePlayer(helper));
+        // Pose juste au-dessus du sol, immobile : sans gravite elle ne bouge pas d'un
+        // millimetre, ce qui rend le test lisible.
+        ball.moveTo(abs.getX() + 0.5, abs.getY() + 2.0, abs.getZ() + 0.5, 0f, 0f);
+        ball.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+
+        assertValue(helper, 50, cn.academy.entity.EntitySilbarn.GRAVITY_DELAY,
+                "deux secondes et demie de flottement");
+        assertClose(helper, 0.12d, cn.academy.entity.EntitySilbarn.GRAVITY, "gravite de l'original");
+        assertFalse(helper, ball.isHit(), "elle part non posee");
+        assertTrue(helper, ball.isPickable(), "et donc visable");
+
+        // Les cinquante premiers ticks : elle flotte, immobile.
+        for (int i = 0; i < cn.academy.entity.EntitySilbarn.GRAVITY_DELAY; i++) {
+            ball.tick();
+        }
+        assertClose(helper, abs.getY() + 2.0, ball.getY(), "aucune gravite avant son heure");
+        assertFalse(helper, ball.isHit(), "et toujours pas posee");
+
+        // Ensuite elle tombe : une dizaine de ticks plus tard elle touche le sol.
+        int fallen = 0;
+        while (!ball.isHit() && fallen < 100) {
+            ball.tick();
+            fallen++;
+        }
+        assertTrue(helper, ball.isHit(), "elle doit finir par se poser");
+        assertFalse(helper, ball.isPickable(), "une bille posee ne se vise plus");
+        assertTrue(helper, Math.abs(ball.getY() - (abs.getY() + 1.0)) < 0.01,
+                "et elle doit s'etre posee sur le bloc, pas dedans : y=" + ball.getY());
+
+        // Puis elle disparait dix ticks apres s'etre posee, comme l'original.
+        for (int i = 0; i < cn.academy.entity.EntitySilbarn.HIT_LIFETIME; i++) {
+            assertFalse(helper, ball.isRemoved(), "encore la au tick " + i + " apres le contact");
+            ball.tick();
+        }
+        assertTrue(helper, ball.isRemoved(), "posee, elle disparait dix ticks plus tard");
+
+        helper.succeed();
+    }
+
+    /** L'objet se lance et pose une bille dans le monde. */
+    @GameTest(template = "empty")
+    public static void lancerLaBilleFaitApparaitreUneBille(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(new BlockPos(3, 1, 3));
+
+        var player = fakePlayer(helper);
+        player.revive();
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        // Le faux joueur est partage : en creatif pour ne pas consommer l'objet, et remis
+        // comme les autres tests l'attendent en partant.
+        player.getAbilities().instabuild = true;
+
+        var stack = new ItemStack(ModItems.SILBARN.get());
+        var before = level.getEntitiesOfClass(cn.academy.entity.EntitySilbarn.class,
+                player.getBoundingBox().inflate(8.0));
+
+        var result = ModItems.SILBARN.get().use(level, player, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        assertValue(helper, net.minecraft.world.InteractionResult.SUCCESS, result.getResult(),
+                "le lancer doit aboutir");
+        var after = level.getEntitiesOfClass(cn.academy.entity.EntitySilbarn.class,
+                player.getBoundingBox().inflate(8.0));
+        assertValue(helper, before.size() + 1, after.size(), "une bille de plus dans le monde");
+        assertValue(helper, 1, stack.getCount(), "et rien de consomme en creatif");
+
+        for (var ball : after) ball.discard();
+        player.getAbilities().instabuild = false;
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le generateur de phase
     // ------------------------------------------------------------------
