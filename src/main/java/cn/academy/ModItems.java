@@ -146,7 +146,8 @@ public class ModItems {
             () -> new AppInstallerItem("skill_tree"));
     public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player", () -> new TooltipItem("ac.app.media_player.name"));
     public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter", () -> new TooltipItem("ac.app.freq_transmitter.name"));
-    public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings", () -> new TooltipItem("ac.app.settings.name"));
+    public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings",
+            () -> new AppInstallerItem("settings"));
 
     /**
      * La bille de silicium : l'objet qu'on lance, portage de {@code ItemSilbarn}.

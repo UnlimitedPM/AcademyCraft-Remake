@@ -4758,24 +4758,29 @@ public final class AcademyGameTests {
         var about = cn.academy.terminal.app.AppAbout.INSTANCE;
         var skillTree = cn.academy.terminal.app.AppSkillTree.INSTANCE;
         var tutorial = cn.academy.terminal.app.AppTutorial.INSTANCE;
+        var settings = cn.academy.terminal.app.AppSettings.INSTANCE;
 
         assertTrue(helper, registry.isBaked(), "le registre doit etre ferme apres l'initialisation");
 
         // L'ordre du registre donne les identifiants : il suit les priorites de
         // l'original, « A propos » en premier, et une application s'ajoute a la fin.
-        assertValue(helper, 3, registry.size(), "trois applications sont portees");
+        assertValue(helper, 4, registry.size(), "quatre applications sont portees");
         assertValue(helper, "about", registry.get(0).getName(), "la premiere application");
         assertValue(helper, "skill_tree", registry.get(1).getName(), "la deuxieme application");
         assertValue(helper, "tutorial", registry.get(2).getName(), "la troisieme application");
+        assertValue(helper, "settings", registry.get(3).getName(), "la quatrieme application");
         assertValue(helper, 0, about.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
         assertValue(helper, 1, skillTree.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
         assertValue(helper, 2, tutorial.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
+        assertValue(helper, 3, settings.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
 
         assertTrue(helper, registry.getByName("about") == about,
                 "la recherche par nom doit rendre la meme instance");
         assertTrue(helper, registry.getByName("skill_tree") == skillTree,
                 "la recherche par nom doit rendre la meme instance");
         assertTrue(helper, registry.getByName("tutorial") == tutorial,
+                "la recherche par nom doit rendre la meme instance");
+        assertTrue(helper, registry.getByName("settings") == settings,
                 "la recherche par nom doit rendre la meme instance");
 
         assertTrue(helper, about.isPreInstalled(),
@@ -4788,7 +4793,13 @@ public final class AcademyGameTests {
         assertValue(helper, "ac.app.about.name", about.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.skill_tree.name", skillTree.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.tutorial.name", tutorial.getDisplayKey(), "cle de langue du nom");
-        assertTrue(helper, registry.getByName("settings") == null,
+        assertValue(helper, "ac.app.settings.name", settings.getDisplayKey(), "cle de langue du nom");
+
+        // Et les applications qui n'ont pas de contenu a montrer ne sont pas enregistrees :
+        // une icone qui n'ouvre rien serait pire qu'une icone absente.
+        assertTrue(helper, registry.getByName("media_player") == null,
+                "les applications non portees ne doivent pas etre enregistrees");
+        assertTrue(helper, registry.getByName("freq_transmitter") == null,
                 "les applications non portees ne doivent pas etre enregistrees");
         helper.succeed();
     }

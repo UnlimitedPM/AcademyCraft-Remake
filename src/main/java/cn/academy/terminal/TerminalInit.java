@@ -1,6 +1,7 @@
 package cn.academy.terminal;
 
 import cn.academy.terminal.app.AppAbout;
+import cn.academy.terminal.app.AppSettings;
 import cn.academy.terminal.app.AppSkillTree;
 import cn.academy.terminal.app.AppTutorial;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -23,6 +24,9 @@ public class TerminalInit {
             AppRegistry.INSTANCE.register(AppAbout.INSTANCE);
             AppRegistry.INSTANCE.register(AppSkillTree.INSTANCE);
             AppRegistry.INSTANCE.register(AppTutorial.INSTANCE);
+            // Ajoutee a la fin : l'identifiant d'une application est sa place, et un
+            // identifiant deja sauvegarde chez un joueur ne doit pas changer de sens.
+            AppRegistry.INSTANCE.register(AppSettings.INSTANCE);
             AppRegistry.INSTANCE.bake();
         });
     }
