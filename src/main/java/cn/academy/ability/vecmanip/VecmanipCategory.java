@@ -15,6 +15,7 @@ public class VecmanipCategory extends Category {
     public static final VecReflectionSkill VEC_REFLECTION = new VecReflectionSkill();
     public static final VecAccelSkill VEC_ACCEL = new VecAccelSkill();
     public static final VecDeviationSkill VEC_DEVIATION = new VecDeviationSkill();
+    public static final StormWingSkill STORM_WING = new StormWingSkill();
 
     public static final VecmanipCategory INSTANCE = new VecmanipCategory();
 
@@ -27,6 +28,7 @@ public class VecmanipCategory extends Category {
         addSkill(VEC_REFLECTION);
         addSkill(VEC_ACCEL);
         addSkill(VEC_DEVIATION);
+        addSkill(STORM_WING);
 
         // L'arbre de l'original part du choc dirige : c'est lui qui apprend a pousser, et
         // tout vecmanip en descend. L'acceleration de vecteur et l'onde de choc lui doivent
@@ -43,5 +45,8 @@ public class VecmanipCategory extends Category {
         // Et la reflexion descend de la deviation : arreter ce qui vole s'apprend avant de
         // le retourner, exactement comme dans l'arbre de l'original.
         VEC_REFLECTION.setParent(VEC_DEVIATION);
+        // Les ailes de tempete descendent de l'acceleration, comme la deviation : on
+        // n'apprend pas a voler avant d'avoir appris a se propulser.
+        STORM_WING.setParent(VEC_ACCEL);
     }
 }

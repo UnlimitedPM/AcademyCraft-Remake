@@ -82,7 +82,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_VEC_DEVIATION, VecmanipCategory.NAME,
                     "vec_deviation"),
             new Binding(AbilityKeyBindings.ACTIVATE_VEC_REFLECTION, VecmanipCategory.NAME,
-                    "vec_reflection"));
+                    "vec_reflection"),
+            new Binding(AbilityKeyBindings.ACTIVATE_STORM_WING, VecmanipCategory.NAME,
+                    "storm_wing"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -135,6 +137,15 @@ public class AbilityClientEvents {
             // maintien : c'est la seule competence qui ecoute autre chose que sa touche.
             if (skill.listensToDirections()) {
                 tickDirections(category, skill);
+            }
+            // Et les ailes de tempete lisent le mouvement a chaque tick, chez le joueur :
+            // c'est ce que faisait le MSG_TICK client de l'original. La direction est celle
+            // du dernier appui, comme son currentDir.
+            if (skill.isHeld()) {
+                var player = net.minecraft.client.Minecraft.getInstance().player;
+                if (player != null) {
+                    skill.onClientHoldTick(player, ClientAbilityData.get(), ClientCharge.getTicks(), aimed);
+                }
             }
             return;
         }

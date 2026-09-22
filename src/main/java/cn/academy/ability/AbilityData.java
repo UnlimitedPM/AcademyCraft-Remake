@@ -142,6 +142,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
          * disparaissent avec lui.
          */
         private final List<net.minecraft.world.phys.Vec3> points = new ArrayList<>();
+
+        /**
+         * Le vol libre du joueur avant le maintien.
+         *
+         * Les ailes de tempete l'ouvrent pour la duree de leur vol et le rendent a la fin :
+         * sans ce souvenir, un joueur de mode survie garderait le vol apres sa competence.
+         */
+        private boolean flying;
     }
 
     private final Map<Skill, Hold> holds = new HashMap<>();
@@ -913,6 +921,22 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public List<net.minecraft.world.phys.Vec3> getHoldPoints(Skill skill) {
         Hold hold = holds.get(skill);
         return hold == null ? List.of() : List.copyOf(hold.points);
+    }
+
+    /**
+     * Le vol libre du joueur avant ce maintien, pour le rendre a la fin.
+     *
+     * C'est le {@code prevAllowFlying} du contexte de l'original : sans lui, une competence
+     * qui ouvre le vol le laisserait ouvert pour toujours.
+     */
+    public void setHoldFlying(Skill skill, boolean flying) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.flying = flying;
+    }
+
+    public boolean getHoldFlying(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold != null && hold.flying;
     }
 
     /** Commence une charge : le compteur repart de zero. */

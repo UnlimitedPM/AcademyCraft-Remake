@@ -1065,6 +1065,42 @@ class SkillCurvesTest {
         assertEquals(0f, reflection.getExpGain(atExperience(reflection, 0f)), 0.000001f);
     }
 
+    @Test
+    void lesAilesDeTempeteCoutentLeVolEtRienDAutre() {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+
+        // Un maintien sans duree, qui se sert des touches de deplacement : c'est avec elles
+        // qu'on vole, comme le scintillement saute avec elles.
+        assertTrue(wing.isHeld(), "les ailes se tiennent");
+        assertEquals(0, wing.getMaxHoldTicks(atExperience(wing, 0f)), "sans duree programmee");
+        assertTrue(wing.listensToDirections(), "le geste se sert des quatre touches");
+        assertTrue(wing.earnsExpOnEffect(), "le vol verse son experience lui-meme");
+        assertEquals(0f, wing.getExpGain(atExperience(wing, 0f)), 0.000001f,
+                "rien a l'ouverture : la charge ne rapporte rien");
+
+        // La charge : 70 ticks au depart, 30 au maximum, et gratuite.
+        assertBounds("charge des ailes", 70f, 30f, wing::chargeTime, wing);
+        assertEquals(0f, wing.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
+
+        // Le vol : 40 a 25 CP par tick (divises par 28) et 10 a 7 de surcout.
+        assertBounds("cout du vol", 1.43f, 0.89f, wing::consumption, wing);
+        assertBounds("surcout du vol", 10f, 7f, wing::overload, wing);
+        assertEquals(wing.overload(atExperience(wing, 0f)),
+                wing.getOverloadCost(atExperience(wing, 0f)), 0.0001f,
+                "le surcout d'ouverture est le premier tick de vol");
+
+        // La vitesse : deux regimes separes par 45 % d'experience, et la recharge qui suit.
+        assertBounds("vitesse des ailes", 1.4f, 3.6f, wing::speed, wing);
+        assertBounds("recharge des ailes", 30f, 10f, d -> (float) wing.getCooldownTicks(d), wing);
+
+        // Les ailes maladroites, et le souffle de l'ouverture : sous 15 % d'experience elles
+        // cassent ce qu'elles trouvent, et a pleine experience elles repoussent.
+        assertTrue(wing.clumsy(atExperience(wing, 0f)), "un debutant casse tout");
+        assertFalse(wing.clumsy(atExperience(wing, 0.2f)), "et un peu d'experience suffit");
+        assertTrue(wing.blows(atExperience(wing, 1f)), "a pleine experience elles repoussent");
+        assertFalse(wing.blows(atExperience(wing, 0.9f)), "et pas avant");
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,

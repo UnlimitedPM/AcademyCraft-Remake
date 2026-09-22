@@ -3008,6 +3008,178 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Les ailes de tempete : le vol est ouvert pendant le maintien, et rendu a la fin.
+     *
+     * <p>Le deplacement lui-meme ne se verifie pas ici : c'est le client qui le pousse, comme
+     * dans l'original. Ce qui se verifie, c'est la note — la charge gratuite, le premier tick
+     * de vol qui paie et qui rapporte, la reserve qui manque et qui termine, et le vol rendu.
+     */
+    @GameTest(template = "empty")
+    public static void lesAilesDeTempeteAutorisentLeVolEtFacturentLeVol(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 300);
+
+        var player = ownPlayer(helper, "winged");
+        clearCorridor(helper, abs, 6);
+        player.moveTo(abs.getX() + 0.5, abs.getY() + 20, abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(wing.getCategory(), 3);
+        data.learnSkill(wing);
+
+        assertFalse(helper, player.getAbilities().mayfly, "un joueur de survie ne vole pas");
+
+        // L'ouverture, comme le paquet la fait : le surcout d'abord, puis le maintien.
+        assertTrue(helper, data.perform(wing.getCpCost(), wing.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        wing.onStart(player, data);
+        data.beginCharge(wing);
+        assertTrue(helper, player.getAbilities().mayfly, "les ailes ouvrent le vol");
+
+        // La charge : septante ticks, gratuits, sans experience.
+        double reserveBefore = data.getControlPoint();
+        for (int tick = 1; tick <= 70; tick++) {
+            assertTrue(helper, wing.onHoldTick(player, data, tick), "la charge tient au tick " + tick);
+        }
+        assertClose(helper, reserveBefore, data.getControlPoint(), "la charge ne coute rien");
+        assertClose(helper, 0.0d, data.getSkillExp(wing), "et ne rapporte rien");
+
+        // Le premier tick de vol : l'experience, la reserve, et le vol qui tient.
+        assertTrue(helper, wing.onHoldTick(player, data, 71), "les ailes volent");
+        assertClose(helper, 0.00005d, data.getSkillExp(wing), "0,00005 par tick de vol");
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 1.4f,
+                "et 40 CP sur 2800 valent 1,43 : " + data.getControlPoint());
+
+        // Plus de reserve, plus d'ailes : c'est la fin du maintien.
+        while (data.getControlPoint() > 0f) {
+            assertTrue(helper, data.consumeControlPoint(data.getControlPoint()),
+                    "vider la reserve doit marcher");
+        }
+        assertFalse(helper, wing.onHoldTick(player, data, 72), "la reserve vide termine le vol");
+
+        // Et la fin ordinaire rend le vol, avec la recharge de l'original.
+        cn.academy.ability.AbilityEvents.endHeld(player, data, wing);
+        assertFalse(helper, player.getAbilities().mayfly, "le vol est rendu a la fin");
+        assertTrue(helper, data.isOnCooldown(wing), "et la recharge est posee");
+
+        helper.succeed();
+    }
+
+    /**
+     * Les ailes maladroites : sous 15 % d'experience, elles cassent ce qu'elles trouvent.
+     *
+     * <p>Tout le volume de casse est rempli de neige — vingt et un blocs de cote, un millier
+     * de positions — parce que l'original en tire quarante au hasard : sans un volume plein,
+     * un tirage ne tomberait presque jamais sur un bloc tendre, et le test ne dirait rien. Le
+     * cas « avec de l'experience » passe en premier, l'experience ne s'oubliant pas.
+     */
+    @GameTest(template = "empty")
+    public static void lesAilesMaladroitesCassentCeQuEllesTrouvent(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        int height = 260;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), height);
+
+        var expert = ownPlayer(helper, "clumsy-no");
+        clearCorridor(helper, abs, 6);
+        expert.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var expertData = expert.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        expertData.setCategoryLevel(wing.getCategory(), 3);
+        expertData.learnSkill(wing);
+        expertData.addSkillExp(wing, 0.2f);
+        assertFalse(helper, wing.clumsy(expertData), "a 0,2 d'experience, les ailes sont sures");
+
+        var clumsy = ownPlayer(helper, "clumsy-yes");
+        clumsy.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var clumsyData = clumsy.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        clumsyData.setCategoryLevel(wing.getCategory(), 3);
+        clumsyData.learnSkill(wing);
+        assertTrue(helper, wing.clumsy(clumsyData), "et a zero, elles ne le sont pas");
+
+        // Le volume de casse, dans le repere RELATIF de la structure : le joueur est pose a
+        // la relative 1 + hauteur, donc le volume est centre la.
+        for (int dx = -10; dx <= 10; dx++) {
+            for (int dy = -10; dy <= 10; dy++) {
+                for (int dz = -10; dz <= 10; dz++) {
+                    helper.setBlock(new BlockPos(2 + dx, 1 + height + dy, 2 + dz),
+                            net.minecraft.world.level.block.Blocks.SNOW_BLOCK);
+                }
+            }
+        }
+
+        wing.onHoldTick(expert, expertData, 5);
+        assertValue(helper, net.minecraft.world.level.block.Blocks.SNOW_BLOCK,
+                helper.getBlockState(new BlockPos(2, 1 + height, 2)).getBlock(),
+                "un joueur experimente ne casse rien");
+
+        wing.onHoldTick(clumsy, clumsyData, 5);
+        int broken = 0;
+        for (int dx = -10; dx <= 10; dx++) {
+            for (int dy = -10; dy <= 10; dy++) {
+                for (int dz = -10; dz <= 10; dz++) {
+                    if (helper.getBlockState(new BlockPos(2 + dx, 1 + height + dy, 2 + dz))
+                            .isAir()) {
+                        broken++;
+                    }
+                }
+            }
+        }
+        assertTrue(helper, broken >= 20,
+                "les ailes d'un debutant cassent ce qu'elles trouvent : " + broken + " blocs");
+
+        helper.succeed();
+    }
+
+    /**
+     * Les ailes pleines : a cent pour cent d'experience, l'ouverture repousse tout ce qui est
+     * a moins de six blocs.
+     */
+    @GameTest(template = "empty")
+    public static void lesAilesPleinesRepoussentALOuverture(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 220);
+
+        var player = ownPlayer(helper, "full-wing");
+        clearCorridor(helper, abs, 6);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(wing.getCategory(), 3);
+        data.learnSkill(wing);
+        data.addSkillExp(wing, 1f);
+        assertTrue(helper, wing.blows(data), "a pleine experience, l'ouverture repousse");
+        assertValue(helper, (int) wing.chargeTicks(data), 30, "et les ailes s'ouvrent en trente ticks");
+
+        assertTrue(helper, data.perform(wing.getCpCost(), wing.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        wing.onStart(player, data);
+        data.beginCharge(wing);
+
+        var cow = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, helper.getLevel());
+        cow.moveTo(abs.getX() + 3.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        cow.setDeltaMovement(0, 0, 0);
+        helper.getLevel().addFreshEntity(cow);
+
+        // Le dernier tick de la charge ne repousse encore rien...
+        assertTrue(helper, wing.onHoldTick(player, data, 30), "la charge tient");
+        assertClose(helper, 0.0d, cow.getDeltaMovement().length(), "et rien n'a bouge");
+
+        // ... et le suivant ouvre les ailes : la bete part a l'oppose du joueur.
+        assertTrue(helper, wing.onHoldTick(player, data, 31), "les ailes s'ouvrent");
+        assertTrue(helper, cow.getDeltaMovement().length() >= 0.5,
+                "le souffle repousse : " + cow.getDeltaMovement());
+        assertTrue(helper, cow.getDeltaMovement().x > 0,
+                "et il repousse bien de l'autre cote : " + cow.getDeltaMovement());
+
+        cow.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui

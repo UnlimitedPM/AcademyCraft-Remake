@@ -171,6 +171,15 @@ public class AbilityKeyBindings {
             InputConstants.KEY_INSERT, "key.categories.academy");
 
     /**
+     * Les ailes de tempete. Il n'y a plus rien de libre pres des touches du jeu, et celle-ci
+     * se tient d'une main pendant que l'autre vole avec W, A, S et D. Le systeme de presets
+     * de l'original reste a porter, et c'est lui qui reglera la question.
+     */
+    public static final KeyMapping ACTIVATE_STORM_WING = new KeyMapping(
+            "key.academy.activate_storm_wing", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_HOME, "key.categories.academy");
+
+    /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
      */
@@ -210,5 +219,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_BLOOD_RETROGRADE);
         event.register(ACTIVATE_VEC_DEVIATION);
         event.register(ACTIVATE_VEC_REFLECTION);
+        event.register(ACTIVATE_STORM_WING);
     }
 }

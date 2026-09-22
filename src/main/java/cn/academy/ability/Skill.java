@@ -406,6 +406,24 @@ public abstract class Skill {
     }
 
     /**
+     * Un tick de maintien, cote client.
+     *
+     * <p>La seule forme de l'original qui s'execute chez le joueur : le contexte de la 1.12.2
+     * vivait des deux cotes, et son {@code MSG_TICK} client poussait le joueur lui-meme —
+     * c'est ainsi que les ailes de tempete volent, en posant la vitesse a chaque tick au lieu
+     * de la demander au serveur.
+     *
+     * <p>{@code direction} est la touche de deplacement tenue (1 a 4, 0 pour aucune), telle
+     * que le client la lit : l'original appelait cela {@code currentDir}, et la retenait du
+     * dernier appui. Le serveur, lui, ne recoit rien de tout cela — il compte ses propres
+     * ticks et facture le vol de son cote.
+     *
+     * <p>Defaut : rien. Seule competence concernee : {@code storm_wing}.
+     */
+    public void onClientHoldTick(Player player, AbilityData data, int heldTicks, int direction) {
+    }
+
+    /**
      * Une action <b>pendant</b> un maintien, venue d'une touche qui n'est pas la sienne.
      *
      * <p>Une seule competence du port s'en sert : le {@code flashing} ecoute les quatre
