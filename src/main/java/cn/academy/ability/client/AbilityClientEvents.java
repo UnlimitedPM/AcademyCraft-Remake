@@ -73,7 +73,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_FLASHING, TeleporterCategory.NAME, "flashing"),
             new Binding(AbilityKeyBindings.ACTIVATE_LOCATION_TELEPORT, TeleporterCategory.NAME,
                     "location_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_SHOCK, VecmanipCategory.NAME, "dir_shock"));
+            new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_SHOCK, VecmanipCategory.NAME, "dir_shock"),
+            new Binding(AbilityKeyBindings.ACTIVATE_GROUNDSHOCK, VecmanipCategory.NAME, "ground_shock"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -108,7 +109,12 @@ public class AbilityClientEvents {
             binding.charging = skill.isChargeable() || skill.isHeld();
             send(category, skill, Phase.PRESS);
             if (skill.isChargeable()) {
-                ClientCharge.begin(skill.getMaxChargeTicks(ClientAbilityData.get()));
+                // Une charge sans maximum n'a rien a montrer : la barre serait pleine des le
+                // premier tick. L'original, lui, faisait plonger le regard du joueur pendant
+                // la charge — un retour visuel cote client que le port n'a pas encore de
+                // crochet pour reproduire. Le bouclier, lui, a son propre temoin.
+                int max = skill.getMaxChargeTicks(ClientAbilityData.get());
+                if (max > 0) ClientCharge.begin(max);
             } else if (skill.isHeld()) {
                 ClientCharge.beginSustained();
             }

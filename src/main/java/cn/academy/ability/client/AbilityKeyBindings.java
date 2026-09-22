@@ -141,6 +141,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_dir_shock", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_EQUALS, "key.categories.academy");
 
+    /** L'onde de choc : la touche se tient, le sol s'effondre au relachement. */
+    public static final KeyMapping ACTIVATE_GROUNDSHOCK = new KeyMapping(
+            "key.academy.activate_ground_shock", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_LBRACKET, "key.categories.academy");
+
     /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
@@ -176,5 +181,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_FLASHING);
         event.register(ACTIVATE_LOCATION_TELEPORT);
         event.register(ACTIVATE_DIRECTED_SHOCK);
+        event.register(ACTIVATE_GROUNDSHOCK);
     }
 }

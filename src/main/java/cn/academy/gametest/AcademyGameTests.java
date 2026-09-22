@@ -2268,6 +2268,228 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * L'onde de choc : ce qu'elle fait au sol devant elle, et a ce qui s'y trouve.
+     *
+     * <p>Le JUnit fige ses courbes, son axe et ses cinq colonnes ; ce qui ne se lit qu'avec
+     * un monde, c'est la <b>marche</b> — est-ce que le sol est vraiment ecrase, est-ce que
+     * les trois blocs au-dessus du marcheur sont vraiment casses, et est-ce qu'un corps
+     * dans le rang est vraiment touche puis souleve.
+     *
+     * <p>Le sol est bati ici, et pas seulement parce que l'onde en a besoin : a cette
+     * altitude le monde est de la pierre pleine, donc une bande d'un bloc de large et de
+     * l'air au-dessus donnent un couloir <b>previsible</b>, ou seuls le bloc du marcheur et
+     * sa colonne comptent. Le terrain alentour, lui, reste de la pierre, que l'onde attaque
+     * aussi des qu'elle sort du couloir — c'est pourquoi toutes les verifications portent
+     * sur les quatre premiers pas.
+     */
+    @GameTest(template = "empty")
+    public static void lOndeDeChocEffondreLeSolDevantElle(GameTestHelper helper) {
+        var shock = cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 240);
+
+        // La hauteur du test s'ajoute a la position <b>relative</b> du sol : `aboveTestArea`
+        // deplace l'absolu, alors que `setBlock` et `getBlockState` comptent depuis la
+        // structure. `abs` est a la relative 1 + 240, et le marcheur part du bloc qui est
+        // sous les pieds — donc de la relative 240. Se tromper d'un bloc ici ne casse pas
+        // le test : il le rend faux, en le faisant travailler un bloc au-dessus du sol.
+        int base = 240;
+
+        var player = ownPlayer(helper, "quaker");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        // Le sol d'abord : un faux joueur pose dans le vide n'est pas « au sol » tant que
+        // rien ne l'y a fait tomber, et l'onde ne partirait pas du tout.
+        player.setOnGround(true);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(shock.getCategory(), 1);
+        data.learnSkill(shock);
+
+        clearCorridor(helper, abs, 14);
+        buildWalkingFloor(helper, 13, base);
+
+        // Un cube de terre dans le couloir, au-dessus du marcheur : c'est la que se voit la
+        // casse des trois blocs de la colonne, qui ne depend d'aucun tirage.
+        helper.setBlock(new BlockPos(2, base + 1, 5),
+                net.minecraft.world.level.block.Blocks.DIRT);
+
+        // Une vache sur le sol, quatre blocs devant : le marcheur la trouvera en passant.
+        var cow = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        cow.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 4.5, 0f, 0f);
+        level.addFreshEntity(cow);
+
+        double reserveBefore = data.getControlPoint();
+        float healthBefore = cow.getHealth();
+        assertTrue(helper, player.onGround(), "le faux joueur doit etre pose au sol");
+        assertTrue(helper, reserveBefore >= shock.consumption(data),
+                "assez de reserve pour l'onde : " + reserveBefore + " pour " + shock.consumption(data));
+        shock.onActivateCharged(player, data, 10);
+
+        assertTrue(helper, data.getControlPoint() < reserveBefore,
+                "le prix doit avoir ete paye : " + data.getControlPoint() + " contre " + reserveBefore);
+
+        // Le sol a ete ecrase : la pierre est devenue de la pierre taillee, ou a disparu
+        // quand le tirage de la casse est tombe (trois chances sur dix par bloc).
+        var firstStep = helper.getBlockState(new BlockPos(2, base, 3));
+        assertFalse(helper, firstStep.is(net.minecraft.world.level.block.Blocks.STONE),
+                "le premier pas doit avoir ecrase le sol, trouve " + firstStep);
+        var flattened = helper.getBlockState(new BlockPos(2, base, 4));
+        assertFalse(helper, flattened.is(net.minecraft.world.level.block.Blocks.STONE),
+                "la pierre du couloir doit avoir ete ecrasee, trouve " + flattened);
+        assertTrue(helper, flattened.is(net.minecraft.world.level.block.Blocks.COBBLESTONE)
+                        || flattened.isAir(),
+                "en pierre taillee, ou en air si elle a ete cassee : " + flattened);
+
+        // La colonne de trois blocs, elle, est cassee sans tirage.
+        assertTrue(helper, helper.getBlockState(new BlockPos(2, base + 1, 5)).isAir(),
+                "le cube de terre au-dessus du marcheur doit avoir ete casse : "
+                        + helper.getBlockState(new BlockPos(2, base + 1, 5)));
+
+        // La vache : 4 points au depart de la courbe, et soulevee.
+        //
+        // Pas de verification sur la poussee horizontale : le coup de degats lui-meme en
+        // donne une (la 1.20.1 recule tout ce qui est frappe de 0,4 dans l'axe de
+        // l'attaquant), et l'original faisait comme le port — il ne posait que la
+        // composante verticale, en laissant celle-la. C'est bien la montee qui vient de
+        // l'onde, et c'est elle qui se verifie.
+        assertTrue(helper, Math.abs((healthBefore - 4f) - cow.getHealth()) < 0.02,
+                "4 points au depart de la courbe, trouve " + (healthBefore - cow.getHealth()));
+        assertTrue(helper, cow.getDeltaMovement().y > 0.4,
+                "la bete est soulevee : " + cow.getDeltaMovement());
+
+        // L'experience : 0,001 pour le coup et 0,002 pour la bete, une seule fois.
+        assertClose(helper, 0.003d, data.getSkillExp(shock),
+                "un corps touche rapporte 0,002, et le coup 0,001");
+        assertValue(helper, shock.cooldown(data), data.getCooldown(shock),
+                "et l'onde pose sa recharge elle-meme");
+
+        // La marche ne ramasse rien : l'original ne laissait des butins qu'a sa passe finale.
+        assertValue(helper, 0, itemsAround(helper, abs, 14).size(),
+                "aucun butin ne doit tomber pendant la marche");
+
+        cow.discard();
+        helper.succeed();
+    }
+
+    /** L'onde ne part pas d'un saut : en l'air, rien du tout, et rien de facture. */
+    @GameTest(template = "empty")
+    public static void lOndeDeChocNePartPasDeLAir(GameTestHelper helper) {
+        var shock = cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 280);
+        int base = 280;
+
+        var player = ownPlayer(helper, "jumper");
+        // Trois blocs au-dessus du sol, et pas au sol : c'est tout le sujet du test.
+        player.moveTo(abs.getX() + 0.5, abs.getY() + 3, abs.getZ() + 0.5, 0f, 0f);
+        player.setOnGround(false);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(shock.getCategory(), 1);
+        data.learnSkill(shock);
+
+        clearCorridor(helper, abs, 14);
+        buildWalkingFloor(helper, 5, base);
+
+        double reserveBefore = data.getControlPoint();
+        shock.onActivateCharged(player, data, 10);
+
+        assertFalse(helper, player.onGround(), "le joueur doit etre en l'air");
+        assertTrue(helper, helper.getBlockState(new BlockPos(2, base, 4))
+                        .is(net.minecraft.world.level.block.Blocks.STONE),
+                "le sol ne doit pas avoir bouge d'un bloc");
+        assertValue(helper, 0, data.getCooldown(shock),
+                "et rien ne doit avoir ete pose en recharge");
+        assertClose(helper, 0d, data.getSkillExp(shock), "ni d'experience versee");
+        assertClose(helper, reserveBefore, data.getControlPoint(),
+                "ni un point de reserve depense");
+        helper.succeed();
+    }
+
+    /**
+     * A pleine experience, l'onde ramasse : la passe finale casse le sol meuble du carre et
+     * le laisse tomber.
+     *
+     * <p>Le cube de terre est pose <b>derriere</b> le joueur : la marche part devant et ne
+     * le touchera donc jamais, alors que le carre de la passe finale l'englobe. C'est ce qui
+     * separe les deux passes du test precedent.
+     */
+    @GameTest(template = "empty")
+    public static void lOndeDeChocRamasseLeSolMeubleALaMaitrise(GameTestHelper helper) {
+        var shock = cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 320);
+        int base = 320;
+
+        var player = ownPlayer(helper, "master");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        player.setOnGround(true);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(shock.getCategory(), 1);
+        data.learnSkill(shock);
+        data.addSkillExp(shock, 1f);
+
+        clearCorridor(helper, abs, 16);
+        buildWalkingFloor(helper, 5, base);
+        // De la terre grasse, molle, derriere le joueur — et de la pierre dure devant lui,
+        // qui doit survivre a la passe finale.
+        helper.setBlock(new BlockPos(2, base, 1),
+                net.minecraft.world.level.block.Blocks.COARSE_DIRT);
+
+        shock.onActivateCharged(player, data, 10);
+
+        assertTrue(helper, helper.getBlockState(new BlockPos(2, base, 1)).isAir(),
+                "la terre derriere le joueur doit avoir ete cassee par la passe finale : "
+                        + helper.getBlockState(new BlockPos(2, base, 1)));
+        // Le sol bati a la colonne du joueur, lui, n'est jamais marche : il sert de
+        // temoin pour la pierre, que la passe finale ne doit pas toucher.
+        assertTrue(helper, helper.getBlockState(new BlockPos(2, base, 2))
+                        .is(net.minecraft.world.level.block.Blocks.STONE),
+                "la pierre, elle, est trop dure pour la passe finale : "
+                        + helper.getBlockState(new BlockPos(2, base, 2)));
+
+        var items = itemsAround(helper, abs, 16);
+        assertTrue(helper, items.stream().anyMatch(item -> item.getItem().is(
+                        net.minecraft.world.item.Items.COARSE_DIRT)),
+                "et la passe finale, elle, laisse tomber le butin : " + items);
+
+        helper.succeed();
+    }
+
+    /**
+     * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
+     *
+     * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui
+     * iraient sinon creuser la pierre de toutes parts, et il rend la marche <b>previsible</b>
+     * — seuls le bloc du marcheur et la colonne de trois comptent, donc l'energie ne part
+     * jamais en fumee sur un tirage malheureux.
+     *
+     * <p>{@code base} est la hauteur <b>relative</b> du sol, altitude du test comprise : voir
+     * le commentaire du premier test de l'onde.
+     */
+    private static void buildWalkingFloor(GameTestHelper helper, int length, int base) {
+        for (int dz = 0; dz <= length; dz++) {
+            helper.setBlock(new BlockPos(2, base, 2 + dz),
+                    net.minecraft.world.level.block.Blocks.STONE);
+            for (int dy = 1; dy <= 5; dy++) {
+                for (int dx = 0; dx <= 4; dx++) {
+                    helper.setBlock(new BlockPos(dx, base + dy, 2 + dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+    }
+
+    /** Les objets au sol dans le couloir d'un test, pour verifier ce qui est tombe. */
+    private static java.util.List<net.minecraft.world.entity.item.ItemEntity> itemsAround(
+            GameTestHelper helper, BlockPos abs, int length) {
+        var box = new net.minecraft.world.phys.AABB(abs.getX() - 1, abs.getY() - 2, abs.getZ() - 1,
+                abs.getX() + 5, abs.getY() + 6, abs.getZ() + length);
+        return helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, box);
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le generateur de phase
     // ------------------------------------------------------------------

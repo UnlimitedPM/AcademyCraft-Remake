@@ -1,5 +1,6 @@
 package cn.academy.ability;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
@@ -747,6 +748,114 @@ class SkillCurvesTest {
         // Deux yeux au meme endroit n'ont pas de direction : pas de division par zero.
         assertEquals(Vec3.ZERO, cn.academy.ability.vecmanip.DirectedShockSkill
                 .knockbackVelocity(new Vec3(1, 2, 3), new Vec3(1, 2, 3)));
+    }
+
+    /**
+     * L'onde de choc : son energie de chantier, ses pas, et l'axe qu'elle suit.
+     */
+    @Test
+    void lOndeDeChocDepenseSonEnergieLeLongDuRegard() {
+        var groundshock = cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK;
+
+        // La touche se tient, avec un minimum de cinq ticks et aucun maximum : l'original
+        // frappait quel que soit le temps tenu.
+        assertTrue(groundshock.isChargeable(), "l'onde de choc se charge");
+        assertEquals(5, groundshock.getMinChargeTicks(atExperience(groundshock, 0f)),
+                "un appui de moins de cinq ticks ne part pas");
+        assertEquals(0, groundshock.getMaxChargeTicks(atExperience(groundshock, 0f)),
+                "aucun maximum : rien ne se referme pendant qu'on tient");
+
+        // Ses courbes : 60 a 120 d'energie, 4 a 6 degats, 80 a 150 CP (divises par 28),
+        // 15 a 10 de surcout, 10 a 25 pas, et 80 a 40 ticks de recharge.
+        assertBounds("energie de ground_shock", 60f, 120f,
+                data -> (float) groundshock.energy(data), groundshock);
+        assertBounds("degats de ground_shock", 4f, 6f, groundshock::damage, groundshock);
+        assertBounds("cout de ground_shock", 2.86f, 5.36f, groundshock::consumption, groundshock);
+        assertBounds("surcout de ground_shock", 15f, 10f, groundshock::overload, groundshock);
+        assertBounds("recharge de ground_shock", 80f, 40f, groundshock::cooldown, groundshock);
+        assertBounds("butin de ground_shock", 0.3f, 1.0f, groundshock::dropRate, groundshock);
+        assertEquals(10, groundshock.maxIterations(atExperience(groundshock, 0f)),
+                "dix pas au depart");
+        assertEquals(25, groundshock.maxIterations(atExperience(groundshock, 1f)),
+                "vingt-cinq au maximum");
+
+        // La poussee verticale : de 0,48 a 1,17 bloc par tick, selon le tirage et
+        // l'experience. Les deux bornes se lisent aux extremes des deux facteurs.
+        assertEquals(0.48d, groundshock.ySpeed(atExperience(groundshock, 0f), 0.0d), 0.0001d);
+        assertEquals(1.17d, groundshock.ySpeed(atExperience(groundshock, 1f), 1.0d), 0.0001d);
+
+        // Tout est verse par le coup, et la recharge aussi : rien ne part d'un appui qui
+        // n'a rien fait, pas meme quand le joueur est en l'air.
+        assertTrue(groundshock.earnsExpOnEffect(), "l'onde verse son experience elle-meme");
+        assertEquals(0f, groundshock.getExpGain(atExperience(groundshock, 0f)), 0.000001f);
+        assertEquals(0, groundshock.getCooldownTicks(atExperience(groundshock, 0f)),
+                "la recharge est posee par le coup, pas par l'activation");
+        assertEquals(0f, groundshock.getCpCost(), 0.000001f,
+                "aucun cout a l'appui : le prix se paie dans l'effet, apres le controle du sol");
+    }
+
+    /**
+     * L'axe de l'onde, et ses cinq colonnes.
+     *
+     * Le regard est ramene a l'horizontale : viser le sol plus loin ne change pas la
+     * longueur du chemin. Les colonnes, elles, se lisent sur la perpendiculaire — et cette
+     * perpendiculaire <b>garde la composante verticale du regard</b>, comme l'original.
+     */
+    @Test
+    void lOndeDeChocAvanceSurLeLacetEtOuvreCinqColonnes() {
+        // Regard vers +Z, un peu vers le sol : la marche reste horizontale.
+        Vec3 sought = cn.academy.ability.vecmanip.GroundshockSkill.walkDirection(
+                new Vec3(0, -0.5, 1));
+        assertEquals(0.0, sought.y, 0.0001, "l'onde ne monte pas avec le regard");
+        assertEquals(1.0, sought.length(), 0.0001, "et sa direction est unitaire");
+        assertEquals(new Vec3(0, 0, 1), round(sought), "viser vers le bas ne devie pas la marche");
+
+        // Regard vers l'est : la marche suit le lacet, pas le tangage.
+        assertEquals(new Vec3(1, 0, 0), round(cn.academy.ability.vecmanip.GroundshockSkill
+                .walkDirection(new Vec3(1, 1, 0))));
+
+        // Regard pile a la verticale : plus d'horizon du tout. L'original levait une
+        // exception dans son marcheur ; le port prend le nord, comme ses autres
+        // competences qui se posent la meme question.
+        assertEquals(new Vec3(0, 0, 1), cn.academy.ability.vecmanip.GroundshockSkill
+                .walkDirection(new Vec3(0, -1, 0)));
+        assertEquals(new Vec3(0, 0, 1), cn.academy.ability.vecmanip.GroundshockSkill
+                .walkDirection(new Vec3(0, 1, 0)));
+
+        // Les cinq colonnes, pour un regard horizontal vers +Z : le centre, puis un bloc
+        // de chaque cote, puis deux.
+        Vec3 south = new Vec3(0, 0, 1);
+        BlockPos row = new BlockPos(10, 5, 10);
+        assertEquals(new BlockPos(10, 5, 10), lateral(row, south, 0), "colonne du centre");
+        assertEquals(new BlockPos(11, 5, 10), lateral(row, south, 1), "premiere colonne a droite");
+        assertEquals(new BlockPos(9, 5, 10), lateral(row, south, 2), "premiere colonne a gauche");
+        assertEquals(new BlockPos(12, 5, 10), lateral(row, south, 3), "deuxieme a droite");
+        assertEquals(new BlockPos(8, 5, 10), lateral(row, south, 4), "deuxieme a gauche");
+
+        // Regard vers l'est : les colonnes sont au nord et au sud du marcheur.
+        Vec3 east = new Vec3(1, 0, 0);
+        assertEquals(new BlockPos(10, 5, 9), lateral(row, east, 1),
+                "colonne a gauche quand on regarde l'est");
+        assertEquals(new BlockPos(10, 5, 11), lateral(row, east, 2),
+                "et l'autre de l'autre cote");
+
+        // Le regard baisse fait descendre les colonnes : la perpendicularite est prise dans
+        // les trois coordonnees, comme l'original, et non dans le plan horizontal. C'est
+        // aussi pour cela que la marche, elle, est ramenee a l'horizontale : les deux
+        // lectures du regard sont bien distinctes.
+        Vec3 tilted = new Vec3(0, -1, 1).normalize();
+        assertEquals(new BlockPos(10, 4, 10), lateral(row, tilted, 1),
+                "un regard a 45 degres vers le sol descend la colonne d'un bloc");
+
+        // Et les chances de chaque colonne : le centre toujours, les bords une fois sur trois.
+        assertEquals(1.0, cn.academy.ability.vecmanip.GroundshockSkill.LATERAL_CHANCES[0]);
+        assertEquals(0.7, cn.academy.ability.vecmanip.GroundshockSkill.LATERAL_CHANCES[1]);
+        assertEquals(0.3, cn.academy.ability.vecmanip.GroundshockSkill.LATERAL_CHANCES[3]);
+    }
+
+    /** La cellule d'une des cinq colonnes, pour alleger le test ci-dessus. */
+    private static BlockPos lateral(BlockPos row, Vec3 look, int index) {
+        return cn.academy.ability.vecmanip.GroundshockSkill.lateralCell(row, look, index);
     }
 
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */

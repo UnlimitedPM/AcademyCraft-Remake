@@ -136,6 +136,14 @@ public final class Config {
                      "nombre raccourcit l'attente.")
             .defineInRange("ability.progressIncrRate", 1.0d, 0.01d, 1000.0d);
 
+    private static final ForgeConfigSpec.BooleanValue DESTROY_BLOCKS = BUILDER
+            .comment("Autorise les competences a casser des blocs.",
+                     "Portage de generic.destroyBlocks de la 1.12.2 : les competences qui",
+                     "effacent des blocs le consultent avant de le faire. Seules celles qui",
+                     "le demandaient chez l'original le lisent — l'onde de choc pour",
+                     "l'instant ; les rayons miniers, eux, cassaient sans rien demander.")
+            .define("general.destroyBlocks", true);
+
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
     // Valeurs en cache, relues a chaque chargement/rechargement de la config.
@@ -150,6 +158,7 @@ public final class Config {
     public static int overloadRecoverCooldown = 32;
     public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
+    public static boolean destroyBlocks = true;
 
     /** Les listes de metaux, relues a chaque chargement de config. */
     public static List<String> metalBlocks = List.of();
@@ -174,6 +183,7 @@ public final class Config {
         overloadRecoverCooldown = OVERLOAD_RECOVER_COOLDOWN.get();
         overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();
         progressIncrRate = PROGRESS_INCR_RATE.get();
+        destroyBlocks = DESTROY_BLOCKS.get();
         // Une nouvelle instance de liste a chaque chargement : c'est ce que
         // MetalTargets surveille pour reconstruire ses ensembles.
         metalBlocks = List.copyOf(METAL_BLOCKS.get());
