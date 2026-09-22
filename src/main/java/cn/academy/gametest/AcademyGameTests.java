@@ -1523,6 +1523,22 @@ public final class AcademyGameTests {
                 "un apprentissage de niveau ne vise aucune competence");
         developer.abort();
 
+        // L'ecran doit pouvoir expliquer le refus, et proposer la montee quand elle est
+        // ouverte : c'est la meme donnee qui alimente la barre de palier, le bouton
+        // grise et son infobulle. Un ecran qui refuserait sans rien dire ferait croire
+        // a une machine cassee.
+        var menu = new cn.academy.DeveloperMenu(0, player.getInventory(), developer);
+        assertValue(helper, 1f, menu.getLevelProgress(category.getCategoryId()),
+                "le palier doit apparaitre rempli sur l'ecran");
+        assertTrue(helper, menu.canLevelUp(category.getCategoryId()),
+                "l'ecran doit proposer la montee");
+
+        setCategoryLevel(player, category, 2);
+        assertValue(helper, 0f, menu.getLevelProgress(category.getCategoryId()),
+                "changer de niveau doit vider le palier a l'ecran aussi");
+        assertFalse(helper, menu.canLevelUp(category.getCategoryId()),
+                "et l'ecran doit refuser la montee");
+
         // On remet la categorie comme on l'a trouvee : le joueur est partage.
         forgetSkill(player, skill);
         setCategoryLevel(player, category, 0);

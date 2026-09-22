@@ -71,8 +71,11 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
     private static final int ROW_HEIGHT = 12;
     private static final int CATEGORY_X = 26;
     private static final int SKILL_X = 32;
-    private static final int LEVEL_X = 108;
     private static final int STATE_X = 74;
+    private static final int LEVEL_X = 104;
+    private static final int BAR_X_ROW = 124;
+    private static final int BAR_WIDTH_ROW = 28;
+    private static final int BAR_HEIGHT_ROW = 6;
     private static final int BUTTON_X = 156;
     private static final int BUTTON_WIDTH = 16;
     private static final int BUTTON_HEIGHT = 10;
@@ -195,13 +198,23 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
         int level = menu.getCategoryLevel(row.categoryId());
         boolean active = menu.isDeveloping() && menu.getDevelopingCategory() == row.categoryId()
                 && menu.getDevelopingSkill() < 0;
+        boolean maxed = level >= menu.getMaxLevel();
 
         graphics.drawString(font, category == null ? "?" : category.getName(),
                 leftPos + CATEGORY_X, y + 2, active ? OK : TEXT, false);
-        graphics.drawString(font, level + " / " + menu.getMaxLevel(),
+        graphics.drawString(font, level + "/" + menu.getMaxLevel(),
                 leftPos + LEVEL_X, y + 2, level > 0 ? OK : DIM, false);
 
-        drawPlus(graphics, y, level < menu.getMaxLevel() && !menu.isDeveloping());
+        // Le palier du niveau en cours. Sans lui, le bouton refuserait de faire monter
+        // la categorie sans que rien n'explique pourquoi : le joueur croirait la
+        // machine cassee, alors qu'il lui manque seulement d'avoir utilise ses
+        // competences.
+        if (!maxed) {
+            float progress = menu.getLevelProgress(row.categoryId());
+            drawBar(graphics, y, progress, menu.canLevelUp(row.categoryId()) ? OK : BUTTON_ON);
+        }
+
+        drawPlus(graphics, y, !maxed && menu.canLevelUp(row.categoryId()) && !menu.isDeveloping());
     }
 
     private void drawSkillRow(GuiGraphics graphics, Row row, int y) {
@@ -218,14 +231,32 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
         graphics.drawString(font, skill.getName(), leftPos + SKILL_X, y + 2, colour, false);
         graphics.drawString(font, "niv. " + skill.getLevel(), leftPos + STATE_X, y + 2, DIM, false);
 
-        if (learned) {
-            graphics.drawString(font, Component.translatable("academy.developer.learned"),
-                    leftPos + LEVEL_X, y + 2, LEARNED, false);
+        // L'experience de la competence : c'est elle qui remplit le palier du niveau,
+        // donc c'est elle que le joueur doit voir pour comprendre ou il en est.
+        if (learned || learnable) {
+            drawBar(graphics, y, data.getSkillExp(skill), learned ? LEARNED : BUTTON_ON);
         }
 
         // L'apprentissage n'est propose que s'il a un sens. La ligne reste visible,
         // avec sa raison de ne pas l'etre dans l'infobulle.
         drawPlus(graphics, y, learnable && !learned && !menu.isDeveloping());
+    }
+
+    /**
+     * La barre d'une ligne : le palier d'une categorie, ou l'experience d'une
+     * competence.
+     *
+     * Les deux occupent la meme colonne, pour que l'oeil compare des choses
+     * comparables : ce qui est rempli ici est ce qui ouvre la suite la-bas.
+     */
+    private void drawBar(GuiGraphics graphics, int y, float ratio, int colour) {
+        int x = leftPos + BAR_X_ROW;
+        int barY = y + 3;
+        graphics.fill(x, barY, x + BAR_WIDTH_ROW, barY + BAR_HEIGHT_ROW, HOLE);
+        int filled = (int) (BAR_WIDTH_ROW * Math.max(0f, Math.min(1f, ratio)));
+        if (filled > 0) {
+            graphics.fill(x, barY, x + filled, barY + BAR_HEIGHT_ROW, colour);
+        }
     }
 
     /** La case « + » d'une ligne, dessinee pareil partout. */
@@ -360,10 +391,21 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
 
         if (row.isCategory()) {
             Category category = menu.getCategory(row.categoryId());
+            int index = row.categoryId();
             lines.add(Component.literal(category == null ? "?" : category.getName()));
+
+            if (menu.getCategoryLevel(index) >= menu.getMaxLevel()) {
+                lines.add(Component.translatable("academy.developer.maxed").withStyle(ChatFormatting.GRAY));
+                return lines;
+            }
+            if (!menu.canLevelUp(index)) {
+                // La raison exacte du refus, en clair : c'est la seule chose qui
+                // manque au joueur pour comprendre ce qu'il doit faire.
+                lines.add(Component.translatable("academy.developer.progress",
+                        (int) (menu.getLevelProgress(index) * 100)).withStyle(ChatFormatting.RED));
+            }
             lines.add(Component.translatable("academy.developer.cost",
-                    menu.getStimulationsFor(row.categoryId()),
-                    (long) menu.getCostFor(row.categoryId())));
+                    menu.getStimulationsFor(index), (long) menu.getCostFor(index)));
             return lines;
         }
 
@@ -376,7 +418,9 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
 
         AbilityData data = ClientAbilityData.get();
         if (data.isSkillLearned(skill)) {
-            lines.add(Component.translatable("academy.developer.learned").withStyle(ChatFormatting.GREEN));
+            int percent = (int) (data.getSkillExp(skill) * 100f);
+            lines.add(Component.translatable("academy.developer.skill_exp", percent)
+                    .withStyle(percent >= 100 ? ChatFormatting.GREEN : ChatFormatting.GRAY));
             return lines;
         }
 

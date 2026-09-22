@@ -56,6 +56,16 @@ public class DeveloperMenu extends AbstractContainerMenu {
     /** Un niveau par categorie enregistree, dans l'ordre du registre. */
     private final SyncedInt[] categoryLevels;
 
+    /**
+     * Avancement du niveau en cours, par categorie, en milliemes.
+     *
+     * Un niveau ne monte que si ce palier est rempli (voir
+     * {@code AbilityData.canLevelUp}). Sans cette valeur a l'ecran, le bouton « + »
+     * refuserait de faire quoi que ce soit sans rien dire : le joueur croirait la
+     * machine cassee.
+     */
+    private final SyncedInt[] categoryProgress;
+
     private final SyncedInt progress;
     private final SyncedInt state;
     private final SyncedInt developingCategory;
@@ -80,13 +90,19 @@ public class DeveloperMenu extends AbstractContainerMenu {
         Player player = playerInventory.player;
         var categories = CategoryManager.INSTANCE.getCategories();
         this.categoryLevels = new SyncedInt[categories.size()];
+        this.categoryProgress = new SyncedInt[categories.size()];
         for (int i = 0; i < categories.size(); i++) {
             Category category = categories.get(i);
             categoryLevels[i] = new SyncedInt(() ->
                     player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                             .map(data -> data.getCategoryLevel(category))
                             .orElse(0));
+            categoryProgress[i] = new SyncedInt(() ->
+                    player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                            .map(data -> Math.round(data.getLevelProgress(category) * 1000f))
+                            .orElse(0));
             addDataSlot(categoryLevels[i]);
+            addDataSlot(categoryProgress[i]);
         }
 
         this.progress = new SyncedInt(() -> (int) Math.round(blockEntity.getProgress() * 1000.0d));
@@ -159,6 +175,25 @@ public class DeveloperMenu extends AbstractContainerMenu {
     /** Niveau maximal, au-dela duquel il n'y a plus rien a developper. */
     public int getMaxLevel() {
         return DevelopActionLevel.MAX_LEVEL;
+    }
+
+    /** Avancement du niveau en cours de cette categorie, de 0 a 1. */
+    public float getLevelProgress(int index) {
+        if (index < 0 || index >= categoryProgress.length) return 0f;
+        return Math.min(1f, categoryProgress[index].value() / 1000f);
+    }
+
+    /**
+     * Cette categorie peut-elle monter d'un cran maintenant ?
+     *
+     * Meme regle que le serveur, lue sur la meme donnee : c'est ce qui permet a
+     * l'ecran de griser le bouton sans risquer de se contredire avec ce que le
+     * serveur acceptera au clic.
+     */
+    public boolean canLevelUp(int index) {
+        if (index < 0 || index >= categoryLevels.length) return false;
+        if (categoryLevels[index].value() >= getMaxLevel()) return false;
+        return categoryProgress[index].value() >= 1000;
     }
 
     /** Stimulations necessaires pour faire monter la categorie d'un cran. */
