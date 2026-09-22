@@ -24,6 +24,8 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
@@ -1737,8 +1739,13 @@ public final class AcademyGameTests {
         assertFalse(helper, isInterfered(owner), "et il doit pouvoir utiliser ses competences");
 
         // Le faux joueur est un singleton du niveau : il faut le retirer, sinon le
-        // prochain test le retrouverait la ou on l'a laisse.
+        // prochain test le retrouverait la ou on l'a laisse. Mais remove() appelle
+        // aussi invalidateCaps(), ce qui rend TOUTES ses capacites muettes pour de
+        // bon — y compris celle des aptitudes. Sans ce reviveCaps, tous les tests
+        // suivants qui lisent une capacite d'un faux joueur lisent du vide, et
+        // passent pour de mauvaises raisons.
         owner.remove(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
+        owner.reviveCaps();
         helper.succeed();
     }
 
@@ -1974,5 +1981,151 @@ public final class AcademyGameTests {
                 "controlPointSyncInterval non charge depuis la config : "
                         + cn.academy.Config.controlPointSyncInterval);
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Le terminal de donnees
+    // ------------------------------------------------------------------
+
+    /** L'objet d'installation installe le terminal, une seule fois, et se consomme. */
+    @GameTest(template = "empty")
+    public static void terminalInstallerInstallsOnce(GameTestHelper helper) {
+        Player player = fakePlayer(helper);
+        player.getAbilities().instabuild = false;
+        resetTerminal(player);
+
+        assertTrue(helper, terminalOf(player) != null,
+                "la capacite du terminal doit etre attachee au joueur");
+        assertTrue(helper, ModItems.TERMINAL_INSTALLER.get() instanceof ModItems.TerminalInstallerItem,
+                "l'objet doit etre celui qui installe, pas un objet inerte");
+        assertFalse(helper, terminalInstalled(player), "un joueur sans terminal ne doit rien avoir");
+
+        ItemStack installer = new ItemStack(ModItems.TERMINAL_INSTALLER.get(), 3);
+        player.setItemInHand(InteractionHand.MAIN_HAND, installer);
+        installer.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+
+        assertTrue(helper, terminalInstalled(player), "l'objet doit installer le terminal");
+        assertValue(helper, 2, installer.getCount(), "un objet sur trois doit etre consomme");
+
+        // Deuxieme usage : le terminal est deja la, donc rien de plus et rien de consomme.
+        installer.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertValue(helper, 2, installer.getCount(), "un terminal deja installe ne consomme plus rien");
+
+        resetTerminal(player);
+        helper.succeed();
+    }
+
+    /** En creatif, l'objet installe mais n'est pas consomme. */
+    @GameTest(template = "empty")
+    public static void terminalInstallerDoesNotConsumeInCreative(GameTestHelper helper) {
+        Player player = fakePlayer(helper);
+        resetTerminal(player);
+        player.getAbilities().instabuild = true;
+
+        ItemStack installer = new ItemStack(ModItems.TERMINAL_INSTALLER.get(), 3);
+        player.setItemInHand(InteractionHand.MAIN_HAND, installer);
+        installer.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+
+        assertTrue(helper, terminalInstalled(player), "l'installation doit avoir lieu");
+        assertValue(helper, 3, installer.getCount(), "en creatif l'objet reste");
+
+        player.getAbilities().instabuild = false;
+        resetTerminal(player);
+        helper.succeed();
+    }
+
+    /**
+     * Sans terminal, un objet d'application refuse de s'installer.
+     *
+     * C'est la regle de l'original : un objet d'application se garde tant que le
+     * terminal n'est pas installe, sinon on le perdrait pour rien.
+     */
+    @GameTest(template = "empty")
+    public static void appInstallerNeedsTheTerminal(GameTestHelper helper) {
+        Player player = fakePlayer(helper);
+        player.getAbilities().instabuild = false;
+        resetTerminal(player);
+
+        ItemStack app = new ItemStack(ModItems.APP_SKILL_TREE.get(), 2);
+        player.setItemInHand(InteractionHand.MAIN_HAND, app);
+        app.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+
+        assertFalse(helper, appInstalled(player), "sans terminal, l'application ne s'installe pas");
+        assertValue(helper, 2, app.getCount(), "et l'objet n'est pas consomme");
+
+        helper.succeed();
+    }
+
+    /** Avec le terminal, l'application s'installe une fois, et l'objet se consomme. */
+    @GameTest(template = "empty")
+    public static void appInstallerInstallsTheAppOnce(GameTestHelper helper) {
+        Player player = fakePlayer(helper);
+        player.getAbilities().instabuild = false;
+        resetTerminal(player);
+
+        ItemStack installer = new ItemStack(ModItems.TERMINAL_INSTALLER.get(), 1);
+        player.setItemInHand(InteractionHand.MAIN_HAND, installer);
+        installer.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertTrue(helper, terminalInstalled(player), "le terminal doit s'installer d'abord");
+
+        ItemStack app = new ItemStack(ModItems.APP_SKILL_TREE.get(), 2);
+        player.setItemInHand(InteractionHand.MAIN_HAND, app);
+        app.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+
+        assertTrue(helper, appInstalled(player), "l'application doit s'installer");
+        assertValue(helper, 1, app.getCount(), "un objet sur deux doit etre consomme");
+
+        // Deuxieme usage : deja installee, donc rien de plus et rien de consomme.
+        app.use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
+        assertValue(helper, 1, app.getCount(), "une application deja installee ne consomme plus rien");
+
+        resetTerminal(player);
+        helper.succeed();
+    }
+
+    /** L'arbre de competences est la seule application portee, et elle est enregistree. */
+    @GameTest(template = "empty")
+    public static void appRegistryContainsThePortedApp(GameTestHelper helper) {
+        var registry = cn.academy.terminal.AppRegistry.INSTANCE;
+        var skillTree = cn.academy.terminal.app.AppSkillTree.INSTANCE;
+
+        assertTrue(helper, registry.isBaked(), "le registre doit etre ferme apres l'initialisation");
+        assertValue(helper, "skill_tree", registry.get(0).getName(), "la premiere application");
+        assertTrue(helper, registry.getByName("skill_tree") == skillTree,
+                "la recherche par nom doit rendre la meme instance");
+        assertValue(helper, 0, skillTree.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
+        assertFalse(helper, skillTree.isPreInstalled(), "l'arbre s'installe avec un objet, pas d'office");
+        assertValue(helper, "ac.app.skill_tree.name", skillTree.getDisplayKey(), "cle de langue du nom");
+        assertTrue(helper, registry.getByName("settings") == null,
+                "les applications non portees ne doivent pas etre enregistrees");
+        helper.succeed();
+    }
+
+    /** Le terminal d'un joueur, ou un etat vide s'il n'a pas la capacite. */
+    private static cn.academy.terminal.TerminalData terminalOf(Player player) {
+        return player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA).orElse(null);
+    }
+
+    private static boolean terminalInstalled(Player player) {
+        var data = terminalOf(player);
+        return data != null && data.isTerminalInstalled();
+    }
+
+    private static boolean appInstalled(Player player) {
+        var data = terminalOf(player);
+        return data != null && data.isInstalled(cn.academy.terminal.app.AppSkillTree.INSTANCE);
+    }
+
+    /**
+     * Rend le faux joueur a son etat initial.
+     *
+     * La fabrique de faux joueurs rend un singleton du niveau : le terminal d'un
+     * test reste installe pour le suivant. Sans cette remise a zero, le test qui
+     * verifie qu'un objet d'application refuse de s'installer sans terminal
+     * passerait ou echouerait selon l'ordre d'execution.
+     */
+    private static void resetTerminal(Player player) {
+        var data = terminalOf(player);
+        if (data != null) data.reset();
     }
 }

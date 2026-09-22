@@ -101,7 +101,8 @@ public class ModItems {
     public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",
+            () -> new TerminalInstallerItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> DEV_NORMAL_ITEM = ITEMS.register("dev_normal",
@@ -139,7 +140,8 @@ public class ModItems {
             () -> new Item(new Item.Properties()));
 
     // --- APPLICATIONS () ---
-    public static final RegistryObject<Item> APP_SKILL_TREE = ITEMS.register("app_skill_tree", () -> new TooltipItem("ac.app.skill_tree.name"));
+    public static final RegistryObject<Item> APP_SKILL_TREE = ITEMS.register("app_skill_tree",
+            () -> new AppInstallerItem("skill_tree"));
     public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player", () -> new TooltipItem("ac.app.media_player.name"));
     public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter", () -> new TooltipItem("ac.app.freq_transmitter.name"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings", () -> new TooltipItem("ac.app.settings.name"));
@@ -275,6 +277,106 @@ public class ModItems {
         @Override
         public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
             tooltip.add(Component.translatable(tooltipKey).withStyle(ChatFormatting.GRAY));
+        }
+    }
+
+    /**
+     * L'objet qui installe le terminal de donnees.
+     *
+     * Portage de {@code ItemTerminalInstaller}. Comme dans l'original, il est
+     * consomme sauf en creatif, refuse de s'appliquer deux fois, et confirme par un
+     * message dans le chat.
+     *
+     * L'original ajoutait aussi le nom de la touche a ce message, en la lisant
+     * depuis le gestionnaire de touches. Le serveur ne peut pas connaitre la touche
+     * du client : le message dit donc « Alt par defaut » plutot que d'inventer une
+     * touche que le joueur a peut-etre changee.
+     */
+    public static class TerminalInstallerItem extends Item {
+        public TerminalInstallerItem(Properties props) { super(props); }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (level.isClientSide) return InteractionResultHolder.success(stack);
+
+            var data = player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA).orElse(null);
+            if (data == null) return InteractionResultHolder.pass(stack);
+
+            if (data.isTerminalInstalled()) {
+                player.displayClientMessage(Component.translatable("ac.terminal.alrdy_installed"), false);
+                return InteractionResultHolder.success(stack);
+            }
+
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+            data.install();
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                cn.academy.terminal.TerminalEvents.sync(serverPlayer);
+            }
+            player.displayClientMessage(Component.translatable("ac.terminal.key_hint"), false);
+            return InteractionResultHolder.success(stack);
+        }
+    }
+
+    /**
+     * L'objet qui installe une application du terminal.
+     *
+     * Portage de {@code ItemApp}. Le nom de l'application est connu des la
+     * construction de l'objet, mais l'application elle-meme ne l'est pas : les
+     * registres ne sont pas remplis au chargement des classes. La recherche se fait
+     * donc a l'usage, et une application absente du registre — parce que son
+     * contenu n'est pas encore porte — se contente de le dire au lieu de planter.
+     */
+    public static class AppInstallerItem extends Item {
+        private final String appName;
+
+        public AppInstallerItem(String appName) {
+            super(new Item.Properties());
+            this.appName = appName;
+        }
+
+        private cn.academy.terminal.App app() {
+            return cn.academy.terminal.AppRegistry.INSTANCE.getByName(appName);
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (level.isClientSide) return InteractionResultHolder.success(stack);
+
+            var app = app();
+            if (app == null) {
+                player.displayClientMessage(Component.translatable("ac.terminal.app_missing",
+                        Component.translatable("ac.app." + appName + ".name")), false);
+                return InteractionResultHolder.success(stack);
+            }
+
+            var data = player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA).orElse(null);
+            if (data == null) return InteractionResultHolder.pass(stack);
+
+            if (!data.isTerminalInstalled()) {
+                player.displayClientMessage(Component.translatable("ac.terminal.notinstalled"), false);
+                return InteractionResultHolder.success(stack);
+            }
+            if (data.isInstalled(app)) {
+                player.displayClientMessage(Component.translatable("ac.terminal.app_alrdy_installed",
+                        app.getDisplayName()), false);
+                return InteractionResultHolder.success(stack);
+            }
+
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+            data.installApp(app);
+            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                cn.academy.terminal.TerminalEvents.sync(serverPlayer);
+            }
+            player.displayClientMessage(Component.translatable("ac.terminal.app_installed",
+                    app.getDisplayName()), false);
+            return InteractionResultHolder.success(stack);
+        }
+
+        @Override
+        public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
+            tooltip.add(Component.translatable("ac.app." + appName + ".name").withStyle(ChatFormatting.GRAY));
         }
     }
 }

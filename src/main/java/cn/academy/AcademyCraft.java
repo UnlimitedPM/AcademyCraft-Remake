@@ -32,6 +32,7 @@ public class AcademyCraft {
         // Types de biome modifier du mod (honore les options de generation de la config).
         cn.academy.worldgen.ConfigurableFeatureBiomeModifier.SERIALIZERS.register(modEventBus);
         modEventBus.addListener(cn.academy.ability.AbilityInit::init);
+        modEventBus.addListener(cn.academy.terminal.TerminalInit::init);
 
         // Sans cette ligne, le fichier config/academy-common.toml n'est jamais cree.
         context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
@@ -66,6 +67,11 @@ public class AcademyCraft {
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.DEVELOPER.get(), DeveloperScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.PHASE_GENERATOR.get(), PhaseGeneratorScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.ABILITY_INTERFERER.get(), AbilityInterfererScreen::new);
+                // Les ecrans des applications du terminal vivent a part des menus :
+                // une application ne s'ouvre pas par un conteneur mais par la touche
+                // du terminal. Sans cette ligne, l'arbre de competences s'installe
+                // mais reste une icone morte.
+                cn.academy.terminal.client.TerminalScreens.init();
                 // Sans cet appel, l'unite d'energie gardait toujours sa texture pleine :
                 // la propriete d'item "academy:energy" n'etait jamais enregistree.
                 ModItemProperties.addCustomItemProperties();

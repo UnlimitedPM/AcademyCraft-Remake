@@ -30,6 +30,17 @@ public class Category {
         return name;
     }
 
+    /**
+     * Cle de langue du nom affiche, comme {@code ac.ability.<nom>.name}.
+     *
+     * L'original tirait son nom de {@code I18n} au moment du rendu ; le port
+     * expose la cle, ce qui laisse l'appelant decider quand traduire — au rendu
+     * seulement, pour que rien ne soit construit cote serveur pour rien.
+     */
+    public String getDisplayKey() {
+        return "ac.ability." + name + ".name";
+    }
+
     public int getCategoryId() {
         return categoryId;
     }

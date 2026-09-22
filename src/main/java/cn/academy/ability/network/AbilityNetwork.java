@@ -23,5 +23,11 @@ public class AbilityNetwork {
                 ActivateSkillPacket::encode, ActivateSkillPacket::decode, ActivateSkillPacket::handle);
         CHANNEL.registerMessage(nextId++, SyncAbilityDataPacket.class,
                 SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode, SyncAbilityDataPacket::handle);
+        // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
+        // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
+        CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,
+                cn.academy.terminal.network.SyncTerminalDataPacket::encode,
+                cn.academy.terminal.network.SyncTerminalDataPacket::decode,
+                cn.academy.terminal.network.SyncTerminalDataPacket::handle);
     }
 }

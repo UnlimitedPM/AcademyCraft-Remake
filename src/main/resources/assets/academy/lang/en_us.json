@@ -8,6 +8,7 @@
   "key.academy.activate_penetrate_tp": "Activate Penetrate Teleport",
   "key.academy.activate_meltdowner": "Activate Meltdowner",
   "key.academy.activate_electron_bomb": "Activate Electron Bomb",
+  "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
   "block.academy.crystal_ore": "Imag Crystal Ore",
@@ -92,6 +93,15 @@
   "ac.app.freq_transmitter.name": "Frequency Transmitter",
   "item.academy.app_settings": "App Installer",
   "ac.app.settings.name": "Settings",
+
+  "ac.terminal.title": "Data Terminal",
+  "ac.terminal.no_apps": "No application installed",
+  "ac.terminal.notinstalled": "You have not yet installed the Data Terminal.",
+  "ac.terminal.alrdy_installed": "You have already installed the Data Terminal.",
+  "ac.terminal.key_hint": "Data terminal installed. Use the terminal key (Left Alt by default) to open it.",
+  "ac.terminal.app_installed": "You have successfully installed app %s.",
+  "ac.terminal.app_alrdy_installed": "You have already installed app %s.",
+  "ac.terminal.app_missing": "App %s is not available yet.",
 
   "item.academy.imag_phase": "Imag Phase Liquid",
   "item.academy.logo": "AcademyCraft Logo",
