@@ -3,6 +3,7 @@ package cn.academy.ability;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Les courbes de puissance des competences portees.
@@ -20,9 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * Les couts en CP de l'original (200 a 450 pour le railgun, 300 par coup renvoye
  * pour la reflexion) supposent une reserve de plusieurs milliers de points, la ou
- * le port plafonne a 100 : ceux du port sont conserves tels quels. De meme, les
- * durees de recharge, le surcout et les durees de charge n'ont pas d'equivalent
- * dans le port, donc leurs courbes attendent.
+ * le port plafonne a 100 : ceux du port sont conserves tels quels. De meme, la
+ * duree de recharge continue du meltdowner (10 a 15 points par tick pendant la
+ * charge) n'a pas d'equivalent a cette echelle, donc le port ne facture que le tir,
+ * pas la charge.</p>
  */
 class SkillCurvesTest {
 
@@ -32,6 +34,23 @@ class SkillCurvesTest {
         data.setCategoryLevel(skill.getCategory(), 1);
         data.learnSkill(skill);
         if (exp > 0f) data.addSkillExp(skill, exp);
+        return data;
+    }
+
+    /**
+     * La meme chose, avec une charge tenue pendant {@code chargeTicks} ticks.
+     *
+     * Le compteur de charge survit au relachement : c'est ainsi que la competence lit
+     * combien de temps elle a ete chargee, exactement comme le paquet d'activation le
+     * fait en jeu.
+     */
+    private static AbilityData atExperience(Skill skill, float exp, int chargeTicks) {
+        AbilityData data = atExperience(skill, exp);
+        data.beginCharge(skill);
+        for (int i = 0; i < chargeTicks; i++) {
+            data.tickCharges();
+        }
+        data.endCharge(skill);
         return data;
     }
 
@@ -57,7 +76,40 @@ class SkillCurvesTest {
         assertBounds("degats de electron_bomb", 6f, 12f, electronBomb::damage, electronBomb);
 
         var meltdowner = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
-        assertBounds("degats de meltdowner", 18f, 50f, meltdowner::damage, meltdowner);
+        // Le meltdowner multiplie ses degats par son facteur de charge : les deux
+        // bornes de sa courbe se lisent donc a une seconde et a deux secondes de tir.
+        assertEquals(14.4f, meltdowner.damage(atExperience(meltdowner, 0f, 20)), 0.0001f,
+                "degats de meltdowner au depart");
+        assertEquals(60f, meltdowner.damage(atExperience(meltdowner, 1f, 40)), 0.0001f,
+                "degats de meltdowner au maximum");
+    }
+
+    @Test
+    void lesCompetencesQuiSeChargentSuiventLeurTempsDeCharge() {
+        var meltdowner = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
+        var vecAccel = cn.academy.ability.vecmanip.VecmanipCategory.VEC_ACCEL;
+
+        // Le meltdowner exige une seconde de charge et ne gagne plus rien apres deux ;
+        // l'acceleration de vecteur plafonne a une seconde, sans minimum.
+        assertTrue(meltdowner.isChargeable(), "le meltdowner se charge");
+        assertEquals(20, meltdowner.getMinChargeTicks(new AbilityData()), "TICKS_MIN");
+        assertEquals(40, meltdowner.getMaxChargeTicks(new AbilityData()), "TICKS_MAX");
+        assertTrue(vecAccel.isChargeable(), "vec_accel se charge");
+        assertEquals(0, vecAccel.getMinChargeTicks(new AbilityData()), "vec_accel part toujours");
+        assertEquals(20, vecAccel.getMaxChargeTicks(new AbilityData()), "MAX_CHARGE");
+
+        // Facteur de charge du meltdowner : 0,8 a une seconde, 1,2 a deux.
+        assertEquals(0.8f, meltdowner.timeRate(atExperience(meltdowner, 0f, 20)), 0.0001f);
+        assertEquals(1.2f, meltdowner.timeRate(atExperience(meltdowner, 0f, 40)), 0.0001f,
+                "deux secondes de charge valent moitie plus qu'une");
+
+        // Et il multiplie aussi la recharge : tenir son tir se paie en attente.
+        assertEquals(240, meltdowner.getCooldownTicks(atExperience(meltdowner, 0f, 20)));
+        assertEquals(168, meltdowner.getCooldownTicks(atExperience(meltdowner, 1f, 40)));
+
+        // Vitesse de vec_accel : sin(0,4) x 2,5 a l'appui, sin(1) x 2,5 a pleine charge.
+        assertEquals(Math.sin(0.4) * 2.5, vecAccel.speed(new AbilityData()), 0.0001);
+        assertEquals(Math.sin(1.0) * 2.5, vecAccel.speed(atExperience(vecAccel, 0f, 20)), 0.0001);
     }
 
     @Test
@@ -116,10 +168,9 @@ class SkillCurvesTest {
 
     @Test
     void lesCompetencesSansRechargeNEnOntPas() {
-        // Le bouclier et le meltdowner tiennent leur recharge du temps de charge du
-        // tir, que le port n'a pas encore : ils n'en ont donc aucune pour l'instant.
-        // Les passives, elles, n'en ont jamais eu.
-        assertEquals(0, cooldownOf(cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER));
+        // Le bouclier tient sa recharge du temps de charge de son maintien, que le port
+        // n'a pas encore : il n'en a donc aucune pour l'instant. Les passives, elles,
+        // n'en ont jamais eu.
         assertEquals(0, cooldownOf(cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD));
         assertEquals(0, cooldownOf(cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION));
         assertEquals(0,

@@ -13,28 +13,72 @@ public class MeltdownerSkill extends Skill {
     private static final float CP_COST = 20f;
     private static final double RANGE = 20;
 
+    /** Le tir ne part pas en dessous d'une seconde de charge : {@code TICKS_MIN}. */
+    public static final int TICKS_MIN = 20;
+
+    /** Au-dela de deux secondes, charger davantage ne change plus rien : {@code TICKS_MAX}. */
+    public static final int TICKS_MAX = 40;
+
     public MeltdownerSkill() {
         super("meltdowner", 3);
     }
 
     /**
-     * Degats repris de l'original : de 18 a 50 selon l'experience.
-     *
-     * L'original les multipliait encore par un facteur de temps de charge ; le port
-     * n'a pas ce temps de charge, donc c'est la courbe de base qui s'applique.
+     * Le meltdowner est la competence qui se chargeait dans l'original : la touche
+     * reste enfoncee, et le tir part au relachement avec ce qui a ete accumule.
      */
-    public float damage(AbilityData data) {
-        return lerp(18f, 50f, data.getSkillExp(this));
+    @Override
+    public boolean isChargeable() {
+        return true;
+    }
+
+    @Override
+    public int getMinChargeTicks(AbilityData data) {
+        return TICKS_MIN;
+    }
+
+    @Override
+    public int getMaxChargeTicks(AbilityData data) {
+        return TICKS_MAX;
     }
 
     /**
-     * L'original multipliait 0,002 par le temps de charge du tir. Le port ne remonte
-     * pas cette duree au paquet d'activation : c'est donc le montant de base qui est
-     * verse, sans le bonus de charge.
+     * Facteur de charge de l'original : 0,8 juste au minimum, 1,2 a pleine charge.
+     *
+     * <p>C'est lui qui fait toute la difference entre un tir rapide et un tir tenu :
+     * il multiplie les degats, la recharge et le gain d'experience de la meme facon.
+     */
+    public float timeRate(AbilityData data) {
+        int ticks = Math.min(data.getChargeTicks(this), TICKS_MAX);
+        return lerp(0.8f, 1.2f, (ticks - TICKS_MIN) / (float) (TICKS_MAX - TICKS_MIN));
+    }
+
+    /**
+     * Degats repris de l'original : de 18 a 50 selon l'experience, le tout multiplie par
+     * le facteur de charge. Un tir tenu au maximum fait donc moitie plus mal qu'un tir
+     * relache tout juste passe.
+     */
+    public float damage(AbilityData data) {
+        return timeRate(data) * lerp(18f, 50f, data.getSkillExp(this));
+    }
+
+    /**
+     * Experience : 0,002 de base, multiplie par le facteur de charge comme dans
+     * l'original — tenir son tir fait donc progresser plus vite.
      */
     @Override
     public float getExpGain(AbilityData data) {
-        return 0.002f;
+        return timeRate(data) * 0.002f;
+    }
+
+    /**
+     * Recharge reprise de l'original : 15 a 7 secondes selon l'experience, multipliees
+     * par le facteur de charge. Tenir le tir le plus longtemps le rend plus puissant
+     * mais le rend aussi plus long a revenir.
+     */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) (timeRate(data) * 20 * lerp(15f, 7f, data.getSkillExp(this)));
     }
 
     @Override

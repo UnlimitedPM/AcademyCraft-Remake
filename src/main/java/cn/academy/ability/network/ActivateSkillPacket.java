@@ -1,6 +1,7 @@
 package cn.academy.ability.network;
 
 import cn.academy.ability.AbilityCapability;
+import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
@@ -13,24 +14,50 @@ import net.minecraftforge.network.PacketDistributor;
 
 import java.util.function.Supplier;
 
-/** C2S: player pressed the key bound to a given skill. */
+/** C2S: the player pressed or released the key bound to a given skill. */
 public class ActivateSkillPacket {
+
+    /**
+     * Ce que le joueur vient de faire de la touche.
+     *
+     * L'original envoyait deux messages distincts, {@code MSG_KEYDOWN} et
+     * {@code MSG_KEYUP} ; les competences qui se chargent ne font rien a l'appui, elles
+     * accumulent, et partent au relachement.
+     */
+    public enum Phase {
+        /** Touche enfoncee. */
+        PRESS,
+        /** Touche relachee : la competence part avec ce qu'elle a accumule. */
+        RELEASE
+    }
 
     private final int categoryId;
     private final int skillId;
+    private final Phase phase;
 
     public ActivateSkillPacket(int categoryId, int skillId) {
+        this(categoryId, skillId, Phase.PRESS);
+    }
+
+    public ActivateSkillPacket(int categoryId, int skillId, Phase phase) {
         this.categoryId = categoryId;
         this.skillId = skillId;
+        this.phase = phase;
     }
 
     public static void encode(ActivateSkillPacket msg, FriendlyByteBuf buf) {
         buf.writeVarInt(msg.categoryId);
         buf.writeVarInt(msg.skillId);
+        buf.writeByte(msg.phase.ordinal());
     }
 
     public static ActivateSkillPacket decode(FriendlyByteBuf buf) {
-        return new ActivateSkillPacket(buf.readVarInt(), buf.readVarInt());
+        int categoryId = buf.readVarInt();
+        int skillId = buf.readVarInt();
+        int phase = buf.readByte();
+        Phase[] values = Phase.values();
+        return new ActivateSkillPacket(categoryId, skillId,
+                phase >= 0 && phase < values.length ? values[phase] : Phase.PRESS);
     }
 
     public static void handle(ActivateSkillPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
@@ -42,57 +69,110 @@ public class ActivateSkillPacket {
             if (category == null) return;
             Skill skill = category.getSkill(msg.skillId);
             if (skill == null) return;
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-                // Apprendre une competence passe par le developpeur : tant qu'elle ne
-                // l'est pas, la touche ne fait rien. L'original ne posait meme pas de
-                // touche dans ce cas ; le port en pose une par competence, donc il le
-                // dit plutot que de rester muet.
-                if (!data.isSkillLearned(skill)) {
-                    player.displayClientMessage(
-                            Component.translatable("academy.ability.not_learned", skill.getDisplayName())
-                                    .withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-                if (data.isInterfered()) {
-                    player.displayClientMessage(
-                            Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-
-                // Recharge : l'original tenait un compteur par competence dans
-                // CooldownData et refusait le declenchement tant qu'il n'etait pas
-                // revenu a zero. Le message dit combien il reste, sinon le joueur
-                // n'aurait aucun moyen de savoir si la touche a echoue ou si elle est
-                // simplement en attente.
-                int cooldown = data.getCooldown(skill);
-                if (cooldown > 0) {
-                    player.displayClientMessage(
-                            Component.translatable("academy.ability.cooldown",
-                                            String.format(java.util.Locale.ROOT, "%.1f", cooldown / 20.0f))
-                                    .withStyle(ChatFormatting.RED), true);
-                    return;
-                }
-
-                if (data.consumeControlPoint(skill.getCpCost())) {
-                    skill.onActivate(player, data);
-                    // La recharge part des que la competence est lancee, comme dans
-                    // l'original qui la posait a la fin de son effet.
-                    data.setCooldown(skill, skill.getCooldownTicks(data));
-                    // Utiliser une competence la fait progresser, et verse de
-                    // l'avancement au niveau de la categorie : c'est ce qui fait qu'on
-                    // monte en jouant, et non en attendant. L'original versait ces
-                    // points depuis chaque competence au moment ou son effet aboutissait ;
-                    // ici ils sont verses a l'activation, au montant de base de la
-                    // competence — l'ecart est note dans Skill#getExpGain.
-                    data.addSkillExp(skill, skill.getExpGain(data));
-                    AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                            new SyncAbilityDataPacket(data));
-                } else {
-                    player.displayClientMessage(
-                            Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
-                }
-            });
+            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> handle(player, data, skill, msg.phase));
         });
         ctx.setPacketHandled(true);
+    }
+
+    private static void handle(ServerPlayer player, AbilityData data, Skill skill, Phase phase) {
+        // Apprendre une competence passe par le developpeur : tant qu'elle ne
+        // l'est pas, la touche ne fait rien. L'original ne posait meme pas de
+        // touche dans ce cas ; le port en pose une par competence, donc il le
+        // dit plutot que de rester muet.
+        if (!data.isSkillLearned(skill)) {
+            player.displayClientMessage(
+                    Component.translatable("academy.ability.not_learned", skill.getDisplayName())
+                            .withStyle(ChatFormatting.RED), true);
+            return;
+        }
+
+        if (phase == Phase.PRESS) {
+            // Une competence qui se charge n'est pas lancee maintenant : on ouvre une
+            // charge et on attend le relachement.
+            if (skill.isChargeable()) {
+                if (!canStart(player, data, skill)) return;
+                data.beginCharge(skill);
+                return;
+            }
+            activate(player, data, skill);
+            return;
+        }
+
+        // Relachement : il n'y a quelque chose a faire que si une charge etait ouverte.
+        if (!data.isCharging(skill)) return;
+        data.endCharge(skill);
+
+        // Relacher trop tot ne declenche rien du tout : l'original exigeait
+        // TICKS_MIN avant d'envoyer quoi que ce soit a son serveur. Rien n'est
+        // consomme dans ce cas, pas meme une recharge.
+        int ticks = data.getChargeTicks(skill);
+        if (ticks < skill.getMinChargeTicks(data)) return;
+
+        activate(player, data, skill);
+    }
+
+    /** Verifie qu'une charge peut s'ouvrir : ni brouillage, ni recharge en cours. */
+    private static boolean canStart(ServerPlayer player, AbilityData data, Skill skill) {
+        if (data.isInterfered()) {
+            player.displayClientMessage(
+                    Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        int cooldown = data.getCooldown(skill);
+        if (cooldown > 0) {
+            announceCooldown(player, cooldown);
+            return false;
+        }
+        return true;
+    }
+
+    /** Le declenchement lui-meme, commun aux competences instantanees et chargees. */
+    private static void activate(ServerPlayer player, AbilityData data, Skill skill) {
+        if (data.isInterfered()) {
+            player.displayClientMessage(
+                    Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
+            return;
+        }
+
+        // Recharge : l'original tenait un compteur par competence dans
+        // CooldownData et refusait le declenchement tant qu'il n'etait pas
+        // revenu a zero. Le message dit combien il reste, sinon le joueur
+        // n'aurait aucun moyen de savoir si la touche a echoue ou si elle est
+        // simplement en attente.
+        int cooldown = data.getCooldown(skill);
+        if (cooldown > 0) {
+            announceCooldown(player, cooldown);
+            return;
+        }
+
+        if (!data.consumeControlPoint(skill.getCpCost())) {
+            player.displayClientMessage(
+                    Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
+            return;
+        }
+
+        // La competence lit elle-meme son temps de charge : le compteur reste
+        // lisible apres le relachement, dans ses degats, sa recharge et son gain
+        // d'experience.
+        skill.onActivateCharged(player, data, data.getChargeTicks(skill));
+        // La recharge part des que la competence est lancee, comme dans
+        // l'original qui la posait a la fin de son effet.
+        data.setCooldown(skill, skill.getCooldownTicks(data));
+        // Utiliser une competence la fait progresser, et verse de
+        // l'avancement au niveau de la categorie : c'est ce qui fait qu'on
+        // monte en jouant, et non en attendant. L'original versait ces
+        // points depuis chaque competence au moment ou son effet aboutissait ;
+        // ici ils sont verses a l'activation, au montant de base de la
+        // competence — l'ecart est note dans Skill#getExpGain.
+        data.addSkillExp(skill, skill.getExpGain(data));
+        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new SyncAbilityDataPacket(data));
+    }
+
+    private static void announceCooldown(ServerPlayer player, int cooldown) {
+        player.displayClientMessage(
+                Component.translatable("academy.ability.cooldown",
+                                String.format(java.util.Locale.ROOT, "%.1f", cooldown / 20.0f))
+                        .withStyle(ChatFormatting.RED), true);
     }
 }

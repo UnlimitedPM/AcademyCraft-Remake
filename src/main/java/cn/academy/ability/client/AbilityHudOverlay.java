@@ -28,11 +28,25 @@ public class AbilityHudOverlay implements IGuiOverlay {
         graphics.drawString(Minecraft.getInstance().font,
                 "CP: " + (int) cp + " / " + (int) maxCp, x, y - 10, 0xFFFFFF);
 
+        int nextY = y + BAR_HEIGHT + 2;
+
+        // Une competence qui se charge ne montrerait rien du tout sans cette barre :
+        // le joueur n'aurait aucun moyen de savoir que sa touche fait quelque chose,
+        // ni quand la charge atteint son maximum.
+        if (ClientCharge.isActive()) {
+            int chargeFilled = Math.round(BAR_WIDTH * ClientCharge.getFraction());
+            graphics.fill(x, nextY, x + BAR_WIDTH, nextY + BAR_HEIGHT, 0xFF404040);
+            graphics.fill(x, nextY, x + chargeFilled, nextY + BAR_HEIGHT, 0xFFFF8020);
+            graphics.drawString(Minecraft.getInstance().font, "CHARGE",
+                    x + BAR_WIDTH + 4, nextY - 2, 0xFFB060);
+            nextY += BAR_HEIGHT + 2;
+        }
+
         // Un brouilleur empeche d'utiliser ses competences : sans cet avertissement
         // le joueur n'aurait aucun moyen de comprendre pourquoi ses touches ne
         // repondent plus.
         if (data.isInterfered()) {
-            graphics.drawString(Minecraft.getInstance().font, "JAMMED", x, y + BAR_HEIGHT + 2, 0xFF5050);
+            graphics.drawString(Minecraft.getInstance().font, "JAMMED", x, nextY, 0xFF5050);
         }
     }
 }

@@ -221,6 +221,48 @@ public abstract class Skill {
         return 0;
     }
 
+    // ------------------------------------------------------------------
+    // Temps de charge
+    // ------------------------------------------------------------------
+
+    /**
+     * Cette competence demande-t-elle de garder la touche enfoncee ?
+     *
+     * L'original avait deux familles : celles qui partent a l'appui (l'arc, le
+     * teleport), et celles qui se chargent (le meltdowner, l'acceleration de vecteur).
+     * Une competence qui se charge est executee au relachement, avec le temps qu'elle a
+     * accumule, que ses degats comme sa recharge peuvent lire via
+     * {@code data.getChargeTicks(this)}.
+     */
+    public boolean isChargeable() {
+        return false;
+    }
+
+    /** Nombre de ticks de charge au-dela duquel la competence ne gagne plus rien. */
+    public int getMaxChargeTicks(AbilityData data) {
+        return 0;
+    }
+
+    /**
+     * Nombre de ticks de charge en dessous duquel la competence ne part pas.
+     *
+     * Reprend {@code TICKS_MIN} du meltdowner de l'original : relacher trop tot ne
+     * declenche rien du tout, et ne coute donc rien.
+     */
+    public int getMinChargeTicks(AbilityData data) {
+        return 0;
+    }
+
+    /**
+     * Execution apres une charge.
+     *
+     * Par defaut, l'activation ordinaire : une competence qui ne se charge pas n'a pas
+     * a connaitre cette methode.
+     */
+    public void onActivateCharged(Player player, AbilityData data, int chargeTicks) {
+        onActivate(player, data);
+    }
+
     /**
      * Interpolation lineaire entre deux valeurs, {@code t} ramene entre 0 et 1.
      *

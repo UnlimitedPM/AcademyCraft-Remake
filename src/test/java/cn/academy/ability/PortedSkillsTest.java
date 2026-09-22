@@ -172,8 +172,8 @@ class PortedSkillsTest {
             Map.entry("electromaster.railgun", 0.005f),
             Map.entry("electromaster.body_intensify", 0.01f),
             Map.entry("meltdowner.electron_bomb", 0.005f),
-            // montant de base : l'original multipliait par le temps de charge
-            Map.entry("meltdowner.meltdowner", 0.002f),
+            // 0,002 multiplie par le facteur de charge de 1,2 a pleine charge
+            Map.entry("meltdowner.meltdowner", 0.0024f),
             // 0,00014 par bloc, pour un saut d'une dizaine de blocs
             Map.entry("teleporter.penetrate_teleport", 0.00014f * 10f),
             // montant de base : l'original ajoutait 0,002 par entite traversee
@@ -186,7 +186,7 @@ class PortedSkillsTest {
             if (skill.isPassive()) continue;
             Float expected = EXPECTED_EXP.get(fullName(skill));
             assertNotNull(expected, "gain d'experience non fige pour " + fullName(skill));
-            assertEquals(expected.floatValue(), skill.getExpGain(new cn.academy.ability.AbilityData()),
+            assertEquals(expected.floatValue(), skill.getExpGain(charged(skill)),
                     0.000001f, "gain de " + fullName(skill));
         }
     }
@@ -197,9 +197,28 @@ class PortedSkillsTest {
         // inatteignable, et cela ne se verrait qu'apres des heures de jeu.
         for (Skill skill : allSkills()) {
             if (skill.isPassive()) continue;
-            assertTrue(skill.getExpGain(new cn.academy.ability.AbilityData()) > 0f,
+            assertTrue(skill.getExpGain(charged(skill)) > 0f,
                     fullName(skill) + " ne rapporte aucune experience");
         }
+    }
+
+    /**
+     * Un etat d'usage : une competence qui se charge est chargee au maximum.
+     *
+     * Sans cela, les gains d'experience d'une competence chargee seraient mesures au
+     * repos, donc multiplies par son facteur de charge le plus bas — ce qui figerait
+     * une valeur qui n'est celle d'aucun tir reel.
+     */
+    private static AbilityData charged(Skill skill) {
+        AbilityData data = new AbilityData();
+        if (skill.isChargeable()) {
+            data.beginCharge(skill);
+            for (int i = 0; i < skill.getMaxChargeTicks(data); i++) {
+                data.tickCharges();
+            }
+            data.endCharge(skill);
+        }
+        return data;
     }
 
     @Test

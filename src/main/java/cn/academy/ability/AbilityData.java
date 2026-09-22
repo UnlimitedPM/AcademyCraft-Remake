@@ -80,6 +80,23 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private final Map<String, Integer> cooldowns = new HashMap<>();
 
     /**
+     * Charges en cours, en ticks accumules.
+     *
+     * Portage du compteur que l'original tenait dans le contexte d'activation : la
+     * touche reste enfoncee, le compteur avance, et la competence est executee au
+     * relachement avec ce quil a accumule. Ce n'est <b>pas</b> sauvegarde : une charge
+     * ne survit pas a un rechargement, comme dans l'original.
+     *
+     * Le compteur <b>survit au relachement</b> : c'est ce que la competence lit pour
+     * savoir combien de temps elle a ete chargee, dans ses degats comme dans sa
+     * recharge. Seule une nouvelle charge le remet a zero.
+     */
+    private final Map<Skill, Integer> chargeTicks = new HashMap<>();
+
+    /** Les competences dont la touche est actuellement enfoncee. */
+    private final Set<Skill> charging = new HashSet<>();
+
+    /**
      * Sources d'interference actives, par nom. Non sauvegarde.
      *
      * Portage de {@code CPData.interfSources} : une machine pose une source, et
@@ -430,6 +447,71 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     /** Nombre de competences en recharge, pour les tests et le debogage. */
     public int getCooldownCount() {
         return cooldowns.size();
+    }
+
+    // ------------------------------------------------------------------
+    // Charges
+    // ------------------------------------------------------------------
+
+    /**
+     * Ticks accumules lors de la derniere charge de cette competence.
+     *
+     * Reste lisible apres le relachement : c'est la valeur que la competence consulte
+     * pour doser son effet.
+     */
+    public int getChargeTicks(Skill skill) {
+        return skill == null ? 0 : chargeTicks.getOrDefault(skill, 0);
+    }
+
+    /** Vrai si la touche de cette competence est actuellement enfoncee. */
+    public boolean isCharging(Skill skill) {
+        return skill != null && charging.contains(skill);
+    }
+
+    public boolean isChargingAnything() {
+        return !charging.isEmpty();
+    }
+
+    /** Commence une charge : le compteur repart de zero. */
+    public void beginCharge(Skill skill) {
+        if (skill == null) return;
+        chargeTicks.put(skill, 0);
+        charging.add(skill);
+    }
+
+    /** Termine une charge sans oublier son compteur : la competence va le lire. */
+    public void endCharge(Skill skill) {
+        if (skill == null) return;
+        charging.remove(skill);
+    }
+
+    /** Annule une charge et oublie son compteur. */
+    public void cancelCharge(Skill skill) {
+        if (skill == null) return;
+        charging.remove(skill);
+        chargeTicks.remove(skill);
+    }
+
+    /**
+     * Fait avancer toutes les charges en cours d'un tick, sans depasser leur maximum.
+     *
+     * A appeler cote serveur a chaque tick du joueur. Le serveur tient son propre
+     * compteur : le client n'annonce pas combien de temps il a tenu la touche, comme
+     * dans l'original ou les deux cotes comptaient de leur cote.
+     */
+    public void tickCharges() {
+        if (charging.isEmpty()) return;
+        for (Skill skill : charging) {
+            int max = skill.getMaxChargeTicks(this);
+            int ticks = chargeTicks.getOrDefault(skill, 0) + 1;
+            chargeTicks.put(skill, max > 0 ? Math.min(ticks, max) : ticks);
+        }
+    }
+
+    /** Oublie toutes les charges. Appele a la mort du joueur. */
+    public void clearCharges() {
+        charging.clear();
+        chargeTicks.clear();
     }
 
     private static String skillKey(Skill skill) {

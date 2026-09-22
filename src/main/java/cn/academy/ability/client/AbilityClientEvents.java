@@ -8,52 +8,92 @@ import cn.academy.ability.electromaster.ElectromasterCategory;
 import cn.academy.ability.meltdowner.MeltdownerCategory;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
+import cn.academy.ability.network.ActivateSkillPacket.Phase;
 import cn.academy.ability.teleporter.TeleporterCategory;
 import cn.academy.ability.vecmanip.VecmanipCategory;
+import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.List;
+
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class AbilityClientEvents {
+
+    /**
+     * Une touche, la competence qu'elle declenche, et sa charge eventuelle.
+     *
+     * <p>Regroupee en tableau : huit blocs recopies a la main auraient fait huit
+     * occasions d'oublier le relachement d'une competence qui se charge.
+     */
+    private static final class Binding {
+
+        final KeyMapping key;
+        final String category;
+        final String skill;
+
+        /** Vrai entre l'appui et le relachement d'une competence qui se charge. */
+        boolean charging;
+
+        Binding(KeyMapping key, String category, String skill) {
+            this.key = key;
+            this.category = category;
+            this.skill = skill;
+        }
+    }
+
+    // Cablage en attendant le systeme de presets et de touches de l'original.
+    private static final List<Binding> BINDINGS = List.of(
+            new Binding(AbilityKeyBindings.ACTIVATE_SKILL, VecmanipCategory.NAME, "vec_accel"),
+            new Binding(AbilityKeyBindings.ACTIVATE_ARC_GEN, ElectromasterCategory.NAME, "arc_gen"),
+            new Binding(AbilityKeyBindings.ACTIVATE_RAILGUN, ElectromasterCategory.NAME, "railgun"),
+            new Binding(AbilityKeyBindings.ACTIVATE_BODY_INTENSIFY, ElectromasterCategory.NAME, "body_intensify"),
+            new Binding(AbilityKeyBindings.ACTIVATE_SHIFT_TP, TeleporterCategory.NAME, "shift_tp"),
+            new Binding(AbilityKeyBindings.ACTIVATE_PENETRATE_TP, TeleporterCategory.NAME, "penetrate_teleport"),
+            new Binding(AbilityKeyBindings.ACTIVATE_MELTDOWNER, MeltdownerCategory.NAME, "meltdowner"),
+            new Binding(AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB, MeltdownerCategory.NAME, "electron_bomb"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
-
-        // Pilot wiring: hardcode one key per skill until the preset/key-mapping system is ported.
-        if (AbilityKeyBindings.ACTIVATE_SKILL.consumeClick()) {
-            send(VecmanipCategory.NAME, "vec_accel");
-        }
-        if (AbilityKeyBindings.ACTIVATE_ARC_GEN.consumeClick()) {
-            send(ElectromasterCategory.NAME, "arc_gen");
-        }
-        if (AbilityKeyBindings.ACTIVATE_RAILGUN.consumeClick()) {
-            send(ElectromasterCategory.NAME, "railgun");
-        }
-        if (AbilityKeyBindings.ACTIVATE_BODY_INTENSIFY.consumeClick()) {
-            send(ElectromasterCategory.NAME, "body_intensify");
-        }
-        if (AbilityKeyBindings.ACTIVATE_SHIFT_TP.consumeClick()) {
-            send(TeleporterCategory.NAME, "shift_tp");
-        }
-        if (AbilityKeyBindings.ACTIVATE_PENETRATE_TP.consumeClick()) {
-            send(TeleporterCategory.NAME, "penetrate_teleport");
-        }
-        if (AbilityKeyBindings.ACTIVATE_MELTDOWNER.consumeClick()) {
-            send(MeltdownerCategory.NAME, "meltdowner");
-        }
-        if (AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB.consumeClick()) {
-            send(MeltdownerCategory.NAME, "electron_bomb");
+        for (Binding binding : BINDINGS) {
+            tick(binding);
         }
     }
 
-    private static void send(String categoryName, String skillName) {
-        Category category = CategoryManager.INSTANCE.getCategory(categoryName);
+    private static void tick(Binding binding) {
+        Category category = CategoryManager.INSTANCE.getCategory(binding.category);
         if (category == null) return;
-        Skill skill = category.getSkill(skillName);
+        Skill skill = category.getSkill(binding.skill);
         if (skill == null) return;
-        AbilityNetwork.CHANNEL.sendToServer(new ActivateSkillPacket(category.getCategoryId(), skill.getId()));
+
+        // Appui : l'original envoyait MSG_KEYDOWN. Une competence qui se charge se
+        // contente d'ouvrir sa charge, une autre part tout de suite.
+        if (binding.key.consumeClick()) {
+            binding.charging = skill.isChargeable();
+            send(category, skill, Phase.PRESS);
+            if (binding.charging) {
+                ClientCharge.begin(skill.getMaxChargeTicks(ClientAbilityData.get()));
+            }
+        }
+
+        if (!binding.charging) return;
+        if (binding.key.isDown()) {
+            ClientCharge.tick();
+            return;
+        }
+
+        // Relachement : l'original envoyait MSG_KEYUP et le serveur executait la
+        // competence avec le temps qu'il avait compte de son cote.
+        binding.charging = false;
+        ClientCharge.end();
+        send(category, skill, Phase.RELEASE);
+    }
+
+    private static void send(Category category, Skill skill, Phase phase) {
+        AbilityNetwork.CHANNEL.sendToServer(
+                new ActivateSkillPacket(category.getCategoryId(), skill.getId(), phase));
     }
 }

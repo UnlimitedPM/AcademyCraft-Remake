@@ -63,6 +63,8 @@ public class AbilityEvents {
             data.refreshInterference();
             // Les recharges avancent d'un tick, comme la boucle de CooldownData.
             data.tickCooldowns();
+            // Et les charges en cours, comme le compteur du contexte d'activation.
+            data.tickCharges();
             // Le plafond vient de la config : on le reapplique a chaque tick pour
             // qu'un rechargement de config soit pris en compte sans reconnexion.
             data.clampToConfiguredMax();
@@ -85,7 +87,10 @@ public class AbilityEvents {
     public static void onDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(AbilityCapability.ABILITY_DATA)
-                    .ifPresent(AbilityData::clearCooldowns);
+                    .ifPresent(data -> {
+                        data.clearCooldowns();
+                        data.clearCharges();
+                    });
         }
     }
 

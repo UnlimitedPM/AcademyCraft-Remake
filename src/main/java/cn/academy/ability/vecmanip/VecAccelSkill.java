@@ -9,10 +9,41 @@ import net.minecraft.world.phys.Vec3;
 public class VecAccelSkill extends Skill {
 
     private static final float CP_COST = 15f;
-    private static final double SPEED = 2.2;
+
+    /** Vitesse maximale de l'original, atteinte a pleine charge. */
+    public static final double MAX_VELOCITY = 2.5;
+
+    /** Duree de charge au-dela de laquelle la poussee ne monte plus : {@code MAX_CHARGE}. */
+    public static final int MAX_CHARGE = 20;
 
     public VecAccelSkill() {
         super("vec_accel", 2);
+    }
+
+    /**
+     * L'acceleration de vecteur se chargeait dans l'original : un appui bref pousse
+     * faiblement, une touche tenue pousse de tout son poids. Relacher reste toujours
+     * possible, meme tout de suite.
+     */
+    @Override
+    public boolean isChargeable() {
+        return true;
+    }
+
+    @Override
+    public int getMaxChargeTicks(AbilityData data) {
+        return MAX_CHARGE;
+    }
+
+    /**
+     * Vitesse de lancement, portage de {@code speed} de l'original :
+     * {@code sin(prog) * MAX_VELOCITY}, avec {@code prog} allant de 0,4 a 1 selon la
+     * charge. Un appui bref pousse donc a 0,97 bloc par tick, une charge pleine a 2,10 —
+     * soit moins que les 2,2 que le port appliquait sans charge.
+     */
+    public double speed(AbilityData data) {
+        double prog = lerp(0.4f, 1f, (float) Math.min(1.0, data.getChargeTicks(this) / (double) MAX_CHARGE));
+        return Math.sin(prog) * MAX_VELOCITY;
     }
 
     /** 0,002 par acceleration, comme dans l'original. */
@@ -42,7 +73,7 @@ public class VecAccelSkill extends Skill {
         double z = Math.cos(yaw) * Math.cos(pitch);
 
         // Original replaces the velocity outright rather than stacking onto existing motion.
-        player.setDeltaMovement(new Vec3(x, y, z).normalize().scale(SPEED));
+        player.setDeltaMovement(new Vec3(x, y, z).normalize().scale(speed(data)));
         player.fallDistance = 0;
         player.hurtMarked = true;
     }
