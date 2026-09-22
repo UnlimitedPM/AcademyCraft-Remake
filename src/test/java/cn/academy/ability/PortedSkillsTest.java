@@ -46,6 +46,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_expert", 4),
             Map.entry("meltdowner.mine_ray_luck", 5),
             Map.entry("meltdowner.jet_engine", 4),
+            Map.entry("meltdowner.ray_barrage", 4),
             Map.entry("teleporter.dim_folding_theorem", 1),
             Map.entry("teleporter.threatening_teleport", 1),
             Map.entry("teleporter.mark_teleport", 2),
@@ -78,7 +79,8 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_basic", List.of("meltdowner.meltdowner")),
             Map.entry("meltdowner.mine_ray_expert", List.of("meltdowner.mine_ray_basic")),
             Map.entry("meltdowner.mine_ray_luck", List.of("meltdowner.mine_ray_expert")),
-            Map.entry("meltdowner.jet_engine", List.of("meltdowner.meltdowner")));
+            Map.entry("meltdowner.jet_engine", List.of("meltdowner.meltdowner")),
+            Map.entry("meltdowner.ray_barrage", List.of("meltdowner.meltdowner")));
 
     private static List<Category> categories() {
         return List.of(
@@ -217,6 +219,8 @@ class PortedSkillsTest {
             Map.entry("meltdowner.electron_bomb", 0.005f),
             // 0,002 multiplie par le facteur de charge de 1,2 a pleine charge
             Map.entry("meltdowner.meltdowner", 0.0024f),
+            // un tir, avec ou sans bille
+            Map.entry("meltdowner.ray_barrage", 0.005f),
             // 0,00014 par bloc, pour un saut d'une dizaine de blocs
             Map.entry("teleporter.penetrate_teleport", 0.00014f * 10f),
             // 0,0006 pour un lancer dans le vide ; 0,003 quand l'objet frappe, verse par
@@ -278,6 +282,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_expert", 300f),
             Map.entry("meltdowner.mine_ray_luck", 350f),
             Map.entry("meltdowner.jet_engine", 60f),
+            Map.entry("meltdowner.ray_barrage", 300f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

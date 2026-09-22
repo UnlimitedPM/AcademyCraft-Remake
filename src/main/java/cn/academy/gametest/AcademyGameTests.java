@@ -1872,6 +1872,89 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Les deux visages de la salve de rayons.
+     *
+     * C'est la seule competence du mod qui change de nature selon ce que le regard trouve :
+     * un tir simple sur ce qu'elle voit, ou une salve en cone si elle tombe sur une bille
+     * de silicium <b>en vol</b>. Les deux se lisent dans le monde, donc ici — et le second
+     * verifie du meme coup que la bille est bien consommee par la salve.
+     */
+    @GameTest(template = "empty")
+    public static void laSalveDeRayonsTireOuFaucheSelonCeQuElleTrouve(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.RAY_BARRAGE;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(new BlockPos(2, 1, 2));
+
+        var player = fakePlayer(helper);
+        player.revive();
+        // Regard vers +Z, comme le lacet zero de Minecraft, et un peu vers le sol : une
+        // vache au sol se vise en baissant les yeux, elle n'est pas a hauteur de tete.
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 10f);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(skill.getCategory(), 1);
+        data.learnSkill(skill);
+
+        // Le monde et le faux joueur sont partages par tous les tests, qui peuvent tourner
+        // en parallele : on nettoie donc le couloir avant de mesurer, comme les autres
+        // tests nettoient leur colonne de blocs. Sans cela, une bete laissee par un test
+        // voisin — au meme endroit, puisque les cellules se recouvrent — se fait frapper a
+        // la place de la notre, et c'est notre test qui echoue, avec un message qui
+        // n'accuse personne.
+        net.minecraft.world.phys.Vec3 look = player.getViewVector(1f);
+        for (var leftover : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,
+                player.getBoundingBox().expandTowards(look.scale(20.0)).inflate(2.0))) {
+            leftover.discard();
+        }
+
+        // --- Sans bille : un tir simple, sur ce que le regard trouve.
+        var cow = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        cow.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 4.5, 0f, 0f);
+        level.addFreshEntity(cow);
+
+        skill.onActivate(player, data);
+        assertFalse(helper, cow.isAlive(),
+                "sans bille, un tir simple de 25 points doit tuer une vache");
+
+        // --- Avec une bille en vol devant le regard : la salve fauche le cone.
+        cow.discard();
+        // Le regard se releve : une bille qu'on vient de lancer vole a hauteur d'oeil.
+        player.setXRot(0f);
+
+        var ball = new cn.academy.entity.EntitySilbarn(level, player);
+        // Un dixieme sous l'oeil, pour que le trait parte franchement dans sa boite plutot
+        // que sur son arete.
+        ball.moveTo(abs.getX() + 0.5, player.getEyeY() - 0.1, abs.getZ() + 3.5, 0f, 0f);
+        ball.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        level.addFreshEntity(ball);
+
+        var target = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        target.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 6.5, 0f, 0f);
+        level.addFreshEntity(target);
+
+        // Le cone ne demande pas que le regard touche la cible : il part de l'oeil du
+        // lanceur et s'ouvre sur 55 degres, donc une bete au sol y est meme si le trait
+        // passe au-dessus d'elle.
+        float before = target.getHealth();
+        skill.onActivate(player, data);
+
+        assertTrue(helper, ball.isHit(), "la bille trouvee doit exploser");
+        assertTrue(helper, target.getHealth() < before,
+                "et la salve doit faucher ce qui est dans le cone");
+        // Une vache a dix points de vie : la salve au minimum en fait exactement dix, donc
+        // elle y passe. C'est ce qui rend l'assertion precise — une salve qui ne ferait
+        // que cinq points la laisserait vivante.
+        assertFalse(helper, target.isAlive(),
+                "10 points a l'experience minimale, sur une bete qui en a 10");
+
+        ball.discard();
+        target.discard();
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le generateur de phase
     // ------------------------------------------------------------------

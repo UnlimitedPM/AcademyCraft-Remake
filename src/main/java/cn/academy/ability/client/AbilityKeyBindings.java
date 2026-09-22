@@ -122,6 +122,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_jet_engine", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_SEMICOLON, "key.categories.academy");
 
+    /** La salve de rayons. Il ne reste que de la ponctuation : voir la note du reacteur. */
+    public static final KeyMapping ACTIVATE_RAY_BARRAGE = new KeyMapping(
+            "key.academy.activate_ray_barrage", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_SLASH, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -145,5 +150,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_MINE_RAY_LUCK);
         event.register(ACTIVATE_SCATTER_BOMB);
         event.register(ACTIVATE_JET_ENGINE);
+        event.register(ACTIVATE_RAY_BARRAGE);
     }
 }

@@ -526,6 +526,63 @@ class SkillCurvesTest {
         assertFalse(jet.onHoldTick(null, flying, 5 + 60), "et le rester");
     }
 
+    /**
+     * La salve de rayons : ses deux versions, et la forme de son cone.
+     *
+     * C'est la seule competence du mod qui change de nature selon ce que le regard trouve :
+     * un tir simple sur ce qu'elle voit, ou une salve en cone si elle trouve une bille de
+     * silicium en vol. Le cone, lui, n'est pas rond — 27,5 degres de lacet pour 55 de
+     * tangage, parce que l'original s'est servi deux fois de la meme portee de deux facons
+     * differentes. Personne ne devinerait ces proportions en jouant, donc elles sont figees
+     * ici.
+     */
+    @Test
+    void laSalveDeRayonsOuvreUnConeDeuxFoisPlusHautQueLarge() {
+        var barrage = cn.academy.ability.meltdowner.MeltdownerCategory.RAY_BARRAGE;
+
+        assertFalse(barrage.isHeld(), "c'est un tir, pas un maintien");
+        assertFalse(barrage.isChargeable(), "et il ne se charge pas non plus");
+        assertEquals(55.0, cn.academy.ability.meltdowner.RayBarrageSkill.CONE_RANGE, 0.0001);
+        assertEquals(27.5, cn.academy.ability.meltdowner.RayBarrageSkill.HALF_YAW, 0.0001);
+        assertEquals(55.0, cn.academy.ability.meltdowner.RayBarrageSkill.HALF_PITCH, 0.0001);
+
+        var look = new Vec3(0, 0, 1);
+
+        // Dans l'axe : oui.
+        assertTrue(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(look, new Vec3(0, 0, 10)));
+        // Vers le haut de 50 degres : oui, le cone est haut.
+        assertTrue(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(look,
+                new Vec3(0, Math.tan(Math.toRadians(50)), 1)));
+        // Vers le haut de 60 : non, on est sorti par le plafond.
+        assertFalse(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(look,
+                new Vec3(0, Math.tan(Math.toRadians(60)), 1)));
+        // Vers la droite de 25 degres : oui.
+        assertTrue(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(look,
+                new Vec3(Math.tan(Math.toRadians(25)), 0, 1)));
+        // Vers la droite de 30 : non, on est sorti par le cote — le cone est plus etroit
+        // que haut, et c'est ce qui le distingue d'un entonnoir.
+        assertFalse(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(look,
+                new Vec3(Math.tan(Math.toRadians(30)), 0, 1)));
+
+        // Derriere : non, evidemment.
+        assertFalse(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(look, new Vec3(0, 0, -10)));
+
+        // Et le lacet se ramene, sinon viser vers l'ouest ferait passer une cible a cote
+        // pour une cible a l'oppose.
+        var west = new Vec3(-1, 0, 0);
+        assertTrue(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(west, new Vec3(-10, 0, 0.1)));
+        assertFalse(cn.academy.ability.meltdowner.RayBarrageSkill.inCone(west, new Vec3(10, 0, 0)));
+
+        // Les deux versions de la competence.
+        assertBounds("degats du tir simple", 25f, 60f, barrage::plainDamage, barrage);
+        assertBounds("degats de la salve", 10f, 18f, barrage::scatteredDamage, barrage);
+        assertBounds("surcout de la salve", 300f, 140f, barrage::getOverloadCost, barrage);
+        assertCooldownBounds("recharge de la salve", barrage, 100, 40);
+        // 450 a 380 CP chez l'original, divises par 28.
+        assertEquals(16.07f, barrage.getCpCost(atExperience(barrage, 0f)), 0.0001f);
+        assertEquals(13.57f, barrage.getCpCost(atExperience(barrage, 1f)), 0.0001f);
+    }
+
     @Test
     void lesRechargesSuiventLExperience() {
         assertCooldownBounds("recharge de arc_gen",

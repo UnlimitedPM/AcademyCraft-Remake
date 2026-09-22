@@ -97,7 +97,14 @@ public class EntitySilbarn extends Projectile {
         return this.entityData.get(DATA_HIT);
     }
 
-    private void markHit() {
+    /**
+     * Pose la bille : elle est desormais au contact.
+     *
+     * Deux appelants, comme dans l'original : le contact avec un bloc, et la salve de
+     * rayons, qui fait exploser la bille qu'elle a trouvee en la postant au meme etat. Dans
+     * les deux cas la bille cesse d'etre visable et disparait dix ticks plus tard.
+     */
+    public void markHit() {
         if (isHit()) return;
         this.entityData.set(DATA_HIT, true);
         this.sinceHit = 0;

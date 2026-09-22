@@ -12,6 +12,7 @@ public class MeltdownerCategory extends Category {
     public static final LightShieldSkill LIGHT_SHIELD = new LightShieldSkill();
     public static final ScatterBombSkill SCATTER_BOMB = new ScatterBombSkill();
     public static final JetEngineSkill JET_ENGINE = new JetEngineSkill();
+    public static final RayBarrageSkill RAY_BARRAGE = new RayBarrageSkill();
     public static final MineRayBasicSkill MINE_RAY_BASIC = new MineRayBasicSkill();
     public static final MineRayExpertSkill MINE_RAY_EXPERT = new MineRayExpertSkill();
     public static final MineRayLuckSkill MINE_RAY_LUCK = new MineRayLuckSkill();
@@ -25,12 +26,13 @@ public class MeltdownerCategory extends Category {
         addSkill(LIGHT_SHIELD);
         addSkill(SCATTER_BOMB);
         addSkill(JET_ENGINE);
+        addSkill(RAY_BARRAGE);
         addSkill(MINE_RAY_BASIC);
         addSkill(MINE_RAY_EXPERT);
         addSkill(MINE_RAY_LUCK);
 
-        // Dependances de l'original dont les deux bouts sont portes. Les autres
-        // (ray_barrage, et l'ecran de la bombe a electrons) attendent leurs competences.
+        // Dependances de l'original dont les deux bouts sont portes. Il ne reste que
+        // l'ecran de la bombe a electrons, qui attend une application du terminal.
         LIGHT_SHIELD.setParent(ELECTRON_BOMB);
         SCATTER_BOMB.setParent(ELECTRON_BOMB, 0.8f);
         // Le meltdowner demande les deux : la bombe pour la maitrise du plasma, le
@@ -41,6 +43,8 @@ public class MeltdownerCategory extends Category {
         // Le reacteur demande une experience pleine dans le meltdowner : l'original
         // n'ouvrait ce vol qu'a qui avait epuise le reste du plasma.
         JET_ENGINE.setParent(MELTDOWNER, 1f);
+        // La salve demande une demi-experience dans le meltdowner, comme l'original.
+        RAY_BARRAGE.setParent(MELTDOWNER, 0.5f);
         // Les rayons miniers se suivent : l'expert demande le premier, le chanceux
         // demande l'expert, comme dans l'original.
         MINE_RAY_BASIC.setParent(MELTDOWNER, 0.3f);
