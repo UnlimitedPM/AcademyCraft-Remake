@@ -795,6 +795,57 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * La machine annonce au client qu'elle travaille, et c'est tout ce qu'il lui faut.
+     *
+     * C'est la seule chose que le serveur doit dire pour que la machine sonne : le client
+     * n'a ni recette ni energie, il ne peut donc pas recalculer `isWorking()`. Le port fait
+     * voyager l'etat dans la balise de synchronisation, celle que la machine envoie deja
+     * dix fois par seconde pour sa barre de progression — donc sans un paquet de plus.
+     *
+     * Le test lit la balise comme le ferait un client : c'est le contrat, et rien d'autre.
+     * Il verifie les deux sens, parce qu'une machine qui se tait doit le dire aussi — sans
+     * quoi le client ferait tourner une boucle pour un bloc au repos.
+     */
+    @GameTest(template = "empty")
+    public static void lesMachinesAnnoncentQuandEllesTravaillent(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        // Au repos, la balise est muette.
+        assertFalse(helper, former.getUpdateTag().getBoolean("working"),
+                "une machine au repos ne doit pas s'annoncer en marche");
+
+        // Recette INCISE : une plaque de fer renforcee donne six aiguilles, comme dans le
+        // test du reseau.
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN,
+                new ItemStack(ModItems.REINFORCED_IRON_PLATE.get()));
+        former.cycleMode(1); // PLATE -> INCISE
+        former.setEnergy(3000.0d);
+
+        // Cinq ticks pour trouver la recette, puis le premier tick de travail.
+        for (int i = 0; i < 6; i++) {
+            MetalFormerBlockEntity.tick(level, abs, helper.getBlockState(rel), former);
+        }
+        assertTrue(helper, former.isWorking(), "la machine doit travailler");
+        assertTrue(helper, former.getUpdateTag().getBoolean("working"),
+                "et le dire au client, qui n'a pas de quoi le recalculer");
+
+        // Une fois l'entree consommee il n'y a plus rien a transformer : la machine se
+        // tait, et le dit.
+        for (int i = 0; i < 120; i++) {
+            MetalFormerBlockEntity.tick(level, abs, helper.getBlockState(rel), former);
+        }
+        assertFalse(helper, former.isWorking(), "la machine doit avoir fini son travail");
+        assertFalse(helper, former.getUpdateTag().getBoolean("working"),
+                "et elle ne doit plus s'annoncer en marche");
+        helper.succeed();
+    }
+
     /** Sans energie, la machine ne doit ni travailler ni rien produire. */
     @GameTest(template = "empty")
     public static void metalFormerDoesNothingWithoutEnergy(GameTestHelper helper) {

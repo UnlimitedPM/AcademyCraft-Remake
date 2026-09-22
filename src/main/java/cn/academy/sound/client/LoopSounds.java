@@ -1,10 +1,9 @@
 package cn.academy.sound.client;
 
 import cn.academy.sound.HeldLoops;
+import cn.academy.sound.SoundLookup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -43,12 +42,12 @@ public final class LoopSounds {
         HeldLoops.Loop loop = HeldLoops.forSkill(skill);
         if (loop == null) return;
 
-        SoundEvent event = event(loop.event());
+        SoundEvent event = SoundLookup.event(loop.event());
         if (event == null) return;
 
         // Le son de mise en route, s'il y en a un, part juste avant la boucle.
         if (loop.hasStartup()) {
-            SoundEvent startup = event(loop.startup());
+            SoundEvent startup = SoundLookup.event(loop.startup());
             if (startup != null) {
                 player.playNotifySound(startup, net.minecraft.sounds.SoundSource.AMBIENT, 0.5f,
                         1.0f);
@@ -68,13 +67,5 @@ public final class LoopSounds {
             running = null;
         }
         runningSkill = null;
-    }
-
-    /** L'evenement porte par un nom, ou {@code null} s'il n'existe pas. */
-    private static SoundEvent event(String name) {
-        ResourceLocation key = ResourceLocation.tryParse(
-                name.contains(":") ? name : "academy:" + name);
-        if (key == null) return null;
-        return BuiltInRegistries.SOUND_EVENT.get(key);
     }
 }

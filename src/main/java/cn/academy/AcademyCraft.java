@@ -77,6 +77,10 @@ public class AcademyCraft {
                 // du terminal. Sans cette ligne, l'arbre de competences s'installe
                 // mais reste une icone morte.
                 cn.academy.terminal.client.TerminalScreens.init();
+                // Les boucles sonores des machines : le block entity est une classe
+                // partagee, il ne peut donc pas nommer la sienne. C'est ici qu'on la lui
+                // installe — et sans cette ligne, les machines tournent en silence.
+                cn.academy.sound.client.MachineLoopSounds.install();
                 // Sans cet appel, l'unite d'energie gardait toujours sa texture pleine :
                 // la propriete d'item "academy:energy" n'etait jamais enregistree.
                 ModItemProperties.addCustomItemProperties();

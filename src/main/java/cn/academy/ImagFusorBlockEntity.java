@@ -6,6 +6,8 @@ import javax.annotation.Nullable;
 import cn.academy.crafting.ImagFusorRecipes;
 import cn.academy.energy.EnergyReceiver;
 import cn.academy.energy.NodeFinder;
+import cn.academy.sound.MachineLoops;
+import cn.academy.sound.MachineSounds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -133,6 +135,13 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     /** Vrai au dernier etat connu du bloc, pour n'ecrire que sur changement. */
     private boolean lit;
 
+    /**
+     * L'etat de marche tel qu'il vient de la balise de synchronisation, donc tel que le
+     * client le lit. Le client n'a ni recette ni energie : c'est cette valeur-la, et non
+     * {@link #isWorking()}, qui allume la boucle sonore de la machine.
+     */
+    private boolean syncedWorking;
+
     private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
     private final LazyOptional<IFluidHandler> fluidHandlerCap = LazyOptional.of(() -> tank);
 
@@ -150,6 +159,14 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     // ------------------------------------------------------------------
 
     public static void tick(Level level, BlockPos pos, BlockState state, ImagFusorBlockEntity fusor) {
+        if (level.isClientSide) {
+            // Chez le client, il n'y a rien a faire avancer : seulement un son a faire
+            // tourner tant que la machine travaille. L'etat vient de la balise de
+            // synchronisation, que le serveur renvoie dix fois par seconde.
+            MachineSounds.tick(level, pos, MachineLoops.forMachine(MachineLoops.IMAG_FUSOR),
+                    fusor.syncedWorking);
+            return;
+        }
         if (!(level instanceof ServerLevel server)) return;
 
         fusor.meltUnit();
@@ -414,6 +431,9 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         tag.putDouble("energy", energy);
         tag.putInt("work", workCounter);
         tag.putBoolean("linked", linked);
+        // L'etat de marche voyage avec le reste : c'est ce que le client lit pour savoir
+        // s'il doit faire tourner la boucle sonore de la machine, sans un paquet de plus.
+        tag.putBoolean("working", isWorking());
     }
 
     @Override
@@ -424,6 +444,7 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         workCounter = tag.getInt("work");
         linked = tag.getBoolean("linked");
+        syncedWorking = tag.getBoolean("working");
         // La recette n'est pas sauvegardee : elle est retrouvee au premier tick a
         // partir de l'objet d'entree, ce qui evite de stocker un rang de recette
         // qui pourrait ne plus rien designer apres une mise a jour.

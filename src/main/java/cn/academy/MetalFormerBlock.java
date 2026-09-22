@@ -65,7 +65,10 @@ public class MetalFormerBlock extends Block implements EntityBlock {
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                  BlockEntityType<T> type) {
-        if (level.isClientSide || type != ModBlockEntities.METAL_FORMER.get()) return null;
+        // Le ticker est pose des DEUX cotes : le serveur transforme, et le client fait
+        // tourner la boucle sonore de la machine. C'est le block entity qui trie, au debut
+        // de son tick.
+        if (type != ModBlockEntities.METAL_FORMER.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof MetalFormerBlockEntity former) MetalFormerBlockEntity.tick(lvl, pos, st, former);
         };
