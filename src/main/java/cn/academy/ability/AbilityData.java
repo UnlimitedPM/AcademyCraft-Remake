@@ -4,7 +4,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.util.INBTSerializable;
+
+import javax.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -113,6 +116,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
         /** Ticks tenus du dernier effet, ou -1 s'il n'y en a pas encore eu. */
         private int mark = -1;
+
+        /** Ancre fixe du maintien : le bloc vise, pour une competence qui attire. */
+        private net.minecraft.world.phys.Vec3 point;
+
+        /** Cible vivante visee, 0 s'il n'y en a pas. */
+        private int targetId;
+
+        /** Ou le maintien a commence, pour les competences qui se paient en distance. */
+        private net.minecraft.world.phys.Vec3 origin;
     }
 
     private final Map<Skill, Hold> holds = new HashMap<>();
@@ -718,6 +730,47 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public void setHoldMark(Skill skill, int ticks) {
         Hold hold = holdOf(skill);
         if (hold != null) hold.mark = ticks;
+    }
+
+    /** Ancre fixe du maintien : le point que la competence vise, sans le suivre. */
+    public void setHoldPoint(Skill skill, net.minecraft.world.phys.Vec3 point) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.point = point;
+    }
+
+    @Nullable
+    public net.minecraft.world.phys.Vec3 getHoldPoint(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? null : hold.point;
+    }
+
+    /**
+     * Cible vivante du maintien.
+     *
+     * Seul l'identifiant est garde : une entite ne se range pas dans une donnee de
+     * joueur, et l'original suivait lui aussi une entite qu'il relisait a chaque tick.
+     * Zero signifie qu'il n'y en a pas.
+     */
+    public void setHoldTarget(Skill skill, int entityId) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.targetId = entityId;
+    }
+
+    public int getHoldTargetId(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? 0 : hold.targetId;
+    }
+
+    /** Point de depart du maintien, pour l'experience gagnee en distance. */
+    public void setHoldOrigin(Skill skill, net.minecraft.world.phys.Vec3 origin) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.origin = origin;
+    }
+
+    @Nullable
+    public net.minecraft.world.phys.Vec3 getHoldOrigin(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? null : hold.origin;
     }
 
     /** Commence une charge : le compteur repart de zero. */

@@ -6,6 +6,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 
+import java.util.List;
+
 /**
  * Configuration du mod (fichier {@code config/academy-common.toml}).
  *
@@ -73,6 +75,60 @@ public final class Config {
                      "soit environ un dixieme de seconde par point sur une reserve pleine.")
             .defineInRange("ability.overloadRecoverSpeed", 1.0d, 0.0d, 1000.0d);
 
+    /**
+     * Ce que l'electromaster attire, repris de {@code normalMetalBlocks} de l'original.
+     *
+     * Ces blocs s'attrapent a tout niveau d'experience.
+     */
+    private static final List<String> DEFAULT_METAL_BLOCKS = List.of(
+            "minecraft:rail",
+            "minecraft:iron_bars",
+            "minecraft:iron_block",
+            "minecraft:activator_rail",
+            "minecraft:detector_rail",
+            "minecraft:golden_rail",
+            "minecraft:sticky_piston",
+            "minecraft:piston");
+
+    /**
+     * Les blocs faiblement metalliques, repris de {@code weakMetalBlocks}.
+     *
+     * Il faut soixante pour cent d'experience pour s'y accrocher : une machine ou un
+     * minerai de fer ne s'attrapent pas du premier coup.
+     */
+    private static final List<String> DEFAULT_WEAK_METAL_BLOCKS = List.of(
+            "minecraft:dispenser",
+            "minecraft:hopper",
+            "minecraft:iron_ore",
+            "minecraft:deepslate_iron_ore");
+
+    /** Les entites metalliques, reprises de {@code metalEntities}. */
+    private static final List<String> DEFAULT_METAL_ENTITIES = List.of(
+            "minecraft:minecart",
+            "minecraft:chest_minecart",
+            "minecraft:furnace_minecart",
+            "minecraft:tnt_minecart",
+            "minecraft:hopper_minecart",
+            "minecraft:spawner_minecart",
+            "minecraft:commandblock_minecart",
+            "minecraft:villager_golem");
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> METAL_BLOCKS = BUILDER
+            .comment("Blocs franchement metalliques, que l'electromaster attire a tout niveau.",
+                     "Noms de blocs, comme minecraft:iron_block.",
+                     "Repris de normalMetalBlocks de la 1.12.2.")
+            .defineList("ability.metalBlocks", DEFAULT_METAL_BLOCKS, o -> o instanceof String);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> WEAK_METAL_BLOCKS = BUILDER
+            .comment("Blocs faiblement metalliques, attires a partir de 60 % d'experience.",
+                     "Repris de weakMetalBlocks de la 1.12.2.")
+            .defineList("ability.weakMetalBlocks", DEFAULT_WEAK_METAL_BLOCKS, o -> o instanceof String);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> METAL_ENTITIES = BUILDER
+            .comment("Entites metalliques, que l'electromaster peut attirer.",
+                     "Repris de metalEntities de la 1.12.2.")
+            .defineList("ability.metalEntities", DEFAULT_METAL_ENTITIES, o -> o instanceof String);
+
     private static final ForgeConfigSpec.DoubleValue PROGRESS_INCR_RATE = BUILDER
             .comment("Vitesse de progression des niveaux d'aptitude.",
                      "1.0 = la valeur de la 1.12.2 : il faut remplir un palier en utilisant",
@@ -95,6 +151,11 @@ public final class Config {
     public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
 
+    /** Les listes de metaux, relues a chaque chargement de config. */
+    public static List<String> metalBlocks = List.of();
+    public static List<String> weakMetalBlocks = List.of();
+    public static List<String> metalEntities = List.of();
+
     /** Valeur de {@link #controlPointStart}, clampee sous le maximum. */
     public static float startingControlPoint() {
         return (float) Math.min(controlPointStart, controlPointMax);
@@ -113,6 +174,11 @@ public final class Config {
         overloadRecoverCooldown = OVERLOAD_RECOVER_COOLDOWN.get();
         overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();
         progressIncrRate = PROGRESS_INCR_RATE.get();
+        // Une nouvelle instance de liste a chaque chargement : c'est ce que
+        // MetalTargets surveille pour reconstruire ses ensembles.
+        metalBlocks = List.copyOf(METAL_BLOCKS.get());
+        weakMetalBlocks = List.copyOf(WEAK_METAL_BLOCKS.get());
+        metalEntities = List.copyOf(METAL_ENTITIES.get());
     }
 
     /**

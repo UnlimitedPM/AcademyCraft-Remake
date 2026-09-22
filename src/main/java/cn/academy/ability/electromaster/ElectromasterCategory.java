@@ -13,6 +13,7 @@ public class ElectromasterCategory extends Category {
     public static final ThunderBoltSkill THUNDER_BOLT = new ThunderBoltSkill();
     public static final ThunderClapSkill THUNDER_CLAP = new ThunderClapSkill();
     public static final ChargingSkill CHARGING = new ChargingSkill();
+    public static final MagMovementSkill MAG_MOVEMENT = new MagMovementSkill();
 
     public static final ElectromasterCategory INSTANCE = new ElectromasterCategory();
 
@@ -24,6 +25,7 @@ public class ElectromasterCategory extends Category {
         addSkill(THUNDER_BOLT);
         addSkill(THUNDER_CLAP);
         addSkill(CHARGING);
+        addSkill(MAG_MOVEMENT);
 
         // Les dependances de l'original dont les deux bouts sont portes. Les autres
         // chaines passent par des competences qui n'existent pas encore ici (mag_manip,
@@ -40,5 +42,7 @@ public class ElectromasterCategory extends Category {
         // Le tout premier degre d'electromaster : brancher sa reserve sur une machine
         // demandait un peu d'arc, comme dans l'original.
         CHARGING.setParent(ARC_GEN, 0.3f);
+        // La traction : l'original la demandait sans seuil d'experience dans l'arc.
+        MAG_MOVEMENT.setParent(ARC_GEN);
     }
 }

@@ -279,6 +279,18 @@ public abstract class Skill {
     }
 
     /**
+     * Cette competence peut-elle commencer avec ce que le joueur vise ?
+     *
+     * Pour les competences qui gardent la touche enfoncee et qui ont besoin d'une cible
+     * precises : l'original appelait son {@code terminate()} dans le {@code MSG_MADEALIVE}
+     * quand il n'y avait rien a viser, donc avant d'avoir rien facture. Le port verifie
+     * donc avant de payer, et le refus ne laisse ni surcout ni recharge derriere lui.
+     */
+    public boolean canStart(Player player, AbilityData data) {
+        return true;
+    }
+
+    /**
      * Un tick de charge, tant que la touche reste enfoncee.
      *
      * Retourner {@code false} abandonne la charge : rien n'est lance, rien n'est

@@ -12,6 +12,7 @@
   "key.academy.activate_thunder_bolt": "Activate Thunder Bolt",
   "key.academy.activate_thunder_clap": "Hold Thunder Clap",
   "key.academy.activate_charging": "Hold Current Charging",
+  "key.academy.activate_mag_movement": "Hold Magnetic Movement",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
@@ -147,6 +148,7 @@
   "ac.ability.electromaster.thunder_bolt.name": "Thunder Bolt",
   "ac.ability.electromaster.thunder_clap.name": "Thunder Clap",
   "ac.ability.electromaster.charging.name": "Current Charging",
+  "ac.ability.electromaster.mag_movement.name": "Magnetic Movement",
   "ac.ability.meltdowner.electron_bomb.name": "Electron Bomb",
   "ac.ability.meltdowner.light_shield.name": "Light Shield",
   "ac.ability.meltdowner.meltdowner.name": "Meltdowner",

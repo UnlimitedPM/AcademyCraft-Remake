@@ -1232,6 +1232,20 @@ public final class AcademyGameTests {
         var lowerHalf = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
         var upperHalf = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
 
+        // La colonne est videe d'abord, et largement : les tests posent jusqu'a huit
+        // piliers, donc une colonne laissee par un test precedent peut monter plus haut
+        // que celle qu'on construit. Sans ce nettoyage, le test des sept piliers tombait
+        // sur les dix blocs du test des huit, se croyait complet, produisait de
+        // l'energie — et gardait ces 100 points dans son tampon alors qu'il verifiait
+        // qu'il restait vide. Cela n'arrivait que selon l'ordre des tests, donc il
+        // suffisait d'en ajouter un pour le voir apparaitre.
+        for (int dy = 0; dy <= 14; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                level.setBlock(lower.offset(0, dy, dz),
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+
         var baseState = ModBlocks.WINDGEN_BASE.get().defaultBlockState()
                 .setValue(cn.academy.WindgenBaseBlock.FACING, net.minecraft.core.Direction.NORTH)
                 .setValue(cn.academy.WindgenBaseBlock.HALF, lowerHalf);
@@ -1636,6 +1650,67 @@ public final class AcademyGameTests {
         return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .map(data -> data.getCategoryLevel(category))
                 .orElse(0);
+    }
+
+    // ------------------------------------------------------------------
+    // Aptitudes : ce que l'electromaster peut attirer
+    // ------------------------------------------------------------------
+
+    /**
+     * La classification des metaux de l'electromaster.
+     *
+     * Elle se lit dans les registres, donc elle ne peut pas se tester en JUnit. C'est
+     * pourtant elle qui decide ce que `mag_movement` et `mag_manip` peuvent accrocher,
+     * et une faute de nom dans les listes de la config ne se verrait qu'en jeu, sous la
+     * forme d'une competence qui refuse de s'accrocher sans rien dire.
+     */
+    @GameTest(template = "empty")
+    public static void lesMetauxReconnusSontCeuxDeLOriginal(GameTestHelper helper) {
+        var normal = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        var weak = net.minecraft.world.level.block.Blocks.HOPPER;
+
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isNormalMetalBlock(normal),
+                "un bloc de fer est un metal franc");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isMetalBlock(
+                        net.minecraft.world.level.block.Blocks.RAIL),
+                "un rail aussi");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isWeakMetalBlock(weak),
+                "un entonnoir est faiblement metallique");
+        assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.isMetalBlock(
+                        net.minecraft.world.level.block.Blocks.STONE),
+                "la pierre n'attire pas");
+
+        // Les blocs faiblement metalliques demandent soixante pour cent d'experience :
+        // sans cela, un debutant s'accrocherait a n'importe quelle machine.
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.canHook(normal, 0f),
+                "un metal franc accroche a tout niveau");
+        assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.canHook(weak, 0.5f),
+                "pas une machine a moitie d'experience");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.canHook(weak, 0.6f),
+                "mais oui au seuil de l'original");
+
+        helper.succeed();
+    }
+
+    /** Les entites metalliques, qui se lisent aussi dans les registres. */
+    @GameTest(template = "empty")
+    public static void lesEntitesMetalliquesSontCellesDeLOriginal(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(new BlockPos(2, 1, 2));
+
+        var minecart = new net.minecraft.world.entity.vehicle.Minecart(
+                net.minecraft.world.entity.EntityType.MINECART, level);
+        minecart.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+        var cow = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        cow.moveTo(abs.getX() + 1.5, abs.getY(), abs.getZ() + 0.5);
+
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isMetallic(minecart),
+                "un wagonnet est metallique");
+        assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.isMetallic(cow),
+                "une vache, non");
+
+        helper.succeed();
     }
 
     // ------------------------------------------------------------------

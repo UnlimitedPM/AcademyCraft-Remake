@@ -66,6 +66,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_charging", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_C, "key.categories.academy");
 
+    /** S'accrocher a un metal et se faire tirer dessus : la touche reste enfoncee. */
+    public static final KeyMapping ACTIVATE_MAG_MOVEMENT = new KeyMapping(
+            "key.academy.activate_mag_movement", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_V, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -80,5 +85,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_THUNDER_BOLT);
         event.register(ACTIVATE_THUNDER_CLAP);
         event.register(ACTIVATE_CHARGING);
+        event.register(ACTIVATE_MAG_MOVEMENT);
     }
 }

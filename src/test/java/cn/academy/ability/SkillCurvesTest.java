@@ -245,6 +245,21 @@ class SkillCurvesTest {
         assertBounds("surcout d'ouverture", 65f, 48f, charging::getOverloadCost, charging);
     }
 
+    @Test
+    void laTractionSePaieParTick() {
+        var movement = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MOVEMENT;
+
+        assertTrue(movement.isHeld(), "la traction se tient");
+        assertEquals(0, movement.getMaxHoldTicks(new AbilityData()),
+                "elle s'arrete quand la reserve est vide, pas au bout d'un temps");
+        assertEquals(25.0, cn.academy.ability.electromaster.MagMovementSkill.getMaxDistance(), 0.0001,
+                "portee de la visee, comme l'original");
+        assertEquals(0f, movement.getCpCost(), 0.0001f, "s'accrocher ne coute rien");
+
+        assertBounds("cout par tick", 0.55f, 0.3f, movement::cpPerTick, movement);
+        assertBounds("surcout d'ouverture", 60f, 30f, movement::getOverloadCost, movement);
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");

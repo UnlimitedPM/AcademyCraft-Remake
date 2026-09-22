@@ -37,6 +37,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.thunder_bolt", 4),
             Map.entry("electromaster.thunder_clap", 5),
             Map.entry("electromaster.charging", 1),
+            Map.entry("electromaster.mag_movement", 2),
             Map.entry("meltdowner.electron_bomb", 1),
             Map.entry("meltdowner.light_shield", 2),
             Map.entry("meltdowner.meltdowner", 3),
@@ -53,6 +54,7 @@ class PortedSkillsTest {
             "electromaster.railgun", "electromaster.thunder_bolt",
             "electromaster.thunder_clap", "electromaster.thunder_bolt",
             "electromaster.charging", "electromaster.arc_gen",
+            "electromaster.mag_movement", "electromaster.arc_gen",
             "meltdowner.light_shield", "meltdowner.electron_bomb",
             "meltdowner.meltdowner", "meltdowner.light_shield");
 
@@ -230,6 +232,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.thunder_bolt", 50f),
             Map.entry("electromaster.thunder_clap", 390f),
             Map.entry("electromaster.charging", 65f),
+            Map.entry("electromaster.mag_movement", 60f),
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),

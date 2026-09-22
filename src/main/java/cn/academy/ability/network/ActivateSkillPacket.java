@@ -97,7 +97,7 @@ public class ActivateSkillPacket {
             // Une competence qui se charge n'est pas lancee maintenant : on ouvre une
             // charge et on attend le relachement.
             if (skill.isChargeable()) {
-                if (!canStart(player, data, skill)) return;
+                if (!canBegin(player, data, skill)) return;
                 data.beginCharge(skill);
                 skill.onStart(player, data);
                 return;
@@ -135,7 +135,10 @@ public class ActivateSkillPacket {
      * par tick.
      */
     private static void beginHeld(ServerPlayer player, AbilityData data, Skill skill) {
-        if (!canStart(player, data, skill)) return;
+        if (!canBegin(player, data, skill)) return;
+        // L'original refusait de s'ouvrir quand il n'y avait rien a viser, et refusait
+        // donc sans rien facturer : le port verifie avant de payer, pas apres.
+        if (!skill.canStart(player, data)) return;
         if (!data.perform(skill.getCpCost(), skill.getOverloadCost(data))) {
             player.displayClientMessage(
                     Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
@@ -147,7 +150,7 @@ public class ActivateSkillPacket {
     }
 
     /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */
-    private static boolean canStart(ServerPlayer player, AbilityData data, Skill skill) {
+    private static boolean canBegin(ServerPlayer player, AbilityData data, Skill skill) {
         if (!canUseAbility(player, data)) return false;
         int cooldown = data.getCooldown(skill);
         if (cooldown > 0) {
