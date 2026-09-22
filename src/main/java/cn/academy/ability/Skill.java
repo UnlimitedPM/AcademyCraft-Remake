@@ -388,6 +388,30 @@ public abstract class Skill {
     }
 
     /**
+     * Une action <b>pendant</b> un maintien, venue d'une touche qui n'est pas la sienne.
+     *
+     * <p>Une seule competence du port s'en sert : le {@code flashing} ecoute les quatre
+     * touches de deplacement, et chacune est un saut. L'action est un nombre — la direction
+     * — que la competence interprete ; le reste du port n'en recoit jamais.
+     *
+     * <p>C'est la cinquieme forme de l'original, apres les instantanees, les chargees, les
+     * tenues et l'effet qui survit au relachement : un maintien qui attend des ordres.
+     */
+    public void onHoldAction(Player player, AbilityData data, int action) {
+    }
+
+    /**
+     * Cette competence ecoute-t-elle les quatre touches de deplacement pendant son maintien ?
+     *
+     * <p>Dit au client de guetter les touches du jeu, et a elles seules. Le port n'a qu'un
+     * cas — le scintillement — mais le drapeau evite au client de connaitre les competences
+     * par leur nom.
+     */
+    public boolean listensToDirections() {
+        return false;
+    }
+
+    /**
      * Fin du maintien, quelle qu'en soit la cause : relachement, duree maximale, ou
      * ressources epuisees. L'original le faisait une seule fois, dans
      * {@code MSG_TERMINATED}.

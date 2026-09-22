@@ -127,6 +127,15 @@ public class AbilityKeyBindings {
             "key.academy.activate_ray_barrage", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_SLASH, "key.categories.academy");
 
+    /**
+     * Le scintillement. Pendant son maintien, les quatre touches de deplacement visent et
+     * declenchent les sauts : c'est la seule competence dont une partie du geste echappe a
+     * cette touche.
+     */
+    public static final KeyMapping ACTIVATE_FLASHING = new KeyMapping(
+            "key.academy.activate_flashing", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_APOSTROPHE, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -151,5 +160,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_SCATTER_BOMB);
         event.register(ACTIVATE_JET_ENGINE);
         event.register(ACTIVATE_RAY_BARRAGE);
+        event.register(ACTIVATE_FLASHING);
     }
 }

@@ -53,6 +53,7 @@ class PortedSkillsTest {
             Map.entry("teleporter.flesh_ripping", 3),
             Map.entry("teleporter.penetrate_teleport", 2),
             Map.entry("teleporter.shift_tp", 4),
+            Map.entry("teleporter.flashing", 5),
             Map.entry("vecmanip.vec_accel", 2),
             Map.entry("vecmanip.vec_reflection", 4));
 
@@ -80,7 +81,8 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_expert", List.of("meltdowner.mine_ray_basic")),
             Map.entry("meltdowner.mine_ray_luck", List.of("meltdowner.mine_ray_expert")),
             Map.entry("meltdowner.jet_engine", List.of("meltdowner.meltdowner")),
-            Map.entry("meltdowner.ray_barrage", List.of("meltdowner.meltdowner")));
+            Map.entry("meltdowner.ray_barrage", List.of("meltdowner.meltdowner")),
+            Map.entry("teleporter.flashing", List.of("teleporter.shift_tp")));
 
     private static List<Category> categories() {
         return List.of(
@@ -283,6 +285,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_luck", 350f),
             Map.entry("meltdowner.jet_engine", 60f),
             Map.entry("meltdowner.ray_barrage", 300f),
+            Map.entry("teleporter.flashing", 250f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

@@ -583,6 +583,88 @@ class SkillCurvesTest {
         assertEquals(13.57f, barrage.getCpCost(atExperience(barrage, 1f)), 0.0001f);
     }
 
+    /**
+     * Le scintillement : ses quatre directions, ses sauts, et ce qu'ils coutent.
+     *
+     * <p>C'est la seule competence du port qui ecoute les touches de deplacement, et la
+     * seule dont les quatre gestes se ressemblent assez pour qu'une inversion se voie a
+     * peine en jeu — avancer la ou on voulait reculer, ou un saut en miroir quand le joueur
+     * se retourne. Les directions sont donc verifiees une par une.
+     */
+    @Test
+    void leScintillementSauteDansLesQuatreSens() {
+        var flashing = cn.academy.ability.teleporter.TeleporterCategory.FLASHING;
+
+        assertTrue(flashing.isHeld(), "le scintillement se tient");
+        assertTrue(flashing.listensToDirections(), "et c'est lui qui ecoute les directions");
+
+        // Regard vers +Z (lacet zero de Minecraft), sans inclinaison : avancer c'est aller
+        // vers +Z, et la gauche d'un joueur qui regarde le sud, c'est l'est (+X).
+        Vec3 south = new Vec3(0, 0, 1);
+
+        assertEquals(new Vec3(0, 0, 1),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(south, 0, cn.academy.ability.teleporter.FlashingSkill.FORWARD)));
+        assertEquals(new Vec3(0, 0, -1),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(south, 0, cn.academy.ability.teleporter.FlashingSkill.BACK)));
+        assertEquals(new Vec3(1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(south, 0, cn.academy.ability.teleporter.FlashingSkill.LEFT)));
+        assertEquals(new Vec3(-1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(south, 0, cn.academy.ability.teleporter.FlashingSkill.RIGHT)));
+
+        // Regard vers l'est (+X) : les quatre directions tournent avec le joueur.
+        Vec3 east = new Vec3(1, 0, 0);
+        assertEquals(new Vec3(1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(east, 0, cn.academy.ability.teleporter.FlashingSkill.FORWARD)));
+        assertEquals(new Vec3(0, 0, -1),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(east, 0, cn.academy.ability.teleporter.FlashingSkill.LEFT)));
+
+        // Le regard incline le saut : vers le haut on monte, vers le sol on descend, et la
+        // longueur reste celle du saut — c'est une direction, pas une portee.
+        Vec3 up = cn.academy.ability.teleporter.FlashingSkill
+                .dashDirection(south, -45, cn.academy.ability.teleporter.FlashingSkill.FORWARD);
+        assertEquals(-Math.sin(Math.toRadians(-45)), up.y, 0.0001);
+        assertEquals(1.0, up.length(), 0.0001);
+        Vec3 down = cn.academy.ability.teleporter.FlashingSkill
+                .dashDirection(south, 45, cn.academy.ability.teleporter.FlashingSkill.FORWARD);
+        assertEquals(-Math.sin(Math.toRadians(45)), down.y, 0.0001);
+
+        // Regard pile a la verticale : il n'y a plus d'horizon, et le nord prend le relais.
+        assertEquals(new Vec3(0, -1, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(new Vec3(0, -1, 0), 90,
+                                cn.academy.ability.teleporter.FlashingSkill.FORWARD)));
+
+        // Les directions sont celles de l'original, et rien d'autre.
+        assertTrue(cn.academy.ability.teleporter.FlashingSkill.isDirection(1));
+        assertTrue(cn.academy.ability.teleporter.FlashingSkill.isDirection(4));
+        assertFalse(cn.academy.ability.teleporter.FlashingSkill.isDirection(0));
+        assertFalse(cn.academy.ability.teleporter.FlashingSkill.isDirection(5));
+
+        // Les courbes : 12 a 18 blocs, 13 a 6 CP par saut (divises par 28), 80 a 60 CP et
+        // 250 a 180 de surcout a l'ouverture, et la plus longue recharge du port.
+        assertEquals(12.0, flashing.distance(atExperience(flashing, 0f)), 0.0001);
+        assertEquals(18.0, flashing.distance(atExperience(flashing, 1f)), 0.0001);
+        assertBounds("cout d'un saut", 0.46f, 0.21f, flashing::dashCost, flashing);
+        assertEquals(2.9f, flashing.getCpCost(atExperience(flashing, 0f)), 0.0001f);
+        assertEquals(2.1f, flashing.getCpCost(atExperience(flashing, 1f)), 0.0001f);
+        assertBounds("surcout du scintillement", 250f, 180f, flashing::getOverloadCost, flashing);
+        assertEquals(60, flashing.getMaxHoldTicks(atExperience(flashing, 0f)));
+        assertEquals(150, flashing.getMaxHoldTicks(atExperience(flashing, 1f)));
+        assertCooldownBounds("recharge du scintillement", flashing, 900, 400);
+    }
+
+    /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
+    private static Vec3 round(Vec3 v) {
+        return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,
+                Math.round(v.z * 1000) / 1000.0);
+    }
+
     @Test
     void lesRechargesSuiventLExperience() {
         assertCooldownBounds("recharge de arc_gen",

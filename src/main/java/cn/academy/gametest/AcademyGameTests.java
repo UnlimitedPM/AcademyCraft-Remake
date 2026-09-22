@@ -1644,6 +1644,61 @@ public final class AcademyGameTests {
         return net.minecraftforge.common.util.FakePlayerFactory.getMinecraft(helper.getLevel());
     }
 
+    /**
+     * Un faux joueur <b>a soi</b>, pour les tests qui ont besoin d'un decor stable.
+     *
+     * <p>Le faux joueur du framework est un singleton : sa position et son orientation sont
+     * celles du dernier test qui les a posees, et deux tests qui tournent en parallele se
+     * les reprennent l'un a l'autre. C'est ainsi qu'un test a cru viser le nord alors qu'un
+     * voisin venait de le retourner. Celui-ci porte un nom different par test, donc personne
+     * d'autre ne le deplace — et il n'entre pas non plus dans la liste des joueurs.
+     */
+    private static net.minecraft.server.level.ServerPlayer ownPlayer(GameTestHelper helper, String name) {
+        var uuid = java.util.UUID.nameUUIDFromBytes(name.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return net.minecraftforge.common.util.FakePlayerFactory.get(
+                helper.getLevel(), new com.mojang.authlib.GameProfile(uuid, name));
+    }
+
+    /**
+     * Nettoie le couloir d'un test avant qu'il ne mesure quoi que ce soit.
+     *
+     * <p>Le monde de test est partage, et il est <b>sauvegarde entre deux executions</b> :
+     * un test qui echoue avant de ranger ses betes les laisse dans le monde, et l'execution
+     * suivante les retrouve. Quatre vaches se sont ainsi accumulees au meme endroit, une par
+     * execution ratee du meme test, et se disputaient la cible d'un rayon.
+     *
+     * <p>La boite est ancree sur la <b>structure du test</b>, jamais sur le faux joueur :
+     * celui-ci est partage, et un autre test peut l'avoir deplace ailleurs entre-temps. Une
+     * boite centree sur le joueur emporte alors les betes du voisin avec les siennes, et
+     * c'est <b>son</b> test qui tombe.
+     *
+     * <p>Et elle se pose <b>en hauteur</b> : les tests qui ont besoin d'un monde a eux
+     * travaillent quarante blocs au-dessus de la zone commune (voir {@link #aboveTestArea}),
+     * ou rien de ce qu'un voisin pose ne peut se trouver.
+     */
+    private static void clearCorridor(GameTestHelper helper, BlockPos abs, int length) {
+        var corridor = new net.minecraft.world.phys.AABB(
+                abs.getX() - 1, abs.getY() - 1, abs.getZ() - 1,
+                abs.getX() + 4, abs.getY() + 5, abs.getZ() + length);
+        for (var leftover : helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.Entity.class, corridor)) {
+            leftover.discard();
+        }
+    }
+
+    /**
+     * Le coin de monde d'un test qui a besoin d'etre seul.
+     *
+     * <p>Le serveur de test place les structures cote a cote, et leurs cellules se touchent
+     * presque : une bete posee par un test voisin tombe facilement au meme endroit que la
+     * notre, et c'est alors la sienne qui se fait frapper — ou la notre qui ne l'est pas.
+     * Quarante blocs plus haut, il n'y a plus personne : c'est le meme procede que la
+     * colonne de l'eolienne, qui se construit a l'ecart pour la meme raison.
+     */
+    private static BlockPos aboveTestArea(GameTestHelper helper, BlockPos relative) {
+        return helper.absolutePos(relative).above(40);
+    }
+
     /** Niveau d'une categorie pour un joueur, ou 0 s'il n'a pas la capacite. */
     private static int levelOf(net.minecraft.world.entity.player.Player player,
                                cn.academy.ability.Category category) {
@@ -1746,11 +1801,14 @@ public final class AcademyGameTests {
         var skill = cn.academy.ability.meltdowner.MeltdownerCategory.SCATTER_BOMB;
         ServerLevel level = helper.getLevel();
         BlockPos rel = new BlockPos(3, 1, 3);
-        BlockPos abs = helper.absolutePos(rel);
+        BlockPos abs = aboveTestArea(helper, rel);
 
-        var player = fakePlayer(helper);
-        player.revive();
+        var player = ownPlayer(helper, "scatter_bomber");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        // Le couloir est nettoye avant de poser la cible, jamais apres : une bete laissee la
+        // par une execution ratee prendrait la salve a la place de la notre.
+        clearCorridor(helper, abs, 8);
 
         // Une vache a deux blocs devant, dans l'axe du regard.
         var cow = new net.minecraft.world.entity.animal.Cow(
@@ -1847,11 +1905,10 @@ public final class AcademyGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos abs = helper.absolutePos(new BlockPos(3, 1, 3));
 
-        var player = fakePlayer(helper);
-        player.revive();
+        var player = ownPlayer(helper, "silbarn_thrower");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
-        // Le faux joueur est partage : en creatif pour ne pas consommer l'objet, et remis
-        // comme les autres tests l'attendent en partant.
+        // Ce joueur n'appartient qu'a ce test : en creatif pour ne pas consommer l'objet,
+        // et il n'y a personne d'autre a qui le rendre.
         player.getAbilities().instabuild = true;
 
         var stack = new ItemStack(ModItems.SILBARN.get());
@@ -1871,7 +1928,6 @@ public final class AcademyGameTests {
         player.getAbilities().instabuild = false;
         helper.succeed();
     }
-
     /**
      * Les deux visages de la salve de rayons.
      *
@@ -1884,10 +1940,9 @@ public final class AcademyGameTests {
     public static void laSalveDeRayonsTireOuFaucheSelonCeQuElleTrouve(GameTestHelper helper) {
         var skill = cn.academy.ability.meltdowner.MeltdownerCategory.RAY_BARRAGE;
         ServerLevel level = helper.getLevel();
-        BlockPos abs = helper.absolutePos(new BlockPos(2, 1, 2));
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2));
 
-        var player = fakePlayer(helper);
-        player.revive();
+        var player = ownPlayer(helper, "barrage_thrower");
         // Regard vers +Z, comme le lacet zero de Minecraft, et un peu vers le sol : une
         // vache au sol se vise en baissant les yeux, elle n'est pas a hauteur de tete.
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 10f);
@@ -1897,16 +1952,8 @@ public final class AcademyGameTests {
         data.learnSkill(skill);
 
         // Le monde et le faux joueur sont partages par tous les tests, qui peuvent tourner
-        // en parallele : on nettoie donc le couloir avant de mesurer, comme les autres
-        // tests nettoient leur colonne de blocs. Sans cela, une bete laissee par un test
-        // voisin — au meme endroit, puisque les cellules se recouvrent — se fait frapper a
-        // la place de la notre, et c'est notre test qui echoue, avec un message qui
-        // n'accuse personne.
-        net.minecraft.world.phys.Vec3 look = player.getViewVector(1f);
-        for (var leftover : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,
-                player.getBoundingBox().expandTowards(look.scale(20.0)).inflate(2.0))) {
-            leftover.discard();
-        }
+        // en parallele : on nettoie donc le couloir avant de mesurer.
+        clearCorridor(helper, abs, 8);
 
         // --- Sans bille : un tir simple, sur ce que le regard trouve.
         var cow = new net.minecraft.world.entity.animal.Cow(
@@ -1920,8 +1967,6 @@ public final class AcademyGameTests {
 
         // --- Avec une bille en vol devant le regard : la salve fauche le cone.
         cow.discard();
-        // Le regard se releve : une bille qu'on vient de lancer vole a hauteur d'oeil.
-        player.setXRot(0f);
 
         var ball = new cn.academy.entity.EntitySilbarn(level, player);
         // Un dixieme sous l'oeil, pour que le trait parte franchement dans sa boite plutot
@@ -1934,6 +1979,18 @@ public final class AcademyGameTests {
                 net.minecraft.world.entity.EntityType.COW, level);
         target.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 6.5, 0f, 0f);
         level.addFreshEntity(target);
+
+        // Le regard se releve : une bille qu'on vient de lancer vole a hauteur d'oeil. La
+        // rotation passe par `moveTo`, et non par `setXRot` : sur un faux joueur, c'est le
+        // seul des deux qui prenne, et un regard qui reste baisse manque la bille — le test
+        // mesurerait alors le tir simple en croyant mesurer la salve.
+        player.moveTo(player.getX(), player.getY(), player.getZ(), 0f, 0f);
+
+        // Ce que le regard trouve vraiment : c'est ce qui decide de la branche prise, et le
+        // dire evite de chercher ailleurs quand un decor etranger s'est glisse dans le coin.
+        assertTrue(helper,
+                cn.academy.ability.TargetingUtil.findEntityInSight(player, 20.0) == ball,
+                "le regard doit trouver la bille, et rien d'autre");
 
         // Le cone ne demande pas que le regard touche la cible : il part de l'oeil du
         // lanceur et s'ouvre sur 55 degres, donc une bete au sol y est meme si le trait
@@ -1952,6 +2009,62 @@ public final class AcademyGameTests {
 
         ball.discard();
         target.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Ou le scintillement fait atterrir.
+     *
+     * Le saut de douze blocs et la direction se lisent en test unitaire ; ce qui ne se lit
+     * qu'avec un monde, c'est <b>l'atterrissage</b> : le trajet s'arrete sur la premiere face
+     * et le point d'arrivee se pose dessus. C'est aussi la partie qui decide si le joueur
+     * ressort devant un mur ou dedans.
+     *
+     * Le mur est pose a deux blocs du joueur, et pas plus loin : au-dela de son propre
+     * carre de terrain, un test n'est plus seul — les cellules des structures voisines se
+     * touchent presque, et une bete laissee la par un autre test arreterait le saut avant
+     * nous. Tout ce qui se mesure ici tient donc dans les deux blocs qui sont les notres.
+     */
+    @GameTest(template = "empty")
+    public static void leScintillementAtterritSurCeQuIlTrouve(GameTestHelper helper) {
+        var flashing = cn.academy.ability.teleporter.TeleporterCategory.FLASHING;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(new BlockPos(2, 1, 2));
+        BlockPos rel = new BlockPos(2, 1, 3);
+
+        var player = ownPlayer(helper, "flasher");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        clearCorridor(helper, abs, 4);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(flashing.getCategory(), 1);
+        data.learnSkill(flashing);
+
+        // --- Un mur deux blocs devant : on s'arrete sur sa face, pas dedans.
+        for (int y = 0; y < 3; y++) {
+            helper.setBlock(rel.offset(0, y, 0), net.minecraft.world.level.block.Blocks.STONE);
+        }
+        BlockPos wall = helper.absolutePos(rel);
+
+        net.minecraft.world.phys.Vec3 onWall = flashing.destination(player, data,
+                cn.academy.ability.teleporter.FlashingSkill.FORWARD);
+
+        assertTrue(helper, Math.abs(onWall.z - (wall.getZ() - 0.6)) < 0.01,
+                "soixante centimetres devant la face nord : z=" + onWall.z
+                        + " pour un mur a " + wall.getZ());
+        assertTrue(helper, Math.abs(onWall.y - (wall.getY() + 1.7)) < 0.01,
+                "et a hauteur de tete du bloc vise : y=" + onWall.y);
+
+        // --- Le saut, lui, part bien de la ou le joueur regarde : en se retournant, la meme
+        // direction vise l'autre bout.
+        player.moveTo(player.getX(), player.getY(), player.getZ(), 180f, 0f);
+        player.setYHeadRot(180f);
+        net.minecraft.world.phys.Vec3 behind = flashing.destination(player, data,
+                cn.academy.ability.teleporter.FlashingSkill.FORWARD);
+        assertTrue(helper, behind.z < abs.getZ(),
+                "dos au mur, avancer c'est reculer : z=" + behind.z);
+
         helper.succeed();
     }
 

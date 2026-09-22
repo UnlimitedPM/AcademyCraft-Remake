@@ -390,6 +390,30 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         }
     }
 
+    /** Ticks restants de chute annulee, ou 0. */
+    private int gravitySuspension;
+
+    /**
+     * Annule presque la chute pendant quelques ticks.
+     *
+     * <p>Portage du {@code GravityCancellor} de l'original, qu'il fallait relancer apres
+     * chaque saut du scintillement : sans lui, un saut en l'air ne ferait que tomber un peu
+     * plus loin. L'effet appartient a l'original au client ; le port le tient cote serveur,
+     * ou la position fait autorite.
+     */
+    public void suspendGravity(int ticks) {
+        gravitySuspension = Math.max(gravitySuspension, ticks);
+    }
+
+    public int getGravitySuspension() {
+        return gravitySuspension;
+    }
+
+    /** Fait avancer la suspension de chute d'un tick. */
+    public void tickGravitySuspension() {
+        if (gravitySuspension > 0) gravitySuspension--;
+    }
+
     /**
      * Vitesse de recuperation, portage de {@code CPData.getOverloadRecoverSpeed} :
      * {@code max(0,002 x reserve, 0,007 x reserve x lerp(1, 0,5, charge / reserve / 2))}.

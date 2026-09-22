@@ -155,51 +155,10 @@ public class MarkTeleportSkill extends Skill {
             return target.position().add(0, target.getEyeHeight(), 0);
         }
         if (blockHit.getType() == HitResult.Type.BLOCK) {
-            return onBlockFace(player, blockHit);
+            return LandingSite.onBlockFace(blockHit.getDirection(), blockHit.getLocation(),
+                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos));
         }
         return end;
-    }
-
-    /** L'atterrissage sur une face de bloc, decalage compris. */
-    private static Vec3 onBlockFace(Player player, BlockHitResult hit) {
-        Vec3 point = hit.getLocation();
-        Direction face = hit.getDirection();
-        BlockPos pos = hit.getBlockPos();
-
-        double x = point.x;
-        double y = point.y;
-        double z = point.z;
-
-        switch (face) {
-            case DOWN -> y -= 1.0;
-            case UP -> y += 1.8;
-            case NORTH -> {
-                z -= 0.6;
-                y = pos.getY() + 1.7;
-            }
-            case SOUTH -> {
-                z += 0.6;
-                y = pos.getY() + 1.7;
-            }
-            case WEST -> {
-                x -= 0.6;
-                y = pos.getY() + 1.7;
-            }
-            case EAST -> {
-                x += 0.6;
-                y = pos.getY() + 1.7;
-            }
-            default -> {
-            }
-        }
-
-        // Les faces verticales seules peuvent avoir une tete dans le passage : l'original
-        // faisait alors redescendre le point d'atterrissage d'un bloc et quart.
-        if (face.getAxis().isHorizontal()
-                && !player.level().isEmptyBlock(BlockPos.containing(x, y + 1.0, z))) {
-            y -= 1.25;
-        }
-        return new Vec3(x, y, z);
     }
 
     @Nullable

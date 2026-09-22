@@ -67,6 +67,15 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
+            // Le scintillement laisse une chute presque annulee derriere lui : c'est le
+            // GravityCancellor de l'original, deux secondes pendant lesquelles la gravite
+            // (0,08 par tick) est compensee a 0,072.
+            if (data.getGravitySuspension() > 0) {
+                if (!player.getAbilities().flying && !player.onGround()) {
+                    player.setDeltaMovement(player.getDeltaMovement().add(0, 0.072, 0));
+                }
+                data.tickGravitySuspension();
+            }
             // Les competences tenues vivent tant que la touche reste enfoncee.
             tickSustained(player, data);
             // Le plafond vient de la config : on le reapplique a chaque tick pour

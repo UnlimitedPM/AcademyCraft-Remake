@@ -22,6 +22,7 @@
   "key.academy.activate_scatter_bomb": "Hold Scatter Bomb",
   "key.academy.activate_jet_engine": "Hold Jet Engine",
   "key.academy.activate_ray_barrage": "Activate Ray Barrage",
+  "key.academy.activate_flashing": "Hold Flashing (then WASD)",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
@@ -173,6 +174,7 @@
   "ac.ability.teleporter.flesh_ripping.name": "Flesh Ripping",
   "ac.ability.teleporter.penetrate_teleport.name": "Penetrate Teleport",
   "ac.ability.teleporter.shift_tp.name": "Shift Teleport",
+  "ac.ability.teleporter.flashing.name": "Flashing",
   "ac.ability.vecmanip.vec_accel.name": "Vector Acceleration",
   "ac.ability.vecmanip.vec_reflection.name": "Vector Reflection",
 
