@@ -2,16 +2,12 @@ package cn.academy.terminal.client;
 
 import cn.academy.terminal.tutorial.TutorialLibrary;
 import cn.academy.terminal.tutorial.TutorialText;
+import cn.academy.terminal.tutorial.client.ClientTutorialData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -27,12 +23,10 @@ import java.util.List;
  *
  * <h2>Ce qui ouvre un tutoriel</h2>
  *
- * L'original retenait ce que le joueur avait <b>obtenu</b> (fabrique, ramasse ou cuit)
- * et le conservait d'une session a l'autre ; le port regarde ce qu'il <b>porte</b>, au
- * moment ou l'ecran s'ouvre. La difference se voit si l'objet a ete range dans un
- * coffre : le tutoriel se referme. C'est une simplification assumee, en attendant le
- * suivi persistant — et elle est permissive, un objet montre ouvrant ce qu'il aurait
- * fallu fabriquer.
+ * Le serveur ouvre les tutoriels ({@code TutorialTracker}) et le client lit ce qu'il lui
+ * envoie : un tutoriel s'ouvre quand le joueur a <b>eu</b> l'objet qu'il demande, et il ne
+ * se referme plus. C'est le comportement de l'original, ou une condition restait acquise
+ * une fois vraie — ranger ensuite son lingot dans un coffre ne referme rien.
  *
  * <p>Un tutoriel non ouvert reste <b>visible</b>, en gris, et son texte s'affiche quand
  * meme : c'est ce que faisait l'original, ou la liste entiere restait a l'ecran.
@@ -91,7 +85,9 @@ public class TutorialScreen extends Screen {
         for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
             TutorialText raw = TutorialLibrary.load(entry.id(), language);
             texts.add(new TutorialText(raw.title(), raw.brief(), raw.contentFor(name)));
-            opened.add(isOpen(entry));
+            // Ce que le serveur a ouvert, plus les tutoriels sans condition. Le client ne
+            // devine rien : un tutoriel reste ouvert meme si son bloc a ete range.
+            opened.add(entry.alwaysOpen() || ClientTutorialData.get().isUnlocked(entry.id()));
         }
 
         layout();
@@ -103,22 +99,6 @@ public class TutorialScreen extends Screen {
 
     private TutorialText text() {
         return texts.get(selected);
-    }
-
-    /** Vrai si le joueur porte de quoi ouvrir ce tutoriel. */
-    private static boolean isOpen(TutorialLibrary.Entry entry) {
-        if (entry.alwaysOpen()) return true;
-
-        Player player = Minecraft.getInstance().player;
-        if (player == null) return false;
-
-        for (String id : entry.requiredItems()) {
-            ResourceLocation key = ResourceLocation.tryParse(id);
-            if (key == null) continue;
-            Item item = BuiltInRegistries.ITEM.get(key);
-            if (item != null && player.getInventory().contains(new ItemStack(item))) return true;
-        }
-        return false;
     }
 
     private int listRight() {

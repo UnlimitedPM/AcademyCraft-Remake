@@ -1685,6 +1685,72 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Les tutoriels s'ouvrent quand l'objet est obtenu, et ne se referment plus.
+     *
+     * <p>C'est le balayage du serveur (portage de celui de `TutorialData`, toutes les trois
+     * ticks) : il regarde ce que le joueur a, et ouvre ce qui peut l'etre. Le port
+     * regardait auparavant ce que le joueur <b>portait</b> au moment d'ouvrir l'ecran :
+     * ranger son lingot dans un coffre refermait le tutoriel. L'original, lui, retenait ce
+     * qui avait ete obtenu — et c'est ce que ce test protege.
+     */
+    @GameTest(template = "empty")
+    public static void lesTutorielsSOuvrentQuandLObjetEstObtenu(GameTestHelper helper) {
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 110);
+
+        var player = ownPlayer(helper, "tutorial-keeper");
+        // Le monde est partage et sauvegarde : le cadeau tombE au sol lors d'une execution
+        // ratee y reste, et l'execution suivante en compte deux. D'ou un coin a soi, nettoye
+        // avant de mesurer — la regle de tous les tests qui font tomber quelque chose.
+        clearCorridor(helper, abs, 4);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(
+                        cn.academy.terminal.tutorial.TutorialCapability.TUTORIAL_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.reset();
+        player.getInventory().clearContent();
+        assertFalse(helper, data.isTerminalGiven(), "au depart, le cadeau n'a pas ete fait");
+
+        // Rien en main : les tutoriels a objet restent fermes. Le cadeau de l'original, lui,
+        // se fait au premier balayage — l'objet MisakaCloud tombe une fois, et une seule.
+        cn.academy.terminal.tutorial.TutorialTracker.scan(player, data);
+        assertFalse(helper, data.isUnlocked("ores"), "sans objet, le tutoriel reste ferme");
+        assertFalse(helper, data.isUnlocked("solar_generator"), "et aucun autre ne s'ouvre");
+        assertTrue(helper, data.isTerminalGiven(), "le premier balayage fait le cadeau");
+
+        var drops = helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class,
+                new net.minecraft.world.phys.AABB(player.blockPosition()).inflate(4),
+                entity -> entity.getItem().is(ModItems.TUTORIAL.get()));
+        assertValue(helper, 1, drops.size(), "l'objet MisakaCloud doit tomber, une fois");
+
+        // Un minerai de fer dans l'inventaire ouvre le tutoriel des minerais, et lui seul.
+        player.getInventory().add(new ItemStack(ModBlocks.IMAGSIL_ORE.get()));
+        cn.academy.terminal.tutorial.TutorialTracker.scan(player, data);
+        assertTrue(helper, data.isUnlocked("ores"), "l'objet obtenu ouvre le tutoriel");
+        assertFalse(helper, data.isUnlocked("solar_generator"), "un objet, un tutoriel");
+
+        // Le ranger ne le referme pas : c'est ce qui distingue « obtenu » de « porte ».
+        player.getInventory().clearContent();
+        cn.academy.terminal.tutorial.TutorialTracker.scan(player, data);
+        assertTrue(helper, data.isUnlocked("ores"),
+                "un tutoriel ouvert ne se referme plus, meme l'objet range");
+
+        // Et le cadeau ne se refait pas : il est acquis, comme dans l'original.
+        var again = helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class,
+                new net.minecraft.world.phys.AABB(player.blockPosition()).inflate(4),
+                entity -> entity.getItem().is(ModItems.TUTORIAL.get()));
+        assertValue(helper, 1, again.size(), "et une seule fois");
+
+        for (var drop : again) {
+            drop.discard();
+        }
+        data.reset();
+        helper.succeed();
+    }
+
+    /**
      * Les evenements de son annonces et enregistres sont les memes.
      *
      * <p>Un son se declare deux fois : dans {@code sounds.json}, qui dit quels fichiers

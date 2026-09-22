@@ -164,6 +164,12 @@ public final class Config {
                     List.of("minecraft:item", "minecraft:xp_bottle", "living", "mob"),
                     o -> o instanceof String);
 
+    /** Le cadeau de l'original : l'objet MisakaCloud, une fois, au premier joueur. */
+    private static final ForgeConfigSpec.BooleanValue GIVE_CLOUD_TERMINAL = BUILDER
+            .comment("Donne l'objet MisakaCloud au joueur, une seule fois, a sa premiere venue.",
+                     "Portage de generic.giveCloudTerminal de la 1.12.2.")
+            .define("general.giveCloudTerminal", true);
+
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
     // Valeurs en cache, relues a chaque chargement/rechargement de la config.
@@ -179,6 +185,7 @@ public final class Config {
     public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
     public static boolean destroyBlocks = true;
+    public static boolean giveCloudTerminal = true;
 
     /** Les listes de metaux, relues a chaque chargement de config. */
     public static List<String> metalBlocks = List.of();
@@ -208,6 +215,7 @@ public final class Config {
         overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();
         progressIncrRate = PROGRESS_INCR_RATE.get();
         destroyBlocks = DESTROY_BLOCKS.get();
+        giveCloudTerminal = GIVE_CLOUD_TERMINAL.get();
         // Une nouvelle instance de liste a chaque chargement : c'est ce que
         // MetalTargets surveille pour reconstruire ses ensembles.
         metalBlocks = List.copyOf(METAL_BLOCKS.get());

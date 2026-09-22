@@ -37,5 +37,11 @@ public class AbilityNetwork {
                 cn.academy.terminal.network.SyncTerminalDataPacket::encode,
                 cn.academy.terminal.network.SyncTerminalDataPacket::decode,
                 cn.academy.terminal.network.SyncTerminalDataPacket::handle);
+        // Les tutoriels ouverts voyagent aussi par la : le client ne peut pas les deviner,
+        // puisqu'un tutoriel reste ouvert meme apres avoir range son bloc.
+        CHANNEL.registerMessage(nextId++, cn.academy.terminal.tutorial.network.SyncTutorialDataPacket.class,
+                cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::encode,
+                cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::decode,
+                cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::handle);
     }
 }
