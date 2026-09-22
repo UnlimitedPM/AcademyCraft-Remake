@@ -1931,6 +1931,49 @@ public final class AcademyGameTests {
         assertTrue(helper, player.getMainHandItem().isEmpty(), "la bobine est consommee");
         assertTrue(helper, cn.academy.FactorItem.otherCategoryIn(player, from) == null,
                 "et le facteur a disparu lui aussi");
+
+        // Un changement de categorie efface aussi les prereglages : les competences qu'ils
+        // allumaient ne sont plus apprises, donc les garder n'aurait pas de sens.
+        var presets = cn.academy.ability.preset.PresetTracker.of(player);
+        assertTrue(helper, presets != null, "le joueur doit porter la donnee des prereglages");
+        assertTrue(helper, presets.getPreset(2).isEmpty(), "et elle doit avoir ete videe");
+        helper.succeed();
+    }
+
+    /**
+     * Les prereglages : quatre touches, quatre prereglages, une donnee de joueur.
+     *
+     * <p>Le modele se relit en JUnit ; ce qui ne se lit qu'avec un jeu, c'est que la donnee
+     * soit bien <b>attachee au joueur</b>, qu'elle survive a la mort, et qu'un changement de
+     * categorie l'efface — l'original le faisait sur l'evenement de changement de categorie.
+     */
+    @GameTest(template = "empty")
+    public static void lesPrereglagesViventSurLeJoueur(GameTestHelper helper) {
+        var player = ownPlayer(helper, "preregle");
+
+        var data = cn.academy.ability.preset.PresetTracker.of(player);
+        assertTrue(helper, data != null, "la capacite doit etre attachee au joueur");
+        assertValue(helper, 0, data.getCurrentId(), "le premier prereglage est en service");
+        assertTrue(helper, data.getPreset(1).isEmpty(), "et rien n'est range");
+
+        // Le serveur range ce que le client lui demande, et rien d'autre.
+        data.getPreset(1).assign(2, "arc_gen");
+        assertValue(helper, "arc_gen", data.getPreset(1).nameAt(2), "competence rangee");
+        assertTrue(helper, data.getPreset(0).isEmpty(), "et dans le bon prereglage");
+
+        data.switchNext();
+        assertValue(helper, 1, data.getCurrentId(), "la touche de changement avance d'un cran");
+
+        // Les quatre prereglages sont sauvegardes avec le joueur, donc la donnee survit a
+        // tout ce qui la relit depuis son etiquettes.
+        var reread = new cn.academy.ability.preset.PresetData();
+        reread.deserializeNBT(java.util.Objects.requireNonNull(data).serializeNBT());
+        assertValue(helper, "arc_gen", reread.getPreset(1).nameAt(2), "l'aller-retour garde tout");
+        assertValue(helper, 1, reread.getCurrentId(), "y compris le prereglage en service");
+
+        cn.academy.ability.preset.PresetTracker.clearOnCategoryChange(player);
+        assertTrue(helper, data.getPreset(1).isEmpty(), "un changement de categorie efface tout");
+        assertValue(helper, 0, data.getCurrentId(), "et remet le premier en service");
         helper.succeed();
     }
 

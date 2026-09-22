@@ -106,6 +106,10 @@ public class DevelopActionReset implements DevelopAction {
         data.setCategoryLevel(abandoned, 0);
         data.setCategoryLevel(adopted, carried);
 
+        // Les prereglages ranges les allumaient : ils ne veulent plus rien dire. L'original
+        // les effacait sur le meme evenement.
+        cn.academy.ability.preset.PresetTracker.clearOnCategoryChange(player);
+
         // La bobine et le facteur y passent, comme dans l'original.
         player.getInventory().setItem(player.getInventory().selected, ItemStack.EMPTY);
         FactorItem.consume(player);

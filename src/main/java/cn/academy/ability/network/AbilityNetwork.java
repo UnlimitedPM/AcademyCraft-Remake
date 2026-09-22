@@ -43,5 +43,16 @@ public class AbilityNetwork {
                 cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::encode,
                 cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::decode,
                 cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::handle);
+
+        // Les prereglages : leur etat descend au client, et les deux gestes qui les
+        // modifient remontent — changer de prereglage, poser une competence sur une touche.
+        CHANNEL.registerMessage(nextId++, cn.academy.ability.preset.network.SyncPresetPacket.class,
+                cn.academy.ability.preset.network.SyncPresetPacket::encode,
+                cn.academy.ability.preset.network.SyncPresetPacket::decode,
+                cn.academy.ability.preset.network.SyncPresetPacket::handle);
+        CHANNEL.registerMessage(nextId++, cn.academy.ability.preset.network.PresetActionPacket.class,
+                cn.academy.ability.preset.network.PresetActionPacket::encode,
+                cn.academy.ability.preset.network.PresetActionPacket::decode,
+                cn.academy.ability.preset.network.PresetActionPacket::handle);
     }
 }
