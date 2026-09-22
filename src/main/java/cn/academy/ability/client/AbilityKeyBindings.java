@@ -61,6 +61,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_thunder_clap", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_B, "key.categories.academy");
 
+    /** Brancher sa reserve sur une machine : la touche reste enfoncee. */
+    public static final KeyMapping ACTIVATE_CHARGING = new KeyMapping(
+            "key.academy.activate_charging", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_C, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -74,5 +79,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_LIGHT_SHIELD);
         event.register(ACTIVATE_THUNDER_BOLT);
         event.register(ACTIVATE_THUNDER_CLAP);
+        event.register(ACTIVATE_CHARGING);
     }
 }

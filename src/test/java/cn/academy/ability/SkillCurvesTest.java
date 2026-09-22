@@ -226,6 +226,25 @@ class SkillCurvesTest {
                 "un claquement jamais charge ne laisse rien derriere lui");
     }
 
+    @Test
+    void leBranchementVerseSonEnergieParTick() {
+        var charging = cn.academy.ability.electromaster.ElectromasterCategory.CHARGING;
+
+        // Competence tenue, sans duree maximale : elle s'arrete quand la reserve est
+        // vide, comme l'original.
+        assertTrue(charging.isHeld(), "le branchement se tient");
+        assertEquals(0, charging.getMaxHoldTicks(new AbilityData()));
+        assertEquals(0f, charging.getCpCost(), 0.0001f, "brancher ne coute rien");
+
+        // Energie versee : 15 a 35 par tick, entiere comme dans l'original.
+        assertEquals(15.0, charging.chargeSpeed(new AbilityData()), 0.0001);
+        assertEquals(35.0, charging.chargeSpeed(atExperience(charging, 1f)), 0.0001);
+
+        // Cout en CP ramene a l'echelle du port, et surcout garde tel quel.
+        assertBounds("cout par tick", 0.11f, 0.25f, charging::cpPerTick, charging);
+        assertBounds("surcout d'ouverture", 65f, 48f, charging::getOverloadCost, charging);
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");
