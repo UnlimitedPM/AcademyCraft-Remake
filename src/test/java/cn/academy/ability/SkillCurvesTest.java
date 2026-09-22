@@ -306,6 +306,31 @@ class SkillCurvesTest {
         assertEquals(0f, mark.getExpGain(new AbilityData()), 0.0001f);
     }
 
+    @Test
+    void laDechirureSePaieAuCoup() {
+        var ripping = cn.academy.ability.teleporter.TeleporterCategory.FLESH_RIPPING;
+
+        assertTrue(ripping.isChargeable(), "la visée se charge");
+        assertEquals(0, ripping.getMinChargeTicks(new AbilityData()));
+        assertEquals(0, ripping.getMaxChargeTicks(new AbilityData()));
+
+        assertBounds("degats de la dechirure", 5f, 12f, ripping::damage, ripping);
+        Curve range = data -> (float) ripping.range(data);
+        assertBounds("portee de la dechirure", 6f, 14f, range, ripping);
+        assertBounds("surcout de la dechirure", 60f, 50f, ripping::getOverloadCost, ripping);
+        Curve cp = ripping::cpCost;
+        assertBounds("cout en CP de la dechirure", 4.6f, 9.6f, cp, ripping);
+        assertEquals(90, ripping.cooldown(atExperience(ripping, 0f)), "recharge au depart");
+        assertEquals(40, ripping.cooldown(atExperience(ripping, 1f)), "recharge au maximum");
+
+        // Ni l'experience ni la recharge ne sont declarees au paquet : l'effet s'en
+        // charge, parce que lui seul sait si le coup est parti.
+        assertTrue(ripping.earnsExpOnEffect(), "l'effet verse l'experience");
+        assertEquals(0f, ripping.getExpGain(new AbilityData()), 0.0001f);
+        assertEquals(0, ripping.getCooldownTicks(new AbilityData()),
+                "le paquet ne pose aucune recharge de lui-meme");
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");

@@ -12,6 +12,7 @@ public class TeleporterCategory extends Category {
     public static final DimFoldingTheoremSkill DIM_FOLDING_THEOREM = new DimFoldingTheoremSkill();
     public static final ThreateningTeleportSkill THREATENING_TELEPORT = new ThreateningTeleportSkill();
     public static final MarkTeleportSkill MARK_TELEPORT = new MarkTeleportSkill();
+    public static final FleshRippingSkill FLESH_RIPPING = new FleshRippingSkill();
 
     public static final TeleporterCategory INSTANCE = new TeleporterCategory();
 
@@ -22,6 +23,7 @@ public class TeleporterCategory extends Category {
         addSkill(DIM_FOLDING_THEOREM);
         addSkill(THREATENING_TELEPORT);
         addSkill(MARK_TELEPORT);
+        addSkill(FLESH_RIPPING);
 
         // L'arbre de l'original part du lancer d'objet : c'est lui qui apprend a
         // viser, et tout le reste en descend. Les deux competences concernees sont
@@ -32,5 +34,8 @@ public class TeleporterCategory extends Category {
         DIM_FOLDING_THEOREM.setParent(THREATENING_TELEPORT, 0.2f);
         PENETRATE_TELEPORT.setParent(THREATENING_TELEPORT, 0.5f);
         MARK_TELEPORT.setParent(THREATENING_TELEPORT, 0.4f);
+        // L'original demandait les deux : savoir marquer, et savoir traverser.
+        FLESH_RIPPING.setParent(MARK_TELEPORT, 0.5f);
+        FLESH_RIPPING.addDependency(PENETRATE_TELEPORT, 0.5f);
     }
 }

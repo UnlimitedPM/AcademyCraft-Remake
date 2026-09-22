@@ -44,24 +44,28 @@ class PortedSkillsTest {
             Map.entry("teleporter.dim_folding_theorem", 1),
             Map.entry("teleporter.threatening_teleport", 1),
             Map.entry("teleporter.mark_teleport", 2),
+            Map.entry("teleporter.flesh_ripping", 3),
             Map.entry("teleporter.penetrate_teleport", 2),
             Map.entry("teleporter.shift_tp", 4),
             Map.entry("vecmanip.vec_accel", 2),
             Map.entry("vecmanip.vec_reflection", 4));
 
     /** Les dependances de l'original dont les deux bouts sont portes. */
-    private static final Map<String, String> EXPECTED_DEPENDENCIES = Map.ofEntries(
-            Map.entry("electromaster.body_intensify", "electromaster.arc_gen"),
-            Map.entry("electromaster.thunder_bolt", "electromaster.arc_gen"),
-            Map.entry("electromaster.railgun", "electromaster.thunder_bolt"),
-            Map.entry("electromaster.thunder_clap", "electromaster.thunder_bolt"),
-            Map.entry("electromaster.charging", "electromaster.arc_gen"),
-            Map.entry("electromaster.mag_movement", "electromaster.arc_gen"),
-            Map.entry("teleporter.dim_folding_theorem", "teleporter.threatening_teleport"),
-            Map.entry("teleporter.penetrate_teleport", "teleporter.threatening_teleport"),
-            Map.entry("teleporter.mark_teleport", "teleporter.threatening_teleport"),
-            Map.entry("meltdowner.light_shield", "meltdowner.electron_bomb"),
-            Map.entry("meltdowner.meltdowner", "meltdowner.light_shield"));
+    private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
+            Map.entry("electromaster.body_intensify", List.of("electromaster.arc_gen")),
+            Map.entry("electromaster.thunder_bolt", List.of("electromaster.arc_gen")),
+            Map.entry("electromaster.railgun", List.of("electromaster.thunder_bolt")),
+            Map.entry("electromaster.thunder_clap", List.of("electromaster.thunder_bolt")),
+            Map.entry("electromaster.charging", List.of("electromaster.arc_gen")),
+            Map.entry("electromaster.mag_movement", List.of("electromaster.arc_gen")),
+            Map.entry("teleporter.dim_folding_theorem", List.of("teleporter.threatening_teleport")),
+            Map.entry("teleporter.penetrate_teleport", List.of("teleporter.threatening_teleport")),
+            Map.entry("teleporter.mark_teleport", List.of("teleporter.threatening_teleport")),
+            // La seule qui demande deux parentes : savoir marquer, et savoir traverser.
+            Map.entry("teleporter.flesh_ripping",
+                    List.of("teleporter.mark_teleport", "teleporter.penetrate_teleport")),
+            Map.entry("meltdowner.light_shield", List.of("meltdowner.electron_bomb")),
+            Map.entry("meltdowner.meltdowner", List.of("meltdowner.light_shield")));
 
     private static List<Category> categories() {
         return List.of(
@@ -121,14 +125,21 @@ class PortedSkillsTest {
     @Test
     void lesDependancesPorteesSontCellesAttendues() {
         for (Skill skill : allSkills()) {
-            String expected = EXPECTED_DEPENDENCIES.get(fullName(skill));
+            List<String> expected = EXPECTED_DEPENDENCIES.get(fullName(skill));
             if (expected == null) {
                 assertTrue(skill.getDependencies().isEmpty(),
                         fullName(skill) + " ne devrait dependre de rien dans le port");
                 continue;
             }
-            assertEquals(1, skill.getDependencies().size(), "une seule dependance pour " + fullName(skill));
-            assertEquals(expected, fullName(skill.getDependencies().get(0)));
+            // Une competence peut avoir plusieurs parentes : l'original en demandait deux
+            // a la dechirure (marquer et traverser). Ce qui compte est l'ensemble, pas
+            // l'ordre dans lequel les conditions ont ete posees.
+            Set<String> found = new HashSet<>();
+            for (Skill dependency : skill.getDependencies()) {
+                found.add(fullName(dependency));
+            }
+            assertEquals(Set.copyOf(expected), found,
+                    "dependances de " + fullName(skill));
         }
     }
 
@@ -244,6 +255,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.mag_movement", 60f),
             Map.entry("teleporter.threatening_teleport", 18f),
             Map.entry("teleporter.mark_teleport", 40f),
+            Map.entry("teleporter.flesh_ripping", 60f),
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),

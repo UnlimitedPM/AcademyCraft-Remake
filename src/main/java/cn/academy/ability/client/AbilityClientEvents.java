@@ -61,7 +61,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_MAG_MOVEMENT, ElectromasterCategory.NAME, "mag_movement"),
             new Binding(AbilityKeyBindings.ACTIVATE_THREATENING_TELEPORT, TeleporterCategory.NAME,
                     "threatening_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MARK_TELEPORT, TeleporterCategory.NAME, "mark_teleport"));
+            new Binding(AbilityKeyBindings.ACTIVATE_MARK_TELEPORT, TeleporterCategory.NAME, "mark_teleport"),
+            new Binding(AbilityKeyBindings.ACTIVATE_FLESH_RIPPING, TeleporterCategory.NAME, "flesh_ripping"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

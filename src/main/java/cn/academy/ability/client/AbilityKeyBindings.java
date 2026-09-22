@@ -81,6 +81,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_mark_teleport", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_P, "key.categories.academy");
 
+    /** Viser quelqu'un pour le frapper au relachement : la touche reste enfoncee. */
+    public static final KeyMapping ACTIVATE_FLESH_RIPPING = new KeyMapping(
+            "key.academy.activate_flesh_ripping", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_Z, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -98,5 +103,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_MAG_MOVEMENT);
         event.register(ACTIVATE_THREATENING_TELEPORT);
         event.register(ACTIVATE_MARK_TELEPORT);
+        event.register(ACTIVATE_FLESH_RIPPING);
     }
 }
