@@ -187,6 +187,45 @@ class SkillCurvesTest {
         assertBounds("part renvoyee", 0.6f, 1.2f, reflection::reflectRatio, reflection);
     }
 
+    @Test
+    void leThunderClapSuitSaCharge() {
+        var clap = cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_CLAP;
+
+        // Quarante ticks obligatoires, soixante au maximum, comme l'original.
+        assertTrue(clap.isChargeable(), "le thunder clap se charge");
+        assertEquals(40, clap.getMinChargeTicks(new AbilityData()));
+        assertEquals(60, clap.getMaxChargeTicks(new AbilityData()));
+
+        // Le facteur de charge ne vaut jamais les 1,2 de sa borne : la charge plafonne a
+        // soixante ticks la ou le diviseur de l'original en vaut soixante apres un
+        // decalage de quarante. La formule est reprise telle quelle.
+        assertEquals(1f, clap.damageFactor(40), 0.0001f);
+        assertEquals(1.0667f, clap.damageFactor(60), 0.0001f);
+        assertEquals(1f, clap.damageFactor(0), 0.0001f, "et jamais moins de 1");
+
+        // Degats : 36 a 72 selon l'experience, fois le facteur de charge.
+        assertEquals(36f, clap.damage(atExperience(clap, 0f, 40)), 0.0001f);
+        assertEquals(38.4f, clap.damage(atExperience(clap, 0f, 60)), 0.0001f,
+                "60 ticks au depart");
+        assertEquals(76.8f, clap.damage(atExperience(clap, 1f, 60)), 0.0001f,
+                "et 60 ticks au maximum");
+
+        Curve range = data -> (float) clap.range(data);
+        assertBounds("rayon de la foudre", 15f, 30f, range, clap);
+    }
+
+    @Test
+    void laRechargeDuThunderClapSuitCeQuOnATenu() {
+        var clap = cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_CLAP;
+
+        // Le temps tenu fois 10 a 6 : 400 ticks (20 s) au depart pour une charge
+        // minimale, 240 (12 s) au maximum.
+        assertEquals(400, clap.getCooldownTicks(atExperience(clap, 0f, 40)));
+        assertEquals(360, clap.getCooldownTicks(atExperience(clap, 1f, 60)));
+        assertEquals(0, clap.getCooldownTicks(new AbilityData()),
+                "un claquement jamais charge ne laisse rien derriere lui");
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");

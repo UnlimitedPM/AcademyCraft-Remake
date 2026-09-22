@@ -116,20 +116,27 @@ public class AbilityEvents {
     }
 
     /**
-     * Fait vivre les competences tenues : un tick de plus, ou leur fin.
+     * Fait vivre les competences qui gardent la touche enfoncee : un tick de plus, ou
+     * leur fin.
      *
      * Le compteur avance d'abord, comme le {@code ticks += 1} de l'original, puis la
      * duree maximale est verifiee avant l'effet du tick.
      */
     private static void tickSustained(ServerPlayer player, AbilityData data) {
         for (Skill skill : data.getChargingSkills()) {
-            if (!skill.isHeld()) continue;
-            int held = data.getChargeTicks(skill);
-            int max = skill.getMaxHoldTicks(data);
-            if (max > 0 && held > max) {
-                endHeld(player, data, skill);
-            } else if (!skill.onHoldTick(player, data, held)) {
-                endHeld(player, data, skill);
+            int ticks = data.getChargeTicks(skill);
+            if (skill.isHeld()) {
+                int max = skill.getMaxHoldTicks(data);
+                if (max > 0 && ticks > max) {
+                    endHeld(player, data, skill);
+                } else if (!skill.onHoldTick(player, data, ticks)) {
+                    endHeld(player, data, skill);
+                }
+            } else if (skill.isChargeable() && !skill.onChargeTick(player, data, ticks)) {
+                // Une charge qui n'a plus de quoi s'entretenir est abandonnee : rien
+                // n'est lance, rien n'est facture, et le compteur est oublie — c'est le
+                // terminate() de l'original, pas la fin d'un maintien.
+                data.cancelCharge(skill);
             }
         }
     }

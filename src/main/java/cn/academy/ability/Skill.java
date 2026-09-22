@@ -269,6 +269,28 @@ public abstract class Skill {
     }
 
     /**
+     * Ouverture, avant le premier tick de charge.
+     *
+     * C'est le {@code MSG_MADEALIVE} de l'original, le meme pour les deux familles qui
+     * gardent la touche enfoncee. Le meltdowner y epingle le surcout qu'il ne laissera
+     * pas redescendre pendant qu'il charge.
+     */
+    public void onStart(Player player, AbilityData data) {
+    }
+
+    /**
+     * Un tick de charge, tant que la touche reste enfoncee.
+     *
+     * Retourner {@code false} abandonne la charge : rien n'est lance, rien n'est
+     * facture, comme le {@code terminate()} que l'original appelait quand la reserve
+     * etait vide. C'est par la que passe l'entretien d'une competence qui se charge :
+     * le meltdowner et le thunder clap paient leurs points par tick.
+     */
+    public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
+        return true;
+    }
+
+    /**
      * Nombre de ticks de charge en dessous duquel la competence ne part pas.
      *
      * Reprend {@code TICKS_MIN} du meltdowner de l'original : relacher trop tot ne
@@ -307,15 +329,6 @@ public abstract class Skill {
     /** Duree maximale du maintien ; 0 = illimite, borne par les ressources. */
     public int getMaxHoldTicks(AbilityData data) {
         return 0;
-    }
-
-    /**
-     * Ouverture du maintien, apres que le cout d'appui a ete paye.
-     *
-     * Portage de {@code MSG_MADEALIVE} de l'original : c'est la que le bouclier epingle
-     * le surcout qu'il ne laissera pas redescendre.
-     */
-    public void onHoldStart(Player player, AbilityData data) {
     }
 
     /**

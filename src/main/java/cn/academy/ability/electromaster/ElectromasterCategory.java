@@ -11,6 +11,7 @@ public class ElectromasterCategory extends Category {
     public static final RailgunSkill RAILGUN = new RailgunSkill();
     public static final BodyIntensifySkill BODY_INTENSIFY = new BodyIntensifySkill();
     public static final ThunderBoltSkill THUNDER_BOLT = new ThunderBoltSkill();
+    public static final ThunderClapSkill THUNDER_CLAP = new ThunderClapSkill();
 
     public static final ElectromasterCategory INSTANCE = new ElectromasterCategory();
 
@@ -20,6 +21,7 @@ public class ElectromasterCategory extends Category {
         addSkill(RAILGUN);
         addSkill(BODY_INTENSIFY);
         addSkill(THUNDER_BOLT);
+        addSkill(THUNDER_CLAP);
 
         // Les dependances de l'original dont les deux bouts sont portes. Les autres
         // chaines passent par des competences qui n'existent pas encore ici (mag_manip,
@@ -31,5 +33,7 @@ public class ElectromasterCategory extends Category {
         // L'original demandait 30 % d'experience dans le thunder bolt avant de
         // debloquer le railgun : l'avoir appris ne suffisait pas.
         RAILGUN.setParent(THUNDER_BOLT, 0.3f);
+        // L'original demandait cette fois l'experience pleine dans le thunder bolt.
+        THUNDER_CLAP.setParent(THUNDER_BOLT, 1f);
     }
 }

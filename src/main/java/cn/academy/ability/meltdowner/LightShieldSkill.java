@@ -117,7 +117,7 @@ public class LightShieldSkill extends Skill {
     }
 
     @Override
-    public void onHoldStart(Player player, AbilityData data) {
+    public void onStart(Player player, AbilityData data) {
         // L'original epingle le surcout consomme a l'ouverture : sans cela la reserve
         // redescendrait pendant le maintien, donc tenir le bouclier rendrait son
         // surcout au fur et a mesure et l'ouverture finirait par ne plus rien couter.

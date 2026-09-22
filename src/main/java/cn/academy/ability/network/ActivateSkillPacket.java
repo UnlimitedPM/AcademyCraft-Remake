@@ -99,6 +99,7 @@ public class ActivateSkillPacket {
             if (skill.isChargeable()) {
                 if (!canStart(player, data, skill)) return;
                 data.beginCharge(skill);
+                skill.onStart(player, data);
                 return;
             }
             activate(player, data, skill);
@@ -141,7 +142,7 @@ public class ActivateSkillPacket {
             return;
         }
         data.beginCharge(skill);
-        skill.onHoldStart(player, data);
+        skill.onStart(player, data);
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
     }
 

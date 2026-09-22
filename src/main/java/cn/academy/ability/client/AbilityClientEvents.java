@@ -55,7 +55,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_MELTDOWNER, MeltdownerCategory.NAME, "meltdowner"),
             new Binding(AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB, MeltdownerCategory.NAME, "electron_bomb"),
             new Binding(AbilityKeyBindings.ACTIVATE_LIGHT_SHIELD, MeltdownerCategory.NAME, "light_shield"),
-            new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_BOLT, ElectromasterCategory.NAME, "thunder_bolt"));
+            new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_BOLT, ElectromasterCategory.NAME, "thunder_bolt"),
+            new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_CLAP, ElectromasterCategory.NAME, "thunder_clap"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

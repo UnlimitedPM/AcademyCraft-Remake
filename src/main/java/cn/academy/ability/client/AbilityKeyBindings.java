@@ -57,6 +57,10 @@ public class AbilityKeyBindings {
             "key.academy.activate_thunder_bolt", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_N, "key.categories.academy");
 
+    public static final KeyMapping ACTIVATE_THUNDER_CLAP = new KeyMapping(
+            "key.academy.activate_thunder_clap", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_B, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -69,5 +73,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_ELECTRON_BOMB);
         event.register(ACTIVATE_LIGHT_SHIELD);
         event.register(ACTIVATE_THUNDER_BOLT);
+        event.register(ACTIVATE_THUNDER_CLAP);
     }
 }

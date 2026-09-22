@@ -19,6 +19,15 @@ public class MeltdownerSkill extends Skill {
     /** Au-dela de deux secondes, charger davantage ne change plus rien : {@code TICKS_MAX}. */
     public static final int TICKS_MAX = 40;
 
+    /**
+     * Limite de securite de l'original : au-dela, la charge s'abandonne d'elle-meme.
+     *
+     * Elle n'aurait pas du etre atteinte — la charge est plafonnee a {@code TICKS_MAX} —
+     * mais l'original la gardait, et une charge abandonnee vaut mieux qu'une charge qui
+     * consomme sans fin.
+     */
+    public static final int TICKS_TOLE = 100;
+
     public MeltdownerSkill() {
         super("meltdowner", 3);
     }
@@ -40,6 +49,31 @@ public class MeltdownerSkill extends Skill {
     @Override
     public int getMaxChargeTicks(AbilityData data) {
         return TICKS_MAX;
+    }
+
+    /**
+     * Entretien de la charge, par tick.
+     *
+     * L'original demandait 10 a 15 CP par tick sur sa reserve de plusieurs milliers de
+     * points ; ramene a 100, cela fait 0,35 a 0,55 — soit une vingtaine de points pour
+     * un tir tenu au maximum, en plus de son cout d'ouverture.
+     */
+    public float chargeCpCost(AbilityData data) {
+        return lerp(0.35f, 0.55f, data.getSkillExp(this));
+    }
+
+    @Override
+    public void onStart(Player player, AbilityData data) {
+        // L'original epingle le surcout de l'ouverture pendant toute la charge (le
+        // `overloadKeep` de son contexte) : sans cela, la reserve redescendrait pendant
+        // qu'on charge et le tir finirait par ne plus rien couter.
+        data.setHeldOverload(this, data.getOverload());
+    }
+
+    @Override
+    public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
+        if (chargeTicks > TICKS_TOLE) return false;
+        return data.consumeControlPoint(chargeCpCost(data));
     }
 
     /**
