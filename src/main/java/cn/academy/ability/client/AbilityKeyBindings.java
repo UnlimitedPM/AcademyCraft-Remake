@@ -86,6 +86,24 @@ public class AbilityKeyBindings {
             "key.academy.activate_flesh_ripping", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_Z, "key.categories.academy");
 
+    /** Les trois rayons miniers : la touche reste enfoncee tant que le rayon creuse. */
+    public static final KeyMapping ACTIVATE_MINE_RAY_BASIC = new KeyMapping(
+            "key.academy.activate_mine_ray_basic", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_O, "key.categories.academy");
+
+    public static final KeyMapping ACTIVATE_MINE_RAY_EXPERT = new KeyMapping(
+            "key.academy.activate_mine_ray_expert", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_M, "key.categories.academy");
+
+    /**
+     * Le troisieme rayon. Le schema « une touche par competence » arrive a saturation —
+     * les lettres libres sont prises — donc celui-ci se pose sur la virgule. Le systeme
+     * de presets de l'original reste a porter, et c'est lui qui reglera la question.
+     */
+    public static final KeyMapping ACTIVATE_MINE_RAY_LUCK = new KeyMapping(
+            "key.academy.activate_mine_ray_luck", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_COMMA, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -104,5 +122,8 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_THREATENING_TELEPORT);
         event.register(ACTIVATE_MARK_TELEPORT);
         event.register(ACTIVATE_FLESH_RIPPING);
+        event.register(ACTIVATE_MINE_RAY_BASIC);
+        event.register(ACTIVATE_MINE_RAY_EXPERT);
+        event.register(ACTIVATE_MINE_RAY_LUCK);
     }
 }

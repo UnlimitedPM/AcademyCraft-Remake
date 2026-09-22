@@ -125,6 +125,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
         /** Ou le maintien a commence, pour les competences qui se paient en distance. */
         private net.minecraft.world.phys.Vec3 origin;
+
+        /** Bloc en cours de minage : les rayons du meltdowner y creusent. */
+        private net.minecraft.core.BlockPos block;
+
+        /** Ce qu'il reste a user sur ce bloc, en durete. */
+        private float progress;
     }
 
     private final Map<Skill, Hold> holds = new HashMap<>();
@@ -783,6 +789,34 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public net.minecraft.world.phys.Vec3 getHoldOrigin(Skill skill) {
         Hold hold = holds.get(skill);
         return hold == null ? null : hold.origin;
+    }
+
+    /**
+     * Bloc vise par un maintien qui creuse, et ce qu'il reste a en user.
+     *
+     * L'original tenait ces deux nombres dans son contexte de rayon : le bloc vise, et
+     * la durete qui lui restait. Le port n'a pas de contexte, donc ils vivent avec le
+     * maintien — et sans eux, changer de cible a chaque tick remettrait le minage a zero.
+     */
+    public void setHoldBlock(Skill skill, net.minecraft.core.BlockPos block) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.block = block;
+    }
+
+    @Nullable
+    public net.minecraft.core.BlockPos getHoldBlock(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? null : hold.block;
+    }
+
+    public void setHoldProgress(Skill skill, float progress) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.progress = progress;
+    }
+
+    public float getHoldProgress(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? 0f : hold.progress;
     }
 
     /** Commence une charge : le compteur repart de zero. */

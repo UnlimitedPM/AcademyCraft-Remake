@@ -331,6 +331,40 @@ class SkillCurvesTest {
                 "le paquet ne pose aucune recharge de lui-meme");
     }
 
+    @Test
+    void lesRayonsMinierCreusentDifferemment() {
+        var basic = cn.academy.ability.meltdowner.MeltdownerCategory.MINE_RAY_BASIC;
+        var expert = cn.academy.ability.meltdowner.MeltdownerCategory.MINE_RAY_EXPERT;
+        var luck = cn.academy.ability.meltdowner.MeltdownerCategory.MINE_RAY_LUCK;
+
+        // Trois competences tenues, de la meme famille, aux portees et aux vitesses de
+        // creusement croissantes : c'est ce que l'original vendait, et rien d'autre.
+        assertTrue(basic.isHeld() && expert.isHeld() && luck.isHeld(), "les rayons se tiennent");
+        assertEquals(10.0, basic.range(), 0.0001);
+        assertEquals(20.0, expert.range(), 0.0001);
+        assertEquals(20.0, luck.range(), 0.0001);
+        assertEquals(2, basic.tier(), "un rayon en fer");
+        assertEquals(5, expert.tier(), "et deux qui percent tout");
+        assertEquals(5, luck.tier());
+
+        assertBounds("creusement du rayon de base", 0.2f, 0.4f, basic::speed, basic);
+        assertBounds("creusement du rayon expert", 0.5f, 1f, expert::speed, expert);
+        assertBounds("creusement du rayon chanceux", 0.5f, 1f, luck::speed, luck);
+
+        assertBounds("entretien du rayon de base", 0.43f, 0.25f, basic::cpPerTick, basic);
+        assertBounds("entretien du rayon expert", 0.9f, 0.54f, expert::cpPerTick, expert);
+        assertBounds("entretien du rayon chanceux", 1.8f, 1.25f, luck::cpPerTick, luck);
+
+        assertBounds("surcout du rayon de base", 200f, 150f, basic::getOverloadCost, basic);
+        assertBounds("surcout du rayon expert", 300f, 200f, expert::getOverloadCost, expert);
+        assertBounds("surcout du rayon chanceux", 350f, 300f, luck::getOverloadCost, luck);
+
+        assertCooldownBounds("recharge du rayon de base", basic, 40, 20);
+        assertCooldownBounds("recharge du rayon expert", expert, 60, 30);
+        assertEquals(0.0005f, basic.expPerBlock(), 0.00001f);
+        assertEquals(0.0003f, expert.expPerBlock(), 0.00001f);
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");

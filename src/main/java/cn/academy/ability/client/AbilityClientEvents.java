@@ -62,7 +62,10 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_THREATENING_TELEPORT, TeleporterCategory.NAME,
                     "threatening_teleport"),
             new Binding(AbilityKeyBindings.ACTIVATE_MARK_TELEPORT, TeleporterCategory.NAME, "mark_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_FLESH_RIPPING, TeleporterCategory.NAME, "flesh_ripping"));
+            new Binding(AbilityKeyBindings.ACTIVATE_FLESH_RIPPING, TeleporterCategory.NAME, "flesh_ripping"),
+            new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_BASIC, MeltdownerCategory.NAME, "mine_ray_basic"),
+            new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_EXPERT, MeltdownerCategory.NAME, "mine_ray_expert"),
+            new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_LUCK, MeltdownerCategory.NAME, "mine_ray_luck"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
