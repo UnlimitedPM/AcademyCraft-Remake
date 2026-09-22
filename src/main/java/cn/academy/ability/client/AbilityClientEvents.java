@@ -66,7 +66,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_BASIC, MeltdownerCategory.NAME, "mine_ray_basic"),
             new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_EXPERT, MeltdownerCategory.NAME, "mine_ray_expert"),
             new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_LUCK, MeltdownerCategory.NAME, "mine_ray_luck"),
-            new Binding(AbilityKeyBindings.ACTIVATE_SCATTER_BOMB, MeltdownerCategory.NAME, "scatter_bomb"));
+            new Binding(AbilityKeyBindings.ACTIVATE_SCATTER_BOMB, MeltdownerCategory.NAME, "scatter_bomb"),
+            new Binding(AbilityKeyBindings.ACTIVATE_JET_ENGINE, MeltdownerCategory.NAME, "jet_engine"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

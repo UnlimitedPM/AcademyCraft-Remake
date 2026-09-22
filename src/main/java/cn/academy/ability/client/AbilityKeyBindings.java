@@ -113,6 +113,15 @@ public class AbilityKeyBindings {
             "key.academy.activate_scatter_bomb", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_PERIOD, "key.categories.academy");
 
+    /**
+     * Le reacteur. Le schema « une touche par competence » est sature bien au-dela des
+     * lettres : il ne reste que de la ponctuation. Le systeme de presets de l'original
+     * reste a porter, et c'est lui qui reglera la question.
+     */
+    public static final KeyMapping ACTIVATE_JET_ENGINE = new KeyMapping(
+            "key.academy.activate_jet_engine", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_SEMICOLON, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -135,5 +144,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_MINE_RAY_EXPERT);
         event.register(ACTIVATE_MINE_RAY_LUCK);
         event.register(ACTIVATE_SCATTER_BOMB);
+        event.register(ACTIVATE_JET_ENGINE);
     }
 }

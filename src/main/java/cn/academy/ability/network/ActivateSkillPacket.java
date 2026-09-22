@@ -88,6 +88,13 @@ public class ActivateSkillPacket {
         }
 
         if (phase == Phase.PRESS) {
+            // Une competence deja tenue ne se rouvre pas. L'original n'avait qu'un
+            // contexte d'activation a la fois, et un second appui sur une competence
+            // ouverte remettrait son compteur a zero — ce qui, pour un effet qui se
+            // repere a son tick de depart comme le vol du reacteur, le ferait repartir
+            // en arriere.
+            if (data.isCharging(skill)) return;
+
             // Une competence tenue s'ouvre : son cout est paye maintenant, et elle vit
             // ensuite tant que la touche reste enfoncee.
             if (skill.isHeld()) {
@@ -110,8 +117,11 @@ public class ActivateSkillPacket {
         if (!data.isCharging(skill)) return;
 
         // Une competence tenue se termine : c'est la fin normale du maintien, avec la
-        // recharge de ce qui a ete tenu.
+        // recharge de ce qui a ete tenu. Sauf si l'effet dit qu'il n'a pas fini — le vol
+        // du jet engine commence au relachement et dure une seconde de plus : le maintien
+        // reste alors ouvert, et c'est son propre tick qui appellera la fin.
         if (skill.isHeld()) {
+            if (skill.onRelease(player, data, data.getChargeTicks(skill))) return;
             AbilityEvents.endHeld(player, data, skill);
             return;
         }

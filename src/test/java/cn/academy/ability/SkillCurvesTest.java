@@ -1,5 +1,6 @@
 package cn.academy.ability;
 
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -425,6 +426,104 @@ class SkillCurvesTest {
         assertEquals(0f, bomb.getCpCost(), 0.0001f, "pas de cout en CP a l'ouverture");
         // Et aucune recharge : l'original n'en posait pas, le prix est le surcout.
         assertEquals(0, bomb.getCooldownTicks(atExperience(bomb, 1f)));
+    }
+
+    /**
+     * Le reacteur : ce que vaut son vol, et ou il mene.
+     *
+     * C'est la seule competence dont l'effet commence au relachement — {@code onRelease}
+     * garde le maintien ouvert, et le vol se termine lui-meme. Le calcul de trajectoire
+     * est donc le vrai sujet : huit ticks pour rejoindre la cible, et quinze ticks de vol,
+     * donc une cible <b>depassee</b> de presque une fois la distance visee. C'est
+     * volontaire : c'est le comportement de l'original, et c'est ce qui en fait un
+     * deplacement et non une teleportation.
+     */
+    @Test
+    void leVolDuReacteurDepasseSaCible() {
+        var jet = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
+
+        assertTrue(jet.isHeld(), "le reacteur se tient");
+        assertEquals(0, jet.getMaxHoldTicks(new AbilityData()),
+                "la visee dure tant que la touche est tenue");
+        assertEquals(8, cn.academy.ability.meltdowner.JetEngineSkill.FLIGHT_TIME,
+                "huit ticks pour rejoindre la cible");
+        assertEquals(15, cn.academy.ability.meltdowner.JetEngineSkill.LIFETIME,
+                "quinze ticks de vol en tout");
+
+        Vec3 start = new Vec3(0, 64, 0);
+        Vec3 target = new Vec3(12, 64, 0);
+
+        // Au huitieme tick, le porteur est sur la cible.
+        assertEquals(12.0, cn.academy.ability.meltdowner.JetEngineSkill
+                .pathPosition(start, target, 8).x, 0.0001);
+        // A la moitie du temps, a mi-chemin.
+        assertEquals(6.0, cn.academy.ability.meltdowner.JetEngineSkill
+                .pathPosition(start, target, 4).x, 0.0001);
+        // Au dernier tick de vol, il l'a depassee de presque une fois la visee.
+        assertEquals(22.5, cn.academy.ability.meltdowner.JetEngineSkill
+                .pathPosition(start, target, 15).x, 0.0001);
+        // Et il ne quitte jamais la ligne.
+        assertEquals(64.0, cn.academy.ability.meltdowner.JetEngineSkill
+                .pathPosition(start, target, 11).y, 0.0001);
+
+        // La vitesse posee a chaque tick est celle qui l'emmene en huit ticks.
+        Vec3 velocity = cn.academy.ability.meltdowner.JetEngineSkill.flightVelocity(start, target);
+        assertEquals(1.5, velocity.x, 0.0001);
+
+        assertBounds("degats du vol", 7f, 20f, jet::flightDamage, jet);
+        assertBounds("surcout du reacteur", 60f, 50f, jet::getOverloadCost, jet);
+        assertCooldownBounds("recharge du reacteur", jet, 60, 30);
+
+        // Le cout en CP de l'original, divise par 28 : 170 a 140 sur plusieurs milliers.
+        assertEquals(6.07f, jet.getCpCost(atExperience(jet, 0f)), 0.0001f);
+        assertEquals(5f, jet.getCpCost(atExperience(jet, 1f)), 0.0001f);
+    }
+
+    /**
+     * Le contrat du relachement.
+     *
+     * Une competence tenue qui ne dit rien de special voit son maintien se terminer au
+     * relachement : c'est le cas de toutes sauf une. Le test fige les deux roles — sans
+     * quoi un effet qui se prolongerait par erreur passerait inapercu.
+     *
+     * <p>Le vol du reacteur, lui, ne peut pas se derouler ici : il deplace un joueur dans
+     * un monde. Ce qui se verifie sans monde est ce qui l'encadre — l'effet n'a pas
+     * commence tant que la touche est tenue, et il se termine au-dela de sa duree.
+     */
+    @Test
+    void seulLeReacteurContinueApresLeRelachement() {
+        var jet = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
+
+        for (var category : java.util.List.of(
+                cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE,
+                cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE,
+                cn.academy.ability.teleporter.TeleporterCategory.INSTANCE,
+                cn.academy.ability.vecmanip.VecmanipCategory.INSTANCE)) {
+            for (Skill skill : category.getSkills()) {
+                if (!skill.isHeld() || skill == jet) continue;
+                // Le relachement termine le maintien de toutes les autres, et le joueur
+                // n'est meme pas lu.
+                assertFalse(skill.onRelease(null, new AbilityData(), 20),
+                        skill.getName() + " ne doit pas se prolonger apres le relachement");
+            }
+        }
+
+        // Le reacteur, lui, ne vole pas tant qu'on tient la touche : il vise.
+        AbilityData vising = new AbilityData();
+        for (int tick = 1; tick <= 200; tick++) {
+            assertTrue(jet.onHoldTick(null, vising, tick),
+                    "la visee ne doit pas s'interrompre au tick " + tick);
+        }
+
+        // Une fois parti (le repere de temps du maintien est le tick du depart), le vol se
+        // termine au tick qui suit sa duree. Les quinze ticks de vol eux-memes deplacent
+        // un joueur dans un monde : ils sont hors de portee d'un test unitaire, et c'est
+        // la fin qui se verifie ici — un vol qui ne s'arreterait jamais laisserait le
+        // joueur a la merci d'une competence qu'il ne peut plus relacher.
+        AbilityData flying = new AbilityData();
+        flying.setHoldMark(jet, 5);
+        assertFalse(jet.onHoldTick(null, flying, 5 + 16), "le vol doit se terminer");
+        assertFalse(jet.onHoldTick(null, flying, 5 + 60), "et le rester");
     }
 
     @Test

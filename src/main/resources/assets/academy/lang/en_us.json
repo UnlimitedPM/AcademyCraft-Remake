@@ -20,6 +20,7 @@
   "key.academy.activate_mine_ray_expert": "Hold Expert Mining Ray",
   "key.academy.activate_mine_ray_luck": "Hold Lucky Mining Ray",
   "key.academy.activate_scatter_bomb": "Hold Scatter Bomb",
+  "key.academy.activate_jet_engine": "Hold Jet Engine",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
@@ -162,6 +163,7 @@
   "ac.ability.meltdowner.mine_ray_expert.name": "Expert Mining Ray",
   "ac.ability.meltdowner.mine_ray_luck.name": "Lucky Mining Ray",
   "ac.ability.meltdowner.scatter_bomb.name": "Scatter Bomb",
+  "ac.ability.meltdowner.jet_engine.name": "Jet Engine",
   "ac.ability.meltdowner.meltdowner.name": "Meltdowner",
   "ac.ability.teleporter.dim_folding_theorem.name": "Dimension Folding Theorem",
   "ac.ability.teleporter.threatening_teleport.name": "Threatening Teleport",

@@ -53,9 +53,21 @@ public final class TargetingUtil {
      * qui retirait le lanceur de son selecteur.
      */
     public static Entity findEntityAlong(Player owner, Vec3 from, Vec3 to) {
+        return findEntityAlong(owner, from, to, e -> true);
+    }
+
+    /**
+     * La meme chose, en ne retenant que ce que le filtre accepte.
+     *
+     * Le vol du jet engine ne frappe que ce qui vit ({@code exclude(player).and(living)}
+     * dans l'original) : sans ce filtre, une barque croisee sur la trajectoire
+     * arreterait le coup a la place du passager.
+     */
+    public static Entity findEntityAlong(Player owner, Vec3 from, Vec3 to,
+                                         java.util.function.Predicate<Entity> extra) {
         AABB box = new AABB(from, to).inflate(1.0);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(owner, from, to, box,
-                e -> !e.isSpectator() && e.isPickable() && e != owner,
+                e -> !e.isSpectator() && e.isPickable() && e != owner && extra.test(e),
                 from.distanceToSqr(to));
         return hit != null ? hit.getEntity() : null;
     }

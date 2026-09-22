@@ -367,6 +367,27 @@ public abstract class Skill {
     }
 
     /**
+     * Le joueur a relache la touche : l'effet doit-il continuer tout seul ?
+     *
+     * <p>C'est le quatrieme cas de l'original, et il n'y en a qu'un : le {@code jet_engine}
+     * se vise pendant le maintien, se paie au relachement, et <b>vole ensuite pendant une
+     * seconde</b>. Le contexte de l'original survivait donc a son propre
+     * {@code MSG_MARK_END} ; il ne mourait qu'une fois le vol fini.
+     *
+     * <p>Rendre {@code true} garde le maintien ouvert : {@link #onHoldTick} continue d'etre
+     * appele, et c'est lui qui terminera l'effet en rendant {@code false} a son tour — ce
+     * qui passe alors par la fin ordinaire, donc par la recharge. Rendre {@code false}
+     * (le defaut) termine le maintien sur-le-champ, comme pour toutes les autres
+     * competences tenues.
+     *
+     * <p>A ne pas confondre avec {@link #onHoldEnd}, qui est la fin — celle-ci arrive plus
+     * tard, et une seule fois, alors que ce crochet-la repond au geste du joueur.
+     */
+    public boolean onRelease(Player player, AbilityData data, int heldTicks) {
+        return false;
+    }
+
+    /**
      * Fin du maintien, quelle qu'en soit la cause : relachement, duree maximale, ou
      * ressources epuisees. L'original le faisait une seule fois, dans
      * {@code MSG_TERMINATED}.
