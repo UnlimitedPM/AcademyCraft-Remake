@@ -21,6 +21,12 @@ public class VecAccelSkill extends Skill {
         return 0.002f;
     }
 
+    /** Recharge reprise de l'original : de 80 a 50 ticks, soit 4 a 2,5 secondes. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(80f, 50f, data.getSkillExp(this));
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

@@ -28,6 +28,12 @@ public class ElectronBombSkill extends Skill {
         return lerp(6f, 12f, data.getSkillExp(this));
     }
 
+    /** Recharge reprise de l'original : de 20 a 10 ticks, soit 1 a 0,5 seconde. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(20f, 10f, data.getSkillExp(this));
+    }
+
     /** 0,005 au lancer, comme dans l'original. */
     @Override
     public float getExpGain(AbilityData data) {

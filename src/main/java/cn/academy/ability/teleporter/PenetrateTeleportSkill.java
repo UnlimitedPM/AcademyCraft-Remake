@@ -24,6 +24,12 @@ public class PenetrateTeleportSkill extends Skill {
         return lerp(10f, 35f, data.getSkillExp(this));
     }
 
+    /** Recharge reprise de l'original : de 50 a 30 ticks, soit 2,5 a 1,5 seconde. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(50f, 30f, data.getSkillExp(this));
+    }
+
     /**
      * L'original versait 0,00014 par bloc parcouru. Le paquet d'activation ne connait
      * pas la distance, donc c'est la valeur d'un saut d'une dizaine de blocs qui est

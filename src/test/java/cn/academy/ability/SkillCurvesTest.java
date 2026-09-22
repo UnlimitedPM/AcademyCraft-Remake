@@ -91,6 +91,45 @@ class SkillCurvesTest {
         assertBounds("part renvoyee", 0.6f, 1.2f, reflection::reflectRatio, reflection);
     }
 
+    private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
+        assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
+        assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");
+    }
+
+    @Test
+    void lesRechargesSuiventLExperience() {
+        assertCooldownBounds("recharge de arc_gen",
+                cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN, 15, 5);
+        assertCooldownBounds("recharge de railgun",
+                cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN, 300, 160);
+        assertCooldownBounds("recharge de body_intensify",
+                cn.academy.ability.electromaster.ElectromasterCategory.BODY_INTENSIFY, 900, 600);
+        assertCooldownBounds("recharge de electron_bomb",
+                cn.academy.ability.meltdowner.MeltdownerCategory.ELECTRON_BOMB, 20, 10);
+        assertCooldownBounds("recharge de penetrate_teleport",
+                cn.academy.ability.teleporter.TeleporterCategory.PENETRATE_TELEPORT, 50, 30);
+        assertCooldownBounds("recharge de shift_tp",
+                cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT, 100, 60);
+        assertCooldownBounds("recharge de vec_accel",
+                cn.academy.ability.vecmanip.VecmanipCategory.VEC_ACCEL, 80, 50);
+    }
+
+    @Test
+    void lesCompetencesSansRechargeNEnOntPas() {
+        // Le bouclier et le meltdowner tiennent leur recharge du temps de charge du
+        // tir, que le port n'a pas encore : ils n'en ont donc aucune pour l'instant.
+        // Les passives, elles, n'en ont jamais eu.
+        assertEquals(0, cooldownOf(cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER));
+        assertEquals(0, cooldownOf(cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD));
+        assertEquals(0, cooldownOf(cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION));
+        assertEquals(0,
+                cooldownOf(cn.academy.ability.teleporter.TeleporterCategory.DIM_FOLDING_THEOREM));
+    }
+
+    private static int cooldownOf(Skill skill) {
+        return skill.getCooldownTicks(atExperience(skill, 1f));
+    }
+
     @Test
     void uneCompetenceNonAppriseEstAuDepartDeSaCourbe() {
         // Sans categorie apprise, l'experience vaut 0 : les courbes doivent donc
@@ -104,8 +143,7 @@ class SkillCurvesTest {
     }
 
     @Test
-    void uneExperienceHorsBornesNeDebordePasDeLaCourbe() {
-        var arcGen = cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN;
+    void uneExperienceHorsBornesNeDebordePasDeLaCourbe() {        var arcGen = cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN;
 
         // Un gain negatif est ignore, et un gain enorme sature a 100 % : dans les deux
         // cas la courbe reste entre ses deux bornes, ce qui protege d'une sauvegarde

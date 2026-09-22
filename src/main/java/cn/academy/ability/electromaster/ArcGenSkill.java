@@ -42,6 +42,12 @@ public class ArcGenSkill extends Skill {
         return lerp(0f, 0.6f, data.getSkillExp(this));
     }
 
+    /** Recharge reprise de l'original : de 15 a 5 ticks, soit de 0,75 a 0,25 seconde. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(15f, 5f, data.getSkillExp(this));
+    }
+
     /**
      * Experience d'un arc qui touche, reprise de l'original : de 0,0048 a 0,0072 selon
      * l'experience deja acquise. L'original distinguait le coup porte du coup dans le

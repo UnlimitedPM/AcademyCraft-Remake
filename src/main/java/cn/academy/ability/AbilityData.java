@@ -24,6 +24,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private static final String TAG_SKILLS = "skills";
     private static final String TAG_SKILL_EXPS = "skillExps";
     private static final String TAG_LEVEL_PROGRESS = "levelProgress";
+    private static final String TAG_COOLDOWNS = "cooldowns";
 
     /**
      * Part de la progression d'un niveau qui doit etre remplie pour monter.
@@ -62,6 +63,21 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * quoi gagner de l'experience dans une categorie ferait monter les autres.
      */
     private final Map<String, Float> levelProgress = new HashMap<>();
+
+    /**
+     * Recharges en cours, par competence, en ticks restants.
+     *
+     * Portage de {@code CooldownData}. L'original reduisait chaque compteur d'un tick
+     * par tick et oubliait ceux qui tombaient a zero, ce qui est exactement ce que fait
+     * {@link #tickCooldowns()}.
+     *
+     * Un ecart assume : l'original ne sauvegardait pas ses recharges, donc se
+     * reconnecter les effacait. Ici elles voyagent avec le reste de la donnee du
+     * joueur — l'effet visible est le meme, sauf qu'on ne peut plus les effacer en
+     * relancant le jeu. Elles sont en revanche bien oubliees a la mort, comme dans
+     * l'original ({@code onPlayerDead}).
+     */
+    private final Map<String, Integer> cooldowns = new HashMap<>();
 
     /**
      * Sources d'interference actives, par nom. Non sauvegarde.
@@ -358,6 +374,64 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         levelProgress.put(category.getName(), Float.MAX_VALUE);
     }
 
+    // ------------------------------------------------------------------
+    // Recharges
+    // ------------------------------------------------------------------
+
+    /** Ticks de recharge restants pour cette competence, 0 si elle est prete. */
+    public int getCooldown(Skill skill) {
+        if (skill == null || skill.getCategory() == null) return 0;
+        return cooldowns.getOrDefault(skillKey(skill), 0);
+    }
+
+    /** Vrai si la competence n'est pas encore prete. */
+    public boolean isOnCooldown(Skill skill) {
+        return getCooldown(skill) > 0;
+    }
+
+    /**
+     * Lance la recharge d'une competence.
+     *
+     * Reprend {@code CooldownData.set} : une recharge plus longue que celle en cours
+     * la remplace, une plus courte ne la raccourcit pas. Sans cela, enchainer deux
+     * usages ferait tomber la recharge a celle du dernier tir.
+     *
+     * Une duree nulle ou negative n'entre rien : une competence sans recharge ne doit
+     * pas laisser de compteur derriere elle.
+     */
+    public void setCooldown(Skill skill, int ticks) {
+        if (skill == null || skill.getCategory() == null || ticks <= 0) return;
+        String key = skillKey(skill);
+        cooldowns.merge(key, ticks, Math::max);
+    }
+
+    /**
+     * Fait avancer toutes les recharges d'un tick.
+     *
+     * A appeler cote serveur a chaque tick du joueur, comme la boucle de
+     * {@code CooldownData}.
+     */
+    public void tickCooldowns() {
+        if (cooldowns.isEmpty()) return;
+        Iterator<Map.Entry<String, Integer>> iterator = cooldowns.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Integer> entry = iterator.next();
+            int left = entry.getValue() - 1;
+            if (left <= 0) iterator.remove();
+            else entry.setValue(left);
+        }
+    }
+
+    /** Oublie toutes les recharges. Appele a la mort du joueur, comme l'original. */
+    public void clearCooldowns() {
+        cooldowns.clear();
+    }
+
+    /** Nombre de competences en recharge, pour les tests et le debogage. */
+    public int getCooldownCount() {
+        return cooldowns.size();
+    }
+
     private static String skillKey(Skill skill) {
         return skill.getCategory().getName() + "." + skill.getName();
     }
@@ -391,6 +465,10 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         CompoundTag progress = new CompoundTag();
         levelProgress.forEach(progress::putFloat);
         tag.put(TAG_LEVEL_PROGRESS, progress);
+
+        CompoundTag cds = new CompoundTag();
+        cooldowns.forEach(cds::putInt);
+        tag.put(TAG_COOLDOWNS, cds);
         return tag;
     }
 
@@ -421,6 +499,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         CompoundTag progress = tag.getCompound(TAG_LEVEL_PROGRESS);
         for (String key : progress.getAllKeys()) {
             levelProgress.put(key, progress.getFloat(key));
+        }
+
+        cooldowns.clear();
+        CompoundTag cds = tag.getCompound(TAG_COOLDOWNS);
+        for (String key : cds.getAllKeys()) {
+            cooldowns.put(key, cds.getInt(key));
         }
     }
 }

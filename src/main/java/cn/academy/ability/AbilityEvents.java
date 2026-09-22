@@ -10,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -60,6 +61,8 @@ public class AbilityEvents {
             // Les sources d'interference sont evaluees ici, une fois par tick : une
             // source qui ne brouille plus disparait d'elle-meme.
             data.refreshInterference();
+            // Les recharges avancent d'un tick, comme la boucle de CooldownData.
+            data.tickCooldowns();
             // Le plafond vient de la config : on le reapplique a chaque tick pour
             // qu'un rechargement de config soit pris en compte sans reconnexion.
             data.clampToConfiguredMax();
@@ -70,6 +73,20 @@ public class AbilityEvents {
                 AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
             }
         });
+    }
+
+    /**
+     * A la mort, les recharges sont oubliees.
+     *
+     * Reprend {@code CooldownData.onPlayerDead} : le joueur repart sans attendre, ce
+     * que faisait l'original.
+     */
+    @SubscribeEvent
+    public static void onDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            player.getCapability(AbilityCapability.ABILITY_DATA)
+                    .ifPresent(AbilityData::clearCooldowns);
+        }
     }
 
     @SubscribeEvent

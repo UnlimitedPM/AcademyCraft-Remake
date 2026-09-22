@@ -31,6 +31,12 @@ public class RailgunSkill extends Skill {
         return lerp(60f, 110f, data.getSkillExp(this));
     }
 
+    /** Recharge reprise de l'original : de 300 a 160 ticks, soit 15 a 8 secondes. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(300f, 160f, data.getSkillExp(this));
+    }
+
     /**
      * Experience de l'original : 0,005 pour un tir, 0,01 s'il touche. Le paquet
      * d'activation ne sait pas si le tir a porte, donc c'est le montant du tir qui est

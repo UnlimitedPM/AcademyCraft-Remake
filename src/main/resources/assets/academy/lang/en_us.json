@@ -135,6 +135,7 @@
   "academy.learn.dependency": "Requires %s first",
   "academy.learn.dependency_exp": "Requires %s at %s%% experience",
   "academy.ability.not_learned": "You have not learned %s",
+  "academy.ability.cooldown": "On cooldown for %ss",
 
   "ac.ability.electromaster.arc_gen.name": "Arc Generation",
   "ac.ability.electromaster.railgun.name": "Railgun",

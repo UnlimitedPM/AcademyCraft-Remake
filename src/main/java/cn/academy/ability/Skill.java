@@ -205,6 +205,23 @@ public abstract class Skill {
     }
 
     /**
+     * Duree de la recharge de cette competence, en ticks. 0 = aucune.
+     *
+     * L'original appelait {@code ctx.setCooldown(...)} apres l'effet, avec une courbe
+     * qui dependait de l'experience (15 a 5 ticks pour un arc, 300 a 160 pour le
+     * railgun). Le port la declare ici et la pose a l'activation, pour que toutes les
+     * competences suivent la meme regle : une competence qui part consomme sa recharge,
+     * meme si sa cible lui echappe.
+     *
+     * Deux competences n'ont pas la leur : celles dont la recharge de l'original
+     * dependait du temps de charge du tir (le bouclier et le meltdowner) attendent que
+     * ce temps de charge soit porte.
+     */
+    public int getCooldownTicks(AbilityData data) {
+        return 0;
+    }
+
+    /**
      * Interpolation lineaire entre deux valeurs, {@code t} ramene entre 0 et 1.
      *
      * Portage de {@code MathUtils.lerpf} : l'original s'en servait partout pour faire

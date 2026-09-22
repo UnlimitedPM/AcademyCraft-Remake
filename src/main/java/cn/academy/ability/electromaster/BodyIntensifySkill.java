@@ -22,6 +22,12 @@ public class BodyIntensifySkill extends Skill {
         return 0.01f;
     }
 
+    /** Recharge reprise de l'original : de 900 a 600 ticks, soit 45 a 30 secondes. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(900f, 600f, data.getSkillExp(this));
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

@@ -30,6 +30,12 @@ public class ShiftTeleportSkill extends Skill {
         return lerp(25f, 35f, data.getSkillExp(this));
     }
 
+    /** Recharge reprise de l'original : de 100 a 60 ticks, soit 5 a 3 secondes. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(100f, 60f, data.getSkillExp(this));
+    }
+
     /**
      * L'original versait 0,002 par entite traversee, plus 0,002. Le port ne compte pas
      * les entites traversees : c'est donc le montant de base qui est verse.

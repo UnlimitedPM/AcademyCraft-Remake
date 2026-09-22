@@ -58,8 +58,26 @@ public class ActivateSkillPacket {
                             Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
                     return;
                 }
+
+                // Recharge : l'original tenait un compteur par competence dans
+                // CooldownData et refusait le declenchement tant qu'il n'etait pas
+                // revenu a zero. Le message dit combien il reste, sinon le joueur
+                // n'aurait aucun moyen de savoir si la touche a echoue ou si elle est
+                // simplement en attente.
+                int cooldown = data.getCooldown(skill);
+                if (cooldown > 0) {
+                    player.displayClientMessage(
+                            Component.translatable("academy.ability.cooldown",
+                                            String.format(java.util.Locale.ROOT, "%.1f", cooldown / 20.0f))
+                                    .withStyle(ChatFormatting.RED), true);
+                    return;
+                }
+
                 if (data.consumeControlPoint(skill.getCpCost())) {
                     skill.onActivate(player, data);
+                    // La recharge part des que la competence est lancee, comme dans
+                    // l'original qui la posait a la fin de son effet.
+                    data.setCooldown(skill, skill.getCooldownTicks(data));
                     // Utiliser une competence la fait progresser, et verse de
                     // l'avancement au niveau de la categorie : c'est ce qui fait qu'on
                     // monte en jouant, et non en attendant. L'original versait ces
