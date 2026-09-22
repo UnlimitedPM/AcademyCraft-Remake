@@ -2,7 +2,11 @@ package cn.academy.ability.teleporter;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -38,12 +42,15 @@ import java.util.List;
  * bateau, les poules et les villageois suivent donc ; un golem ou un cheval, non. Chacun
  * garde son <b>ecart</b> avec le lanceur : le groupe arrive en formation, et pas empile.
  *
- * <h2>Ecart assume</h2>
+ * <h2>Changer de dimension</h2>
  *
- * La traversee de dimension — ouverte a partir de 80 % d'experience, comme dans l'original,
- * et doublee au prix — n'est <b>pas encore portee</b> : le port refuse une marque d'une autre
- * dimension en le disant. Le gate et le prix, eux, sont en place et verifies, pour que le
- * jour ou la traversee arrivera il n'y ait plus qu'a la brancher.
+ * Au-dela de <b>80 %</b> d'experience, comme dans l'original, une marque posee dans un autre
+ * monde devient accessible — et le voyage coute alors le <b>double</b>. Toute la compagnie
+ * suit, comme pour un saut ordinaire.
+ *
+ * <p>Une marque ne retient que le <b>nom</b> de sa dimension : le serveur peut donc ne pas la
+ * connaitre, si le monde vient d'un mod qu'on a retire. Il le dit alors, au lieu de laisser
+ * le joueur disparaitre.
  */
 public class LocationTeleportSkill extends Skill {
 
@@ -123,6 +130,20 @@ public class LocationTeleportSkill extends Skill {
         return !LocationMark.of(player.level()).equals(mark.dimension());
     }
 
+    /**
+     * Le niveau d'une marque, ou {@code null} si le serveur ne connait pas cette dimension.
+     *
+     * <p>Une marque ne retient que le <b>nom</b> de sa dimension — c'est ce qui la rend
+     * testable sans registre — donc le serveur peut tres bien ne pas connaitre ce nom : un
+     * monde retire par un mod, une sauvegarde d'un autre pack. D'ou le refus explicite
+     * plutot qu'un plantage.
+     */
+    public static ServerLevel dimensionOf(ServerPlayer player, LocationMark mark) {
+        ResourceLocation key = ResourceLocation.tryParse(mark.dimension());
+        if (key == null) return null;
+        return player.server.getLevel(ResourceKey.create(Registries.DIMENSION, key));
+    }
+
     /** La distance entre le joueur et sa marque, en blocs. */
     public static double distanceTo(Player player, LocationMark mark) {
         return Math.sqrt(player.position().distanceToSqr(mark.x(), mark.y(), mark.z()));
@@ -167,6 +188,7 @@ public class LocationTeleportSkill extends Skill {
         if (dest == null) return false;
 
         boolean cross = crossDimension(player, dest);
+        ServerLevel target = null;
         if (cross) {
             if (!canCrossDimension(data)) {
                 player.displayClientMessage(
@@ -174,28 +196,44 @@ public class LocationTeleportSkill extends Skill {
                         true);
                 return false;
             }
-            // La marque est dans une autre dimension : le port sait le dire, mais ne sait
-            // pas encore y aller. Voir l'ecart assume en tete de classe.
-            player.displayClientMessage(
-                    Component.translatable("ac.ability.teleporter.location_teleport.err_dim"), true);
-            return false;
+            target = dimensionOf(player, dest);
+            if (target == null) {
+                // Le serveur ne connait pas cette dimension : une marque posee sur un monde
+                // qu'on a retire, par exemple. Le dire vaut mieux qu'y disparaitre.
+                player.displayClientMessage(
+                        Component.translatable("ac.ability.teleporter.location_teleport.err_dim"),
+                        true);
+                return false;
+            }
         }
 
         double distance = distanceTo(player, dest);
         // L'original payait sans verifier (`consumeWithForce`) : le prix a deja ete montre a
-        // l'ecran, et refuser ici laisserait le joueur devant un bouton qui ne fait rien.
-        data.performForced(cpCost(data, distance, false), OVERLOAD);
+        // l'ecran, et refuser ici laisserait le joueur devant un bouton qui ne fait rien. Et
+        // le facteur vaut 2 des qu'on change de dimension, comme chez lui.
+        data.performForced(cpCost(data, distance, cross), OVERLOAD);
 
         Vec3 from = player.position();
         for (LivingEntity companion : companions(player)) {
             Vec3 offset = companion.position().subtract(from);
             if (companion.isPassenger()) companion.stopRiding();
-            companion.teleportTo(dest.x() + offset.x, dest.y() + offset.y, dest.z() + offset.z);
+            if (target != null) {
+                companion.teleportTo(target, dest.x() + offset.x, dest.y() + offset.y,
+                        dest.z() + offset.z, java.util.Set.of(), companion.getYRot(),
+                        companion.getXRot());
+            } else {
+                companion.teleportTo(dest.x() + offset.x, dest.y() + offset.y, dest.z() + offset.z);
+            }
             companion.fallDistance = 0.0f;
         }
 
         if (player.isPassenger()) player.stopRiding();
-        player.teleportTo(dest.x(), dest.y(), dest.z());
+        if (target != null) {
+            player.teleportTo(target, dest.x(), dest.y(), dest.z(), player.getYRot(),
+                    player.getXRot());
+        } else {
+            player.teleportTo(dest.x(), dest.y(), dest.z());
+        }
         player.fallDistance = 0.0f;
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
 

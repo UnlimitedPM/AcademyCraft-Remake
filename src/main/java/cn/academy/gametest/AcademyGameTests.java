@@ -2335,6 +2335,37 @@ public final class AcademyGameTests {
         assertTrue(helper, data.getSkillExp(skill) > 0.9f, "un saut verse son experience");
 
         chicken.discard();
+
+        // Une marque d'une AUTRE dimension : accessible, mais le serveur peut ne pas connaitre
+        // ce monde. C'est le cas d'une marque posee sur un monde qu'un mod a emporte — le nom
+        // est tout ce qu'une marque retient, donc il faut le lui demander avant d'y aller.
+        assertTrue(helper, skill.canCrossDimension(data),
+                "a pleine experience, on peut traverser une dimension");
+        data.addMark("nulle part", "academy:nulle_part", targetX, abs.getY(), abs.getZ() + 0.5);
+        int reserveAvant = (int) data.getControlPoint();
+        assertFalse(helper, skill.perform(player, data, 1),
+                "une dimension que le serveur ne connait pas ne s'atteint pas");
+        assertValue(helper, reserveAvant, (int) data.getControlPoint(),
+                "et un refus ne se paie pas");
+
+        var teleport = cn.academy.ability.teleporter.LocationTeleportSkill.class;
+        assertTrue(helper,
+                cn.academy.ability.teleporter.LocationTeleportSkill.dimensionOf(player,
+                        data.getMark(1)) == null,
+                "le serveur ne connait pas cette dimension-la");
+        assertTrue(helper,
+                cn.academy.ability.teleporter.LocationTeleportSkill.dimensionOf(player,
+                        data.getMark(0)) != null,
+                "mais il connait la sienne, celle ou la marque a ete posee");
+        // Et celles du jeu : un serveur en charge trois, et le nether en fait partie. C'est
+        // la preuve que `dimensionOf` sait lire un nom de dimension du jeu, pas seulement le
+        // sien — c'est-a-dire que la traversee a de quoi aboutir.
+        assertTrue(helper,
+                cn.academy.ability.teleporter.LocationTeleportSkill.dimensionOf(player,
+                        new cn.academy.ability.teleporter.LocationMark("nether", "minecraft:the_nether",
+                                0, 64, 0)) != null,
+                "le nether doit exister sur un serveur en charge");
+
         helper.succeed();
     }
 

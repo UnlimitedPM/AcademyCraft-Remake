@@ -191,7 +191,7 @@
   "ac.ability.teleporter.location_teleport.name": "Location Teleport",
   "ac.ability.teleporter.location_teleport.err_exp": "Not enough experience to cross dimensions",
   "ac.ability.teleporter.location_teleport.err_cp": "Not enough Control Points for that trip",
-  "ac.ability.teleporter.location_teleport.err_dim": "Cross-dimension travel is not ported yet",
+  "ac.ability.teleporter.location_teleport.err_dim": "The server does not know this dimension",
   "ac.ability.teleporter.location_teleport.name_hint": "Name this place",
   "ac.ability.teleporter.location_teleport.mark_here": "Mark here",
   "ac.ui.location_teleport.title": "Teleport Marks",
