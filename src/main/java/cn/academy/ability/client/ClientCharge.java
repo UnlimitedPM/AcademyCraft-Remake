@@ -15,14 +15,16 @@ public final class ClientCharge {
     private static boolean sustained;
     private static int ticks;
     private static int maxTicks = 1;
+    private static String skill;
 
     private ClientCharge() {}
 
     /** Ouvre une charge. {@code maxTicks} sert uniquement a calculer la proportion. */
-    public static void begin(int maxTicks) {
+    public static void begin(String skill, int maxTicks) {
         active = true;
         sustained = false;
         ticks = 0;
+        ClientCharge.skill = skill;
         ClientCharge.maxTicks = Math.max(1, maxTicks);
     }
 
@@ -34,10 +36,11 @@ public final class ClientCharge {
      * touche tient quelque chose — sans lui, le maintien serait invisible jusqu'a ce
      * que ses ressources s'epuisent.
      */
-    public static void beginSustained() {
+    public static void beginSustained(String skill) {
         active = false;
         sustained = true;
         ticks = 0;
+        ClientCharge.skill = skill;
     }
 
     /** Avance d'un tick tant que la touche est tenue. */
@@ -50,6 +53,17 @@ public final class ClientCharge {
         active = false;
         sustained = false;
         ticks = 0;
+        skill = null;
+    }
+
+    /**
+     * Le nom de la competence en cours, ou {@code null}.
+     *
+     * Sert a la boucle sonore du maintien : c'est elle qui sait quel son suivre et quand
+     * le couper, sans que la competence ait a le dire.
+     */
+    public static String getSkill() {
+        return skill;
     }
 
     public static boolean isActive() {

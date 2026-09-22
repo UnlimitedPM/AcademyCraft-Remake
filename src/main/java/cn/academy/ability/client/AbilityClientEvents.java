@@ -98,6 +98,12 @@ public class AbilityClientEvents {
         for (Binding binding : BINDINGS) {
             tick(binding);
         }
+
+        // Les boucles sonores des maintiens, une seule a la fois : le port retient la
+        // competence en cours, et le suivi du joueur se fait tout seul. Appele apres les
+        // touches, pour que le relachement coupe la boucle au meme tick.
+        cn.academy.sound.client.LoopSounds.tick(
+                net.minecraft.client.Minecraft.getInstance().player, ClientCharge.getSkill());
     }
 
     /** La direction visee par le clavier, ou 0 : le scintillement saute au relachement. */
@@ -130,9 +136,9 @@ public class AbilityClientEvents {
                 // la charge — un retour visuel cote client que le port n'a pas encore de
                 // crochet pour reproduire. Le bouclier, lui, a son propre temoin.
                 int max = skill.getMaxChargeTicks(ClientAbilityData.get());
-                if (max > 0) ClientCharge.begin(max);
+                if (max > 0) ClientCharge.begin(skill.getName(), max);
             } else if (skill.isHeld()) {
-                ClientCharge.beginSustained();
+                ClientCharge.beginSustained(skill.getName());
             }
         }
 
