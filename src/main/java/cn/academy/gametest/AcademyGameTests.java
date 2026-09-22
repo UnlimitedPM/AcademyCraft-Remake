@@ -1978,6 +1978,44 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Les deux gestes du client, du cote du serveur.
+     *
+     * <p>Le client ne fait que demander : c'est ce chemin-ci qui change la donnee, et qui la
+     * renvoie ensuite complete. Un ecran qui se tromperait ne peut donc rien casser — il
+     * sera corrige par le prochain envoi du serveur.
+     */
+    @GameTest(template = "empty")
+    public static void leServeurRangeCeQueLeClientDemande(GameTestHelper helper) {
+        var player = ownPlayer(helper, "preregle_serveur");
+        var data = cn.academy.ability.preset.PresetTracker.of(player);
+        assertTrue(helper, data != null, "la capacite doit etre attachee");
+
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.ASSIGN, 2, 1, "railgun");
+        assertValue(helper, "railgun", data.getPreset(2).nameAt(1), "la competence doit etre rangee");
+        assertTrue(helper, data.getPreset(0).isEmpty(), "et dans le prereglage demande");
+
+        // Le meme geste avec un nom nul libere la touche : c'est ainsi qu'on efface.
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.ASSIGN, 2, 1, null);
+        assertTrue(helper, data.getPreset(2).isEmpty(), "une touche se libere");
+
+        // Un prereglage hors bornes est refuse, et un changement ramene dans le tour.
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.ASSIGN, 9, 0, "arc_gen");
+        assertTrue(helper, data.getPreset(0).isEmpty(), "un prereglage hors bornes ne range rien");
+
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.SWITCH, 6, 0, null);
+        assertValue(helper, 2, data.getCurrentId(), "un changement revient dans le tour");
+
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.SWITCH, -1, 0, null);
+        assertValue(helper, 2, data.getCurrentId(), "et un identifiant negatif ne fait rien");
+        helper.succeed();
+    }
+
+    /**
      * Les tutoriels livres, et les objets qui les ouvrent.
      *
      * <p>Le contenu lui-meme se relit dans les ressources, en JUnit. Ce que JUnit ne

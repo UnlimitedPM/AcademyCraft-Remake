@@ -66,22 +66,31 @@ public class PresetActionPacket {
     public static void handle(PresetActionPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ServerPlayer player = ctx.getSender();
-        ctx.enqueueWork(() -> {
-            if (player == null) return;
-            PresetData data = PresetTracker.of(player);
-            if (data == null) return;
-
-            if (msg.action == Action.SWITCH) {
-                data.switchTo(msg.presetId);
-                // Le client ne se contente pas de suivre : il pourrait se tromper. On lui
-                // renvoie donc l'etat, et c'est lui qui fait foi.
-                PresetTracker.sync(player);
-            } else {
-                if (msg.presetId < 0 || msg.presetId >= PresetData.MAX_PRESETS) return;
-                data.getPreset(msg.presetId).assign(msg.key, msg.skillName);
-                PresetTracker.sync(player);
-            }
-        });
+        ctx.enqueueWork(() -> apply(player, msg.action, msg.presetId, msg.key, msg.skillName));
         ctx.setPacketHandled(true);
+    }
+
+    /**
+     * Ce que le serveur fait d'une demande, sans passer par le reseau.
+     *
+     * <p>Extrait du gestionnaire pour que le meme chemin s'exerce en GameTest : le client
+     * ne fait que demander, et c'est ici que la donnee change — puis redescend, complete.
+     */
+    public static void apply(@Nullable ServerPlayer player, Action action, int presetId, int key,
+                             @Nullable String skillName) {
+        if (player == null) return;
+        PresetData data = PresetTracker.of(player);
+        if (data == null) return;
+
+        if (action == Action.SWITCH) {
+            data.switchTo(presetId);
+        } else {
+            if (presetId < 0 || presetId >= PresetData.MAX_PRESETS) return;
+            data.getPreset(presetId).assign(key, skillName);
+        }
+
+        // Le client ne se contente pas de suivre : il pourrait se tromper. On lui renvoie
+        // donc l'etat, et c'est lui qui fait foi.
+        PresetTracker.sync(player);
     }
 }

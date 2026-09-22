@@ -10,8 +10,14 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * Temporary one-key-per-skill scheme until the preset/key-mapping system is ported.
- * Wiring lives in {@link AbilityClientEvents}.
+ * Les touches du mod : une par competence, et celles des prereglages.
+ *
+ * <p>Les touches par competence sont un <b>palliatif</b>, herite de la penurie de touches :
+ * l'original n'en donnait que quatre, et quatre prereglages pour dire ce qu'elles allument.
+ * Les deux systemes vivent cote a cote le temps que les prereglages soient reglables depuis
+ * le jeu — les quatre touches d'aptitude etant, elles, deja la reponse complete.
+ *
+ * <p>Le cablage vit dans {@link AbilityClientEvents}.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class AbilityKeyBindings {
@@ -19,6 +25,33 @@ public class AbilityKeyBindings {
     public static final KeyMapping ACTIVATE_SKILL = new KeyMapping(
             "key.academy.activate_skill", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_R, "key.categories.academy");
+
+    // ------------------------------------------------------------------
+    // Les prereglages
+    // ------------------------------------------------------------------
+
+    /**
+     * Les quatre touches d'aptitude : ce sont les prereglages qui disent ce qu'elles font.
+     *
+     * <p>Le pave numerique est libre, l'alphabet et la ponctuation ne le sont plus : c'est
+     * la consequence directe d'une touche par competence. Comme toutes les touches du mod,
+     * elles se reconfigurent dans les options du jeu.
+     */
+    public static final KeyMapping ABILITY_1 = abilityKey("key.academy.ability_1", InputConstants.KEY_NUMPAD1);
+    public static final KeyMapping ABILITY_2 = abilityKey("key.academy.ability_2", InputConstants.KEY_NUMPAD2);
+    public static final KeyMapping ABILITY_3 = abilityKey("key.academy.ability_3", InputConstants.KEY_NUMPAD3);
+    public static final KeyMapping ABILITY_4 = abilityKey("key.academy.ability_4", InputConstants.KEY_NUMPAD4);
+
+    /** Le passage au prereglage suivant, qui fait le tour des quatre. */
+    public static final KeyMapping PRESET_NEXT = abilityKey("key.academy.preset_next", InputConstants.KEY_NUMPAD5);
+
+    /** L'ecran qui regle les prereglages. */
+    public static final KeyMapping PRESET_EDIT = abilityKey("key.academy.preset_edit", InputConstants.KEY_NUMPAD6);
+
+    private static KeyMapping abilityKey(String description, int defaultKey) {
+        return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+                defaultKey, "key.categories.academy");
+    }
 
     public static final KeyMapping ACTIVATE_ARC_GEN = new KeyMapping(
             "key.academy.activate_arc_gen", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
@@ -247,5 +280,13 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_PLASMA_CANNON);
         event.register(ACTIVATE_MINE_DETECT);
         event.register(ACTIVATE_MAG_MANIP);
+
+        // Les prereglages : quatre touches d'aptitude, le changement, et l'ecran de reglage.
+        event.register(ABILITY_1);
+        event.register(ABILITY_2);
+        event.register(ABILITY_3);
+        event.register(ABILITY_4);
+        event.register(PRESET_NEXT);
+        event.register(PRESET_EDIT);
     }
 }

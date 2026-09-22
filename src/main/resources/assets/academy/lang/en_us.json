@@ -165,6 +165,19 @@
 
   "academy.developer.reset": "Change",
   "academy.developer.reset.tooltip": "Forget this category and take another: hold a magnetic coil, carry an induction factor, and use the advanced developer",
+
+  "key.academy.ability_1": "Ability 1",
+  "key.academy.ability_2": "Ability 2",
+  "key.academy.ability_3": "Ability 3",
+  "key.academy.ability_4": "Ability 4",
+  "key.academy.preset_next": "Next preset",
+  "key.academy.preset_edit": "Edit presets",
+
+  "academy.preset.title": "Ability presets",
+  "academy.preset.hint": "Pick a learned ability, then click the key you want it on. Right click clears a key. Click a number to use that preset.",
+  "academy.preset.learned": "Learned",
+  "academy.preset.slots": "Keys of each preset",
+  "academy.preset.none": "Nothing learned yet",
   "academy.developer.skill_exp": "Experience %s%%",
 
   "academy.learn.level": "Requires category level %s",

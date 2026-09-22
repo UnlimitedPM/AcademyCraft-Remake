@@ -18,6 +18,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -35,18 +36,39 @@ public class AbilityClientEvents {
         final String category;
         final String skill;
 
+        /**
+         * La touche d'aptitude dont cette entree depend, ou -1.
+         *
+         * <p>Les quatre touches d'aptitude ne declenchent rien par elles-memes : c'est le
+         * prereglage en service qui dit ce qu'elles allument, et il peut changer d'un
+         * instant a l'autre. Le reste du cablage est donc le meme, mais la competence est
+         * relue a chaque appui.
+         */
+        final int presetSlot;
+
         /** Vrai entre l'appui et le relachement d'une competence qui se charge. */
         boolean charging;
 
         Binding(KeyMapping key, String category, String skill) {
+            this(key, category, skill, -1);
+        }
+
+        Binding(KeyMapping key, String category, String skill, int presetSlot) {
             this.key = key;
             this.category = category;
             this.skill = skill;
+            this.presetSlot = presetSlot;
         }
     }
 
     // Cablage en attendant le systeme de presets et de touches de l'original.
     private static final List<Binding> BINDINGS = List.of(
+            // Les quatre touches d'aptitude : ce sont les prereglages qui disent ce
+            // qu'elles font. C'est la reponse de l'original a la penurie de touches.
+            new Binding(AbilityKeyBindings.ABILITY_1, null, null, 0),
+            new Binding(AbilityKeyBindings.ABILITY_2, null, null, 1),
+            new Binding(AbilityKeyBindings.ABILITY_3, null, null, 2),
+            new Binding(AbilityKeyBindings.ABILITY_4, null, null, 3),
             new Binding(AbilityKeyBindings.ACTIVATE_SKILL, VecmanipCategory.NAME, "vec_accel"),
             new Binding(AbilityKeyBindings.ACTIVATE_ARC_GEN, ElectromasterCategory.NAME, "arc_gen"),
             new Binding(AbilityKeyBindings.ACTIVATE_RAILGUN, ElectromasterCategory.NAME, "railgun"),
@@ -99,11 +121,72 @@ public class AbilityClientEvents {
             tick(binding);
         }
 
+        tickPresetKeys();
+
         // Les boucles sonores des maintiens, une seule a la fois : le port retient la
         // competence en cours, et le suivi du joueur se fait tout seul. Appele apres les
         // touches, pour que le relachement coupe la boucle au meme tick.
         cn.academy.sound.client.LoopSounds.tick(
                 net.minecraft.client.Minecraft.getInstance().player, ClientCharge.getSkill());
+    }
+
+    /**
+     * La competence d'une touche.
+     *
+     * <p>Une touche fixe la tient de son cablage ; une touche d'aptitude la demande au
+     * prereglage en service, qui peut avoir change depuis le dernier tick. Le nom est
+     * cherche dans les quatre categories parce que le prereglage ne retient que lui — comme
+     * partout dans le port.
+     */
+    @Nullable
+    private static Skill skillOf(Binding binding) {
+        if (binding.presetSlot >= 0) {
+            return skillByName(cn.academy.ability.preset.client.ClientPresetData
+                    .skillAt(binding.presetSlot));
+        }
+        Category category = CategoryManager.INSTANCE.getCategory(binding.category);
+        return category == null ? null : category.getSkill(binding.skill);
+    }
+
+    /** Une competence par son nom, ou {@code null} si aucune categorie ne la porte. */
+    @Nullable
+    private static Skill skillByName(@Nullable String name) {
+        if (name == null) return null;
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            Skill skill = category.getSkill(name);
+            if (skill != null) return skill;
+        }
+        return null;
+    }
+
+    /**
+     * Ce que les deux touches de prereglage declenchent.
+     *
+     * <p>Le changement est demande au serveur, qui renvoie ensuite l'etat complet : le
+     * client ne modifie jamais son exemplaire, il n'a donc aucun moyen de diverger. La
+     * condition de l'original — n'y toucher que si l'aptitude est eveillee — n'est pas
+     * reprise : le port n'a pas d'etat « eveille », et une touche qui ne fait rien sans
+     * rien dire serait pire que le contraire.
+     */
+    private static void tickPresetKeys() {
+        if (minecraftPlayer() == null) return;
+
+        if (AbilityKeyBindings.PRESET_NEXT.consumeClick()) {
+            var data = cn.academy.ability.preset.client.ClientPresetData.get();
+            AbilityNetwork.CHANNEL.sendToServer(
+                    cn.academy.ability.preset.network.PresetActionPacket
+                            .switchTo(data.getCurrentId() + 1));
+        }
+
+        if (AbilityKeyBindings.PRESET_EDIT.consumeClick()) {
+            net.minecraft.client.Minecraft.getInstance()
+                    .setScreen(new cn.academy.ability.preset.client.PresetEditScreen());
+        }
+    }
+
+    @Nullable
+    private static net.minecraft.client.player.LocalPlayer minecraftPlayer() {
+        return net.minecraft.client.Minecraft.getInstance().player;
     }
 
     /** La direction visee par le clavier, ou 0 : le scintillement saute au relachement. */
@@ -113,10 +196,10 @@ public class AbilityClientEvents {
     private static final boolean[] directionHeld = new boolean[4];
 
     private static void tick(Binding binding) {
-        Category category = CategoryManager.INSTANCE.getCategory(binding.category);
-        if (category == null) return;
-        Skill skill = category.getSkill(binding.skill);
+        Skill skill = skillOf(binding);
         if (skill == null) return;
+        Category category = skill.getCategory();
+        if (category == null) return;
 
         // Appui : l'original envoyait MSG_KEYDOWN. Une competence qui se charge ouvre
         // son compteur, une competence tenue vit a partir de maintenant, une autre part
