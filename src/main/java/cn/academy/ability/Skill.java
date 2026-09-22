@@ -380,6 +380,17 @@ public abstract class Skill {
         return 0f;
     }
 
+    /**
+     * Cout en CP, pour les competences dont le cout suit l'experience.
+     *
+     * Les competences portees jusqu'ici ont un cout fixe, d'ou le {@link #getCpCost()}
+     * sans donnee ; l'original faisait pourtant varier celui du lancer d'objet de 35 a
+     * 100. Par defaut, les deux disent la meme chose.
+     */
+    public float getCpCost(AbilityData data) {
+        return getCpCost();
+    }
+
     /** Called server-side when the player triggers this skill's key. */
     public void onActivate(Player player, AbilityData data) {}
 

@@ -260,6 +260,24 @@ class SkillCurvesTest {
         assertBounds("surcout d'ouverture", 60f, 30f, movement::getOverloadCost, movement);
     }
 
+    @Test
+    void leLancerDObjetSuitLExperience() {
+        var throwing = cn.academy.ability.teleporter.TeleporterCategory.THREATENING_TELEPORT;
+
+        assertTrue(throwing.isChargeable(), "le lancer se charge");
+        assertEquals(0, throwing.getMinChargeTicks(new AbilityData()),
+                "et part des le relachement, sans minimum");
+        assertEquals(0, throwing.getMaxChargeTicks(new AbilityData()));
+
+        assertBounds("degats du lancer", 3f, 6f, throwing::damage, throwing);
+        Curve range = data -> (float) throwing.range(data);
+        assertBounds("portee du lancer", 8f, 15f, range, throwing);
+        assertBounds("surcout du lancer", 18f, 10f, throwing::getOverloadCost, throwing);
+        Curve cp = throwing::getCpCost;
+        assertBounds("cout en CP du lancer", 1.25f, 3.5f, cp, throwing);
+        assertCooldownBounds("recharge du lancer", throwing, 30, 15);
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");

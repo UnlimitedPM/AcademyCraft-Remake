@@ -42,6 +42,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.light_shield", 2),
             Map.entry("meltdowner.meltdowner", 3),
             Map.entry("teleporter.dim_folding_theorem", 1),
+            Map.entry("teleporter.threatening_teleport", 1),
             Map.entry("teleporter.penetrate_teleport", 2),
             Map.entry("teleporter.shift_tp", 4),
             Map.entry("vecmanip.vec_accel", 2),
@@ -55,6 +56,8 @@ class PortedSkillsTest {
             "electromaster.thunder_clap", "electromaster.thunder_bolt",
             "electromaster.charging", "electromaster.arc_gen",
             "electromaster.mag_movement", "electromaster.arc_gen",
+            "teleporter.dim_folding_theorem", "teleporter.threatening_teleport",
+            "teleporter.penetrate_teleport", "teleporter.threatening_teleport",
             "meltdowner.light_shield", "meltdowner.electron_bomb",
             "meltdowner.meltdowner", "meltdowner.light_shield");
 
@@ -189,6 +192,9 @@ class PortedSkillsTest {
             Map.entry("meltdowner.meltdowner", 0.0024f),
             // 0,00014 par bloc, pour un saut d'une dizaine de blocs
             Map.entry("teleporter.penetrate_teleport", 0.00014f * 10f),
+            // 0,0006 pour un lancer dans le vide ; 0,003 quand l'objet frappe, verse par
+            // l'effet lui-meme
+            Map.entry("teleporter.threatening_teleport", 0.0006f),
             // montant de base : l'original ajoutait 0,002 par entite traversee
             Map.entry("teleporter.shift_tp", 0.002f),
             Map.entry("vecmanip.vec_accel", 0.002f));
@@ -233,6 +239,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.thunder_clap", 390f),
             Map.entry("electromaster.charging", 65f),
             Map.entry("electromaster.mag_movement", 60f),
+            Map.entry("teleporter.threatening_teleport", 18f),
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),

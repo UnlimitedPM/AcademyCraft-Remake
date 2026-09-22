@@ -58,7 +58,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_BOLT, ElectromasterCategory.NAME, "thunder_bolt"),
             new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_CLAP, ElectromasterCategory.NAME, "thunder_clap"),
             new Binding(AbilityKeyBindings.ACTIVATE_CHARGING, ElectromasterCategory.NAME, "charging"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MAG_MOVEMENT, ElectromasterCategory.NAME, "mag_movement"));
+            new Binding(AbilityKeyBindings.ACTIVATE_MAG_MOVEMENT, ElectromasterCategory.NAME, "mag_movement"),
+            new Binding(AbilityKeyBindings.ACTIVATE_THREATENING_TELEPORT, TeleporterCategory.NAME,
+                    "threatening_teleport"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

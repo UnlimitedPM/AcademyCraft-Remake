@@ -71,6 +71,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_mag_movement", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_V, "key.categories.academy");
 
+    /** Lancer l'objet tenu : la touche reste enfoncee, l'objet part au relachement. */
+    public static final KeyMapping ACTIVATE_THREATENING_TELEPORT = new KeyMapping(
+            "key.academy.activate_threatening_teleport", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_X, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -86,5 +91,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_THUNDER_CLAP);
         event.register(ACTIVATE_CHARGING);
         event.register(ACTIVATE_MAG_MOVEMENT);
+        event.register(ACTIVATE_THREATENING_TELEPORT);
     }
 }

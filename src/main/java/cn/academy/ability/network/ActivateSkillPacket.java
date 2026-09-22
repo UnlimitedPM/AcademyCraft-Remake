@@ -139,7 +139,7 @@ public class ActivateSkillPacket {
         // L'original refusait de s'ouvrir quand il n'y avait rien a viser, et refusait
         // donc sans rien facturer : le port verifie avant de payer, pas apres.
         if (!skill.canStart(player, data)) return;
-        if (!data.perform(skill.getCpCost(), skill.getOverloadCost(data))) {
+        if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
             player.displayClientMessage(
                     Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
             return;
@@ -200,7 +200,7 @@ public class ActivateSkillPacket {
         // Les deux ressources ensemble ou aucune : portage de CPData.perform. Sans
         // cette atomicite, une competence refusee faute de CP laisserait quand meme
         // du surcout derriere elle.
-        if (!data.perform(skill.getCpCost(), skill.getOverloadCost(data))) {
+        if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
             player.displayClientMessage(
                     Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
             return;

@@ -1713,6 +1713,26 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * L'aiguille du lancer d'objet, le seul objet que l'original distinguait.
+     *
+     * Le bonus se lit sur un objet reel, donc dans les registres : c'est pourquoi il est
+     * ici et pas en JUnit.
+     */
+    @GameTest(template = "empty")
+    public static void uneAiguilleLanceeFaitPlusMal(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.THREATENING_TELEPORT;
+        var data = new cn.academy.ability.AbilityData();
+
+        float needle = skill.damage(data, new ItemStack(ModItems.NEEDLE.get()));
+        float stick = skill.damage(data, new ItemStack(net.minecraft.world.item.Items.STICK));
+
+        assertClose(helper, needle, stick * 1.5f, "une aiguille fait moitie plus mal");
+        assertClose(helper, stick, skill.damage(data), "et les autres objets font le degat de base");
+
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le generateur de phase
     // ------------------------------------------------------------------
