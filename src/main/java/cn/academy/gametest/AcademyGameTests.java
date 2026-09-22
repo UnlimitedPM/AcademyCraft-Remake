@@ -6,6 +6,8 @@ import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ModBlocks;
 import cn.academy.ModFluids;
 import cn.academy.ModItems;
+import cn.academy.WindgenBaseBlockEntity;
+import cn.academy.WindgenMainBlockEntity;
 import cn.academy.energy.ImagNetworkData;
 import cn.academy.energy.MatrixBlockEntity;
 import cn.academy.energy.NodeBlockEntity;
@@ -1052,6 +1054,229 @@ public final class AcademyGameTests {
                         net.minecraft.world.level.material.Fluids.WATER),
                 "l'eau ne doit pas etre acceptee");
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Reseau energetique : l'eolienne, second generateur
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void windgenBaseIsAnEnergyGenerator(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.WINDGEN_BASE.get().defaultBlockState()
+                .setValue(cn.academy.WindgenBaseBlock.HALF,
+                        net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER));
+        var base = (WindgenBaseBlockEntity) helper.getBlockEntity(rel);
+
+        // Valeurs de TileWindGenBase : tampon 20000, bande passante LATENCY_MK3
+        // = 300, production maximale 15 par tick.
+        assertValue(helper, 20000, base.getMaxEnergyStored(), "tampon de l'eolienne");
+        assertClose(helper, 300.0d, base.getBandwidth(), "bande passante de l'eolienne");
+        assertClose(helper, 15.0d, WindgenBaseBlockEntity.MAX_GENERATION_SPEED, "production maximale");
+        assertValue(helper, 8, WindgenBaseBlockEntity.MIN_PILLARS, "piliers minimum");
+        assertValue(helper, 40, WindgenBaseBlockEntity.MAX_PILLARS, "piliers maximum");
+
+        base.setEnergy(1000.0d);
+        assertClose(helper, 250.0d, base.provideEnergy(250.0d), "energie fournie sur demande");
+        assertClose(helper, 750.0d, base.getEnergy(), "reste du tampon");
+        assertClose(helper, 750.0d, base.provideEnergy(900.0d), "le tampon se vide");
+        assertClose(helper, 0.0d, base.provideEnergy(100.0d), "un tampon vide ne fournit rien");
+        helper.succeed();
+    }
+
+    /** Seules les parties utiles portent un block entity, pas les leurres. */
+    @GameTest(template = "empty")
+    public static void windgenOnlyUsefulPartsHaveBlockEntities(GameTestHelper helper) {
+        var lowerHalf = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+        var upperHalf = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
+
+        BlockPos lower = new BlockPos(1, 1, 1);
+        BlockPos upper = new BlockPos(1, 2, 1);
+        helper.setBlock(lower, ModBlocks.WINDGEN_BASE.get().defaultBlockState()
+                .setValue(cn.academy.WindgenBaseBlock.HALF, lowerHalf));
+        helper.setBlock(upper, ModBlocks.WINDGEN_BASE.get().defaultBlockState()
+                .setValue(cn.academy.WindgenBaseBlock.HALF, upperHalf));
+
+        assertValue(helper, true, helper.getBlockEntity(lower) instanceof WindgenBaseBlockEntity,
+                "la base basse doit porter le block entity");
+        assertValue(helper, null, helper.getBlockEntity(upper),
+                "la moitie haute ne doit pas en avoir, sinon elle aurait son propre tampon");
+
+        BlockPos center = new BlockPos(2, 1, 1);
+        BlockPos front = new BlockPos(2, 1, 2);
+        helper.setBlock(center, ModBlocks.WINDGEN_MAIN.get().defaultBlockState()
+                .setValue(cn.academy.WindgenMainBlock.PART, cn.academy.WindgenMainBlock.Part.CENTER));
+        helper.setBlock(front, ModBlocks.WINDGEN_MAIN.get().defaultBlockState()
+                .setValue(cn.academy.WindgenMainBlock.PART, cn.academy.WindgenMainBlock.Part.FRONT));
+
+        assertValue(helper, true, helper.getBlockEntity(center) instanceof WindgenMainBlockEntity,
+                "le centre du rotor doit porter le block entity");
+        assertValue(helper, null, helper.getBlockEntity(front),
+                "les bouts du rotor ne doivent pas en avoir, sinon il y aurait trois helices");
+        helper.succeed();
+    }
+
+    /**
+     * La zone balayee par les pales est un carre vertical. Le test se place loin
+     * au-dessus des structures pour avoir de l'air garanti, pose un obstacle dans
+     * la zone, et verifie que la reponse change.
+     */
+    @GameTest(template = "empty")
+    public static void windgenBladeAreaIsChecked(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos rotorPos = helper.absolutePos(new BlockPos(1, 1, 1)).atY(120);
+
+        var facing = net.minecraft.core.Direction.NORTH;
+        var state = ModBlocks.WINDGEN_MAIN.get().defaultBlockState()
+                .setValue(cn.academy.WindgenMainBlock.FACING, facing)
+                .setValue(cn.academy.WindgenMainBlock.PART, cn.academy.WindgenMainBlock.Part.CENTER);
+        level.setBlock(rotorPos, state, 3);
+        clearBladeArea(level, rotorPos, facing);
+
+        assertTrue(helper, WindgenMainBlockEntity.computeNoObstacle(level, rotorPos, state),
+                "de l'air partout : les pales doivent etre degagees");
+
+        // Un bloc dans le plan, a cinq blocs du centre et trois blocs plus haut.
+        var side = facing.getClockWise();
+        BlockPos obstacle = rotorPos.relative(facing, 2).relative(side, 5).above(3);
+        level.setBlock(obstacle, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+        assertFalse(helper, WindgenMainBlockEntity.computeNoObstacle(level, rotorPos, state),
+                "un bloc dans la zone doit arreter les pales");
+
+        level.setBlock(obstacle, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        assertTrue(helper, WindgenMainBlockEntity.computeNoObstacle(level, rotorPos, state),
+                "l'obstacle retire, les pales doivent repartir");
+        helper.succeed();
+    }
+
+    /** Sans les huit piliers reglementaires, l'eolienne ne produit rien. */
+    @GameTest(template = "empty")
+    public static void windgenNeedsEnoughPillars(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos lower = helper.absolutePos(new BlockPos(1, 1, 1)).atY(80);
+
+        WindgenBaseBlockEntity base = buildWindgen(level, lower, 7);
+        WindgenMainBlockEntity rotor = rotorOf(level, lower, 7);
+        assertTrue(helper, rotor != null, "le rotor doit avoir ete construit");
+        rotor.getInventory().setStackInSlot(WindgenMainBlockEntity.SLOT_FAN,
+                new ItemStack(ModItems.WINDGEN_FAN.get()));
+
+        for (int i = 0; i < 20; i++) {
+            WindgenBaseBlockEntity.tick(level, lower, level.getBlockState(lower), base);
+        }
+
+        assertValue(helper, WindgenBaseBlockEntity.Completeness.NO_TOP, base.getCompleteness(level),
+                "sept piliers ne suffisent pas : la colonne est incomplete");
+        assertClose(helper, 0.0d, base.getSimulatedGeneration(level), "aucune production");
+        assertClose(helper, 0.0d, base.getEnergy(), "le tampon doit rester vide");
+        helper.succeed();
+    }
+
+    /**
+     * Le test de bout en bout : une colonne complete, une helice, rien devant les
+     * pales, et le tampon se remplit a la vitesse prevue par la formule
+     * d'altitude.
+     */
+    @GameTest(template = "empty")
+    public static void windgenGeneratesWhenComplete(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos lower = helper.absolutePos(new BlockPos(1, 1, 1)).atY(80);
+
+        WindgenBaseBlockEntity base = buildWindgen(level, lower, 8);
+        WindgenMainBlockEntity rotor = rotorOf(level, lower, 8);
+        assertTrue(helper, rotor != null, "le rotor doit avoir ete construit");
+        assertTrue(helper, !rotor.isFanInstalled(), "sans helice, rien ne tourne");
+
+        rotor.getInventory().setStackInSlot(WindgenMainBlockEntity.SLOT_FAN,
+                new ItemStack(ModItems.WINDGEN_FAN.get()));
+        assertTrue(helper, rotor.isFanInstalled(), "l'helice doit etre vue");
+
+        // La revision de la zone balayee n'a lieu que tous les 20 ticks.
+        for (int i = 0; i < 20; i++) {
+            WindgenMainBlockEntity.tick(level, rotor.getBlockPos(), level.getBlockState(rotor.getBlockPos()),
+                    rotor);
+        }
+
+        for (int i = 0; i < 20; i++) {
+            WindgenBaseBlockEntity.tick(level, lower, level.getBlockState(lower), base);
+        }
+
+        assertValue(helper, WindgenBaseBlockEntity.Completeness.COMPLETE, base.getCompleteness(level),
+                "la colonne doit etre reconnue complete");
+
+        // Altitude du rotor : base a 80, deux blocs de base, huit piliers.
+        int rotorY = 80 + 2 + 8;
+        double expected = (0.5d + 0.5d * Math.min(1.0d, (rotorY - 70.0d) / 90.0d)) * 15.0d;
+        assertClose(helper, expected, base.getSimulatedGeneration(level), "production a cette altitude");
+        assertTrue(helper, base.getEnergy() > 0.0d,
+                "le tampon aurait du se remplir, il est a " + base.getEnergy());
+        helper.succeed();
+    }
+
+    /**
+     * Construit une eolienne complete a une altitude ou l'air est garanti, et
+     * rend sa base.
+     *
+     * Les blocs sont poses directement sur le niveau et non par
+     * {@code helper.setBlock} : la colonne fait dix blocs de haut et sort de la
+     * structure de test, ce qui est justement le but — on veut du vide autour des
+     * pales.
+     */
+    private static WindgenBaseBlockEntity buildWindgen(ServerLevel level, BlockPos lower, int pillars) {
+        var lowerHalf = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+        var upperHalf = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
+
+        var baseState = ModBlocks.WINDGEN_BASE.get().defaultBlockState()
+                .setValue(cn.academy.WindgenBaseBlock.FACING, net.minecraft.core.Direction.NORTH)
+                .setValue(cn.academy.WindgenBaseBlock.HALF, lowerHalf);
+        level.setBlock(lower, baseState, 3);
+        level.setBlock(lower.above(), baseState.setValue(cn.academy.WindgenBaseBlock.HALF, upperHalf), 3);
+
+        for (int i = 0; i < pillars; i++) {
+            level.setBlock(lower.offset(0, 2 + i, 0),
+                    ModBlocks.WINDGEN_PILLAR.get().defaultBlockState(), 3);
+        }
+
+        var facing = net.minecraft.core.Direction.NORTH;
+        BlockPos center = lower.offset(0, 2 + pillars, 0);
+        var rotorState = ModBlocks.WINDGEN_MAIN.get().defaultBlockState()
+                .setValue(cn.academy.WindgenMainBlock.FACING, facing)
+                .setValue(cn.academy.WindgenMainBlock.PART, cn.academy.WindgenMainBlock.Part.CENTER);
+        level.setBlock(center, rotorState, 3);
+        level.setBlock(center.relative(facing), rotorState
+                .setValue(cn.academy.WindgenMainBlock.PART, cn.academy.WindgenMainBlock.Part.FRONT), 3);
+        level.setBlock(center.relative(facing.getOpposite()), rotorState
+                .setValue(cn.academy.WindgenMainBlock.PART, cn.academy.WindgenMainBlock.Part.BACK), 3);
+
+        clearBladeArea(level, center, facing);
+        return (WindgenBaseBlockEntity) level.getBlockEntity(lower);
+    }
+
+    /**
+     * Vide le plan balaye par les pales, et charge au passage les chunks qu'il
+     * traverse.
+     *
+     * Indispensable dans un test : les structures des autres tests sont posees
+     * cote a cote dans le meme monde, et un chunk non charge compte comme un
+     * obstacle. Sans ce nettoyage, le resultat dependrait de l'ordre des tests.
+     */
+    private static void clearBladeArea(ServerLevel level, BlockPos rotorCenter, net.minecraft.core.Direction facing) {
+        final int radius = 7;
+        BlockPos plane = rotorCenter.relative(facing, 2);
+        net.minecraft.core.Direction side = facing.getClockWise();
+
+        for (int along = -radius; along <= radius; along++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                level.setBlock(plane.relative(side, along).above(dy),
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+            }
+        }
+    }
+
+    /** Le rotor au sommet de la colonne construite par {@link #buildWindgen}. */
+    private static WindgenMainBlockEntity rotorOf(ServerLevel level, BlockPos lower, int pillars) {
+        BlockPos center = lower.offset(0, 2 + pillars, 0);
+        return level.getBlockEntity(center) instanceof WindgenMainBlockEntity rotor ? rotor : null;
     }
 
     @GameTest(template = "empty")

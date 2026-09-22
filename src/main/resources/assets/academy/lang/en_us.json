@@ -103,6 +103,11 @@
   "academy.metal_former.mode.etch": "Etching",
   "academy.metal_former.mode.refine": "Refining",
 
+  "academy.windgen_base.status.base_only": "No pillar column",
+  "academy.windgen_base.status.no_top": "Column incomplete",
+  "academy.windgen_base.status.complete": "Generating",
+  "academy.windgen_base.status.complete_not_working": "Stopped",
+
 
 
   "itemGroup.academy_tab": "AcademyCraft Remake"

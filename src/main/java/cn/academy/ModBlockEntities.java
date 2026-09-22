@@ -48,6 +48,20 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("imag_fusor", () ->
                     BlockEntityType.Builder.of(ImagFusorBlockEntity::new, ModBlocks.IMAG_FUSOR.get()).build(null));
 
+    /**
+     * L'eolienne a deux block entities : la base qui produit, et le rotor qui
+     * garde l'helice et surveille la zone balayee par les pales. Les blocs qui
+     * completent les deux structures (moitie haute de la base, parties avant et
+     * arriere du rotor) n'en ont pas : ce sont des leurres d'affichage.
+     */
+    public static final RegistryObject<BlockEntityType<WindgenBaseBlockEntity>> WINDGEN_BASE =
+            BLOCK_ENTITIES.register("windgen_base", () ->
+                    BlockEntityType.Builder.of(WindgenBaseBlockEntity::new, ModBlocks.WINDGEN_BASE.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<WindgenMainBlockEntity>> WINDGEN_MAIN =
+            BLOCK_ENTITIES.register("windgen_main", () ->
+                    BlockEntityType.Builder.of(WindgenMainBlockEntity::new, ModBlocks.WINDGEN_MAIN.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

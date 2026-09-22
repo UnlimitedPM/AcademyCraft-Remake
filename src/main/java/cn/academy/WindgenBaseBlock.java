@@ -2,6 +2,10 @@ package cn.academy;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -11,7 +15,11 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -19,11 +27,13 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
-public class WindgenBaseBlock extends Block {
+public class WindgenBaseBlock extends Block implements EntityBlock {
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
@@ -103,5 +113,61 @@ public class WindgenBaseBlock extends Block {
     @Override
     public boolean propagatesSkylightDown(BlockState state, BlockGetter reader, BlockPos pos) {
         return true;
+    }
+
+    // ------------------------------------------------------------------
+    // Block entity
+    // ------------------------------------------------------------------
+
+    /**
+     * Seule la moitie basse porte le block entity : les deux moities d'un meme
+     * bloc ne doivent pas avoir chacune leur tampon d'energie.
+     */
+    @Nullable
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return state.getValue(HALF) == DoubleBlockHalf.LOWER ? new WindgenBaseBlockEntity(pos, state) : null;
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
+                                                                 BlockEntityType<T> type) {
+        if (level.isClientSide || state.getValue(HALF) != DoubleBlockHalf.LOWER) return null;
+        if (type != ModBlockEntities.WINDGEN_BASE.get()) return null;
+        return (lvl, pos, st, be) -> {
+            if (be instanceof WindgenBaseBlockEntity base) WindgenBaseBlockEntity.tick(lvl, pos, st, base);
+        };
+    }
+
+    // ------------------------------------------------------------------
+    // Interaction
+    // ------------------------------------------------------------------
+
+    @Override
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
+                                 InteractionHand hand, BlockHitResult hit) {
+        if (level.isClientSide) return InteractionResult.SUCCESS;
+        if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.PASS;
+
+        // Le clic peut tomber sur la moitie haute : l'ecran est sur la basse.
+        BlockPos origin = state.getValue(HALF) == DoubleBlockHalf.LOWER ? pos : pos.below();
+        if (level.getBlockEntity(origin) instanceof WindgenBaseBlockEntity base) {
+            NetworkHooks.openScreen(serverPlayer, base, buf -> buf.writeBlockPos(origin));
+        }
+        return InteractionResult.CONSUME;
+    }
+
+    /**
+     * Retire la base du reseau. Le detachement se fait sur la donnee de
+     * sauvegarde et non sur le block entity, qui peut deja avoir disparu.
+     */
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock()) && state.getValue(HALF) == DoubleBlockHalf.LOWER
+                && level instanceof ServerLevel server) {
+            cn.academy.energy.NodeFinder.detach(server, pos);
+        }
+        super.onRemove(state, level, pos, newState, isMoving);
     }
 }

@@ -84,7 +84,12 @@ public class ModItems {
 
     public static final RegistryObject<Item> ENERGY_UNIT = ITEMS.register("energy_unit",
             () -> new Item(new Item.Properties().stacksTo(1)));
-    public static final RegistryObject<Item> WINDGEN_FAN = ITEMS.register("windgen_fan", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> WINDGEN_FAN = ITEMS.register("windgen_fan",
+            // L'original : setMaxStackSize(1) + setMaxDamage(100). Rien ne l'use
+            // en jeu, mais il n'est pas empilable et c'est ce qui compte pour
+            // l'emplacement du rotor. La durabilite est conservee pour ne pas
+            // s'ecarter de l'original plus que necessaire.
+            () -> new Item(new Item.Properties().stacksTo(1).durability(100)));
 
     public static final RegistryObject<Item> WINDGEN_BASE = ITEMS.register("windgen_base",
             () -> new BlockItem(ModBlocks.WINDGEN_BASE.get(), new Item.Properties()));
