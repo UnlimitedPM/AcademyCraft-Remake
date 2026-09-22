@@ -1,0 +1,25 @@
+{
+  "parent": "academy:ac_learning_skill",
+  "display": {
+    "icon": {
+      "item": "academy:coin"
+    },
+    "title": {
+      "translate": "advancements.general.ac_exp_full"
+    },
+    "description": {
+      "translate": "advancements.general.ac_exp_full.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ac_exp_full": {
+      "trigger": "academy:ac_exp_full"
+    }
+  },
+  "requirements": [
+    [
+      "ac_exp_full"
+    ]
+  ]
+}

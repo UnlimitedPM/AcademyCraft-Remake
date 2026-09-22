@@ -1,0 +1,27 @@
+{
+  "display": {
+    "icon": {
+      "item": "academy:logo"
+    },
+    "title": {
+      "translate": "advancements.general.root"
+    },
+    "description": {
+      "translate": "advancements.general.root.desc"
+    },
+    "background": "academy:textures/block/reso_ore.png",
+    "show_toast": false,
+    "announce_to_chat": false,
+    "frame": "task"
+  },
+  "criteria": {
+    "impossible": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "impossible"
+    ]
+  ]
+}

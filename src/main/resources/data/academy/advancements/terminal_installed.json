@@ -1,0 +1,25 @@
+{
+  "parent": "academy:open_misaka_cloud",
+  "display": {
+    "icon": {
+      "item": "academy:terminal_installer"
+    },
+    "title": {
+      "translate": "advancements.general.terminal_installed"
+    },
+    "description": {
+      "translate": "advancements.general.terminal_installed.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "terminal_installed": {
+      "trigger": "academy:terminal_installed"
+    }
+  },
+  "requirements": [
+    [
+      "terminal_installed"
+    ]
+  ]
+}

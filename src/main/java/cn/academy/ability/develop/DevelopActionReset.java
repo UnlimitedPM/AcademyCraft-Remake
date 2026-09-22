@@ -113,6 +113,11 @@ public class DevelopActionReset implements DevelopAction {
         // La bobine et le facteur y passent, comme dans l'original.
         player.getInventory().setItem(player.getInventory().selected, ItemStack.EMPTY);
         FactorItem.consume(player);
+
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
+                    cn.academy.advancements.AcademyAdvancements.CONVERT_CATEGORY);
+        }
     }
 
     /**

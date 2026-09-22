@@ -1,0 +1,25 @@
+{
+  "parent": "academy:dev_category",
+  "display": {
+    "icon": {
+      "item": "academy:needle"
+    },
+    "title": {
+      "translate": "advancements.general.ac_learning_skill"
+    },
+    "description": {
+      "translate": "advancements.general.ac_learning_skill.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ac_learning_skill": {
+      "trigger": "academy:ac_learning_skill"
+    }
+  },
+  "requirements": [
+    [
+      "ac_learning_skill"
+    ]
+  ]
+}

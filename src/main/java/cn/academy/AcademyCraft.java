@@ -29,6 +29,10 @@ public class AcademyCraft {
         ModEntities.register(modEventBus);
         ModSounds.register(modEventBus);
         ModBlockEntities.register(modEventBus); // <-- LA LIGNE MAGIQUE QUI MANQUAIT
+        // Les declencheurs de succes vivent dans la table de CriteriaTriggers, pas dans un
+        // registre : ils s'enregistrent donc au demarrage, avant que le premier monde ne
+        // lise ses fichiers de succes.
+        modEventBus.addListener(cn.academy.advancements.AcademyAdvancements::setup);
         ModCreativeTabs.register(modEventBus);
         ModMenus.register(modEventBus);
         // Types de biome modifier du mod (honore les options de generation de la config).

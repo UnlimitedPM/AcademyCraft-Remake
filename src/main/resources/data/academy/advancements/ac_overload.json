@@ -1,0 +1,25 @@
+{
+  "parent": "academy:ac_learning_skill",
+  "display": {
+    "icon": {
+      "item": "academy:cat_engine"
+    },
+    "title": {
+      "translate": "advancements.general.ac_overload"
+    },
+    "description": {
+      "translate": "advancements.general.ac_overload.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ac_overload": {
+      "trigger": "academy:ac_overload"
+    }
+  },
+  "requirements": [
+    [
+      "ac_overload"
+    ]
+  ]
+}

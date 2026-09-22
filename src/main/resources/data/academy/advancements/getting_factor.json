@@ -1,0 +1,25 @@
+{
+  "parent": "academy:root",
+  "display": {
+    "icon": {
+      "item": "academy:factor_electromaster"
+    },
+    "title": {
+      "translate": "advancements.general.getting_factor"
+    },
+    "description": {
+      "translate": "advancements.general.getting_factor.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "getting_factor": {
+      "trigger": "academy:getting_factor"
+    }
+  },
+  "requirements": [
+    [
+      "getting_factor"
+    ]
+  ]
+}

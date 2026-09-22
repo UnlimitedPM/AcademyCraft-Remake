@@ -1,0 +1,25 @@
+{
+  "parent": "academy:getting_phase",
+  "display": {
+    "icon": {
+      "item": "academy:phase_generator"
+    },
+    "title": {
+      "translate": "advancements.general.phase_generator"
+    },
+    "description": {
+      "translate": "advancements.general.phase_generator.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "phase_generator": {
+      "trigger": "academy:phase_generator"
+    }
+  },
+  "requirements": [
+    [
+      "phase_generator"
+    ]
+  ]
+}

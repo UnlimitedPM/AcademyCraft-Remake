@@ -45,6 +45,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     /** Niveau a partir duquel la progression est plus longue, comme dans l'original. */
     private static final int LAST_LEVEL = 4;
 
+    /**
+     * Le joueur a qui appartiennent ces donnees, sur le serveur uniquement.
+     *
+     * <p>Trois succes du mod se declenchent au fond des donnees elles-memes — apprendre
+     * une competence, la saturer d'experience, tomber en surcharge — et ces endroits-la
+     * n'ont aucun joueur sous la main. Le proprietaire est donc pose a l'attachement de
+     * la capacite, et reste <b>nul</b> partout ailleurs : dans les tests unitaires, qui
+     * construisent des donnees sans joueur, rien ne se declenche.
+     */
+    private net.minecraft.server.level.ServerPlayer owner;
+
     private final Map<String, Integer> categoryLevels = new HashMap<>();
 
     /** Competences apprises, sous la forme {@code <categorie>.<competence>}. */
@@ -424,6 +435,11 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         float max = getMaxOverload();
         overload = Math.min(max, overload + amount);
         if (overload >= max) {
+            // Le franchissement du maximum, et non l'etat : le succes ne tombe qu'une fois.
+            if (overloadFine) {
+                cn.academy.advancements.AcademyAdvancements.award(owner,
+                        cn.academy.advancements.AcademyAdvancements.AC_OVERLOAD);
+            }
             overloadFine = false;
         }
         addMaxOverload = Math.min(maxAddOverload(getHighestLevel()),
@@ -475,6 +491,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     /** Fait avancer la suspension de chute d'un tick. */
     public void tickGravitySuspension() {
         if (gravitySuspension > 0) gravitySuspension--;
+    }
+
+    /**
+     * Retient a qui appartiennent ces donnees, pour les succes qui se declenchent ici.
+     *
+     * <p>Appele par le fournisseur de capacite, au moment de l'attachement. Le client
+     * n'a pas de {@code ServerPlayer} : ses donnees gardent donc un proprietaire nul, ce
+     * qui est exactement ce qu'on veut — un succes ne s'accorde que sur le serveur.
+     */
+    public void setOwner(net.minecraft.world.entity.player.Player player) {
+        owner = player instanceof net.minecraft.server.level.ServerPlayer serverPlayer ? serverPlayer : null;
     }
 
     /**
@@ -576,7 +603,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     /** Marque une competence comme apprise. Retourne vrai si cela a change quelque chose. */
     public boolean learnSkill(Skill skill) {
         if (skill == null || skill.getCategory() == null) return false;
-        return learnedSkills.add(skillKey(skill));
+        boolean changed = learnedSkills.add(skillKey(skill));
+        if (changed) {
+            cn.academy.advancements.AcademyAdvancements.award(owner,
+                    cn.academy.advancements.AcademyAdvancements.AC_LEARNING_SKILL);
+        }
+        return changed;
     }
 
     /** Oublie une competence. Sert surtout aux tests et au debogage. */
@@ -642,7 +674,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         float effective = amount * skill.getExpIncrSpeed();
         String key = skillKey(skill);
         float current = skillExps.getOrDefault(key, 0f);
-        skillExps.put(key, Math.min(1f, current + effective));
+        float reached = Math.min(1f, current + effective);
+        skillExps.put(key, reached);
+
+        // « Combien de fois as-tu fait ca ? » — le succes tombe quand une competence
+        // atteint son maximum d'experience, pas a chaque emploi.
+        if (current < 1f && reached >= 1f) {
+            cn.academy.advancements.AcademyAdvancements.award(owner,
+                    cn.academy.advancements.AcademyAdvancements.AC_EXP_FULL);
+        }
 
         addLevelProgress(skill.getCategory(), effective);
     }

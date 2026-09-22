@@ -1,0 +1,25 @@
+{
+  "parent": "academy:getting_factor",
+  "display": {
+    "icon": {
+      "item": "academy:magnetic_coil"
+    },
+    "title": {
+      "translate": "advancements.general.convert_category"
+    },
+    "description": {
+      "translate": "advancements.general.convert_category.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "convert_category": {
+      "trigger": "academy:convert_category"
+    }
+  },
+  "requirements": [
+    [
+      "convert_category"
+    ]
+  ]
+}

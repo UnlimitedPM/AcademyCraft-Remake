@@ -350,6 +350,8 @@ public class ModItems {
             data.install();
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
                 cn.academy.terminal.TerminalEvents.sync(serverPlayer);
+                cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
+                        cn.academy.advancements.AcademyAdvancements.TERMINAL_INSTALLED);
             }
             player.displayClientMessage(Component.translatable("ac.terminal.key_hint"), false);
             return InteractionResultHolder.success(stack);
@@ -375,6 +377,11 @@ public class ModItems {
             ItemStack stack = player.getItemInHand(hand);
             if (level.isClientSide) {
                 cn.academy.terminal.App.requestOpen(cn.academy.terminal.app.AppTutorial.INSTANCE);
+            } else if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                // L'original declenchait le succes ici aussi, sur le serveur : c'est
+                // l'usage de l'objet qui compte, pas l'ecran qui s'ouvre.
+                cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
+                        cn.academy.advancements.AcademyAdvancements.OPEN_MISAKA_CLOUD);
             }
             return InteractionResultHolder.success(stack);
         }

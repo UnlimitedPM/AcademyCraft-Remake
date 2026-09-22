@@ -4824,6 +4824,131 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Les seize succes du mod sont la, et leurs quinze declencheurs aussi.
+     *
+     * <p>Un succes n'est qu'un fichier de donnees : celui qui cite un declencheur
+     * inconnu ne fait pas tomber le jeu, il reste simplement <b>impossible a obtenir</b> —
+     * et personne ne s'en apercoit avant d'avoir joue une partie entiere. Ce test le voit
+     * en une seconde, et il verifie les deux moities du contrat : que chaque fichier est
+     * charge, et que chaque declencheur qu'il cite est enregistre.
+     */
+    @GameTest(template = "empty")
+    public static void lesSuccesDuModSontTousLa(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        assertTrue(helper, server != null, "un serveur doit etre la");
+
+        var ours = server.getAdvancements().getAllAdvancements().stream()
+                .filter(advancement -> advancement.getId().getNamespace().equals("academy"))
+                .toList();
+        assertValue(helper, 16, ours.size(), "les seize succes de l'original");
+
+        // Chaque declencheur cite par un fichier doit repondre dans la table : c'est
+        // exactement ce qu'un fichier mal orthographie casserait en silence.
+        for (var advancement : ours) {
+            for (var criterion : advancement.getCriteria().entrySet()) {
+                // Le declencheur « impossible » de la racine n'est pas de la meme famille :
+                // il ne porte pas d'identifiant, et c'est normal.
+                if (!(criterion.getValue().getTrigger()
+                        instanceof net.minecraft.advancements.critereon.AbstractCriterionTriggerInstance instance)) {
+                    continue;
+                }
+                var id = instance.getCriterion();
+                assertTrue(helper, net.minecraft.advancements.CriteriaTriggers.getCriterion(id) != null,
+                        "le declencheur doit etre enregistre : " + advancement.getId());
+                if (id.getNamespace().equals("academy")) {
+                    assertValue(helper, advancement.getId().getPath(), id.getPath(),
+                            "le succes " + advancement.getId().getPath() + " cite son propre declencheur");
+                }
+            }
+        }
+
+        // Et la racine porte le fond d'ecran : sans lui, l'onglet des succes est vide.
+        var root = server.getAdvancements().getAdvancement(cn.academy.advancements.AcademyAdvancements.id("root"));
+        assertTrue(helper, root != null, "la racine doit exister");
+        assertTrue(helper, root.getDisplay() != null && root.getDisplay().getBackground() != null,
+                "la racine doit avoir un fond");
+        helper.succeed();
+    }
+
+    /**
+     * Les seize succes sont branchables, et Forge refuse de les accorder a un faux joueur.
+     *
+     * <p>Deux verites en une, parce qu'elles vont ensemble. La premiere : chaque fichier de
+     * succes doit produire un critere <b>rattachable</b> a un declencheur enregistre — c'est
+     * ce que le jeu fait a la connexion d'un joueur, et un fichier dont le declencheur ne
+     * repond pas ne donnerait jamais rien. La seconde : la remise elle-meme s'arrete a la
+     * porte de Forge, qui refuse les succes aux faux joueurs.
+     *
+     * <p>Le port ne peut donc pas prouver ici qu'un succes arrive dans l'inventaire d'un
+     * joueur : cela se voit en partie. Ce qu'il prouve, c'est que la chaine est complete
+     * jusqu'a cette porte — les fichiers se chargent, les criteres se rattachent, les
+     * declencheurs s'appellent.
+     */
+    @GameTest(template = "empty")
+    public static void lesSuccesSontBranchables(GameTestHelper helper) {
+        var server = helper.getLevel().getServer();
+        var player = ownPlayer(helper, "branchement");
+
+        int branchables = connectAdvancements(player, server.getAdvancements(),
+                cn.academy.AcademyCraft.MOD_ID);
+        assertValue(helper, 16, branchables, "les seize succes doivent avoir un critere branchable");
+
+        var level3 = server.getAdvancements()
+                .getAdvancement(cn.academy.advancements.AcademyAdvancements.id("ac_level_3"));
+        assertTrue(helper, level3 != null, "le succes doit exister");
+
+        // Le declencheur s'appelle sans broncher — mais Forge refuse la remise. C'est la
+        // porte de Forge, pas le port : le test la nomme pour que personne ne la confonde
+        // avec une regression le jour ou un vrai joueur, lui, recevra bien son succes.
+        cn.academy.advancements.AcademyAdvancements.award(player,
+                cn.academy.advancements.AcademyAdvancements.AC_LEVEL_3);
+        assertFalse(helper, player.getAdvancements().getOrStartProgress(level3).isDone(),
+                "Forge refuse les succes aux faux joueurs");
+        assertFalse(helper, player.getAdvancements().award(level3, "ac_level_3"),
+                "et c'est bien sa porte : la remise directe echoue aussi");
+        helper.succeed();
+    }
+
+    /**
+     * Branche les ecouteurs de succes de ce joueur, comme le fait une vraie connexion, et
+     * rend le nombre de succes du namespace donne qui ont trouve preneur.
+     *
+     * <p>Un joueur normal les recoit tout seul : son gestionnaire de succes s'inscrit auprès
+     * de chaque declencheur pour chaque critere qui lui reste a obtenir. Un faux joueur
+     * n'entre jamais dans la liste des joueurs, donc rien de tout cela n'a lieu — et un
+     * declencheur qui ne trouve pas d'auditeur rend la main sans rien dire.
+     *
+     * <p>La copie est volontaire : c'est exactement ce que fait le jeu, et si le port
+     * s'ecartait de ce chemin, ce test ne le verrait plus.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int connectAdvancements(net.minecraft.server.level.ServerPlayer player,
+                                           net.minecraft.server.ServerAdvancementManager manager,
+                                           String namespace) {
+        int connected = 0;
+        for (var advancement : manager.getAllAdvancements()) {
+            var progress = player.getAdvancements().getOrStartProgress(advancement);
+            if (progress.isDone()) continue;
+            boolean any = false;
+            for (var entry : advancement.getCriteria().entrySet()) {
+                var criterionProgress = progress.getCriterion(entry.getKey());
+                if (criterionProgress == null || criterionProgress.isDone()) continue;
+                var instance = entry.getValue().getTrigger();
+                if (instance == null) continue;
+                var trigger = net.minecraft.advancements.CriteriaTriggers.getCriterion(instance.getCriterion());
+                if (trigger == null) continue;
+                ((net.minecraft.advancements.CriterionTrigger) trigger).addPlayerListener(
+                        player.getAdvancements(),
+                        new net.minecraft.advancements.CriterionTrigger.Listener(
+                                instance, advancement, entry.getKey()));
+                any = true;
+            }
+            if (any && advancement.getId().getNamespace().equals(namespace)) connected++;
+        }
+        return connected;
+    }
+
     /** Le terminal d'un joueur, ou un etat vide s'il n'a pas la capacite. */
     private static cn.academy.terminal.TerminalData terminalOf(Player player) {
         return player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA).orElse(null);

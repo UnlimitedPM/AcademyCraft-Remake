@@ -1,0 +1,25 @@
+{
+  "parent": "academy:ac_node",
+  "display": {
+    "icon": {
+      "item": "academy:mat_core_0"
+    },
+    "title": {
+      "translate": "advancements.general.ac_matrix"
+    },
+    "description": {
+      "translate": "advancements.general.ac_matrix.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ac_matrix": {
+      "trigger": "academy:ac_matrix"
+    }
+  },
+  "requirements": [
+    [
+      "ac_matrix"
+    ]
+  ]
+}

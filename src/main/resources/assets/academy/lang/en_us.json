@@ -235,5 +235,38 @@
 
 
 
-  "itemGroup.academy_tab": "AcademyCraft Remake"
+  "itemGroup.academy_tab": "AcademyCraft Remake",
+
+  "advancements.general.root": "Academy Craft",
+  "advancements.general.root.desc": "The beginning of everything",
+  "advancements.general.open_misaka_cloud": "First Contact",
+  "advancements.general.open_misaka_cloud.desc": "Open Misaka Cloud",
+  "advancements.general.getting_phase": "Mysterious and powerful",
+  "advancements.general.getting_phase.desc": "Get a matter unit with Imag Phase Liquid",
+  "advancements.general.phase_generator": "New Energy",
+  "advancements.general.phase_generator.desc": "Craft a Phase Generator",
+  "advancements.general.ac_node": "No More Wires!",
+  "advancements.general.ac_node.desc": "Craft a Basic Wireless Imag Node",
+  "advancements.general.ac_matrix": "WIFI Available Here",
+  "advancements.general.ac_matrix.desc": "Craft a Matrix",
+  "advancements.general.terminal_installed": "Technology Changes Life",
+  "advancements.general.terminal_installed.desc": "Install Data Terminal",
+  "advancements.general.getting_factor": "Infinite Possibility",
+  "advancements.general.getting_factor.desc": "Get an Induction Factor",
+  "advancements.general.ac_developer": "There is a Limit for Human",
+  "advancements.general.ac_developer.desc": "Craft a Portable Ability Developer",
+  "advancements.general.dev_category": "Above Human",
+  "advancements.general.dev_category.desc": "Develop an Ability",
+  "advancements.general.ac_level_3": "On My Own",
+  "advancements.general.ac_level_3.desc": "Upgrade to level 3",
+  "advancements.general.ac_level_5": "One Man Army",
+  "advancements.general.ac_level_5.desc": "Upgrade to level 5",
+  "advancements.general.convert_category": "No More Randomized",
+  "advancements.general.convert_category.desc": "Transform your category",
+  "advancements.general.ac_learning_skill": "Practice Makes Perfect",
+  "advancements.general.ac_learning_skill.desc": "Learn any skill",
+  "advancements.general.ac_exp_full": "How many times did you do that?",
+  "advancements.general.ac_exp_full.desc": "Achieve full EXP for any skill",
+  "advancements.general.ac_overload": "There is Still a Limit for ESPers",
+  "advancements.general.ac_overload.desc": "Use your ability, until it overloads"
 }

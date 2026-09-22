@@ -1,0 +1,25 @@
+{
+  "parent": "academy:phase_generator",
+  "display": {
+    "icon": {
+      "item": "academy:node_basic"
+    },
+    "title": {
+      "translate": "advancements.general.ac_node"
+    },
+    "description": {
+      "translate": "advancements.general.ac_node.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ac_node": {
+      "trigger": "academy:ac_node"
+    }
+  },
+  "requirements": [
+    [
+      "ac_node"
+    ]
+  ]
+}

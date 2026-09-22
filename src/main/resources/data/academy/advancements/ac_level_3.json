@@ -1,0 +1,25 @@
+{
+  "parent": "academy:dev_category",
+  "display": {
+    "icon": {
+      "item": "academy:crystal_normal"
+    },
+    "title": {
+      "translate": "advancements.general.ac_level_3"
+    },
+    "description": {
+      "translate": "advancements.general.ac_level_3.desc"
+    },
+    "frame": "task"
+  },
+  "criteria": {
+    "ac_level_3": {
+      "trigger": "academy:ac_level_3"
+    }
+  },
+  "requirements": [
+    [
+      "ac_level_3"
+    ]
+  ]
+}
