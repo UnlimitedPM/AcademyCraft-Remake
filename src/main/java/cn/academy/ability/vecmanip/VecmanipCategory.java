@@ -11,6 +11,7 @@ public class VecmanipCategory extends Category {
     public static final DirectedShockSkill DIRECTED_SHOCK = new DirectedShockSkill();
     public static final GroundshockSkill GROUNDSHOCK = new GroundshockSkill();
     public static final DirectedBlastwaveSkill DIRECTED_BLASTWAVE = new DirectedBlastwaveSkill();
+    public static final BloodRetrogradeSkill BLOOD_RETROGRADE = new BloodRetrogradeSkill();
     public static final VecReflectionSkill VEC_REFLECTION = new VecReflectionSkill();
     public static final VecAccelSkill VEC_ACCEL = new VecAccelSkill();
 
@@ -21,6 +22,7 @@ public class VecmanipCategory extends Category {
         addSkill(DIRECTED_SHOCK);
         addSkill(GROUNDSHOCK);
         addSkill(DIRECTED_BLASTWAVE);
+        addSkill(BLOOD_RETROGRADE);
         addSkill(VEC_REFLECTION);
         addSkill(VEC_ACCEL);
 
@@ -32,5 +34,6 @@ public class VecmanipCategory extends Category {
         VEC_ACCEL.setParent(DIRECTED_SHOCK);
         GROUNDSHOCK.setParent(DIRECTED_SHOCK);
         DIRECTED_BLASTWAVE.setParent(GROUNDSHOCK);
+        BLOOD_RETROGRADE.setParent(DIRECTED_BLASTWAVE);
     }
 }

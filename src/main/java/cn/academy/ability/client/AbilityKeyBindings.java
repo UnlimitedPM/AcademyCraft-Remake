@@ -151,6 +151,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_dir_blast", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_RBRACKET, "key.categories.academy");
 
+    /** Le retour de sang : un contact de deux blocs, pour le plus gros coup du port. */
+    public static final KeyMapping ACTIVATE_BLOOD_RETROGRADE = new KeyMapping(
+            "key.academy.activate_blood_retro", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_BACKSLASH, "key.categories.academy");
+
     /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
@@ -188,5 +193,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_DIRECTED_SHOCK);
         event.register(ACTIVATE_GROUNDSHOCK);
         event.register(ACTIVATE_DIRECTED_BLASTWAVE);
+        event.register(ACTIVATE_BLOOD_RETROGRADE);
     }
 }

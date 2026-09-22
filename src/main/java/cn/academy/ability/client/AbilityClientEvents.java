@@ -76,7 +76,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_SHOCK, VecmanipCategory.NAME, "dir_shock"),
             new Binding(AbilityKeyBindings.ACTIVATE_GROUNDSHOCK, VecmanipCategory.NAME, "ground_shock"),
             new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_BLASTWAVE, VecmanipCategory.NAME,
-                    "dir_blast"));
+                    "dir_blast"),
+            new Binding(AbilityKeyBindings.ACTIVATE_BLOOD_RETROGRADE, VecmanipCategory.NAME,
+                    "blood_retro"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

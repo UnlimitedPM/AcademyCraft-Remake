@@ -59,6 +59,7 @@ class PortedSkillsTest {
             Map.entry("vecmanip.dir_shock", 1),
             Map.entry("vecmanip.ground_shock", 1),
             Map.entry("vecmanip.dir_blast", 3),
+            Map.entry("vecmanip.blood_retro", 4),
             Map.entry("vecmanip.vec_reflection", 4));
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
@@ -95,8 +96,10 @@ class PortedSkillsTest {
             Map.entry("vecmanip.ground_shock", List.of("vecmanip.dir_shock")),
             // L'onde dirigee descend de l'onde au sol : on n'apprend pas a viser avant
             // d'avoir appris a frapper le sol.
-            Map.entry("vecmanip.dir_blast", List.of("vecmanip.ground_shock")));
-
+            Map.entry("vecmanip.dir_blast", List.of("vecmanip.ground_shock")),
+            // Le contact descend de l'onde dirigee : on n'apprend pas a retourner le sang
+            // avant d'avoir appris a ouvrir le sol.
+            Map.entry("vecmanip.blood_retro", List.of("vecmanip.dir_blast")));
     private static List<Category> categories() {
         return List.of(
                 cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE,
@@ -303,6 +306,7 @@ class PortedSkillsTest {
             Map.entry("vecmanip.dir_shock", 18f),
             Map.entry("vecmanip.ground_shock", 15f),
             Map.entry("vecmanip.dir_blast", 50f),
+            Map.entry("vecmanip.blood_retro", 55f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

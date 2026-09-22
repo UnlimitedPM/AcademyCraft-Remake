@@ -2393,6 +2393,7 @@ public final class AcademyGameTests {
         buildWalkingFloor(helper, 5, base);
 
         double reserveBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
         shock.onActivateCharged(player, data, 10);
 
         assertFalse(helper, player.onGround(), "le joueur doit etre en l'air");
@@ -2404,6 +2405,10 @@ public final class AcademyGameTests {
         assertClose(helper, 0d, data.getSkillExp(shock), "ni d'experience versee");
         assertClose(helper, reserveBefore, data.getControlPoint(),
                 "ni un point de reserve depense");
+        // Le surcout non plus : c'est tout l'objet de `Skill#paysOnEffect`, sans lequel le
+        // paquet paierait le prix avant que l'onde ait pu constater qu'elle ne part pas.
+        assertClose(helper, overloadBefore, data.getOverload(),
+                "ni un point de surcout charge");
         helper.succeed();
     }
 
@@ -2613,6 +2618,75 @@ public final class AcademyGameTests {
                 "sans cible, le centre se pose au bout du regard — et le bloc pose a cote y passe");
         assertClose(helper, 0.0012d, empty.getSkillExp(blast),
                 "une onde qui ne trouve personne ne rapporte que 0,0012");
+        helper.succeed();
+    }
+
+    /**
+     * Le retour de sang : un contact de deux blocs, et rien du tout sans contact.
+     *
+     * <p>C'est le test de {@code Skill#paysOnEffect}. Le prix du contact se decide dans son
+     * effet — pas au paquet — parce qu'il depend de ce que la main trouve : sans cible,
+     * <b>rien</b> n'est facture, ni reserve, ni surcout, ni recharge, ni experience. Un
+     * goulem de fer sert de victime : 100 points de vie, donc il survit aux 30 degats et le
+     * test peut les chiffrer.
+     */
+    @GameTest(template = "empty")
+    public static void leRetourDeSangNeSePaieQueSilTouche(GameTestHelper helper) {
+        var blood = cn.academy.ability.vecmanip.VecmanipCategory.BLOOD_RETROGRADE;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 350);
+
+        var player = ownPlayer(helper, "bloodletter");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(blood.getCategory(), 1);
+        data.learnSkill(blood);
+
+        clearCorridor(helper, abs, 8);
+
+        var golem = new net.minecraft.world.entity.animal.IronGolem(
+                net.minecraft.world.entity.EntityType.IRON_GOLEM, level);
+        golem.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 2.0, 0f, 0f);
+        level.addFreshEntity(golem);
+
+        assertTrue(helper, blood.touch(player) == golem,
+                "la main doit trouver le goulem a un bloc et demi : " + blood.touch(player));
+
+        double reserveBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
+        float healthBefore = golem.getHealth();
+        blood.onActivateCharged(player, data, 5);
+
+        assertTrue(helper, Math.abs((healthBefore - 30f) - golem.getHealth()) < 0.02,
+                "30 points au depart de la courbe, trouve " + (healthBefore - golem.getHealth()));
+        assertClose(helper, 0.002d, data.getSkillExp(blood), "un contact verse son experience");
+        assertValue(helper, blood.cooldown(data), data.getCooldown(blood),
+                "et il pose sa recharge lui-meme");
+        assertTrue(helper, data.getControlPoint() < reserveBefore,
+                "le contact se paie : " + data.getControlPoint() + " contre " + reserveBefore);
+        assertTrue(helper, data.getOverload() > overloadBefore,
+                "et il charge la reserve de surcout : " + data.getOverload()
+                        + " contre " + overloadBefore);
+
+        // --- Rien sous la main : la main ne touche plus rien du tout.
+        golem.moveTo(abs.getX() + 20.0, abs.getY(), abs.getZ(), 0f, 0f);
+        var empty = new cn.academy.ability.AbilityData();
+        empty.setCategoryLevel(blood.getCategory(), 1);
+        empty.learnSkill(blood);
+
+        double emptyReserve = empty.getControlPoint();
+        float emptyOverload = empty.getOverload();
+        assertTrue(helper, blood.touch(player) == null,
+                "sans cible, la main ne doit rien trouver : " + blood.touch(player));
+        blood.onActivateCharged(player, empty, 5);
+
+        assertClose(helper, 0d, empty.getSkillExp(blood), "sans contact, pas d'experience");
+        assertValue(helper, 0, empty.getCooldown(blood), "ni de recharge");
+        assertClose(helper, emptyReserve, empty.getControlPoint(), "ni de reserve depensee");
+        assertClose(helper, emptyOverload, empty.getOverload(), "ni de surcout charge");
+
+        golem.discard();
         helper.succeed();
     }
 

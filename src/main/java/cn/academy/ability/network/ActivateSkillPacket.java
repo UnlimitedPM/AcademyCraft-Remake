@@ -209,8 +209,10 @@ public class ActivateSkillPacket {
 
         // Les deux ressources ensemble ou aucune : portage de CPData.perform. Sans
         // cette atomicite, une competence refusee faute de CP laisserait quand meme
-        // du surcout derriere elle.
-        if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
+        // du surcout derriere elle. Les competences qui paient dans leur effet sautent
+        // ce paiement : elles seules savent ce qu'elles doivent — voir Skill#paysOnEffect.
+        if (!skill.paysOnEffect()
+                && !data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
             player.displayClientMessage(
                     Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
             return;

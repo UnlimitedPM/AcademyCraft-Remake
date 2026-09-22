@@ -218,6 +218,24 @@ public abstract class Skill {
     }
 
     /**
+     * Cette competence paie-t-elle son cout elle-meme, depuis son effet ?
+     *
+     * <p>Par defaut non : le paquet d'activation paie les deux ressources avant d'appeler
+     * l'effet, ce qui suffit quand le prix ne depend pas de ce que l'effet trouve. Mais
+     * certaines competences doivent pouvoir <b>ne rien payer du tout</b> — l'onde de choc
+     * ne facture rien a un joueur en l'air, le retour de sang rien a qui ne touche personne
+     * — et le paquet, lui, ne le sait pas encore au moment ou il paie.
+     *
+     * <p>Quand cette methode rend vrai, le paquet saute le paiement et la verification de
+     * reserve : c'est l'effet qui appelle {@code data.perform(...)} lui-meme. Les couts
+     * declares restent ceux de l'original — ils disent ce que l'effet paiera, et un test
+     * les fige — mais l'ordre, lui, appartient a la competence.
+     */
+    public boolean paysOnEffect() {
+        return false;
+    }
+
+    /**
      * Multiplicateur d'experience, porte par la competence.
      *
      * L'original en faisait un reglage par competence ({@code exp_incr_speed}, defaut

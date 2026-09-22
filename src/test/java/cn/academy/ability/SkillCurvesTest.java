@@ -792,6 +792,9 @@ class SkillCurvesTest {
                 "la recharge est posee par le coup, pas par l'activation");
         assertEquals(0f, groundshock.getCpCost(), 0.000001f,
                 "aucun cout a l'appui : le prix se paie dans l'effet, apres le controle du sol");
+        // Et le paquet ne paie rien non plus, sans quoi il paierait le surcout avant que
+        // l'onde ait pu constater qu'elle ne part pas — voir Skill#paysOnEffect.
+        assertTrue(groundshock.paysOnEffect(), "l'onde de choc se paie elle-meme");
     }
 
     /**
@@ -931,6 +934,40 @@ class SkillCurvesTest {
         assertEquals(6, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.BLAST_RADIUS_SQ);
         assertEquals(4.0, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.REACH,
                 "le rayon de visee");
+    }
+
+    /**
+     * Le retour de sang : le plus court rayon du port, pour le plus gros coup.
+     */
+    @Test
+    void leRetourDeSangFrappeFortEtDePres() {
+        var blood = cn.academy.ability.vecmanip.VecmanipCategory.BLOOD_RETROGRADE;
+
+        // Deux blocs de contact, aucun minimum de charge et aucun maximum : la touche part
+        // des qu'elle trouve quelque chose.
+        assertEquals(2.0, cn.academy.ability.vecmanip.BloodRetrogradeSkill.REACH,
+                "la portee du contact");
+        assertTrue(blood.isChargeable(), "le retour de sang se charge");
+        assertEquals(0, blood.getMinChargeTicks(atExperience(blood, 0f)),
+                "aucun minimum : un appui suffit quand la main touche");
+        assertEquals(0, blood.getMaxChargeTicks(atExperience(blood, 0f)),
+                "et aucun maximum : l'original s'arretait a trente ticks sans que rien n'en depende");
+
+        // Ses courbes : 30 a 60 degats, 280 a 350 CP (divises par 28), 55 a 40 de surcout,
+        // et 90 a 40 ticks de recharge.
+        assertBounds("degats de blood_retro", 30f, 60f, blood::damage, blood);
+        assertBounds("cout de blood_retro", 10f, 12.5f, blood::consumption, blood);
+        assertBounds("surcout de blood_retro", 55f, 40f, blood::overload, blood);
+        assertBounds("recharge de blood_retro", 90f, 40f, blood::cooldown, blood);
+
+        // Rien n'est declare au paquet, et pourtant le surcout non plus n'est pas nul : le
+        // prix se paie dans l'effet, apres le contact — voir Skill#paysOnEffect.
+        assertTrue(blood.paysOnEffect(), "le contact se paie lui-meme");
+        assertEquals(0f, blood.getCpCost(), 0.000001f, "rien a l'activation");
+        assertEquals(0, blood.getCooldownTicks(atExperience(blood, 0f)),
+                "et rien non plus en recharge : c'est le contact qui la pose");
+        assertTrue(blood.earnsExpOnEffect(), "l'experience est versee par le contact");
+        assertEquals(0f, blood.getExpGain(atExperience(blood, 0f)), 0.000001f);
     }
 
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */

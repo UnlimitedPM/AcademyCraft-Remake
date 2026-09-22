@@ -196,8 +196,15 @@ public class GroundshockSkill extends Skill {
      * Aucun cout a l'appui, aucun a l'activation.
      *
      * Le prix se paie dans l'effet, apres le controle du sol : l'original ne consommait
-     * rien du tout quand le joueur etait en l'air, et cela ne peut se decider qu'ici.
+     * rien du tout quand le joueur etait en l'air, et cela ne peut se decider qu'ici. Voir
+     * {@link Skill#paysOnEffect()} — sans quoi le paquet paierait le surcout avant que
+     * l'onde ait pu constater qu'elle ne partait pas.
      */
+    @Override
+    public boolean paysOnEffect() {
+        return true;
+    }
+
     @Override
     public float getCpCost() {
         return 0f;
