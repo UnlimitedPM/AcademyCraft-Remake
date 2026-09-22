@@ -1487,9 +1487,16 @@ public final class AcademyGameTests {
         assertValue(helper, 2, skill.getLevel(), "vec_accel est une competence de niveau 2");
         assertValue(helper, 5, skill.getLearningStims(), "prix de vec_accel : 3 + 2*2/2");
 
+        // vec_accel descend du choc dirige : le developpeur refuse une competence dont la
+        // parente n'est pas apprise, et c'est la seule des competences du port a avoir un
+        // parent au meme niveau que son point d'entree.
+        var parent = category.getSkill("dir_shock");
+        assertTrue(helper, parent != null, "dir_shock doit etre portee");
+
         // L'etat de depart est pose ici et non suppose : le joueur est partage.
         setCategoryLevel(player, category, 0);
         forgetSkill(player, skill);
+        forgetSkill(player, parent);
 
         // Sans le niveau, la competence est refusee.
         assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
@@ -1497,10 +1504,13 @@ public final class AcademyGameTests {
         assertValue(helper, DeveloperBlockEntity.DevState.IDLE, developer.getState(),
                 "un refus ne doit pas laisser la machine en marche");
 
-        // Avec le niveau, elle s'ouvre.
+        // Avec le niveau, elle s'ouvre — mais il faut d'abord sa parente : vec_accel
+        // descend du choc dirige, comme body_intensify a besoin de arc_gen (la regle
+        // elle-meme est verifiee par developerSkillHonoursItsDependency).
         setCategoryLevel(player, category, 2);
+        learnSkill(player, parent);
         assertTrue(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
-                "avec le niveau 2, la competence doit s'ouvrir");
+                "avec le niveau 2 et sa parente, la competence doit s'ouvrir");
         assertValue(helper, skill.getId(), developer.getSkillId(), "la cible est la competence");
         assertValue(helper, 5, developer.getMaxStim(), "cinq stimulations pour vec_accel");
 
@@ -1555,6 +1565,7 @@ public final class AcademyGameTests {
 
         // On remet la categorie comme on l'a trouvee : le joueur est partage.
         forgetSkill(player, skill);
+        forgetSkill(player, parent);
         setCategoryLevel(player, category, 0);
         helper.succeed();
     }
@@ -1570,8 +1581,9 @@ public final class AcademyGameTests {
 
         var player = fakePlayer(helper);
 
-        // Categorie 0 = electromaster : c'est la seule qui porte une dependance dont
-        // les deux bouts soient portes (body_intensify depend de arc_gen).
+        // Categorie 0 = electromaster : deux de ses competences portent une dependance
+        // dont les deux bouts sont portes (body_intensify depend de arc_gen, comme
+        // vec_accel depend du choc dirige cote vecmanip).
         var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0);
         var parent = category.getSkill("arc_gen");
         var child = category.getSkill("body_intensify");
@@ -1614,6 +1626,12 @@ public final class AcademyGameTests {
         return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .map(data -> data.isSkillLearned(skill))
                 .orElse(false);
+    }
+
+    /** Apprend une competence a ce joueur, sans passer par le developpeur. */
+    private static void learnSkill(Player player, cn.academy.ability.Skill skill) {
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(data -> data.learnSkill(skill));
     }
 
     /**
@@ -2143,6 +2161,110 @@ public final class AcademyGameTests {
         assertTrue(helper, data.getSkillExp(skill) > 0.9f, "un saut verse son experience");
 
         chicken.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Le choc dirige : ce qu'un poing ferme fait a ce qu'il trouve, et ce qu'il coute.
+     *
+     * Le JUnit fige les courbes et la poussee a partir des deux points de visee ; ce qui ne
+     * se lit qu'avec un monde, c'est le <b>rayon</b> — est-ce que le coup trouve vraiment la
+     * bete posee devant, et rien d'autre — et le fait que la recharge ne se pose qu'au
+     * contact. Le seuil d'un quart d'experience, lui, se voit tres bien : sous le seuil le
+     * coup ne fait que bousculer la victime, au-dessus il la souleve et l'envoie valser.
+     */
+    @GameTest(template = "empty")
+    public static void leChocDirigeNeFaitAttendreQueSilTouche(GameTestHelper helper) {
+        var dirShock = cn.academy.ability.vecmanip.VecmanipCategory.DIRECTED_SHOCK;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 200);
+
+        var player = ownPlayer(helper, "shocker");
+        // Regard vers +Z (le lacet zero de Minecraft) et un peu vers le sol : une vache au
+        // sol se vise en baissant les yeux, elle n'est pas a hauteur de tete.
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 10f);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(dirShock.getCategory(), 1);
+        data.learnSkill(dirShock);
+
+        clearCorridor(helper, abs, 6);
+
+        // --- Un poing dans le vide : les deux ressources partent, et rien d'autre.
+        assertTrue(helper, data.perform(dirShock.getCpCost(data), dirShock.getOverloadCost(data)),
+                "un coup dans le vide se paie quand meme");
+        dirShock.onActivateCharged(player, data, 10);
+
+        assertValue(helper, 0, data.getCooldown(dirShock),
+                "ne rien toucher ne fait attendre personne : la recharge n'est posee qu'au contact");
+        assertClose(helper, 0.0010d, data.getSkillExp(dirShock),
+                "et le geste ne rapporte que l'experience du coup dans le vide");
+
+        // --- Sans un quart d'experience, le coup ne fait que bousculer.
+        //
+        // Une vache ici : elle a dix points de vie, et le coup en fait sept a l'experience
+        // minimale — elle survit donc, de justesse, a ce qu'on veut mesurer.
+        var nudged = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        nudged.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 2.5, 0f, 0f);
+        level.addFreshEntity(nudged);
+
+        // Ce que le regard trouve vraiment : c'est le rayon de trois blocs qui est en jeu ici.
+        assertTrue(helper, cn.academy.ability.TargetingUtil.findEntityInSight(player, 3.0) == nudged,
+                "le regard doit trouver la bete a deux blocs et demie, et rien d'autre : "
+                        + cn.academy.ability.TargetingUtil.findEntityInSight(player, 3.0));
+
+        float healthBefore = nudged.getHealth();
+        dirShock.onActivateCharged(player, data, 10);
+
+        assertTrue(helper, Math.abs((healthBefore - 7f) - nudged.getHealth()) < 0.02,
+                "7 points au depart de la courbe, trouve " + (healthBefore - nudged.getHealth()));
+        // Sous le seuil, la poussee ne s'applique pas : il ne reste que la bousculade d'un
+        // vingt-quatrieme de bloc, horizontale. C'est la que se voit le seuil d'experience.
+        assertTrue(helper, nudged.getDeltaMovement().z > 0.2,
+                "la bete est bousculee vers l'avant : " + nudged.getDeltaMovement());
+        assertClose(helper, 0d, nudged.getDeltaMovement().y,
+                "mais elle ne quitte pas le sol");
+        assertValue(helper, dirShock.cooldown(data), data.getCooldown(dirShock),
+                "un coup qui touche fait attendre, lui");
+
+        nudged.discard();
+
+        // --- Passe le seuil, la meme chose mais la victime s'envole.
+        //
+        // Un zombie et non une vache : a six dixiemes d'experience le coup fait 11,8
+        // points, et une vache n'en a que dix — elle mourrait, et le test ne pourrait
+        // plus mesurer ses degats. Le zombie en a vingt, donc il survit a l'experience
+        // meme ou le coup fait le plus mal.
+        var volunteer = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        volunteer.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 2.5, 0f, 0f);
+        level.addFreshEntity(volunteer);
+
+        // Ce que le regard trouve, encore une fois : la vache ecartee ne doit plus etre
+        // dans le couloir, sans quoi c'est elle qui prendrait le coup.
+        assertTrue(helper, cn.academy.ability.TargetingUtil.findEntityInSight(player, 3.0) == volunteer,
+                "le regard doit trouver le zombie, et plus la vache ecartee : "
+                        + cn.academy.ability.TargetingUtil.findEntityInSight(player, 3.0));
+
+        var experienced = new cn.academy.ability.AbilityData();
+        experienced.setCategoryLevel(dirShock.getCategory(), 1);
+        experienced.learnSkill(dirShock);
+        experienced.addSkillExp(dirShock, 0.6f);
+
+        healthBefore = volunteer.getHealth();
+        dirShock.onActivateCharged(player, experienced, 10);
+
+        assertTrue(helper, Math.abs(11.8d - (healthBefore - volunteer.getHealth())) < 0.02,
+                "11,8 points a six dixiemes d'experience, trouve "
+                        + (healthBefore - volunteer.getHealth()));
+        assertTrue(helper, volunteer.getDeltaMovement().z > 0.5,
+                "la bete part en arriere, et bien plus loin qu'une simple bousculade : "
+                        + volunteer.getDeltaMovement());
+        assertTrue(helper, volunteer.getDeltaMovement().y > 0.3,
+                "et la poussee la souleve : " + volunteer.getDeltaMovement());
+
+        volunteer.discard();
         helper.succeed();
     }
 

@@ -136,6 +136,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_flashing", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_APOSTROPHE, "key.categories.academy");
 
+    /** Le choc dirige : la touche se tient, le coup part au relachement. */
+    public static final KeyMapping ACTIVATE_DIRECTED_SHOCK = new KeyMapping(
+            "key.academy.activate_dir_shock", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_EQUALS, "key.categories.academy");
+
     /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
@@ -170,5 +175,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_RAY_BARRAGE);
         event.register(ACTIVATE_FLASHING);
         event.register(ACTIVATE_LOCATION_TELEPORT);
+        event.register(ACTIVATE_DIRECTED_SHOCK);
     }
 }

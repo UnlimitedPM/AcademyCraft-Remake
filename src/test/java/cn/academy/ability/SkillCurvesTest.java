@@ -659,6 +659,96 @@ class SkillCurvesTest {
         assertCooldownBounds("recharge du scintillement", flashing, 900, 400);
     }
 
+    /**
+     * Le choc dirige : une fenetre de charge etroite, et une poussee qui n'existe qu'a
+     * partir d'un quart d'experience.
+     */
+    @Test
+    void leChocDirigeSeChargeEtPousse() {
+        var dirShock = cn.academy.ability.vecmanip.VecmanipCategory.DIRECTED_SHOCK;
+
+        // La touche se tient, et la fenetre est etroite : six ticks au minimum, cinquante au
+        // dela desquels le coup est perdu. Contrairement aux autres competences a charge, le
+        // relachement n'est jamais "trop tot" ni "trop tard" de la meme facon : en dessous,
+        // le paquet ne declenche rien ; au-dessus, la charge s'abandonne d'elle-meme.
+        assertTrue(dirShock.isChargeable(), "le choc dirige se charge");
+        assertEquals(6, dirShock.getMinChargeTicks(atExperience(dirShock, 0f)),
+                "un appui de moins de six ticks ne part pas");
+        assertEquals(50, dirShock.getMaxChargeTicks(atExperience(dirShock, 0f)),
+                "au dela de cinquante ticks, le coup est perdu");
+
+        // Ses courbes : 7 a 15 degats, 50 a 100 CP divisees par 28, 18 a 12 de surcout, et
+        // 60 a 20 ticks de recharge.
+        assertBounds("degats de dir_shock", 7f, 15f, dirShock::damage, dirShock);
+        assertBounds("cout de dir_shock", 1.79f, 3.57f, dirShock::getCpCost, dirShock);
+        assertBounds("surcout de dir_shock", 18f, 12f, dirShock::getOverloadCost, dirShock);
+        assertBounds("recharge de dir_shock", 60f, 20f, dirShock::cooldown, dirShock);
+
+        // La recharge n'est posee par personne au moment de partir : c'est le coup qui la
+        // pose, et seulement s'il a touche quelque chose. Le paquet ne doit donc rien poser
+        // de lui-meme, sinon un poing dans le vide ferait deja attendre.
+        assertEquals(0, dirShock.getCooldownTicks(atExperience(dirShock, 0f)),
+                "une recharge qui ne se pose qu'au contact");
+
+        // Tout se verse au coup : 0,0035 s'il touche, 0,001 dans le vide, par l'effet lui-meme.
+        assertTrue(dirShock.earnsExpOnEffect(), "le choc verse son experience depuis son effet");
+        assertEquals(0f, dirShock.getExpGain(atExperience(dirShock, 0f)), 0.000001f,
+                "rien au declenchement : le paquet ne voit pas si le poing a touche");
+    }
+
+    /**
+     * La poussee du choc, verifiee sur ses seuls points de visee.
+     *
+     * C'est la quatrieme coquille corrigee de l'original : son axe Z recevait la composante
+     * verticale de la direction au lieu de l'horizontale. Une cible droit devant, a la meme
+     * hauteur — le cas le plus courant — ne reculait donc pas du tout : elle montait.
+     */
+    @Test
+    void laPousseeDuChocDirigeRepousseEtSouleve() {
+        // Cible pile en face, meme hauteur : elle recule et monte, mais reste dans l'axe.
+        Vec3 face = cn.academy.ability.vecmanip.DirectedShockSkill.knockbackVelocity(
+                new Vec3(0, 0, 0), new Vec3(0, 0, 1));
+        assertTrue(face.z > 0, "une cible devant recule : " + face);
+        assertTrue(face.y > 0, "et la poussee la souleve : " + face);
+        assertEquals(0.0, face.x, 0.0001, "sans derive laterale : " + face);
+        // Le recul vaut 0,6 de bloc par tick, et le soulevement 0,36 : c'est la poussee de
+        // l'original, dont l'axe Z prenait la composante verticale — nulle ici — au lieu de
+        // l'horizontale. Sans la correction, la cible montait sans reculer d'un pouce.
+        assertEquals(0.600, face.z, 0.001, "le recul horizontal");
+        assertEquals(0.360, face.y, 0.001, "le soulevement");
+
+        // Cible de cote : elle part de l'autre cote, sans derive sur l'axe Z.
+        Vec3 side = cn.academy.ability.vecmanip.DirectedShockSkill.knockbackVelocity(
+                new Vec3(0, 0, 0), new Vec3(1, 0, 0));
+        assertTrue(side.x > 0, "une cible de cote part de l'autre cote : " + side);
+        assertEquals(0.0, side.z, 0.0001, "sans derive sur l'axe Z");
+
+        // Cible au-dessus : elle monte, c'est le sens de l'eloignement.
+        Vec3 above = cn.academy.ability.vecmanip.DirectedShockSkill.knockbackVelocity(
+                new Vec3(0, 0, 0), new Vec3(0, 3, 0));
+        assertTrue(above.y > 0, "une cible au-dessus monte : " + above);
+
+        // Cible en dessous : elle part vers le bas, mais le soulevement de 0,6 use la
+        // direction — une cible tres en dessous repart doucement vers le haut.
+        Vec3 below = cn.academy.ability.vecmanip.DirectedShockSkill.knockbackVelocity(
+                new Vec3(0, 0, 0), new Vec3(0, -3, 0));
+        assertTrue(below.y < 0, "une cible en dessous part vers le bas : " + below);
+
+        // La force est celle de l'original : 0,7 de long, quelle que soit la visee —
+        // l'original appliquait 0,7 a une direction unitaire.
+        for (Vec3 eye : new Vec3[] {
+                new Vec3(2, 0, 0), new Vec3(0, 0, -4), new Vec3(3, 1, 3),
+                new Vec3(0, -3, 0), new Vec3(0, 5, 0) }) {
+            double length = cn.academy.ability.vecmanip.DirectedShockSkill
+                    .knockbackVelocity(new Vec3(0, 0, 0), eye).length();
+            assertEquals(0.7, length, 0.0001, "force constante pour " + eye);
+        }
+
+        // Deux yeux au meme endroit n'ont pas de direction : pas de division par zero.
+        assertEquals(Vec3.ZERO, cn.academy.ability.vecmanip.DirectedShockSkill
+                .knockbackVelocity(new Vec3(1, 2, 3), new Vec3(1, 2, 3)));
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,

@@ -56,8 +56,8 @@ class PortedSkillsTest {
             Map.entry("teleporter.flashing", 5),
             Map.entry("teleporter.location_teleport", 3),
             Map.entry("vecmanip.vec_accel", 2),
+            Map.entry("vecmanip.dir_shock", 1),
             Map.entry("vecmanip.vec_reflection", 4));
-
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
             Map.entry("electromaster.body_intensify", List.of("electromaster.arc_gen")),
@@ -86,7 +86,10 @@ class PortedSkillsTest {
             Map.entry("teleporter.flashing", List.of("teleporter.shift_tp")),
             // La troisieme a deux parentes : savoir traverser un mur, et savoir marquer.
             Map.entry("teleporter.location_teleport",
-                    List.of("teleporter.penetrate_teleport", "teleporter.mark_teleport")));
+                    List.of("teleporter.penetrate_teleport", "teleporter.mark_teleport")),
+            // Le choc dirige est la racine de vecmanip : c'est de lui que descend
+            // l'acceleration de vecteur chez l'original.
+            Map.entry("vecmanip.vec_accel", List.of("vecmanip.dir_shock")));
 
     private static List<Category> categories() {
         return List.of(
@@ -291,6 +294,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.ray_barrage", 300f),
             Map.entry("teleporter.flashing", 250f),
             Map.entry("teleporter.location_teleport", 240f),
+            Map.entry("vecmanip.dir_shock", 18f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

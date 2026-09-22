@@ -72,7 +72,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_RAY_BARRAGE, MeltdownerCategory.NAME, "ray_barrage"),
             new Binding(AbilityKeyBindings.ACTIVATE_FLASHING, TeleporterCategory.NAME, "flashing"),
             new Binding(AbilityKeyBindings.ACTIVATE_LOCATION_TELEPORT, TeleporterCategory.NAME,
-                    "location_teleport"));
+                    "location_teleport"),
+            new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_SHOCK, VecmanipCategory.NAME, "dir_shock"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
