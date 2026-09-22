@@ -31,28 +31,37 @@ public class ElectromasterCategory extends Category {
         addSkill(MINE_DETECT);
         addSkill(MAG_MANIP);
 
-        // Les dependances de l'original dont les deux bouts sont portes. Les autres
-        // chaines passent par des competences qui n'existent pas encore ici (mag_manip,
-        // mag_movement, current_charging...), et une dependance vers une competence
-        // absente rendrait la competence inapprenable pour toujours. Elles seront
-        // reposees en meme temps que ces competences.
-        BODY_INTENSIFY.setParent(ARC_GEN);
+        // L'arbre de l'electromaster, enfin complet : tant que mag_manip manquait, trois
+        // de ses liens ne pouvaient pas etre posees (une dependance vers une competence
+        // absente rendrait la competence inapprenable pour toujours). Les seuils sont
+        // ceux de l'original, au mot pres.
+        BODY_INTENSIFY.setParent(ARC_GEN, 1f);
+        // Le corps demande toute l'experience de l'arc, et la meme chose du branchement :
+        // il faut avoir appris a charger une machine avant d'intensifier son propre corps.
+        BODY_INTENSIFY.addDependency(CHARGING, 1f);
+        // Le thunder bolt demandait l'arc, sans seuil, et 70 % du branchement.
         THUNDER_BOLT.setParent(ARC_GEN);
+        THUNDER_BOLT.addDependency(CHARGING, 0.7f);
         // L'original demandait 30 % d'experience dans le thunder bolt avant de
-        // debloquer le railgun : l'avoir appris ne suffisait pas.
+        // debloquer le railgun : l'avoir appris ne suffisait pas. Et toute l'experience
+        // de la manipulation d'un bloc, parce que le railgun se charge de la meme facon.
         RAILGUN.setParent(THUNDER_BOLT, 0.3f);
+        RAILGUN.addDependency(MAG_MANIP, 1f);
         // L'original demandait cette fois l'experience pleine dans le thunder bolt.
         THUNDER_CLAP.setParent(THUNDER_BOLT, 1f);
         // Le tout premier degre d'electromaster : brancher sa reserve sur une machine
         // demandait un peu d'arc, comme dans l'original.
         CHARGING.setParent(ARC_GEN, 0.3f);
-        // La traction : l'original la demandait sans seuil d'experience dans l'arc.
+        // La traction : l'original la demandait sans seuil d'experience dans l'arc, donc
+        // l'arc appris suffisait, plus 70 % du branchement.
         MAG_MOVEMENT.setParent(ARC_GEN);
+        MAG_MOVEMENT.addDependency(CHARGING, 0.7f);
         // La manipulation d'un bloc descend de la traction, et l'original demandait la
         // moitie de son experience : on n'arrache pas un bloc avant d'avoir appris a s'y
         // accrocher.
         MAG_MANIP.setParent(MAG_MOVEMENT, 0.5f);
-        // La detection de minerais descend de mag_manip dans l'original, avec toute son
-        // experience : le port ne l'a pas encore reposee, donc elle n'a pas de parent.
+        // Et la detection de minerais ferme la chaine : toute l'experience de la
+        // manipulation, puisqu'elle en est la suite directe.
+        MINE_DETECT.setParent(MAG_MANIP, 1f);
     }
 }

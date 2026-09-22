@@ -34,8 +34,10 @@ public final class ConditionDependency implements LearningCondition {
      * Part de l'experience a atteindre dans la competence parente.
      *
      * Reprend {@code DevConditionDep.requiredExp} de l'original, ou une parente
-     * declaree sans seuil valait 0 — donc « apprise » suffisait. Les dependances
-     * portees sont toutes dans ce cas.
+     * declaree sans seuil valait 0 — donc « apprise » suffisait. L'original n'en
+     * demandait pas toujours : le railgun voulait 30 % du thunder bolt, la detection
+     * de minerais toute l'experience de la manipulation d'un bloc. Les seuils portes
+     * sont figes par {@code PortedSkillsTest}.
      */
     public float getRequiredExp() {
         return requiredExp;

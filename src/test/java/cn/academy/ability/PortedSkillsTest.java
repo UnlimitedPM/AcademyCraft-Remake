@@ -1,5 +1,7 @@
 package cn.academy.ability;
 
+import cn.academy.ability.develop.condition.ConditionDependency;
+import cn.academy.ability.develop.condition.LearningCondition;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -69,15 +71,23 @@ class PortedSkillsTest {
 
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
-            Map.entry("electromaster.body_intensify", List.of("electromaster.arc_gen")),
-            Map.entry("electromaster.thunder_bolt", List.of("electromaster.arc_gen")),
-            Map.entry("electromaster.railgun", List.of("electromaster.thunder_bolt")),
+            // L'electromaster est complet : ses huit competences et leurs onze liens, ceux
+            // que l'original posait dans son CatElectromaster.
+            Map.entry("electromaster.body_intensify",
+                    List.of("electromaster.arc_gen", "electromaster.charging")),
+            Map.entry("electromaster.thunder_bolt",
+                    List.of("electromaster.arc_gen", "electromaster.charging")),
+            Map.entry("electromaster.railgun",
+                    List.of("electromaster.thunder_bolt", "electromaster.mag_manip")),
             Map.entry("electromaster.thunder_clap", List.of("electromaster.thunder_bolt")),
             Map.entry("electromaster.charging", List.of("electromaster.arc_gen")),
-            Map.entry("electromaster.mag_movement", List.of("electromaster.arc_gen")),
+            Map.entry("electromaster.mag_movement",
+                    List.of("electromaster.arc_gen", "electromaster.charging")),
             // La manipulation d'un bloc descend de la traction, avec la moitie de son
             // experience : on n'arrache pas un bloc avant de savoir s'y accrocher.
             Map.entry("electromaster.mag_manip", List.of("electromaster.mag_movement")),
+            // Et la detection de minerais descend de la manipulation, avec toute la sienne.
+            Map.entry("electromaster.mine_detect", List.of("electromaster.mag_manip")),
             Map.entry("teleporter.dim_folding_theorem", List.of("teleporter.threatening_teleport")),
             Map.entry("teleporter.penetrate_teleport", List.of("teleporter.threatening_teleport")),
             Map.entry("teleporter.mark_teleport", List.of("teleporter.threatening_teleport")),
@@ -195,6 +205,48 @@ class PortedSkillsTest {
             }
             assertEquals(Set.copyOf(expected), found,
                     "dependances de " + fullName(skill));
+        }
+    }
+
+    /**
+     * Les seuils d'experience que l'original demandait dans la parente, quand il en
+     * demandait un.
+     *
+     * Une dependance sans seuil se contente de « apprise » ; l'original en demandait
+     * parfois davantage, et c'est presque tout l'arbre de l'electromaster : le railgun
+     * voulait 30 % du thunder bolt, le corps interdit toute l'experience de l'arc, la
+     * detection de minerais toute celle de la manipulation d'un bloc. Ces nombres ne se
+     * voient nulle part en jeu — sinon sous la forme d'une competence qui refuse de
+     * s'ouvrir — donc ils sont figes ici.
+     */
+    private static final Map<String, Map<String, Float>> EXPECTED_THRESHOLDS = Map.of(
+            "electromaster.charging", Map.of("electromaster.arc_gen", 0.3f),
+            "electromaster.mag_movement", Map.of("electromaster.charging", 0.7f),
+            "electromaster.mag_manip", Map.of("electromaster.mag_movement", 0.5f),
+            "electromaster.body_intensify",
+                    Map.of("electromaster.arc_gen", 1f, "electromaster.charging", 1f),
+            "electromaster.thunder_bolt", Map.of("electromaster.charging", 0.7f),
+            "electromaster.railgun",
+                    Map.of("electromaster.thunder_bolt", 0.3f, "electromaster.mag_manip", 1f),
+            "electromaster.thunder_clap", Map.of("electromaster.thunder_bolt", 1f),
+            "electromaster.mine_detect", Map.of("electromaster.mag_manip", 1f));
+
+    @Test
+    void lesSeuilsDeDependanceSontCeuxDeLOriginal() {
+        for (Skill skill : allSkills()) {
+            if (!fullName(skill).startsWith("electromaster.")) continue;
+
+            Map<String, Float> expected = EXPECTED_THRESHOLDS.getOrDefault(fullName(skill),
+                    Map.of());
+            Map<String, Float> found = new HashMap<>();
+            for (LearningCondition condition : skill.getConditions()) {
+                if (condition instanceof ConditionDependency dependency
+                        && dependency.getRequiredExp() > 0f) {
+                    found.put(fullName(dependency.getDependency()),
+                            dependency.getRequiredExp());
+                }
+            }
+            assertEquals(expected, found, "seuils de " + fullName(skill));
         }
     }
 

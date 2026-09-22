@@ -1584,36 +1584,56 @@ public final class AcademyGameTests {
 
         var player = fakePlayer(helper);
 
-        // Categorie 0 = electromaster : deux de ses competences portent une dependance
-        // dont les deux bouts sont portes (body_intensify depend de arc_gen, comme
-        // vec_accel depend du choc dirige cote vecmanip).
+        // Categorie 0 = electromaster : body_intensify y porte DEUX dependances, et
+        // l'original demandait toute l'experience dans chacune (l'arc, et le branchement
+        // d'une machine). Le seuil est ce qu'il y a de plus facile a perdre en recopiant
+        // l'arbre : « apprise » ne suffit pas, il faut s'en etre servi.
         var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0);
-        var parent = category.getSkill("arc_gen");
+        var arc = category.getSkill("arc_gen");
+        var charging = category.getSkill("charging");
         var child = category.getSkill("body_intensify");
-        assertTrue(helper, parent != null && child != null, "les deux competences doivent etre portees");
+        assertTrue(helper, arc != null && charging != null && child != null,
+                "les trois competences doivent etre portees");
 
-        // body_intensify est de niveau 3 et depend de arc_gen.
         assertValue(helper, 3, child.getLevel(), "body_intensify est de niveau 3");
-        assertValue(helper, 1, child.getDependencies().size(), "une dependance");
-        assertTrue(helper, child.getDependencies().get(0) == parent, "et c'est arc_gen");
+        assertValue(helper, 2, child.getDependencies().size(), "deux dependances");
+        assertTrue(helper, child.getDependencies().contains(arc), "l'arc en fait partie");
+        assertTrue(helper, child.getDependencies().contains(charging),
+                "et le branchement aussi");
         assertValue(helper, 7, child.getLearningStims(), "prix de body_intensify : 3 + 3*3/2");
 
         setCategoryLevel(player, category, 3);
-        forgetSkill(player, parent);
+        forgetSkill(player, arc);
+        forgetSkill(player, charging);
 
         assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), child.getId()),
-                "sans la dependance, la competence ne doit pas s'ouvrir");
+                "sans les dependances, la competence ne doit pas s'ouvrir");
+
+        // L'arc appris ne suffit pas : il en manque une.
+        learnSkill(player, arc);
+        assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), child.getId()),
+                "une seule des deux dependances ne suffit pas");
+
+        // Apprendre le branchement ne suffit pas non plus : l'original demandait TOUTE
+        // l'experience dans chacune des deux.
+        learnSkill(player, charging);
+        assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), child.getId()),
+                "apprendre le branchement ne suffit pas, il faut l'avoir pousse a fond");
 
         player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
-                .ifPresent(data -> data.learnSkill(parent));
+                .ifPresent(data -> {
+                    data.addSkillExp(arc, 1f);
+                    data.addSkillExp(charging, 1f);
+                });
 
         assertTrue(helper, developer.startDeveloping(player, category.getCategoryId(), child.getId()),
-                "une fois la dependance apprise, la competence s'ouvre");
+                "les deux dependances a fond : la competence s'ouvre");
         assertValue(helper, 7, developer.getMaxStim(), "sept stimulations pour body_intensify");
 
         // On n'attend pas la fin : ce test porte sur l'ouverture, pas sur le deroule.
         developer.abort();
-        forgetSkill(player, parent);
+        forgetSkill(player, arc);
+        forgetSkill(player, charging);
         setCategoryLevel(player, category, 0);
         helper.succeed();
     }
