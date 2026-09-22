@@ -2863,6 +2863,151 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La reflexion de vecteur : ce qu'elle fait de different de la deviation.
+     *
+     * <p>Meme veille, meme repere, mais l'effet est l'inverse : une fleche est <b>renvoyee</b>
+     * vers le point que le regard touche, a sa vitesse, et une boule de feu est <b>remplacee</b>
+     * — le tir change de camp. Le deuxieme tick verifie le repere partage par les deux
+     * competences : ce qui est deja renvoye ne rapporte plus rien.
+     */
+    @GameTest(template = "empty")
+    public static void laReflexionRenvoieCeQuiVole(GameTestHelper helper) {
+        var reflection = cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 360);
+
+        var player = ownPlayer(helper, "reflector");
+        // Le couloir est nettoye AVANT de placer le joueur : ce qui reste d'une execution
+        // ratee ferait echouer le compte des boules de feu juste apres.
+        clearCorridor(helper, abs, 10);
+        // Le regard vers +Z : c'est de ce cote que tout doit repartir.
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(reflection.getCategory(), 4);
+        data.learnSkill(reflection);
+        reflection.onStart(player, data);
+        data.beginCharge(reflection);
+
+        var arrow = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        arrow.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 3.0, 0f, 0f);
+        arrow.setDeltaMovement(0.0, 0.0, -1.0);
+        level.addFreshEntity(arrow);
+
+        var ball = new net.minecraft.world.entity.projectile.SmallFireball(
+                net.minecraft.world.entity.EntityType.SMALL_FIREBALL, level);
+        ball.moveTo(abs.getX() + 1.5, abs.getY() + 1.0, abs.getZ() + 3.0, 0f, 0f);
+        ball.setDeltaMovement(0.0, 0.0, -0.5);
+        level.addFreshEntity(ball);
+
+        double reserveBefore = data.getControlPoint();
+        assertTrue(helper, reflection.onHoldTick(player, data, 1), "la veille doit tenir");
+
+        // La fleche repart vers le regard, a sa vitesse, et porte le repere.
+        assertClose(helper, 1.0d, arrow.getDeltaMovement().length(),
+                "une fleche renvoyee garde sa vitesse");
+        assertTrue(helper, arrow.getDeltaMovement().z > 0.9,
+                "et repart la ou le regard touche : " + arrow.getDeltaMovement());
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(arrow),
+                "et elle est marquee comme renvoyee");
+        assertClose(helper, 0.0016d, data.getSkillExp(reflection),
+                "0,0008 par point de difficulte, pour deux prises de difficulte 1,0");
+
+        // La boule de feu, elle, a ete remplacee : une seule boule dans le couloir, vivante,
+        // marquee, et relancee vers le regard.
+        var balls = level.getEntitiesOfClass(net.minecraft.world.entity.projectile.SmallFireball.class,
+                new net.minecraft.world.phys.AABB(abs).inflate(6));
+        assertClose(helper, 1d, balls.size(),
+                "l'ancienne boule a disparu, une neuve a pris sa place");
+        assertFalse(helper, balls.get(0) == ball, "et c'est bien une autre boule");
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(balls.get(0)),
+                "marquee a son tour, pour ne pas etre renvoyee deux fois");
+        assertTrue(helper, balls.get(0).getDeltaMovement().z > 0.4,
+                "et relancee vers le regard : " + balls.get(0).getDeltaMovement());
+        assertFalse(helper, ball.isAlive(), "l'ancienne boule, elle, est morte");
+
+        // Les deux prises se paient en reserve : 10,7 CP par entite de difficulte 1.
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 21f,
+                "deux prises a payer : " + data.getControlPoint());
+
+        // Le deuxieme tick ne rapporte plus rien : les deux sont marquees.
+        double expAfterFirst = data.getSkillExp(reflection);
+        assertTrue(helper, reflection.onHoldTick(player, data, 2), "la veille tient toujours");
+        assertClose(helper, expAfterFirst, data.getSkillExp(reflection),
+                "une entite deja renvoyee ne rapporte plus d'experience");
+
+        arrow.discard();
+        balls.get(0).discard();
+        helper.succeed();
+    }
+
+    /**
+     * La reflexion des coups : elle renvoie une part des degats a qui les a donnes, et
+     * annule le coup quand la part renvoyee couvre ce qu'elle a pris.
+     *
+     * <p>Le renvoi est lu <b>avant</b> que l'experience du coup ne soit versee, comme dans
+     * l'original : a l'ouverture, 10 points de degats sont donc rendus a 6 pile, et non a
+     * 6,024 comme le voudrait l'experience gagnee au passage.
+     */
+    @GameTest(template = "empty")
+    public static void laReflexionRendLesCoups(GameTestHelper helper) {
+        var reflection = cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 320);
+
+        var player = ownPlayer(helper, "reflector-of-hits");
+        clearCorridor(helper, abs, 6);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(reflection.getCategory(), 4);
+        data.learnSkill(reflection);
+        reflection.onStart(player, data);
+        data.beginCharge(reflection);
+
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        level.addFreshEntity(zombie);
+
+        // Un coup de 10 donne par le zombie : 60 % repartent, donc 6 points, et il en reste 4.
+        double reserveBefore = data.getControlPoint();
+        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().mobAttack(zombie), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
+        assertClose(helper, 4.0d, hurt.getAmount(), "10 points dont 60 % repartent");
+        assertTrue(helper, zombie.getHealth() < 15f && zombie.getHealth() > 13f,
+                "et l'attaquant encaisse les 6 points renvoyes : " + zombie.getHealth());
+        assertClose(helper, 0.004d, data.getSkillExp(reflection),
+                "0,0004 par point encaisse");
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 7f,
+                "un coup de 10 points coute 7,1 CP : " + data.getControlPoint());
+
+        // Au maximum la part renvoyee vaut 120 % : le coup est entierement rendu, donc
+        // annule — le porteur ne prend rien du tout.
+        data.addSkillExp(reflection, 1f);
+        var absorbed = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().mobAttack(zombie), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(absorbed);
+        assertClose(helper, 0.0d, absorbed.getAmount(), "un renvoi complet ne laisse rien passer");
+        assertTrue(helper, absorbed.isCanceled(), "et le coup est annule");
+
+        // Hors du maintien, plus rien : les degats passent entiers, et rien n'est annule.
+        data.cancelCharge(reflection);
+        var after = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().mobAttack(zombie), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(after);
+        assertClose(helper, 10.0d, after.getAmount(), "sans maintien, les degats passent entiers");
+        assertFalse(helper, after.isCanceled(), "et rien n'est annule");
+
+        zombie.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui

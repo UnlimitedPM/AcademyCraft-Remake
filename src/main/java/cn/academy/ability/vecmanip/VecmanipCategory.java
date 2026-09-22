@@ -40,5 +40,8 @@ public class VecmanipCategory extends Category {
         // La deviation descend de l'acceleration : on n'apprend pas a arreter ce qui vole
         // avant d'avoir appris a se propulser soi-meme.
         VEC_DEVIATION.setParent(VEC_ACCEL);
+        // Et la reflexion descend de la deviation : arreter ce qui vole s'apprend avant de
+        // le retourner, exactement comme dans l'arbre de l'original.
+        VEC_REFLECTION.setParent(VEC_DEVIATION);
     }
 }

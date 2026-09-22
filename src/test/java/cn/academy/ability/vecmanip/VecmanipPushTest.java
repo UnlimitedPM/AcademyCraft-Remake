@@ -13,6 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * l'onde de choc dirigee (0,4 et 1,2), et c'est aussi la ou vit la <b>coquille corrigee</b>
  * de l'original : son axe Z recevait la composante verticale, si bien qu'une cible droit
  * devant ne reculait pas du tout. Le test la fixe pour les deux competences a la fois.
+ *
+ * <p>La meme classe porte les deux autres directions de vecmanip, celles qui ne dependent
+ * que d'un point : la <b>bousculade</b> des ondes (0,24 dans l'axe joueur vers cible) et le
+ * <b>renvoi</b> de la reflexion, qui retourne une entite vers ce que le regard touche en lui
+ * gardant sa vitesse.
  */
 class VecmanipPushTest {
 
@@ -87,5 +92,27 @@ class VecmanipPushTest {
         assertTrue(diagonal.y > 0, "et la cible plus haute est soulevee : " + diagonal);
 
         assertEquals(Vec3.ZERO, VecmanipPush.shove(new Vec3(1, 2, 3), new Vec3(1, 2, 3)));
+    }
+
+    @Test
+    void leRenvoiGardeLaVitesseEtPrendLaDirectionDuRegard() {
+        // Le cas de la reflexion : une fleche qui arrivait sur le joueur (mouvement vers -Z)
+        // repart vers le point que le regard touche (loin devant, vers +Z), et garde sa
+        // vitesse — 1,0 pour une fleche de l'original.
+        Vec3 back = VecmanipPush.redirect(new Vec3(0, 0, 20), new Vec3(0, 0, 3), 1.0);
+        assertEquals(1.0, back.length(), 0.0001, "la vitesse de l'entite est conservee");
+        assertTrue(back.z > 0, "elle repart vers ce que le regard touche : " + back);
+        assertEquals(0.0, back.x, 0.0001, "sans derive laterale quand la visee est droite");
+
+        // Une entite immobile ne part pas : le renvoi ne cree pas d'energie.
+        assertEquals(Vec3.ZERO, VecmanipPush.redirect(new Vec3(0, 0, 20), new Vec3(0, 0, 3), 0.0));
+
+        // Et une visee confondue avec l'entite n'a pas de direction : pas de division par zero.
+        assertEquals(Vec3.ZERO, VecmanipPush.redirect(new Vec3(1, 2, 3), new Vec3(1, 2, 3), 1.0));
+
+        // La hauteur suit la visee : viser plus bas renvoie plus bas.
+        Vec3 down = VecmanipPush.redirect(new Vec3(0, -5, 20), new Vec3(0, 1, 0), 2.0);
+        assertEquals(2.0, down.length(), 0.0001, "la longueur reste celle du mouvement");
+        assertTrue(down.y < 0, "viser sous soi renvoie vers le bas : " + down);
     }
 }

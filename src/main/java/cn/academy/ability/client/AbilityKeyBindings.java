@@ -162,6 +162,15 @@ public class AbilityKeyBindings {
             InputConstants.KEY_GRAVE, "key.categories.academy");
 
     /**
+     * La reflexion de vecteur. Les lettres sont prises depuis longtemps, et la ponctuation
+     * s'epuise a son tour : celle-ci se pose donc sur la touche d'insertion. Le systeme de
+     * presets de l'original reste a porter, et c'est lui qui reglera la question.
+     */
+    public static final KeyMapping ACTIVATE_VEC_REFLECTION = new KeyMapping(
+            "key.academy.activate_vec_reflection", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_INSERT, "key.categories.academy");
+
+    /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
      */
@@ -200,5 +209,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_DIRECTED_BLASTWAVE);
         event.register(ACTIVATE_BLOOD_RETROGRADE);
         event.register(ACTIVATE_VEC_DEVIATION);
+        event.register(ACTIVATE_VEC_REFLECTION);
     }
 }

@@ -162,7 +162,7 @@ public final class EntityAffection {
      * frappe dans un nom d'entite est ignoree, et l'entite tombe alors dans la difficulte par
      * defaut.
      *
-     * <h2>Septieme coquille de l'original corrigee</h2>
+     * <h2>Sixieme coquille de l'original corrigee</h2>
      *
      * <p>Son {@code .find { case (klass, _) => klass != null }} lisait la liste de difficultes
      * avec un {@code find} la ou il fallait un {@code filter} : sur les trois entrees de la

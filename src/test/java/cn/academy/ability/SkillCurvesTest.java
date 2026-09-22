@@ -1019,6 +1019,52 @@ class SkillCurvesTest {
         assertEquals(0f, deviation.getExpGain(atExperience(deviation, 0f)), 0.000001f);
     }
 
+    /**
+     * La reflexion de vecteur : la soeur de la deviation, mais elle <b>renvoie</b> au lieu
+     * d'arreter.
+     */
+    @Test
+    void laReflexionRenvoieCeQuiVoleEtRendLesCoups() {
+        var reflection = cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION;
+
+        // Une competence tenue, sans duree ni recharge : elle tient tant que la reserve suit,
+        // comme la veille de la deviation dont elle descend.
+        assertTrue(reflection.isHeld(), "la reflexion se tient");
+        assertFalse(reflection.isPassive(), "ce n'est plus une passive");
+        assertEquals(0, reflection.getMaxHoldTicks(atExperience(reflection, 0f)),
+                "aucune duree programmee");
+        assertEquals(0, reflection.getCooldownTicks(atExperience(reflection, 0f)),
+                "aucune recharge : un maintien se termine et se reprend");
+
+        // Ses courbes : entretien 15 a 11 CP par tick, surcout epingle 350 a 250 (verbatim),
+        // et 300 a 160 CP par entite renvoyee — les deux divises par 28, l'epingle non.
+        assertBounds("entretien de vec_reflection", 0.54f, 0.39f, reflection::tickCost, reflection);
+        assertBounds("epingle de vec_reflection", 350f, 250f, reflection::pin, reflection);
+        assertBounds("cout d'une entite renvoyee",
+                10.7f, 5.7f, d -> reflection.entityCost(d, 1f), reflection);
+
+        // La difficulte multiplie ce qu'une entite coute, comme elle multiplie ce qu'elle
+        // rapporte : une potion (1,4) coute plus cher qu'une fleche (1,0).
+        assertBounds("cout d'une potion",
+                10.7f * 1.4f, 5.7f * 1.4f, d -> reflection.entityCost(d, 1.4f), reflection);
+        assertEquals(reflection.entityCost(atExperience(reflection, 0f), 0f), 0f, 0.0001f,
+                "et ce que la config ne connait pas ne coute rien");
+
+        // Les coups : la part renvoyee va de 60 % a 120 %, et son prix suit ce qu'elle rend
+        // — 20 a 15 CP par point de degats, divises par 28.
+        assertBounds("part renvoyee", 0.6f, 1.2f, reflection::reflectRatio, reflection);
+        assertBounds("prix d'un coup de 10 points",
+                7.1f, 5.4f, d -> reflection.damageCost(d, 10f), reflection);
+
+        // Le prix d'ouverture est le surcout epingle, et rien d'autre.
+        assertEquals(0f, reflection.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
+        assertEquals(reflection.pin(atExperience(reflection, 0f)),
+                reflection.getOverloadCost(atExperience(reflection, 0f)), 0.0001f,
+                "et le surcout epingle pour seul prix");
+        assertTrue(reflection.earnsExpOnEffect(), "tout est verse par la veille et par ses renvois");
+        assertEquals(0f, reflection.getExpGain(atExperience(reflection, 0f)), 0.000001f);
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,
@@ -1047,8 +1093,10 @@ class SkillCurvesTest {
 
     @Test
     void lesCompetencesSansRechargeNEnOntPas() {
-        // Les passives n'en ont jamais eu.
+        // Les passives n'en ont jamais eu, et les maintiens non plus : leur fin est leur
+        // propre fin, pas une recharge a attendre.
         assertEquals(0, cooldownOf(cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION));
+        assertEquals(0, cooldownOf(cn.academy.ability.vecmanip.VecmanipCategory.VEC_DEVIATION));
         assertEquals(0,
                 cooldownOf(cn.academy.ability.teleporter.TeleporterCategory.DIM_FOLDING_THEOREM));
     }

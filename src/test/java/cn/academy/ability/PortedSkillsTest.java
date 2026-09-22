@@ -102,7 +102,12 @@ class PortedSkillsTest {
             // avant d'avoir appris a ouvrir le sol.
             Map.entry("vecmanip.blood_retro", List.of("vecmanip.dir_blast")),
             // La deviation descend de l'acceleration de vecteur.
-            Map.entry("vecmanip.vec_deviation", List.of("vecmanip.vec_accel")));    private static List<Category> categories() {
+            Map.entry("vecmanip.vec_deviation", List.of("vecmanip.vec_accel")),
+            // Et la reflexion de la deviation : arreter ce qui vole s'apprend avant de le
+            // retourner, comme dans l'arbre de l'original.
+            Map.entry("vecmanip.vec_reflection", List.of("vecmanip.vec_deviation")));
+
+    private static List<Category> categories() {
         return List.of(
                 cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE,
                 cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE,
@@ -310,6 +315,7 @@ class PortedSkillsTest {
             Map.entry("vecmanip.dir_blast", 50f),
             Map.entry("vecmanip.blood_retro", 55f),
             Map.entry("vecmanip.vec_deviation", 80f),
+            Map.entry("vecmanip.vec_reflection", 350f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

@@ -80,7 +80,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_BLOOD_RETROGRADE, VecmanipCategory.NAME,
                     "blood_retro"),
             new Binding(AbilityKeyBindings.ACTIVATE_VEC_DEVIATION, VecmanipCategory.NAME,
-                    "vec_deviation"));
+                    "vec_deviation"),
+            new Binding(AbilityKeyBindings.ACTIVATE_VEC_REFLECTION, VecmanipCategory.NAME,
+                    "vec_reflection"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

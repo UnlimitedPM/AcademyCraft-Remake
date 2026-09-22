@@ -40,14 +40,15 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * ce qui vole, pas ce qui marche. Une entite deviee est <b>marquee</b> : elle ne sera plus
  * touchee, ce qui empeche une cible immobile de rapporter de l'experience a chaque tick.
  *
- * <h2>Sixieme coquille de l'original corrigee</h2>
+ * <h2>Un quiproquo qui n'en etait pas un</h2>
  *
- * Sa reduction de degats payait son cout avec {@code ctx.consume(0, consumption)} : les deux
- * arguments etaient <b>inverses</b>, donc elle ne payait pas de reserve du tout et chargeait
- * la surcharge du montant qu'elle aurait du payer. C'est le meme quiproquo que sur le bouclier
- * de lumiere (voir {@code LightShieldSkill}), et l'intention se lit dans le
- * {@code min(reserve disponible, ...)} de la ligne au-dessus : c'est de la <b>reserve</b> que
- * la deviation se paie. Le port suit l'intention.
+ * Le port a d'abord cru que sa reduction de degats appelait {@code ctx.consume} avec ses
+ * arguments inverses, comme le fait le bouclier de lumiere. Il n'en est rien : la signature
+ * de l'original est {@code consume(overload, cp)}, donc {@code ctx.consume(0, consumption)}
+ * paie bien la <b>reserve</b> et rien d'autre — ce que le port fait aussi, par
+ * {@code consumeControlPoint}. Le piege existe pourtant, et il vaut la peine d'etre note : le
+ * port range ses deux ressources dans l'autre ordre, {@code perform(cp, overload)}, si bien
+ * que la meme ligne recopiee telle quelle paierait la surcharge a la place de la reserve.
  *
  * <p>Non porte : les ondes visuelles et le son de l'original.
  */

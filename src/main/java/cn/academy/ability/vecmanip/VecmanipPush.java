@@ -60,6 +60,26 @@ public final class VecmanipPush {
         return away.lengthSqr() == 0 ? Vec3.ZERO : away.normalize().scale(SHOVE);
     }
 
+    /**
+     * Le renvoi de la reflexion : ce qui vole repart la ou le regard s'arrete, a sa
+     * propre vitesse.
+     *
+     * <p>La ou la deviation <b>arrete</b> ce qu'elle trouve, la reflexion le retourne :
+     * l'original prenait la direction de la tete de l'entite vers le point que le regard
+     * touche, la normalisait, et la remettait a la <b>longueur du mouvement en cours</b>.
+     * Une fleche rapide repart vite, une bille posee ne part pas — c'est toute la
+     * difference entre les deux competences.
+     *
+     * @param lookPoint le point que le regard touche (vingt blocs devant les yeux)
+     * @param entityEye l'oeil de ce qui est renvoye
+     * @param speed     la longueur du mouvement en cours
+     */
+    public static Vec3 redirect(Vec3 lookPoint, Vec3 entityEye, double speed) {
+        Vec3 toAim = lookPoint.subtract(entityEye);
+        if (toAim.lengthSqr() == 0) return Vec3.ZERO;
+        return toAim.normalize().scale(speed);
+    }
+
     /** La bousculade des deux ondes : {@code 0.24} chez l'original, sur les deux. */
     public static final double SHOVE = 0.24;
 
