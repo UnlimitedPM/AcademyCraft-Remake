@@ -2083,21 +2083,57 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
-    /** L'arbre de competences est la seule application portee, et elle est enregistree. */
+    /** Les applications portees sont enregistrees, et elles seules. */
     @GameTest(template = "empty")
-    public static void appRegistryContainsThePortedApp(GameTestHelper helper) {
+    public static void appRegistryContainsThePortedApps(GameTestHelper helper) {
         var registry = cn.academy.terminal.AppRegistry.INSTANCE;
+        var about = cn.academy.terminal.app.AppAbout.INSTANCE;
         var skillTree = cn.academy.terminal.app.AppSkillTree.INSTANCE;
 
         assertTrue(helper, registry.isBaked(), "le registre doit etre ferme apres l'initialisation");
-        assertValue(helper, "skill_tree", registry.get(0).getName(), "la premiere application");
+
+        // L'ordre du registre donne les identifiants : il suit les priorites de
+        // l'original, « A propos » en premier, et une application s'ajoute a la fin.
+        assertValue(helper, 2, registry.size(), "deux applications sont portees");
+        assertValue(helper, "about", registry.get(0).getName(), "la premiere application");
+        assertValue(helper, "skill_tree", registry.get(1).getName(), "la deuxieme application");
+        assertValue(helper, 0, about.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
+        assertValue(helper, 1, skillTree.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
+
+        assertTrue(helper, registry.getByName("about") == about,
+                "la recherche par nom doit rendre la meme instance");
         assertTrue(helper, registry.getByName("skill_tree") == skillTree,
                 "la recherche par nom doit rendre la meme instance");
-        assertValue(helper, 0, skillTree.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
-        assertFalse(helper, skillTree.isPreInstalled(), "l'arbre s'installe avec un objet, pas d'office");
+
+        assertTrue(helper, about.isPreInstalled(),
+                "a propos s'installe d'office : sinon le terminal s'ouvre sur une grille vide");
+        assertFalse(helper, skillTree.isPreInstalled(),
+                "l'arbre s'installe avec un objet, pas d'office");
+
+        assertValue(helper, "ac.app.about.name", about.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.skill_tree.name", skillTree.getDisplayKey(), "cle de langue du nom");
         assertTrue(helper, registry.getByName("settings") == null,
                 "les applications non portees ne doivent pas etre enregistrees");
+        helper.succeed();
+    }
+
+    /**
+     * Les credits livres avec le mod sont lisibles au moment ou le jeu tourne.
+     *
+     * Le test JUnit lit le meme fichier depuis le classpath ; celui-ci verifie en
+     * plus qu'il est bien dans les ressources du mod, ce qui n'est pas la meme
+     * chose : un fichier present dans les sources peut manquer a l'assemblage.
+     */
+    @GameTest(template = "empty")
+    public static void aboutCreditsArePackaged(GameTestHelper helper) {
+        var document = cn.academy.terminal.about.AboutDocument.load();
+
+        assertFalse(helper, document.isEmpty(), "le document de credits doit se lire dans le jeu");
+        assertTrue(helper, document.getHeader().size() == 2, "l'en-tete de l'original fait deux lignes");
+        assertTrue(helper, document.getStaff().size() >= 8, "l'equipe compte au moins huit roles");
+        assertTrue(helper, document.getDonators().size() >= 93,
+                "la liste des donateurs de l'original fait 93 noms, une liste tronquee doit se voir");
+        assertTrue(helper, !document.toLines("info").isEmpty(), "la mise en page doit produire des lignes");
         helper.succeed();
     }
 
@@ -2115,7 +2151,6 @@ public final class AcademyGameTests {
         var data = terminalOf(player);
         return data != null && data.isInstalled(cn.academy.terminal.app.AppSkillTree.INSTANCE);
     }
-
     /**
      * Rend le faux joueur a son etat initial.
      *

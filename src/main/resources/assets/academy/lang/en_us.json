@@ -103,6 +103,10 @@
   "ac.terminal.app_alrdy_installed": "You have already installed app %s.",
   "ac.terminal.app_missing": "App %s is not available yet.",
 
+  "ac.app.about.name": "About",
+  "ac.about.donators_info": "In no particular order",
+  "ac.about.empty": "Credits are missing from this build.",
+
   "item.academy.imag_phase": "Imag Phase Liquid",
   "item.academy.logo": "AcademyCraft Logo",
 
