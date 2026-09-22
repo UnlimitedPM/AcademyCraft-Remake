@@ -76,6 +76,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_threatening_teleport", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_X, "key.categories.academy");
 
+    /** Viser loin : la portee grandit tant que la touche est tenue. */
+    public static final KeyMapping ACTIVATE_MARK_TELEPORT = new KeyMapping(
+            "key.academy.activate_mark_teleport", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_P, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -92,5 +97,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_CHARGING);
         event.register(ACTIVATE_MAG_MOVEMENT);
         event.register(ACTIVATE_THREATENING_TELEPORT);
+        event.register(ACTIVATE_MARK_TELEPORT);
     }
 }

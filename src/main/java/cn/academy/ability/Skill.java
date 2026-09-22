@@ -206,6 +206,18 @@ public abstract class Skill {
     }
 
     /**
+     * Cette competence verse-t-elle son experience elle-meme, depuis son effet ?
+     *
+     * Par defaut non : le paquet d'activation verse {@link #getExpGain} et l'effet peut
+     * ajouter une part. Quelques competences n'ont rien a declarer la — la teleportation
+     * au marqueur se paie au bloc parcouru, et le paquet ne connait pas la distance — et
+     * le disent ici plutot que de laisser croire a un oubli.
+     */
+    public boolean earnsExpOnEffect() {
+        return false;
+    }
+
+    /**
      * Multiplicateur d'experience, porte par la competence.
      *
      * L'original en faisait un reglage par competence ({@code exp_incr_speed}, defaut

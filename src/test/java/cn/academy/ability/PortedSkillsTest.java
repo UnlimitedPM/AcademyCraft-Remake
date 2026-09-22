@@ -43,23 +43,25 @@ class PortedSkillsTest {
             Map.entry("meltdowner.meltdowner", 3),
             Map.entry("teleporter.dim_folding_theorem", 1),
             Map.entry("teleporter.threatening_teleport", 1),
+            Map.entry("teleporter.mark_teleport", 2),
             Map.entry("teleporter.penetrate_teleport", 2),
             Map.entry("teleporter.shift_tp", 4),
             Map.entry("vecmanip.vec_accel", 2),
             Map.entry("vecmanip.vec_reflection", 4));
 
     /** Les dependances de l'original dont les deux bouts sont portes. */
-    private static final Map<String, String> EXPECTED_DEPENDENCIES = Map.of(
-            "electromaster.body_intensify", "electromaster.arc_gen",
-            "electromaster.thunder_bolt", "electromaster.arc_gen",
-            "electromaster.railgun", "electromaster.thunder_bolt",
-            "electromaster.thunder_clap", "electromaster.thunder_bolt",
-            "electromaster.charging", "electromaster.arc_gen",
-            "electromaster.mag_movement", "electromaster.arc_gen",
-            "teleporter.dim_folding_theorem", "teleporter.threatening_teleport",
-            "teleporter.penetrate_teleport", "teleporter.threatening_teleport",
-            "meltdowner.light_shield", "meltdowner.electron_bomb",
-            "meltdowner.meltdowner", "meltdowner.light_shield");
+    private static final Map<String, String> EXPECTED_DEPENDENCIES = Map.ofEntries(
+            Map.entry("electromaster.body_intensify", "electromaster.arc_gen"),
+            Map.entry("electromaster.thunder_bolt", "electromaster.arc_gen"),
+            Map.entry("electromaster.railgun", "electromaster.thunder_bolt"),
+            Map.entry("electromaster.thunder_clap", "electromaster.thunder_bolt"),
+            Map.entry("electromaster.charging", "electromaster.arc_gen"),
+            Map.entry("electromaster.mag_movement", "electromaster.arc_gen"),
+            Map.entry("teleporter.dim_folding_theorem", "teleporter.threatening_teleport"),
+            Map.entry("teleporter.penetrate_teleport", "teleporter.threatening_teleport"),
+            Map.entry("teleporter.mark_teleport", "teleporter.threatening_teleport"),
+            Map.entry("meltdowner.light_shield", "meltdowner.electron_bomb"),
+            Map.entry("meltdowner.meltdowner", "meltdowner.light_shield"));
 
     private static List<Category> categories() {
         return List.of(
@@ -204,8 +206,9 @@ class PortedSkillsTest {
         for (Skill skill : allSkills()) {
             // Les passives et les competences tenues n'ont pas de gain a l'activation :
             // elles versent leur experience depuis leur propre crochet, le seul endroit
-            // ou elles savent que quelque chose s'est produit.
-            if (skill.isPassive() || skill.isHeld()) continue;
+            // ou elles savent que quelque chose s'est produit. Les competences qui le
+            // declarent (voir Skill#earnsExpOnEffect) non plus, et pour la meme raison.
+            if (skill.isPassive() || skill.isHeld() || skill.earnsExpOnEffect()) continue;
             Float expected = EXPECTED_EXP.get(fullName(skill));
             assertNotNull(expected, "gain d'experience non fige pour " + fullName(skill));
             assertEquals(expected.floatValue(), skill.getExpGain(charged(skill)),
@@ -218,7 +221,7 @@ class PortedSkillsTest {
         // Une competence active sans gain d'experience rendrait son niveau
         // inatteignable, et cela ne se verrait qu'apres des heures de jeu.
         for (Skill skill : allSkills()) {
-            if (skill.isPassive() || skill.isHeld()) continue;
+            if (skill.isPassive() || skill.isHeld() || skill.earnsExpOnEffect()) continue;
             assertTrue(skill.getExpGain(charged(skill)) > 0f,
                     fullName(skill) + " ne rapporte aucune experience");
         }
@@ -240,6 +243,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.charging", 65f),
             Map.entry("electromaster.mag_movement", 60f),
             Map.entry("teleporter.threatening_teleport", 18f),
+            Map.entry("teleporter.mark_teleport", 40f),
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),

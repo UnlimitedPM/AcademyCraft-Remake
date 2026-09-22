@@ -278,6 +278,34 @@ class SkillCurvesTest {
         assertCooldownBounds("recharge du lancer", throwing, 30, 15);
     }
 
+    @Test
+    void laTeleportationAuMarqueurGranditAvecLaVisee() {
+        var mark = cn.academy.ability.teleporter.TeleporterCategory.MARK_TELEPORT;
+
+        assertTrue(mark.isChargeable(), "la visée se charge");
+
+        // Deux blocs par tick de visee...
+        assertEquals(20.0, cn.academy.ability.teleporter.MarkTeleportSkill.maxDistance(0f, 100f, 9, 0.43f),
+                0.0001);
+        // ... sans depasser la portee d'experience (25 a 60 blocs)...
+        assertEquals(25.0, cn.academy.ability.teleporter.MarkTeleportSkill.maxDistance(0f, 100f, 999, 0.43f),
+                0.0001);
+        assertEquals(60.0, cn.academy.ability.teleporter.MarkTeleportSkill.maxDistance(1f, 100f, 999, 0.14f),
+                0.0001);
+        // ... ni ce que la reserve peut payer : 100 points a 0,43 le bloc font 232 blocs,
+        // donc c'est l'experience qui decide ici.
+        assertEquals(10.0, cn.academy.ability.teleporter.MarkTeleportSkill.maxDistance(0f, 4.3f, 999, 0.43f),
+                0.0001, "une reserve a moitie vide ne porte qu'a dix blocs");
+
+        assertBounds("cout par bloc", 0.43f, 0.14f, mark::cpPerBlock, mark);
+        assertBounds("surcout du saut", 40f, 20f, mark::getOverloadCost, mark);
+        assertCooldownBounds("recharge du saut", mark, 30, 0);
+
+        // L'experience se paie au bloc, l'effet s'en charge : rien a declarer ici.
+        assertTrue(mark.earnsExpOnEffect(), "l'effet verse l'experience");
+        assertEquals(0f, mark.getExpGain(new AbilityData()), 0.0001f);
+    }
+
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {
         assertEquals(min, skill.getCooldownTicks(atExperience(skill, 0f)), what + " au depart");
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");

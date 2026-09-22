@@ -14,6 +14,7 @@
   "key.academy.activate_charging": "Hold Current Charging",
   "key.academy.activate_mag_movement": "Hold Magnetic Movement",
   "key.academy.activate_threatening_teleport": "Hold Threatening Teleport",
+  "key.academy.activate_mark_teleport": "Hold Mark Teleport",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
@@ -155,6 +156,7 @@
   "ac.ability.meltdowner.meltdowner.name": "Meltdowner",
   "ac.ability.teleporter.dim_folding_theorem.name": "Dimension Folding Theorem",
   "ac.ability.teleporter.threatening_teleport.name": "Threatening Teleport",
+  "ac.ability.teleporter.mark_teleport.name": "Mark Teleport",
   "ac.ability.teleporter.penetrate_teleport.name": "Penetrate Teleport",
   "ac.ability.teleporter.shift_tp.name": "Shift Teleport",
   "ac.ability.vecmanip.vec_accel.name": "Vector Acceleration",

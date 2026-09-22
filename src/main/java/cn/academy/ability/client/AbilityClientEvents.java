@@ -60,7 +60,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_CHARGING, ElectromasterCategory.NAME, "charging"),
             new Binding(AbilityKeyBindings.ACTIVATE_MAG_MOVEMENT, ElectromasterCategory.NAME, "mag_movement"),
             new Binding(AbilityKeyBindings.ACTIVATE_THREATENING_TELEPORT, TeleporterCategory.NAME,
-                    "threatening_teleport"));
+                    "threatening_teleport"),
+            new Binding(AbilityKeyBindings.ACTIVATE_MARK_TELEPORT, TeleporterCategory.NAME, "mark_teleport"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

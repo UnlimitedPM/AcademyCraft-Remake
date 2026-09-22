@@ -322,6 +322,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
+     * Paye sans verifier la reserve, en la vidant au pire.
+     *
+     * Portage de {@code CPData.performWithForce} : certains couts se calculent sur ce
+     * qui reste — la teleportation au marqueur coute tant par bloc, dans la limite de ce
+     * qu'on a — donc il n'y a rien a refuser, seulement une reserve a vider.
+     */
+    public void performForced(float cp, float overloadCost) {
+        controlPoint = Math.max(0f, controlPoint - cp);
+        addOverload(overloadCost);
+    }
+
+    /**
      * Ajoute du surcout, en plafonnant a la reserve et en armant la recuperation.
      *
      * Portage de {@code CPData.addOverload} : atteindre le maximum met le joueur en
