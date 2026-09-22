@@ -9,6 +9,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import javax.annotation.Nullable;
 
 /** Shared hitscan targeting helper for skills that fire in the direction the player looks. */
 public final class TargetingUtil {
@@ -41,6 +42,32 @@ public final class TargetingUtil {
         BlockHitResult hit = player.level().clip(
                 new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         return hit.getType() == HitResult.Type.MISS ? end : hit.getLocation();
+    }
+
+    /**
+     * Le bloc que le regard touche, ou {@code null} s'il n'y en a aucun.
+     *
+     * <p>La difference avec {@link #findImpactPoint} est celle entre « ou » et « quoi » :
+     * certaines competences ont besoin des <b>coordonnees du bloc</b> — l'onde de choc
+     * dirigee prend le centre de son rayon dessus — et non du point de la face frappee.
+     */
+    @Nullable
+    public static BlockHitResult findBlockInSight(Player player, double range) {
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f);
+        Vec3 end = eye.add(look.scale(range));
+        BlockHitResult hit = player.level().clip(
+                new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.BLOCK ? hit : null;
+    }
+
+    /** Le bout du regard, quand rien ne l'arrete : celui de l'original, portee comprise. */
+    public static Vec3 fallbackPoint(Player player, double range) {
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f);
+        // L'original partait de la <b>position</b> du joueur, pas de ses yeux — et c'est ce
+        // point-la qui devient le centre de ses effets.
+        return player.position().add(look.scale(range));
     }
 
     /**

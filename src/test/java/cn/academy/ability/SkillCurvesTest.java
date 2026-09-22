@@ -858,6 +858,81 @@ class SkillCurvesTest {
         return cn.academy.ability.vecmanip.GroundshockSkill.lateralCell(row, look, index);
     }
 
+    /**
+     * L'onde de choc dirigee : ce qu'elle coute, ce qu'elle casse, et ce qu'elle projette.
+     */
+    @Test
+    void lOndeDirigeeCasseSelonSonExperience() {
+        var blast = cn.academy.ability.vecmanip.VecmanipCategory.DIRECTED_BLASTWAVE;
+
+        // La meme fenetre de charge que le choc dirige : six ticks au minimum, cinquante
+        // au dela desquels le coup est perdu.
+        assertTrue(blast.isChargeable(), "l'onde dirigee se charge");
+        assertEquals(6, blast.getMinChargeTicks(atExperience(blast, 0f)),
+                "un appui de moins de six ticks ne part pas");
+        assertEquals(50, blast.getMaxChargeTicks(atExperience(blast, 0f)),
+                "au dela de cinquante ticks, le coup est perdu");
+
+        // Ses courbes : 10 a 25 degats, 160 a 200 CP (divises par 28), 50 a 30 de surcout,
+        // une chance de casse de 0,5 a 0,8 et un butin de 0,4 a 0,9.
+        assertBounds("degats de dir_blast", 10f, 25f, blast::damage, blast);
+        assertBounds("cout de dir_blast", 5.71f, 7.14f, blast::consumption, blast);
+        assertBounds("surcout de dir_blast", 50f, 30f, blast::overload, blast);
+        assertBounds("chance de casse", 0.5f, 0.8f, blast::breakProbability, blast);
+        assertBounds("butin de dir_blast", 0.4f, 0.9f, blast::dropRate, blast);
+        assertBounds("recharge de dir_blast", 80f, 50f, blast::cooldown, blast);
+
+        // La recharge est celle que le paquet pose : elle ne depend pas de ce que l'onde a
+        // trouve, contrairement au gain d'experience.
+        assertEquals(blast.cooldown(atExperience(blast, 0f)),
+                blast.getCooldownTicks(atExperience(blast, 0f)), "recharge posee par le paquet");
+
+        // La durete acceptee : trois paliers, ceux de l'original. A 2,9 l'onde ouvre la
+        // pierre (1,5) et la pierre taillee (2) mais pas l'obsidienne (50) ; a 25, l'objet
+        // de fer y passe aussi ; a 55, plus rien de cassable ne lui resiste.
+        assertEquals(2.9f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.breakHardness(0f),
+                0.0001f, "depart");
+        assertEquals(2.9f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.breakHardness(0.24f),
+                0.0001f, "juste avant le premier palier");
+        assertEquals(25f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.breakHardness(0.25f),
+                0.0001f, "premier palier");
+        assertEquals(25f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.breakHardness(0.49f),
+                0.0001f, "juste avant le second");
+        assertEquals(55f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.breakHardness(0.5f),
+                0.0001f, "second palier");
+        assertEquals(55f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.breakHardness(1f),
+                0.0001f, "a la maitrise");
+
+        // L'experience suit ce que la vague a trouve, et c'est elle qui se verse :
+        // 0,0025 si elle a projete quelqu'un, 0,0012 sinon.
+        assertEquals(0.0025f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.expGain(true),
+                0.000001f, "une vague qui a trouve quelqu'un");
+        assertEquals(0.0012f, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.expGain(false),
+                0.000001f, "une vague dans le vide");
+        assertTrue(blast.earnsExpOnEffect(), "l'onde verse son experience elle-meme");
+        assertEquals(0f, blast.getExpGain(atExperience(blast, 0f)), 0.000001f,
+                "rien au declenchement : le paquet ne sait pas ce qui a ete touche");
+    }
+
+    /**
+     * Le cube de l'onde dirigee, et son asymetrie.
+     *
+     * L'original ecrivait sa boucle {@code (x - 3) until (x + 3)} : la borne haute exclue,
+     * le cube va donc de moins trois a <b>plus deux</b>. Ce n'est pas un detail de style —
+     * le relief laisse derriere est ampute d'un bloc d'un cote — et le port a garde la
+     * borne telle quelle, plutot que de la corriger en silence.
+     */
+    @Test
+    void leCubeDeLOndeDirigeeEstAsymetrique() {
+        assertEquals(-3, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.BLAST_LOW);
+        assertEquals(2, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.BLAST_HIGH);
+        assertEquals(3, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.BLAST_RANGE,
+                "la portee sur les entites, elle, est bien de trois blocs de chaque cote");
+        assertEquals(6, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.BLAST_RADIUS_SQ);
+        assertEquals(4.0, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.REACH,
+                "le rayon de visee");
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,

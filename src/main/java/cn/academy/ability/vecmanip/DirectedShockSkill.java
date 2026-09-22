@@ -57,10 +57,10 @@ public class DirectedShockSkill extends Skill {
     public static final double KNOCKBACK_LIFT = 0.6;
 
     /** Le dixieme de bloc qui decolle la cible du sol avant la poussee. */
-    public static final double KNOCKBACK_LIFT_OFF = 0.1;
+    public static final double KNOCKBACK_LIFT_OFF = VecmanipPush.LIFT_OFF;
 
     /** Petite poussee supplementaire, dans l'axe du coup ({@code 0.24}). */
-    public static final double SHOVE = 0.24;
+    public static final double SHOVE = VecmanipPush.SHOVE;
 
     public DirectedShockSkill() {
         // Le nom est celui de l'original, qui appelait la competence "dir_shock" alors que
@@ -176,12 +176,9 @@ public class DirectedShockSkill extends Skill {
     /**
      * La poussee : la cible est jetee loin du poing, et soulevee.
      *
-     * Portage de {@code knockback} : l'original prenait la direction qui va de la tete de la
-     * cible a celle du joueur, lui retranchait 0,6 en vertical, renormait, puis poussait a
-     * l'oppose. Retrancher sur la direction <b>inversee</b> revient exactement a ajouter 0,6
-     * vers le haut sur la direction directe : la cible part donc en arriere <b>et</b> en
-     * l'air, d'une force de 0,7. C'est ce qui fait qu'un coup de poing souleve sa victime
-     * plutot que de la coller au sol.
+     * <p>Le calcul lui-meme vit dans {@link VecmanipPush#push}, partage avec l'onde de choc
+     * dirigee : seule la force change d'une competence a l'autre. Ici 0,7 de poussee et 0,6
+     * de soulevement, et la coquille de l'original corrigee la-bas une fois pour toutes.
      */
     public static Vec3 knockback(Player player, LivingEntity target) {
         return knockbackVelocity(player.getEyePosition(), target.getEyePosition());
@@ -193,19 +190,8 @@ public class DirectedShockSkill extends Skill {
      *
      * <p>Une cible pile devant le joueur, a la meme hauteur, part donc en arriere et vers le
      * haut : {@code (0, 0.36, 0.60)} pour une cible a un bloc vers +Z.
-     *
-     * <h2>La coquille de l'original</h2>
-     *
-     * L'original ecrivait {@code motionZ = delta.y * -0.7} : l'axe Z recevait la composante
-     * <b>verticale</b> au lieu de l'horizontale. Consequence visible : une cible droit devant
-     * et a la meme hauteur — le cas le plus courant — ne reculait pas du tout, elle montait
-     * seulement. Les axes X et Y, eux, etaient justes. Le port suit l'intention : chaque axe
-     * avec sa composante.
      */
     public static Vec3 knockbackVelocity(Vec3 playerEye, Vec3 targetEye) {
-        Vec3 away = targetEye.subtract(playerEye);
-        if (away.lengthSqr() == 0) return Vec3.ZERO;
-        Vec3 lifted = away.normalize().add(0, KNOCKBACK_LIFT, 0);
-        return lifted.normalize().scale(KNOCKBACK);
+        return VecmanipPush.push(playerEye, targetEye, KNOCKBACK_LIFT, KNOCKBACK);
     }
 }

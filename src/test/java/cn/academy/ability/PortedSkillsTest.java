@@ -58,6 +58,7 @@ class PortedSkillsTest {
             Map.entry("vecmanip.vec_accel", 2),
             Map.entry("vecmanip.dir_shock", 1),
             Map.entry("vecmanip.ground_shock", 1),
+            Map.entry("vecmanip.dir_blast", 3),
             Map.entry("vecmanip.vec_reflection", 4));
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
@@ -91,7 +92,10 @@ class PortedSkillsTest {
             // Le choc dirige est la racine de vecmanip : c'est de lui que descendent
             // l'acceleration de vecteur et l'onde de choc chez l'original.
             Map.entry("vecmanip.vec_accel", List.of("vecmanip.dir_shock")),
-            Map.entry("vecmanip.ground_shock", List.of("vecmanip.dir_shock")));
+            Map.entry("vecmanip.ground_shock", List.of("vecmanip.dir_shock")),
+            // L'onde dirigee descend de l'onde au sol : on n'apprend pas a viser avant
+            // d'avoir appris a frapper le sol.
+            Map.entry("vecmanip.dir_blast", List.of("vecmanip.ground_shock")));
 
     private static List<Category> categories() {
         return List.of(
@@ -298,6 +302,7 @@ class PortedSkillsTest {
             Map.entry("teleporter.location_teleport", 240f),
             Map.entry("vecmanip.dir_shock", 18f),
             Map.entry("vecmanip.ground_shock", 15f),
+            Map.entry("vecmanip.dir_blast", 50f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

@@ -74,7 +74,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_LOCATION_TELEPORT, TeleporterCategory.NAME,
                     "location_teleport"),
             new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_SHOCK, VecmanipCategory.NAME, "dir_shock"),
-            new Binding(AbilityKeyBindings.ACTIVATE_GROUNDSHOCK, VecmanipCategory.NAME, "ground_shock"));
+            new Binding(AbilityKeyBindings.ACTIVATE_GROUNDSHOCK, VecmanipCategory.NAME, "ground_shock"),
+            new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_BLASTWAVE, VecmanipCategory.NAME,
+                    "dir_blast"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

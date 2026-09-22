@@ -2458,6 +2458,165 @@ public final class AcademyGameTests {
     }
 
     /**
+     * L'onde de choc dirigee : ce qu'elle fait de ce qu'elle trouve devant elle.
+     *
+     * <p>Le JUnit fige ses courbes, son cube et ses paliers de durete ; ce qui ne se lit
+     * qu'avec un monde, c'est le <b>rayon</b> qui choisit le centre, ce qu'il devient une
+     * fois choisi, et surtout qui il projette. Une obsidienne sert de temoin : a 50 de
+     * durete elle resiste a une onde de faible experience, ce qui prouve du meme coup que
+     * le rayon l'a bien trouvee — c'est elle le centre, et non un caillou voisin.
+     */
+    @GameTest(template = "empty")
+    public static void lOndeDirigeeProjetteAutourDeSaCible(GameTestHelper helper) {
+        var blast = cn.academy.ability.vecmanip.VecmanipCategory.DIRECTED_BLASTWAVE;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 360);
+        int base = 360;
+
+        var player = ownPlayer(helper, "blaster");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(blast.getCategory(), 1);
+        data.learnSkill(blast);
+
+        clearCorridor(helper, abs, 8);
+
+        // Le couloir du rayon, puis le mur : a trois blocs, l'obsidienne est ce que le
+        // regard trouve, donc le centre de l'onde.
+        for (int dz = 2; dz <= 4; dz++) {
+            helper.setBlock(new BlockPos(2, base + 2, dz),
+                    net.minecraft.world.level.block.Blocks.AIR);
+        }
+        helper.setBlock(new BlockPos(2, base + 2, 5),
+                net.minecraft.world.level.block.Blocks.OBSIDIAN);
+
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 3.5, 0f, 0f);
+        level.addFreshEntity(zombie);
+
+        // Un objet au sol, dans le cube : l'onde de l'original projetait tout ce qu'elle
+        // trouvait, pas seulement ce qui vit.
+        var loose = new net.minecraft.world.entity.item.ItemEntity(level,
+                abs.getX() - 1.5, abs.getY(), abs.getZ() + 3.5,
+                new ItemStack(net.minecraft.world.item.Items.STONE, 3));
+        loose.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        level.addFreshEntity(loose);
+
+        double reserveBefore = data.getControlPoint();
+        float healthBefore = zombie.getHealth();
+        // Le prix se paie a l'activation, comme le fait le paquet : la competence, elle, ne
+        // s'occupe que de son effet.
+        assertTrue(helper, data.perform(blast.getCpCost(data), blast.getOverloadCost(data)),
+                "la reserve doit suffire au coup");
+        blast.onActivateCharged(player, data, 10);
+
+        // L'obsidienne tient : a faible experience, l'onde ne brise que jusqu'a 2,9.
+        assertTrue(helper, helper.getBlockState(new BlockPos(2, base + 2, 5))
+                        .is(net.minecraft.world.level.block.Blocks.OBSIDIAN),
+                "une onde de faible experience ne doit pas entamer l'obsidienne : "
+                        + helper.getBlockState(new BlockPos(2, base + 2, 5)));
+
+        // Le zombie : 10 points, et il part en arriere et en l'air.
+        assertTrue(helper, Math.abs((healthBefore - 10f) - zombie.getHealth()) < 0.02,
+                "10 points au depart de la courbe, trouve " + (healthBefore - zombie.getHealth()));
+        assertTrue(helper, zombie.getDeltaMovement().z > 0.5,
+                "la bete part en arriere : " + zombie.getDeltaMovement());
+        assertTrue(helper, zombie.getDeltaMovement().y > 0.3,
+                "et la poussee la souleve : " + zombie.getDeltaMovement());
+        assertTrue(helper, zombie.getY() > abs.getY(),
+                "le dixieme de bloc qui la decolle du sol vaut bien 0,1 : " + zombie.getY());
+
+        // L'objet, lui, ne peut pas etre blesse — mais il part comme le reste.
+        assertTrue(helper, loose.getDeltaMovement().length() > 0.5,
+                "un objet au sol est projete aussi : " + loose.getDeltaMovement());
+        assertTrue(helper, loose.isAlive(), "et il n'est pas blesse : il ne peut pas l'etre");
+
+        // L'experience : 0,0025 quand la vague a trouve quelqu'un, une seule fois.
+        assertClose(helper, 0.0025d, data.getSkillExp(blast),
+                "deux corps projetes valent le meme gain qu'un seul");
+        assertTrue(helper, data.getControlPoint() < reserveBefore,
+                "et le coup se paie : " + data.getControlPoint() + " contre " + reserveBefore);
+        // Pas de verification de recharge ici : c'est le paquet qui la pose (voir
+        // `getCooldownTicks`), et le test unitaire la fige. Le declenchement direct, lui,
+        // ne la pose pas — l'onde dirigee n'a pas a la porter elle-meme, son cout etant
+        // paye a l'activation quoi qu'il arrive.
+
+        zombie.discard();
+        loose.discard();
+        helper.succeed();
+    }
+
+    /**
+     * A la maitrise, l'onde ramasse : le bloc casse laisse son propre objet.
+     *
+     * <p>Deuxieme phase : un regard qui ne trouve rien. Le centre se pose alors au bout du
+     * regard, a quatre blocs, et un bloc pose <b>a cote</b> de ce point — donc hors du rayon
+     * lui-meme — doit y passer. C'est le seul moyen de voir ce repli depuis le jeu.
+     */
+    @GameTest(template = "empty")
+    public static void lOndeDirigeeRamasseALaMaitrise(GameTestHelper helper) {
+        var blast = cn.academy.ability.vecmanip.VecmanipCategory.DIRECTED_BLASTWAVE;
+        // 370 et non 400 : la structure de test part de y = -60, et le monde s'arrete a
+        // 320. Plus haut, `setBlock` ne fait rien et `getBlockState` rend de l'air — le
+        // test passe alors sans rien tester, ce qui est pire qu'un echec.
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 370);
+        int base = 370;
+
+        var player = ownPlayer(helper, "master_blaster");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(blast.getCategory(), 1);
+        data.learnSkill(blast);
+        data.addSkillExp(blast, 1f);
+
+        clearCorridor(helper, abs, 8);
+
+        for (int dz = 2; dz <= 4; dz++) {
+            helper.setBlock(new BlockPos(2, base + 2, dz),
+                    net.minecraft.world.level.block.Blocks.AIR);
+        }
+        helper.setBlock(new BlockPos(2, base + 2, 5),
+                net.minecraft.world.level.block.Blocks.OBSIDIAN);
+
+        blast.onActivateCharged(player, data, 10);
+
+        assertTrue(helper, helper.getBlockState(new BlockPos(2, base + 2, 5)).isAir(),
+                "a pleine experience, l'obsidienne y passe : "
+                        + helper.getBlockState(new BlockPos(2, base + 2, 5)));
+        assertTrue(helper, itemsAround(helper, abs, 8).stream()
+                        .anyMatch(item -> item.getItem().is(net.minecraft.world.item.Items.OBSIDIAN)),
+                "et elle laisse son propre objet, sans tirage : " + itemsAround(helper, abs, 8));
+
+        // --- Regard dans le vide : le centre se pose a quatre blocs, au bout du regard.
+        for (var leftover : itemsAround(helper, abs, 8)) {
+            leftover.discard();
+        }
+        for (int dy = 2; dy <= 6; dy++) {
+            helper.setBlock(new BlockPos(2, base + dy, 2),
+                    net.minecraft.world.level.block.Blocks.AIR);
+        }
+        // Le centre tombe sur le coin du bloc (3, base + 5, 3) : un bloc pose la y passe,
+        // alors que le rayon, lui, monte le long de la colonne voisine.
+        helper.setBlock(new BlockPos(3, base + 5, 3),
+                net.minecraft.world.level.block.Blocks.STONE);
+
+        var empty = new cn.academy.ability.AbilityData();
+        empty.setCategoryLevel(blast.getCategory(), 1);
+        empty.learnSkill(blast);
+        player.moveTo(player.getX(), player.getY(), player.getZ(), 0f, -90f);
+        blast.onActivateCharged(player, empty, 10);
+
+        assertTrue(helper, helper.getBlockState(new BlockPos(3, base + 5, 3)).isAir(),
+                "sans cible, le centre se pose au bout du regard — et le bloc pose a cote y passe");
+        assertClose(helper, 0.0012d, empty.getSkillExp(blast),
+                "une onde qui ne trouve personne ne rapporte que 0,0012");
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui

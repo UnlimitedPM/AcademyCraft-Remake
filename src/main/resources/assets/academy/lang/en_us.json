@@ -26,6 +26,7 @@
   "key.academy.activate_location_teleport": "Open Teleport Marks",
   "key.academy.activate_dir_shock": "Hold Directed Shock",
   "key.academy.activate_ground_shock": "Hold Ground Shock",
+  "key.academy.activate_dir_blast": "Hold Directed Blastwave",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
@@ -189,6 +190,7 @@
   "ac.ability.vecmanip.vec_accel.name": "Vector Acceleration",
   "ac.ability.vecmanip.dir_shock.name": "Directed Shock",
   "ac.ability.vecmanip.ground_shock.name": "Ground Shock",
+  "ac.ability.vecmanip.dir_blast.name": "Directed Blastwave",
   "ac.ability.vecmanip.vec_reflection.name": "Vector Reflection",
 
   "academy.phase_generator.state.on": "Running",
