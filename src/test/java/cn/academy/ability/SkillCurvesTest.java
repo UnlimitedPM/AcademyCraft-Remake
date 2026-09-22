@@ -370,6 +370,63 @@ class SkillCurvesTest {
         assertEquals(max, skill.getCooldownTicks(atExperience(skill, 1f)), what + " au maximum");
     }
 
+    /**
+     * La bombe a fragmentation : son calendrier de pose, et ce qu'elle en fait.
+     *
+     * C'est la competence la plus « en deux temps » du port — elle pose des billes
+     * pendant quatre secondes et ne les envoie qu'a la fin — donc ce qui merite d'etre
+     * fige est autant le calendrier que les degats. Le calendrier est reproduit ici a la
+     * main, tick par tick, pour que ce soit bien l'original qui soit lu et pas la
+     * fonction qui se relit elle-meme.
+     */
+    @Test
+    void laBombeAFragmentationPoseSesBillesParDizaines() {
+        var bomb = cn.academy.ability.meltdowner.MeltdownerCategory.SCATTER_BOMB;
+
+        assertTrue(bomb.isHeld(), "la bombe se tient");
+        // Pas de duree maximale : c'est le contrepoids du tick 200 qui termine le
+        // maintien, et il doit pouvoir blesser le lanceur en passant.
+        assertEquals(0, bomb.getMaxHoldTicks(new AbilityData()), "aucune duree maximale");
+        assertEquals(200, cn.academy.ability.meltdowner.ScatterBombSkill.BACKFIRE_TICK,
+                "dix secondes avant le contrepoids");
+
+        // La premiere bille a une seconde, une toutes les dix ticks, la derniere a
+        // quatre secondes : sept en tout.
+        int[] expected = new int[201];
+        for (int tick = 20; tick <= 80; tick += 10) {
+            expected[tick] = 1;
+        }
+        int seen = 0;
+        for (int tick = 1; tick <= 200; tick++) {
+            assertEquals(expected[tick] == 1,
+                    cn.academy.ability.meltdowner.ScatterBombSkill.spawnsBallAt(tick),
+                    "bille au tick " + tick);
+            seen += expected[tick];
+            assertEquals(seen, cn.academy.ability.meltdowner.ScatterBombSkill.ballCount(tick),
+                    "billes posees au tick " + tick);
+        }
+        assertEquals(7, cn.academy.ability.meltdowner.ScatterBombSkill.ballCount(200),
+                "sept billes pour un maintien complet");
+
+        // Les billes ne visent d'elles-memes qu'a partir de la moitie de l'experience,
+        // et elles sont alors billes x experience a le faire.
+        assertEquals(0, cn.academy.ability.meltdowner.ScatterBombSkill.autoTargetCount(0f, 7));
+        assertEquals(0, cn.academy.ability.meltdowner.ScatterBombSkill.autoTargetCount(0.5f, 7),
+                "pile a la moitie : non");
+        assertEquals(4, cn.academy.ability.meltdowner.ScatterBombSkill.autoTargetCount(0.6f, 7));
+        assertEquals(7, cn.academy.ability.meltdowner.ScatterBombSkill.autoTargetCount(1f, 7),
+                "au maximum, elles visent toutes");
+
+        assertBounds("degats d'une bille", 5f, 9f, bomb::ballDamage, bomb);
+        assertBounds("entretien de la bombe", 0.11f, 0.21f, bomb::cpPerTick, bomb);
+        assertBounds("surcout de la bombe", 80f, 60f, bomb::getOverloadCost, bomb);
+
+        // Rien a l'ouverture en CP : les billes se paient une par une pendant la ponte.
+        assertEquals(0f, bomb.getCpCost(), 0.0001f, "pas de cout en CP a l'ouverture");
+        // Et aucune recharge : l'original n'en posait pas, le prix est le surcout.
+        assertEquals(0, bomb.getCooldownTicks(atExperience(bomb, 1f)));
+    }
+
     @Test
     void lesRechargesSuiventLExperience() {
         assertCooldownBounds("recharge de arc_gen",

@@ -104,6 +104,15 @@ public class AbilityKeyBindings {
             "key.academy.activate_mine_ray_luck", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_COMMA, "key.categories.academy");
 
+    /**
+     * La bombe a fragmentation. Les lettres libres sont prises, donc elle se pose sur le
+     * point : le systeme de presets de l'original reste a porter, et c'est lui qui reglera
+     * la question.
+     */
+    public static final KeyMapping ACTIVATE_SCATTER_BOMB = new KeyMapping(
+            "key.academy.activate_scatter_bomb", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_PERIOD, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -125,5 +134,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_MINE_RAY_BASIC);
         event.register(ACTIVATE_MINE_RAY_EXPERT);
         event.register(ACTIVATE_MINE_RAY_LUCK);
+        event.register(ACTIVATE_SCATTER_BOMB);
     }
 }

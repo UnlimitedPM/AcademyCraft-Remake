@@ -40,6 +40,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.mag_movement", 2),
             Map.entry("meltdowner.electron_bomb", 1),
             Map.entry("meltdowner.light_shield", 2),
+            Map.entry("meltdowner.scatter_bomb", 2),
             Map.entry("meltdowner.meltdowner", 3),
             Map.entry("meltdowner.mine_ray_basic", 3),
             Map.entry("meltdowner.mine_ray_expert", 4),
@@ -68,7 +69,11 @@ class PortedSkillsTest {
             Map.entry("teleporter.flesh_ripping",
                     List.of("teleporter.mark_teleport", "teleporter.penetrate_teleport")),
             Map.entry("meltdowner.light_shield", List.of("meltdowner.electron_bomb")),
-            Map.entry("meltdowner.meltdowner", List.of("meltdowner.light_shield")),
+            Map.entry("meltdowner.scatter_bomb", List.of("meltdowner.electron_bomb")),
+            // La deuxieme a deux parentes : la bombe pour le plasma, le bouclier pour
+            // l'avoir tenu. L'original les demandait toutes les deux a 0,8.
+            Map.entry("meltdowner.meltdowner",
+                    List.of("meltdowner.light_shield", "meltdowner.scatter_bomb")),
             Map.entry("meltdowner.mine_ray_basic", List.of("meltdowner.meltdowner")),
             Map.entry("meltdowner.mine_ray_expert", List.of("meltdowner.mine_ray_basic")),
             Map.entry("meltdowner.mine_ray_luck", List.of("meltdowner.mine_ray_expert")));
@@ -100,7 +105,8 @@ class PortedSkillsTest {
             assertFalse(category.getSkills().isEmpty(), category.getName() + " sans competence");
         }
         assertEquals(EXPECTED_LEVELS.size(), allSkills().size(),
-                "le port compte onze competences : une de plus ou de moins doit se voir ici");
+                "le port compte autant de competences que la table en fige : une de plus "
+                        + "ou de moins doit se voir ici");
     }
 
     @Test
@@ -265,6 +271,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),
+            Map.entry("meltdowner.scatter_bomb", 80f),
             Map.entry("meltdowner.mine_ray_basic", 200f),
             Map.entry("meltdowner.mine_ray_expert", 300f),
             Map.entry("meltdowner.mine_ray_luck", 350f),

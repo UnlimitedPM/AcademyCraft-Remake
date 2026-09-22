@@ -149,10 +149,16 @@ public class AbilityEvents {
      * dans le {@code MSG_TERMINATED} de son contexte, quelle que soit la cause de la fin.
      */
     public static void endHeld(ServerPlayer player, AbilityData data, Skill skill) {
+        int heldTicks = data.getChargeTicks(skill);
+        // L'effet de fin passe AVANT que l'etat du maintien ne soit oublie : l'original
+        // le faisait depuis son contexte, qui vivait encore pendant son propre
+        // MSG_TERMINATED — la bombe a fragmentation y relit les billes qu'elle a posees.
+        // La recharge se lit au meme moment, et pour la meme raison : le bouclier la
+        // calcule avec ce qu'il a fallu tenir.
+        skill.onHoldEnd(player, data, heldTicks);
+        int cooldown = skill.getCooldownTicks(data);
         data.endCharge(skill);
-        // La recharge se lit apres la fin, avec le compteur du maintien encore en place.
-        skill.onHoldEnd(player, data, data.getChargeTicks(skill));
-        data.setCooldown(skill, skill.getCooldownTicks(data));
+        data.setCooldown(skill, cooldown);
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
     }
 }

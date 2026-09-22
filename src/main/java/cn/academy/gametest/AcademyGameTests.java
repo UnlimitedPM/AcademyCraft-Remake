@@ -1733,6 +1733,59 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * La salve de la bombe a fragmentation.
+     *
+     * C'est la partie de la competence qu'aucun test unitaire ne peut voir : les billes
+     * sont posees pendant le maintien, elles partent a la fin, et ce qu'elles touchent
+     * depend d'un lancer de rayon dans le monde. Le faux joueur est partage par tous les
+     * tests, donc la competence se rend en partant.
+     */
+    @GameTest(template = "empty")
+    public static void lesBillesDeLaBombeTouchentCeQuellesVisent(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.SCATTER_BOMB;
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(3, 1, 3);
+        BlockPos abs = helper.absolutePos(rel);
+
+        var player = fakePlayer(helper);
+        player.revive();
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        // Une vache a deux blocs devant, dans l'axe du regard.
+        var cow = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        cow.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 2.5, 0f, 0f);
+        level.addFreshEntity(cow);
+
+        var data = new cn.academy.ability.AbilityData();
+        // Presque au maximum d'experience : les billes prennent la vache en chasse sans
+        // dependre du hasard, et il reste de la place pour voir la salve en verser.
+        data.setCategoryLevel(skill.getCategory(), 1);
+        data.learnSkill(skill);
+        data.addSkillExp(skill, 0.9f);
+
+        // La ponte, par le vrai crochet du maintien : une bille toutes les dix ticks
+        // pendant quatre secondes, chacune payee par l'entretien.
+        for (int tick = 1; tick <= 80; tick++) {
+            skill.onHoldTick(player, data, tick);
+        }
+        assertValue(helper, 7, data.getHoldPoints(skill).size(), "sept billes posees en quatre secondes");
+
+        float before = cow.getHealth();
+        // Fin du maintien : les billes partent.
+        skill.onHoldEnd(player, data, 80);
+
+        assertTrue(helper, cow.getHealth() < before,
+                "une vache a deux blocs doit encaisser la salve entiere");
+        assertTrue(helper, data.getSkillExp(skill) > 0.9f, "et la salve rapporte son experience");
+
+        cow.discard();
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(gone -> gone.forgetSkill(skill));
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le generateur de phase
     // ------------------------------------------------------------------

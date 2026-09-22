@@ -42,4 +42,21 @@ public final class TargetingUtil {
                 new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         return hit.getType() == HitResult.Type.MISS ? end : hit.getLocation();
     }
+
+    /**
+     * Premiere entite rencontree sur un segment, l'auteur exclu.
+     *
+     * Portage de {@code Raytrace.perform} pour sa partie « entites » : les competences
+     * qui frappent depuis un point du monde — la bille posee en l'air par la bombe a
+     * fragmentation — ne partent pas de l'oeil du joueur, et ne peuvent donc pas se
+     * contenter de {@link #findEntityInSight}. L'auteur est exclu comme dans l'original,
+     * qui retirait le lanceur de son selecteur.
+     */
+    public static Entity findEntityAlong(Player owner, Vec3 from, Vec3 to) {
+        AABB box = new AABB(from, to).inflate(1.0);
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(owner, from, to, box,
+                e -> !e.isSpectator() && e.isPickable() && e != owner,
+                from.distanceToSqr(to));
+        return hit != null ? hit.getEntity() : null;
+    }
 }
