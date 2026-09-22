@@ -70,7 +70,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_SCATTER_BOMB, MeltdownerCategory.NAME, "scatter_bomb"),
             new Binding(AbilityKeyBindings.ACTIVATE_JET_ENGINE, MeltdownerCategory.NAME, "jet_engine"),
             new Binding(AbilityKeyBindings.ACTIVATE_RAY_BARRAGE, MeltdownerCategory.NAME, "ray_barrage"),
-            new Binding(AbilityKeyBindings.ACTIVATE_FLASHING, TeleporterCategory.NAME, "flashing"));
+            new Binding(AbilityKeyBindings.ACTIVATE_FLASHING, TeleporterCategory.NAME, "flashing"),
+            new Binding(AbilityKeyBindings.ACTIVATE_LOCATION_TELEPORT, TeleporterCategory.NAME,
+                    "location_teleport"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -96,6 +98,12 @@ public class AbilityClientEvents {
         // son compteur, une competence tenue vit a partir de maintenant, une autre part
         // tout de suite.
         if (binding.key.consumeClick()) {
+            // Une competence qui ouvre un ecran ne part pas : c'est la liste des marques qui
+            // decide, et c'est un clic dedans qui enverra quelque chose au serveur.
+            if (skill.opensScreen()) {
+                AbilityScreens.open(category, skill);
+                return;
+            }
             binding.charging = skill.isChargeable() || skill.isHeld();
             send(category, skill, Phase.PRESS);
             if (skill.isChargeable()) {

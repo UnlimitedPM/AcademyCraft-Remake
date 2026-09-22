@@ -1687,16 +1687,22 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Le coin de monde d'un test qui a besoin d'etre seul.
+     * Le coin de monde d'un test qui a besoin d'etre seul, a une hauteur qui n'appartient
+     * qu'a lui.
      *
      * <p>Le serveur de test place les structures cote a cote, et leurs cellules se touchent
      * presque : une bete posee par un test voisin tombe facilement au meme endroit que la
      * notre, et c'est alors la sienne qui se fait frapper — ou la notre qui ne l'est pas.
-     * Quarante blocs plus haut, il n'y a plus personne : c'est le meme procede que la
-     * colonne de l'eolienne, qui se construit a l'ecart pour la meme raison.
+     * Il y a donc <b>une altitude par test</b>, par multiples de quarante : leurs couloirs
+     * ne peuvent plus se croiser, et le nettoyage de l'un ne peut plus emporter les betes de
+     * l'autre — ce qui arrivait quand deux tests partageaient la meme hauteur.
+     *
+     * <p>Attention : quarante blocs plus haut, on est <b>dans la pierre</b>. Bon pour un test
+     * qui ne regarde que des entites, mauvais pour un test qui fait un lancer de rayon sur les
+     * blocs — celui-la reste au niveau de la structure.
      */
-    private static BlockPos aboveTestArea(GameTestHelper helper, BlockPos relative) {
-        return helper.absolutePos(relative).above(40);
+    private static BlockPos aboveTestArea(GameTestHelper helper, BlockPos relative, int height) {
+        return helper.absolutePos(relative).above(height);
     }
 
     /** Niveau d'une categorie pour un joueur, ou 0 s'il n'a pas la capacite. */
@@ -1801,7 +1807,7 @@ public final class AcademyGameTests {
         var skill = cn.academy.ability.meltdowner.MeltdownerCategory.SCATTER_BOMB;
         ServerLevel level = helper.getLevel();
         BlockPos rel = new BlockPos(3, 1, 3);
-        BlockPos abs = aboveTestArea(helper, rel);
+        BlockPos abs = aboveTestArea(helper, rel, 80);
 
         var player = ownPlayer(helper, "scatter_bomber");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
@@ -1903,7 +1909,7 @@ public final class AcademyGameTests {
     @GameTest(template = "empty")
     public static void lancerLaBilleFaitApparaitreUneBille(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        BlockPos abs = helper.absolutePos(new BlockPos(3, 1, 3));
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 40);
 
         var player = ownPlayer(helper, "silbarn_thrower");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
@@ -1940,7 +1946,7 @@ public final class AcademyGameTests {
     public static void laSalveDeRayonsTireOuFaucheSelonCeQuElleTrouve(GameTestHelper helper) {
         var skill = cn.academy.ability.meltdowner.MeltdownerCategory.RAY_BARRAGE;
         ServerLevel level = helper.getLevel();
-        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2));
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 120);
 
         var player = ownPlayer(helper, "barrage_thrower");
         // Regard vers +Z, comme le lacet zero de Minecraft, et un peu vers le sol : une
@@ -1968,10 +1974,20 @@ public final class AcademyGameTests {
         // --- Avec une bille en vol devant le regard : la salve fauche le cone.
         cow.discard();
 
+        // Le regard se releve <b>avant</b> de poser la bille : elle est placée dans l'axe, donc
+        // la rotation doit déjà être celle du tir. Une bille posée dans l'axe d'un regard
+        // baissé passerait sous le trait, et le test mesurerait le tir simple en croyant
+        // mesurer la salve.
+        player.moveTo(player.getX(), player.getY(), player.getZ(), 0f, 0f);
+
         var ball = new cn.academy.entity.EntitySilbarn(level, player);
-        // Un dixieme sous l'oeil, pour que le trait parte franchement dans sa boite plutot
-        // que sur son arete.
-        ball.moveTo(abs.getX() + 0.5, player.getEyeY() - 0.1, abs.getZ() + 3.5, 0f, 0f);
+        // Un dixième sous l'œil : une bille qu'on vient de lancer vole exactement là, et le
+        // test ne dépend alors pas de l'orientation du faux joueur — sur laquelle il ne faut
+        // pas compter (voir clearCorridor).
+        net.minecraft.world.phys.Vec3 look = player.getViewVector(1f);
+        net.minecraft.world.phys.Vec3 ballAt = player.getEyePosition(1f)
+                .add(look.scale(3.0)).add(0, -0.1, 0);
+        ball.moveTo(ballAt.x, ballAt.y, ballAt.z, 0f, 0f);
         ball.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         level.addFreshEntity(ball);
 
@@ -1980,17 +1996,12 @@ public final class AcademyGameTests {
         target.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 6.5, 0f, 0f);
         level.addFreshEntity(target);
 
-        // Le regard se releve : une bille qu'on vient de lancer vole a hauteur d'oeil. La
-        // rotation passe par `moveTo`, et non par `setXRot` : sur un faux joueur, c'est le
-        // seul des deux qui prenne, et un regard qui reste baisse manque la bille — le test
-        // mesurerait alors le tir simple en croyant mesurer la salve.
-        player.moveTo(player.getX(), player.getY(), player.getZ(), 0f, 0f);
-
         // Ce que le regard trouve vraiment : c'est ce qui decide de la branche prise, et le
         // dire evite de chercher ailleurs quand un decor etranger s'est glisse dans le coin.
         assertTrue(helper,
                 cn.academy.ability.TargetingUtil.findEntityInSight(player, 20.0) == ball,
-                "le regard doit trouver la bille, et rien d'autre");
+                "le regard doit trouver la bille, et rien d'autre : "
+                        + cn.academy.ability.TargetingUtil.findEntityInSight(player, 20.0));
 
         // Le cone ne demande pas que le regard touche la cible : il part de l'oeil du
         // lanceur et s'ouvre sur 55 degres, donc une bete au sol y est meme si le trait
@@ -2065,6 +2076,73 @@ public final class AcademyGameTests {
         assertTrue(helper, behind.z < abs.getZ(),
                 "dos au mur, avancer c'est reculer : z=" + behind.z);
 
+        helper.succeed();
+    }
+
+    /**
+     * La teleportation a la marque, et ceux qu'elle emmene.
+     *
+     * C'est la seule competence du port qui deplace un <b>groupe</b>, et c'est ce qui se lit
+     * le moins bien en test unitaire : chacun garde son ecart avec le lanceur, donc le groupe
+     * arrive en formation et pas empile. La marque, elle, se pose et se relit comme le reste
+     * de la donnee du joueur.
+     */
+    @GameTest(template = "empty")
+    public static void laTeleportationEmporteLaCompagnie(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.LOCATION_TELEPORT;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 160);
+
+        var player = ownPlayer(helper, "traveller");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        clearCorridor(helper, abs, 4);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(skill.getCategory(), 1);
+        data.learnSkill(skill);
+        // Assez d'experience pour que le prix soit au plus bas, et de la reserve pour payer.
+        data.addSkillExp(skill, 1f);
+
+        // Le compagnon et la marque sont dans le carre de terrain du test : au-dela, on est
+        // dans la pierre, et le serveur repousse le joueur hors du bloc ou il a atterri.
+        // Un compagnon juste a cote, et une marque douze blocs plus loin : le groupe part
+        // avec son ecart, donc les deux doivent se retrouver decales de la meme distance.
+        var chicken = new net.minecraft.world.entity.animal.Chicken(
+                net.minecraft.world.entity.EntityType.CHICKEN, level);
+        chicken.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        level.addFreshEntity(chicken);
+
+        double targetX = abs.getX() + 12.5;
+        data.addMark("au loin", cn.academy.ability.teleporter.LocationMark.of(level),
+                targetX, abs.getY(), abs.getZ() + 0.5);
+        assertValue(helper, 1, data.getMarks().size(), "la marque doit etre posee");
+
+        double offset = chicken.getX() - player.getX();
+        int reserveBefore = (int) data.getControlPoint();
+        assertTrue(helper, skill.perform(player, data, 0), "le saut doit aboutir");
+
+        // Le faux joueur du framework refuse d'etre deplace — Forge neutralise la connexion
+        // de son `FakePlayer`, et `teleportTo` ne fait rien sur lui. C'est donc le compagnon
+        // qui montre ou le groupe est arrive : il garde son ecart avec le lanceur, donc s'il
+        // est a la marque plus cet ecart, c'est que le saut a bien eu lieu, formation
+        // comprise. C'est aussi pourquoi les autres competences de teleportation du port
+        // n'ont pas de GameTest : on ne peut y observer que ceux qu'elles emmenent.
+        assertTrue(helper, Math.abs(chicken.getX() - (targetX + offset)) < 0.01,
+                "le compagnon doit arriver a la marque, decale de son ecart : x=" + chicken.getX()
+                        + " pour une marque a " + targetX + " et un ecart de " + offset);
+        assertTrue(helper, Math.abs(chicken.getY() - abs.getY()) < 0.01,
+                "et a la hauteur de la marque : y=" + chicken.getY());
+        assertTrue(helper, chicken.isAlive(), "la compagnie arrive entiere");
+
+        // Le prix du voyage, sa recharge et son experience.
+        assertTrue(helper, data.getControlPoint() < reserveBefore,
+                "le saut se paie sur la reserve : " + data.getControlPoint() + " contre " + reserveBefore);
+        assertValue(helper, skill.cooldown(data), data.getCooldown(skill),
+                "et il pose sa recharge lui-meme, avec ce qu'il a porte");
+        assertTrue(helper, data.getSkillExp(skill) > 0.9f, "un saut verse son experience");
+
+        chicken.discard();
         helper.succeed();
     }
 

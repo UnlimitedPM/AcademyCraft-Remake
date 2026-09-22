@@ -23,6 +23,7 @@
   "key.academy.activate_jet_engine": "Hold Jet Engine",
   "key.academy.activate_ray_barrage": "Activate Ray Barrage",
   "key.academy.activate_flashing": "Hold Flashing (then WASD)",
+  "key.academy.activate_location_teleport": "Open Teleport Marks",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",
@@ -175,6 +176,14 @@
   "ac.ability.teleporter.penetrate_teleport.name": "Penetrate Teleport",
   "ac.ability.teleporter.shift_tp.name": "Shift Teleport",
   "ac.ability.teleporter.flashing.name": "Flashing",
+  "ac.ability.teleporter.location_teleport.name": "Location Teleport",
+  "ac.ability.teleporter.location_teleport.err_exp": "Not enough experience to cross dimensions",
+  "ac.ability.teleporter.location_teleport.err_cp": "Not enough Control Points for that trip",
+  "ac.ability.teleporter.location_teleport.err_dim": "Cross-dimension travel is not ported yet",
+  "ac.ability.teleporter.location_teleport.name_hint": "Name this place",
+  "ac.ability.teleporter.location_teleport.mark_here": "Mark here",
+  "ac.ui.location_teleport.title": "Teleport Marks",
+  "ac.ui.location_teleport.empty": "No marks yet - name this place and mark it.",
   "ac.ability.vecmanip.vec_accel.name": "Vector Acceleration",
   "ac.ability.vecmanip.vec_reflection.name": "Vector Reflection",
 

@@ -14,6 +14,7 @@ public class TeleporterCategory extends Category {
     public static final MarkTeleportSkill MARK_TELEPORT = new MarkTeleportSkill();
     public static final FleshRippingSkill FLESH_RIPPING = new FleshRippingSkill();
     public static final FlashingSkill FLASHING = new FlashingSkill();
+    public static final LocationTeleportSkill LOCATION_TELEPORT = new LocationTeleportSkill();
 
     public static final TeleporterCategory INSTANCE = new TeleporterCategory();
 
@@ -26,6 +27,7 @@ public class TeleporterCategory extends Category {
         addSkill(MARK_TELEPORT);
         addSkill(FLESH_RIPPING);
         addSkill(FLASHING);
+        addSkill(LOCATION_TELEPORT);
 
         // L'arbre de l'original part du lancer d'objet : c'est lui qui apprend a
         // viser, et tout le reste en descend. Les competences dont les deux bouts sont
@@ -42,5 +44,10 @@ public class TeleporterCategory extends Category {
         // Le scintillement descend du saut court, avec la meme exigence que l'original :
         // presque toute l'experience du saut, donc l'avoir beaucoup pratique.
         FLASHING.setParent(SHIFT_TELEPORT, 0.8f);
+        // Et la teleportation a la marque, comme dans l'original, demande les deux : savoir
+        // traverser un mur, et savoir marquer un endroit. C'est la troisieme competence du
+        // port a deux parentes.
+        LOCATION_TELEPORT.setParent(PENETRATE_TELEPORT, 0.8f);
+        LOCATION_TELEPORT.addDependency(MARK_TELEPORT, 0.8f);
     }
 }

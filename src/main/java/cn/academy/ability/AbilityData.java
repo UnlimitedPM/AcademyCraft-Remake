@@ -28,6 +28,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private static final String TAG_SKILL_EXPS = "skillExps";
     private static final String TAG_LEVEL_PROGRESS = "levelProgress";
     private static final String TAG_COOLDOWNS = "cooldowns";
+    private static final String TAG_MARKS = "marks";
 
     /**
      * Part de la progression d'un niveau qui doit etre remplie pour monter.
@@ -163,6 +164,49 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * exactement comme {@code interfering} dans l'original.
      */
     private boolean interfered;
+
+    /**
+     * Les endroits marques par le joueur, portage de {@code LocTeleportData}.
+     *
+     * <p>La teleportation a la marque et son ecran vivent de cette liste : l'ecran la lit
+     * pour l'afficher, et c'est elle qui se sauvegarde et qui voyage jusqu'au client avec
+     * le reste de la donnee du joueur — un seul chemin suffit, donc pas de seconde
+     * capacite ni de second paquet pour une liste de coordonnees.
+     */
+    private final List<cn.academy.ability.teleporter.LocationMark> marks = new ArrayList<>();
+
+    /** Les marques, dans l'ordre ou elles ont ete posees. */
+    public List<cn.academy.ability.teleporter.LocationMark> getMarks() {
+        return List.copyOf(marks);
+    }
+
+    /**
+     * Pose une marque, a la suite.
+     *
+     * <p>Reprend {@code add} de l'original : le rang dans la liste <b>est</b> l'identifiant.
+     */
+    public void addMark(String name, String dimension, double x, double y, double z) {
+        marks.add(new cn.academy.ability.teleporter.LocationMark(
+                cn.academy.ability.teleporter.LocationMark.cleanName(name, marks.size()),
+                dimension, x, y, z));
+    }
+
+    /**
+     * Retire une marque, et renumerote celles qui suivent.
+     *
+     * <p>Reprend {@code remove} de l'original : sans renumerotation, l'ecran enverrait
+     * l'identifiant d'une marque pour en designer une autre.
+     */
+    public void removeMark(int id) {
+        if (id < 0 || id >= marks.size()) return;
+        marks.remove(id);
+    }
+
+    /** La marque de ce rang, ou {@code null}. */
+    @Nullable
+    public cn.academy.ability.teleporter.LocationMark getMark(int id) {
+        return id < 0 || id >= marks.size() ? null : marks.get(id);
+    }
 
     private float controlPoint = cn.academy.Config.startingControlPoint();
     private float maxControlPoint = (float) cn.academy.Config.controlPointMax;
@@ -961,6 +1005,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         tag.putFloat("addOverload", addMaxOverload);
         tag.putBoolean("overloadFine", overloadFine);
         tag.putInt("untilOverloadRecover", untilOverloadRecover);
+
+        // Les marques voyagent avec le reste : l'ecran de la teleportation les affiche, et
+        // le client ne peut pas les deviner.
+        ListTag markTags = new ListTag();
+        for (cn.academy.ability.teleporter.LocationMark mark : marks) {
+            markTags.add(mark.save());
+        }
+        tag.put(TAG_MARKS, markTags);
         return tag;
     }
 
@@ -1005,5 +1057,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // le joueur doit repartir disponible, pas bloque par un booleen par defaut.
         overloadFine = !tag.contains("overloadFine") || tag.getBoolean("overloadFine");
         untilOverloadRecover = tag.getInt("untilOverloadRecover");
+
+        marks.clear();
+        ListTag markTags = tag.getList(TAG_MARKS, Tag.TAG_COMPOUND);
+        for (int i = 0; i < markTags.size(); i++) {
+            cn.academy.ability.teleporter.LocationMark mark =
+                    cn.academy.ability.teleporter.LocationMark.load(markTags.getCompound(i));
+            // Une dimension disparue laisse un trou, et non une exception : les autres
+            // marques doivent survivre a celle-la.
+            if (mark != null) marks.add(mark);
+        }
     }
 }

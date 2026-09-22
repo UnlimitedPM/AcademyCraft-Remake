@@ -412,6 +412,18 @@ public abstract class Skill {
     }
 
     /**
+     * Cette competence ouvre-t-elle un ecran au lieu de partir ?
+     *
+     * <p>Une seule le fait, la teleportation a la marque : sa touche ouvre la liste des
+     * endroits marques, et c'est un clic dans cette liste qui declenche le saut. Le client
+     * le lit pour savoir qu'il ne doit <b>rien</b> envoyer a l'appui — sans quoi le serveur
+     * recevrait une activation pour une competence qui ne s'active pas.
+     */
+    public boolean opensScreen() {
+        return false;
+    }
+
+    /**
      * Fin du maintien, quelle qu'en soit la cause : relachement, duree maximale, ou
      * ressources epuisees. L'original le faisait une seule fois, dans
      * {@code MSG_TERMINATED}.

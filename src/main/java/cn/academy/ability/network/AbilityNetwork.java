@@ -23,6 +23,8 @@ public class AbilityNetwork {
                 ActivateSkillPacket::encode, ActivateSkillPacket::decode, ActivateSkillPacket::handle);
         CHANNEL.registerMessage(nextId++, FlashingPacket.class,
                 FlashingPacket::encode, FlashingPacket::decode, FlashingPacket::handle);
+        CHANNEL.registerMessage(nextId++, LocationTeleportPacket.class,
+                LocationTeleportPacket::encode, LocationTeleportPacket::decode, LocationTeleportPacket::handle);
         CHANNEL.registerMessage(nextId++, SyncAbilityDataPacket.class,
                 SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode, SyncAbilityDataPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
