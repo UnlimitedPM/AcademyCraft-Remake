@@ -86,6 +86,11 @@ public class ModBlockEntities {
                     BlockEntityType.Builder.of(PhaseGeneratorBlockEntity::new,
                             ModBlocks.PHASE_GENERATOR.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<AbilityInterfererBlockEntity>> ABILITY_INTERFERER =
+            BLOCK_ENTITIES.register("ability_interferer", () ->
+                    BlockEntityType.Builder.of(AbilityInterfererBlockEntity::new,
+                            ModBlocks.ABILITY_INTERFERER.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

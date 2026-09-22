@@ -44,6 +44,11 @@ public class ActivateSkillPacket {
             if (skill == null) return;
             player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
                 if (!data.hasLearned(category)) return;
+                if (data.isInterfered()) {
+                    player.displayClientMessage(
+                            Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
+                    return;
+                }
                 if (data.consumeControlPoint(skill.getCpCost())) {
                     skill.onActivate(player, data);
                     AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),

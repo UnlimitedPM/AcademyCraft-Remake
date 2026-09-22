@@ -35,6 +35,9 @@ public class ModMenus {
     public static final RegistryObject<MenuType<PhaseGeneratorMenu>> PHASE_GENERATOR =
             MENUS.register("phase_generator", () -> IForgeMenuType.create(PhaseGeneratorMenu::new));
 
+    public static final RegistryObject<MenuType<AbilityInterfererMenu>> ABILITY_INTERFERER =
+            MENUS.register("ability_interferer", () -> IForgeMenuType.create(AbilityInterfererMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

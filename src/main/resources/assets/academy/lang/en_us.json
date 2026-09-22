@@ -116,6 +116,10 @@
   "academy.phase_generator.state.on": "Running",
   "academy.phase_generator.state.off": "Idle",
 
+  "academy.interferer.state.on": "Jamming",
+  "academy.interferer.state.off": "Idle",
+  "academy.interferer.action.toggle": "On / Off",
+
 
 
   "itemGroup.academy_tab": "AcademyCraft Remake"

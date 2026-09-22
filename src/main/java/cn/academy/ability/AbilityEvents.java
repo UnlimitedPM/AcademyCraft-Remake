@@ -57,6 +57,9 @@ public class AbilityEvents {
         if (event.phase != TickEvent.Phase.END) return;
         if (!(event.player instanceof ServerPlayer player)) return;
         player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            // Les sources d'interference sont evaluees ici, une fois par tick : une
+            // source qui ne brouille plus disparait d'elle-meme.
+            data.refreshInterference();
             // Le plafond vient de la config : on le reapplique a chaque tick pour
             // qu'un rechargement de config soit pris en compte sans reconnexion.
             data.clampToConfiguredMax();

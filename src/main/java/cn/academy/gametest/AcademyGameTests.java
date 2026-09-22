@@ -1,5 +1,7 @@
 package cn.academy.gametest;
 
+import cn.academy.AbilityInterfererBlock;
+import cn.academy.AbilityInterfererBlockEntity;
 import cn.academy.AcademyCraft;
 import cn.academy.DeveloperBlockEntity;
 import cn.academy.ImagFusorBlockEntity;
@@ -1604,6 +1606,147 @@ public final class AcademyGameTests {
         assertValue(helper, 6000, generator.getLiquidAmount(),
                 "2000 mB doivent avoir brule, soit 1000 d'energie");
         helper.succeed();
+    }
+
+    // ------------------------------------------------------------------
+    // Le brouilleur d'aptitudes
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void interfererValuesAndRangeSettings(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
+        var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
+
+        // Valeurs de TileAbilityInterferer : tampon 10000, bande passante
+        // LATENCY_MK1 = 50, rayon entre 10 et 100.
+        assertValue(helper, 10000, machine.getMaxEnergyStored(), "tampon du brouilleur");
+        assertClose(helper, 50.0d, machine.getBandwidth(), "bande passante");
+        assertValue(helper, 10, AbilityInterfererBlockEntity.MIN_RANGE, "rayon minimum");
+        assertValue(helper, 100, AbilityInterfererBlockEntity.MAX_RANGE, "rayon maximum");
+
+        assertFalse(helper, machine.isEnabled(), "la machine demarre a l'arret");
+        assertValue(helper, AbilityInterfererBlockEntity.MIN_RANGE, machine.getRange(), "rayon de depart");
+
+        // Le rayon se paie au carre : c'est ce qui rend un grand brouilleur cher.
+        assertClose(helper, 100.0d, machine.getCycleCost(), "cout a 10 blocs");
+        assertClose(helper, 10.0d, machine.getCostPerTick(), "cout par tick a 10 blocs");
+        machine.setRange(50);
+        assertClose(helper, 2500.0d, machine.getCycleCost(), "cout a 50 blocs");
+        assertClose(helper, 250.0d, machine.getCostPerTick(), "cout par tick a 50 blocs");
+
+        // Le rayon reste dans ses bornes.
+        machine.setRange(5);
+        assertValue(helper, AbilityInterfererBlockEntity.MIN_RANGE, machine.getRange(), "borne basse");
+        machine.setRange(500);
+        assertValue(helper, AbilityInterfererBlockEntity.MAX_RANGE, machine.getRange(), "borne haute");
+
+        machine.adjustRange(AbilityInterfererBlockEntity.RANGE_STEP);
+        assertValue(helper, AbilityInterfererBlockEntity.MAX_RANGE, machine.getRange(),
+                "au-dela du maximum, le reglage ne bouge plus");
+        helper.succeed();
+    }
+
+    /** Un cycle paie le rayon au carre et allume le bloc. */
+    @GameTest(template = "empty")
+    public static void interfererPaysForItsRange(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
+        var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        machine.setEnergy(10000.0d);
+        machine.setEnabled(true);
+        assertTrue(helper, machine.isEnabled(), "avec de quoi payer, la machine s'allume");
+
+        // Dix ticks pour un cycle complet.
+        for (int i = 0; i < 10; i++) {
+            AbilityInterfererBlockEntity.tick(level, abs, helper.getBlockState(rel), machine);
+        }
+
+        assertClose(helper, 9900.0d, machine.getEnergy(), "un cycle coute le carre du rayon");
+        assertValue(helper, true, helper.getBlockState(rel).getValue(AbilityInterfererBlock.ON),
+                "le bloc doit s'allumer");
+        helper.succeed();
+    }
+
+    /** Sans de quoi payer, la machine s'eteint d'elle-meme au lieu de brouiller gratuitement. */
+    @GameTest(template = "empty")
+    public static void interfererStopsWhenItCannotPay(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
+        var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        // Moins que les 100 du cycle a dix blocs.
+        machine.setEnergy(50.0d);
+        machine.setEnabled(true);
+        assertFalse(helper, machine.isEnabled(), "sans de quoi payer un cycle, elle refuse de s'allumer");
+
+        // De quoi payer un cycle, mais pas deux.
+        machine.setEnergy(150.0d);
+        machine.setEnabled(true);
+        assertTrue(helper, machine.isEnabled(), "un cycle payable suffit a s'allumer");
+
+        for (int i = 0; i < 10; i++) {
+            AbilityInterfererBlockEntity.tick(level, abs, helper.getBlockState(rel), machine);
+        }
+        assertClose(helper, 50.0d, machine.getEnergy(), "le premier cycle est paye");
+        assertTrue(helper, machine.isEnabled(), "elle a encore de quoi payer");
+
+        for (int i = 0; i < 10; i++) {
+            AbilityInterfererBlockEntity.tick(level, abs, helper.getBlockState(rel), machine);
+        }
+        assertFalse(helper, machine.isEnabled(), "le deuxieme cycle n'est pas payable");
+        assertClose(helper, 0.0d, machine.getEnergy(), "l'original vidait le tampon en s'eteignant");
+        assertValue(helper, false, helper.getBlockState(rel).getValue(AbilityInterfererBlock.ON),
+                "le bloc doit s'eteindre");
+        helper.succeed();
+    }
+
+    /** Le poseur n'est jamais brouille par sa propre machine. */
+    @GameTest(template = "empty")
+    public static void interfererNeverJamsItsOwner(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        var state = ModBlocks.ABILITY_INTERFERER.get().defaultBlockState();
+        helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
+        var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
+
+        var owner = fakePlayer(helper);
+        machine.setPlacer(owner);
+        assertValue(helper, owner.getGameProfile().getName(), machine.getPlacer(), "le poseur est retenu");
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        // On place le faux joueur dans le rayon, puis on fait tourner la machine.
+        owner.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+        level.addFreshEntity(owner);
+
+        machine.setEnergy(10000.0d);
+        machine.setEnabled(true);
+        for (int i = 0; i < 10; i++) {
+            AbilityInterfererBlockEntity.tick(level, abs, state, machine);
+        }
+
+        assertValue(helper, 0, machine.getAffectedCount(), "le poseur ne doit pas etre brouille");
+        assertFalse(helper, isInterfered(owner), "et il doit pouvoir utiliser ses competences");
+
+        // Le faux joueur est un singleton du niveau : il faut le retirer, sinon le
+        // prochain test le retrouverait la ou on l'a laisse.
+        owner.remove(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
+        helper.succeed();
+    }
+
+    /** Vrai si ce joueur est brouille, d'apres sa donnee d'aptitudes. */
+    private static boolean isInterfered(net.minecraft.world.entity.player.Player player) {
+        return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .map(cn.academy.ability.AbilityData::isInterfered)
+                .orElse(false);
     }
 
     @GameTest(template = "empty")
