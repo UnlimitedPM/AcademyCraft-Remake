@@ -65,4 +65,14 @@ public final class ClientCharge {
     public static float getFraction() {
         return active ? Math.min(1.0f, ticks / (float) maxTicks) : 0.0f;
     }
+
+    /**
+     * Ticks ecoules depuis l'appui.
+     *
+     * Sert a la barre de charge, et au rendu du bouclier qui grossit et accelere avec
+     * l'age du maintien.
+     */
+    public static int getTicks() {
+        return ticks;
+    }
 }
