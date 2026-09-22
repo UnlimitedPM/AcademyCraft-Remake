@@ -21,7 +21,7 @@ public class ElectronBombSkill extends Skill {
     private static final float DAMAGE = 10f;
 
     public ElectronBombSkill() {
-        super("electron_bomb");
+        super("electron_bomb", 1);
     }
 
     @Override

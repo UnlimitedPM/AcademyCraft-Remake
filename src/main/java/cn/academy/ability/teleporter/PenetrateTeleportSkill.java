@@ -12,7 +12,7 @@ public class PenetrateTeleportSkill extends Skill {
     private static final double RANGE = 6;
 
     public PenetrateTeleportSkill() {
-        super("penetrate_teleport");
+        super("penetrate_teleport", 2);
     }
 
     @Override

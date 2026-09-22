@@ -43,7 +43,16 @@ public class ActivateSkillPacket {
             Skill skill = category.getSkill(msg.skillId);
             if (skill == null) return;
             player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-                if (!data.hasLearned(category)) return;
+                // Apprendre une competence passe par le developpeur : tant qu'elle ne
+                // l'est pas, la touche ne fait rien. L'original ne posait meme pas de
+                // touche dans ce cas ; le port en pose une par competence, donc il le
+                // dit plutot que de rester muet.
+                if (!data.isSkillLearned(skill)) {
+                    player.displayClientMessage(
+                            Component.translatable("academy.ability.not_learned", skill.getDisplayName())
+                                    .withStyle(ChatFormatting.RED), true);
+                    return;
+                }
                 if (data.isInterfered()) {
                     player.displayClientMessage(
                             Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);

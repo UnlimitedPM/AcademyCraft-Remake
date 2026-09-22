@@ -10,7 +10,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 public class DimFoldingTheoremSkill extends Skill {
 
     public DimFoldingTheoremSkill() {
-        super("dim_folding_theorem");
+        super("dim_folding_theorem", 1);
     }
 
     @Override

@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
+import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DevelopActionLevel;
 import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.core.BlockPos;
@@ -38,6 +39,17 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  */
 public class DeveloperMenu extends AbstractContainerMenu {
 
+    /**
+     * Decalage des boutons de competence.
+     *
+     * Un bouton de conteneur ne transporte qu'un entier. Les identifiants de
+     * categorie tiennent dans les petites valeurs — il y en a quatre — et les
+     * competences commencent donc a cent, pour que les deux espaces ne se
+     * rencontrent jamais. Le serveur refait le chemin inverse dans
+     * {@link #clickMenuButton}.
+     */
+    public static final int SKILL_BUTTON_BASE = 100;
+
     private final DeveloperBlockEntity blockEntity;
     private final ContainerLevelAccess access;
 
@@ -47,6 +59,7 @@ public class DeveloperMenu extends AbstractContainerMenu {
     private final SyncedInt progress;
     private final SyncedInt state;
     private final SyncedInt developingCategory;
+    private final SyncedInt developingSkill;
     private final SyncedInt energyStored;
 
     public DeveloperMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
@@ -79,10 +92,12 @@ public class DeveloperMenu extends AbstractContainerMenu {
         this.progress = new SyncedInt(() -> (int) Math.round(blockEntity.getProgress() * 1000.0d));
         this.state = new SyncedInt(() -> blockEntity.getState().ordinal());
         this.developingCategory = new SyncedInt(blockEntity::getCategoryId);
+        this.developingSkill = new SyncedInt(blockEntity::getSkillId);
         this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
         addDataSlot(progress);
         addDataSlot(state);
         addDataSlot(developingCategory);
+        addDataSlot(developingSkill);
         addDataSlot(energyStored);
 
         for (int row = 0; row < 3; row++) {
@@ -102,7 +117,15 @@ public class DeveloperMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int buttonId) {
         if (!(player instanceof ServerPlayer serverPlayer)) return false;
-        return blockEntity.startDeveloping(serverPlayer, buttonId);
+
+        if (buttonId < SKILL_BUTTON_BASE) {
+            return blockEntity.startDeveloping(serverPlayer, buttonId);
+        }
+
+        Skill skill = CategoryManager.INSTANCE.getSkill(buttonId - SKILL_BUTTON_BASE);
+        if (skill == null || skill.getCategory() == null) return false;
+        return blockEntity.startDeveloping(serverPlayer,
+                skill.getCategory().getCategoryId(), skill.getId());
     }
 
     // ------------------------------------------------------------------
@@ -115,6 +138,17 @@ public class DeveloperMenu extends AbstractContainerMenu {
 
     public Category getCategory(int index) {
         return CategoryManager.INSTANCE.getCategory(index);
+    }
+
+    /** La competence d'une categorie, par son identifiant dans cette categorie. */
+    public Skill getSkill(int categoryIndex, int skillId) {
+        Category category = getCategory(categoryIndex);
+        return category == null ? null : category.getSkill(skillId);
+    }
+
+    /** L'identifiant de bouton qui lance l'apprentissage d'une competence. */
+    public static int skillButton(Skill skill) {
+        return SKILL_BUTTON_BASE + CategoryManager.INSTANCE.indexOfSkill(skill);
     }
 
     public int getCategoryLevel(int index) {
@@ -162,6 +196,11 @@ public class DeveloperMenu extends AbstractContainerMenu {
 
     public int getDevelopingCategory() {
         return developingCategory.value();
+    }
+
+    /** Identifiant de la competence en cours, ou -1 si c'est le niveau qui monte. */
+    public int getDevelopingSkill() {
+        return developingSkill.value();
     }
 
     public int getEnergyStored() {

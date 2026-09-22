@@ -6,8 +6,10 @@ import javax.annotation.Nullable;
 
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
+import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DevelopAction;
 import cn.academy.ability.develop.DevelopActionLevel;
+import cn.academy.ability.develop.DevelopActionSkill;
 import cn.academy.ability.develop.DeveloperType;
 import cn.academy.energy.EnergyReceiver;
 import cn.academy.energy.NodeFinder;
@@ -77,6 +79,15 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
 
     /** Categorie en cours d'apprentissage, ou -1. */
     private int categoryId = -1;
+
+    /**
+     * Competence visee, ou -1 pour un apprentissage de niveau.
+     *
+     * Le developpeur mene un apprentissage a la fois, et il en existe deux sortes :
+     * faire monter une categorie d'un cran, ou apprendre une de ses competences.
+     * Ce champ dit laquelle des deux.
+     */
+    private int skillId = -1;
 
     /** Apprenti, ou {@code null} si personne. C'est la seule reference sauvegardee. */
     @Nullable
@@ -196,6 +207,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         state = newState;
         action = null;
         categoryId = -1;
+        skillId = -1;
         student = null;
         studentRef = null;
         studentName = null;
@@ -224,19 +236,34 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
      * @return vrai si l'apprentissage a pu demarrer
      */
     public boolean startDeveloping(ServerPlayer player, int requestedCategoryId) {
+        return startDeveloping(player, requestedCategoryId, -1);
+    }
+
+    /**
+     * Demarre l'apprentissage d'une competence d'une categorie.
+     *
+     * @param requestedSkillId l'identifiant de la competence <b>dans sa categorie</b>,
+     *                         ou -1 pour faire monter la categorie d'un cran
+     * @return vrai si l'apprentissage a pu demarrer
+     */
+    public boolean startDeveloping(ServerPlayer player, int requestedCategoryId, int requestedSkillId) {
         if (state == DevState.DEVELOPING) return false;
 
         Category category = CategoryManager.INSTANCE.getCategory(requestedCategoryId);
         if (category == null) return false;
 
-        DevelopActionLevel candidate = new DevelopActionLevel(category);
-        // Au niveau maximal il n'y a plus rien a faire. L'ecran grise deja le
-        // bouton, donc ce refus n'est qu'une ceinture de securite ; l'original ne
-        // prevenait pas le joueur autrement qu'en changeant l'etat affiche.
+        DevelopAction candidate = buildAction(category, requestedSkillId);
+        if (candidate == null) return false;
+
+        // Au niveau maximal il n'y a plus rien a faire, et une competence deja
+        // apprise n'a plus rien a apprendre. L'ecran grise deja ces lignes, donc ce
+        // refus n'est qu'une ceinture de securite ; l'original ne prevenait pas le
+        // joueur autrement qu'en changeant l'etat affiche.
         if (!candidate.validate(player)) return false;
 
         action = candidate;
         categoryId = requestedCategoryId;
+        skillId = requestedSkillId;
         student = player.getUUID();
         studentRef = player;
         studentName = player.getGameProfile().getName();
@@ -246,6 +273,20 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         state = DevState.DEVELOPING;
         setChanged();
         return true;
+    }
+
+    /**
+     * L'action correspondant a une cible, ou {@code null} si la cible n'existe pas.
+     *
+     * Sert aussi bien au lancement qu'a la reconstruction apres un chargement : une
+     * action n'est jamais sauvegardee, elle est refabriquee a partir de la categorie
+     * et de la competence.
+     */
+    @Nullable
+    private static DevelopAction buildAction(Category category, int targetSkillId) {
+        if (targetSkillId < 0) return new DevelopActionLevel(category);
+        Skill skill = category.getSkill(targetSkillId);
+        return skill == null ? null : new DevelopActionSkill(skill);
     }
 
     /** Interrompt l'apprentissage en cours, sans rien rendre. */
@@ -271,6 +312,11 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
 
     public int getCategoryId() {
         return categoryId;
+    }
+
+    /** Competence visee, ou -1 si l'apprentissage porte sur le niveau de la categorie. */
+    public int getSkillId() {
+        return skillId;
     }
 
     @Nullable
@@ -345,6 +391,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         tag.putDouble("energy", energy);
         tag.putInt("state", state.ordinal());
         tag.putInt("category", categoryId);
+        tag.putInt("skill", skillId);
         tag.putInt("stim", stim);
         tag.putInt("max_stim", maxStim);
         tag.putInt("tick_this_stim", tickThisStim);
@@ -359,6 +406,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         energy = Math.min(type.getEnergy(), Math.max(0.0d, tag.getDouble("energy")));
         state = stateOf(tag.getInt("state"));
         categoryId = tag.getInt("category");
+        skillId = tag.contains("skill") ? tag.getInt("skill") : -1;
         stim = tag.getInt("stim");
         maxStim = tag.getInt("max_stim");
         tickThisStim = tag.getInt("tick_this_stim");
@@ -368,10 +416,10 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         studentName = tag.contains("student_name") ? tag.getString("student_name") : null;
 
         // L'action n'est pas sauvegardee : elle est reconstruite a partir de la
-        // categorie, ce qui evite de stocker un objet qui n'a pas de sens hors du
-        // jeu et qui pourrait ne plus exister apres une mise a jour.
+        // categorie et de la competence, ce qui evite de stocker un objet qui n'a pas
+        // de sens hors du jeu et qui pourrait ne plus exister apres une mise a jour.
         Category category = categoryId >= 0 ? CategoryManager.INSTANCE.getCategory(categoryId) : null;
-        action = category != null ? new DevelopActionLevel(category) : null;
+        action = category != null ? buildAction(category, skillId) : null;
         if (state == DevState.DEVELOPING && action == null) state = DevState.FAILED;
     }
 

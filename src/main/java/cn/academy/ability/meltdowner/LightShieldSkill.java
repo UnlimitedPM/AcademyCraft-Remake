@@ -12,7 +12,7 @@ public class LightShieldSkill extends Skill {
     private static final float CP_COST_PER_HIT = 8f;
 
     public LightShieldSkill() {
-        super("light_shield");
+        super("light_shield", 2);
     }
 
     @Override

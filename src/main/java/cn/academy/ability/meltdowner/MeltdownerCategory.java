@@ -18,5 +18,10 @@ public class MeltdownerCategory extends Category {
         addSkill(MELTDOWNER);
         addSkill(ELECTRON_BOMB);
         addSkill(LIGHT_SHIELD);
+
+        // Dependances de l'original dont les deux bouts sont portes. Les autres
+        // (scatter_bomb, jet_engine, mine_ray_*...) attendent leurs competences.
+        LIGHT_SHIELD.setParent(ELECTRON_BOMB);
+        MELTDOWNER.addDependency(LIGHT_SHIELD);
     }
 }

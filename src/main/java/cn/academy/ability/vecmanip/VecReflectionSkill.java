@@ -19,7 +19,7 @@ public class VecReflectionSkill extends Skill {
     private static final float CP_COST_PER_HIT = 5f;
 
     public VecReflectionSkill() {
-        super("vec_reflection");
+        super("vec_reflection", 4);
     }
 
     @Override

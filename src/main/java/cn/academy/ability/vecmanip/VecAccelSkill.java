@@ -12,7 +12,7 @@ public class VecAccelSkill extends Skill {
     private static final double SPEED = 2.2;
 
     public VecAccelSkill() {
-        super("vec_accel");
+        super("vec_accel", 2);
     }
 
     @Override

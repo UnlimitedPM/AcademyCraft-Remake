@@ -17,7 +17,7 @@ public class ShiftTeleportSkill extends Skill {
     private static final double MAX_RANGE = 12;
 
     public ShiftTeleportSkill() {
-        super("shift_tp");
+        super("shift_tp", 4);
     }
 
     @Override

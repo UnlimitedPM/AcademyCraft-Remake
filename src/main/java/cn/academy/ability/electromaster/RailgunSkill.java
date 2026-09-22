@@ -17,7 +17,7 @@ public class RailgunSkill extends Skill {
     private static final double KNOCKBACK = 2.5;
 
     public RailgunSkill() {
-        super("railgun");
+        super("railgun", 4);
     }
 
     @Override

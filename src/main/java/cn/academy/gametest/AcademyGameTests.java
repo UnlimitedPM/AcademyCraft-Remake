@@ -1437,6 +1437,153 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    // ------------------------------------------------------------------
+    // Developpeur : apprendre une competence
+    // ------------------------------------------------------------------
+
+    /**
+     * Le test de bout en bout : une competence s'apprend au developpeur.
+     *
+     * La categorie d'abord, la competence ensuite : c'est l'enchainement que le
+     * joueur suit en jeu, et il verifie au passage que le niveau de la categorie
+     * ouvre bien la competence du meme niveau.
+     */
+    @GameTest(template = "empty")
+    public static void developerLearnsASkill(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        var developer = (DeveloperBlockEntity) helper.getBlockEntity(rel);
+        BlockPos abs = helper.absolutePos(rel);
+
+        var player = fakePlayer(helper);
+        player.getAbilities().instabuild = false;
+
+        // Categorie 3 = vecmanip, la seule que les autres tests du developpeur ne
+        // touchent pas (ils prennent les categories 1 et 2). Les tests partagent le
+        // meme faux joueur et peuvent tourner en parallele : deux tests sur la meme
+        // categorie se marcheraient dessus.
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(3);
+        assertTrue(helper, category != null, "la quatrieme categorie doit exister");
+        assertValue(helper, "vecmanip", category.getName(), "categorie attendue");
+
+        var skill = category.getSkill("vec_accel");
+        assertTrue(helper, skill != null, "vec_accel doit etre portee");
+        assertValue(helper, 2, skill.getLevel(), "vec_accel est une competence de niveau 2");
+        assertValue(helper, 5, skill.getLearningStims(), "prix de vec_accel : 3 + 2*2/2");
+
+        // L'etat de depart est pose ici et non suppose : le joueur est partage.
+        setCategoryLevel(player, category, 0);
+        forgetSkill(player, skill);
+
+        // Sans le niveau, la competence est refusee.
+        assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
+                "au niveau 0, une competence de niveau 2 ne doit pas s'ouvrir");
+        assertValue(helper, DeveloperBlockEntity.DevState.IDLE, developer.getState(),
+                "un refus ne doit pas laisser la machine en marche");
+
+        // Avec le niveau, elle s'ouvre.
+        setCategoryLevel(player, category, 2);
+        assertTrue(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
+                "avec le niveau 2, la competence doit s'ouvrir");
+        assertValue(helper, skill.getId(), developer.getSkillId(), "la cible est la competence");
+        assertValue(helper, 5, developer.getMaxStim(), "cinq stimulations pour vec_accel");
+
+        developer.setEnergy(50000.0d);
+
+        // 5 stimulations de 21 ticks chacune (l'original comptait tps + 1).
+        for (int i = 0; i < 300 && developer.getState() == DeveloperBlockEntity.DevState.DEVELOPING; i++) {
+            DeveloperBlockEntity.tick(level, abs, helper.getBlockState(rel), developer);
+        }
+
+        assertValue(helper, DeveloperBlockEntity.DevState.DONE, developer.getState(),
+                "l'apprentissage doit aboutir");
+        assertTrue(helper, skillLearned(player, skill), "la competence doit etre apprise");
+        assertValue(helper, -1, developer.getSkillId(), "la cible est effacee une fois termine");
+
+        // On relance : la meme competence ne s'apprend pas deux fois.
+        assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
+                "une competence deja apprise ne se reapprend pas");
+
+        // On remet la categorie comme on l'a trouvee : le joueur est partage.
+        forgetSkill(player, skill);
+        setCategoryLevel(player, category, 0);
+        helper.succeed();
+    }
+
+    /** Une competence dont la dependance n'est pas apprise est refusee, puis acceptee. */
+    @GameTest(template = "empty")
+    public static void developerSkillHonoursItsDependency(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        var developer = (DeveloperBlockEntity) helper.getBlockEntity(rel);
+
+        var player = fakePlayer(helper);
+
+        // Categorie 0 = electromaster : c'est la seule qui porte une dependance dont
+        // les deux bouts soient portes (body_intensify depend de arc_gen).
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0);
+        var parent = category.getSkill("arc_gen");
+        var child = category.getSkill("body_intensify");
+        assertTrue(helper, parent != null && child != null, "les deux competences doivent etre portees");
+
+        // body_intensify est de niveau 3 et depend de arc_gen.
+        assertValue(helper, 3, child.getLevel(), "body_intensify est de niveau 3");
+        assertValue(helper, 1, child.getDependencies().size(), "une dependance");
+        assertTrue(helper, child.getDependencies().get(0) == parent, "et c'est arc_gen");
+        assertValue(helper, 7, child.getLearningStims(), "prix de body_intensify : 3 + 3*3/2");
+
+        setCategoryLevel(player, category, 3);
+        forgetSkill(player, parent);
+
+        assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), child.getId()),
+                "sans la dependance, la competence ne doit pas s'ouvrir");
+
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(data -> data.learnSkill(parent));
+
+        assertTrue(helper, developer.startDeveloping(player, category.getCategoryId(), child.getId()),
+                "une fois la dependance apprise, la competence s'ouvre");
+        assertValue(helper, 7, developer.getMaxStim(), "sept stimulations pour body_intensify");
+
+        // On n'attend pas la fin : ce test porte sur l'ouverture, pas sur le deroule.
+        developer.abort();
+        forgetSkill(player, parent);
+        setCategoryLevel(player, category, 0);
+        helper.succeed();
+    }
+
+    /** Niveau d'une categorie, pose directement : c'est le developpeur qui le monte en jeu. */
+    private static void setCategoryLevel(Player player, cn.academy.ability.Category category, int level) {
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(data -> data.setCategoryLevel(category, level));
+    }
+
+    /** Vrai si ce joueur a appris cette competence. */
+    private static boolean skillLearned(Player player, cn.academy.ability.Skill skill) {
+        return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .map(data -> data.isSkillLearned(skill))
+                .orElse(false);
+    }
+
+    /**
+     * Oublie une competence sur ce joueur.
+     *
+     * Le faux joueur est un <b>singleton partage par tous les tests</b>, et ceux qui
+     * se ressemblent peuvent tourner en parallele. Un test qui apprend une
+     * competence doit donc la rendre en partant, et surtout ne pas remettre a zero
+     * toute la progression : il effacerait le niveau qu'un autre test est en train
+     * d'utiliser, et cet autre test echouerait a la fin de son apprentissage, avec
+     * un message qui n'a l'air de rien avoir a faire avec celui qui a casse.
+     */
+    private static void forgetSkill(Player player, cn.academy.ability.Skill skill) {
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(data -> data.forgetSkill(skill));
+    }
+
     /**
      * Un joueur simule, pour les tests qui ont besoin d'un porteur d'aptitudes.
      *
@@ -1738,14 +1885,20 @@ public final class AcademyGameTests {
         assertValue(helper, 0, machine.getAffectedCount(), "le poseur ne doit pas etre brouille");
         assertFalse(helper, isInterfered(owner), "et il doit pouvoir utiliser ses competences");
 
-        // Le faux joueur est un singleton du niveau : il faut le retirer, sinon le
-        // prochain test le retrouverait la ou on l'a laisse. Mais remove() appelle
-        // aussi invalidateCaps(), ce qui rend TOUTES ses capacites muettes pour de
-        // bon — y compris celle des aptitudes. Sans ce reviveCaps, tous les tests
-        // suivants qui lisent une capacite d'un faux joueur lisent du vide, et
-        // passent pour de mauvaises raisons.
+        // Le faux joueur est un singleton du niveau, partage par tous les tests : il
+        // faut le retirer, sinon le prochain test le retrouve la ou on l'a laisse.
+        //
+        // Mais remove() fait deux degats qu'il faut reparer, sous peine de casser des
+        // tests qui n'ont l'air de rien avoir a faire avec celui-ci :
+        //   - il appelle invalidateCaps(), qui rend TOUTES les capacites muettes ;
+        //   - il marque la creature comme retiree, donc isAlive() reste faux pour
+        //     toujours, et un developpeur qui la cherche comme eleve echoue.
+        // revive() repare les deux (il defait le retrait et reactive les capacites).
+        // On l'eloigne ensuite pour qu'aucun test ne le retrouve dans une zone ou il
+        // cherche un joueur.
         owner.remove(net.minecraft.world.entity.Entity.RemovalReason.DISCARDED);
-        owner.reviveCaps();
+        owner.revive();
+        owner.moveTo(100_000.0d, 100.0d, 100_000.0d);
         helper.succeed();
     }
 

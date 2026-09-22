@@ -46,4 +46,52 @@ public final class CategoryManager {
     public List<Category> getCategories() {
         return Collections.unmodifiableList(categories);
     }
+
+    // ------------------------------------------------------------------
+    // Les competences, vues comme une seule liste
+    // ------------------------------------------------------------------
+
+    /**
+     * Nombre de competences de toutes les categories.
+     *
+     * L'ecran du developpeur ne peut pas passer un objet {@code Skill} a un bouton :
+     * le clic d'un bouton de conteneur est un entier. Il passe donc l'indice de la
+     * competence dans cette liste a plat, et le serveur refait le chemin inverse. Les
+     * deux cotes enumerent les memes categories dans le meme ordre — celui du
+     * registre — donc les indices concordent.
+     */
+    public int getSkillCount() {
+        int total = 0;
+        for (Category category : categories) {
+            total += category.getSkills().size();
+        }
+        return total;
+    }
+
+    /** La competence a cet indice, ou {@code null} s'il est hors bornes. */
+    public Skill getSkill(int globalIndex) {
+        if (globalIndex < 0) return null;
+        int remaining = globalIndex;
+        for (Category category : categories) {
+            int size = category.getSkills().size();
+            if (remaining < size) return category.getSkill(remaining);
+            remaining -= size;
+        }
+        return null;
+    }
+
+    /** L'indice a plat d'une competence, ou -1 si elle n'est pas enregistree. */
+    public int indexOfSkill(Skill skill) {
+        if (skill == null) return -1;
+        int offset = 0;
+        for (Category category : categories) {
+            int size = category.getSkills().size();
+            if (category == skill.getCategory()) {
+                int index = category.getSkills().indexOf(skill);
+                return index < 0 ? -1 : offset + index;
+            }
+            offset += size;
+        }
+        return -1;
+    }
 }

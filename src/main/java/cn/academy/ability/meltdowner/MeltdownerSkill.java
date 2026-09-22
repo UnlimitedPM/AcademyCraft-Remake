@@ -15,7 +15,7 @@ public class MeltdownerSkill extends Skill {
     private static final float DAMAGE = 12f;
 
     public MeltdownerSkill() {
-        super("meltdowner");
+        super("meltdowner", 3);
     }
 
     @Override

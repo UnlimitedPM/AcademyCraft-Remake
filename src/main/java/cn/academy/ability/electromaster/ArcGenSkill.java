@@ -22,7 +22,7 @@ public class ArcGenSkill extends Skill {
     private final Random random = new Random();
 
     public ArcGenSkill() {
-        super("arc_gen");
+        super("arc_gen", 1);
     }
 
     @Override

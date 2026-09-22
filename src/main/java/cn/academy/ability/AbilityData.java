@@ -1,11 +1,18 @@
 package cn.academy.ability;
 
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraftforge.common.util.INBTSerializable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -14,7 +21,12 @@ import java.util.function.BooleanSupplier;
  */
 public class AbilityData implements INBTSerializable<CompoundTag> {
 
+    private static final String TAG_SKILLS = "skills";
+
     private final Map<String, Integer> categoryLevels = new HashMap<>();
+
+    /** Competences apprises, sous la forme {@code <categorie>.<competence>}. */
+    private final Set<String> learnedSkills = new HashSet<>();
 
     /**
      * Sources d'interference actives, par nom. Non sauvegarde.
@@ -140,6 +152,56 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return interferenceSources.size();
     }
 
+    // ------------------------------------------------------------------
+    // Competences apprises
+    // ------------------------------------------------------------------
+
+    /**
+     * Vrai si cette competence a ete apprise au developpeur.
+     *
+     * L'original tenait un {@code BitSet} indexe par l'identifiant de la competence,
+     * ce qui supposait une seule categorie par joueur. Le port autorise plusieurs
+     * categories, donc la cle porte le nom de la categorie en plus de celui de la
+     * competence : deux categories peuvent avoir une competence du meme nom, et rien
+     * n'obligerait non plus les identifiants a rester alignes d'une version a
+     * l'autre. Le nom, lui, ne bouge pas.
+     */
+    public boolean isSkillLearned(Skill skill) {
+        if (skill == null || skill.getCategory() == null) return false;
+        return learnedSkills.contains(skillKey(skill));
+    }
+
+    /** Marque une competence comme apprise. Retourne vrai si cela a change quelque chose. */
+    public boolean learnSkill(Skill skill) {
+        if (skill == null || skill.getCategory() == null) return false;
+        return learnedSkills.add(skillKey(skill));
+    }
+
+    /** Oublie une competence. Sert surtout aux tests et au debogage. */
+    public boolean forgetSkill(Skill skill) {
+        if (skill == null || skill.getCategory() == null) return false;
+        return learnedSkills.remove(skillKey(skill));
+    }
+
+    /** Les competences apprises d'une categorie, dans l'ordre du registre. */
+    public List<Skill> getLearnedSkills(Category category) {
+        List<Skill> out = new ArrayList<>();
+        if (category == null) return out;
+        for (Skill skill : category.getSkills()) {
+            if (isSkillLearned(skill)) out.add(skill);
+        }
+        return out;
+    }
+
+    /** Nombre de competences apprises, toutes categories confondues. */
+    public int getLearnedSkillCount() {
+        return learnedSkills.size();
+    }
+
+    private static String skillKey(Skill skill) {
+        return skill.getCategory().getName() + "." + skill.getName();
+    }
+
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
@@ -151,6 +213,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // Le drapeau voyage pour que le HUD du client puisse l'afficher ; les
         // sources, elles, n'ont aucun sens hors du serveur.
         tag.putBoolean("interfered", interfered);
+
+        // Les competences apprises voyagent aussi : l'ecran du developpeur et
+        // l'arbre doivent savoir quoi griser, et le client ne peut pas le deviner.
+        ListTag skills = new ListTag();
+        for (String key : learnedSkills) {
+            skills.add(StringTag.valueOf(key));
+        }
+        tag.put(TAG_SKILLS, skills);
         return tag;
     }
 
@@ -164,5 +234,11 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         controlPoint = tag.getFloat("cp");
         maxControlPoint = tag.contains("maxCp") ? tag.getFloat("maxCp") : configuredMax();
         interfered = tag.getBoolean("interfered");
+
+        learnedSkills.clear();
+        ListTag skills = tag.getList(TAG_SKILLS, Tag.TAG_STRING);
+        for (int i = 0; i < skills.size(); i++) {
+            learnedSkills.add(skills.getString(i));
+        }
     }
 }

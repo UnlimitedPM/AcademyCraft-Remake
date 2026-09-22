@@ -13,7 +13,7 @@ public class BodyIntensifySkill extends Skill {
     private static final int DURATION_TICKS = 200; // 10s
 
     public BodyIntensifySkill() {
-        super("body_intensify");
+        super("body_intensify", 3);
     }
 
     @Override

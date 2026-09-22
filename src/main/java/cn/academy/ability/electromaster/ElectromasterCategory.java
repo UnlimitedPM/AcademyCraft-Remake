@@ -18,5 +18,13 @@ public class ElectromasterCategory extends Category {
         addSkill(ARC_GEN);
         addSkill(RAILGUN);
         addSkill(BODY_INTENSIFY);
+
+        // La seule dependance de l'original dont les deux bouts soient portes :
+        // « body_intensify.setParent(arcGen) ». Les autres chaines passent par des
+        // competences qui n'existent pas ici (thunder_bolt, mag_manip, charging...),
+        // et une dependance vers une competence absente rendrait la competence
+        // inapprenable pour toujours. Elles seront reposees en meme temps que ces
+        // competences.
+        BODY_INTENSIFY.setParent(ARC_GEN);
     }
 }
