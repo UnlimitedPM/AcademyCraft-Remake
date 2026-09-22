@@ -115,6 +115,9 @@ public class FleshRippingSkill extends Skill {
         // reserve suivait, et un coup parti se paie.
         data.performForced(cpCost(data), getOverloadCost(data));
         target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        // Le son du coup, pose sur la cible dans l'original — mais il n'y a qu'un joueur
+        // pour l'entendre, donc le port le lui donne directement.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_GUTS, 0.6f);
 
         if (player.getRandom().nextFloat() < DISGUST_CHANCE) {
             // 100 ticks, soit cinq secondes : joli geste, vilaine sensation.

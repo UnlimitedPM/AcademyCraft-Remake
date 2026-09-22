@@ -68,6 +68,11 @@ public class RailgunSkill extends Skill {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
+        // Le seul son de l'original qui se pose dans le monde plutot qu'au joueur : un
+        // tir de railgun s'entend de loin. Il part au moment du tir, donc ici.
+        cn.academy.sound.AcademySounds.playAt(player.level(), player.position(),
+                cn.academy.ModSounds.EM_RAILGUN, 0.5f, 1.0f);
+
         living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
         Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
         living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));

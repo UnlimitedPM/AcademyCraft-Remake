@@ -115,6 +115,7 @@ public class MarkTeleportSkill extends Skill {
         }
         player.teleportTo(destination.x, destination.y, destination.z);
         player.fallDistance = 0.0f;
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
 
         // 0,00018 par bloc, comme l'original : c'est la distance qui compte, pas le geste.
         data.addSkillExp(this, 0.00018f * (float) distance);

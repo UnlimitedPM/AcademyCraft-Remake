@@ -81,6 +81,10 @@ public class ThunderBoltSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
+        // L'eclair s'annonce a l'appui, plus fort que l'arc faible du premier degre :
+        // l'original jouait 0,6 contre 0,5.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_ARC_STRONG, 0.6f);
+
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         Vec3 impact = target != null
                 ? target.position().add(0, target.getEyeHeight(), 0)

@@ -135,6 +135,12 @@ public class MeltdownerSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
+        // La seule competence du port qui se declare dans la categorie des joueurs :
+        // c'est ce que l'original demandait, pour que le curseur des competences la
+        // baisse avec le reste.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.MD_MELTDOWNER,
+                net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f);
+
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 

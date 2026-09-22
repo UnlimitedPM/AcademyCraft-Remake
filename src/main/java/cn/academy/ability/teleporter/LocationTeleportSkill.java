@@ -197,6 +197,7 @@ public class LocationTeleportSkill extends Skill {
         if (player.isPassenger()) player.stopRiding();
         player.teleportTo(dest.x(), dest.y(), dest.z());
         player.fallDistance = 0.0f;
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
 
         data.addSkillExp(this, expFor(distance));
         data.setCooldown(this, cooldown(data));

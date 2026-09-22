@@ -121,6 +121,11 @@ public class TerminalScreen extends Screen {
                 if (mouseX >= x && mouseX < x + CELL_SIZE && mouseY >= y && mouseY < y + CELL_SIZE) {
                     Screen page = AppScreens.create(apps.get(i));
                     if (minecraft != null && page != null) {
+                        // Le seul son de l'original qui se declare dans la categorie
+                        // `master`, et le plus discret de tous : 0,2, un clic de selection.
+                        cn.academy.sound.AcademySounds.playFor(minecraft.player,
+                                cn.academy.ModSounds.TERMINAL_SELECT,
+                                net.minecraft.sounds.SoundSource.MASTER, 0.2f, 1.0f);
                         minecraft.setScreen(page);
                     }
                     return true;

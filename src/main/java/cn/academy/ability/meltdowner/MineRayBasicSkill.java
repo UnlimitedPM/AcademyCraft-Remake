@@ -45,6 +45,11 @@ public class MineRayBasicSkill extends MineRaySkill {
         return (int) lerp(40f, 20f, data.getSkillExp(this));
     }
 
+    @Override
+    public net.minecraftforge.registries.RegistryObject<net.minecraft.sounds.SoundEvent> startupSound() {
+        return cn.academy.ModSounds.MD_MINE_BASIC_STARTUP;
+    }
+
     /** Surcout : de 200 a 150, comme l'original. */
     @Override
     public float getOverloadCost(AbilityData data) {

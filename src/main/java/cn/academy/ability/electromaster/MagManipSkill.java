@@ -209,6 +209,9 @@ public class MagManipSkill extends Skill {
         if (thrown) {
             Vec3 aim = TargetingUtil.findImpactPoint(player, THROW_RANGE);
             block.setDeltaMovement(MagManipVisuals.throwVelocity(block.position(), aim, speed(data)));
+            // Le son part avec le bloc : l'original le jouait sur le meme message que le
+            // lancer, au volume plein (1,0) — c'est un bloc de fer qui part.
+            cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_MAG_MANIP, 1f);
             // Le client doit accepter cette vitesse : sans cela il la corrigerait au tick
             // suivant, et le bloc semblerait ne pas partir.
             block.hurtMarked = true;

@@ -41,6 +41,9 @@ public class BodyIntensifySkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
+        cn.academy.sound.AcademySounds.playFor(player,
+                cn.academy.ModSounds.EM_INTENSIFY_ACTIVATE, 0.5f);
+
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, DURATION_TICKS, 1));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, DURATION_TICKS, 0));
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, DURATION_TICKS, 0));

@@ -72,6 +72,10 @@ public class ArcGenSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
+        // L'arc claque meme s'il ne trouve rien : l'original le jouait a l'appui, avant de
+        // savoir sur quoi son rayon tomberait.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_ARC_WEAK, 0.5f);
+
         Entity target = TargetingUtil.findEntityInSight(player, range(data));
         if (!(target instanceof LivingEntity living)) return;
 

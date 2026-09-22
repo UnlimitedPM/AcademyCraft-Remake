@@ -57,6 +57,11 @@ public class MineRayLuckSkill extends MineRaySkill {
         return (int) lerp(60f, 30f, data.getSkillExp(this));
     }
 
+    @Override
+    public net.minecraftforge.registries.RegistryObject<net.minecraft.sounds.SoundEvent> startupSound() {
+        return cn.academy.ModSounds.MD_MINE_LUCK_STARTUP;
+    }
+
     /** Surcout : de 350 a 300, comme l'original. */
     @Override
     public float getOverloadCost(AbilityData data) {

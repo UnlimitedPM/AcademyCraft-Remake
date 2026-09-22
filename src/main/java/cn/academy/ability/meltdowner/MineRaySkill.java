@@ -5,8 +5,10 @@ import cn.academy.ability.Skill;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
+import net.minecraftforge.registries.RegistryObject;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -64,6 +66,15 @@ public abstract class MineRaySkill extends Skill {
     /** Recharge posee a la fin du rayon, de l'experience minimale a la maximale. */
     public abstract int cooldown(AbilityData data);
 
+    /**
+     * Le son de mise en route du rayon.
+     *
+     * L'original le composait a partir du nom de la competence
+     * ({@code "md.mine_" + postfix + "_startup"}) ; le port demande a chaque rayon lequel
+     * est le sien, ce qui revient au meme sans construire de nom a la volee.
+     */
+    public abstract RegistryObject<SoundEvent> startupSound();
+
     @Override
     public int getCooldownTicks(AbilityData data) {
         // La recharge se pose a la fin du maintien, donc par AbilityEvents.endHeld, qui
@@ -79,6 +90,9 @@ public abstract class MineRaySkill extends Skill {
     @Override
     public void onStart(Player player, AbilityData data) {
         data.setHeldOverload(this, data.getOverload());
+        // Le rayon s'annonce : l'original le faisait au meme moment, quand son contexte
+        // devenait vivant.
+        cn.academy.sound.AcademySounds.playFor(player, startupSound(), 0.4f);
     }
 
     @Override

@@ -96,6 +96,9 @@ public class ShiftTeleportSkill extends Skill {
 
         player.teleportTo(destX, destY, destZ);
         player.fallDistance = 0;
+        // L'original le jouait au dernier moment, et seulement si sa ligne avait trouve
+        // quelqu'un : le port, qui ne fait pas ce coup au passage, le joue toujours.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
         TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
     }
 }

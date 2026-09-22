@@ -164,6 +164,7 @@ public class FlashingSkill extends Skill {
         if (player.isPassenger()) player.stopRiding();
         player.teleportTo(destination.x, destination.y, destination.z);
         player.fallDistance = 0.0f;
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_FLASHING, 1.0f);
 
         // 0,002 par saut, comme l'original.
         data.addSkillExp(this, 0.002f);

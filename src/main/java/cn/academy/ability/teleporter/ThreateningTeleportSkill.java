@@ -134,6 +134,9 @@ public class ThreateningTeleportSkill extends Skill {
             // indirectMagic : c'est le type de degats qui traverse l'armure, ce que
             // l'original demandait explicitement.
             living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data, stack)));
+            // Le son ne part que si l'objet a frappe : l'original le jouait sous un
+            // `if(attacked)`, un lancer dans le vide restant muet.
+            cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
         }
 
         if (!player.isCreative()) {

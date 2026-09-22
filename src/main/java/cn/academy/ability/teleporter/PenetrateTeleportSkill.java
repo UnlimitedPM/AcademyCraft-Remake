@@ -58,6 +58,9 @@ public class PenetrateTeleportSkill extends Skill {
         Vec3 dest = start.add(look.scale(range(data)));
         player.teleportTo(dest.x, dest.y - 1.6, dest.z);
         player.fallDistance = 0;
+        // Le son part au relachement dans l'original, juste avant le message d'execution :
+        // c'est le meme instant.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
         TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
     }
 }
