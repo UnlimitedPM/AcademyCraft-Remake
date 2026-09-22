@@ -6,6 +6,7 @@ import cn.academy.AcademyCraft;
 import cn.academy.DeveloperBlockEntity;
 import cn.academy.ImagFusorBlockEntity;
 import cn.academy.MetalFormerBlockEntity;
+import cn.academy.ability.develop.DevelopProgress.DevState;
 import cn.academy.ModBlocks;
 import cn.academy.ModFluids;
 import cn.academy.ModItems;
@@ -1466,11 +1467,11 @@ public final class AcademyGameTests {
         developer.setEnergy(50000.0d);
 
         // 5 stimulations de 21 ticks chacune (l'original comptait tps + 1).
-        for (int i = 0; i < 200 && developer.getState() == DeveloperBlockEntity.DevState.DEVELOPING; i++) {
+        for (int i = 0; i < 200 && developer.getState() == DevState.DEVELOPING; i++) {
             DeveloperBlockEntity.tick(level, abs, helper.getBlockState(rel), developer);
         }
 
-        assertValue(helper, DeveloperBlockEntity.DevState.DONE, developer.getState(),
+        assertValue(helper, DevState.DONE, developer.getState(),
                 "l'apprentissage doit avoir abouti");
         assertValue(helper, 1, levelOf(player, category), "la categorie doit etre apprise");
         helper.succeed();
@@ -1496,7 +1497,7 @@ public final class AcademyGameTests {
         // Un seul tick suffit : le tampon est vide, le developeur ne peut rien tirer.
         DeveloperBlockEntity.tick(level, abs, helper.getBlockState(rel), developer);
 
-        assertValue(helper, DeveloperBlockEntity.DevState.FAILED, developer.getState(),
+        assertValue(helper, DevState.FAILED, developer.getState(),
                 "sans energie l'apprentissage doit echouer");
         assertValue(helper, 0, levelOf(player, category), "et rien ne doit etre appris");
         helper.succeed();
@@ -1552,7 +1553,7 @@ public final class AcademyGameTests {
         // Sans le niveau, la competence est refusee.
         assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
                 "au niveau 0, une competence de niveau 2 ne doit pas s'ouvrir");
-        assertValue(helper, DeveloperBlockEntity.DevState.IDLE, developer.getState(),
+        assertValue(helper, DevState.IDLE, developer.getState(),
                 "un refus ne doit pas laisser la machine en marche");
 
         // Avec le niveau, elle s'ouvre — mais il faut d'abord sa parente : vec_accel
@@ -1568,11 +1569,11 @@ public final class AcademyGameTests {
         developer.setEnergy(50000.0d);
 
         // 5 stimulations de 21 ticks chacune (l'original comptait tps + 1).
-        for (int i = 0; i < 300 && developer.getState() == DeveloperBlockEntity.DevState.DEVELOPING; i++) {
+        for (int i = 0; i < 300 && developer.getState() == DevState.DEVELOPING; i++) {
             DeveloperBlockEntity.tick(level, abs, helper.getBlockState(rel), developer);
         }
 
-        assertValue(helper, DeveloperBlockEntity.DevState.DONE, developer.getState(),
+        assertValue(helper, DevState.DONE, developer.getState(),
                 "l'apprentissage doit aboutir");
         assertTrue(helper, skillLearned(player, skill), "la competence doit etre apprise");
         assertValue(helper, -1, developer.getSkillId(), "la cible est effacee une fois termine");
@@ -1759,6 +1760,105 @@ public final class AcademyGameTests {
                 developer.startDeveloping(player, category.getCategoryId(), body.getId()),
                 "une competence de niveau 3 doit s'ouvrir sur une machine normale");
         developer.abort();
+        helper.succeed();
+    }
+
+    /**
+     * Le developpeur portable : l'objet tient dans la main, et l'apprentissage avec.
+     *
+     * Meme ecran, meme deroule, meme prix que la machine — seule la source de l'energie
+     * change. C'est ce qui permet a l'objet d'etre un developeur sans etre une machine, et
+     * ce que l'original obtenait avec son interface `IDeveloper`.
+     */
+    @GameTest(template = "empty")
+    public static void lePortableApprendDansLaMain(GameTestHelper helper) {
+        var player = ownPlayer(helper, "portatif");
+
+        // L'objet, charge a ras bord : c'est lui qui paie.
+        var portable = new ItemStack(ModItems.DEVELOPER_PORTABLE.get());
+        cn.academy.DeveloperPortableItem.charge(portable,
+                cn.academy.DeveloperPortableItem.MAX_ENERGY);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, portable);
+
+        var data = player
+                .getCapability(cn.academy.ability.develop.PortableDevCapability.PORTABLE_DEV)
+                .resolve().orElseThrow();
+        var ability = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0);
+
+        // Un objet tenu ne se raccorde a aucun reseau : l'ecran le dit.
+        assertFalse(helper, data.isLinked(), "un objet tenu ne se raccorde pas au reseau");
+        assertValue(helper, (int) cn.academy.ability.develop.DeveloperType.PORTABLE.getEnergy(),
+                data.getMaxEnergyStored(), "le tampon est celui du type portable");
+
+        assertTrue(helper, data.startDeveloping(player, category.getCategoryId(), -1),
+                "l'apprentissage doit demarrer");
+        assertValue(helper, 5, data.getProgressData().getMaxStimulations(),
+                "cinq stimulations pour le premier niveau");
+
+        double before = cn.academy.DeveloperPortableItem.getEnergy(portable);
+        // Cinq stimulations de 26 ticks (25 + 1, la cadence de l'original), payees 30 par
+        // tick — le prix du type portable, reparti sur ses tps.
+        for (int i = 0; i < 300 && data.getState() == DevState.DEVELOPING; i++) {
+            cn.academy.ability.develop.PortableDevTracker.tick(player, data);
+        }
+
+        assertValue(helper, DevState.DONE, data.getState(), "l'apprentissage doit aboutir");
+        assertValue(helper, 1, ability.getCategoryLevel(category), "la categorie doit etre apprise");
+
+        double spent = before - cn.academy.DeveloperPortableItem.getEnergy(portable);
+        assertTrue(helper, spent >= 3800.0d && spent <= 4000.0d,
+                "l'objet doit avoir paye le prix de l'original : " + spent);
+        helper.succeed();
+    }
+
+    /**
+     * Un portable a sec, ou range : l'apprentissage s'arrete.
+     *
+     * L'original ne trouvait plus d'objet a qui demander l'energie, et marquait l'echec —
+     * exactement comme une machine que le reseau ne suit plus. Et un objet ne peut pas
+     * enseigner ce que sa qualite ne permet pas : les competences de niveau 3 demandent la
+     * machine normale.
+     */
+    @GameTest(template = "empty")
+    public static void lePortableSArreteQuandLaMainSeVide(GameTestHelper helper) {
+        var player = ownPlayer(helper, "portatif_a_sec");
+        var data = player
+                .getCapability(cn.academy.ability.develop.PortableDevCapability.PORTABLE_DEV)
+                .resolve().orElseThrow();
+        var ability = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0);
+
+        // Sans l'objet en main, l'apprentissage ne demarre meme pas.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        assertFalse(helper, data.startDeveloping(player, category.getCategoryId(), -1),
+                "sans objet, il n'y a rien pour payer");
+
+        // Avec un objet vide, il demarre puis echoue au premier tick.
+        var empty = new ItemStack(ModItems.DEVELOPER_PORTABLE.get());
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, empty);
+        assertTrue(helper, data.startDeveloping(player, category.getCategoryId(), -1),
+                "l'objet present suffit a demarrer");
+
+        cn.academy.ability.develop.PortableDevTracker.tick(player, data);
+
+        assertValue(helper, DevState.FAILED, data.getState(), "sans energie, tout est perdu");
+        assertValue(helper, 0, ability.getCategoryLevel(category), "et rien n'est appris");
+
+        // Un portable n'enseigne pas une competence de niveau 3 : il faut la machine
+        // normale. La categorie est montee pour que le niveau ne soit pas la raison du
+        // refus, et l'objet recharge pour qu'il ne soit pas l'energie non plus.
+        var body = category.getSkill("body_intensify");
+        assertTrue(helper, body != null, "body_intensify doit etre portee");
+        ability.setCategoryLevel(category, 3);
+        cn.academy.DeveloperPortableItem.charge(empty, cn.academy.DeveloperPortableItem.MAX_ENERGY);
+
+        assertFalse(helper, data.startDeveloping(player, category.getCategoryId(), body.getId()),
+                "un portable n'enseigne pas une competence de niveau 3");
+
+        ability.setCategoryLevel(category, 0);
         helper.succeed();
     }
 

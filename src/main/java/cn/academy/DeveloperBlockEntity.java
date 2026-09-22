@@ -10,6 +10,8 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DevelopAction;
 import cn.academy.ability.develop.DevelopActionLevel;
 import cn.academy.ability.develop.DevelopActionSkill;
+import cn.academy.ability.develop.DevelopProgress;
+import cn.academy.ability.develop.Developer;
 import cn.academy.ability.develop.DeveloperType;
 import cn.academy.energy.EnergyReceiver;
 import cn.academy.energy.NodeFinder;
@@ -55,15 +57,10 @@ import net.minecraft.world.level.block.state.BlockState;
  * categorie entre-temps echoue apres avoir paye : la encore, c'est l'original.
  */
 public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity
-        implements MenuProvider, EnergyReceiver {
+        implements MenuProvider, EnergyReceiver, Developer {
 
-    /** Etat d'un apprentissage, repris de {@code DevelopData.DevState}. */
-    public enum DevState {
-        IDLE,
-        DEVELOPING,
-        FAILED,
-        DONE
-    }
+    /** L'avancement de l'apprentissage, partage avec le developeur portable. */
+    private final DevelopProgress progress = new DevelopProgress();
 
     /** Cadence de recherche d'un noeud, en ticks. */
     private static final int NODE_SEARCH_INTERVAL = 100;
@@ -74,8 +71,6 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     private final DeveloperType type;
 
     private double energy;
-
-    private DevState state = DevState.IDLE;
 
     /** Categorie en cours d'apprentissage, ou -1. */
     private int categoryId = -1;
@@ -111,10 +106,6 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     @Nullable
     private DevelopAction action;
 
-    private int stim;
-    private int maxStim;
-    private int tickThisStim;
-
     private boolean linked;
 
     private int searchCounter;
@@ -129,6 +120,11 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
 
     public DeveloperType getDeveloperType() {
         return type;
+    }
+
+    /** L'avancement, tel quel : c'est le meme objet pour le bloc et pour l'objet portable. */
+    public DevelopProgress getProgressData() {
+        return progress;
     }
 
     // ------------------------------------------------------------------
@@ -147,7 +143,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
             }
         }
 
-        if (dev.state == DevState.DEVELOPING) dev.advance(server);
+        if (dev.progress.isDeveloping()) dev.advance(server);
 
         if (++dev.syncCounter >= SYNC_INTERVAL) {
             dev.syncCounter = 0;
@@ -173,17 +169,16 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
 
         energy -= cost;
 
-        // L'original comptait tps + 1 ticks par stimulation (comparaison
-        // stricte apres increment). On garde ce detail plutot que de le corriger
-        // en silence : ce serait un changement de vitesse non demande.
-        if (++tickThisStim > type.getTps()) {
-            tickThisStim = 0;
-            stim++;
+        // Le compteur de stimulations vit dans `DevelopProgress`, avec la cadence de
+        // l'original (tps + 1 ticks) que l'objet portable suit aussi.
+        if (!progress.tick(type.getTps())) {
+            setChanged();
+            return;
+        }
 
-            if (stim >= maxStim) {
-                complete(player);
-                return;
-            }
+        if (progress.allStimulationsDone()) {
+            complete(player);
+            return;
         }
         setChanged();
     }
@@ -193,27 +188,25 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         boolean success = action != null && action.validate(player, type);
         if (success) {
             action.onLearned(player);
-            reset(DevState.DONE);
+            reset(DevelopProgress.DevState.DONE);
         } else {
             fail();
         }
     }
 
     private void fail() {
-        reset(DevState.FAILED);
+        reset(DevelopProgress.DevState.FAILED);
     }
 
-    private void reset(DevState newState) {
-        state = newState;
+    private void reset(DevelopProgress.DevState newState) {
+        if (newState == DevelopProgress.DevState.IDLE) progress.reset();
+        else progress.finish(newState == DevelopProgress.DevState.DONE);
         action = null;
         categoryId = -1;
         skillId = -1;
         student = null;
         studentRef = null;
         studentName = null;
-        stim = 0;
-        maxStim = 0;
-        tickThisStim = 0;
         setChanged();
     }
 
@@ -238,7 +231,6 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     public boolean startDeveloping(ServerPlayer player, int requestedCategoryId) {
         return startDeveloping(player, requestedCategoryId, -1);
     }
-
     /**
      * Demarre l'apprentissage d'une competence d'une categorie.
      *
@@ -247,7 +239,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
      * @return vrai si l'apprentissage a pu demarrer
      */
     public boolean startDeveloping(ServerPlayer player, int requestedCategoryId, int requestedSkillId) {
-        if (state == DevState.DEVELOPING) return false;
+        if (progress.isDeveloping()) return false;
 
         Category category = CategoryManager.INSTANCE.getCategory(requestedCategoryId);
         if (category == null) return false;
@@ -267,10 +259,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         student = player.getUUID();
         studentRef = player;
         studentName = player.getGameProfile().getName();
-        stim = 0;
-        tickThisStim = 0;
-        maxStim = candidate.getStimulations(player);
-        state = DevState.DEVELOPING;
+        progress.begin(candidate.getStimulations(player));
         setChanged();
         return true;
     }
@@ -290,31 +279,37 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     }
 
     /** Interrompt l'apprentissage en cours, sans rien rendre. */
+    @Override
     public void abort() {
-        if (state == DevState.DEVELOPING) fail();
+        if (progress.isDeveloping()) fail();
     }
 
     // ------------------------------------------------------------------
-    // Etat, pour l'ecran
+    // Etat, pour l'ecran (Developer)
     // ------------------------------------------------------------------
 
-    public DevState getState() {
-        return state;
+    @Override
+    public DevelopProgress.DevState getState() {
+        return progress.getState();
     }
 
+    /** Stimulations faites. */
     public int getStim() {
-        return stim;
+        return progress.getStimulations();
     }
 
+    /** Stimulations prevues pour l'apprentissage en cours. */
     public int getMaxStim() {
-        return maxStim;
+        return progress.getMaxStimulations();
     }
 
+    @Override
     public int getCategoryId() {
         return categoryId;
     }
 
     /** Competence visee, ou -1 si l'apprentissage porte sur le niveau de la categorie. */
+    @Override
     public int getSkillId() {
         return skillId;
     }
@@ -324,25 +319,23 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         return studentName;
     }
 
-    /**
-     * Avancement entre 0 et 1, comme {@code DevelopData.getDevelopProgress} : les
-     * stimulations faites, plus la fraction de la stimulation en cours.
-     */
+    /** Avancement entre 0 et 1 : les stimulations faites, plus celle en cours. */
+    @Override
     public double getProgress() {
-        if (state != DevState.DEVELOPING || maxStim <= 0) return 0.0d;
-        double done = (double) stim / maxStim;
-        double current = (double) tickThisStim / maxStim / type.getTps();
-        return Math.min(1.0d, done + current);
+        return progress.progress(type.getTps());
     }
 
+    @Override
     public double getEnergy() {
         return energy;
     }
 
+    @Override
     public int getEnergyStored() {
         return (int) energy;
     }
 
+    @Override
     public int getMaxEnergyStored() {
         return (int) type.getEnergy();
     }
@@ -353,6 +346,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         setChanged();
     }
 
+    @Override
     public boolean isLinked() {
         return linked;
     }
@@ -389,12 +383,11 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putDouble("energy", energy);
-        tag.putInt("state", state.ordinal());
+        // L'etat de l'apprentissage voyage avec le reste : c'est exactement ce que le
+        // client lit pour l'ecran, et ce qu'un rechargement doit retrouver.
+        tag.merge(progress.serializeNBT());
         tag.putInt("category", categoryId);
         tag.putInt("skill", skillId);
-        tag.putInt("stim", stim);
-        tag.putInt("max_stim", maxStim);
-        tag.putInt("tick_this_stim", tickThisStim);
         tag.putBoolean("linked", linked);
         if (student != null) tag.putUUID("student", student);
         if (studentName != null) tag.putString("student_name", studentName);
@@ -404,12 +397,9 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     public void load(CompoundTag tag) {
         super.load(tag);
         energy = Math.min(type.getEnergy(), Math.max(0.0d, tag.getDouble("energy")));
-        state = stateOf(tag.getInt("state"));
+        progress.deserializeNBT(tag);
         categoryId = tag.getInt("category");
         skillId = tag.contains("skill") ? tag.getInt("skill") : -1;
-        stim = tag.getInt("stim");
-        maxStim = tag.getInt("max_stim");
-        tickThisStim = tag.getInt("tick_this_stim");
         linked = tag.getBoolean("linked");
         student = tag.hasUUID("student") ? tag.getUUID("student") : null;
         studentRef = null;
@@ -420,13 +410,9 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         // de sens hors du jeu et qui pourrait ne plus exister apres une mise a jour.
         Category category = categoryId >= 0 ? CategoryManager.INSTANCE.getCategory(categoryId) : null;
         action = category != null ? buildAction(category, skillId) : null;
-        if (state == DevState.DEVELOPING && action == null) state = DevState.FAILED;
-    }
-
-    private static DevState stateOf(int ordinal) {
-        DevState[] values = DevState.values();
-        if (ordinal < 0 || ordinal >= values.length) return DevState.IDLE;
-        return values[ordinal];
+        if (progress.getState() == DevelopProgress.DevState.DEVELOPING && action == null) {
+            progress.finish(false);
+        }
     }
 
     @Override

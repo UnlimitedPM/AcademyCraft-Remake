@@ -202,7 +202,12 @@ public class DeveloperBlock extends HorizontalDirectionalBlock implements Entity
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             BlockPos anchor = anchorOf(pos, state);
             if (level.getBlockEntity(anchor) instanceof DeveloperBlockEntity dev) {
-                NetworkHooks.openScreen(serverPlayer, dev, buf -> buf.writeBlockPos(anchor));
+                // Le drapeau dit au client de quel developeur il s'agit : `false` = une
+                // machine, dont il ira chercher le block entity a la position qui suit.
+                NetworkHooks.openScreen(serverPlayer, dev, buf -> {
+                    buf.writeBoolean(false);
+                    buf.writeBlockPos(anchor);
+                });
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

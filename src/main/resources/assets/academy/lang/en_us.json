@@ -58,6 +58,7 @@
   "block.academy.developer_advanced": "Advanced Ability Developer",
 
   "academy.developer.type.portable": "Portable Developer",
+  "academy.developer.portable.energy": "Energy %s / %s",
   "academy.developer.type.normal": "Normal Ability Developer",
   "academy.developer.type.advanced": "Advanced Ability Developer",
   "block.academy.ability_interferer": "Ability Interferer",

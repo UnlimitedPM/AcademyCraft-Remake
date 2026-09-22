@@ -4,6 +4,8 @@ import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DevelopActionLevel;
+import cn.academy.ability.develop.DevelopProgress;
+import cn.academy.ability.develop.Developer;
 import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -15,6 +17,8 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
+
+import javax.annotation.Nullable;
 
 /**
  * Ecran du developeur d'aptitudes.
@@ -50,7 +54,9 @@ public class DeveloperMenu extends AbstractContainerMenu {
      */
     public static final int SKILL_BUTTON_BASE = 100;
 
-    private final DeveloperBlockEntity blockEntity;
+    private final Developer developer;
+    private final DeveloperType type;
+    private final boolean portable;
     private final ContainerLevelAccess access;
 
     /** Un niveau par categorie enregistree, dans l'ordre du registre. */
@@ -73,7 +79,21 @@ public class DeveloperMenu extends AbstractContainerMenu {
     private final SyncedInt energyStored;
 
     public DeveloperMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+        this(containerId, playerInventory, resolveDeveloper(playerInventory, buf));
+    }
+
+    /**
+     * Le developeur d'en face, selon ce que le paquet annonce.
+     *
+     * <p>Le bloc s'annonce par sa position, et le client va le chercher dans son monde —
+     * c'est le seul moyen pour lui de connaitre sa qualite, que le bloc porte lui-meme.
+     * Le portable n'annonce rien : il n'a rien a resoudre, et son ecran se contente de ce
+     * que le serveur lui envoie.
+     */
+    @Nullable
+    private static Developer resolveDeveloper(Inventory playerInventory, FriendlyByteBuf buf) {
+        if (buf.readBoolean()) return null;
+        return resolveBlockEntity(playerInventory, buf.readBlockPos());
     }
 
     private static DeveloperBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -82,10 +102,22 @@ public class DeveloperMenu extends AbstractContainerMenu {
         throw new IllegalStateException("No DeveloperBlockEntity at " + pos);
     }
 
-    public DeveloperMenu(int containerId, Inventory playerInventory, DeveloperBlockEntity blockEntity) {
+    /**
+     * L'ecran d'un developeur, quel qu'il soit.
+     *
+     * <p>Le bloc arrive ici avec son block entity ; le portable avec la donnee du joueur
+     * — et {@code null} chez le client, qui n'a rien a resoudre : c'est le serveur qui
+     * pousse les valeurs par les emplacements de donnee, comme pour tous les autres
+     * menus du port.
+     */
+    public DeveloperMenu(int containerId, Inventory playerInventory, @Nullable Developer developer) {
         super(ModMenus.DEVELOPER.get(), containerId);
-        this.blockEntity = blockEntity;
-        this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
+        this.developer = developer;
+        this.portable = developer == null;
+        this.type = developer == null ? DeveloperType.PORTABLE : developer.getDeveloperType();
+        this.access = developer instanceof DeveloperBlockEntity be
+                ? ContainerLevelAccess.create(be.getLevel(), be.getBlockPos())
+                : ContainerLevelAccess.NULL;
 
         Player player = playerInventory.player;
         var categories = CategoryManager.INSTANCE.getCategories();
@@ -105,11 +137,12 @@ public class DeveloperMenu extends AbstractContainerMenu {
             addDataSlot(categoryProgress[i]);
         }
 
-        this.progress = new SyncedInt(() -> (int) Math.round(blockEntity.getProgress() * 1000.0d));
-        this.state = new SyncedInt(() -> blockEntity.getState().ordinal());
-        this.developingCategory = new SyncedInt(blockEntity::getCategoryId);
-        this.developingSkill = new SyncedInt(blockEntity::getSkillId);
-        this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
+        this.progress = new SyncedInt(() ->
+                developer == null ? 0 : (int) Math.round(developer.getProgress() * 1000.0d));
+        this.state = new SyncedInt(() -> developer == null ? 0 : developer.getState().ordinal());
+        this.developingCategory = new SyncedInt(() -> developer == null ? -1 : developer.getCategoryId());
+        this.developingSkill = new SyncedInt(() -> developer == null ? -1 : developer.getSkillId());
+        this.energyStored = new SyncedInt(() -> developer == null ? 0 : developer.getEnergyStored());
         addDataSlot(progress);
         addDataSlot(state);
         addDataSlot(developingCategory);
@@ -133,14 +166,15 @@ public class DeveloperMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int buttonId) {
         if (!(player instanceof ServerPlayer serverPlayer)) return false;
+        if (developer == null) return false;
 
         if (buttonId < SKILL_BUTTON_BASE) {
-            return blockEntity.startDeveloping(serverPlayer, buttonId);
+            return developer.startDeveloping(serverPlayer, buttonId, -1);
         }
 
         Skill skill = CategoryManager.INSTANCE.getSkill(buttonId - SKILL_BUTTON_BASE);
         if (skill == null || skill.getCategory() == null) return false;
-        return blockEntity.startDeveloping(serverPlayer,
+        return developer.startDeveloping(serverPlayer,
                 skill.getCategory().getCategoryId(), skill.getId());
     }
 
@@ -203,30 +237,27 @@ public class DeveloperMenu extends AbstractContainerMenu {
 
     /** Energie totale que coutera la prochaine etape de cette categorie. */
     public double getCostFor(int index) {
-        return blockEntity.getDeveloperType().getTotalCost(getStimulationsFor(index));
+        return getDeveloperType().getTotalCost(getStimulationsFor(index));
     }
 
     public double getEnergyPerTick() {
-        return blockEntity.getDeveloperType().getEnergyPerTick();
+        return getDeveloperType().getEnergyPerTick();
     }
 
     public DeveloperType getDeveloperType() {
-        return blockEntity.getDeveloperType();
+        return type;
     }
 
     public float getProgress() {
         return Math.min(1.0f, progress.value() / 1000.0f);
     }
 
-    public DeveloperBlockEntity.DevState getState() {
-        DeveloperBlockEntity.DevState[] values = DeveloperBlockEntity.DevState.values();
-        int ordinal = state.value();
-        if (ordinal < 0 || ordinal >= values.length) return DeveloperBlockEntity.DevState.IDLE;
-        return values[ordinal];
+    public DevelopProgress.DevState getState() {
+        return DevelopProgress.stateOf(state.value());
     }
 
     public boolean isDeveloping() {
-        return getState() == DeveloperBlockEntity.DevState.DEVELOPING;
+        return getState() == DevelopProgress.DevState.DEVELOPING;
     }
 
     public int getDevelopingCategory() {
@@ -243,11 +274,16 @@ public class DeveloperMenu extends AbstractContainerMenu {
     }
 
     public int getMaxEnergyStored() {
-        return blockEntity.getMaxEnergyStored();
+        return developer == null ? (int) DeveloperType.PORTABLE.getEnergy() : developer.getMaxEnergyStored();
     }
 
     public boolean isLinkedToNode() {
-        return blockEntity.isLinked();
+        return developer != null && developer.isLinked();
+    }
+
+    /** Vrai si cet ecran est celui de l'objet portable, et non d'une machine. */
+    public boolean isPortable() {
+        return portable;
     }
 
     // ------------------------------------------------------------------
@@ -281,6 +317,9 @@ public class DeveloperMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, blockEntity.getBlockState().getBlock());
+        // Un objet tenu n'a pas de position : l'ecran reste ouvert tant que le joueur le
+        // garde, et c'est l'apprentissage lui-meme qui s'interrompt s'il le range.
+        if (!(developer instanceof DeveloperBlockEntity be)) return true;
+        return stillValid(access, player, be.getBlockState().getBlock());
     }
 }

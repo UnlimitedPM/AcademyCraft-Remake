@@ -357,14 +357,14 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
     protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
         graphics.drawString(font, title, 8, 6, TEXT, false);
         graphics.drawString(font, statusText(), BAR_X, BAR_Y + BAR_HEIGHT + 4,
-                menu.getState() == DeveloperBlockEntity.DevState.FAILED ? OFF : TEXT, false);
+                menu.getState() == cn.academy.ability.develop.DevelopProgress.DevState.FAILED ? OFF : TEXT, false);
         graphics.drawString(font, playerInventoryTitle, 8, inventoryLabelY, TEXT, false);
     }
 
     /** Message d'etat, dans la langue du joueur. */
     private Component statusText() {
-        DeveloperBlockEntity.DevState state = menu.getState();
-        if (state == DeveloperBlockEntity.DevState.DEVELOPING) {
+        cn.academy.ability.develop.DevelopProgress.DevState state = menu.getState();
+        if (state == cn.academy.ability.develop.DevelopProgress.DevState.DEVELOPING) {
             return Component.translatable("academy.developer.state.developing")
                     .append(" : " + (long) (menu.getProgress() * 100) + " %");
         }

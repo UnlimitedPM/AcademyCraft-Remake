@@ -103,7 +103,7 @@ public class ModItems {
     public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",
             () -> new TerminalInstallerItem(new Item.Properties().stacksTo(1)));
-    public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", DeveloperPortableItem::new);
     public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new TutorialItem());
     public static final RegistryObject<Item> DEV_NORMAL_ITEM = ITEMS.register("dev_normal",
             () -> new BlockItem(ModBlocks.DEV_NORMAL.get(), new Item.Properties()));
