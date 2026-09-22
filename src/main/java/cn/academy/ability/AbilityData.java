@@ -97,6 +97,27 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private final Set<Skill> charging = new HashSet<>();
 
     /**
+     * Ce qu'un maintien en cours a besoin de retenir.
+     *
+     * L'original rangeait cela dans le contexte d'activation, qui vivait pour un joueur
+     * et une competence : le surcout a reserver, et un repere de temps pour les effets
+     * qui ne doivent pas se repeter a chaque tick (le bouclier absorbe au plus une fois
+     * toutes les 18 ticks). Le port n'a pas de contexte, donc ce qu'il y avait dedans
+     * est range avec la donnee du joueur. Rien n'est sauvegarde : un maintien ne
+     * survit pas a un rechargement, comme une charge.
+     */
+    public static final class Hold {
+
+        /** Surcout a ne pas laisser redescendre tant que le maintien dure. */
+        private float overload;
+
+        /** Ticks tenus du dernier effet, ou -1 s'il n'y en a pas encore eu. */
+        private int mark = -1;
+    }
+
+    private final Map<Skill, Hold> holds = new HashMap<>();
+
+    /**
      * Sources d'interference actives, par nom. Non sauvegarde.
      *
      * Portage de {@code CPData.interfSources} : une machine pose une source, et
@@ -251,6 +272,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return baseMaxOverload(getHighestLevel()) + addMaxOverload;
     }
 
+    /**
+     * Force le surcout courant, borne a la reserve.
+     *
+     * Portage de {@code CPData.setOverload} : l'original s'en servait pour remettre le
+     * surcout epingle d'un maintien apres que la recuperation l'a fait baisser.
+     */
+    public void setOverload(float value) {
+        overload = Math.max(0f, Math.min(getMaxOverload(), value));
+    }
+
     /** Part du plafond acquise en utilisant ses competences. */
     public float getAddMaxOverload() {
         return addMaxOverload;
@@ -304,6 +335,9 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * vide — c'est le {@code getOverloadRecoverSpeed} de l'original.
      */
     public void tickOverload() {
+        // Un maintien en cours epingle sa part de surcout : l'original la reposait a
+        // chaque tick apres la recuperation, ce qui revient au meme.
+        if (isHoldingOverload()) return;
         if (untilOverloadRecover > 0) {
             untilOverloadRecover--;
             return;
@@ -637,6 +671,55 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return !charging.isEmpty();
     }
 
+    /** Les competences dont la touche est enfoncee, en copie : l'appelant peut agir dessus. */
+    public Set<Skill> getChargingSkills() {
+        return Set.copyOf(charging);
+    }
+
+    // ------------------------------------------------------------------
+    // Etat d'un maintien
+    // ------------------------------------------------------------------
+
+    private Hold holdOf(Skill skill) {
+        return skill == null ? null : holds.computeIfAbsent(skill, s -> new Hold());
+    }
+
+    /**
+     * Surcout que ce maintien ne laisse pas redescendre.
+     *
+     * L'original epinglait le surcout consomme a l'ouverture ({@code overloadKeep}) :
+     * sans cela, tenir un bouclier rendrait la reserve au fur et a mesure, donc le
+     * maintenir serait gratuit en surcout au bout de quelques secondes.
+     */
+    public void setHeldOverload(Skill skill, float overload) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.overload = overload;
+    }
+
+    public float getHeldOverload(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? 0f : hold.overload;
+    }
+
+    /** Vrai si un maintien en cours epingle du surcout. */
+    public boolean isHoldingOverload() {
+        for (Hold hold : holds.values()) {
+            if (hold.overload > 0f) return true;
+        }
+        return false;
+    }
+
+    /** Ticks tenus du dernier effet de ce maintien, ou -1 s'il n'y en a pas encore eu. */
+    public int getHoldMark(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? -1 : hold.mark;
+    }
+
+    public void setHoldMark(Skill skill, int ticks) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.mark = ticks;
+    }
+
     /** Commence une charge : le compteur repart de zero. */
     public void beginCharge(Skill skill) {
         if (skill == null) return;
@@ -648,6 +731,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public void endCharge(Skill skill) {
         if (skill == null) return;
         charging.remove(skill);
+        // L'etat du maintien, lui, disparait : il n'a de sens que pendant.
+        holds.remove(skill);
     }
 
     /** Annule une charge et oublie son compteur. */
@@ -655,6 +740,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         if (skill == null) return;
         charging.remove(skill);
         chargeTicks.remove(skill);
+        holds.remove(skill);
     }
 
     /**
@@ -677,6 +763,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public void clearCharges() {
         charging.clear();
         chargeTicks.clear();
+        holds.clear();
     }
 
     private static String skillKey(Skill skill) {

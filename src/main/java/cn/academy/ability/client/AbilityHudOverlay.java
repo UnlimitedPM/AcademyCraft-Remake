@@ -61,6 +61,13 @@ public class AbilityHudOverlay implements IGuiOverlay {
             nextY += BAR_HEIGHT + 2;
         }
 
+        // Le bouclier tenu n'a pas encore son rendu dans le monde : ce temoin est ce
+        // qui dit au joueur qu'il tient quelque chose.
+        if (ClientCharge.isSustained()) {
+            graphics.drawString(Minecraft.getInstance().font, "SHIELD", x, nextY, 0x80C0FF);
+            nextY += BAR_HEIGHT + 4;
+        }
+
         // Un brouilleur empeche d'utiliser ses competences : sans cet avertissement
         // le joueur n'aurait aucun moyen de comprendre pourquoi ses touches ne
         // repondent plus. La surcharge, elle, a sa barre rouge.

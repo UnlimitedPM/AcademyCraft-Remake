@@ -48,6 +48,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_electron_bomb", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_U, "key.categories.academy");
 
+    /** Le bouclier se tient : c'est la touche qui reste enfoncee. */
+    public static final KeyMapping ACTIVATE_LIGHT_SHIELD = new KeyMapping(
+            "key.academy.activate_light_shield", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_I, "key.categories.academy");
+
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(ACTIVATE_SKILL);
@@ -58,5 +63,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_PENETRATE_TP);
         event.register(ACTIVATE_MELTDOWNER);
         event.register(ACTIVATE_ELECTRON_BOMB);
+        event.register(ACTIVATE_LIGHT_SHIELD);
     }
 }

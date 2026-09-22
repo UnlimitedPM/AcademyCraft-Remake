@@ -183,7 +183,10 @@ class PortedSkillsTest {
     @Test
     void lesGainsDExperienceSontCeuxDeLOriginal() {
         for (Skill skill : allSkills()) {
-            if (skill.isPassive()) continue;
+            // Les passives et les competences tenues n'ont pas de gain a l'activation :
+            // elles versent leur experience depuis leur propre crochet, le seul endroit
+            // ou elles savent que quelque chose s'est produit.
+            if (skill.isPassive() || skill.isHeld()) continue;
             Float expected = EXPECTED_EXP.get(fullName(skill));
             assertNotNull(expected, "gain d'experience non fige pour " + fullName(skill));
             assertEquals(expected.floatValue(), skill.getExpGain(charged(skill)),
@@ -196,7 +199,7 @@ class PortedSkillsTest {
         // Une competence active sans gain d'experience rendrait son niveau
         // inatteignable, et cela ne se verrait qu'apres des heures de jeu.
         for (Skill skill : allSkills()) {
-            if (skill.isPassive()) continue;
+            if (skill.isPassive() || skill.isHeld()) continue;
             assertTrue(skill.getExpGain(charged(skill)) > 0f,
                     fullName(skill) + " ne rapporte aucune experience");
         }
@@ -215,6 +218,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.body_intensify", 200f),
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
+            Map.entry("meltdowner.light_shield", 110f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

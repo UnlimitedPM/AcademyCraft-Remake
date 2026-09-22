@@ -53,7 +53,8 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_SHIFT_TP, TeleporterCategory.NAME, "shift_tp"),
             new Binding(AbilityKeyBindings.ACTIVATE_PENETRATE_TP, TeleporterCategory.NAME, "penetrate_teleport"),
             new Binding(AbilityKeyBindings.ACTIVATE_MELTDOWNER, MeltdownerCategory.NAME, "meltdowner"),
-            new Binding(AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB, MeltdownerCategory.NAME, "electron_bomb"));
+            new Binding(AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB, MeltdownerCategory.NAME, "electron_bomb"),
+            new Binding(AbilityKeyBindings.ACTIVATE_LIGHT_SHIELD, MeltdownerCategory.NAME, "light_shield"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -69,13 +70,16 @@ public class AbilityClientEvents {
         Skill skill = category.getSkill(binding.skill);
         if (skill == null) return;
 
-        // Appui : l'original envoyait MSG_KEYDOWN. Une competence qui se charge se
-        // contente d'ouvrir sa charge, une autre part tout de suite.
+        // Appui : l'original envoyait MSG_KEYDOWN. Une competence qui se charge ouvre
+        // son compteur, une competence tenue vit a partir de maintenant, une autre part
+        // tout de suite.
         if (binding.key.consumeClick()) {
-            binding.charging = skill.isChargeable();
+            binding.charging = skill.isChargeable() || skill.isHeld();
             send(category, skill, Phase.PRESS);
-            if (binding.charging) {
+            if (skill.isChargeable()) {
                 ClientCharge.begin(skill.getMaxChargeTicks(ClientAbilityData.get()));
+            } else if (skill.isHeld()) {
+                ClientCharge.beginSustained();
             }
         }
 

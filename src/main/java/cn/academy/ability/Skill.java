@@ -276,6 +276,55 @@ public abstract class Skill {
         onActivate(player, data);
     }
 
+    // ------------------------------------------------------------------
+    // Competences tenues
+    // ------------------------------------------------------------------
+
+    /**
+     * Cette competence agit-elle tant que la touche reste enfoncee ?
+     *
+     * Troisieme famille de l'original, a cote des instantanees et des chargees : le
+     * bouclier ne se lance pas au relachement, il vit pendant tout le maintien et
+     * s'entretient par tick. Le compteur de ticks tenus est celui du maintien, et il
+     * reste lisible apres la fin, donc la recharge peut en dependre.
+     */
+    public boolean isHeld() {
+        return false;
+    }
+
+    /** Duree maximale du maintien ; 0 = illimite, borne par les ressources. */
+    public int getMaxHoldTicks(AbilityData data) {
+        return 0;
+    }
+
+    /**
+     * Ouverture du maintien, apres que le cout d'appui a ete paye.
+     *
+     * Portage de {@code MSG_MADEALIVE} de l'original : c'est la que le bouclier epingle
+     * le surcout qu'il ne laissera pas redescendre.
+     */
+    public void onHoldStart(Player player, AbilityData data) {
+    }
+
+    /**
+     * Un tick de maintien.
+     *
+     * Retourner {@code false} termine la competence : c'est ainsi qu'une competence
+     * tenue s'arrete quand ses ressources s'epuisent, comme le faisait le context de
+     * l'original en appelant {@code terminate()}.
+     */
+    public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
+        return true;
+    }
+
+    /**
+     * Fin du maintien, quelle qu'en soit la cause : relachement, duree maximale, ou
+     * ressources epuisees. L'original le faisait une seule fois, dans
+     * {@code MSG_TERMINATED}.
+     */
+    public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
+    }
+
     /**
      * Interpolation lineaire entre deux valeurs, {@code t} ramene entre 0 et 1.
      *

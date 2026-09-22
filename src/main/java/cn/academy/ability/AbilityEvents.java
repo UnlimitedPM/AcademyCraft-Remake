@@ -67,6 +67,8 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
+            // Les competences tenues vivent tant que la touche reste enfoncee.
+            tickSustained(player, data);
             // Le plafond vient de la config : on le reapplique a chaque tick pour
             // qu'un rechargement de config soit pris en compte sans reconnexion.
             data.clampToConfiguredMax();
@@ -103,11 +105,47 @@ public class AbilityEvents {
             for (Category category : CategoryManager.INSTANCE.getCategories()) {
                 if (!data.hasLearned(category)) continue;
                 for (Skill skill : category.getSkills()) {
-                    if (skill.isPassive()) {
+                    // Une passive est toujours la ; une competence tenue ne l'est que
+                    // pendant son maintien, sinon le bouclier absorberait sans etre tenu.
+                    if (skill.isPassive() || data.isCharging(skill)) {
                         event.setAmount(skill.onDamaged(player, data, event));
                     }
                 }
             }
         });
+    }
+
+    /**
+     * Fait vivre les competences tenues : un tick de plus, ou leur fin.
+     *
+     * Le compteur avance d'abord, comme le {@code ticks += 1} de l'original, puis la
+     * duree maximale est verifiee avant l'effet du tick.
+     */
+    private static void tickSustained(ServerPlayer player, AbilityData data) {
+        for (Skill skill : data.getChargingSkills()) {
+            if (!skill.isHeld()) continue;
+            int held = data.getChargeTicks(skill);
+            int max = skill.getMaxHoldTicks(data);
+            if (max > 0 && held > max) {
+                endHeld(player, data, skill);
+            } else if (!skill.onHoldTick(player, data, held)) {
+                endHeld(player, data, skill);
+            }
+        }
+    }
+
+    /**
+     * Termine un maintien : relachement, duree maximale ou ressources epuisees.
+     *
+     * Les trois chemins font la meme chose, donc passent par ici : terminer l'effet,
+     * poser la recharge de la duree tenue, et prevenir le client. L'original le faisait
+     * dans le {@code MSG_TERMINATED} de son contexte, quelle que soit la cause de la fin.
+     */
+    public static void endHeld(ServerPlayer player, AbilityData data, Skill skill) {
+        data.endCharge(skill);
+        // La recharge se lit apres la fin, avec le compteur du maintien encore en place.
+        skill.onHoldEnd(player, data, data.getChargeTicks(skill));
+        data.setCooldown(skill, skill.getCooldownTicks(data));
+        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
     }
 }

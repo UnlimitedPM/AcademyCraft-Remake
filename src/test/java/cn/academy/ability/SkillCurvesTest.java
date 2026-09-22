@@ -3,6 +3,7 @@ package cn.academy.ability;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -113,6 +114,44 @@ class SkillCurvesTest {
     }
 
     @Test
+    void leBouclierSeTientEtSePaie() {
+        var shield = cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD;
+
+        // Le bouclier est une competence tenue, plus une passive : c'est ce qui lui rend
+        // sa duree, sa recharge et son surcout.
+        assertTrue(shield.isHeld(), "le bouclier se tient");
+        assertFalse(shield.isPassive(), "ce n'est plus une passive");
+        assertEquals(120, shield.getMaxHoldTicks(new AbilityData()), "MAX_TIME au depart");
+        assertEquals(180, shield.getMaxHoldTicks(atExperience(shield, 1f)), "MAX_TIME au maximum");
+
+        // Bornes des courbes, toutes reprises de l'original...
+        assertBounds("degats absorbes", 15f, 50f, shield::absorbDamage, shield);
+        assertBounds("degats de contact", 2f, 6f, shield::touchDamage, shield);
+        assertBounds("surcout d'ouverture", 110f, 60f, shield::getOverloadCost, shield);
+        assertBounds("surcout par coup", 5f, 3f, shield::overloadPerHit, shield);
+
+        // ...sauf les couts en CP, ramenes a l'echelle de la reserve du port pour que
+        // la duree de maintien reste celle de l'original.
+        assertBounds("entretien par tick", 1f, 0.7f, shield::holdCpCost, shield);
+        assertBounds("CP par coup", 2f, 1f, shield::cpPerHit, shield);
+        assertEquals(0f, shield.getCpCost(), 0.0001f, "pas de cout en CP a l'ouverture");
+    }
+
+    @Test
+    void laRechargeDuBouclierSuitCeQuIlAFalluTenir() {
+        var shield = cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD;
+
+        // L'original posait la recharge a la fin du maintien, avec les ticks tenus :
+        // deux fois la duree au depart, une seule au maximum.
+        assertEquals(120, shield.getCooldownTicks(atExperience(shield, 0f, 60)),
+                "une minute tenue coute deux minutes d'attente au depart");
+        assertEquals(60, shield.getCooldownTicks(atExperience(shield, 1f, 60)),
+                "et une seule au maximum");
+        assertEquals(0, shield.getCooldownTicks(new AbilityData()),
+                "un bouclier jamais tenu ne laisse rien derriere lui");
+    }
+
+    @Test
     void lesPorteesSuiventLExperience() {
         var arcGen = cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN;
         Curve arcRange = data -> (float) arcGen.range(data);
@@ -168,10 +207,7 @@ class SkillCurvesTest {
 
     @Test
     void lesCompetencesSansRechargeNEnOntPas() {
-        // Le bouclier tient sa recharge du temps de charge de son maintien, que le port
-        // n'a pas encore : il n'en a donc aucune pour l'instant. Les passives, elles,
-        // n'en ont jamais eu.
-        assertEquals(0, cooldownOf(cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD));
+        // Les passives n'en ont jamais eu.
         assertEquals(0, cooldownOf(cn.academy.ability.vecmanip.VecmanipCategory.VEC_REFLECTION));
         assertEquals(0,
                 cooldownOf(cn.academy.ability.teleporter.TeleporterCategory.DIM_FOLDING_THEOREM));

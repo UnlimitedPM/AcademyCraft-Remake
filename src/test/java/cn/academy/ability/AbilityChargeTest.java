@@ -207,10 +207,88 @@ class AbilityChargeTest {
         assertFalse(skill.isChargeable());
         assertEquals(0, skill.getMaxChargeTicks(data));
         assertEquals(0, skill.getMinChargeTicks(data));
+        assertFalse(skill.isHeld(), "et elle ne se tient pas non plus");
 
         // Et son activation chargee par defaut reste l'activation ordinaire : les huit
         // competences deja portees n'ont pas eu a connaitre la charge.
         skill.onActivateCharged(null, data, 7);
         assertTrue(skill.activated);
+    }
+
+    // ------------------------------------------------------------------
+    // Etat d'un maintien
+    // ------------------------------------------------------------------
+
+    @Test
+    void lEtatDuMaintienSuitLaCharge() {
+        ChargingSkill skill = new ChargingSkill("charge", 10);
+        AbilityData data = new AbilityData();
+
+        assertEquals(-1, data.getHoldMark(skill), "aucun repere avant le premier effet");
+        assertEquals(0f, data.getHeldOverload(skill), 0.0001f);
+        assertFalse(data.isHoldingOverload());
+        assertTrue(data.getChargingSkills().isEmpty());
+
+        data.beginCharge(skill);
+        data.setHeldOverload(skill, 42f);
+        data.setHoldMark(skill, 3);
+        data.tickCharges();
+
+        assertEquals(42f, data.getHeldOverload(skill), 0.0001f);
+        assertTrue(data.isHoldingOverload());
+        assertEquals(3, data.getHoldMark(skill));
+        assertEquals(1, data.getChargingSkills().size());
+
+        // La fin du maintien emporte son etat : il n'a de sens que pendant.
+        data.endCharge(skill);
+
+        assertEquals(0f, data.getHeldOverload(skill), 0.0001f);
+        assertEquals(-1, data.getHoldMark(skill));
+        assertFalse(data.isHoldingOverload());
+        assertEquals(1, data.getChargeTicks(skill), "le compteur, lui, reste lisible");
+    }
+
+    @Test
+    void annulerUnMaintienOublieSonEtat() {
+        ChargingSkill skill = new ChargingSkill("charge", 10);
+        AbilityData data = new AbilityData();
+        data.beginCharge(skill);
+        data.setHeldOverload(skill, 20f);
+
+        data.cancelCharge(skill);
+
+        assertEquals(0f, data.getHeldOverload(skill), 0.0001f);
+        assertEquals(0, data.getChargeTicks(skill));
+    }
+
+    @Test
+    void laMortOublieLEtatDuMaintien() {
+        ChargingSkill skill = new ChargingSkill("charge", 10);
+        AbilityData data = new AbilityData();
+        data.beginCharge(skill);
+        data.setHeldOverload(skill, 30f);
+        data.setHoldMark(skill, 5);
+
+        data.clearCharges();
+
+        assertFalse(data.isChargingAnything());
+        assertFalse(data.isHoldingOverload());
+        assertEquals(0f, data.getHeldOverload(skill), 0.0001f);
+    }
+
+    @Test
+    void lEtatDuMaintienNeSurvitPasAUneSauvegarde() {
+        ChargingSkill skill = new ChargingSkill("charge", 10);
+        AbilityData data = new AbilityData();
+        data.beginCharge(skill);
+        data.setHeldOverload(skill, 25f);
+
+        CompoundTag tag = data.serializeNBT();
+        AbilityData reloaded = new AbilityData();
+        reloaded.deserializeNBT(tag);
+
+        assertFalse(reloaded.isHoldingOverload());
+        assertEquals(0f, reloaded.getHeldOverload(skill), 0.0001f);
+        assertEquals(-1, reloaded.getHoldMark(skill));
     }
 }

@@ -258,6 +258,31 @@ class AbilityOverloadTest {
     }
 
     @Test
+    void leSurcoutNeRedescendPasPendantUnMaintien() {
+        DummySkill skill = new DummySkill("tenue");
+        AbilityData data = atLevel(1);
+        data.perform(0f, 50f);
+        data.beginCharge(skill);
+        data.setHeldOverload(skill, data.getOverload());
+
+        for (int i = 0; i < 200; i++) {
+            data.tickOverload();
+        }
+
+        // L'original epinglait le surcout d'un maintien : sans cela, tenir un bouclier
+        // rembourserait son cout d'ouverture au bout de quelques secondes, donc les
+        // competences tenues finiraient par ne plus rien couter.
+        assertEquals(50f, data.getOverload(), 0.0001f);
+
+        data.endCharge(skill);
+        for (int i = 0; i < 60; i++) {
+            data.tickOverload();
+        }
+
+        assertTrue(data.getOverload() < 50f, "la reserve redescend une fois le maintien fini");
+    }
+
+    @Test
     void uneCompetenceOrdinaireNAPasDeSurcout() {
         // Le surcout est une seconde ressource, pas une obligation : les competences
         // deja portees qui n'en avaient pas dans l'original n'en ont pas ici non plus.

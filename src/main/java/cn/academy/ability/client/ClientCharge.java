@@ -12,6 +12,7 @@ package cn.academy.ability.client;
 public final class ClientCharge {
 
     private static boolean active;
+    private static boolean sustained;
     private static int ticks;
     private static int maxTicks = 1;
 
@@ -20,23 +21,44 @@ public final class ClientCharge {
     /** Ouvre une charge. {@code maxTicks} sert uniquement a calculer la proportion. */
     public static void begin(int maxTicks) {
         active = true;
+        sustained = false;
         ticks = 0;
         ClientCharge.maxTicks = Math.max(1, maxTicks);
     }
 
+    /**
+     * Ouvre un maintien, qui n'a pas de fin programmee.
+     *
+     * Le bouclier de l'original se voyait : il avait son entite et ses sons. Le port
+     * n'a pas encore de rendu pour lui, donc ce temoin est ce qui dit au joueur que sa
+     * touche tient quelque chose — sans lui, le maintien serait invisible jusqu'a ce
+     * que ses ressources s'epuisent.
+     */
+    public static void beginSustained() {
+        active = false;
+        sustained = true;
+        ticks = 0;
+    }
+
     /** Avance d'un tick tant que la touche est tenue. */
     public static void tick() {
-        if (active) ticks++;
+        if (active || sustained) ticks++;
     }
 
     /** Ferme la charge, au relachement de la touche. */
     public static void end() {
         active = false;
+        sustained = false;
         ticks = 0;
     }
 
     public static boolean isActive() {
         return active;
+    }
+
+    /** Vrai pendant un maintien : le bouclier tient, sans duree programmee. */
+    public static boolean isSustained() {
+        return sustained;
     }
 
     /** Part de la charge maximale atteinte, entre 0 et 1. */

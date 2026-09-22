@@ -2,6 +2,7 @@ package cn.academy.ability.network;
 
 import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
+import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
@@ -87,6 +88,12 @@ public class ActivateSkillPacket {
         }
 
         if (phase == Phase.PRESS) {
+            // Une competence tenue s'ouvre : son cout est paye maintenant, et elle vit
+            // ensuite tant que la touche reste enfoncee.
+            if (skill.isHeld()) {
+                beginHeld(player, data, skill);
+                return;
+            }
             // Une competence qui se charge n'est pas lancee maintenant : on ouvre une
             // charge et on attend le relachement.
             if (skill.isChargeable()) {
@@ -100,6 +107,14 @@ public class ActivateSkillPacket {
 
         // Relachement : il n'y a quelque chose a faire que si une charge etait ouverte.
         if (!data.isCharging(skill)) return;
+
+        // Une competence tenue se termine : c'est la fin normale du maintien, avec la
+        // recharge de ce qui a ete tenu.
+        if (skill.isHeld()) {
+            AbilityEvents.endHeld(player, data, skill);
+            return;
+        }
+
         data.endCharge(skill);
 
         // Relacher trop tot ne declenche rien du tout : l'original exigeait
@@ -109,6 +124,25 @@ public class ActivateSkillPacket {
         if (ticks < skill.getMinChargeTicks(data)) return;
 
         activate(player, data, skill);
+    }
+
+    /**
+     * Ouvre une competence tenue.
+     *
+     * Le cout d'ouverture est paye a l'appui, comme le {@code MSG_MADEALIVE} de
+     * l'original : le bouclier charge sa reserve des qu'il apparait, puis s'entretient
+     * par tick.
+     */
+    private static void beginHeld(ServerPlayer player, AbilityData data, Skill skill) {
+        if (!canStart(player, data, skill)) return;
+        if (!data.perform(skill.getCpCost(), skill.getOverloadCost(data))) {
+            player.displayClientMessage(
+                    Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
+            return;
+        }
+        data.beginCharge(skill);
+        skill.onHoldStart(player, data);
+        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
     }
 
     /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */
