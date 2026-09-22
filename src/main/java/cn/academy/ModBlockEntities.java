@@ -62,6 +62,25 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("windgen_main", () ->
                     BlockEntityType.Builder.of(WindgenMainBlockEntity::new, ModBlocks.WINDGEN_MAIN.get()).build(null));
 
+    /**
+     * Les deux developeurs ont chacun leur type de block entity, parce que la
+     * qualite y est passee a la construction : contrairement aux noeuds, elle ne se
+     * deduit pas du bloc porteur sans le consulter.
+     */
+    public static final RegistryObject<BlockEntityType<DeveloperBlockEntity>> DEVELOPER_NORMAL =
+            BLOCK_ENTITIES.register("developer_normal", () ->
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new DeveloperBlockEntity(pos, state,
+                                    cn.academy.ability.develop.DeveloperType.NORMAL),
+                            ModBlocks.DEV_NORMAL.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<DeveloperBlockEntity>> DEVELOPER_ADVANCED =
+            BLOCK_ENTITIES.register("developer_advanced", () ->
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new DeveloperBlockEntity(pos, state,
+                                    cn.academy.ability.develop.DeveloperType.ADVANCED),
+                            ModBlocks.DEV_ADVANCED.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

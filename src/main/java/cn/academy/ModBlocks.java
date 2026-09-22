@@ -111,14 +111,15 @@ public class ModBlocks {
     public static final RegistryObject<Block> WINDGEN_MAIN = BLOCKS.register("windgen_main",
             () -> new WindgenMainBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL).noOcclusion()));
 
-    // --- DÉVELOPPEMENT D'APPLICATIONS ---
+    // --- DEVELOPPEMENT D'APPLICATIONS ---
     public static final RegistryObject<Block> DEV_NORMAL = BLOCKS.register("dev_normal",
-            () -> new DeveloperBlock(BlockBehaviour.Properties.of().strength(4.0f).noOcclusion()));
+            () -> new DeveloperBlock(BlockBehaviour.Properties.of().strength(4.0f).noOcclusion(),
+                    () -> cn.academy.ability.develop.DeveloperType.NORMAL));
     public static final RegistryObject<Block> DEV_ADVANCED = BLOCKS.register("developer_advanced",
             () -> new DeveloperBlock(BlockBehaviour.Properties.of()
-                    .strength(4.5f) // Un peu plus résistant que le normal
-                    .noOcclusion()
-            ));
+                    .strength(4.5f) // Un peu plus rÃ©sistant que le normal
+                    .noOcclusion(),
+                    () -> cn.academy.ability.develop.DeveloperType.ADVANCED));
     // Dans ModBlocks.java, remplacez la section ABILITY_INTERFERER par celle-ci :
     public static final RegistryObject<Block> ABILITY_INTERFERER = BLOCKS.register("ability_interferer",
             () -> new AbilityInterfererBlock(BlockBehaviour.Properties.of()

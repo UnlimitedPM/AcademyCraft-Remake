@@ -29,6 +29,9 @@ public class ModMenus {
     public static final RegistryObject<MenuType<WindgenMainMenu>> WINDGEN_MAIN =
             MENUS.register("windgen_main", () -> IForgeMenuType.create(WindgenMainMenu::new));
 
+    public static final RegistryObject<MenuType<DeveloperMenu>> DEVELOPER =
+            MENUS.register("developer", () -> IForgeMenuType.create(DeveloperMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

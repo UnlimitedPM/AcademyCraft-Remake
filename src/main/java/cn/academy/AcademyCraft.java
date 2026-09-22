@@ -63,6 +63,7 @@ public class AcademyCraft {
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.IMAG_FUSOR.get(), ImagFusorScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.WINDGEN_BASE.get(), WindgenBaseScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.WINDGEN_MAIN.get(), WindgenMainScreen::new);
+                net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.DEVELOPER.get(), DeveloperScreen::new);
                 // Sans cet appel, l'unite d'energie gardait toujours sa texture pleine :
                 // la propriete d'item "academy:energy" n'etait jamais enregistree.
                 ModItemProperties.addCustomItemProperties();

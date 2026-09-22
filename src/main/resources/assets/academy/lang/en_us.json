@@ -108,6 +108,11 @@
   "academy.windgen_base.status.complete": "Generating",
   "academy.windgen_base.status.complete_not_working": "Stopped",
 
+  "academy.developer.state.idle": "Ready",
+  "academy.developer.state.developing": "Developing",
+  "academy.developer.state.failed": "Failed",
+  "academy.developer.state.done": "Done",
+
 
 
   "itemGroup.academy_tab": "AcademyCraft Remake"

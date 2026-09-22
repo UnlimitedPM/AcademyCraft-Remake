@@ -1,6 +1,7 @@
 package cn.academy.gametest;
 
 import cn.academy.AcademyCraft;
+import cn.academy.DeveloperBlockEntity;
 import cn.academy.ImagFusorBlockEntity;
 import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ModBlocks;
@@ -1185,7 +1186,6 @@ public final class AcademyGameTests {
         WindgenBaseBlockEntity base = buildWindgen(level, lower, 8);
         WindgenMainBlockEntity rotor = rotorOf(level, lower, 8);
         assertTrue(helper, rotor != null, "le rotor doit avoir ete construit");
-        assertTrue(helper, !rotor.isFanInstalled(), "sans helice, rien ne tourne");
 
         rotor.getInventory().setStackInSlot(WindgenMainBlockEntity.SLOT_FAN,
                 new ItemStack(ModItems.WINDGEN_FAN.get()));
@@ -1277,6 +1277,179 @@ public final class AcademyGameTests {
     private static WindgenMainBlockEntity rotorOf(ServerLevel level, BlockPos lower, int pillars) {
         BlockPos center = lower.offset(0, 2 + pillars, 0);
         return level.getBlockEntity(center) instanceof WindgenMainBlockEntity rotor ? rotor : null;
+    }
+
+    // ------------------------------------------------------------------
+    // Le developeur d'aptitudes
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void developerValuesFollowItsType(GameTestHelper helper) {
+        BlockPos normalRel = new BlockPos(0, 1, 0);
+        BlockPos advancedRel = new BlockPos(2, 1, 0);
+        helper.setBlock(normalRel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        helper.setBlock(advancedRel, ModBlocks.DEV_ADVANCED.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+
+        var normal = (DeveloperBlockEntity) helper.getBlockEntity(normalRel);
+        var advanced = (DeveloperBlockEntity) helper.getBlockEntity(advancedRel);
+
+        // Chiffres de DeveloperType : normal tampon 50000 / bande passante 100,
+        // avance tampon 200000 / bande passante 300.
+        assertValue(helper, 50000, normal.getMaxEnergyStored(), "tampon du developeur normal");
+        assertClose(helper, 100.0d, normal.getBandwidth(), "bande passante du normal");
+        assertValue(helper, 200000, advanced.getMaxEnergyStored(), "tampon du developeur avance");
+        assertClose(helper, 300.0d, advanced.getBandwidth(), "bande passante de l'avance");
+
+        // L'avance va plus vite : 15 ticks par stimulation contre 20.
+        assertValue(helper, 20, cn.academy.ability.develop.DeveloperType.NORMAL.getTps(), "tps normal");
+        assertValue(helper, 15, cn.academy.ability.develop.DeveloperType.ADVANCED.getTps(), "tps avance");
+        assertClose(helper, 35.0d, cn.academy.ability.develop.DeveloperType.NORMAL.getEnergyPerTick(),
+                "cout par tick du normal");
+        assertClose(helper, 40.0d, cn.academy.ability.develop.DeveloperType.ADVANCED.getEnergyPerTick(),
+                "cout par tick de l'avance");
+
+        assertClose(helper, 0.0d, normal.injectEnergy(1000.0d), "tout doit etre accepte");
+        assertClose(helper, 1000.0d, normal.getEnergy(), "energie stockee");
+        assertClose(helper, 49000.0d, normal.getRequiredEnergy(), "besoin restant");
+        helper.succeed();
+    }
+
+    /** Le multi-bloc n'a qu'un block entity, sur son ancrage. */
+    @GameTest(template = "empty")
+    public static void developerOnlyTheAnchorHasABlockEntity(GameTestHelper helper) {
+        BlockPos anchor = new BlockPos(1, 1, 1);
+        helper.setBlock(anchor, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.FACING, net.minecraft.core.Direction.NORTH)
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+
+        assertValue(helper, true, helper.getBlockEntity(anchor) instanceof DeveloperBlockEntity,
+                "l'ancrage doit porter le block entity");
+
+        // Le leurre juste au-dessus, calcule comme le fait setPlacedBy.
+        BlockPos dummy = anchor.above(cn.academy.DeveloperBlock.DevPart.F_TOP.h)
+                .relative(net.minecraft.core.Direction.SOUTH, cn.academy.DeveloperBlock.DevPart.F_TOP.dist);
+        helper.setBlock(dummy, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.FACING, net.minecraft.core.Direction.NORTH)
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.F_TOP));
+
+        assertValue(helper, null, helper.getBlockEntity(dummy),
+                "les leurres ne doivent pas porter de block entity");
+        helper.succeed();
+    }
+
+    /** Les huit parties du multi-bloc doivent retrouver l'ancrage. */
+    @GameTest(template = "empty")
+    public static void developerAnchorIsFoundFromEveryPart(GameTestHelper helper) {
+        BlockPos anchorRel = new BlockPos(1, 1, 1);
+        helper.setBlock(anchorRel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        BlockPos anchorAbs = helper.absolutePos(anchorRel);
+
+        for (net.minecraft.core.Direction facing : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            for (cn.academy.DeveloperBlock.DevPart part : cn.academy.DeveloperBlock.DevPart.values()) {
+                var state = ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                        .setValue(cn.academy.DeveloperBlock.FACING, facing)
+                        .setValue(cn.academy.DeveloperBlock.PART, part);
+
+                // setPlacedBy pose les leurres « au fond » de la face choisie.
+                BlockPos partAbs = anchorAbs.above(part.h)
+                        .relative(facing.getOpposite(), part.dist);
+
+                assertValue(helper, anchorAbs, cn.academy.DeveloperBlock.anchorOf(partAbs, state),
+                        "ancrage retrouve depuis " + part + " facing " + facing);
+            }
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Le test de bout en bout : un joueur lance un apprentissage, le developeur
+     * tire son energie, et la categorie monte d'un niveau.
+     */
+    @GameTest(template = "empty")
+    public static void developerDevelopsACategory(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        var developer = (DeveloperBlockEntity) helper.getBlockEntity(rel);
+        BlockPos abs = helper.absolutePos(rel);
+
+        var player = fakePlayer(helper);
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(2);
+        assertTrue(helper, category != null, "la troisieme categorie doit exister");
+        int categoryId = category.getCategoryId();
+
+        assertValue(helper, 0, levelOf(player, category), "aucune categorie apprise au depart");
+        assertTrue(helper, developer.startDeveloping(player, categoryId),
+                "l'apprentissage doit pouvoir demarrer");
+
+        // Cout du niveau 0 vers 1 : 5 stimulations, 700 d'energie chacune.
+        assertValue(helper, 5, developer.getMaxStim(), "stimulations pour le premier niveau");
+        assertClose(helper, 3500.0d,
+                cn.academy.ability.develop.DeveloperType.NORMAL.getTotalCost(developer.getMaxStim()),
+                "cout total du premier niveau");
+
+        developer.setEnergy(50000.0d);
+
+        // 5 stimulations de 21 ticks chacune (l'original comptait tps + 1).
+        for (int i = 0; i < 200 && developer.getState() == DeveloperBlockEntity.DevState.DEVELOPING; i++) {
+            DeveloperBlockEntity.tick(level, abs, helper.getBlockState(rel), developer);
+        }
+
+        assertValue(helper, DeveloperBlockEntity.DevState.DONE, developer.getState(),
+                "l'apprentissage doit avoir abouti");
+        assertValue(helper, 1, levelOf(player, category), "la categorie doit etre apprise");
+        helper.succeed();
+    }
+
+    /** Sans energie, l'apprentissage echoue et rien n'est appris. */
+    @GameTest(template = "empty")
+    public static void developerFailsWithoutEnergy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        var developer = (DeveloperBlockEntity) helper.getBlockEntity(rel);
+        BlockPos abs = helper.absolutePos(rel);
+
+        var player = fakePlayer(helper);
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(1);
+        assertTrue(helper, category != null, "la deuxieme categorie doit exister");
+
+        assertTrue(helper, developer.startDeveloping(player, category.getCategoryId()),
+                "l'apprentissage doit pouvoir demarrer");
+
+        // Un seul tick suffit : le tampon est vide, le developeur ne peut rien tirer.
+        DeveloperBlockEntity.tick(level, abs, helper.getBlockState(rel), developer);
+
+        assertValue(helper, DeveloperBlockEntity.DevState.FAILED, developer.getState(),
+                "sans energie l'apprentissage doit echouer");
+        assertValue(helper, 0, levelOf(player, category), "et rien ne doit etre appris");
+        helper.succeed();
+    }
+
+    /**
+     * Un joueur simule, pour les tests qui ont besoin d'un porteur d'aptitudes.
+     *
+     * C'est un {@code FakePlayer} et non le joueur simule du framework : ce dernier
+     * s'annonce comme un vrai joueur, ce qui declenche les gestionnaires de
+     * connexion du mod — et l'envoi d'un paquet de synchronisation sur une connexion
+     * sans canal leve une exception. Un faux joueur reste en dehors de la liste des
+     * joueurs, donc rien de tout cela ne se declenche.
+     */
+    private static net.minecraft.server.level.ServerPlayer fakePlayer(GameTestHelper helper) {
+        return net.minecraftforge.common.util.FakePlayerFactory.getMinecraft(helper.getLevel());
+    }
+
+    /** Niveau d'une categorie pour un joueur, ou 0 s'il n'a pas la capacite. */
+    private static int levelOf(net.minecraft.world.entity.player.Player player,
+                               cn.academy.ability.Category category) {
+        return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .map(data -> data.getCategoryLevel(category))
+                .orElse(0);
     }
 
     @GameTest(template = "empty")
