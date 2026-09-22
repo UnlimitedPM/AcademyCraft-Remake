@@ -34,6 +34,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.arc_gen", 1),
             Map.entry("electromaster.body_intensify", 3),
             Map.entry("electromaster.railgun", 4),
+            Map.entry("electromaster.thunder_bolt", 4),
             Map.entry("meltdowner.electron_bomb", 1),
             Map.entry("meltdowner.light_shield", 2),
             Map.entry("meltdowner.meltdowner", 3),
@@ -46,6 +47,8 @@ class PortedSkillsTest {
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, String> EXPECTED_DEPENDENCIES = Map.of(
             "electromaster.body_intensify", "electromaster.arc_gen",
+            "electromaster.thunder_bolt", "electromaster.arc_gen",
+            "electromaster.railgun", "electromaster.thunder_bolt",
             "meltdowner.light_shield", "meltdowner.electron_bomb",
             "meltdowner.meltdowner", "meltdowner.light_shield");
 
@@ -171,6 +174,9 @@ class PortedSkillsTest {
             // un tir ; l'original doublait pour un coup au but, que le paquet ne voit pas
             Map.entry("electromaster.railgun", 0.005f),
             Map.entry("electromaster.body_intensify", 0.01f),
+            // un tir qui ne touche rien ; 0,005 s'il touche quelque chose, verse par
+            // l'effet lui-meme
+            Map.entry("electromaster.thunder_bolt", 0.003f),
             Map.entry("meltdowner.electron_bomb", 0.005f),
             // 0,002 multiplie par le facteur de charge de 1,2 a pleine charge
             Map.entry("meltdowner.meltdowner", 0.0024f),
@@ -216,6 +222,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.arc_gen", 18f),
             Map.entry("electromaster.railgun", 180f),
             Map.entry("electromaster.body_intensify", 200f),
+            Map.entry("electromaster.thunder_bolt", 50f),
             Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),

@@ -1,0 +1,127 @@
+package cn.academy.ability.electromaster;
+
+import cn.academy.ability.AbilityData;
+import cn.academy.ability.Skill;
+import cn.academy.ability.TargetingUtil;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
+
+/**
+ * Active skill, portage de ThunderBolt : un eclat qui frappe droit devant, puis se
+ * propage en cercle autour de son point d'impact.
+ *
+ * <p>Deux degats differents, comme dans l'original : la cible touchee encaisse la
+ * version forte, ce qui se trouve dans les huit blocs autour encaisse la version
+ * faible. L'engourdissement, lui, n'apparait qu'a partir d'un cinquieme d'experience :
+ * un debutant fait mal, il ne paralyse pas.
+ */
+public class ThunderBoltSkill extends Skill {
+
+    /** Portee de la visee, comme {@code ThunderBolt.RANGE}. */
+    private static final double RANGE = 20.0;
+
+    /** Rayon de la propagation, comme {@code ThunderBolt.AOE_RANGE}. */
+    private static final double AOE_RANGE = 8.0;
+
+    /** Environ 10 % de la reserve de l'original, ramene a celle du port. */
+    private static final float CP_COST = 10f;
+
+    /** Chance d'engourdir, et seuil d'experience, comme l'original. */
+    private static final float SLOW_CHANCE = 0.8f;
+    private static final float SLOW_EXP = 0.2f;
+
+    public ThunderBoltSkill() {
+        super("thunder_bolt", 4);
+    }
+
+    /** Degats sur la cible touchee : de 10 a 25. */
+    public float damage(AbilityData data) {
+        return lerp(10f, 25f, data.getSkillExp(this));
+    }
+
+    /** Degats sur ce qui entoure l'impact : de 6 a 15. */
+    public float aoeDamage(AbilityData data) {
+        return lerp(6f, 15f, data.getSkillExp(this));
+    }
+
+    /** Recharge reprise de l'original : de 120 a 50 ticks, soit 6 a 2,5 secondes. */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return (int) lerp(120f, 50f, data.getSkillExp(this));
+    }
+
+    /** Surcout repris de l'original : de 50 a 27. */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(50f, 27f, data.getSkillExp(this));
+    }
+
+    @Override
+    public float getCpCost() {
+        return CP_COST;
+    }
+
+    /**
+     * Experience d'un tir qui ne touche rien : 0,003, comme l'original.
+     *
+     * Le tir qui touche rapporte davantage (0,005) ; la difference est versee depuis
+     * l'effet lui-meme, qui est le seul a savoir s'il a touche quelque chose.
+     */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.003f;
+    }
+
+    @Override
+    public void onActivate(Player player, AbilityData data) {
+        Entity target = TargetingUtil.findEntityInSight(player, RANGE);
+        Vec3 impact = target != null
+                ? target.position().add(0, target.getEyeHeight(), 0)
+                : TargetingUtil.findImpactPoint(player, RANGE);
+
+        boolean effective = false;
+
+        if (target instanceof LivingEntity living) {
+            effective = true;
+            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+            if (data.getSkillExp(this) > SLOW_EXP && isSlowed(player)) {
+                // 40 ticks d'engourdissement, comme l'original (2 secondes).
+                living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
+            }
+        }
+
+        for (LivingEntity around : entitiesAround(player, impact, target)) {
+            effective = true;
+            around.hurt(player.damageSources().indirectMagic(player, player), scaled(aoeDamage(data)));
+            // L'original appliquait cet engourdissement a la cible principale dans sa
+            // boucle de propagation, donc jamais a l'entite concernee. Le port suit
+            // l'intention : chaque entite prise dans l'arc est engourdie.
+            if (data.getSkillExp(this) > SLOW_EXP && isSlowed(player)) {
+                around.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 3));
+            }
+        }
+
+        // Un tir qui touche rapporte 0,005 : les 0,002 manquants s'ajoutent ici.
+        if (effective) {
+            data.addSkillExp(this, 0.002f);
+        }
+    }
+
+    /** Les entites vivantes autour du point d'impact, sans la cible deja frappee. */
+    private static List<LivingEntity> entitiesAround(Player player, Vec3 impact, Entity target) {
+        AABB area = new AABB(impact, impact).inflate(AOE_RANGE);
+        return player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player && e != target);
+    }
+
+    /** Les 80 % de chance de l'original : un tirage par entite, pas un par competence. */
+    private static boolean isSlowed(Player player) {
+        return player.getRandom().nextFloat() < SLOW_CHANCE;
+    }
+}

@@ -73,6 +73,11 @@ class SkillCurvesTest {
         var railgun = cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN;
         assertBounds("degats de railgun", 60f, 110f, railgun::damage, railgun);
 
+        // Le thunder bolt fait deux degats : la cible touchee, et ce qui l'entoure.
+        var thunderBolt = cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_BOLT;
+        assertBounds("degats de thunder_bolt", 10f, 25f, thunderBolt::damage, thunderBolt);
+        assertBounds("degats de propagation", 6f, 15f, thunderBolt::aoeDamage, thunderBolt);
+
         var electronBomb = cn.academy.ability.meltdowner.MeltdownerCategory.ELECTRON_BOMB;
         assertBounds("degats de electron_bomb", 6f, 12f, electronBomb::damage, electronBomb);
 
@@ -193,6 +198,8 @@ class SkillCurvesTest {
                 cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN, 15, 5);
         assertCooldownBounds("recharge de railgun",
                 cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN, 300, 160);
+        assertCooldownBounds("recharge de thunder_bolt",
+                cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_BOLT, 120, 50);
         assertCooldownBounds("recharge de body_intensify",
                 cn.academy.ability.electromaster.ElectromasterCategory.BODY_INTENSIFY, 900, 600);
         assertCooldownBounds("recharge de electron_bomb",

@@ -148,6 +148,18 @@ public abstract class Skill {
      * l'apprentissage tant qu'elle n'est pas apprise.
      */
     public void setParent(Skill parent) {
+        setParent(parent, 0f);
+    }
+
+    /**
+     * Meme chose, avec le seuil d'experience que l'original demandait parfois dans la
+     * parente.
+     *
+     * {@code railgun.setParent(thunderBolt, 0.3f)} demandait 30 % d'experience dans le
+     * thunder bolt avant de debloquer le railgun : avoir appris la parente ne suffisait
+     * pas, il fallait s'en etre servi.
+     */
+    public void setParent(Skill parent, float requiredExp) {
         if (this.parent != null) {
             throw new IllegalStateException("Parent already set on " + name);
         }
@@ -155,7 +167,7 @@ public abstract class Skill {
             throw new IllegalArgumentException("A skill cannot be its own parent: " + name);
         }
         this.parent = parent;
-        addDependency(parent);
+        addDependency(parent, requiredExp);
     }
 
     @Nullable
