@@ -60,6 +60,13 @@ public class ActivateSkillPacket {
                 }
                 if (data.consumeControlPoint(skill.getCpCost())) {
                     skill.onActivate(player, data);
+                    // Utiliser une competence la fait progresser, et verse de
+                    // l'avancement au niveau de la categorie : c'est ce qui fait qu'on
+                    // monte en jouant, et non en attendant. L'original versait ces
+                    // points depuis chaque competence au moment ou son effet aboutissait ;
+                    // ici ils sont verses a l'activation, au montant de base de la
+                    // competence — l'ecart est note dans Skill#getExpGain.
+                    data.addSkillExp(skill, skill.getExpGain(data));
                     AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                             new SyncAbilityDataPacket(data));
                 } else {

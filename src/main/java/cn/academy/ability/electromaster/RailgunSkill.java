@@ -20,6 +20,16 @@ public class RailgunSkill extends Skill {
         super("railgun", 4);
     }
 
+    /**
+     * Experience de l'original : 0,005 pour un tir, 0,01 s'il touche. Le paquet
+     * d'activation ne sait pas si le tir a porte, donc c'est le montant du tir qui est
+     * verse ; la part du coup au but reviendra avec les evenements de degats.
+     */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.005f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

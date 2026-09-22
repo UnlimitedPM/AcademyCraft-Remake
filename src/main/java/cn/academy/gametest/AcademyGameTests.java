@@ -1506,6 +1506,23 @@ public final class AcademyGameTests {
         assertFalse(helper, developer.startDeveloping(player, category.getCategoryId(), skill.getId()),
                 "une competence deja apprise ne se reapprend pas");
 
+        // Le niveau ne monte plus tout seul : il faut avoir rempli le palier en
+        // utilisant ses competences. vecmanip au niveau 2 n'a qu'une competence
+        // utilisable — vec_accel, celle qui vient d'etre apprise — donc le palier
+        // vaut 1 * 0,666, et l'avancement est encore a zero.
+        assertFalse(helper, developer.startDeveloping(player, category.getCategoryId()),
+                "sans avancement, la categorie ne doit pas monter");
+
+        // Un usage d'experience, comme le ferait l'activation de la competence.
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(data -> data.addSkillExp(skill, 1f));
+
+        assertTrue(helper, developer.startDeveloping(player, category.getCategoryId()),
+                "une fois le palier rempli, la categorie monte");
+        assertValue(helper, -1, developer.getSkillId(),
+                "un apprentissage de niveau ne vise aucune competence");
+        developer.abort();
+
         // On remet la categorie comme on l'a trouvee : le joueur est partage.
         forgetSkill(player, skill);
         setCategoryLevel(player, category, 0);

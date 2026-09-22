@@ -18,6 +18,16 @@ public class MeltdownerSkill extends Skill {
         super("meltdowner", 3);
     }
 
+    /**
+     * L'original multipliait 0,002 par le temps de charge du tir. Le port ne remonte
+     * pas cette duree au paquet d'activation : c'est donc le montant de base qui est
+     * verse, sans le bonus de charge.
+     */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.002f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

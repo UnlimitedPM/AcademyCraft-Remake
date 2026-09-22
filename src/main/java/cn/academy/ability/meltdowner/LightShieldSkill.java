@@ -23,6 +23,10 @@ public class LightShieldSkill extends Skill {
     @Override
     public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
         if (!data.consumeControlPoint(CP_COST_PER_HIT)) return event.getAmount();
+        // 0,001 par coup encaisse, comme l'original. Une competence passive ne s'active
+        // pas : son experience est donc versee depuis son propre crochet, le seul
+        // endroit ou elle sait que quelque chose s'est produit.
+        data.addSkillExp(this, 0.001f);
         return event.getAmount() * (1 - ABSORB_RATIO);
     }
 }

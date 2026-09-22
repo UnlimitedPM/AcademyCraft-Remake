@@ -16,6 +16,12 @@ public class BodyIntensifySkill extends Skill {
         super("body_intensify", 3);
     }
 
+    /** 0,01 a l'application du renfort, comme dans l'original. */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.01f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

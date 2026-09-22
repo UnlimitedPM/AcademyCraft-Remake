@@ -38,6 +38,11 @@ public class VecReflectionSkill extends Skill {
         float reflected = amount * REFLECT_RATIO;
         float absorbed = amount * ABSORB_RATIO;
         attacker.hurt(player.damageSources().magic(), reflected);
+
+        // L'original versait 0,0008 par point de difficulte de la cible renvoyee. Le
+        // port n'a pas cette difficulte : c'est le montant renvoye qui sert de base,
+        // ce qui donne la meme chose pour un adversaire ordinaire.
+        data.addSkillExp(this, reflected * 0.0008f);
         return amount - absorbed;
     }
 }

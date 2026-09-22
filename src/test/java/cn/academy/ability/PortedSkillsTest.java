@@ -154,4 +154,66 @@ class PortedSkillsTest {
             assertNotNull(found.get(name), name + " attendue mais absente du port");
         }
     }
+
+    // ------------------------------------------------------------------
+    // Experience d'usage
+    // ------------------------------------------------------------------
+
+    /**
+     * Les gains d'experience, repris de l'original.
+     *
+     * Les competences passives n'y sont pas : elles ne s'activent pas, donc leur
+     * experience est versee depuis leur propre crochet (voir les tests suivants).
+     */
+    private static final Map<String, Float> EXPECTED_EXP = Map.ofEntries(
+            // borne basse de lerpf(0.0048, 0.0072, experience)
+            Map.entry("electromaster.arc_gen", 0.0048f),
+            // un tir ; l'original doublait pour un coup au but, que le paquet ne voit pas
+            Map.entry("electromaster.railgun", 0.005f),
+            Map.entry("electromaster.body_intensify", 0.01f),
+            Map.entry("meltdowner.electron_bomb", 0.005f),
+            // montant de base : l'original multipliait par le temps de charge
+            Map.entry("meltdowner.meltdowner", 0.002f),
+            // 0,00014 par bloc, pour un saut d'une dizaine de blocs
+            Map.entry("teleporter.penetrate_teleport", 0.00014f * 10f),
+            // montant de base : l'original ajoutait 0,002 par entite traversee
+            Map.entry("teleporter.shift_tp", 0.002f),
+            Map.entry("vecmanip.vec_accel", 0.002f));
+
+    @Test
+    void lesGainsDExperienceSontCeuxDeLOriginal() {
+        for (Skill skill : allSkills()) {
+            if (skill.isPassive()) continue;
+            Float expected = EXPECTED_EXP.get(fullName(skill));
+            assertNotNull(expected, "gain d'experience non fige pour " + fullName(skill));
+            assertEquals(expected.floatValue(), skill.getExpGain(new cn.academy.ability.AbilityData()),
+                    0.000001f, "gain de " + fullName(skill));
+        }
+    }
+
+    @Test
+    void aucuneCompetenceActiveNeResteSansExperience() {
+        // Une competence active sans gain d'experience rendrait son niveau
+        // inatteignable, et cela ne se verrait qu'apres des heures de jeu.
+        for (Skill skill : allSkills()) {
+            if (skill.isPassive()) continue;
+            assertTrue(skill.getExpGain(new cn.academy.ability.AbilityData()) > 0f,
+                    fullName(skill) + " ne rapporte aucune experience");
+        }
+    }
+
+    @Test
+    void uneCompetencePassiveRapporteDeLExperienceParSonPropreCrochet() {
+        var folding = cn.academy.ability.teleporter.TeleporterCategory.DIM_FOLDING_THEOREM;
+        cn.academy.ability.AbilityData data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(folding.getCategory(), 1);
+
+        assertTrue(folding.isPassive(), "c'est une passive : elle ne s'active pas");
+        assertEquals(0f, data.getSkillExp(folding), 0.0001f, "on part de rien");
+
+        // C'est ce que faisait l'utilitaire de teleportation de l'original.
+        folding.onTeleported(data);
+
+        assertTrue(data.getSkillExp(folding) > 0f, "une teleportation doit la faire progresser");
+    }
 }

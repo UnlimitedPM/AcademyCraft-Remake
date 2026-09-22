@@ -22,11 +22,46 @@ import java.util.function.BooleanSupplier;
 public class AbilityData implements INBTSerializable<CompoundTag> {
 
     private static final String TAG_SKILLS = "skills";
+    private static final String TAG_SKILL_EXPS = "skillExps";
+    private static final String TAG_LEVEL_PROGRESS = "levelProgress";
+
+    /**
+     * Part de la progression d'un niveau qui doit etre remplie pour monter.
+     *
+     * L'original multipliait le nombre de competences du niveau par 0,666 — ou par
+     * 1,333 au niveau 4, le dernier avant le maximum, pour le rendre plus long. Ces
+     * deux nombres sont repris tels quels : c'est ce qui donne au niveau 4 sa duree.
+     */
+    private static final float PROGRESS_PER_SKILL = 0.666f;
+
+    /** Au niveau 4, le palier est double : c'est le dernier avant le maximum. */
+    private static final float LAST_LEVEL_FACTOR = 1.333f;
+
+    /** Niveau a partir duquel la progression est plus longue, comme dans l'original. */
+    private static final int LAST_LEVEL = 4;
 
     private final Map<String, Integer> categoryLevels = new HashMap<>();
 
     /** Competences apprises, sous la forme {@code <categorie>.<competence>}. */
     private final Set<String> learnedSkills = new HashSet<>();
+
+    /**
+     * Experience de chaque competence, de 0 a 1.
+     *
+     * Meme cle que les competences apprises. L'original tenait un tableau indexe par
+     * l'identifiant de la competence ; le nom, lui, ne bouge pas quand le registre
+     * change.
+     */
+    private final Map<String, Float> skillExps = new HashMap<>();
+
+    /**
+     * Avancement verse dans le niveau en cours, par categorie.
+     *
+     * L'original n'avait qu'une categorie et donc qu'un seul compteur. Comme le port
+     * tient un niveau par categorie, il lui faut un avancement par categorie — sans
+     * quoi gagner de l'experience dans une categorie ferait monter les autres.
+     */
+    private final Map<String, Float> levelProgress = new HashMap<>();
 
     /**
      * Sources d'interference actives, par nom. Non sauvegarde.
@@ -59,8 +94,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return categoryLevels.getOrDefault(category.getName(), 0);
     }
 
+    /**
+     * Fixe le niveau d'une categorie et remet son avancement a zero.
+     *
+     * La remise a zero est celle de l'original ({@code setLevel} vidait
+     * {@code expAddedThisLevel}) : sans elle, l'avancement accumule pour le niveau
+     * precedent ferait monter le suivant d'un coup.
+     */
     public void setCategoryLevel(Category category, int level) {
         categoryLevels.put(category.getName(), level);
+        levelProgress.remove(category.getName());
     }
 
     public boolean hasLearned(Category category) {
@@ -198,6 +241,123 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return learnedSkills.size();
     }
 
+    // ------------------------------------------------------------------
+    // Experience, et progression de niveau
+    // ------------------------------------------------------------------
+
+    /**
+     * Experience d'une competence, de 0 a 1.
+     *
+     * Rend 0 pour une competence d'une categorie que le joueur n'a pas apprise :
+     * c'est la traduction de la garde de l'original, qui rendait 0 des que la
+     * competence n'appartenait pas a la categorie du joueur.
+     */
+    public float getSkillExp(Skill skill) {
+        if (skill == null || skill.getCategory() == null) return 0f;
+        if (!hasLearned(skill.getCategory())) return 0f;
+        return skillExps.getOrDefault(skillKey(skill), 0f);
+    }
+
+    /**
+     * Ajoute de l'experience a une competence, et la verse au niveau en cours.
+     *
+     * Reprend {@code addSkillExp} de l'original, y compris deux details qui peuvent
+     * surprendre :
+     *
+     * - l'experience de la competence est <b>plafonnee</b> a 1, mais l'avancement du
+     *   niveau recoit le montant complet. Une competence deja saturee continue donc
+     *   de faire progresser le niveau.
+     * - la competence est apprise du meme coup. En pratique elle l'est deja, puisque
+     *   l'activation exige qu'elle le soit ; c'est une ceinture de securite de
+     *   l'original, conservee.
+     *
+     * Le multiplicateur de la competence y est applique : l'original le posait dans
+     * {@code AbilityContext}, au moment de l'appel. Le faire ici evite qu'un appelant
+     * l'oublie.
+     */
+    public void addSkillExp(Skill skill, float amount) {
+        if (skill == null || skill.getCategory() == null || amount <= 0f) return;
+
+        learnSkill(skill);
+
+        float effective = amount * skill.getExpIncrSpeed();
+        String key = skillKey(skill);
+        float current = skillExps.getOrDefault(key, 0f);
+        skillExps.put(key, Math.min(1f, current + effective));
+
+        addLevelProgress(skill.getCategory(), effective);
+    }
+
+    /** Verse de l'avancement dans le niveau en cours d'une categorie. */
+    private void addLevelProgress(Category category, float amount) {
+        String key = category.getName();
+        float scaled = amount * (float) cn.academy.Config.progressIncrRate;
+        levelProgress.merge(key, scaled, Float::sum);
+    }
+
+    /** Avancement brut verse au niveau en cours, avant division par le palier. */
+    public float getRawLevelProgress(Category category) {
+        return levelProgress.getOrDefault(category.getName(), 0f);
+    }
+
+    /**
+     * Nombre de competences utilisables du niveau en cours.
+     *
+     * C'est le palier de l'original ({@code getLevelTotalExp}) : une unite par
+     * competence <b>non passive</b> du niveau courant — les passives ne se declenchent
+     * pas, donc elles ne peuvent pas servir a progresser. Un niveau sans competence
+     * utilisable rend 0, et {@link #getLevelProgress} le traite comme un palier deja
+     * franchi : c'est le cas, dans le port, des niveaux dont les competences ne sont
+     * pas encore portees. Cela s'ouvrira au fur et a mesure.
+     */
+    private int levelThreshold(Category category) {
+        int level = getCategoryLevel(category);
+        int count = 0;
+        for (Skill skill : category.getSkills()) {
+            if (!skill.isPassive() && skill.getLevel() == level) count++;
+        }
+        return count;
+    }
+
+    /**
+     * Avancement du niveau en cours, de 0 a 1.
+     *
+     * Reprend {@code getLevelProgress} : le palier est le nombre de competences du
+     * niveau multiplie par 0,666, ou par 1,333 au niveau 4. Un palier nul vaut
+     * avancement complet.
+     */
+    public float getLevelProgress(Category category) {
+        int level = getCategoryLevel(category);
+        float factor = level == LAST_LEVEL ? LAST_LEVEL_FACTOR : PROGRESS_PER_SKILL;
+        float threshold = levelThreshold(category) * factor;
+        if (threshold <= 0f) return 1f;
+        return Math.min(1f, getRawLevelProgress(category) / threshold);
+    }
+
+    /**
+     * Le joueur peut-il monter cette categorie d'un cran ?
+     *
+     * Reprend {@code canLevelUp} : au maximum il n'y a plus rien a faire, et sinon il
+     * faut avoir rempli le palier du niveau en cours. C'est ce qui fait qu'on monte en
+     * <b>utilisant</b> ses competences, et non en attendant.
+     */
+    public boolean canLevelUp(Category category) {
+        if (category == null) return false;
+        if (getCategoryLevel(category) >= cn.academy.ability.develop.DevelopActionLevel.MAX_LEVEL) return false;
+        return getLevelProgress(category) >= 1f;
+    }
+
+    /**
+     * Verse de l'avancement sans passer par une competence.
+     *
+     * Sert aux commandes de debogage et aux tests : c'est le pendant de
+     * {@code maxOutLevelProgress} de l'original, qui remplissait le niveau d'un coup.
+     */
+    public void maxOutLevelProgress(Category category) {
+        if (category == null) return;
+        levelProgress.put(category.getName(), Float.MAX_VALUE);
+    }
+
     private static String skillKey(Skill skill) {
         return skill.getCategory().getName() + "." + skill.getName();
     }
@@ -221,6 +381,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
             skills.add(StringTag.valueOf(key));
         }
         tag.put(TAG_SKILLS, skills);
+
+        // L'experience aussi : l'arbre de competences l'affiche, et c'est elle qui
+        // dit au joueur ou il en est de sa progression.
+        CompoundTag exps = new CompoundTag();
+        skillExps.forEach(exps::putFloat);
+        tag.put(TAG_SKILL_EXPS, exps);
+
+        CompoundTag progress = new CompoundTag();
+        levelProgress.forEach(progress::putFloat);
+        tag.put(TAG_LEVEL_PROGRESS, progress);
         return tag;
     }
 
@@ -239,6 +409,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         ListTag skills = tag.getList(TAG_SKILLS, Tag.TAG_STRING);
         for (int i = 0; i < skills.size(); i++) {
             learnedSkills.add(skills.getString(i));
+        }
+
+        skillExps.clear();
+        CompoundTag exps = tag.getCompound(TAG_SKILL_EXPS);
+        for (String key : exps.getAllKeys()) {
+            skillExps.put(key, exps.getFloat(key));
+        }
+
+        levelProgress.clear();
+        CompoundTag progress = tag.getCompound(TAG_LEVEL_PROGRESS);
+        for (String key : progress.getAllKeys()) {
+            levelProgress.put(key, progress.getFloat(key));
         }
     }
 }

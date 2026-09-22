@@ -15,22 +15,43 @@ import net.minecraft.network.chat.Component;
 public final class ConditionDependency implements LearningCondition {
 
     private final Skill dependency;
+    private final float requiredExp;
 
     public ConditionDependency(Skill dependency) {
+        this(dependency, 0f);
+    }
+
+    public ConditionDependency(Skill dependency, float requiredExp) {
         this.dependency = dependency;
+        this.requiredExp = requiredExp;
     }
 
     public Skill getDependency() {
         return dependency;
     }
 
+    /**
+     * Part de l'experience a atteindre dans la competence parente.
+     *
+     * Reprend {@code DevConditionDep.requiredExp} de l'original, ou une parente
+     * declaree sans seuil valait 0 — donc « apprise » suffisait. Les dependances
+     * portees sont toutes dans ce cas.
+     */
+    public float getRequiredExp() {
+        return requiredExp;
+    }
+
     @Override
     public boolean accepts(AbilityData data, Skill skill) {
-        return data.isSkillLearned(dependency);
+        return data.isSkillLearned(dependency) && data.getSkillExp(dependency) >= requiredExp;
     }
 
     @Override
     public Component describe(Skill skill) {
-        return Component.translatable("academy.learn.dependency", dependency.getDisplayName());
+        if (requiredExp <= 0f) {
+            return Component.translatable("academy.learn.dependency", dependency.getDisplayName());
+        }
+        return Component.translatable("academy.learn.dependency_exp",
+                dependency.getDisplayName(), Math.round(requiredExp * 100f));
     }
 }

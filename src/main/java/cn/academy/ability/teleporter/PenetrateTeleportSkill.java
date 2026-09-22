@@ -15,6 +15,16 @@ public class PenetrateTeleportSkill extends Skill {
         super("penetrate_teleport", 2);
     }
 
+    /**
+     * L'original versait 0,00014 par bloc parcouru. Le paquet d'activation ne connait
+     * pas la distance, donc c'est la valeur d'un saut d'une dizaine de blocs qui est
+     * versee — la distance moyenne de cette competence.
+     */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.00014f * 10f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;
@@ -27,5 +37,6 @@ public class PenetrateTeleportSkill extends Skill {
         Vec3 dest = start.add(look.scale(RANGE));
         player.teleportTo(dest.x, dest.y - 1.6, dest.z);
         player.fallDistance = 0;
+        TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
     }
 }

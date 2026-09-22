@@ -24,6 +24,12 @@ public class ElectronBombSkill extends Skill {
         super("electron_bomb", 1);
     }
 
+    /** 0,005 au lancer, comme dans l'original. */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.005f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

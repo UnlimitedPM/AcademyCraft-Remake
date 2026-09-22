@@ -118,11 +118,21 @@ public abstract class Skill {
      * seul effet serait de rendre la competence inapprenable sans rien dire.
      */
     public void addDependency(Skill dependency) {
+        addDependency(dependency, 0f);
+    }
+
+    /**
+     * Declare une dependance qui exige en plus un seuil d'experience dans la parente.
+     *
+     * Reprend {@code addSkillDep(skill, exp)} de l'original. Une dependance declaree
+     * sans seuil vaut 0, donc « apprise » suffit.
+     */
+    public void addDependency(Skill dependency, float requiredExp) {
         if (dependency == this) {
             throw new IllegalArgumentException("A skill cannot depend on itself: " + name);
         }
         dependencies.add(dependency);
-        conditions.add(new ConditionDependency(dependency));
+        conditions.add(new ConditionDependency(dependency, requiredExp));
     }
 
     public List<Skill> getDependencies() {
@@ -159,6 +169,52 @@ public abstract class Skill {
 
     public boolean isPassive() {
         return false;
+    }
+
+    // ------------------------------------------------------------------
+    // Experience d'usage
+    // ------------------------------------------------------------------
+
+    /**
+     * Experience gagnee en utilisant cette competence.
+     *
+     * Chaque competence de l'original appelait {@code ctx.addSkillExp(...)} avec son
+     * propre montant, au moment ou son effet aboutissait : un coup porte, un bouclier
+     * qui encaisse, une distance de teleportation. Le paquet d'activation ne peut pas
+     * savoir tout cela, donc la valeur est declaree ici et versee a l'activation (voir
+     * {@code ActivateSkillPacket}), au montant de base de l'original. Les competences
+     * passives, qui ne s'activent pas, ont le leur verse depuis leur propre crochet.
+     *
+     * Zero signifie « pas encore porte » : un test verifie qu'aucune competence livree
+     * n'est restee a zero, sinon elle rapporterait silencieusement une progression nulle
+     * et le niveau serait inatteignable.
+     */
+    public float getExpGain(AbilityData data) {
+        return 0f;
+    }
+
+    /**
+     * Multiplicateur d'experience, porte par la competence.
+     *
+     * L'original en faisait un reglage par competence ({@code exp_incr_speed}, defaut
+     * 1.0). La config du port est plate et n'a pas cette arborescence, donc elle est
+     * ici sans reglage : le crochet existe pour le jour ou elle l'aura.
+     */
+    public float getExpIncrSpeed() {
+        return 1f;
+    }
+
+    /**
+     * Interpolation lineaire entre deux valeurs, {@code t} ramene entre 0 et 1.
+     *
+     * Portage de {@code MathUtils.lerpf} : l'original s'en servait partout pour faire
+     * grandir la puissance d'une competence avec son experience. Le port ne s'en sert
+     * pour l'instant que pour l'experience elle-meme ; les courbes de puissance par
+     * competence viendront s'y brancher.
+     */
+    protected static float lerp(float from, float to, float t) {
+        float clamped = Math.max(0f, Math.min(1f, t));
+        return from + (to - from) * clamped;
     }
 
     /** Control Points consumed each time this skill is activated. */

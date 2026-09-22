@@ -47,7 +47,14 @@ public class DevelopActionLevel implements DevelopAction {
 
     @Override
     public boolean validate(Player player) {
-        return levelOf(player) < MAX_LEVEL;
+        AbilityData data = dataOf(player);
+        if (data == null) return false;
+        // Reprend LearningHelper.canLevelUp de l'original : une categorie deja
+        // apprise ne monte que si son palier est rempli, c'est-a-dire si le joueur a
+        // utilise ses competences. Une categorie jamais apprise passe sans palier :
+        // c'est ce qui la fait entrer dans le systeme.
+        if (!data.hasLearned(category)) return true;
+        return data.canLevelUp(category);
     }
 
     @Override

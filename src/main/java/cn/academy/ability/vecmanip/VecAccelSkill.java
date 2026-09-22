@@ -15,6 +15,12 @@ public class VecAccelSkill extends Skill {
         super("vec_accel", 2);
     }
 
+    /** 0,002 par acceleration, comme dans l'original. */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.002f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;

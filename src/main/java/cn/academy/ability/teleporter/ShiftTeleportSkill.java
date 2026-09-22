@@ -20,6 +20,15 @@ public class ShiftTeleportSkill extends Skill {
         super("shift_tp", 4);
     }
 
+    /**
+     * L'original versait 0,002 par entite traversee, plus 0,002. Le port ne compte pas
+     * les entites traversees : c'est donc le montant de base qui est verse.
+     */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return 0.002f;
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;
@@ -65,5 +74,6 @@ public class ShiftTeleportSkill extends Skill {
 
         player.teleportTo(destX, destY, destZ);
         player.fallDistance = 0;
+        TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
     }
 }

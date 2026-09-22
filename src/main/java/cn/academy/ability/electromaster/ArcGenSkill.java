@@ -25,6 +25,17 @@ public class ArcGenSkill extends Skill {
         super("arc_gen", 1);
     }
 
+    /**
+     * Experience d'un arc qui touche, reprise de l'original : de 0,0048 a 0,0072 selon
+     * l'experience deja acquise. L'original distinguait le coup porte du coup dans le
+     * vide ; le port ne le peut plus, l'activation etant deja conditionnee a une cible
+     * en vue, donc c'est la branche « touche » qui est reprise.
+     */
+    @Override
+    public float getExpGain(AbilityData data) {
+        return lerp(0.0048f, 0.0072f, data.getSkillExp(this));
+    }
+
     @Override
     public float getCpCost() {
         return CP_COST;
