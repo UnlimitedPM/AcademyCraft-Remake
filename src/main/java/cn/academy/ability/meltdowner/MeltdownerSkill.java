@@ -12,10 +12,19 @@ public class MeltdownerSkill extends Skill {
 
     private static final float CP_COST = 20f;
     private static final double RANGE = 20;
-    private static final float DAMAGE = 12f;
 
     public MeltdownerSkill() {
         super("meltdowner", 3);
+    }
+
+    /**
+     * Degats repris de l'original : de 18 a 50 selon l'experience.
+     *
+     * L'original les multipliait encore par un facteur de temps de charge ; le port
+     * n'a pas ce temps de charge, donc c'est la courbe de base qui s'applique.
+     */
+    public float damage(AbilityData data) {
+        return lerp(18f, 50f, data.getSkillExp(this));
     }
 
     /**
@@ -38,6 +47,6 @@ public class MeltdownerSkill extends Skill {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
-        living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
+        living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
     }
 }

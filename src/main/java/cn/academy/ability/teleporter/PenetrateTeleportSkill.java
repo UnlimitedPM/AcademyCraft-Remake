@@ -9,10 +9,19 @@ import net.minecraft.world.phys.Vec3;
 public class PenetrateTeleportSkill extends Skill {
 
     private static final float CP_COST = 30f;
-    private static final double RANGE = 6;
 
     public PenetrateTeleportSkill() {
         super("penetrate_teleport", 2);
+    }
+
+    /**
+     * Portee reprise de l'original : de 10 a 35 blocs selon l'experience.
+     *
+     * Le port se contentait de 6 blocs. Le cout en CP reste le sien : celui de
+     * l'original (14 a 9) se rapporte a une autre reserve.
+     */
+    public double range(AbilityData data) {
+        return lerp(10f, 35f, data.getSkillExp(this));
     }
 
     /**
@@ -34,7 +43,7 @@ public class PenetrateTeleportSkill extends Skill {
     public void onActivate(Player player, AbilityData data) {
         Vec3 start = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
-        Vec3 dest = start.add(look.scale(RANGE));
+        Vec3 dest = start.add(look.scale(range(data)));
         player.teleportTo(dest.x, dest.y - 1.6, dest.z);
         player.fallDistance = 0;
         TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);

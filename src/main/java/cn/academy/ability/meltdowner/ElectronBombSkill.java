@@ -18,10 +18,14 @@ public class ElectronBombSkill extends Skill {
     private static final float CP_COST = 30f;
     private static final double RANGE = 15;
     private static final double RADIUS = 3;
-    private static final float DAMAGE = 10f;
 
     public ElectronBombSkill() {
         super("electron_bomb", 1);
+    }
+
+    /** Degats repris de l'original : de 6 a 12 selon l'experience. */
+    public float damage(AbilityData data) {
+        return lerp(6f, 12f, data.getSkillExp(this));
     }
 
     /** 0,005 au lancer, comme dans l'original. */
@@ -49,7 +53,7 @@ public class ElectronBombSkill extends Skill {
         AABB area = new AABB(target, target).inflate(RADIUS);
         List<LivingEntity> nearby = player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         for (LivingEntity living : nearby) {
-            living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
+            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
         }
     }
 }

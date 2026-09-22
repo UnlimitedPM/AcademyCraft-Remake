@@ -14,10 +14,20 @@ import net.minecraft.world.phys.Vec3;
 public class ShiftTeleportSkill extends Skill {
 
     private static final float CP_COST = 20f;
-    private static final double MAX_RANGE = 12;
 
     public ShiftTeleportSkill() {
         super("shift_tp", 4);
+    }
+
+    /**
+     * Portee reprise de l'original : de 25 a 35 blocs selon l'experience.
+     *
+     * L'original blessait en plus les creatures traversees (15 a 35 degats) ; le port
+     * ne fait que deplacer le joueur, donc cette part n'a pas ete portee. Le cout en
+     * CP reste celui du port.
+     */
+    public double maxRange(AbilityData data) {
+        return lerp(25f, 35f, data.getSkillExp(this));
     }
 
     /**
@@ -39,7 +49,7 @@ public class ShiftTeleportSkill extends Skill {
         Level level = player.level();
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
-        Vec3 end = eye.add(look.scale(MAX_RANGE));
+        Vec3 end = eye.add(look.scale(maxRange(data)));
         double eyeHeight = player.getEyeHeight();
 
         HitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));

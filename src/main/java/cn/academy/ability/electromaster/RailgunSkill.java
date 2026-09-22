@@ -13,11 +13,22 @@ public class RailgunSkill extends Skill {
 
     private static final float CP_COST = 35f;
     private static final double RANGE = 30;
-    private static final float DAMAGE = 20f;
     private static final double KNOCKBACK = 2.5;
 
     public RailgunSkill() {
         super("railgun", 4);
+    }
+
+    /**
+     * Degats repris de l'original : de 60 a 110 selon l'experience.
+     *
+     * C'est le chiffre de la 1.12.2, et il est bien plus eleve que celui du port (20)
+     * : le railgun est cense tuer net, et c'est une competence de niveau 4. Le
+     * reglage {@code general.damageScale} permet de l'adoucir sans rien recompiler.
+     * Le cout en CP reste celui du port, pour la meme raison que partout ailleurs.
+     */
+    public float damage(AbilityData data) {
+        return lerp(60f, 110f, data.getSkillExp(this));
     }
 
     /**
@@ -40,7 +51,7 @@ public class RailgunSkill extends Skill {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
-        living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
+        living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
         Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
         living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
         living.hurtMarked = true;

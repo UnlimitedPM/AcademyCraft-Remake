@@ -14,7 +14,14 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  */
 public class VecReflectionSkill extends Skill {
 
-    private static final float REFLECT_RATIO = 0.5f;
+    /**
+     * Part des degats renvoyee, reprise de l'original : de 0,6 a 1,2 selon
+     * l'experience. Au maximum elle renvoie donc plus qu'elle n'encaisse.
+     */
+    public float reflectRatio(AbilityData data) {
+        return lerp(0.6f, 1.2f, data.getSkillExp(this));
+    }
+
     private static final float ABSORB_RATIO = 0.3f;
     private static final float CP_COST_PER_HIT = 5f;
 
@@ -35,7 +42,7 @@ public class VecReflectionSkill extends Skill {
         if (!data.consumeControlPoint(CP_COST_PER_HIT)) return event.getAmount();
 
         float amount = event.getAmount();
-        float reflected = amount * REFLECT_RATIO;
+        float reflected = amount * reflectRatio(data);
         float absorbed = amount * ABSORB_RATIO;
         attacker.hurt(player.damageSources().magic(), reflected);
 

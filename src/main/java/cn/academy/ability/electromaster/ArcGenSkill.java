@@ -14,15 +14,32 @@ import java.util.Random;
 public class ArcGenSkill extends Skill {
 
     private static final float CP_COST = 20f;
-    private static final double RANGE = 10;
-    private static final float DAMAGE = 7f;
-    private static final float IGNITE_CHANCE = 0.3f;
     private static final int IGNITE_TICKS = 80;
 
     private final Random random = new Random();
 
     public ArcGenSkill() {
         super("arc_gen", 1);
+    }
+
+    //
+    // Courbes reprises de l'original : les degats vont de 5 a 9, la portee de 6 a 15
+    // blocs, et la chance d'embraser de 0 a 60 %, le tout selon l'experience de la
+    // competence. Le cout en CP, lui, reste celui du port : celui de l'original (30 a
+    // 70) suppose une reserve de plusieurs milliers de points, la ou le port plafonne
+    // a 100. Voir `ability.controlPointMax`.
+    //
+
+    public float damage(AbilityData data) {
+        return lerp(5f, 9f, data.getSkillExp(this));
+    }
+
+    public double range(AbilityData data) {
+        return lerp(6f, 15f, data.getSkillExp(this));
+    }
+
+    public float igniteChance(AbilityData data) {
+        return lerp(0f, 0.6f, data.getSkillExp(this));
     }
 
     /**
@@ -43,11 +60,11 @@ public class ArcGenSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
-        Entity target = TargetingUtil.findEntityInSight(player, RANGE);
+        Entity target = TargetingUtil.findEntityInSight(player, range(data));
         if (!(target instanceof LivingEntity living)) return;
 
-        living.hurt(player.damageSources().indirectMagic(player, player), scaled(DAMAGE));
-        if (random.nextFloat() < IGNITE_CHANCE) {
+        living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        if (random.nextFloat() < igniteChance(data)) {
             living.setSecondsOnFire(IGNITE_TICKS / 20);
         }
     }
