@@ -203,11 +203,52 @@ class PortedSkillsTest {
     }
 
     /**
+     * Les surcouts, repris de l'original.
+     *
+     * Le surcout est la seule des deux ressources dont l'echelle de l'original tient
+     * telle quelle dans le port : les couts en CP, eux, supposent une reserve de
+     * plusieurs milliers de points et restent ceux du port.
+     */
+    private static final Map<String, Float> EXPECTED_OVERLOAD = Map.ofEntries(
+            Map.entry("electromaster.arc_gen", 18f),
+            Map.entry("electromaster.railgun", 180f),
+            Map.entry("electromaster.body_intensify", 200f),
+            Map.entry("meltdowner.electron_bomb", 200f),
+            Map.entry("meltdowner.meltdowner", 200f),
+            Map.entry("teleporter.penetrate_teleport", 80f),
+            Map.entry("teleporter.shift_tp", 40f),
+            Map.entry("vecmanip.vec_accel", 30f));
+
+    @Test
+    void lesSurcoutsSontCeuxDeLOriginal() {
+        for (Skill skill : allSkills()) {
+            if (skill.isPassive()) continue;
+            Float expected = EXPECTED_OVERLOAD.get(fullName(skill));
+            assertNotNull(expected, "surcout non fige pour " + fullName(skill));
+            assertEquals(expected.floatValue(), skill.getOverloadCost(charged(skill)),
+                    0.0001f, "surcout de " + fullName(skill));
+        }
+    }
+
+    @Test
+    void aucuneCompetenceActiveNeResteSansSurcout() {
+        // Une competence active qui ne chargerait pas la reserve serait gratuite en
+        // surcout : elle pourrait etre enchainee sans jamais mettre le joueur en
+        // surcharge, ce que l'original ne permettait a aucune.
+        for (Skill skill : allSkills()) {
+            if (skill.isPassive()) continue;
+            assertTrue(skill.getOverloadCost(charged(skill)) > 0f,
+                    fullName(skill) + " ne charge pas la reserve de surcout");
+        }
+    }
+
+    /**
      * Un etat d'usage : une competence qui se charge est chargee au maximum.
      *
      * Sans cela, les gains d'experience d'une competence chargee seraient mesures au
      * repos, donc multiplies par son facteur de charge le plus bas — ce qui figerait
-     * une valeur qui n'est celle d'aucun tir reel.
+     * une valeur qui n'est celle d'aucun tir reel. Et une courbe qui depend de la
+     * charge se lit avec la charge au maximum, comme un tir tenu.
      */
     private static AbilityData charged(Skill skill) {
         AbilityData data = new AbilityData();

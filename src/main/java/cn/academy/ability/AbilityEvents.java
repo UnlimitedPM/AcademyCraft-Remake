@@ -65,6 +65,8 @@ public class AbilityEvents {
             data.tickCooldowns();
             // Et les charges en cours, comme le compteur du contexte d'activation.
             data.tickCharges();
+            // Le surcout redescend apres son delai, comme dans CPData.tick.
+            data.tickOverload();
             // Le plafond vient de la config : on le reapplique a chaque tick pour
             // qu'un rechargement de config soit pris en compte sans reconnexion.
             data.clampToConfiguredMax();

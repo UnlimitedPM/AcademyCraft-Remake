@@ -63,6 +63,16 @@ public final class Config {
             .comment("Frequence (en ticks) de synchronisation des CP vers le client.")
             .defineInRange("ability.controlPointSyncInterval", 20, 1, 200);
 
+    private static final ForgeConfigSpec.IntValue OVERLOAD_RECOVER_COOLDOWN = BUILDER
+            .comment("Ticks d'attente avant que le surcout ne redescende.",
+                     "Repris de ac.ability.data.overload_recover_cooldown de la 1.12.2.")
+            .defineInRange("ability.overloadRecoverCooldown", 32, 0, 20_000);
+
+    private static final ForgeConfigSpec.DoubleValue OVERLOAD_RECOVER_SPEED = BUILDER
+            .comment("Vitesse de recuperation du surcout. 1.0 = celle de la 1.12.2,",
+                     "soit environ un dixieme de seconde par point sur une reserve pleine.")
+            .defineInRange("ability.overloadRecoverSpeed", 1.0d, 0.0d, 1000.0d);
+
     private static final ForgeConfigSpec.DoubleValue PROGRESS_INCR_RATE = BUILDER
             .comment("Vitesse de progression des niveaux d'aptitude.",
                      "1.0 = la valeur de la 1.12.2 : il faut remplir un palier en utilisant",
@@ -81,6 +91,8 @@ public final class Config {
     public static double controlPointStart = 100.0d;
     public static double controlPointRegenPerTick = 0.25d;
     public static int controlPointSyncInterval = 20;
+    public static int overloadRecoverCooldown = 32;
+    public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
 
     /** Valeur de {@link #controlPointStart}, clampee sous le maximum. */
@@ -98,6 +110,8 @@ public final class Config {
         controlPointStart = CP_START.get();
         controlPointRegenPerTick = CP_REGEN_PER_TICK.get();
         controlPointSyncInterval = CP_SYNC_INTERVAL.get();
+        overloadRecoverCooldown = OVERLOAD_RECOVER_COOLDOWN.get();
+        overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();
         progressIncrRate = PROGRESS_INCR_RATE.get();
     }
 

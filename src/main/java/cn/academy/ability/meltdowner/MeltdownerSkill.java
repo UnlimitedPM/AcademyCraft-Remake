@@ -86,6 +86,19 @@ public class MeltdownerSkill extends Skill {
         return CP_COST;
     }
 
+    /**
+     * Surcout repris de l'original : de 200 a 170 selon l'experience, a l'ouverture
+     * du tir.
+     *
+     * L'original drainait encore 10 a 15 points par tick pendant la charge ; ce
+     * drainage n'est pas porte, comme les couts en CP de cet original qui supposent
+     * une toute autre echelle de reserve.
+     */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(200f, 170f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);

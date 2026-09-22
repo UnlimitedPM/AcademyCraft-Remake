@@ -33,6 +33,12 @@ public class BodyIntensifySkill extends Skill {
         return CP_COST;
     }
 
+    /** Surcout repris de l'original : de 200 a 120 selon l'experience. */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(200f, 120f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, DURATION_TICKS, 1));

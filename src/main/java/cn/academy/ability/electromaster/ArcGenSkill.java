@@ -64,6 +64,12 @@ public class ArcGenSkill extends Skill {
         return CP_COST;
     }
 
+    /** Surcout repris de l'original : de 18 a 11 selon l'experience. */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(18f, 11f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         Entity target = TargetingUtil.findEntityInSight(player, range(data));

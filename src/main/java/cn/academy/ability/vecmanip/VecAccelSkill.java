@@ -63,6 +63,12 @@ public class VecAccelSkill extends Skill {
         return CP_COST;
     }
 
+    /** Surcout repris de l'original : de 30 a 15 selon l'experience. */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(30f, 15f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         // Look slightly upward like the original (pitch - 10) so the arc carries the player forward.

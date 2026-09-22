@@ -52,6 +52,17 @@ public class RailgunSkill extends Skill {
         return CP_COST;
     }
 
+    /**
+     * Surcout repris de l'original : de 180 a 120 selon l'experience.
+     *
+     * C'est le tir qui remplit le plus la reserve : sur une reserve de 350 points,
+     * deux tirs d'affilee suffisent a mettre le joueur en surcharge.
+     */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(180f, 120f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);

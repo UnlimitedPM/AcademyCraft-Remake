@@ -45,6 +45,18 @@ public class ElectronBombSkill extends Skill {
         return CP_COST;
     }
 
+    /**
+     * Surcout repris de l'original : 200 points pour ouvrir la competence.
+     *
+     * L'original tenait une reserve ({@code overload_keep = 200}) pendant qu'il
+     * lancait ses billes, puis 5 points par bille. Le port joue la competence d'un
+     * seul coup, donc c'est le cout d'ouverture qui s'applique.
+     */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return 200f;
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         Level level = player.level();

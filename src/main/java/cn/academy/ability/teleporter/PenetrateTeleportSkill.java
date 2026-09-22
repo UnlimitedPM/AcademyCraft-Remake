@@ -45,6 +45,12 @@ public class PenetrateTeleportSkill extends Skill {
         return CP_COST;
     }
 
+    /** Surcout repris de l'original : de 80 a 50 selon l'experience. */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(80f, 50f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         Vec3 start = player.getEyePosition(1.0f);

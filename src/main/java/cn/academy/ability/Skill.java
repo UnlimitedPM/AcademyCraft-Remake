@@ -221,6 +221,19 @@ public abstract class Skill {
         return 0;
     }
 
+    /**
+     * Surcout demande par une activation.
+     *
+     * Portage de la seconde ressource de l'original ({@code ctx.consume(overload, cp)}) :
+     * en plus des CP, chaque competence charge une reserve qui se remplit et met le
+     * joueur en surcharge quand elle est pleine. Contrairement aux couts en CP de
+     * l'original, ceux du surcout tiennent dans la meme echelle que le port, donc ce
+     * sont les vrais chiffres de la 1.12.2.
+     */
+    public float getOverloadCost(AbilityData data) {
+        return 0f;
+    }
+
     // ------------------------------------------------------------------
     // Temps de charge
     // ------------------------------------------------------------------

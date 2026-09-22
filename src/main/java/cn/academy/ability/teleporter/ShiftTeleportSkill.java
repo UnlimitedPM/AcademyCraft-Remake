@@ -50,6 +50,12 @@ public class ShiftTeleportSkill extends Skill {
         return CP_COST;
     }
 
+    /** Surcout repris de l'original : de 40 a 30 selon l'experience. */
+    @Override
+    public float getOverloadCost(AbilityData data) {
+        return lerp(40f, 30f, data.getSkillExp(this));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
         Level level = player.level();

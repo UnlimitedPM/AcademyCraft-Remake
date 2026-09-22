@@ -111,13 +111,9 @@ public class ActivateSkillPacket {
         activate(player, data, skill);
     }
 
-    /** Verifie qu'une charge peut s'ouvrir : ni brouillage, ni recharge en cours. */
+    /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */
     private static boolean canStart(ServerPlayer player, AbilityData data, Skill skill) {
-        if (data.isInterfered()) {
-            player.displayClientMessage(
-                    Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
-            return false;
-        }
+        if (!canUseAbility(player, data)) return false;
         int cooldown = data.getCooldown(skill);
         if (cooldown > 0) {
             announceCooldown(player, cooldown);
@@ -126,13 +122,31 @@ public class ActivateSkillPacket {
         return true;
     }
 
-    /** Le declenchement lui-meme, commun aux competences instantanees et chargees. */
-    private static void activate(ServerPlayer player, AbilityData data, Skill skill) {
+    /**
+     * Le joueur peut-il seulement lancer quelque chose ?
+     *
+     * Portage de {@code CPData.canUseAbility} : une surcharge et un brouillage ferment
+     * tout, y compris les competences qui se chargent — l'original ne creait meme pas
+     * de contexte dans ce cas, donc la touche ne faisait rien du tout.
+     */
+    private static boolean canUseAbility(ServerPlayer player, AbilityData data) {
         if (data.isInterfered()) {
             player.displayClientMessage(
                     Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
-            return;
+            return false;
         }
+        if (data.isOverloaded()) {
+            player.displayClientMessage(
+                    Component.literal("Overloaded - wait for your overload to drop")
+                            .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        return true;
+    }
+
+    /** Le declenchement lui-meme, commun aux competences instantanees et chargees. */
+    private static void activate(ServerPlayer player, AbilityData data, Skill skill) {
+        if (!canUseAbility(player, data)) return;
 
         // Recharge : l'original tenait un compteur par competence dans
         // CooldownData et refusait le declenchement tant qu'il n'etait pas
@@ -145,7 +159,10 @@ public class ActivateSkillPacket {
             return;
         }
 
-        if (!data.consumeControlPoint(skill.getCpCost())) {
+        // Les deux ressources ensemble ou aucune : portage de CPData.perform. Sans
+        // cette atomicite, une competence refusee faute de CP laisserait quand meme
+        // du surcout derriere elle.
+        if (!data.perform(skill.getCpCost(), skill.getOverloadCost(data))) {
             player.displayClientMessage(
                     Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
             return;

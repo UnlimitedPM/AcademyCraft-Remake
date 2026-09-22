@@ -30,6 +30,25 @@ public class AbilityHudOverlay implements IGuiOverlay {
 
         int nextY = y + BAR_HEIGHT + 2;
 
+        // Le surcout, sous les CP : une seconde reserve qui se remplit a chaque
+        // activation et qui bloque tout quand elle est pleine. Toujours affichee, comme
+        // la barre de l'original, pour que le joueur voie venir la surcharge au lieu de
+        // la decouvrir en pleine action.
+        float maxOverload = data.getMaxOverload();
+        if (maxOverload > 0) {
+            float overload = data.getOverload();
+            int overloadFilled = Math.round(BAR_WIDTH * (overload / maxOverload));
+            graphics.fill(x, nextY, x + BAR_WIDTH, nextY + BAR_HEIGHT, 0xFF404040);
+            if (overloadFilled > 0) {
+                graphics.fill(x, nextY, x + overloadFilled, nextY + BAR_HEIGHT,
+                        data.isOverloaded() ? 0xFFFF3030 : 0xFFFFA030);
+            }
+            graphics.drawString(Minecraft.getInstance().font,
+                    "Overload: " + (int) overload + " / " + (int) maxOverload,
+                    x + BAR_WIDTH + 4, nextY - 2, 0xFFC080);
+            nextY += BAR_HEIGHT + 2;
+        }
+
         // Une competence qui se charge ne montrerait rien du tout sans cette barre :
         // le joueur n'aurait aucun moyen de savoir que sa touche fait quelque chose,
         // ni quand la charge atteint son maximum.
@@ -44,7 +63,7 @@ public class AbilityHudOverlay implements IGuiOverlay {
 
         // Un brouilleur empeche d'utiliser ses competences : sans cet avertissement
         // le joueur n'aurait aucun moyen de comprendre pourquoi ses touches ne
-        // repondent plus.
+        // repondent plus. La surcharge, elle, a sa barre rouge.
         if (data.isInterfered()) {
             graphics.drawString(Minecraft.getInstance().font, "JAMMED", x, nextY, 0xFF5050);
         }

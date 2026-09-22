@@ -162,13 +162,174 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public boolean consumeControlPoint(float amount) {
-        if (controlPoint < amount) return false;
-        controlPoint -= amount;
-        return true;
+        return perform(amount, 0f);
     }
 
     public void tickRegen(float amount) {
         controlPoint = Math.min(maxControlPoint, controlPoint + amount);
+    }
+
+    // ------------------------------------------------------------------
+    // Surcout
+    // ------------------------------------------------------------------
+
+    /**
+     * Plafond de base du surcout par niveau, repris de {@code init_overload} de
+     * l'original.
+     *
+     * C'est la meme reserve que dans la 1.12.2, a l'unite pres : contrairement aux
+     * couts en CP de l'original, ceux du surcout tiennent dans une echelle que le
+     * port peut reprendre telle quelle.
+     */
+    private static final float[] BASE_MAX_OVERLOAD = {100f, 100f, 150f, 240f, 350f, 500f};
+
+    /**
+     * Gain de plafond acquis en utilisant ses competences, repris de
+     * {@code add_overload}. Le joueur gagne donc de la reserve en s'en servant.
+     */
+    private static final float[] MAX_ADD_OVERLOAD = {0f, 40f, 70f, 80f, 100f, 500f};
+
+    /**
+     * Part du surcout qui devient du plafond, reprise de {@code maxo_incr_rate}.
+     *
+     * Bornee a 10 points par activation, comme l'original.
+     */
+    private static final float OVERLOAD_INCR_RATE = 0.0058f;
+
+    /** Plafond de base du surcout pour ce niveau. */
+    public static float baseMaxOverload(int level) {
+        return BASE_MAX_OVERLOAD[clampLevel(level)];
+    }
+
+    /** Gain de plafond maximal pour ce niveau. */
+    public static float maxAddOverload(int level) {
+        return MAX_ADD_OVERLOAD[clampLevel(level)];
+    }
+
+    private static int clampLevel(int level) {
+        return Math.max(0, Math.min(BASE_MAX_OVERLOAD.length - 1, level));
+    }
+
+    /**
+     * Niveau d'aptitude du joueur.
+     *
+     * L'original n'avait qu'une aptitude et donc qu'un niveau ; le port en a quatre.
+     * C'est le plus haut qui compte : un joueur qui a monte une categorie au niveau 4
+     * a la reserve du niveau 4, sinon sa meilleure aptitude serait penalisee par celle
+     * qu'il delaisse.
+     */
+    public int getHighestLevel() {
+        int highest = 0;
+        for (int level : categoryLevels.values()) {
+            highest = Math.max(highest, level);
+        }
+        return highest;
+    }
+
+    private float overload;
+    private float addMaxOverload;
+
+    /**
+     * Faux quand le surcout a atteint son maximum : plus aucune competence ne part.
+     *
+     * L'original distingait ce drapeau de {@code isOverloaded()} pour l'affichage,
+     * dont le temoin s'eteignait au bout du delai de recuperation alors que les
+     * competences restaient bloquees. Le port garde un seul drapeau : un verrou qui
+     * ne se montre plus est un verrou invisible, et le joueur ne comprendrait pas
+     * pourquoi ses touches ne repondent plus alors que la barre redescend.
+     */
+    private boolean overloadFine = true;
+
+    /** Ticks restants avant que le surcout ne redescende. */
+    private int untilOverloadRecover;
+
+    public float getOverload() {
+        return overload;
+    }
+
+    public float getMaxOverload() {
+        return baseMaxOverload(getHighestLevel()) + addMaxOverload;
+    }
+
+    /** Part du plafond acquise en utilisant ses competences. */
+    public float getAddMaxOverload() {
+        return addMaxOverload;
+    }
+
+    public boolean isOverloaded() {
+        return !overloadFine;
+    }
+
+    public int getUntilOverloadRecover() {
+        return untilOverloadRecover;
+    }
+
+    /**
+     * Verifie et applique le cout d'une activation : les deux ressources, ou rien.
+     *
+     * Portage de {@code CPData.perform} : le surcout n'est ajoute que si les CP ont
+     * ete payes. Sans cette atomicite, une competence refusee faute de CP laisserait
+     * quand meme du surcout derriere elle.
+     */
+    public boolean perform(float cp, float overloadCost) {
+        if (controlPoint < cp) return false;
+        controlPoint -= cp;
+        addOverload(overloadCost);
+        return true;
+    }
+
+    /**
+     * Ajoute du surcout, en plafonnant a la reserve et en armant la recuperation.
+     *
+     * Portage de {@code CPData.addOverload} : atteindre le maximum met le joueur en
+     * surcharge, et une part du surcout consomme devient de la reserve permanente.
+     */
+    private void addOverload(float amount) {
+        if (amount <= 0) return;
+        untilOverloadRecover = cn.academy.Config.overloadRecoverCooldown;
+        float max = getMaxOverload();
+        overload = Math.min(max, overload + amount);
+        if (overload >= max) {
+            overloadFine = false;
+        }
+        addMaxOverload = Math.min(maxAddOverload(getHighestLevel()),
+                addMaxOverload + Math.min(10f, amount * OVERLOAD_INCR_RATE));
+    }
+
+    /**
+     * Fait avancer la recuperation du surcout d'un tick.
+     *
+     * Portage de la seconde moitie de {@code CPData.tick} : rien ne redescend avant
+     * la fin du delai, puis la reserve se vide d'autant plus vite qu'elle est presque
+     * vide — c'est le {@code getOverloadRecoverSpeed} de l'original.
+     */
+    public void tickOverload() {
+        if (untilOverloadRecover > 0) {
+            untilOverloadRecover--;
+            return;
+        }
+        if (overload <= 0) return;
+        overload = Math.max(0f, overload - getOverloadRecoverSpeed());
+        if (overload <= 0f) {
+            overload = 0f;
+            overloadFine = true;
+        }
+    }
+
+    /**
+     * Vitesse de recuperation, portage de {@code CPData.getOverloadRecoverSpeed} :
+     * {@code max(0,002 x reserve, 0,007 x reserve x lerp(1, 0,5, charge / reserve / 2))}.
+     *
+     * Sur une reserve de 100 points, cela fait 0,70 point par tick quand la barre est
+     * vide et 0,53 quand elle est pleine : une surcharge complete tient donc une
+     * dizaine de secondes.
+     */
+    public float getOverloadRecoverSpeed() {
+        float max = getMaxOverload();
+        if (max <= 0f) return 0f;
+        float raw = Math.max(0.002f * max,
+                0.007f * max * Skill.lerp(1f, 0.5f, overload / max / 2f));
+        return (float) (cn.academy.Config.overloadRecoverSpeed * raw);
     }
 
     public void copyFrom(AbilityData other) {
@@ -176,6 +337,10 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         categoryLevels.putAll(other.categoryLevels);
         controlPoint = other.controlPoint;
         maxControlPoint = other.maxControlPoint;
+        overload = other.overload;
+        addMaxOverload = other.addMaxOverload;
+        overloadFine = other.overloadFine;
+        untilOverloadRecover = other.untilOverloadRecover;
         // Les sources d'interference ne sont pas copiees : elles appartiennent a un
         // monde et a des machines precises, et les brouilleurs encore en place les
         // reposeront dans la dizaine de ticks qui suit.
@@ -551,6 +716,13 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         CompoundTag cds = new CompoundTag();
         cooldowns.forEach(cds::putInt);
         tag.put(TAG_COOLDOWNS, cds);
+
+        // Le surcout voyage avec le reste : l'original le sauvegardait aussi, donc se
+        // reconnecter en pleine surcharge ne remet pas la reserve a zero.
+        tag.putFloat("overload", overload);
+        tag.putFloat("addOverload", addMaxOverload);
+        tag.putBoolean("overloadFine", overloadFine);
+        tag.putInt("untilOverloadRecover", untilOverloadRecover);
         return tag;
     }
 
@@ -588,5 +760,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         for (String key : cds.getAllKeys()) {
             cooldowns.put(key, cds.getInt(key));
         }
+
+        overload = tag.getFloat("overload");
+        addMaxOverload = tag.getFloat("addOverload");
+        // Une sauvegarde sans le drapeau est une sauvegarde d'avant la surcharge :
+        // le joueur doit repartir disponible, pas bloque par un booleen par defaut.
+        overloadFine = !tag.contains("overloadFine") || tag.getBoolean("overloadFine");
+        untilOverloadRecover = tag.getInt("untilOverloadRecover");
     }
 }
