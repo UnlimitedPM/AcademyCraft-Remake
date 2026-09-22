@@ -119,6 +119,7 @@
   "ac.app.freq_transmitter.name": "Frequency Transmitter",
   "item.academy.app_settings": "App Installer",
   "ac.app.settings.name": "Settings",
+  "ac.app.tutorial.name": "MisakaCloud",
 
   "ac.terminal.title": "Data Terminal",
   "ac.terminal.no_apps": "No application installed",
@@ -132,6 +133,7 @@
   "ac.app.about.name": "About",
   "ac.about.donators_info": "In no particular order",
   "ac.about.empty": "Credits are missing from this build.",
+  "ac.tutorial.missing": "This tutorial is missing from this build.",
 
   "item.academy.imag_phase": "Imag Phase Liquid",
   "item.academy.logo": "AcademyCraft Logo",

@@ -40,4 +40,18 @@ public final class AppScreens {
         Supplier<Screen> factory = FACTORIES.get(app.getAppId());
         return factory == null ? null : factory.get();
     }
+
+    /**
+     * Ouvre l'ecran d'une application, s'il existe.
+     *
+     * Les objets qui ouvrent leur page sans passer par le terminal — l'original avait
+     * un objet MisakaCloud qui affichait directement les tutoriels — y arrivent par
+     * {@code App.requestOpen}, dont cette methode est l'aboutissement cote client.
+     */
+    public static void open(App app) {
+        Screen page = create(app);
+        if (page != null) {
+            net.minecraft.client.Minecraft.getInstance().setScreen(page);
+        }
+    }
 }

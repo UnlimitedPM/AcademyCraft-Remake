@@ -1638,6 +1638,52 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Les tutoriels livres, et les objets qui les ouvrent.
+     *
+     * <p>Le contenu lui-meme se relit dans les ressources, en JUnit. Ce que JUnit ne
+     * peut pas faire, c'est interroger les registres — et les tutoriels s'ouvrent par
+     * des noms d'objets ecrits a la main, dont {@code academy:dev_normal}, un nom garde
+     * de la 1.12.2. Un nom faux ne ferait rien tomber : il fermerait son tutoriel pour
+     * toujours, sans un mot.
+     */
+    @GameTest(template = "empty")
+    public static void lesTutorielsOuvrentParDesObjetsQuiExistent(GameTestHelper helper) {
+        int named = 0;
+        for (var entry : cn.academy.terminal.tutorial.TutorialLibrary.entries()) {
+            for (String id : entry.requiredItems()) {
+                named++;
+                var key = net.minecraft.resources.ResourceLocation.tryParse(id);
+                assertTrue(helper, key != null, "nom d'objet illisible : " + id);
+                assertTrue(helper,
+                        net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(key),
+                        "objet inconnu du tutoriel " + entry.id() + " : " + id);
+            }
+        }
+        assertValue(helper, 17, named, "les objets ouvreurs de l'original");
+
+        // Le contenu se lit aussi en jeu, et pas seulement en JUnit : c'est le seul
+        // fichier livre que le jeu relit a l'ouverture d'un ecran.
+        var welcome = cn.academy.terminal.tutorial.TutorialLibrary.load("welcome", "en_us");
+        assertFalse(helper, welcome.isEmpty(), "le tutoriel d'accueil doit se lire en jeu");
+        assertTrue(helper, welcome.contentFor("Misaka").length() > 20, "et porter du contenu");
+
+        // L'application MisakaCloud : enregistree, et installee d'office comme l'original.
+        var app = cn.academy.terminal.AppRegistry.INSTANCE.getByName("tutorial");
+        assertTrue(helper, app != null, "l'application MisakaCloud doit etre enregistree");
+        assertTrue(helper, app.isPreInstalled(), "et installee d'office, comme l'original");
+        assertTrue(helper, app.getAppId() >= 0, "son identifiant est attribue a l'enregistrement");
+
+        var player = ownPlayer(helper, "tutorial-reader");
+        var data = player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.install();
+        assertTrue(helper, data.isInstalled(app),
+                "le terminal doit offrir les applications installees d'office");
+
+        helper.succeed();
+    }
+
     /** Niveau d'une categorie, pose directement : c'est le developpeur qui le monte en jeu. */
     private static void setCategoryLevel(Player player, cn.academy.ability.Category category, int level) {
         player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
@@ -4198,29 +4244,37 @@ public final class AcademyGameTests {
         var registry = cn.academy.terminal.AppRegistry.INSTANCE;
         var about = cn.academy.terminal.app.AppAbout.INSTANCE;
         var skillTree = cn.academy.terminal.app.AppSkillTree.INSTANCE;
+        var tutorial = cn.academy.terminal.app.AppTutorial.INSTANCE;
 
         assertTrue(helper, registry.isBaked(), "le registre doit etre ferme apres l'initialisation");
 
         // L'ordre du registre donne les identifiants : il suit les priorites de
         // l'original, « A propos » en premier, et une application s'ajoute a la fin.
-        assertValue(helper, 2, registry.size(), "deux applications sont portees");
+        assertValue(helper, 3, registry.size(), "trois applications sont portees");
         assertValue(helper, "about", registry.get(0).getName(), "la premiere application");
         assertValue(helper, "skill_tree", registry.get(1).getName(), "la deuxieme application");
+        assertValue(helper, "tutorial", registry.get(2).getName(), "la troisieme application");
         assertValue(helper, 0, about.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
         assertValue(helper, 1, skillTree.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
+        assertValue(helper, 2, tutorial.getAppId(), "l'identifiant vient de l'ordre d'enregistrement");
 
         assertTrue(helper, registry.getByName("about") == about,
                 "la recherche par nom doit rendre la meme instance");
         assertTrue(helper, registry.getByName("skill_tree") == skillTree,
+                "la recherche par nom doit rendre la meme instance");
+        assertTrue(helper, registry.getByName("tutorial") == tutorial,
                 "la recherche par nom doit rendre la meme instance");
 
         assertTrue(helper, about.isPreInstalled(),
                 "a propos s'installe d'office : sinon le terminal s'ouvre sur une grille vide");
         assertFalse(helper, skillTree.isPreInstalled(),
                 "l'arbre s'installe avec un objet, pas d'office");
+        assertTrue(helper, tutorial.isPreInstalled(),
+                "MisakaCloud s'installe d'office, comme dans l'original : c'est la documentation");
 
         assertValue(helper, "ac.app.about.name", about.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.skill_tree.name", skillTree.getDisplayKey(), "cle de langue du nom");
+        assertValue(helper, "ac.app.tutorial.name", tutorial.getDisplayKey(), "cle de langue du nom");
         assertTrue(helper, registry.getByName("settings") == null,
                 "les applications non portees ne doivent pas etre enregistrees");
         helper.succeed();

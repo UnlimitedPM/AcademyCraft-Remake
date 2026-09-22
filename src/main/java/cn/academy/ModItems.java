@@ -104,7 +104,7 @@ public class ModItems {
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",
             () -> new TerminalInstallerItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new TutorialItem());
     public static final RegistryObject<Item> DEV_NORMAL_ITEM = ITEMS.register("dev_normal",
             () -> new BlockItem(ModBlocks.DEV_NORMAL.get(), new Item.Properties()));
     public static final RegistryObject<Item> DEV_ADVANCED_ITEM = ITEMS.register("developer_advanced",
@@ -349,6 +349,30 @@ public class ModItems {
                 cn.academy.terminal.TerminalEvents.sync(serverPlayer);
             }
             player.displayClientMessage(Component.translatable("ac.terminal.key_hint"), false);
+            return InteractionResultHolder.success(stack);
+        }
+    }
+
+    /**
+     * L'objet MisakaCloud : les tutoriels du mod, ouverts directement.
+     *
+     * Portage de {@code ItemTutorial}. L'original l'attachait a l'application du meme
+     * nom, mais l'ouvrait sans passer par le terminal — et c'est ce que fait le port :
+     * l'application est installee d'office, donc l'objet ne sert qu'a l'ouvrir. L'ecran
+     * est atteint par {@code App.requestOpen}, qui ne nomme aucun type client.
+     */
+    public static class TutorialItem extends Item {
+
+        public TutorialItem() {
+            super(new Item.Properties());
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+            if (level.isClientSide) {
+                cn.academy.terminal.App.requestOpen(cn.academy.terminal.app.AppTutorial.INSTANCE);
+            }
             return InteractionResultHolder.success(stack);
         }
     }

@@ -32,6 +32,26 @@ public abstract class App {
     private int appId = -1;
     private boolean preInstalled;
 
+    /**
+     * Ce qui sait ouvrir une page, pose par le client au demarrage.
+     *
+     * Un objet tenu en main s'utilise des deux cotes, et c'est pourtant l'objet qui
+     * ouvre le tutoriel : il lui faut donc un chemin neutre vers l'ecran. Cette boite
+     * est ce chemin — vide tant que le client ne l'a pas remplie, ce qui est le cas
+     * sur un serveur dedie, ou personne n'ouvre rien. Meme raisonnement que la table
+     * application -> ecran : le type client reste de l'autre cote de la frontiere.
+     */
+    private static java.util.function.Consumer<App> opener = app -> {};
+
+    public static void setOpener(java.util.function.Consumer<App> value) {
+        opener = value;
+    }
+
+    /** Demande l'ouverture de cette application. Sans client, il ne se passe rien. */
+    public static void requestOpen(App app) {
+        opener.accept(app);
+    }
+
     protected App(String name) {
         this.name = name;
     }
