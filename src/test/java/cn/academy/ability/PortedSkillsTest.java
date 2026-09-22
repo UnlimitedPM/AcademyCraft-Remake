@@ -62,7 +62,8 @@ class PortedSkillsTest {
             Map.entry("vecmanip.blood_retro", 4),
             Map.entry("vecmanip.vec_deviation", 2),
             Map.entry("vecmanip.vec_reflection", 4),
-            Map.entry("vecmanip.storm_wing", 3));
+            Map.entry("vecmanip.storm_wing", 3),
+            Map.entry("vecmanip.plasma_cannon", 5));
 
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
@@ -110,7 +111,10 @@ class PortedSkillsTest {
             Map.entry("vecmanip.vec_reflection", List.of("vecmanip.vec_deviation")),
             // Les ailes de tempete descendent de l'acceleration : on n'apprend pas a voler
             // avant d'avoir appris a se propulser.
-            Map.entry("vecmanip.storm_wing", List.of("vecmanip.vec_accel")));
+            Map.entry("vecmanip.storm_wing", List.of("vecmanip.vec_accel")),
+            // Et le canon a plasma descend des ailes : c'est la competence la plus chere de
+            // la categorie, et la derniere de l'arbre.
+            Map.entry("vecmanip.plasma_cannon", List.of("vecmanip.storm_wing")));
 
     private static List<Category> categories() {
         return List.of(
@@ -322,6 +326,7 @@ class PortedSkillsTest {
             Map.entry("vecmanip.vec_deviation", 80f),
             Map.entry("vecmanip.vec_reflection", 350f),
             Map.entry("vecmanip.storm_wing", 10f),
+            Map.entry("vecmanip.plasma_cannon", 500f),
             Map.entry("teleporter.penetrate_teleport", 80f),
             Map.entry("teleporter.shift_tp", 40f),
             Map.entry("vecmanip.vec_accel", 30f));

@@ -492,8 +492,9 @@ class SkillCurvesTest {
      * commence tant que la touche est tenue, et il se termine au-dela de sa duree.
      */
     @Test
-    void seulLeReacteurContinueApresLeRelachement() {
+    void leReacteurEtLeCanonContinuentApresLeRelachement() {
         var jet = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
+        var cannon = cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON;
 
         for (var category : java.util.List.of(
                 cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE,
@@ -501,13 +502,18 @@ class SkillCurvesTest {
                 cn.academy.ability.teleporter.TeleporterCategory.INSTANCE,
                 cn.academy.ability.vecmanip.VecmanipCategory.INSTANCE)) {
             for (Skill skill : category.getSkills()) {
-                if (!skill.isHeld() || skill == jet) continue;
+                if (!skill.isHeld() || skill == jet || skill == cannon) continue;
                 // Le relachement termine le maintien de toutes les autres, et le joueur
                 // n'est meme pas lu.
                 assertFalse(skill.onRelease(null, new AbilityData(), 20),
                         skill.getName() + " ne doit pas se prolonger apres le relachement");
             }
         }
+
+        // Le canon a plasma, lui, ne part que sur une charge complete : sous la charge
+        // minimale, l'original mourait sans rien faire, et ne versait rien.
+        assertFalse(cannon.onRelease(null, new AbilityData(), 20),
+                "sous la charge minimale, le canon ne part pas");
 
         // Le reacteur, lui, ne vole pas tant qu'on tient la touche : il vise.
         AbilityData vising = new AbilityData();
@@ -1099,6 +1105,38 @@ class SkillCurvesTest {
         assertFalse(wing.clumsy(atExperience(wing, 0.2f)), "et un peu d'experience suffit");
         assertTrue(wing.blows(atExperience(wing, 1f)), "a pleine experience elles repoussent");
         assertFalse(wing.blows(atExperience(wing, 0.9f)), "et pas avant");
+    }
+
+    /**
+     * Le canon a plasma : la charge la plus chere du port, et sa plus longue recharge.
+     */
+    @Test
+    void leCanonAPlasmaSeChargePuisPoseUneRechargeDeCinquanteSecondes() {
+        var cannon = cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON;
+
+        assertTrue(cannon.isHeld(), "le canon se tient");
+        assertEquals(0, cannon.getMaxHoldTicks(atExperience(cannon, 0f)), "sans duree programmee");
+        assertTrue(cannon.earnsExpOnEffect(), "l'experience se verse au tir");
+        assertEquals(0f, cannon.getExpGain(atExperience(cannon, 0f)), 0.000001f);
+
+        // La charge raccourcit et coute plus cher par tick : 60 a 30 ticks, 18 a 25 CP.
+        assertBounds("charge du canon", 60f, 30f, cannon::chargeTime, cannon);
+        assertBounds("cout de la charge", 0.64f, 0.89f, cannon::chargeCost, cannon);
+
+        // Le surcout epingle : 500 a 400, verbatim, et rien a l'appui en reserve.
+        assertBounds("epingle du canon", 500f, 400f, cannon::pin, cannon);
+        assertEquals(0f, cannon.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
+        assertEquals(cannon.pin(atExperience(cannon, 0f)),
+                cannon.getOverloadCost(atExperience(cannon, 0f)), 0.0001f,
+                "et le surcout epingle pour seul prix");
+
+        // L'explosion : 80 a 150 points de degats, 12 a 15 de puissance.
+        assertBounds("degats du canon", 80f, 150f, cannon::damage, cannon);
+        assertBounds("puissance du canon", 12f, 15f, cannon::power, cannon);
+
+        // Et la recharge la plus longue du port : 50 secondes a zero, 30 au maximum.
+        assertBounds("recharge du canon", 1000f, 600f,
+                d -> (float) cannon.getCooldownTicks(d), cannon);
     }
 
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */

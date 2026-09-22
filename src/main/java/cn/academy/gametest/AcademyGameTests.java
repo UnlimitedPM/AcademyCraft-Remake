@@ -3180,6 +3180,114 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le canon a plasma : la charge se paie, le tir part, la boule vole et explose.
+     *
+     * <p>C'est la seule competence du port a trois temps, et le seul test qui va jusqu'au
+     * bout : la charge par tick, le relachement qui ne part que sur une charge complete, la
+     * boule posee quinze blocs au-dessus de la tete, le vol d'un bloc par tick, et ce qui
+     * reste de ce qu'elle a trouve.
+     *
+     * <p>Le point vise est un <b>mur de pierre</b> monte dix blocs devant, et pas une bete :
+     * un tir qui doit tomber sur une creature depend de ce que le rayon trouve sur sa route,
+     * et ce qu'il trouve — une bete projetee la par une execution precedente — n'est pas
+     * toujours la sienne. Vecu a la troisieme execution, ou le test a echoue sur la vie de sa
+     * cible sans rien dire d'autre. La bete du test est donc <b>a cote</b> du mur, dans le
+     * rayon de l'explosion.
+     *
+     * <p>L'altitude est un multiple de vingt qui n'appartient a personne : l'explosion est
+     * large de douze blocs, et un couloir voisin n'a rien a y faire.
+     */
+    @GameTest(template = "empty")
+    public static void leCanonAPlasmaTireEtExploseOuIlTombe(GameTestHelper helper) {
+        var cannon = cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON;
+        ServerLevel level = helper.getLevel();
+        int height = 180;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), height);
+
+        var player = ownPlayer(helper, "plasma-gunner");
+        clearCorridor(helper, abs, 20);
+        // Le regard a plat : c'est ainsi que le rayon touche le mur.
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        // Le mur : trois blocs de large sur trois de haut, a dix blocs devant. Le repere
+        // RELATIF compte la hauteur du test (voir le commentaire du sol du couloir).
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 2; dy++) {
+                helper.setBlock(new BlockPos(2 + dx, 1 + height + dy, 12),
+                        net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(cannon.getCategory(), 5);
+        data.learnSkill(cannon);
+        assertTrue(helper, data.perform(cannon.getCpCost(), cannon.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        cannon.onStart(player, data);
+        data.beginCharge(cannon);
+
+        // La boule est posee a l'appui, quinze blocs au-dessus de la tete.
+        var ball = data.getHoldPoint(cannon);
+        assertTrue(helper, ball != null, "la boule doit etre posee a l'ouverture");
+        assertClose(helper, abs.getY() + 15.0d, ball.y, "quinze blocs au-dessus de la tete");
+
+        // La bete, a cote du mur : elle ne gene pas la visee, et l'explosion la prend.
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 3.5, abs.getY(), abs.getZ() + 10.5, 0f, 0f);
+        level.addFreshEntity(zombie);
+        var zombiesAround = level.getEntitiesOfClass(
+                net.minecraft.world.entity.monster.Zombie.class,
+                new net.minecraft.world.phys.AABB(abs).inflate(30));
+        assertTrue(helper, zombiesAround.contains(zombie),
+                "la bete doit etre dans le monde : " + zombiesAround.size() + " betes autour");
+
+        // La charge : soixante ticks payes par tick, et rien de verse avant le tir.
+        double reserveBefore = data.getControlPoint();
+        for (int tick = 1; tick < 60; tick++) {
+            assertTrue(helper, cannon.onHoldTick(player, data, tick),
+                    "la charge tient au tick " + tick);
+        }
+        assertClose(helper, 0.0d, data.getSkillExp(cannon), "rien n'est verse avant le tir");
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 37f,
+                "et la charge se paie : " + data.getControlPoint());
+
+        // Le relachement, sur une charge complete : la boule part, et l'experience est versee.
+        assertTrue(helper, cannon.onRelease(player, data, 60),
+                "une charge complete fait partir la boule");
+        assertClose(helper, 0.008d, data.getSkillExp(cannon), "0,008 au tir");
+
+        // Et elle vise bien le mur : la face touchee est a dix blocs du joueur, et dans la
+        // largeur du mur. Sans cette assertion, un tir qui part ailleurs laisserait le test
+        // echouer sur la vie de sa cible, sans dire pourquoi.
+        var destination = data.getHoldOrigin(cannon);
+        assertTrue(helper, destination != null
+                        && Math.abs(destination.z - (abs.getZ() + 10.0)) < 0.01
+                        && Math.abs(destination.x - (abs.getX() + 0.5)) < 1.5,
+                "la boule doit viser le mur : " + destination);
+
+        // Le vol : un bloc par tick, et il finit sur le mur.
+        int flown = 0;
+        boolean flying = true;
+        while (flying && flown < 100) {
+            flown++;
+            flying = cannon.onHoldTick(player, data, 60 + flown);
+        }
+        assertFalse(helper, flying, "la boule finit par tomber");
+        assertTrue(helper, flown > 5, "et elle vole vraiment : " + flown + " ticks");
+        assertFalse(helper, zombie.isAlive(),
+                "ce qui se trouve a dix blocs de l'arrivee n'y survit pas");
+
+        // La fin ordinaire, avec la recharge la plus longue du port.
+        cn.academy.ability.AbilityEvents.endHeld(player, data, cannon);
+        assertTrue(helper, data.isOnCooldown(cannon), "et la recharge est posee");
+
+        zombie.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui

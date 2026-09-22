@@ -180,6 +180,14 @@ public class AbilityKeyBindings {
             InputConstants.KEY_HOME, "key.categories.academy");
 
     /**
+     * Le canon a plasma. Meme remarque que les ailes : il n'y a plus rien de libre, le systeme
+     * de presets de l'original reste a porter.
+     */
+    public static final KeyMapping ACTIVATE_PLASMA_CANNON = new KeyMapping(
+            "key.academy.activate_plasma_cannon", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_END, "key.categories.academy");
+
+    /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
      */
@@ -220,5 +228,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_VEC_DEVIATION);
         event.register(ACTIVATE_VEC_REFLECTION);
         event.register(ACTIVATE_STORM_WING);
+        event.register(ACTIVATE_PLASMA_CANNON);
     }
 }

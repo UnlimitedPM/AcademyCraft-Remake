@@ -84,7 +84,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_VEC_REFLECTION, VecmanipCategory.NAME,
                     "vec_reflection"),
             new Binding(AbilityKeyBindings.ACTIVATE_STORM_WING, VecmanipCategory.NAME,
-                    "storm_wing"));
+                    "storm_wing"),
+            new Binding(AbilityKeyBindings.ACTIVATE_PLASMA_CANNON, VecmanipCategory.NAME,
+                    "plasma_cannon"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
