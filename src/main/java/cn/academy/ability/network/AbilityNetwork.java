@@ -27,6 +27,10 @@ public class AbilityNetwork {
                 LocationTeleportPacket::encode, LocationTeleportPacket::decode, LocationTeleportPacket::handle);
         CHANNEL.registerMessage(nextId++, SyncAbilityDataPacket.class,
                 SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode, SyncAbilityDataPacket::handle);
+        // La detection de minerais est la seule competence qui ait besoin de dire quelque
+        // chose au client : c'est lui qui balaie le monde et l'allume.
+        CHANNEL.registerMessage(nextId++, MineDetectPacket.class,
+                MineDetectPacket::encode, MineDetectPacket::decode, MineDetectPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

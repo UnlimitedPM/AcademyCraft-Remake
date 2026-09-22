@@ -1139,6 +1139,36 @@ class SkillCurvesTest {
                 d -> (float) cannon.getCooldownTicks(d), cannon);
     }
 
+    /**
+     * La detection de minerais : la seule competence du port qui ne fait rien au monde.
+     */
+    @Test
+    void laDetectionDeMineraisPaieSonRegard() {
+        var detect = cn.academy.ability.electromaster.ElectromasterCategory.MINE_DETECT;
+
+        // Rien n'est declare au paquet : l'eclat decide, paie, et pose sa recharge — sinon
+        // un appui sans reserve couterait une attente pour un regard qui n'a pas eu lieu.
+        assertTrue(detect.paysOnEffect(), "c'est l'effet qui paie");
+        assertTrue(detect.earnsExpOnEffect(), "et qui verse l'experience");
+        assertEquals(0f, detect.getExpGain(atExperience(detect, 0f)), 0.000001f);
+        assertEquals(0f, detect.getCpCost(), 0.000001f, "aucun cout en reserve a l'appui");
+        assertEquals(0, detect.getCooldownTicks(atExperience(detect, 0f)),
+                "et aucune recharge posee par le paquet");
+
+        // Ce qu'il paie : 1500 a 1000 CP divises par 28, et 200 a 180 de surcout. Le prix
+        // baisse quand la portee grandit, ce qui est l'envers des habitudes.
+        assertBounds("cout de l'eclat", 53.57f, 35.71f, detect::consumption, detect);
+        assertBounds("surcout de l'eclat", 200f, 180f, detect::overload, detect);
+        assertBounds("portee de l'eclat", 15f, 30f, detect::range, detect);
+
+        // Quarante-cinq secondes d'attente au depart, vingt au maximum : c'est la deuxieme
+        // plus longue du port, apres le canon a plasma.
+        assertBounds("recharge de l'eclat", 900f, 400f, d -> (float) detect.cooldown(d), detect);
+
+        // L'eclat complet, lui, se mesure ailleurs : voir MineDetectTest.
+        assertFalse(detect.advanced(atExperience(detect, 0f), 0), "un novice ne l'a pas");
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,

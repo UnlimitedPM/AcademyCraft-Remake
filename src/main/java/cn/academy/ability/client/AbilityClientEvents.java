@@ -86,7 +86,9 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ACTIVATE_STORM_WING, VecmanipCategory.NAME,
                     "storm_wing"),
             new Binding(AbilityKeyBindings.ACTIVATE_PLASMA_CANNON, VecmanipCategory.NAME,
-                    "plasma_cannon"));
+                    "plasma_cannon"),
+            new Binding(AbilityKeyBindings.ACTIVATE_MINE_DETECT, ElectromasterCategory.NAME,
+                    "mine_detect"));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {

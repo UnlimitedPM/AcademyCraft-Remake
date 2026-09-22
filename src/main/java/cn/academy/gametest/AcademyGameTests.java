@@ -3288,6 +3288,93 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La detection de minerais : un eclat qui se paie, un regard qui a lieu, et rien du tout
+     * quand la reserve manque.
+     *
+     * <p>C'est la seule competence du port qui paie <b>dans son effet</b> : le paquet
+     * d'activation ne la touche pas. Le test tient donc les deux bouts — la reserve pleine, ou
+     * l'eclat aveugle et pose sa recharge ; la reserve vide, ou il ne se passe rien du tout.
+     */
+    @GameTest(template = "empty")
+    public static void laDetectionDeMineraisPaieSonRegard(GameTestHelper helper) {
+        var detect = cn.academy.ability.electromaster.ElectromasterCategory.MINE_DETECT;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 140);
+
+        var player = ownPlayer(helper, "ore-seer");
+        clearCorridor(helper, abs, 4);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(detect.getCategory(), 3);
+        data.learnSkill(detect);
+
+        double reserveBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
+        detect.onActivate(player, data);
+
+        var blindness = player.getEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
+        assertTrue(helper, blindness != null, "l'eclat aveugle un instant");
+        assertValue(helper, 100, blindness.getDuration(), "cent ticks, comme le regard");
+        assertClose(helper, 0.008d, data.getSkillExp(detect), "et verse 0,008 d'experience");
+        assertTrue(helper, data.isOnCooldown(detect), "puis pose sa recharge");
+        // Quarante-cinq secondes au depart, moins l'experience que l'eclat vient de verser :
+        // la recharge est lue APRES le gain, comme dans l'original, ou elle vaut donc 896 et
+        // non 900 des le premier eclat.
+        assertTrue(helper, data.getCooldown(detect) >= 895 && data.getCooldown(detect) <= 900,
+                "quarante-cinq secondes au depart : " + data.getCooldown(detect));
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 53f,
+                "1500 CP sur 2800 valent 53,57 : " + data.getControlPoint());
+        assertTrue(helper, data.getOverload() > overloadBefore + 199f,
+                "et 200 de surcout, verbatim : " + data.getOverload());
+
+        // Sans reserve : ni regard, ni experience, ni recharge. C'est tout l'interet du
+        // paiement dans l'effet, et c'est la moitie du test.
+        var poor = ownPlayer(helper, "ore-seer-poor");
+        poor.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var poorData = poor.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        poorData.setCategoryLevel(detect.getCategory(), 3);
+        poorData.learnSkill(detect);
+        while (poorData.getControlPoint() > 0f) {
+            assertTrue(helper, poorData.consumeControlPoint(poorData.getControlPoint()),
+                    "vider la reserve doit marcher");
+        }
+
+        detect.onActivate(poor, poorData);
+        assertFalse(helper, poor.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                "sans reserve, le regard n'a pas lieu");
+        assertClose(helper, 0.0d, poorData.getSkillExp(detect), "et rien n'est verse");
+        assertFalse(helper, poorData.isOnCooldown(detect), "ni aucune recharge");
+
+        // Ce que l'oeil sait reconnaitre, enfin : c'est le monde qui le dit, donc un GameTest.
+        var targets = cn.academy.ability.electromaster.MetalTargets.class;
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
+                        net.minecraft.world.level.block.Blocks.IRON_ORE.defaultBlockState()),
+                "un minerai de fer est un minerai");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
+                        net.minecraft.world.level.block.Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState()),
+                "et un minerai des profondeurs aussi");
+        assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
+                        net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()),
+                "la pierre n'en est pas un");
+        assertValue(helper, 0, cn.academy.ability.electromaster.MetalTargets.harvestTier(
+                net.minecraft.world.level.block.Blocks.COAL_ORE.defaultBlockState()),
+                "le charbon se creuse a la main");
+        assertValue(helper, 1, cn.academy.ability.electromaster.MetalTargets.harvestTier(
+                net.minecraft.world.level.block.Blocks.IRON_ORE.defaultBlockState()),
+                "le fer demande la pierre");
+        assertValue(helper, 2, cn.academy.ability.electromaster.MetalTargets.harvestTier(
+                net.minecraft.world.level.block.Blocks.DIAMOND_ORE.defaultBlockState()),
+                "le diamant demande le fer");
+        assertValue(helper, 3, cn.academy.ability.electromaster.MetalTargets.harvestTier(
+                net.minecraft.world.level.block.Blocks.OBSIDIAN.defaultBlockState()),
+                "et l'obsidienne demande le diamant");
+
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui

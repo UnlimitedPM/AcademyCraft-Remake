@@ -3,15 +3,18 @@ package cn.academy.ability.electromaster;
 import cn.academy.Config;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Ce que l'electromaster peut attirer : les blocs et les entites metalliques.
+ * Ce que l'electromaster peut attirer : les blocs et les entites metalliques, et ce que
+ * l'oeil de la detection de minerais reperera.
  *
  * <p>Portage de {@code CatElectromaster} : l'original tenait trois listes dans sa
  * config — blocs franchement metalliques, blocs faiblement metalliques, entites
@@ -21,11 +24,27 @@ import java.util.Set;
  * <p>Deux listes de blocs et pas une, parce que l'original distinguait les deux : sous
  * soixante pour cent d'experience, un debutant ne s'accroche qu'aux blocs franchement
  * metalliques. Un rail, oui ; une machine ou un minerai de fer, pas encore.
+ *
+ * <p>Et une quatrieme classification, qui n'a pas de liste : ce qui est un <b>minerai</b>.
+ * L'original le demandait au dictionnaire de minerais, en cherchant le mot « ore » dans ses
+ * noms — le port demande la meme chose au nom d'enregistrement du bloc, ce qui marche pour
+ * les minerais de la 1.20.1 comme pour ceux des autres mods.
  */
 public final class MetalTargets {
 
     /** Experience a partir de laquelle les blocs faiblement metalliques accrochent. */
     public static final float WEAK_EXP = 0.6f;
+
+    /**
+     * Les etiquettes de minerais de la 1.20.1.
+     *
+     * Elles ne servent qu'a couvrir ce que le nom ne dit pas — un bloc qui serait un minerai
+     * sans le mot dans son identifiant — mais elles ne coutent rien.
+     */
+    private static final List<net.minecraft.tags.TagKey<Block>> ORE_TAGS = List.of(
+            BlockTags.COAL_ORES, BlockTags.COPPER_ORES, BlockTags.DIAMOND_ORES,
+            BlockTags.EMERALD_ORES, BlockTags.GOLD_ORES, BlockTags.IRON_ORES,
+            BlockTags.LAPIS_ORES, BlockTags.REDSTONE_ORES);
 
     private static Set<Block> normal = Set.of();
     private static Set<Block> weak = Set.of();
@@ -73,6 +92,41 @@ public final class MetalTargets {
         ensureBuilt();
         ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
         return id != null && entities.contains(id);
+    }
+
+    /**
+     * Vrai si ce bloc est un minerai.
+     *
+     * Portage de {@code CatElectromaster.isOreBlock} : l'original regardait la classe du
+     * bloc, puis tous les noms que le dictionnaire de minerais lui donnait, et retenait ceux
+     * qui contenaient « ore ». Le port regarde le nom d'enregistrement, ce qui donne le meme
+     * resultat pour les minerais de la 1.20.1 — <code>iron_ore</code>,
+     * <code>deepslate_iron_ore</code>, <code>nether_quartz_ore</code> — et pour ceux des
+     * autres mods, qui suivent la meme convention. Les etiquettes completes viennent en
+     * secours, pour un minerai dont le nom ne dirait rien.
+     */
+    public static boolean isOreBlock(BlockState state) {
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
+        if (id != null && id.getPath().contains("ore")) return true;
+        for (net.minecraft.tags.TagKey<Block> tag : ORE_TAGS) {
+            if (state.is(tag)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Le palier de pioche d'un bloc, transpose des niveaux de la 1.12.2.
+     *
+     * C'est ce que la detection de minerais colore quand elle est complete : un minerai de
+     * charbon ne se creuse pas comme un minerai de diamant. Les etiquettes de la 1.20.1
+     * disent quelle pioche est <b>necessaire</b>, dans l'ordre : rien, la pierre, le fer, le
+     * diamant — les quatre niveaux de l'original.
+     */
+    public static int harvestTier(BlockState state) {
+        if (state.is(BlockTags.NEEDS_DIAMOND_TOOL)) return 3;
+        if (state.is(BlockTags.NEEDS_IRON_TOOL)) return 2;
+        if (state.is(BlockTags.NEEDS_STONE_TOOL)) return 1;
+        return 0;
     }
 
     private static void ensureBuilt() {

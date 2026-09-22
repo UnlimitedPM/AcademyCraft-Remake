@@ -188,6 +188,14 @@ public class AbilityKeyBindings {
             InputConstants.KEY_END, "key.categories.academy");
 
     /**
+     * La detection de minerais. Meme remarque que les autres : il n'y a plus rien de libre,
+     * le systeme de presets de l'original reste a porter.
+     */
+    public static final KeyMapping ACTIVATE_MINE_DETECT = new KeyMapping(
+            "key.academy.activate_mine_detect", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_PAGEUP, "key.categories.academy");
+
+    /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
      */
@@ -229,5 +237,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_VEC_REFLECTION);
         event.register(ACTIVATE_STORM_WING);
         event.register(ACTIVATE_PLASMA_CANNON);
+        event.register(ACTIVATE_MINE_DETECT);
     }
 }
