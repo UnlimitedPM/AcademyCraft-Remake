@@ -144,6 +144,26 @@ public final class Config {
                      "l'instant ; les rayons miniers, eux, cassaient sans rien demander.")
             .define("general.destroyBlocks", true);
 
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> AFFECTED_ENTITIES = BUILDER
+            .comment("Entites que vecmanip peut devier ou reflechir, avec leur difficulte.",
+                     "Ecriture : \"<id>=<difficulte>\", par exemple minecraft:arrow=1.0 ;",
+                     "un id seul vaut la difficulte par defaut, 1.0.",
+                     "La difficulte multiplie le cout en surcout et l'experience gagnee.",
+                     "Repris de ac.ability.category.vecmanip.common.affected_entities du 1.12.2,",
+                     "dont la liste d'objets n'a pas d'equivalent dans une config plate.")
+            .defineList("ability.affectedEntities",
+                    List.of("minecraft:arrow=1.0", "minecraft:potion=1.4", "minecraft:snowball=0.1"),
+                    o -> o instanceof String);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> EXCLUDED_ENTITIES = BUILDER
+            .comment("Entites que vecmanip ne touche jamais.",
+                     "Des ids d'entites, plus deux mots-cles : \"living\" (tout ce qui vit)",
+                     "et \"mob\" (les creatures). Repris de ...common.affected_entities.excluded,",
+                     "ou les deux mots-cles s'ecrivaient deja ainsi.")
+            .defineList("ability.excludedEntities",
+                    List.of("minecraft:item", "minecraft:xp_bottle", "living", "mob"),
+                    o -> o instanceof String);
+
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
     // Valeurs en cache, relues a chaque chargement/rechargement de la config.
@@ -164,6 +184,10 @@ public final class Config {
     public static List<String> metalBlocks = List.of();
     public static List<String> weakMetalBlocks = List.of();
     public static List<String> metalEntities = List.of();
+
+    /** Ce que vecmanip peut devier, et ce qu'il ne touche jamais. */
+    public static List<String> affectedEntities = List.of();
+    public static List<String> excludedEntities = List.of();
 
     /** Valeur de {@link #controlPointStart}, clampee sous le maximum. */
     public static float startingControlPoint() {
@@ -189,6 +213,8 @@ public final class Config {
         metalBlocks = List.copyOf(METAL_BLOCKS.get());
         weakMetalBlocks = List.copyOf(WEAK_METAL_BLOCKS.get());
         metalEntities = List.copyOf(METAL_ENTITIES.get());
+        affectedEntities = List.copyOf(AFFECTED_ENTITIES.get());
+        excludedEntities = List.copyOf(EXCLUDED_ENTITIES.get());
     }
 
     /**

@@ -970,6 +970,55 @@ class SkillCurvesTest {
         assertEquals(0f, blood.getExpGain(atExperience(blood, 0f)), 0.000001f);
     }
 
+    /**
+     * La deviation de vecteur : ce qu'elle coute, et ce qu'elle epargne.
+     */
+    @Test
+    void laDeviationCouteParTickEtEpargneDesDegats() {
+        var deviation = cn.academy.ability.vecmanip.VecmanipCategory.VEC_DEVIATION;
+
+        // Une competence tenue, sans duree : elle tient tant que la reserve suit.
+        assertTrue(deviation.isHeld(), "la deviation se tient");
+        assertEquals(0, deviation.getMaxHoldTicks(atExperience(deviation, 0f)),
+                "aucune duree programmee");
+
+        // Ses courbes : entretien 0,46 a 0,18 CP par tick (13 a 5 chez l'original, divises
+        // par 28), surcout epingle 80 a 50, et 15 a 12 de surcout par entite arretee.
+        assertBounds("entretien de vec_deviation", 0.46f, 0.18f, deviation::tickCost, deviation);
+        assertBounds("epingle de vec_deviation", 80f, 50f, deviation::pin, deviation);
+        assertBounds("surcout par entite", 15f, 12f, deviation::entityOverload, deviation);
+
+        // La reduction : de 40 % a 90 % des degats, payee 0,54 a 0,43 CP par coup encaisse,
+        // mais jamais plus que ce qu'il reste en reserve.
+        assertBounds("reduction de vec_deviation", 0.4f, 0.9f, deviation::reduction, deviation);
+        assertBounds("cout de la reduction", 0.54f, 0.43f, deviation::resistCost, deviation);
+
+        // La reserve borne la depense, dans les deux sens : avec de quoi payer, un coup
+        // encaisse coute le prix du palier et pas la reserve entiere ; a sec, il ne coute
+        // que ce qu'il reste — c'est le `min` de l'original, et c'est ce qui fait qu'un
+        // dernier coup encaisse ne laisse pas de dette.
+        AbilityData rich = atExperience(deviation, 0f);
+        assertEquals(0.54f, deviation.resistCharge(rich), 0.0001f,
+                "avec de quoi payer, le coup coute le prix du palier");
+
+        AbilityData poor = atExperience(deviation, 0f);
+        assertTrue(poor.consumeControlPoint(100f), "vider la reserve doit marcher");
+        assertEquals(0f, poor.getControlPoint(), 0.0001f, "la reserve doit etre vide");
+        assertEquals(0f, deviation.resistCharge(poor), 0.0001f,
+                "une reserve vide ne paie rien du tout");
+
+        // Le prix d'ouverture est le surcout epingle, et rien d'autre ; la recharge, elle,
+        // n'existe pas : c'est un maintien.
+        assertEquals(0f, deviation.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
+        assertEquals(deviation.pin(atExperience(deviation, 0f)),
+                deviation.getOverloadCost(atExperience(deviation, 0f)), 0.0001f,
+                "et le surcout epingle pour seul prix");
+        assertEquals(0, deviation.getCooldownTicks(atExperience(deviation, 0f)),
+                "aucune recharge : le maintien se termine et se reprend");
+        assertTrue(deviation.earnsExpOnEffect(), "tout est verse par ce que la veille arrete");
+        assertEquals(0f, deviation.getExpGain(atExperience(deviation, 0f)), 0.000001f);
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,

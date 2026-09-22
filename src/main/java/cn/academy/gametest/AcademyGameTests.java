@@ -1531,15 +1531,18 @@ public final class AcademyGameTests {
                 "une competence deja apprise ne se reapprend pas");
 
         // Le niveau ne monte plus tout seul : il faut avoir rempli le palier en
-        // utilisant ses competences. vecmanip au niveau 2 n'a qu'une competence
-        // utilisable — vec_accel, celle qui vient d'etre apprise — donc le palier
-        // vaut 1 * 0,666, et l'avancement est encore a zero.
+        // utilisant ses competences. vecmanip au niveau 2 a maintenant DEUX competences
+        // utilisables — vec_accel et vec_deviation — donc le palier vaut 2 * 0,666,
+        // et l'avancement est encore a zero.
         assertFalse(helper, developer.startDeveloping(player, category.getCategoryId()),
                 "sans avancement, la categorie ne doit pas monter");
 
-        // Un usage d'experience, comme le ferait l'activation de la competence.
+        // Un usage d'experience, comme le ferait l'activation de la competence. 1,5 et
+        // non 1,0 : l'experience d'une competence plafonne a 1, mais l'avancement du
+        // niveau recoit le montant complet — c'est ce qui permet de franchir un palier
+        // de plus d'un point.
         player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
-                .ifPresent(data -> data.addSkillExp(skill, 1f));
+                .ifPresent(data -> data.addSkillExp(skill, 1.5f));
 
         assertTrue(helper, developer.startDeveloping(player, category.getCategoryId()),
                 "une fois le palier rempli, la categorie monte");
@@ -2687,6 +2690,175 @@ public final class AcademyGameTests {
         assertClose(helper, emptyOverload, empty.getOverload(), "ni de surcout charge");
 
         golem.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Ce que vecmanip accepte de toucher, et a quel prix.
+     *
+     * <p>La classification demande les registres du jeu — donc un GameTest — et c'est elle qui
+     * decide de tout : ce qui est arrete, ce qui est ignore, et ce que chaque prise coute. Elle
+     * se lit dans les registres, jamais en dur, et une entree de config mal ecrite ne doit pas
+     * la faire tomber.
+     *
+     * <p>Le cas de la potion est le plus interessant : sa difficulte de 1,4 ne peut venir que
+     * de la <b>deuxieme</b> entree de la config, donc ce test dit aussi que toute la liste est
+     * lue — l'original, lui, n'en gardait qu'une.
+     */
+    @GameTest(template = "empty")
+    public static void lesEntitesDevieesSontCellesDeLaConfig(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 300);
+
+        var player = ownPlayer(helper, "classifier");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        // Les trois entrees de la config par defaut.
+        var arrow = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        arrow.moveTo(abs.getX(), abs.getY(), abs.getZ(), 0f, 0f);
+        assertClose(helper, 1.0d,
+                cn.academy.ability.vecmanip.EntityAffection.affect(arrow).difficulty(),
+                "une fleche vaut 1,0");
+
+        var potion = new net.minecraft.world.entity.projectile.ThrownPotion(
+                net.minecraft.world.entity.EntityType.POTION, level);
+        potion.moveTo(abs.getX(), abs.getY(), abs.getZ(), 0f, 0f);
+        assertClose(helper, 1.4d,
+                cn.academy.ability.vecmanip.EntityAffection.affect(potion).difficulty(),
+                "une potion vaut 1,4 : la deuxieme entree de la config est donc lue");
+
+        var snowball = new net.minecraft.world.entity.projectile.Snowball(
+                net.minecraft.world.entity.EntityType.SNOWBALL, level);
+        snowball.moveTo(abs.getX(), abs.getY(), abs.getZ(), 0f, 0f);
+        assertClose(helper, 0.1d,
+                cn.academy.ability.vecmanip.EntityAffection.affect(snowball).difficulty(),
+                "une boule de neige ne vaut presque rien");
+
+        // Rien de vivant : c'est la liste d'exclusion de l'original, ou "living" et "mob"
+        // etaient deja ecrits ainsi. On arrete ce qui vole, pas ce qui marche.
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.affect(zombie).excluded(),
+                "une creature est exclue");
+        var cow = new net.minecraft.world.entity.animal.Cow(
+                net.minecraft.world.entity.EntityType.COW, level);
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.affect(cow).excluded(),
+                "et une bete aussi : tout ce qui vit est exclu");
+
+        var loose = new net.minecraft.world.entity.item.ItemEntity(level, abs.getX(), abs.getY(),
+                abs.getZ(), new ItemStack(net.minecraft.world.item.Items.STONE, 1));
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.affect(loose).excluded(),
+                "un objet au sol est exclu par son nom");
+
+        // Ni vivant ni exclu, ni dans la liste : la difficulte par defaut, 1,0.
+        var boat = new net.minecraft.world.entity.vehicle.Boat(
+                net.minecraft.world.entity.EntityType.BOAT, level);
+        boat.moveTo(abs.getX(), abs.getY(), abs.getZ(), 0f, 0f);
+        var affect = cn.academy.ability.vecmanip.EntityAffection.affect(boat);
+        assertFalse(helper, affect.excluded(), "une barque n'est pas exclue");
+        assertClose(helper, 1.0d, affect.difficulty(), "et vaut la difficulte par defaut");
+
+        // Le repere : une entite deviee le reste, meme apres un tour dans son NBT.
+        assertFalse(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(boat),
+                "rien n'est marque au depart");
+        cn.academy.ability.vecmanip.EntityAffection.mark(boat);
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(boat),
+                "et le repere tient");
+        var tag = boat.getPersistentData().copy();
+        assertTrue(helper, tag.getBoolean("ac_vm_deviated"),
+                "le repere est bien le tag de l'original : " + tag);
+
+        helper.succeed();
+    }
+
+    /**
+     * La veille de la deviation : ce qu'elle arrete, ce qu'elle ignore, et ce qu'elle coute.
+     *
+     * <p>Trois entites autour du joueur, dont une seule doit bouger : une fleche (arretee et
+     * marquee), une creature et un objet au sol (exclus, donc intacts). Le deuxieme tick
+     * verifie le repere : une entite deja deviee ne rapporte plus rien.
+     *
+     * <p>La reduction de degats se lit juste apres, sur le meme maintien : c'est le m\u00eame
+     * etat qui l'autorise, un maintien ouvert, et le test le dit en la lisant par
+     * {@code AbilityEvents} — le crochet par lequel le jeu la declenche.
+     */
+    @GameTest(template = "empty")
+    public static void laDeviationArreteCeQuiEntreEtAmortitLesCoups(GameTestHelper helper) {
+        var deviation = cn.academy.ability.vecmanip.VecmanipCategory.VEC_DEVIATION;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 340);
+
+        var player = ownPlayer(helper, "deviator");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        clearCorridor(helper, abs, 10);
+
+        // Un maintien ouvert, comme le paquet l'ouvre : c'est lui qui autorise tout.
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(deviation.getCategory(), 2);
+        data.learnSkill(deviation);
+        deviation.onStart(player, data);
+        data.beginCharge(deviation);
+
+        var arrow = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        arrow.moveTo(abs.getX() + 0.5, abs.getY() + 1.0, abs.getZ() + 3.0, 0f, 0f);
+        arrow.setDeltaMovement(0.0, 0.0, -1.0);
+        level.addFreshEntity(arrow);
+
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 2.5, 0f, 0f);
+        zombie.setDeltaMovement(0.0, 0.0, -1.0);
+        level.addFreshEntity(zombie);
+
+        double reserveBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
+        assertTrue(helper, deviation.onHoldTick(player, data, 1), "la veille doit tenir");
+
+        // La fleche : arretee net, et marquee.
+        assertClose(helper, 0d, arrow.getDeltaMovement().length(), "la fleche doit etre arretee");
+        assertClose(helper, 0.0d, arrow.getBaseDamage(), "et ne plus pouvoir blesser personne");
+        assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(arrow),
+                "et elle est marquee comme deviee");
+        assertClose(helper, 0.001d, data.getSkillExp(deviation),
+                "0,001 par point de difficulte : une fleche vaut 1,0");
+
+        // La creature et la bete, elles, n'ont pas bouge : elles sont exclues.
+        assertClose(helper, -1.0d, zombie.getDeltaMovement().z, "une creature n'est pas arretee");
+        assertFalse(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(zombie),
+                "et elle n'est pas marquee");
+
+        // Le deuxieme tick ne rapporte plus rien : la fleche est marquee.
+        assertTrue(helper, deviation.onHoldTick(player, data, 2), "la veille tient toujours");
+        assertClose(helper, 0.001d, data.getSkillExp(deviation),
+                "une entite deja deviee ne rapporte plus d'experience");
+        assertTrue(helper, data.getOverload() > overloadBefore + 14f,
+                "chaque prise se paie en surcout : " + data.getOverload());
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 0.9f,
+                "et l'entretien se paie par tick : " + data.getControlPoint());
+
+        // La reduction de degats, par le crochet du jeu. Le gain d'experience du coup est
+        // verse AVANT que la reduction ne soit calculee, comme dans l'original : le coup
+        // s'amortit donc avec l'experience qu'il vient de donner, et 10 points tombent a
+        // 5,965 et non a 6 — a 0,001 d'experience la part epargnee vaut 0,4035.
+        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().generic(), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
+        assertTrue(helper, Math.abs(5.965f - hurt.getAmount()) < 0.01f,
+                "10 points doivent tomber a 5,965 : la deviation epargne 40 %");
+
+        // Et hors du maintien, elle ne fait plus rien du tout.
+        data.cancelCharge(deviation);
+        var after = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().generic(), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(after);
+        assertClose(helper, 10.0d, after.getAmount(),
+                "sans maintien, les degats passent entiers");
+
+        arrow.discard();
+        zombie.discard();
         helper.succeed();
     }
 

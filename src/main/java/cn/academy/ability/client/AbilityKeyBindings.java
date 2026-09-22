@@ -156,6 +156,11 @@ public class AbilityKeyBindings {
             "key.academy.activate_blood_retro", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
             InputConstants.KEY_BACKSLASH, "key.categories.academy");
 
+    /** La deviation de vecteur : une veille qui tient tant que la reserve suit. */
+    public static final KeyMapping ACTIVATE_VEC_DEVIATION = new KeyMapping(
+            "key.academy.activate_vec_deviation", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_GRAVE, "key.categories.academy");
+
     /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
@@ -194,5 +199,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_GROUNDSHOCK);
         event.register(ACTIVATE_DIRECTED_BLASTWAVE);
         event.register(ACTIVATE_BLOOD_RETROGRADE);
+        event.register(ACTIVATE_VEC_DEVIATION);
     }
 }

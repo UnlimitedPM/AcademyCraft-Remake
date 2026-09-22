@@ -14,6 +14,7 @@ public class VecmanipCategory extends Category {
     public static final BloodRetrogradeSkill BLOOD_RETROGRADE = new BloodRetrogradeSkill();
     public static final VecReflectionSkill VEC_REFLECTION = new VecReflectionSkill();
     public static final VecAccelSkill VEC_ACCEL = new VecAccelSkill();
+    public static final VecDeviationSkill VEC_DEVIATION = new VecDeviationSkill();
 
     public static final VecmanipCategory INSTANCE = new VecmanipCategory();
 
@@ -25,6 +26,7 @@ public class VecmanipCategory extends Category {
         addSkill(BLOOD_RETROGRADE);
         addSkill(VEC_REFLECTION);
         addSkill(VEC_ACCEL);
+        addSkill(VEC_DEVIATION);
 
         // L'arbre de l'original part du choc dirige : c'est lui qui apprend a pousser, et
         // tout vecmanip en descend. L'acceleration de vecteur et l'onde de choc lui doivent
@@ -35,5 +37,8 @@ public class VecmanipCategory extends Category {
         GROUNDSHOCK.setParent(DIRECTED_SHOCK);
         DIRECTED_BLASTWAVE.setParent(GROUNDSHOCK);
         BLOOD_RETROGRADE.setParent(DIRECTED_BLASTWAVE);
+        // La deviation descend de l'acceleration : on n'apprend pas a arreter ce qui vole
+        // avant d'avoir appris a se propulser soi-meme.
+        VEC_DEVIATION.setParent(VEC_ACCEL);
     }
 }
