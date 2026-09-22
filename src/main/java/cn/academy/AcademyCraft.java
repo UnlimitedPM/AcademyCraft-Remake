@@ -27,6 +27,7 @@ public class AcademyCraft {
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
         ModEntities.register(modEventBus);
+        ModSounds.register(modEventBus);
         ModBlockEntities.register(modEventBus); // <-- LA LIGNE MAGIQUE QUI MANQUAIT
         ModCreativeTabs.register(modEventBus);
         ModMenus.register(modEventBus);

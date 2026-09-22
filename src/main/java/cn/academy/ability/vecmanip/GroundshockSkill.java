@@ -234,6 +234,11 @@ public class GroundshockSkill extends Skill {
 
         new Shock(level, player, data, this).cast();
 
+        // Le volume 2 de l'original : l'onde de choc est la competence la plus bruyante
+        // de la categorie, et c'est voulu.
+        cn.academy.sound.AcademySounds.playFor(player,
+                cn.academy.ModSounds.VECMANIP_GROUNDSHOCK, 2f);
+
         data.addSkillExp(this, CAST_EXP);
         data.setCooldown(this, cooldown(data));
     }

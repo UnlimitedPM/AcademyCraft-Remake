@@ -158,6 +158,9 @@ public class BloodRetrogradeSkill extends Skill {
         if (!data.perform(consumption(data), overload(data))) return;
 
         target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        // Le son du coup, entendu du seul joueur qui l'a porte : c'est le
+        // `playClient(player, "vecmanip.blood_retro", AMBIENT, 1.0f)` de l'original.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_BLOOD_RETRO, 1f);
         data.addSkillExp(this, EXP);
         data.setCooldown(this, cooldown(data));
     }

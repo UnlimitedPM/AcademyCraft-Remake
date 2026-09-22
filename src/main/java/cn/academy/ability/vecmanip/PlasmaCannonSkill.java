@@ -270,6 +270,11 @@ public class PlasmaCannonSkill extends Skill {
         if (heldTicks < chargeTicks(data)) return false;
         if (!(player.level() instanceof ServerLevel level)) return false;
 
+        // Le son de la charge qui s'acheve : l'original le jouait au tick ou son compteur
+        // atteignait le temps de charge, c'est-a-dire a ce moment precis.
+        cn.academy.sound.AcademySounds.playFor(player,
+                cn.academy.ModSounds.VECMANIP_PLASMA_CANNON_T, 0.5f);
+
         data.addSkillExp(this, EXP_PER_SHOT);
         data.setHoldOrigin(this, aim(level, player));
         data.setHoldMark(this, heldTicks);

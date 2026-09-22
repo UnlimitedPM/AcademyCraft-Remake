@@ -267,6 +267,11 @@ public class DirectedBlastwaveSkill extends Skill {
     private void blast(ServerLevel level, Player player, AbilityData data, Vec3 point) {
         boolean effective = false;
 
+        // Le son part du centre de l'onde, comme dans l'original : c'est la seule des
+        // competences de vecmanip qui se fait entendre dans le monde plutot qu'au joueur.
+        cn.academy.sound.AcademySounds.playAt(level, point,
+                cn.academy.ModSounds.VECMANIP_DIRECTED_BLAST, 0.5f, 1.0f);
+
         // D'abord les corps : tous ceux du cube, vivants ou non.
         AABB box = new AABB(point.x - BLAST_RANGE, point.y - BLAST_RANGE, point.z - BLAST_RANGE,
                 point.x + BLAST_RANGE, point.y + BLAST_RANGE, point.z + BLAST_RANGE);

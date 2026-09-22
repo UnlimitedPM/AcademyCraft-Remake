@@ -209,6 +209,12 @@ public class VecDeviationSkill extends Skill {
             // et refuser ici laisserait passer ce qu'on a promis d'arreter.
             data.performForced(0f, entityOverload(data));
             stop(level, entity);
+
+            // Le son se pose sur l'entite arretee, comme le `MSG_PLAY` de l'original :
+            // c'est ce qui donne a la veille son rythme de petits claquements.
+            cn.academy.sound.AcademySounds.playAt(level, entity.position(),
+                    cn.academy.ModSounds.VECMANIP_VEC_DEVIATION, 0.5f, 1.0f);
+
             data.addSkillExp(this, EXP_PER_DIFFICULTY * affect.difficulty());
         }
         return true;

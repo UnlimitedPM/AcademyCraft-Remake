@@ -1684,6 +1684,45 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Les evenements de son annonces et enregistres sont les memes.
+     *
+     * <p>Un son se declare deux fois : dans {@code sounds.json}, qui dit quels fichiers
+     * jouer, et dans le registre, qui lui donne un nom. Un evenement enregistre mais absent
+     * du fichier se joue dans un <b>silence total</b>, sans la moindre erreur — et
+     * l'inverse, un evenement annonce mais non enregistre, ne se joue pas du tout. JUnit
+     * relit bien le fichier, mais il ne peut pas interroger le registre : c'est donc ici, et
+     * nulle part ailleurs, que les deux listes se rencontrent.
+     */
+    @GameTest(template = "empty")
+    public static void lesSonsDeclaresSontCeuxDuRegistre(GameTestHelper helper) {
+        var declared = new java.util.TreeSet<String>();
+        try (var in = AcademyGameTests.class.getResourceAsStream("/assets/academy/sounds.json")) {
+            if (in == null) throw new IllegalStateException("sounds.json doit etre livre");
+            var reader = new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8);
+            var root = com.google.gson.JsonParser.parseReader(reader);
+            for (var entry : root.getAsJsonObject().entrySet()) {
+                declared.add(entry.getKey());
+            }
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("sounds.json doit se lire", e);
+        }
+
+        var registered = new java.util.TreeSet<String>();
+        for (var holder : cn.academy.ModSounds.all()) {
+            assertTrue(helper, holder.isPresent(),
+                    "l'evenement doit etre enregistre : " + holder.getId());
+            registered.add(holder.getId().getPath());
+        }
+
+        assertValue(helper, 44, registered.size(), "les evenements de l'original");
+        assertTrue(helper, declared.equals(registered),
+                "chaque evenement annonce doit etre enregistre, et l'inverse : annonces "
+                        + declared + ", enregistres " + registered);
+
+        helper.succeed();
+    }
+
     /** Niveau d'une categorie, pose directement : c'est le developpeur qui le monte en jeu. */
     private static void setCategoryLevel(Player player, cn.academy.ability.Category category, int level) {
         player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)

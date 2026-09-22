@@ -82,5 +82,7 @@ public class VecAccelSkill extends Skill {
         player.setDeltaMovement(new Vec3(x, y, z).normalize().scale(speed(data)));
         player.fallDistance = 0;
         player.hurtMarked = true;
+
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_VEC_ACCEL, 0.35f);
     }
 }

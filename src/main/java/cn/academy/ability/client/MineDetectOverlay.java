@@ -58,6 +58,10 @@ public final class MineDetectOverlay {
         MineDetectOverlay.advanced = advanced;
         scanCooldown = 0;
         ores = List.of();
+
+        // Le son de l'eclat, chez le seul joueur concerne : l'original le jouait dans le
+        // meme gestionnaire client, sur le meme message.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_MINEDETECT, 0.5f);
     }
 
     /** Vrai tant que l'eclat dure. */

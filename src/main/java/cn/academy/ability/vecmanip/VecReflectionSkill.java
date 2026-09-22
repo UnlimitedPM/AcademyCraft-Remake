@@ -238,6 +238,12 @@ public class VecReflectionSkill extends Skill {
                         entity.getDeltaMovement().length()));
                 EntityAffection.mark(entity);
             }
+
+            // Le son se pose sur ce qui vient d'etre retourne, comme la soeur inverse de la
+            // veille : l'original envoyait le meme message d'effet, a la meme position.
+            cn.academy.sound.AcademySounds.playAt(level, entity.position(),
+                    cn.academy.ModSounds.VECMANIP_VEC_REFLECTION, 0.5f, 1.0f);
+
             data.addSkillExp(this, EXP_PER_DIFFICULTY * affect.difficulty());
         }
         return true;
