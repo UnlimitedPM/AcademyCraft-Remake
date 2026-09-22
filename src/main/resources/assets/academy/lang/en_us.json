@@ -113,6 +113,9 @@
   "academy.developer.state.failed": "Failed",
   "academy.developer.state.done": "Done",
 
+  "academy.phase_generator.state.on": "Running",
+  "academy.phase_generator.state.off": "Idle",
+
 
 
   "itemGroup.academy_tab": "AcademyCraft Remake"

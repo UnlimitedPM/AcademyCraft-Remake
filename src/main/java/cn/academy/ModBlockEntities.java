@@ -81,6 +81,11 @@ public class ModBlockEntities {
                                     cn.academy.ability.develop.DeveloperType.ADVANCED),
                             ModBlocks.DEV_ADVANCED.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<PhaseGeneratorBlockEntity>> PHASE_GENERATOR =
+            BLOCK_ENTITIES.register("phase_generator", () ->
+                    BlockEntityType.Builder.of(PhaseGeneratorBlockEntity::new,
+                            ModBlocks.PHASE_GENERATOR.get()).build(null));
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

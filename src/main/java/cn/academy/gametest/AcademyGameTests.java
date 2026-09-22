@@ -7,6 +7,8 @@ import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ModBlocks;
 import cn.academy.ModFluids;
 import cn.academy.ModItems;
+import cn.academy.PhaseGeneratorBlock;
+import cn.academy.PhaseGeneratorBlockEntity;
 import cn.academy.WindgenBaseBlockEntity;
 import cn.academy.WindgenMainBlockEntity;
 import cn.academy.energy.ImagNetworkData;
@@ -1450,6 +1452,158 @@ public final class AcademyGameTests {
         return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .map(data -> data.getCategoryLevel(category))
                 .orElse(0);
+    }
+
+    // ------------------------------------------------------------------
+    // Reseau energetique : le generateur de phase
+    // ------------------------------------------------------------------
+
+    @GameTest(template = "empty")
+    public static void phaseGeneratorBurnsLiquidIntoEnergy(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.PHASE_GENERATOR.get());
+        var generator = (PhaseGeneratorBlockEntity) helper.getBlockEntity(rel);
+
+        // Valeurs de TilePhaseGen : tampon 6000, bande passante LATENCY_MK1 = 50,
+        // cuve 8000, 100 mB par tick a 0,5 d'energie par millibassin, soit 50.
+        assertValue(helper, 6000, generator.getMaxEnergyStored(), "tampon du generateur de phase");
+        assertClose(helper, 50.0d, generator.getBandwidth(), "bande passante");
+        assertValue(helper, 8000, generator.getTankSize(), "capacite de la cuve");
+        assertValue(helper, 100, PhaseGeneratorBlockEntity.CONSUME_PER_TICK, "phase par tick");
+        assertClose(helper, 0.5d, PhaseGeneratorBlockEntity.GEN_PER_MB, "energie par millibassin");
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        assertFalse(helper, generator.isProducing(), "une cuve vide ne produit rien");
+        for (int i = 0; i < 20; i++) {
+            PhaseGeneratorBlockEntity.tick(level, abs, helper.getBlockState(rel), generator);
+        }
+        assertClose(helper, 0.0d, generator.getEnergy(), "sans phase, rien ne se produit");
+
+        // 1000 mB de phase, de quoi tenir 10 ticks a 100 mB par tick.
+        generator.setLiquidAmount(1000);
+        assertTrue(helper, generator.isProducing(), "avec de la phase, la machine produit");
+
+        for (int i = 0; i < 10; i++) {
+            PhaseGeneratorBlockEntity.tick(level, abs, helper.getBlockState(rel), generator);
+        }
+        assertClose(helper, 500.0d, generator.getEnergy(), "10 ticks a 50 d'energie");
+        assertValue(helper, 0, generator.getLiquidAmount(), "toute la phase doit avoir brule");
+        assertFalse(helper, generator.isProducing(), "plus de phase, plus de production");
+        helper.succeed();
+    }
+
+    /** Un tampon plein ne doit pas bruler de phase pour rien. */
+    @GameTest(template = "empty")
+    public static void phaseGeneratorStopsWhenItsBufferIsFull(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.PHASE_GENERATOR.get());
+        var generator = (PhaseGeneratorBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        generator.setLiquidAmount(1000);
+        generator.setEnergy(6000.0d);
+
+        for (int i = 0; i < 20; i++) {
+            PhaseGeneratorBlockEntity.tick(level, abs, helper.getBlockState(rel), generator);
+        }
+
+        assertValue(helper, 1000, generator.getLiquidAmount(),
+                "un tampon plein ne doit pas consommer de phase");
+        assertClose(helper, 6000.0d, generator.getEnergy(), "le tampon reste plein");
+        helper.succeed();
+    }
+
+    /** Les unites de phase fondent dans la cuve et ressortent vides. */
+    @GameTest(template = "empty")
+    public static void phaseGeneratorMeltsPhaseUnits(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.PHASE_GENERATOR.get());
+        var generator = (PhaseGeneratorBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        generator.getInventory().setStackInSlot(PhaseGeneratorBlockEntity.SLOT_LIQUID_IN,
+                new ItemStack(ModItems.MATTER_UNIT_PHASE.get(), 2));
+        // Le tampon est rempli pour que rien ne soit brule pendant la fonte : sinon
+        // la cuve se viderait au fur et a mesure et le compte serait faux.
+        generator.setEnergy(6000.0d);
+
+        // Deux ticks suffisent : une unite par tick.
+        PhaseGeneratorBlockEntity.tick(level, abs, helper.getBlockState(rel), generator);
+        PhaseGeneratorBlockEntity.tick(level, abs, helper.getBlockState(rel), generator);
+
+        assertValue(helper, 2000, generator.getLiquidAmount(), "deux unites fondues");
+        ItemStack empties = generator.getInventory().getStackInSlot(PhaseGeneratorBlockEntity.SLOT_LIQUID_OUT);
+        assertValue(helper, ModItems.MATTER_UNIT.get(), empties.getItem(), "unite vide rendue");
+        assertValue(helper, 2, empties.getCount(), "deux unites vides rendues");
+        helper.succeed();
+    }
+
+    /** Le palier de texture suit le remplissage de la cuve. */
+    @GameTest(template = "empty")
+    public static void phaseGeneratorShowsItsTankOnTheBlock(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.PHASE_GENERATOR.get());
+        var generator = (PhaseGeneratorBlockEntity) helper.getBlockEntity(rel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(rel);
+
+        assertValue(helper, 0, PhaseGeneratorBlockEntity.levelFor(0), "cuve vide");
+        assertValue(helper, 2, PhaseGeneratorBlockEntity.levelFor(4000), "cuve a moitie");
+        assertValue(helper, 4, PhaseGeneratorBlockEntity.levelFor(8000), "cuve pleine");
+
+        generator.setLiquidAmount(8000);
+        generator.setEnergy(6000.0d);
+        for (int i = 0; i < 10; i++) {
+            PhaseGeneratorBlockEntity.tick(level, abs, helper.getBlockState(rel), generator);
+        }
+
+        assertValue(helper, 4, helper.getBlockState(rel).getValue(PhaseGeneratorBlock.LEVEL),
+                "le bloc doit montrer la cuve pleine");
+        helper.succeed();
+    }
+
+    /** Le test de bout en bout : le generateur alimente le noeud. */
+    @GameTest(template = "empty")
+    public static void phaseGeneratorFeedsItsNode(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos generatorRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(generatorRel, ModBlocks.PHASE_GENERATOR.get());
+        var node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+        var generator = (PhaseGeneratorBlockEntity) helper.getBlockEntity(generatorRel);
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos generatorAbs = helper.absolutePos(generatorRel);
+
+        for (int i = 0; i < 100; i++) {
+            PhaseGeneratorBlockEntity.tick(level, generatorAbs, helper.getBlockState(generatorRel), generator);
+        }
+        assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(generatorAbs),
+                "le generateur doit avoir trouve le noeud tout seul");
+
+        // On fixe la cuve et le tampon : la production reelle depend de la quantite
+        // de phase restante, qu'on ne veut pas avoir a suivre ici.
+        generator.setLiquidAmount(8000);
+        node.setEnergy(0.0d);
+
+        for (int i = 0; i < 20; i++) {
+            PhaseGeneratorBlockEntity.tick(level, generatorAbs, helper.getBlockState(generatorRel), generator);
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+
+        assertClose(helper, 1000.0d, node.getEnergy(), "20 ticks a 50 d'energie");
+        assertValue(helper, 6000, generator.getLiquidAmount(),
+                "2000 mB doivent avoir brule, soit 1000 d'energie");
+        helper.succeed();
     }
 
     @GameTest(template = "empty")
