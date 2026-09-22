@@ -15,6 +15,7 @@ public class ElectromasterCategory extends Category {
     public static final ChargingSkill CHARGING = new ChargingSkill();
     public static final MagMovementSkill MAG_MOVEMENT = new MagMovementSkill();
     public static final MineDetectSkill MINE_DETECT = new MineDetectSkill();
+    public static final MagManipSkill MAG_MANIP = new MagManipSkill();
 
     public static final ElectromasterCategory INSTANCE = new ElectromasterCategory();
 
@@ -28,6 +29,7 @@ public class ElectromasterCategory extends Category {
         addSkill(CHARGING);
         addSkill(MAG_MOVEMENT);
         addSkill(MINE_DETECT);
+        addSkill(MAG_MANIP);
 
         // Les dependances de l'original dont les deux bouts sont portes. Les autres
         // chaines passent par des competences qui n'existent pas encore ici (mag_manip,
@@ -46,8 +48,11 @@ public class ElectromasterCategory extends Category {
         CHARGING.setParent(ARC_GEN, 0.3f);
         // La traction : l'original la demandait sans seuil d'experience dans l'arc.
         MAG_MOVEMENT.setParent(ARC_GEN);
+        // La manipulation d'un bloc descend de la traction, et l'original demandait la
+        // moitie de son experience : on n'arrache pas un bloc avant d'avoir appris a s'y
+        // accrocher.
+        MAG_MANIP.setParent(MAG_MOVEMENT, 0.5f);
         // La detection de minerais descend de mag_manip dans l'original, avec toute son
-        // experience : elle n'est pas portee, et une dependance vers une competence absente
-        // rendrait celle-ci inapprenable pour toujours. Sa parente sera reposee avec elle.
+        // experience : le port ne l'a pas encore reposee, donc elle n'a pas de parent.
     }
 }

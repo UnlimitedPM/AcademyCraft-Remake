@@ -196,6 +196,14 @@ public class AbilityKeyBindings {
             InputConstants.KEY_PAGEUP, "key.categories.academy");
 
     /**
+     * La manipulation d'un bloc. Il ne reste que les touches de defilement, et celle-ci se
+     * tient pendant qu'on vise. Le systeme de presets de l'original reste a porter.
+     */
+    public static final KeyMapping ACTIVATE_MAG_MANIP = new KeyMapping(
+            "key.academy.activate_mag_manip", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            InputConstants.KEY_PAGEDOWN, "key.categories.academy");
+
+    /**
      * La teleportation a la marque. Sa touche n'allume rien : elle ouvre la liste des
      * endroits marques, et c'est un clic qui fait partir.
      */
@@ -238,5 +246,6 @@ public class AbilityKeyBindings {
         event.register(ACTIVATE_STORM_WING);
         event.register(ACTIVATE_PLASMA_CANNON);
         event.register(ACTIVATE_MINE_DETECT);
+        event.register(ACTIVATE_MAG_MANIP);
     }
 }

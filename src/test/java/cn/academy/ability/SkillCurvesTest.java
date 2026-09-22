@@ -1169,6 +1169,33 @@ class SkillCurvesTest {
         assertFalse(detect.advanced(atExperience(detect, 0f), 0), "un novice ne l'a pas");
     }
 
+    /**
+     * La manipulation d'un bloc : ce que coute un lancer, et rien avant.
+     */
+    @Test
+    void laManipulationDUnBlocPaieSonLancer() {
+        var manip = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+
+        // Une competence tenue, qui ne paie rien tant que le bloc est tenu : c'est le lancer
+        // qui decide, comme la detection de minerais.
+        assertTrue(manip.isHeld(), "le bloc se tient");
+        assertEquals(0, manip.getMaxHoldTicks(atExperience(manip, 0f)), "sans duree programmee");
+        assertTrue(manip.paysOnEffect(), "c'est le lancer qui paie");
+        assertTrue(manip.earnsExpOnEffect(), "et qui verse l'experience");
+        assertEquals(0f, manip.getExpGain(atExperience(manip, 0f)), 0.000001f);
+        assertEquals(0f, manip.getCpCost(), 0.000001f, "aucun cout en reserve a l'appui");
+        assertEquals(0, manip.getCooldownTicks(atExperience(manip, 0f)),
+                "et aucune recharge posee par le paquet");
+
+        // Le lancer : 140 a 270 CP divises par 28, et 35 a 20 de surcout.
+        assertBounds("cout du lancer", 5f, 9.64f, manip::consumption, manip);
+        assertBounds("surcout du lancer", 35f, 20f, manip::overload, manip);
+
+        // Sa vitesse, et la recharge qu'il pose : 60 ticks au depart, 40 au maximum.
+        assertBounds("vitesse du lancer", 0.5f, 1.0f, d -> (float) manip.speed(d), manip);
+        assertBounds("recharge du lancer", 60f, 40f, d -> (float) manip.cooldown(d), manip);
+    }
+
     /** Arrondi d'un vecteur de direction, pour comparer sans se battre avec les arrondis. */
     private static Vec3 round(Vec3 v) {
         return new Vec3(Math.round(v.x * 1000) / 1000.0, Math.round(v.y * 1000) / 1000.0,

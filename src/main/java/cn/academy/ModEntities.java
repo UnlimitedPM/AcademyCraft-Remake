@@ -39,10 +39,24 @@ public class ModEntities {
                     .updateInterval(10)
                     .build("silbarn"));
 
+    /**
+     * Le bloc tenu par la manipulation magnetique, portage de {@code MagManipEntityBlock}.
+     *
+     * Un bloc de taille pleine — un metre de cote, comme celui qu'il represente — suivi de
+     * pres et rafraichi souvent : c'est ce que le joueur regarde quand il le jette.
+     */
+    public static final RegistryObject<EntityType<cn.academy.entity.EntityMagManipBlock>> MAG_MANIP_BLOCK =
+            ENTITIES.register("mag_manip_block", () -> EntityType.Builder
+                    .<cn.academy.entity.EntityMagManipBlock>of(cn.academy.entity.EntityMagManipBlock::new,
+                            MobCategory.MISC)
+                    .sized(1f, 1f)
+                    .clientTrackingRange(8)
+                    .updateInterval(2)
+                    .build("mag_manip_block"));
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) {
         ENTITIES.register(bus);
     }
-
     private ModEntities() {
     }
 }

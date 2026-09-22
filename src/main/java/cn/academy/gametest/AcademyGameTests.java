@@ -3375,6 +3375,140 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La manipulation magnetique d'un bloc : arracher, tenir, jeter, reposer.
+     *
+     * <p>Le test suit le bloc du monde a l'entite et retour, parce que c'est tout le sujet :
+     * un bloc metallique quitte sa place, devient une entite qui se tient deux blocs devant
+     * les yeux, part vers ce que le regard touche et se repose en chemin. Le lancer paie sa
+     * reserve, son surcout, son experience et sa recharge ; l'arrachage, lui, ne paie rien.
+     *
+     * <p>Il verifie aussi le refus : les mains vides et rien de metallique dans les dix blocs
+     * du regard, la competence ne s'ouvre pas — l'original refusait sans le dire, dans son
+     * {@code canActivate}.
+     */
+    @GameTest(template = "empty")
+    public static void laManipulationArracheEtRelanceUnBlocDeFer(GameTestHelper helper) {
+        var manip = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        var iron = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        int height = 100;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        // `abs` ne sert qu'aux entites, qui vivent en coordonnees absolues ; les blocs se
+        // posent en RELATIF, altitude du test comprise (voir le commentaire du sol du couloir).
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Le monde de test est partage et sauvegarde : ce test range son couloir avant de
+        // mesurer quoi que ce soit, sinon le bloc de fer laisse par l'execution precedente
+        // serait arrache a la place de celui qu'il vient de poser. La dalle du test (le
+        // relatif y 1) reste : elle porte le faux joueur.
+        clearCorridor(helper, abs, 12);
+        for (int dz = 0; dz <= 12; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = 0; dy <= 3; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        // Rien a tenir : les mains vides, et le regard remonte un couloir deja nettoye — neuf
+        // blocs d'air, soit la portee exacte des dix pas de la sonde.
+        var empty = ownPlayer(helper, "nothing-to-hold");
+        empty.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        empty.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 9.5, 180f, 0f);
+        var emptyData = empty.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        emptyData.setCategoryLevel(manip.getCategory(), 2);
+        emptyData.learnSkill(manip);
+        assertFalse(helper, manip.canStart(empty, emptyData),
+                "mains vides et rien de metallique : la competence refuse de s'ouvrir");
+        assertFalse(helper, cn.academy.ability.electromaster.MagManipSkill.accepts(stone),
+                "et la pierre ne s'arrache pas");
+        assertTrue(helper, cn.academy.ability.electromaster.MagManipSkill.accepts(iron),
+                "le fer, si");
+
+        // Le decor : le bloc de fer au niveau du regard a trois blocs, et un mur de pierre
+        // trois blocs plus loin. Le mur arrete le lancer et fixe le point vise.
+        var player = ownPlayer(helper, "block-thrower");
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(manip.getCategory(), 2);
+        data.learnSkill(manip);
+        double reserveBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
+
+        BlockPos ironAt = eyes.offset(0, 0, 3);
+        helper.setBlock(ironAt, iron);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = 0; dy <= 3; dy++) {
+                helper.setBlock(eyes.offset(dx, dy, 6), stone);
+            }
+        }
+
+        var box = new net.minecraft.world.phys.AABB(
+                abs.getX() - 4, abs.getY() - 2, abs.getZ() - 4,
+                abs.getX() + 5, abs.getY() + 8, abs.getZ() + 13);
+
+        assertTrue(helper, manip.canStart(player, data), "un bloc de fer dans le regard : on le prend");
+        manip.onStart(player, data);
+        assertTrue(helper, helper.getBlockState(ironAt).isAir(),
+                "l'arrachage retire le bloc du monde, et ne paie rien");
+        assertClose(helper, reserveBefore, data.getControlPoint(), "la reserve n'a pas bouge");
+        var carried = helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box);
+        assertValue(helper, 1, carried.size(), "le bloc est devenu une entite");
+        var block = carried.get(0);
+        assertTrue(helper, block.getBlockState().is(iron), "qui porte l'etat du bloc de fer");
+
+        // Le maintien : le bloc se tient devant les yeux, un dixieme sous la tete.
+        var target = cn.academy.ability.electromaster.MagManipVisuals.carryTarget(
+                player.getEyePosition(1f), player.getViewVector(1f));
+        for (int i = 0; i < 40; i++) {
+            assertTrue(helper, manip.onHoldTick(player, data, i), "le maintien a toujours son bloc");
+            block.tick();
+        }
+        assertTrue(helper, block.position().distanceTo(target) < 0.5,
+                "le bloc se tient deux blocs devant les yeux : " + block.position()
+                        + " contre " + target);
+
+        // Le lancer : il paie, verse son experience, pose sa recharge, et part.
+        assertFalse(helper, manip.onRelease(player, data, 40),
+                "relacher termine le maintien, que le bloc parte ou non");
+        assertTrue(helper, data.getControlPoint() < reserveBefore - 4.5,
+                "140 CP sur 2800 valent 5 : " + data.getControlPoint());
+        assertTrue(helper, data.getOverload() > overloadBefore + 34f,
+                "et 35 de surcout, verbatim : " + data.getOverload());
+        assertClose(helper, 0.005d, data.getSkillExp(manip), "pour 0,005 d'experience");
+        assertTrue(helper, data.isOnCooldown(manip), "et une recharge est posee");
+        assertValue(helper, 60, data.getCooldown(manip), "de soixante ticks au depart");
+        assertTrue(helper, block.getDeltaMovement().length() > 0.4,
+                "et le bloc part vers le mur : " + block.getDeltaMovement());
+
+        // La pose : il retombe sur le mur, s'y colle, et n'est plus une entite.
+        for (int i = 0; i < 60 && block.isAlive(); i++) {
+            block.tick();
+        }
+        assertFalse(helper, block.isAlive(), "le bloc s'est pose et l'entite a disparu — position "
+                + block.position() + ", vitesse " + block.getDeltaMovement()
+                + ", mur a z " + (abs.getZ() + 6));
+        assertValue(helper, 0, helper.getLevel().getEntitiesOfClass(
+                        cn.academy.entity.EntityMagManipBlock.class, box).size(),
+                "aucun bloc de fer ne reste en l'air");
+        int placed = 0;
+        for (int dz = 2; dz <= 8; dz++) {
+            for (int dy = 0; dy <= 3; dy++) {
+                if (helper.getBlockState(eyes.offset(0, dy, dz)).is(iron)) placed++;
+            }
+        }
+        assertValue(helper, 1, placed, "et on le retrouve pose dans le couloir");
+
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui

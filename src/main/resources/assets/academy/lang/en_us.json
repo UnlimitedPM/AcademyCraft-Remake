@@ -33,6 +33,7 @@
   "key.academy.activate_storm_wing": "Hold Storm Wing (then WASD)",
   "key.academy.activate_plasma_cannon": "Hold Plasma Cannon, release to fire",
   "key.academy.activate_mine_detect": "Activate Mine Detection",
+  "key.academy.activate_mag_manip": "Hold Magnetism, release to throw",
   "key.academy.open_terminal": "Open Data Terminal",
 
   "block.academy.constraint_metal": "Constraint Metal Ore",

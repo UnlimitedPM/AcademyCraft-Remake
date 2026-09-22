@@ -39,6 +39,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.charging", 1),
             Map.entry("electromaster.mag_movement", 2),
             Map.entry("electromaster.mine_detect", 3),
+            Map.entry("electromaster.mag_manip", 2),
             Map.entry("meltdowner.electron_bomb", 1),
             Map.entry("meltdowner.light_shield", 2),
             Map.entry("meltdowner.scatter_bomb", 2),
@@ -74,6 +75,9 @@ class PortedSkillsTest {
             Map.entry("electromaster.thunder_clap", List.of("electromaster.thunder_bolt")),
             Map.entry("electromaster.charging", List.of("electromaster.arc_gen")),
             Map.entry("electromaster.mag_movement", List.of("electromaster.arc_gen")),
+            // La manipulation d'un bloc descend de la traction, avec la moitie de son
+            // experience : on n'arrache pas un bloc avant de savoir s'y accrocher.
+            Map.entry("electromaster.mag_manip", List.of("electromaster.mag_movement")),
             Map.entry("teleporter.dim_folding_theorem", List.of("teleporter.threatening_teleport")),
             Map.entry("teleporter.penetrate_teleport", List.of("teleporter.threatening_teleport")),
             Map.entry("teleporter.mark_teleport", List.of("teleporter.threatening_teleport")),
@@ -307,6 +311,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.charging", 65f),
             Map.entry("electromaster.mag_movement", 60f),
             Map.entry("electromaster.mine_detect", 200f),
+            Map.entry("electromaster.mag_manip", 35f),
             Map.entry("teleporter.threatening_teleport", 18f),
             Map.entry("teleporter.mark_teleport", 40f),
             Map.entry("teleporter.flesh_ripping", 60f),
