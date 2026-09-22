@@ -2,6 +2,7 @@ package cn.academy.ability.develop.condition;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -23,7 +24,8 @@ public final class ConditionLevel implements LearningCondition {
     private ConditionLevel() {}
 
     @Override
-    public boolean accepts(AbilityData data, Skill skill) {
+    public boolean accepts(AbilityData data, Skill skill, DeveloperType developer) {
+        // La machine ne dit rien du niveau : c'est le joueur qui apprend.
         return data.getCategoryLevel(skill.getCategory()) >= skill.getLevel();
     }
 

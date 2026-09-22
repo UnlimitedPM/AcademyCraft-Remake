@@ -4,7 +4,6 @@ import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import net.minecraft.world.entity.player.Player;
-
 import java.util.Optional;
 
 /**
@@ -41,11 +40,11 @@ public class DevelopActionSkill implements DevelopAction {
     }
 
     @Override
-    public boolean validate(Player player) {
+    public boolean validate(Player player, DeveloperType developer) {
         Optional<AbilityData> data = player.getCapability(AbilityCapability.ABILITY_DATA).resolve();
         if (data.isEmpty()) return false;
         if (data.get().isSkillLearned(skill)) return false;
-        return LearningHelper.canLearn(data.get(), skill);
+        return LearningHelper.canLearn(data.get(), skill, developer);
     }
 
     @Override

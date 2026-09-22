@@ -223,7 +223,7 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
 
         AbilityData data = ClientAbilityData.get();
         boolean learned = data.isSkillLearned(skill);
-        boolean learnable = LearningHelper.canLearn(data, skill);
+        boolean learnable = LearningHelper.canLearn(data, skill, menu.getDeveloperType());
         boolean active = menu.isDeveloping() && menu.getDevelopingCategory() == row.categoryId()
                 && menu.getDevelopingSkill() == row.skillId();
 
@@ -328,7 +328,8 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
         Skill skill = menu.getSkill(row.categoryId(), row.skillId());
         if (skill == null) return false;
         AbilityData data = ClientAbilityData.get();
-        return !data.isSkillLearned(skill) && LearningHelper.canLearn(data, skill);
+        return !data.isSkillLearned(skill)
+                && LearningHelper.canLearn(data, skill, menu.getDeveloperType());
     }
 
     private int buttonIdOf(Row row) {
@@ -426,7 +427,8 @@ public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
 
         // La raison exacte du blocage : l'ecran ne rejoue pas les regles, il demande
         // a la meme condition que le serveur laquelle ne passe pas.
-        LearningCondition blocker = LearningHelper.firstBlocker(data, skill);
+        LearningCondition blocker = LearningHelper.firstBlocker(data, skill,
+                menu.getDeveloperType());
         if (blocker != null) {
             lines.add(blocker.describe(skill).copy().withStyle(ChatFormatting.RED));
         }

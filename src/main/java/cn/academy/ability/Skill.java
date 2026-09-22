@@ -1,6 +1,8 @@
 package cn.academy.ability;
 
+import cn.academy.ability.develop.DeveloperType;
 import cn.academy.ability.develop.condition.ConditionDependency;
+import cn.academy.ability.develop.condition.ConditionDeveloperType;
 import cn.academy.ability.develop.condition.ConditionLevel;
 import cn.academy.ability.develop.condition.LearningCondition;
 import net.minecraft.network.chat.Component;
@@ -53,6 +55,26 @@ public abstract class Skill {
         // Comme dans l'original : toute competence exige au moins le niveau ou elle
         // se trouve. Pour une competence de niveau 0, la condition est toujours vraie.
         this.conditions.add(ConditionLevel.INSTANCE);
+        // Et une machine d'une qualite suffisante : l'original la posait quand la
+        // competence rejoignait sa categorie, le port la pose des la construction — le
+        // niveau suffit a la calculer, et la competence n'a plus besoin d'une categorie
+        // pour savoir qui peut l'enseigner.
+        this.conditions.add(new ConditionDeveloperType(getMinimumDeveloperType()));
+    }
+
+    /**
+     * La machine minimale qui sait enseigner cette competence.
+     *
+     * Reprend {@code Skill.getMinimumDeveloperType()} au mot pres : les competences des
+     * premiers niveaux s'apprennent avec l'objet portable, celles du niveau 3 demandent la
+     * machine normale, et les deux derniers niveaux la machine avancee. Une machine plus
+     * avancee sait toujours enseigner ce que sait une machine plus modeste (voir
+     * {@link DeveloperType}), donc la regle se lit sans table.
+     */
+    public DeveloperType getMinimumDeveloperType() {
+        if (level <= 2) return DeveloperType.PORTABLE;
+        if (level <= 3) return DeveloperType.NORMAL;
+        return DeveloperType.ADVANCED;
     }
 
     final void bind(Category category, int id) {

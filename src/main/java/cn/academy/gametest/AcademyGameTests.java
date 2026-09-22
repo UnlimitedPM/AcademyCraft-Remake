@@ -1690,6 +1690,79 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Une machine normale n'enseigne pas les competences hautes.
+     *
+     * L'original deduisait la machine exigee du seul <b>niveau</b> de la competence : les
+     * niveaux 1 et 2 tiennent dans l'objet portable, le 3 demande la machine normale, et
+     * les niveaux 4 et 5 la machine avancee. Le railgun est de niveau 4 : ses deux
+     * dependances satisfaites, il ne reste que la machine pour refuser — et c'est bien
+     * elle que l'ecran nomme dans son infobulle.
+     */
+    @GameTest(template = "empty")
+    public static void unDevelopeurNormalNEnseignePasLesCompetencesHautes(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.DEV_NORMAL.get().defaultBlockState()
+                .setValue(cn.academy.DeveloperBlock.PART, cn.academy.DeveloperBlock.DevPart.BASE));
+        var developer = (DeveloperBlockEntity) helper.getBlockEntity(rel);
+
+        assertValue(helper, cn.academy.ability.develop.DeveloperType.NORMAL,
+                developer.getDeveloperType(), "la machine posee est la normale");
+
+        // Un apprenti a lui : les autres tests du developeur partagent le leur, et une
+        // categorie montee ici ne doit pas les deranger.
+        var player = ownPlayer(helper, "apprenti");
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory(0);
+        var railgun = category.getSkill("railgun");
+        var thunderBolt = category.getSkill("thunder_bolt");
+        var magManip = category.getSkill("mag_manip");
+        var body = category.getSkill("body_intensify");
+        var arc = category.getSkill("arc_gen");
+        var charging = category.getSkill("charging");
+        assertTrue(helper, railgun != null && thunderBolt != null && magManip != null
+                        && body != null && arc != null && charging != null,
+                "les competences de l'electromaster doivent etre portees");
+        assertValue(helper, 4, railgun.getLevel(), "le railgun est de niveau 4");
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(category, 4);
+        // Tout ce qui pourrait bloquer le railgun est satisfait : ses deux dependances,
+        // apprises et poussees a fond.
+        data.learnSkill(thunderBolt);
+        data.learnSkill(magManip);
+        data.addSkillExp(thunderBolt, 1f);
+        data.addSkillExp(magManip, 1f);
+
+        assertFalse(helper,
+                developer.startDeveloping(player, category.getCategoryId(), railgun.getId()),
+                "une machine normale ne doit pas enseigner une competence de niveau 4");
+
+        // Et le refus est nomme : c'est la machine, pas autre chose — c'est ce que l'ecran
+        // affichera en rouge sur la ligne de la competence.
+        var blocker = cn.academy.ability.develop.LearningHelper.firstBlocker(data, railgun,
+                cn.academy.ability.develop.DeveloperType.NORMAL);
+        assertTrue(helper,
+                blocker instanceof cn.academy.ability.develop.condition.ConditionDeveloperType,
+                "le blocage doit venir de la machine : " + blocker);
+        assertValue(helper, cn.academy.ability.develop.DeveloperType.ADVANCED,
+                ((cn.academy.ability.develop.condition.ConditionDeveloperType) blocker).getRequired(),
+                "et il doit nommer la machine qu'il faut");
+
+        // La meme machine enseigne sans broncher ce qui est a son niveau : le niveau 3
+        // demande la machine normale, et c'est exactement ce qu'elle est.
+        data.setCategoryLevel(category, 3);
+        data.learnSkill(arc);
+        data.learnSkill(charging);
+        data.addSkillExp(arc, 1f);
+        data.addSkillExp(charging, 1f);
+        assertTrue(helper,
+                developer.startDeveloping(player, category.getCategoryId(), body.getId()),
+                "une competence de niveau 3 doit s'ouvrir sur une machine normale");
+        developer.abort();
+        helper.succeed();
+    }
+
+    /**
      * Les tutoriels livres, et les objets qui les ouvrent.
      *
      * <p>Le contenu lui-meme se relit dans les ressources, en JUnit. Ce que JUnit ne

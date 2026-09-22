@@ -3,6 +3,7 @@ package cn.academy.ability.develop;
 import cn.academy.ability.Category;
 import cn.academy.ability.Skill;
 import cn.academy.ability.develop.condition.ConditionDependency;
+import cn.academy.ability.develop.condition.ConditionDeveloperType;
 import cn.academy.ability.develop.condition.ConditionLevel;
 import org.junit.jupiter.api.Test;
 
@@ -70,8 +71,36 @@ class SkillMetadataTest {
     void laConditionDeNiveauEstToujoursPosee() {
         DummySkill skill = new DummySkill("nimporte", 2);
 
-        assertEquals(1, skill.getConditions().size());
+        assertEquals(2, skill.getConditions().size(), "le niveau, puis la machine");
         assertTrue(skill.getConditions().get(0) instanceof ConditionLevel);
+    }
+
+    /**
+     * La qualite de machine exigee se deduit du seul niveau de la competence.
+     *
+     * C'est la regle de l'original, au mot pres : les niveaux 1 et 2 s'apprennent avec
+     * l'objet portable, le niveau 3 demande la machine normale, et les niveaux 4 et 5 la
+     * machine avancee. Une faute ici ne ferait rien tomber en jeu — elle rendrait une
+     * competence inapprenable, ou l'offrirait a une machine trop modeste.
+     */
+    @Test
+    void laMachineExigeeSuitLeNiveauDeLaCompetence() {
+        for (int level = 0; level <= 2; level++) {
+            assertEquals(DeveloperType.PORTABLE, new DummySkill("bas" + level, level)
+                    .getMinimumDeveloperType(), "niveau " + level);
+        }
+        assertEquals(DeveloperType.NORMAL, new DummySkill("trois", 3).getMinimumDeveloperType());
+        assertEquals(DeveloperType.ADVANCED, new DummySkill("quatre", 4).getMinimumDeveloperType());
+        assertEquals(DeveloperType.ADVANCED, new DummySkill("cinq", 5).getMinimumDeveloperType());
+    }
+
+    @Test
+    void laConditionDeMachinePorteLaQualiteDeduiteDuNiveau() {
+        DummySkill skill = new DummySkill("quatre", 4);
+
+        assertTrue(skill.getConditions().get(1) instanceof ConditionDeveloperType);
+        assertEquals(DeveloperType.ADVANCED,
+                ((ConditionDeveloperType) skill.getConditions().get(1)).getRequired());
     }
 
     @Test
@@ -95,8 +124,9 @@ class SkillMetadataTest {
 
         assertEquals(1, child.getDependencies().size());
         assertSame(parent, child.getDependencies().get(0));
-        assertEquals(2, child.getConditions().size(), "la condition de niveau, plus la dependance");
-        assertTrue(child.getConditions().get(1) instanceof ConditionDependency);
+        assertEquals(3, child.getConditions().size(),
+                "le niveau, la machine, puis la dependance");
+        assertTrue(child.getConditions().get(2) instanceof ConditionDependency);
     }
 
     @Test

@@ -19,9 +19,22 @@ package cn.academy.ability.develop;
  * Les chiffres sont ceux de l'original : un developeur avance a un tampon quatre
  * fois plus gros et va plus vite, mais chaque stimulation lui coute un peu moins
  * cher. Le vrai avantage de l'avance est donc la vitesse, pas l'economie.
+ *
+ * <h2>L'ordre est le sens</h2>
+ *
+ * La condition qui decide si une machine sait enseigner une competence compare les
+ * <b>ordinaux</b> : {@code developer.ordinal() >= requis.ordinal()}. Une machine avancee
+ * sait donc tout ce que sait une machine modeste, sans table de correspondance — c'est
+ * exactement ce que faisait l'original. <b>L'ordre de declaration fait partie du
+ * contrat</b> : PORTABLE d'abord, puis NORMAL, puis ADVANCED.
+ *
+ * <p>Le portable est le plus modeste des trois — plus lent (25 ticks par stimulation
+ * contre 20) et plus cher (750 par stimulation contre 700), avec un tampon de 10 000 et
+ * non 50 000. C'est le prix a payer pour l'avoir dans sa poche.
  */
 public enum DeveloperType {
 
+    PORTABLE(50.0d, 10_000.0d, 25, 750.0d),
     NORMAL(100.0d, 50_000.0d, 20, 700.0d),
     ADVANCED(300.0d, 200_000.0d, 15, 600.0d);
 
@@ -58,6 +71,21 @@ public enum DeveloperType {
     /** Energie consommee par tick pendant une stimulation. */
     public double getEnergyPerTick() {
         return cps / tps;
+    }
+
+    /**
+     * La cle de langue du nom de la machine.
+     *
+     * La classe reste sans Minecraft — c'est ce qui permet de la relire en JUnit — donc
+     * elle rend une cle et non un texte. C'est la condition de qualite qui s'en sert pour
+     * dire au joueur quelle machine il lui faut.
+     */
+    public String nameKey() {
+        return switch (this) {
+            case PORTABLE -> "academy.developer.type.portable";
+            case NORMAL -> "academy.developer.type.normal";
+            case ADVANCED -> "academy.developer.type.advanced";
+        };
     }
 
     /**

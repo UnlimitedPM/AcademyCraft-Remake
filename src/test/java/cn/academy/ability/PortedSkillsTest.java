@@ -1,6 +1,7 @@
 package cn.academy.ability;
 
 import cn.academy.ability.develop.condition.ConditionDependency;
+import cn.academy.ability.develop.condition.ConditionDeveloperType;
 import cn.academy.ability.develop.condition.LearningCondition;
 import org.junit.jupiter.api.Test;
 
@@ -184,6 +185,27 @@ class PortedSkillsTest {
         for (Skill skill : allSkills()) {
             int expected = (int) (3 + skill.getLevel() * skill.getLevel() * 0.5f);
             assertEquals(expected, skill.getLearningStims(), "stimulations de " + fullName(skill));
+        }
+    }
+
+    /**
+     * Chaque competence livree dit quelle machine peut l'enseigner.
+     *
+     * La condition est posee par le constructeur de {@code Skill}, a partir du seul
+     * niveau : les niveaux 1 et 2 tiennent dans l'objet portable, le 3 demande la machine
+     * normale, les niveaux 4 et 5 la machine avancee. Une competence livree sans cette
+     * condition serait apprenable avec n'importe quoi — un verrou ouvert en silence.
+     */
+    @Test
+    void chaqueCompetenceExigeLaMachineDeSonNiveau() {
+        for (Skill skill : allSkills()) {
+            ConditionDeveloperType condition = null;
+            for (LearningCondition candidate : skill.getConditions()) {
+                if (candidate instanceof ConditionDeveloperType typed) condition = typed;
+            }
+            assertNotNull(condition, fullName(skill) + " n'exige aucune machine");
+            assertEquals(skill.getMinimumDeveloperType(), condition.getRequired(),
+                    "machine exigee par " + fullName(skill));
         }
     }
 

@@ -2,6 +2,7 @@ package cn.academy.ability.develop.condition;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -21,11 +22,14 @@ public interface LearningCondition {
     /**
      * La condition est-elle remplie ?
      *
-     * @param data  l'etat du joueur
-     * @param skill la competence visee, dont depend la reponse pour une condition
-     *              de niveau
+     * @param data      l'etat du joueur
+     * @param skill     la competence visee, dont depend la reponse pour une condition
+     *                  de niveau
+     * @param developer la qualite de la machine utilisee : l'original passait le
+     *                  developeur entier ({@code IDeveloper}), dont seule cette qualite
+     *                  servait. Le portable est simplement une autre facon de la fournir.
      */
-    boolean accepts(AbilityData data, Skill skill);
+    boolean accepts(AbilityData data, Skill skill, DeveloperType developer);
 
     /** Pourquoi la condition n'est pas remplie, dans la langue du joueur. */
     Component describe(Skill skill);

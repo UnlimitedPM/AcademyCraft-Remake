@@ -5,11 +5,10 @@ import net.minecraft.world.entity.player.Player;
 /**
  * Un apprentissage que le developeur peut mener a bien.
  *
- * Portage de {@code IDevelopAction} de la 1.12.2, allege de son parametre
- * {@code IDeveloper} : dans l'original, la seule action portee ici ne s'en servait
- * que pour lire le type du developeur, et la seule verification qui en dependait
- * ne regardait en fait que l'etat du joueur. Le parametre n'apportait donc rien
- * qu'un risque de dependance circulaire.
+ * Portage de {@code IDevelopAction} de la 1.12.2. Les deux actions portees ne
+ * s'interessent qu'a une chose du developeur : sa <b>qualite</b> — une competence haute
+ * demande une machine haute, et l'original le verifiait dans la validation, au dernier
+ * moment, du meme cote que le reste des conditions.
  *
  * Un apprentissage se deroule en <b>stimulations</b> : chacune dure
  * {@code tps} ticks et coute {@code cps} unites d'energie, reparties sur ces
@@ -24,8 +23,10 @@ public interface DevelopAction {
      * Vrai si l'apprentissage peut aboutir. Verifie a la fin, pas au debut : dans
      * l'original le joueur pouvait lancer un apprentissage qui devenait impossible
      * en cours de route, et il echouait alors en perdant ce qu'il avait paye.
+     *
+     * @param developer la qualite de la machine utilisee
      */
-    boolean validate(Player player);
+    boolean validate(Player player, DeveloperType developer);
 
     /** Applique l'apprentissage. Appele une seule fois, apres une validation reussie. */
     void onLearned(Player player);

@@ -17,16 +17,16 @@ public final class LearningHelper {
     private LearningHelper() {}
 
     /**
-     * Le joueur peut-il apprendre cette competence maintenant ?
+     * Le joueur peut-il apprendre cette competence, avec cette machine ?
      *
-     * L'original passait aussi le developeur, pour une condition sur son type. Le
-     * port n'a pas encore cette condition — elle demanderait le developeur portable,
-     * qui n'existe pas ici — donc l'apprentissage ne depend que du joueur. C'est la
-     * signature qu'il faudra rouvrir pour la condition de type.
+     * L'original passait le developeur entier pour une condition sur son type ; le port
+     * ne passe que cette qualite, la seule qui etait lue. C'est ce qui permettra a l'objet
+     * portable d'apprendre les competences basses sans inventer une seconde machine :
+     * seule la source de l'energie change, les regles sont les memes.
      */
-    public static boolean canLearn(AbilityData data, Skill skill) {
+    public static boolean canLearn(AbilityData data, Skill skill, DeveloperType developer) {
         for (LearningCondition condition : skill.getConditions()) {
-            if (!condition.accepts(data, skill)) return false;
+            if (!condition.accepts(data, skill, developer)) return false;
         }
         return true;
     }
@@ -50,9 +50,10 @@ public final class LearningHelper {
     }
 
     /** La premiere condition qui bloque, ou {@code null} si la competence est accessible. */
-    public static LearningCondition firstBlocker(AbilityData data, Skill skill) {
+    public static LearningCondition firstBlocker(AbilityData data, Skill skill,
+                                                 DeveloperType developer) {
         for (LearningCondition condition : skill.getConditions()) {
-            if (!condition.accepts(data, skill)) return condition;
+            if (!condition.accepts(data, skill, developer)) return condition;
         }
         return null;
     }

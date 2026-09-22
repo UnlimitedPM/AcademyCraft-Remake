@@ -56,6 +56,10 @@
   "block.academy.windgen_main": "Wind Generator",
   "block.academy.dev_normal": "Normal Ability Developer",
   "block.academy.developer_advanced": "Advanced Ability Developer",
+
+  "academy.developer.type.portable": "Portable Developer",
+  "academy.developer.type.normal": "Normal Ability Developer",
+  "academy.developer.type.advanced": "Advanced Ability Developer",
   "block.academy.ability_interferer": "Ability Interferer",
   "block.academy.phase_liquid": "Imag Phase Liquid",
 
@@ -160,6 +164,7 @@
   "academy.developer.skill_exp": "Experience %s%%",
 
   "academy.learn.level": "Requires category level %s",
+  "academy.learn.developer": "Requires a %s",
   "academy.learn.dependency": "Requires %s first",
   "academy.learn.dependency_exp": "Requires %s at %s%% experience",
   "academy.ability.not_learned": "You have not learned %s",

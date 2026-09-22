@@ -2,6 +2,7 @@ package cn.academy.ability.develop.condition;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -44,7 +45,8 @@ public final class ConditionDependency implements LearningCondition {
     }
 
     @Override
-    public boolean accepts(AbilityData data, Skill skill) {
+    public boolean accepts(AbilityData data, Skill skill, DeveloperType developer) {
+        // La machine ne dit rien des dependances : c'est le joueur qui apprend.
         return data.isSkillLearned(dependency) && data.getSkillExp(dependency) >= requiredExp;
     }
 

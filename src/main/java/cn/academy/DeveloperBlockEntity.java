@@ -190,7 +190,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
 
     /** Derniere etape : on verifie une derniere fois, puis on applique ou on echoue. */
     private void complete(ServerPlayer player) {
-        boolean success = action != null && action.validate(player);
+        boolean success = action != null && action.validate(player, type);
         if (success) {
             action.onLearned(player);
             reset(DevState.DONE);
@@ -259,7 +259,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         // apprise n'a plus rien a apprendre. L'ecran grise deja ces lignes, donc ce
         // refus n'est qu'une ceinture de securite ; l'original ne prevenait pas le
         // joueur autrement qu'en changeant l'etat affiche.
-        if (!candidate.validate(player)) return false;
+        if (!candidate.validate(player, type)) return false;
 
         action = candidate;
         categoryId = requestedCategoryId;

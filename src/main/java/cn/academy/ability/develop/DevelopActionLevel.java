@@ -46,13 +46,18 @@ public class DevelopActionLevel implements DevelopAction {
     }
 
     @Override
-    public boolean validate(Player player) {
+    public boolean validate(Player player, DeveloperType developer) {
         AbilityData data = dataOf(player);
         if (data == null) return false;
         // Reprend LearningHelper.canLevelUp de l'original : une categorie deja
         // apprise ne monte que si son palier est rempli, c'est-a-dire si le joueur a
         // utilise ses competences. Une categorie jamais apprise passe sans palier :
         // c'est ce qui la fait entrer dans le systeme.
+        //
+        // L'original passait la qualite de la machine a `canLevelUp(type, data)`... et la
+        // fonction ne lisait que le joueur. Monter une categorie d'un cran ne demande donc
+        // aucune machine en particulier : c'est le PALIER qui decide, et il se remplit en
+        // utilisant ses competences. Le parametre reste la pour la signature.
         if (!data.hasLearned(category)) return true;
         return data.canLevelUp(category);
     }
