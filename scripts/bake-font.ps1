@@ -26,11 +26,12 @@
 # Un caractere sans encre n'avancerait que d'un pixel : l'espace recoit donc un pixel a alpha 1,
 # invisible mais bien mesure.
 #
-# Usage : powershell -File scripts/bake-font.ps1 [-Source police.ttc] [-OutDir dossier]
+# Usage : powershell -File scripts/bake-font.ps1 [-Source police.ttc] [-OutDir dossier] [-TexDir dossier]
 
 param(
     [string]$Source = "$env:WINDIR\Fonts\msyh.ttc",
-    [string]$OutDir = "src/main/resources/assets/academy/font"
+    [string]$OutDir = "src/main/resources/assets/academy/font",
+    [string]$TexDir = "src/main/resources/assets/academy/textures/font"
 )
 
 Add-Type -AssemblyName System.Drawing
@@ -64,6 +65,7 @@ function Escape-Json([string]$Text) {
 
 if (-not (Test-Path $Source)) { throw "police introuvable : $Source" }
 if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Path $OutDir -Force | Out-Null }
+if (-not (Test-Path $TexDir)) { New-Item -ItemType Directory -Path $TexDir -Force | Out-Null }
 
 $Collection = New-Object System.Drawing.Text.PrivateFontCollection
 $Collection.AddFontFile($Source)
@@ -137,7 +139,13 @@ foreach ($Size in $Sizes) {
     $Graphics.Dispose()
 
     $Name = "ac_gui_$Size"
-    $Sheet.Save((Join-Path $OutDir "$Name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+
+    # Les DEUX endroits ne sont pas interchangeables : la definition se lit dans `font/`, mais
+    # l'image d'un fournisseur « bitmap » se lit dans `textures/font/` — Minecraft prefixe lui-meme
+    # le chemin de `file` par `textures/`, donc une planche rangee dans `font/` est introuvable et
+    # le fournisseur est rejete (les glyphes manquent alors TOUS, sans autre message qu'un
+    # avertissement dans le journal).
+    $Sheet.Save((Join-Path $TexDir "$Name.png"), [System.Drawing.Imaging.ImageFormat]::Png)
     $Sheet.Dispose()
     $Font.Dispose()
 
@@ -166,6 +174,6 @@ foreach ($Size in $Sizes) {
     "$Name : $($Codes.Count) caracteres, cases de ${Width}x${Height}, ascendante $Ascent"
 }
 
-"planches ecrites dans $OutDir (a partir de $Source)"
+"planches ecrites dans $TexDir et definitions dans $OutDir (a partir de $Source)"
 "rappel : les .ttf et les planches ne sont pas redistribuables, elles restent hors du depot"
 "et se regenerent avec ce script."
