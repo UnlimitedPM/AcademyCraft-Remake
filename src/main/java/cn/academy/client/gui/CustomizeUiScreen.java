@@ -3,6 +3,7 @@ package cn.academy.client.gui;
 import cn.academy.client.hud.HudConfig;
 import cn.academy.client.hud.HudElement;
 import cn.academy.client.hud.HudLayout;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -115,6 +116,13 @@ public class CustomizeUiScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
+        // Le fond de l'ecran vient d'etre dessine, et il coupe le melange en partant. Sans le
+        // rallumer, tout ce qui a de la transparence sort en aplat opaque : les fondus des
+        // textures (le contour du panneau, la plaque des notifications, les touches du
+        // rappel) deviennent des blocs, et les teintes des lignes deviennent du blanc.
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
         // Les apercus, a leur place reelle. Le panneau passe apres eux, comme avant.
         for (HudElement element : elements) {
             drawPreview(graphics, element);
@@ -125,6 +133,8 @@ public class CustomizeUiScreen extends Screen {
         if (selected != null) {
             drawEditBox(graphics, selected.ordinal());
         }
+
+        RenderSystem.disableBlend();
     }
 
     /** Le panneau des elements : sa texture d'origine, a moitie, et ses lignes. */
@@ -134,7 +144,9 @@ public class CustomizeUiScreen extends Screen {
         pose.translate(CustomizeUiLayout.PANEL_X, CustomizeUiLayout.PANEL_Y, 0);
         pose.scale((float) CustomizeUiLayout.SCALE, (float) CustomizeUiLayout.SCALE, 1.0f);
 
-        graphics.blit(PANEL_TEXTURE, 0, 0, 0, 0,
+        graphics.blit(PANEL_TEXTURE, 0, 0,
+                CustomizeUiLayout.PANEL_W, CustomizeUiLayout.PANEL_H,
+                0.0f, 0.0f,
                 CustomizeUiLayout.PANEL_W, CustomizeUiLayout.PANEL_H,
                 CustomizeUiLayout.PANEL_W, CustomizeUiLayout.PANEL_H);
 
@@ -177,13 +189,17 @@ public class CustomizeUiScreen extends Screen {
         pose.translate(x, y, 0);
 
         switch (element) {
-            case CP_BAR -> graphics.blit(CPBAR_TEXTURE, 0, 0, 0, 0, w, h, CPBAR_W, CPBAR_H);
+            case CP_BAR -> graphics.blit(CPBAR_TEXTURE, 0, 0, w, h, 0.0f, 0.0f,
+                    CPBAR_W, CPBAR_H, CPBAR_W, CPBAR_H);
             case KEY_HINT -> {
                 // Son image, a l'echelle ou l'original la montre dans cet ecran.
                 pose.pushPose();
                 pose.scale(KEY_HINT_SCALE, KEY_HINT_SCALE, 1.0f);
-                graphics.blit(KEY_HINT_TEXTURE, 0, 0, 0, 0,
-                        KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H, KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H);
+                graphics.blit(KEY_HINT_TEXTURE, 0, 0,
+                        KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H,
+                        0.0f, 0.0f,
+                        KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H,
+                        KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H);
                 pose.popPose();
             }
             case NOTIFICATION -> drawNotificationPreview(graphics);
@@ -203,9 +219,11 @@ public class CustomizeUiScreen extends Screen {
         pose.pushPose();
         pose.scale(NOTIFY_SCALE, NOTIFY_SCALE, 1.0f);
 
-        graphics.blit(NOTIFY_BACK_TEXTURE, 0, 0, 0, 0, NOTIFY_W, NOTIFY_H, NOTIFY_W, NOTIFY_H);
-        graphics.blit(NOTIFY_LOGO_TEXTURE, NOTIFY_ICON_X, NOTIFY_ICON_Y, 0, 0,
-                NOTIFY_ICON, NOTIFY_ICON, NOTIFY_LOGO, NOTIFY_LOGO);
+        graphics.blit(NOTIFY_BACK_TEXTURE, 0, 0, NOTIFY_W, NOTIFY_H, 0.0f, 0.0f,
+                NOTIFY_W, NOTIFY_H, NOTIFY_W, NOTIFY_H);
+        graphics.blit(NOTIFY_LOGO_TEXTURE, NOTIFY_ICON_X, NOTIFY_ICON_Y,
+                NOTIFY_ICON, NOTIFY_ICON, 0.0f, 0.0f,
+                NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO);
 
         drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), NOTIFY_TITLE_X, NOTIFY_TITLE_Y,
                 CustomizeUiLayout.plainFontScale(NOTIFY_TITLE_FONT), NOTIFY_TEXT_COLOR);
