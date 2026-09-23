@@ -135,8 +135,8 @@ public class CustomizeUiScreen extends Screen {
     }
 
     /** Le haut d'un texte dont on connait le bas : l'original cale ses boites par le bas. */
-    private static int textTopForBottom(float bottom, float scale) {
-        return Math.round(bottom - CustomizeUiLayout.LINE * scale);
+    private int textTopForBottom(float bottom) {
+        return Math.round(bottom - font.lineHeight);
     }
 
     /** Le panneau des elements : sa texture d'origine, a moitie, et ses lignes. */
@@ -246,8 +246,8 @@ public class CustomizeUiScreen extends Screen {
     private void drawMediaPreview(GuiGraphics graphics) {
         blend();
 
-        // La barre, dessinee au dixieme de pixel : le fond gris fait 1,5 de haut et la
-        // progression blanche 1,9, donc du blanc juste au-dessus et juste en dessous.
+        // La barre, dessinee au dixieme de pixel : le fond gris fait 1,3 de haut et la
+        // progression blanche 2,1, donc du blanc juste au-dessus et juste en dessous.
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.scale(CustomizeUiLayout.MEDIA_BAR_STEP, CustomizeUiLayout.MEDIA_BAR_STEP, 1.0f);
@@ -268,15 +268,17 @@ public class CustomizeUiScreen extends Screen {
 
         // Le titre se cale par le bas de sa boite (juste au-dessus de la barre), et la duree
         // par le bas de la sienne, dix pixels plus bas : c'est ce qui les met a deux hauteurs.
+        // Le bas se retire avec la hauteur de ligne de la POLICE, et non celle du xml : c'est
+        // celle-la qui est dessinee, et l'ecart se voit (le titre tombait sur la barre).
         float titleScale = CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT);
         float timeScale = CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TIME_FONT);
         blend();
         drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), CustomizeUiLayout.MEDIA_TITLE_X,
-                textTopForBottom(CustomizeUiLayout.MEDIA_TITLE_BOTTOM, titleScale),
+                textTopForBottom(CustomizeUiLayout.MEDIA_TITLE_BOTTOM),
                 titleScale, 1.0f, NOTIFY_TEXT_COLOR);
         blend();
         drawText(graphics, Component.literal(MEDIA_DEMO_TIME), CustomizeUiLayout.MEDIA_TIME_X,
-                textTopForBottom(CustomizeUiLayout.MEDIA_TIME_BOTTOM, timeScale),
+                textTopForBottom(CustomizeUiLayout.MEDIA_TIME_BOTTOM),
                 timeScale, 1.0f, NOTIFY_TEXT_COLOR);
     }
 

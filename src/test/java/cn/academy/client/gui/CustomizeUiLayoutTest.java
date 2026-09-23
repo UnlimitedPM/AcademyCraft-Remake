@@ -79,18 +79,18 @@ class CustomizeUiLayoutTest {
 
     @Test
     void leLecteurMediaEstCeluiDeSonXml() {
-        // Sa barre : le fond gris fait 1,5 pixel de haut et la progression blanche 1,9, donc elle
-        // deborde a peine de chaque cote. Tout est en dixiemes, d'ou les quinze et dix-neuf.
+        // Sa barre : le fond gris fait 1,3 pixel de haut et la progression blanche 2,1, donc elle
+        // deborde a peine de chaque cote. Tout est en dixiemes, d'ou les treize et vingt et un.
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
-        assertEquals(15, CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS, "le gris fait 1,5 pixel");
+        assertEquals(13, CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS, "le gris fait 1,3 pixel");
         assertEquals(21, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 2,1");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
                         > CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS,
                 "le blanc doit deborder du gris");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
-                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 6,
-                "mais a peine : un quart de pixel de chaque cote au plus");
+                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 8,
+                "mais a peine : quatre dixiemes de chaque cote au plus");
 
         // Ses deux textes sont cales par le BAS de leur boite de 10 (l'une posee a 17, l'autre
         // a 27) : le titre tombe donc a 27 et la duree a 37, dix pixels plus bas, et non a la
