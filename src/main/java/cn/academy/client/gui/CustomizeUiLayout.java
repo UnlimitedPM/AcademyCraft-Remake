@@ -101,16 +101,16 @@ public final class CustomizeUiLayout {
     /**
      * Le rapport entre la police de l'original et la notre.
      *
-     * <p>La police embarquee est rasterisee a <b>9 pixels</b> (c'est le {@code size} de sa
-     * definition). Or Minecraft ne sait pas reechantillonner proprement : une police dessinee
-     * a une taille inferieure a celle ou elle a ete rasterisee perd ses traits fins (le
-     * filtrage d'interface est au plus proche voisin, donc un trait d'un pixel se fait sauter).
-     * Ce rapport est donc choisi pour que les textes de l'ecran tombent a <b>environ un pour
-     * un</b> avec le raster : de 0,9 a 1,1 selon les endroits.
+     * <p>La police embarquee est declaree a <b>9 pixels</b>, et Minecraft la rasterise au
+     * double de cette taille (son sur-echantillonnage) avant de la dessiner a 9. Ce n'est pas
+     * un detail : a une taille rasterisee trop petite, certaines boites de glyphes tombent a
+     * zero pixel, et le chargeur de Minecraft les remplace alors <b>par des espaces, en
+     * silence</b> (voir {@code TrueTypeGlyphProvider.getGlyph}). Vecu : rasterise a 9, le 'a',
+     * le 'e' et le 'r' de YaHei disparaissaient, et « blablabla » s'affichait « bl bl bl b ».
      *
-     * <p>Il vaut un dixieme, ce qui rend le texte environ 10 % plus petit que le corps annonce
-     * par l'original : c'est la mesure prise a l'ecran, sa police du systeme dessinant plus
-     * petite que son corps nominal.
+     * <p>Le rapport vaut un dixieme, ce qui rend le texte environ 10 % plus petit que le corps
+     * annonce par l'original : c'est la mesure prise a l'ecran, sa police du systeme dessinant
+     * plus petite que son corps nominal.
      */
     public static final float FONT_RATIO = 1.0f / 10.0f;
 
