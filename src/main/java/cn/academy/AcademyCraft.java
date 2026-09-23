@@ -42,6 +42,11 @@ public class AcademyCraft {
 
         // Sans cette ligne, le fichier config/academy-common.toml n'est jamais cree.
         context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
+        // La place des elements du HUD est une affaire de client : elle vit donc dans une
+        // config de type CLIENT, comme l'original la rangeait chez lui. Sur un serveur
+        // dedie, Forge ignore simplement cette config.
+        context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.CLIENT,
+                cn.academy.client.hud.HudConfig.SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -56,6 +61,32 @@ public class AcademyCraft {
     // D??PLACE LE RENDU ICI (Mod Bus + Client Only)
     @Mod.EventBusSubscriber(modid = MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
+        /**
+         * Retient la config du HUD une fois chargee.
+         *
+         * <p>Sans cette prise, l'ecran de reglage pourrait lire la place des elements
+         * mais pas la reecrire : Forge ne rend la config en main que par cet evenement.
+         */
+        @SubscribeEvent
+        public static void onConfigLoading(net.minecraftforge.fml.event.config.ModConfigEvent.Loading event) {
+            if (event.getConfig().getSpec() == cn.academy.client.hud.HudConfig.SPEC) {
+                cn.academy.client.hud.HudConfig.capture(event.getConfig());
+            }
+            if (event.getConfig().getSpec() == Config.SPEC) {
+                Config.capture(event.getConfig());
+            }
+        }
+
+        @SubscribeEvent
+        public static void onConfigReloading(net.minecraftforge.fml.event.config.ModConfigEvent.Reloading event) {
+            if (event.getConfig().getSpec() == cn.academy.client.hud.HudConfig.SPEC) {
+                cn.academy.client.hud.HudConfig.capture(event.getConfig());
+            }
+            if (event.getConfig().getSpec() == Config.SPEC) {
+                Config.capture(event.getConfig());
+            }
+        }
+
         @SubscribeEvent
         public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerBlockEntityRenderer(ModBlockEntities.CAT_ENGINE.get(), CatEngineRenderer::new);

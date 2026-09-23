@@ -185,7 +185,37 @@ public final class Config {
     public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
     public static boolean destroyBlocks = true;
-    public static boolean giveCloudTerminal = true;
+
+    /** La config chargee, pour pouvoir la reecrire depuis l'ecran de reglage du mod. */
+    private static net.minecraftforge.fml.config.ModConfig loadedConfig;
+
+    /** Retient la config une fois chargee : sans elle, l'ecran ne saurait rien sauvegarder. */
+    public static void capture(net.minecraftforge.fml.config.ModConfig config) {
+        loadedConfig = config;
+    }
+
+    /**
+     * Bascule « Destroy blocks » et l'ecrit dans le fichier.
+     *
+     * <p>La valeur est ecrite des deux cotes : dans la config, et dans le champ que le jeu
+     * lit vraiment. Oublier le second ferait une case a cocher qui ne change rien.
+     */
+    public static boolean toggleDestroyBlocks() {
+        destroyBlocks = !destroyBlocks;
+        DESTROY_BLOCKS.set(destroyBlocks);
+        save();
+        return destroyBlocks;
+    }
+
+    /** Reecrit le fichier de config. Un echec ne fait pas tomber le jeu. */
+    public static void save() {
+        if (loadedConfig == null) return;
+        try {
+            loadedConfig.save();
+        } catch (Exception e) {
+            // Disque plein, fichier verrouille : la valeur reste en memoire.
+        }
+    }    public static boolean giveCloudTerminal = true;
 
     /** Les listes de metaux, relues a chaque chargement de config. */
     public static List<String> metalBlocks = List.of();
