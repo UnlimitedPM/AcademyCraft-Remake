@@ -90,30 +90,35 @@ public final class CustomizeUiLayout {
     public static final int MEDIA_BAR_W = 120;
     public static final float MEDIA_BAR_PROGRESS = 0.5f;
     public static final int MEDIA_BAR_GREY_TENTHS = 15;
-    public static final int MEDIA_BAR_WHITE_TENTHS = 19;
-    public static final int MEDIA_BAR_BACK = 0x33000000;
+    public static final int MEDIA_BAR_WHITE_TENTHS = 20;
+    public static final int MEDIA_BAR_BACK = 0x1F000000;
     public static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
     /** Le pas de dessin de la barre : un dixieme de pixel. */
     public static final float MEDIA_BAR_STEP = 0.1f;
 
     /**
-     * Le rapport entre la police de l'original et la notre.
-     *
-     * <p>Minecraft ne sait pas dessiner une police TTF proprement : il la peint dans un atlas a
-     * {@code size * oversample} pixels puis la reduit a la taille demandee, et toute reduction
-     * abime le trait. Le reglage cherche donc a la rendre <b>aussi petite que possible</b> : la
-     * police est declaree a 11 pixels sans sur-echantillonnage, donc rasterisee a 11, et le texte
-     * est dessine a 8-9 pixels — une reduction de 1,3 au lieu de 2,2. Sous 9-10 pixels de raster,
-     * le trait devient trop pale pour etre lisible ; c'est la limite basse.
-     *
-     * <p>La reduction restante est confiee a un filtrage lisse, sans quoi elle cisaille les
-     * lettres : voir {@link FontSmoothing}.
-     *
-     * <p>Le rapport vaut un douzieme, ce qui rend le texte environ 10 % plus petit que le corps
-     * annonce par l'original : c'est la mesure prise a l'ecran, sa police du systeme dessinant
-     * plus petite que son corps nominal.
+     * La police n'est plus rasterisee par Minecraft : ses glyphes sont graves d'avance, avec
+     * hinting, par {@code scripts/bake-font.ps1}, une planche par taille entiere. L'ecran choisit
+     * donc la planche la plus proche de la taille voulue, puis compense l'ecart par une echelle
+     * de quelques pour cent — invisible, et sans reduction destructrice.
      */
     public static final float FONT_RATIO = 1.0f / 12.0f;
+
+    /** Le corps de reference : l'echelle 1 dessine un em de cette taille. */
+    public static final float BASE_EM = 11.0f;
+
+    /** Les tailles de planches que {@code scripts/bake-font.ps1} grave. */
+    public static final int SHEET_MIN = 7;
+    public static final int SHEET_MAX = 20;
+
+    /**
+     * La hauteur de ligne du jeu, pour centrer un texte dans sa ligne.
+     *
+     * <p>C'est une constante, et non {@code font.lineHeight} : avec une planche de glyphes, cette
+     * derniere vaut la hauteur de la planche (13 pixels pour celle de 9), et le centrage se
+     * decalerait d'un pixel.
+     */
+    public static final int LINE = 9;
 
     private CustomizeUiLayout() {
     }
@@ -139,6 +144,22 @@ public final class CustomizeUiLayout {
     /** L'echelle d'un texte qui n'est pas dans le panneau : il n'y a pas a le reduire. */
     public static float plainFontScale(float fontSize) {
         return fontSize * FONT_RATIO;
+    }
+
+    /**
+     * La planche de glyphes a utiliser, pour une echelle qui inclut deja l'echelle du panneau.
+     *
+     * <p>La taille reellement dessinee vaut {@code BASE_EM * echelle}. On prend la planche la
+     * plus proche, dans les bornes gravees.
+     */
+    public static int sheetFor(float scale) {
+        int em = Math.round(BASE_EM * scale);
+        return Math.max(SHEET_MIN, Math.min(SHEET_MAX, em));
+    }
+
+    /** L'echelle a appliquer a cette planche pour obtenir exactement la taille voulue. */
+    public static float sheetScale(float scale, int sheet) {
+        return BASE_EM * scale / sheet;
     }
 
     /** Le haut d'un texte dont on veut centrer la ligne sur {@code centerY}. */

@@ -54,7 +54,10 @@ Thumbs.db
 .git-commit-msg.tmp
 
 # Police de l'interface : extraite d'une police SYSTEME de Windows (Microsoft YaHei, celle
-# de l'original) par scripts/ttc-to-ttf.py. Elle n'est pas redistribuable, donc le fichier
-# reste hors du depot ; chacun le regenere avec le script. Sans lui, le mod retombe sur la
-# police du jeu (voir assets/academy/font/ac_gui.json).
+# de l'original) par scripts/ttc-to-ttf.py, puis gravee en planches de glyphes par
+# scripts/bake-font.ps1. Rien de tout cela n'est redistribuable, donc ces fichiers restent
+# hors du depot ; chacun les regenere avec les deux scripts. Sans elles, le mod retombe sur la
+# police du jeu (voir la cle "reference" de chaque definition).
 /src/main/resources/assets/academy/font/ac_gui.ttf
+/src/main/resources/assets/academy/font/ac_gui_*.png
+/src/main/resources/assets/academy/font/ac_gui_*.json

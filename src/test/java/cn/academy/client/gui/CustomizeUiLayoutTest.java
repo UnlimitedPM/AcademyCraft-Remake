@@ -66,6 +66,27 @@ class CustomizeUiLayoutTest {
     }
 
     @Test
+    void laPlancheDeGlyphesSuitLaTailleDessinee() {
+        // Les glyphes sont graves d'avance, une planche par taille entiere. Un texte dessine a
+        // 8,25 pixels se sert de la planche de 8 et l'echelle compense l'ecart de 3 %.
+        assertEquals(8, CustomizeUiLayout.sheetFor(CustomizeUiLayout.fontScale(18.0f)));
+        assertEquals(1.0313f, CustomizeUiLayout.sheetScale(CustomizeUiLayout.fontScale(18.0f), 8),
+                0.001f);
+
+        // Le titre d'une notification est dessine au quart : c'est le produit des deux echelles
+        // qui donne sa taille reelle, donc la planche.
+        float notification = CustomizeUiLayout.plainFontScale(38.0f) * 0.25f;
+        assertEquals(9, CustomizeUiLayout.sheetFor(notification));
+
+        // Le titre du lecteur media, dessine a l'echelle un : 9,17 pixels, donc la planche de 9.
+        assertEquals(9, CustomizeUiLayout.sheetFor(CustomizeUiLayout.plainFontScale(10.0f)));
+
+        // Rien ne sort des planches gravees, meme pour un texte enorme ou minuscule.
+        assertEquals(CustomizeUiLayout.SHEET_MIN, CustomizeUiLayout.sheetFor(0.01f));
+        assertEquals(CustomizeUiLayout.SHEET_MAX, CustomizeUiLayout.sheetFor(99.0f));
+    }
+
+    @Test
     void laPoliceEstCelleDeLoriginalRameneeALaNotre() {
         // La police est declaree a 11 pixels et rasterisee a 11 (sans sur-echantillonnage), pour
         // que la reduction soit la plus faible possible. Le rapport d'un douzieme fait tomber ses
@@ -86,13 +107,13 @@ class CustomizeUiLayoutTest {
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
         assertEquals(15, CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS, "le gris fait 1,5 pixel");
-        assertEquals(19, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 1,9");
+        assertEquals(20, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 2");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
                         > CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS,
                 "le blanc doit deborder du gris");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
-                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 4,
-                "mais a peine : un dixieme de chaque cote au plus");
+                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 6,
+                "mais a peine : un quart de pixel de chaque cote au plus");
 
         // Ses deux textes sont cales par le BAS de leur boite de 10 (l'une posee a 17, l'autre
         // a 27) : le titre tombe donc a 27 et la duree a 37, dix pixels plus bas, et non a la

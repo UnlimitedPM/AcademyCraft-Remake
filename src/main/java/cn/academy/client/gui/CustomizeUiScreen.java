@@ -41,18 +41,16 @@ public class CustomizeUiScreen extends Screen {
     private static final int OUTLINE = 0xFFFFFFFF;
 
     /**
-     * La police de l'original.
+     * La police de l'original, gravee d'avance.
      *
      * <p>L'original ne dessinait pas avec la police du jeu : il rendait son texte avec une
-     * police <b>du systeme</b>, Microsoft YaHei par defaut, lue par AWT. Elle est donc
-     * embarquee ici sous {@code assets/academy/font/ac_gui.ttf}, extraite d'une collection
-     * Windows par {@code scripts/ttc-to-ttf.py} — le chargeur de Minecraft ne sait pas lire
-     * un .ttc. Ses deux tailles et la facon de les accorder sont expliquees sur
-     * {@link CustomizeUiLayout#FONT_RATIO}. Si le fichier est absent, la definition retombe
-     * sur la police du jeu.
+     * police <b>du systeme</b>, Microsoft YaHei par defaut, lue par AWT. Et Minecraft ne sait
+     * pas la dessiner : il rasterise sans hinting puis reduit, ce qui cisaile ou noie le trait.
+     * Les glyphes sont donc graves d'avance, <b>avec hinting</b>, par {@code bake-font.ps1} — une
+     * planche par taille — et Minecraft les dessine pixel pour pixel. Chaque definition retombe
+     * sur la police du jeu si sa planche manque.
      */
-    private static final Style GUI_STYLE = Style.EMPTY.withFont(
-            ResourceLocation.fromNamespaceAndPath("academy", "ac_gui"));
+    private static final Style[] SHEET_STYLES = new Style[CustomizeUiLayout.SHEET_MAX + 1];
 
     /** Les images de l'original, telles quelles : aucune n'est redessinee. */
     private static final ResourceLocation PANEL_TEXTURE = texture("window_ui_resize");
@@ -117,9 +115,6 @@ public class CustomizeUiScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
-        // Sans ce lissage, le texte sort cisaille : voir FontSmoothing.
-        FontSmoothing.apply();
-
         // Le fond de l'ecran vient d'etre dessine, et il coupe le melange en partant. Chaque
         // dessin le rallume donc lui-meme : sans cela, tout ce qui a de la transparence sort
         // en aplat opaque et les textes ne se melangent pas.
@@ -153,8 +148,8 @@ public class CustomizeUiScreen extends Screen {
     }
 
     /** Le haut d'un texte dont on connait le bas : l'original cale ses boites par le bas. */
-    private int textTopForBottom(float bottom, float scale) {
-        return Math.round(bottom - font.lineHeight * scale);
+    private static int textTopForBottom(float bottom, float scale) {
+        return Math.round(bottom - CustomizeUiLayout.LINE * scale);
     }
 
     /** Le panneau des elements : sa texture d'origine, a moitie, et ses lignes. */
@@ -186,16 +181,16 @@ public class CustomizeUiScreen extends Screen {
         float headerScale = CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT);
         drawText(graphics, title, CustomizeUiLayout.headerTextLeft(),
                 CustomizeUiLayout.textTop(CustomizeUiLayout.headerTextCenterY(),
-                        Math.round(font.lineHeight * headerScale)),
-                headerScale, CustomizeUiLayout.HEADER_TEXT);
+                        Math.round(CustomizeUiLayout.LINE * headerScale)),
+                headerScale, 1.0f, CustomizeUiLayout.HEADER_TEXT);
 
         float rowScale = CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT);
         for (int i = 0; i < elements.size(); ++i) {
             drawText(graphics, Component.translatable(elements.get(i).getLabelKey()),
                     CustomizeUiLayout.rowTextLeft(),
                     CustomizeUiLayout.textTop(CustomizeUiLayout.rowTextCenterY(i),
-                            Math.round(font.lineHeight * rowScale)),
-                    rowScale, CustomizeUiLayout.ROW_TEXT);
+                            Math.round(CustomizeUiLayout.LINE * rowScale)),
+                    rowScale, 1.0f, CustomizeUiLayout.ROW_TEXT);
         }
     }
 
@@ -253,9 +248,9 @@ public class CustomizeUiScreen extends Screen {
 
         blend();
         drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), NOTIFY_TITLE_X, NOTIFY_TITLE_Y,
-                CustomizeUiLayout.plainFontScale(NOTIFY_TITLE_FONT), NOTIFY_TEXT_COLOR);
+                CustomizeUiLayout.plainFontScale(NOTIFY_TITLE_FONT), NOTIFY_SCALE, NOTIFY_TEXT_COLOR);
         drawText(graphics, Component.literal(NOTIFY_DEMO_TEXT), NOTIFY_TEXT_X, NOTIFY_TEXT_Y,
-                CustomizeUiLayout.plainFontScale(NOTIFY_TEXT_FONT), NOTIFY_TEXT_COLOR);
+                CustomizeUiLayout.plainFontScale(NOTIFY_TEXT_FONT), NOTIFY_SCALE, NOTIFY_TEXT_COLOR);
 
         pose.popPose();
     }
@@ -291,11 +286,11 @@ public class CustomizeUiScreen extends Screen {
         blend();
         drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), CustomizeUiLayout.MEDIA_TITLE_X,
                 textTopForBottom(CustomizeUiLayout.MEDIA_TITLE_BOTTOM, titleScale),
-                titleScale, NOTIFY_TEXT_COLOR);
+                titleScale, 1.0f, NOTIFY_TEXT_COLOR);
         blend();
         drawText(graphics, Component.literal(MEDIA_DEMO_TIME), CustomizeUiLayout.MEDIA_TIME_X,
                 textTopForBottom(CustomizeUiLayout.MEDIA_TIME_BOTTOM, timeScale),
-                timeScale, NOTIFY_TEXT_COLOR);
+                timeScale, 1.0f, NOTIFY_TEXT_COLOR);
     }
 
     /** Le cadre des deux champs, a droite de la ligne de l'element choisi. */
@@ -315,9 +310,9 @@ public class CustomizeUiScreen extends Screen {
 
         int top = CustomizeUiLayout.fieldTop(index);
         drawText(graphics, Component.literal("X"), x + CustomizeUiLayout.LABEL_X, top,
-                1.0f, CustomizeUiLayout.FIELD_TEXT);
+                1.0f, 1.0f, CustomizeUiLayout.FIELD_TEXT);
         drawText(graphics, Component.literal("Y"), x + CustomizeUiLayout.LABEL_Y, top,
-                1.0f, CustomizeUiLayout.FIELD_TEXT);
+                1.0f, 1.0f, CustomizeUiLayout.FIELD_TEXT);
 
         drawField(graphics, index, true);
         drawField(graphics, index, false);
@@ -337,26 +332,42 @@ public class CustomizeUiScreen extends Screen {
 
         String value = focused ? buffer
                 : String.valueOf(x ? layout.getX(selected) : layout.getY(selected));
-        drawText(graphics, Component.literal(value), left + 1, top, 1.0f,
+        drawText(graphics, Component.literal(value), left + 1, top, 1.0f, 1.0f,
                 CustomizeUiLayout.FIELD_TEXT);
     }
 
     /**
-     * Ecrit un texte dans la police de l'original, a l'echelle demandee.
+     * Ecrit un texte avec la planche de glyphes gravee la plus proche de la taille voulue.
      *
-     * <p>La police est celle de l'original (voir {@link #GUI_STYLE}) : l'echelle demandee vient
-     * de {@link CustomizeUiLayout#fontScale(float)}, qui porte tout le reglage.
+     * <p>{@code scale} est l'echelle du texte (elle inclut deja celle du panneau quand il y en
+     * a une) et {@code poseScale} celle de la pose du dessin, car c'est leur produit qui donne
+     * la taille reellement dessinee — donc la planche a choisir. L'echelle appliquee ensuite a
+     * la planche ne depend que de {@code scale} : la pose du dessin, elle, est deja en place.
      */
     private void drawText(GuiGraphics graphics, Component text, int left, int top,
-                          float scale, int color) {
+                          float scale, float poseScale, int color) {
         blend();
+
+        int sheet = CustomizeUiLayout.sheetFor(scale * poseScale);
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(left, top, 0);
-        pose.scale(scale, scale, 1.0f);
-        graphics.drawString(font, text.copy().withStyle(GUI_STYLE), 0, 0, color, false);
+        pose.scale(CustomizeUiLayout.sheetScale(scale, sheet),
+                CustomizeUiLayout.sheetScale(scale, sheet), 1.0f);
+        graphics.drawString(font, text.copy().withStyle(styleOf(sheet)), 0, 0, color, false);
         pose.popPose();
+    }
+
+    /** Le style qui designe la planche gravee d'une taille donnee. */
+    private static Style styleOf(int sheet) {
+        Style style = SHEET_STYLES[sheet];
+        if (style == null) {
+            style = Style.EMPTY.withFont(
+                    ResourceLocation.fromNamespaceAndPath("academy", "ac_gui_" + sheet));
+            SHEET_STYLES[sheet] = style;
+        }
+        return style;
     }
 
     @Override
