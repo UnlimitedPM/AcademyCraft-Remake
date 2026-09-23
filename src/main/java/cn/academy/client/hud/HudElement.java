@@ -35,21 +35,28 @@ package cn.academy.client.hud;
  */
 public enum HudElement {
 
-    /** Le temoin de points de controle : haut a droite. Sa barre fait 964x147 a l'echelle 0.2. */
-    CP_BAR("cpbar", "ac.gui.uiedit.elm.cpbar", Side.RIGHT, Slide.TOP, -12.0, 12.0,
-            193, 29, 193, 29),
-
-    /** Le rappel des touches d'aptitude : contre le bord droit, sous le milieu. 140x210 a 0.23. */
+    /**
+     * Le rappel des touches d'aptitude : contre le bord droit, sous le milieu. 140x210 a 0.23.
+     *
+     * <p>L'ordre de ces quatre constantes <b>est</b> celui du panneau "Elements" de
+     * l'original — Control Hint, Media Player, Notification, CP Indicator — et non un ordre
+     * choisi : l'original les listait dans l'ordre ou ils s'inscrivaient, et changer le notre
+     * reorganiserait sa liste sous les yeux du joueur.
+     */
     KEY_HINT("keyhint", "ac.gui.uiedit.elm.keyhint", Side.RIGHT, Slide.MIDDLE, 0.0, 30.0,
             32, 48, 64, 97),
+
+    /** Le morceau en cours : bas a droite. 145x36, sans echelle. */
+    MEDIA("media", "ac.gui.uiedit.elm.media", Side.RIGHT, Slide.BOTTOM, -6.0, -6.0,
+            145, 36, 145, 36),
 
     /** Les messages du mod : haut a gauche. 517x170 a 0.25. */
     NOTIFICATION("notification", "ac.gui.uiedit.elm.notification", Side.LEFT, Slide.TOP, 0.0, 15.0,
             129, 43, 129, 43),
 
-    /** Le morceau en cours : bas a droite. 145x36, sans echelle. */
-    MEDIA("media", "ac.gui.uiedit.elm.media", Side.RIGHT, Slide.BOTTOM, -6.0, -6.0,
-            145, 36, 145, 36);
+    /** Le temoin de points de controle : haut a droite. Sa barre fait 964x147 a l'echelle 0.2. */
+    CP_BAR("cpbar", "ac.gui.uiedit.elm.cpbar", Side.RIGHT, Slide.TOP, -12.0, 12.0,
+            193, 29, 193, 29);
 
     /** De quel cote de l'ecran l'element est accroche. */
     public enum Side { LEFT, RIGHT }

@@ -2,6 +2,7 @@ package cn.academy.client.hud;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -52,6 +53,19 @@ class HudLayoutTest {
         assertEquals("keyhint", HudElement.KEY_HINT.getName());
         assertEquals("notification", HudElement.NOTIFICATION.getName());
         assertEquals("media", HudElement.MEDIA.getName());
+    }
+
+    @Test
+    void lOrdreDesElementsEstCeluiDuPanneau() {
+        // Ce n'est pas un ordre choisi : c'est celui du panneau de l'original, releve sur sa
+        // capture — Control Hint, Media Player, Notification, CP Indicator. Le figer evite
+        // que la liste se reorganise toute seule sous les yeux du joueur.
+        assertArrayEquals(new HudElement[] {
+                HudElement.KEY_HINT,
+                HudElement.MEDIA,
+                HudElement.NOTIFICATION,
+                HudElement.CP_BAR }, HudElement.values()
+        );
     }
 
     @Test
