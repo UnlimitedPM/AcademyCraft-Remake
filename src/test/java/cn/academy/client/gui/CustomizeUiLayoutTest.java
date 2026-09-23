@@ -67,13 +67,17 @@ class CustomizeUiLayoutTest {
 
     @Test
     void laPoliceEstCelleDeLoriginalRameneeALaNotre() {
-        // L'original ecrit son en-tete et ses lignes en corps 18 : dans un panneau a moitie,
-        // cela fait 9 pixels, soit la police du jeu a 0.75.
-        assertEquals(0.75f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
-        assertEquals(0.75f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
-        // La notification ecrit en corps 38 et 54, sans passer par le panneau.
-        assertEquals(3.1667f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
-        assertEquals(4.5f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
+        // La police embarquee est rasterisee a 9 pixels, et le rapport d'un dixieme fait tomber
+        // les textes de l'ecran a environ un pour un avec ce raster. Un corps 18 dans un panneau
+        // a moitie donne donc 0,9 ; le titre d'une notification, ecrit en corps 38 et dessine au
+        // quart, doit se lire en multipliant les deux.
+        assertEquals(0.9f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
+        assertEquals(0.9f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
+        assertEquals(3.8f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
+        assertEquals(5.4f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
+        // Le titre du lecteur media : dessine a l'echelle un, donc pile sur le raster.
+        assertEquals(1.0f, CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT),
+                0.001f);
     }
 
     @Test
@@ -82,8 +86,13 @@ class CustomizeUiLayoutTest {
         // a 27 ; son fond descend un cheveu plus bas (27,2) et fait 1,1 de haut.
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
-        assertEquals(1, CustomizeUiLayout.MEDIA_BAR_BACK_H, "1,1 arrondi au pixel");
-        assertEquals(2, CustomizeUiLayout.MEDIA_BAR_FILL_H, "1,5 arrondi au pixel");
+        assertEquals(1, CustomizeUiLayout.MEDIA_BAR_BACK_H, "le fond fait un pixel");
+        // Le fond doit etre AU CENTRE de la progression : du blanc au-dessus et en dessous.
+        assertTrue(CustomizeUiLayout.MEDIA_BAR_FILL_TOP < CustomizeUiLayout.MEDIA_BAR_Y,
+                "il reste du blanc au-dessus du fond");
+        assertTrue(CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_BACK_H
+                        < CustomizeUiLayout.MEDIA_BAR_FILL_TOP + CustomizeUiLayout.MEDIA_BAR_FILL_H,
+                "et du blanc en dessous");
 
         // Ses deux textes sont cales par le BAS de leur boite de 10 (l'une posee a 17, l'autre
         // a 27) : le titre tombe donc a 27 et la duree a 37, dix pixels plus bas, et non a la

@@ -47,9 +47,9 @@ public class CustomizeUiScreen extends Screen {
      * police <b>du systeme</b>, Microsoft YaHei par defaut, lue par AWT. Elle est donc
      * embarquee ici sous {@code assets/academy/font/ac_gui.ttf}, extraite d'une collection
      * Windows par {@code scripts/ttc-to-ttf.py} — le chargeur de Minecraft ne sait pas lire
-     * un .ttc. Son corps de base vaut 12, donc les tailles de l'original s'ecrivent en
-     * douziemes, ce que fait {@link CustomizeUiLayout#fontScale(float)}. Si le fichier est
-     * absent, la definition retombe sur la police du jeu.
+     * un .ttc. Son corps de base est 9, et les tailles de l'original se lisent en dixiemes
+     * (voir {@link CustomizeUiLayout#FONT_RATIO}). Si le fichier est absent, la definition
+     * retombe sur la police du jeu.
      */
     private static final Style GUI_STYLE = Style.EMPTY.withFont(
             ResourceLocation.fromNamespaceAndPath("academy", "ac_gui"));
@@ -116,13 +116,6 @@ public class CustomizeUiScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
-
-        // L'original filtrait ses textures en lineaire, et cet ecran les reduit toutes.
-        GuiTextures.linear(PANEL_TEXTURE);
-        GuiTextures.linear(CPBAR_TEXTURE);
-        GuiTextures.linear(KEY_HINT_TEXTURE);
-        GuiTextures.linear(NOTIFY_LOGO_TEXTURE);
-        GuiTextures.linear(NOTIFY_BACK_TEXTURE);
 
         // Le fond de l'ecran vient d'etre dessine, et il coupe le melange en partant. Chaque
         // dessin le rallume donc lui-meme : sans cela, tout ce qui a de la transparence sort
@@ -269,12 +262,13 @@ public class CustomizeUiScreen extends Screen {
         blend();
 
         // La progression blanche d'abord, le fond ensuite : c'est l'ordre de ses widgets, donc
-        // chez lui le blanc se retrouve legerement assombri par le noir a 20 %.
-        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
+        // chez lui le blanc se retrouve legerement assombri par le noir a 20 % du fond. Le fond
+        // est plus court que la progression et pose au milieu d'elle.
+        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_FILL_TOP,
                 CustomizeUiLayout.MEDIA_BAR_X
                         + Math.round(CustomizeUiLayout.MEDIA_BAR_W
                                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS),
-                CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_FILL_H,
+                CustomizeUiLayout.MEDIA_BAR_FILL_TOP + CustomizeUiLayout.MEDIA_BAR_FILL_H,
                 CustomizeUiLayout.MEDIA_BAR_FILL);
         graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
                 CustomizeUiLayout.MEDIA_BAR_X + CustomizeUiLayout.MEDIA_BAR_W,
@@ -341,8 +335,8 @@ public class CustomizeUiScreen extends Screen {
     /**
      * Ecrit un texte dans la police de l'original, a l'echelle demandee.
      *
-     * <p>La police est celle de l'original (voir {@link #GUI_STYLE}) : son corps de base vaut
-     * 12, et une taille de l'original se lit donc en douziemes.
+     * <p>La police est celle de l'original (voir {@link #GUI_STYLE}) : son corps de base est 9,
+     * et une taille de l'original se lit donc en dixiemes.
      */
     private void drawText(GuiGraphics graphics, Component text, int left, int top,
                           float scale, int color) {

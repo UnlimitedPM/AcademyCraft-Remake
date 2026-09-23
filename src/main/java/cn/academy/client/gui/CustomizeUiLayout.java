@@ -79,27 +79,40 @@ public final class CustomizeUiLayout {
     public static final int MEDIA_TIME_X = 117;
     public static final int MEDIA_TIME_BOTTOM = 37;
     public static final float MEDIA_TIME_FONT = 8.5f;
-    /** Sa barre : 120 de large a partir de 14, remplie a moitie, sur un fond plus fin dessous. */
+    /** Sa barre : 120 de large a partir de 14, remplie a moitie, posee sur un fond plus fin. */
     public static final int MEDIA_BAR_X = 14;
     public static final int MEDIA_BAR_Y = 27;
     public static final int MEDIA_BAR_W = 120;
     public static final float MEDIA_BAR_PROGRESS = 0.5f;
-    /** Le fond fait 1,1 de haut et la progression 1,5 : arrondis au pixel entier. */
+    /**
+     * La progression fait 1,5 de haut et son fond 1,1, pose 0,2 sous elle : le fond est donc
+     * <b>au centre</b> du blanc, avec un peu de blanc au-dessus et en dessous.
+     *
+     * <p>Au pixel entier, il faut trois pixels de blanc pour un de fond pour que ce centrage
+     * se voie : a 1,5 et 1,1 les deux se superposeraient exactement, et la barre paraitrait
+     * entièrement grise.
+     */
+    public static final int MEDIA_BAR_FILL_TOP = MEDIA_BAR_Y - 1;
+    public static final int MEDIA_BAR_FILL_H = 3;
     public static final int MEDIA_BAR_BACK_H = 1;
-    public static final int MEDIA_BAR_FILL_H = 2;
     public static final int MEDIA_BAR_BACK = 0x33000000;
     public static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
 
     /**
-     * Le rapport entre la police de l'original et celle du jeu.
+     * Le rapport entre la police de l'original et la notre.
      *
-     * <p>L'original ecrit son en-tete en corps 18, dans un panneau a moitie : cela fait donc
-     * 9 pixels a l'ecran, soit exactement la police du jeu. Un corps se lit donc en
-     * douziemes. Ce rapport a ete verifie sur les textes du lecteur media : son titre, ecrit
-     * en corps 10 dans une boite de 100 de large, y tient avec cette conversion, comme il y
-     * tenait chez lui.
+     * <p>La police embarquee est rasterisee a <b>9 pixels</b> (c'est le {@code size} de sa
+     * definition). Or Minecraft ne sait pas reechantillonner proprement : une police dessinee
+     * a une taille inferieure a celle ou elle a ete rasterisee perd ses traits fins (le
+     * filtrage d'interface est au plus proche voisin, donc un trait d'un pixel se fait sauter).
+     * Ce rapport est donc choisi pour que les textes de l'ecran tombent a <b>environ un pour
+     * un</b> avec le raster : de 0,9 a 1,1 selon les endroits.
+     *
+     * <p>Il vaut un dixieme, ce qui rend le texte environ 10 % plus petit que le corps annonce
+     * par l'original : c'est la mesure prise a l'ecran, sa police du systeme dessinant plus
+     * petite que son corps nominal.
      */
-    public static final float FONT_RATIO = 1.0f / 12.0f;
+    public static final float FONT_RATIO = 1.0f / 10.0f;
 
     private CustomizeUiLayout() {
     }
