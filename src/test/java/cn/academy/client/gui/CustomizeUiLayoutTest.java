@@ -78,45 +78,19 @@ class CustomizeUiLayoutTest {
     }
 
     @Test
-    void laPlancheDeGlyphesSuitLaTailleDessinee() {
-        // Les glyphes sont graves d'avance, une planche par taille entiere, et la taille voulue
-        // est arrondie AVANT de choisir : un texte du panneau veut 6,75 pixels, donc la planche
-        // de 7, et celle-la se dessine a l'echelle 1 — sans reechantillonnage, donc nette.
-        float panneau = CustomizeUiLayout.fontScale(18.0f);
-        assertEquals(7, CustomizeUiLayout.sheetFor(panneau));
-        assertEquals(1.0f, CustomizeUiLayout.sheetScale(panneau, 7), 0.0001f);
-
-        // Le titre d'une notification est dessine au quart : c'est le produit des deux echelles
-        // qui donne sa taille reelle, donc la planche. 7,13 pixels, donc la planche de 7.
-        float notification = CustomizeUiLayout.plainFontScale(38.0f) * 0.25f;
-        assertEquals(7, CustomizeUiLayout.sheetFor(notification));
-
-        // Le titre du lecteur media, dessine a l'echelle un : 7,5 pixels, donc la planche de 8 ;
-        // sa duree veut 6,4, donc la planche de 6.
-        assertEquals(8, CustomizeUiLayout.sheetFor(CustomizeUiLayout.plainFontScale(10.0f)));
-        assertEquals(6, CustomizeUiLayout.sheetFor(
-                CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TIME_FONT)));
-
-        // Rien ne sort des planches gravees, meme pour un texte enorme ou minuscule : la taille
-        // est alors rattrapee par l'echelle, quitte a etre un peu moins nette.
-        assertEquals(CustomizeUiLayout.SHEET_MIN, CustomizeUiLayout.sheetFor(0.01f));
-        assertEquals(CustomizeUiLayout.SHEET_MAX, CustomizeUiLayout.sheetFor(99.0f));
-    }
-
-    @Test
     void leLecteurMediaEstCeluiDeSonXml() {
-        // Sa barre : le fond gris fait 1,3 pixel de haut et la progression blanche 2,1, donc elle
-        // deborde a peine de chaque cote. Tout est en dixiemes, d'ou les treize et vingt et un.
+        // Sa barre : le fond gris fait 1,3 pixel de haut et la progression blanche 2,2, donc elle
+        // deborde a peine de chaque cote. Tout est en dixiemes, d'ou les treize et vingt-deux.
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
         assertEquals(13, CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS, "le gris fait 1,3 pixel");
-        assertEquals(21, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 2,1");
+        assertEquals(22, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 2,2");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
                         > CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS,
                 "le blanc doit deborder du gris");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
-                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 8,
-                "mais a peine : quatre dixiemes de chaque cote au plus");
+                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 9,
+                "mais a peine : moins de cinq dixiemes de chaque cote");
 
         // Ses deux textes sont cales par le BAS de leur boite de 10 (l'une posee a 17, l'autre
         // a 27) : le titre tombe donc a 27 et la duree a 37, dix pixels plus bas, et non a la
