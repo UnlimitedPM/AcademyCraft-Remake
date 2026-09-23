@@ -77,6 +77,23 @@ class CustomizeUiLayoutTest {
     }
 
     @Test
+    void leLecteurMediaEstCeluiDeSonXml() {
+        // Son media_player_aux.xml : une barre de 120 a partir de 14, remplie a moitie, posee
+        // a 27 ; son fond descend un cheveu plus bas (27,2) et fait 1,1 de haut.
+        assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
+                * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
+        assertEquals(1, CustomizeUiLayout.MEDIA_BAR_BACK_H, "1,1 arrondi au pixel");
+        assertEquals(2, CustomizeUiLayout.MEDIA_BAR_FILL_H, "1,5 arrondi au pixel");
+
+        // Ses deux textes sont cales par le BAS de leur boite de 10 (l'une posee a 17, l'autre
+        // a 27) : le titre tombe donc a 27 et la duree a 37, dix pixels plus bas, et non a la
+        // meme hauteur comme on pourrait le croire.
+        assertEquals(10, CustomizeUiLayout.MEDIA_TIME_BOTTOM - CustomizeUiLayout.MEDIA_TITLE_BOTTOM);
+        assertEquals(CustomizeUiLayout.MEDIA_BAR_Y, CustomizeUiLayout.MEDIA_TITLE_BOTTOM,
+                "le titre s'arrete juste au-dessus de la barre");
+    }
+
+    @Test
     void leTexteEstCentreSurSaLigne() {
         assertEquals(118, CustomizeUiLayout.textTop(122, 8), "8 pixels centres sur 122");
         assertEquals(115, CustomizeUiLayout.textTop(119, 8), "et cela suit la ligne");

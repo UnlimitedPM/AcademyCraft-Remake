@@ -71,20 +71,6 @@ public class CustomizeUiScreen extends Screen {
     private static final String NOTIFY_DEMO_TITLE = "Some Notification";
     private static final String NOTIFY_DEMO_TEXT = "blablabla";
     private static final int NOTIFY_TEXT_COLOR = 0xFFFFFFFF;
-
-    /** Le lecteur media : du texte et une barre, l'original n'a pas de fond. */
-    private static final int MEDIA_TITLE_X = 13;
-    private static final int MEDIA_TITLE_Y = 17;
-    private static final float MEDIA_TITLE_FONT = 10.0f;
-    private static final int MEDIA_TIME_X = 117;
-    private static final int MEDIA_TIME_Y = 27;
-    private static final float MEDIA_TIME_FONT = 8.5f;
-    private static final int MEDIA_BAR_X = 14;
-    private static final int MEDIA_BAR_Y = 27;
-    private static final int MEDIA_BAR_W = 120;
-    private static final float MEDIA_BAR_PROGRESS = 0.5f;
-    private static final int MEDIA_BAR_BACK = 0x33000000;
-    private static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
     /** Ses textes d'exemple, tels que son xml les porte. */
     private static final String MEDIA_DEMO_TITLE = "Only My Railgun";
     private static final String MEDIA_DEMO_TIME = "04:30";
@@ -137,8 +123,28 @@ public class CustomizeUiScreen extends Screen {
         RenderSystem.disableBlend();
     }
 
+    /**
+     * Rallume le melange avant un dessin.
+     *
+     * <p>Indispensable : {@code graphics.fill} termine par {@code disableBlend()}. Comme
+     * l'ordre de dessin passe par le lecteur media (qui n'est fait que de {@code fill}) avant
+     * la notification, le panneau et le temoin de CP, tout ce qui suit sortait en aplats
+     * opaques : les fondus des textures et la transparence de l'icone etaient perdus.
+     */
+    private static void blend() {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+    }
+
+    /** Le haut d'un texte dont on connait le bas : l'original cale ses boites par le bas. */
+    private int textTopForBottom(float bottom, float scale) {
+        return Math.round(bottom - font.lineHeight * scale);
+    }
+
     /** Le panneau des elements : sa texture d'origine, a moitie, et ses lignes. */
     private void drawPanel(GuiGraphics graphics, int mouseX, int mouseY) {
+        blend();
+
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(CustomizeUiLayout.PANEL_X, CustomizeUiLayout.PANEL_Y, 0);
@@ -179,6 +185,8 @@ public class CustomizeUiScreen extends Screen {
 
     /** L'apercu d'un element, a sa place reelle et a la taille de l'original. */
     private void drawPreview(GuiGraphics graphics, HudElement element) {
+        blend();
+
         int w = element.getPreviewWidth();
         int h = element.getPreviewHeight();
         int x = layout.placeX(element, width, w);
@@ -215,6 +223,8 @@ public class CustomizeUiScreen extends Screen {
 
     /** La notification : son fond, son icone, et les deux lignes d'exemple de l'original. */
     private void drawNotificationPreview(GuiGraphics graphics) {
+        blend();
+
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.scale(NOTIFY_SCALE, NOTIFY_SCALE, 1.0f);
@@ -225,6 +235,7 @@ public class CustomizeUiScreen extends Screen {
                 NOTIFY_ICON, NOTIFY_ICON, 0.0f, 0.0f,
                 NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO);
 
+        blend();
         drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), NOTIFY_TITLE_X, NOTIFY_TITLE_Y,
                 CustomizeUiLayout.plainFontScale(NOTIFY_TITLE_FONT), NOTIFY_TEXT_COLOR);
         drawText(graphics, Component.literal(NOTIFY_DEMO_TEXT), NOTIFY_TEXT_X, NOTIFY_TEXT_Y,
@@ -235,20 +246,38 @@ public class CustomizeUiScreen extends Screen {
 
     /** Le lecteur media : pas d'image, son titre, sa duree et sa barre de progression. */
     private void drawMediaPreview(GuiGraphics graphics) {
-        graphics.fill(MEDIA_BAR_X, MEDIA_BAR_Y, MEDIA_BAR_X + MEDIA_BAR_W, MEDIA_BAR_Y + 2,
-                MEDIA_BAR_BACK);
-        graphics.fill(MEDIA_BAR_X, MEDIA_BAR_Y,
-                MEDIA_BAR_X + Math.round(MEDIA_BAR_W * MEDIA_BAR_PROGRESS), MEDIA_BAR_Y + 1,
-                MEDIA_BAR_FILL);
+        blend();
 
-        drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), MEDIA_TITLE_X, MEDIA_TITLE_Y,
-                CustomizeUiLayout.plainFontScale(MEDIA_TITLE_FONT), NOTIFY_TEXT_COLOR);
-        drawText(graphics, Component.literal(MEDIA_DEMO_TIME), MEDIA_TIME_X, MEDIA_TIME_Y,
-                CustomizeUiLayout.plainFontScale(MEDIA_TIME_FONT), NOTIFY_TEXT_COLOR);
+        // La barre : son fond sur 120, et la progression blanche sur la moitie.
+        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
+                CustomizeUiLayout.MEDIA_BAR_X + CustomizeUiLayout.MEDIA_BAR_W,
+                CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_BACK_H,
+                CustomizeUiLayout.MEDIA_BAR_BACK);
+        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
+                CustomizeUiLayout.MEDIA_BAR_X
+                        + Math.round(CustomizeUiLayout.MEDIA_BAR_W
+                                * CustomizeUiLayout.MEDIA_BAR_PROGRESS),
+                CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_FILL_H,
+                CustomizeUiLayout.MEDIA_BAR_FILL);
+
+        // Le titre se cale par le bas de sa boite (juste au-dessus de la barre), et la duree
+        // par le bas de la sienne, dix pixels plus bas : c'est ce qui les met a deux hauteurs.
+        float titleScale = CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT);
+        float timeScale = CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TIME_FONT);
+        blend();
+        drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), CustomizeUiLayout.MEDIA_TITLE_X,
+                textTopForBottom(CustomizeUiLayout.MEDIA_TITLE_BOTTOM, titleScale),
+                titleScale, NOTIFY_TEXT_COLOR);
+        blend();
+        drawText(graphics, Component.literal(MEDIA_DEMO_TIME), CustomizeUiLayout.MEDIA_TIME_X,
+                textTopForBottom(CustomizeUiLayout.MEDIA_TIME_BOTTOM, timeScale),
+                timeScale, NOTIFY_TEXT_COLOR);
     }
 
     /** Le cadre des deux champs, a droite de la ligne de l'element choisi. */
     private void drawEditBox(GuiGraphics graphics, int index) {
+        blend();
+
         int x = CustomizeUiLayout.editLeft();
         int y = CustomizeUiLayout.editTop(index);
 
@@ -272,6 +301,8 @@ public class CustomizeUiScreen extends Screen {
 
     /** Un des deux champs, avec sa valeur ; il passe au rouge si la saisie ne passe pas. */
     private void drawField(GuiGraphics graphics, int index, boolean x) {
+        blend();
+
         int left = CustomizeUiLayout.fieldLeft(x);
         int top = CustomizeUiLayout.fieldTop(index);
         boolean focused = editing && x == editingX;

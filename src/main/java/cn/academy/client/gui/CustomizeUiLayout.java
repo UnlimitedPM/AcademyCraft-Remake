@@ -70,6 +70,26 @@ public final class CustomizeUiLayout {
     /** Le rouge de l'original quand la saisie ne passe pas. */
     public static final int FIELD_BAD = 0xFFBB3333;
 
+    /** Le lecteur media, tel que son {@code media_player_aux.xml} le pose : 145x36, sans fond. */
+    public static final int MEDIA_TITLE_X = 13;
+    /** Son titre est cale par le BAS de sa boite de 10, posee a 17 : donc a 27. */
+    public static final int MEDIA_TITLE_BOTTOM = 27;
+    public static final float MEDIA_TITLE_FONT = 10.0f;
+    /** Sa duree est calee de meme, mais sa boite part de 27 : son bas tombe a 37, dix plus bas. */
+    public static final int MEDIA_TIME_X = 117;
+    public static final int MEDIA_TIME_BOTTOM = 37;
+    public static final float MEDIA_TIME_FONT = 8.5f;
+    /** Sa barre : 120 de large a partir de 14, remplie a moitie, sur un fond plus fin dessous. */
+    public static final int MEDIA_BAR_X = 14;
+    public static final int MEDIA_BAR_Y = 27;
+    public static final int MEDIA_BAR_W = 120;
+    public static final float MEDIA_BAR_PROGRESS = 0.5f;
+    /** Le fond fait 1,1 de haut et la progression 1,5 : arrondis au pixel entier. */
+    public static final int MEDIA_BAR_BACK_H = 1;
+    public static final int MEDIA_BAR_FILL_H = 2;
+    public static final int MEDIA_BAR_BACK = 0x33000000;
+    public static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
+
     /**
      * Le rapport entre la police de l'original et celle du jeu.
      *
