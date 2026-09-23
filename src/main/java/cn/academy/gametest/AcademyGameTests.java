@@ -4794,6 +4794,9 @@ public final class AcademyGameTests {
                 "l'arbre s'installe avec un objet, pas d'office");
         assertTrue(helper, tutorial.isPreInstalled(),
                 "MisakaCloud s'installe d'office, comme dans l'original : c'est la documentation");
+        assertTrue(helper, settings.isPreInstalled(),
+                "Settings s'installe d'office, comme dans l'original : sans cela, son objet"
+                        + " n'ayant aucune recette, l'ecran de reglage du mod serait introuvable");
 
         assertValue(helper, "ac.app.about.name", about.getDisplayKey(), "cle de langue du nom");
         assertValue(helper, "ac.app.skill_tree.name", skillTree.getDisplayKey(), "cle de langue du nom");

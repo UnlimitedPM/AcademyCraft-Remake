@@ -27,6 +27,10 @@ public final class AppSettings extends App {
 
     private AppSettings() {
         super("settings");
+        // L'original l'installait d'office (`setPreInstalled` dans son AppSettings) : sans
+        // cela, l'application n'existe que si on installe son objet, et cet objet n'a
+        // aucune recette — l'ecran de reglage du mod serait donc introuvable en jeu.
+        setPreInstalled();
     }
 
     @Override
