@@ -131,8 +131,16 @@ foreach ($Size in $Sizes) {
 
             # La chaine se pose par le HAUT de sa ligne : on remonte donc de l'ascendante pour
             # que la ligne de base tombe juste.
+            #
+            # Le CADRAGE sur la case n'est pas un ornement : l'antialiasing d'une lettre mord
+            # d'un pixel sur la case voisine (le 'j' pose un pixel a alpha 12 juste a gauche de
+            # sa case), et Minecraft mesure l'encre de la CASE ENTIERE, voisine comprise. La
+            # lettre voisine recoit alors une avance trop large : un trou apres chaque 'i'
+            # (« Medi a Player »). Le cadrage garde chaque lettre chez elle.
+            $Graphics.SetClip((New-Object System.Drawing.RectangleF($X, ($Row * $Height), $Width, $Height)))
             $Graphics.DrawString([string][char]$Code, $Font, [System.Drawing.Brushes]::White,
                 $X, ($Baseline - $Ascent), $Format)
+            $Graphics.ResetClip()
         }
         $Lines += $Line.ToString()
     }
