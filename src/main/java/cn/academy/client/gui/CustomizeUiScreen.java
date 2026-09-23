@@ -8,7 +8,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -39,18 +38,6 @@ import java.util.List;
 public class CustomizeUiScreen extends Screen {
 
     private static final int OUTLINE = 0xFFFFFFFF;
-
-    /**
-     * La police de l'original, gravee d'avance.
-     *
-     * <p>L'original ne dessinait pas avec la police du jeu : il rendait son texte avec une
-     * police <b>du systeme</b>, Microsoft YaHei par defaut, lue par AWT. Et Minecraft ne sait
-     * pas la dessiner : il rasterise sans hinting puis reduit, ce qui cisaile ou noie le trait.
-     * Les glyphes sont donc graves d'avance, <b>avec hinting</b>, par {@code bake-font.ps1} — une
-     * planche par taille — et Minecraft les dessine pixel pour pixel. Chaque definition retombe
-     * sur la police du jeu si sa planche manque.
-     */
-    private static final Style[] SHEET_STYLES = new Style[CustomizeUiLayout.SHEET_MAX + 1];
 
     /** Les images de l'original, telles quelles : aucune n'est redessinee. */
     private static final ResourceLocation PANEL_TEXTURE = texture("window_ui_resize");
@@ -337,41 +324,36 @@ public class CustomizeUiScreen extends Screen {
     }
 
     /**
-     * Ecrit un texte avec la planche de glyphes gravee de la taille voulue.
+     * Ecrit un texte dans la police du jeu.
      *
-     * <p>{@code scale} est l'echelle du texte (elle inclut deja celle du panneau quand il y en
-     * a une) et {@code poseScale} celle de la pose du dessin : c'est leur produit qui donne la
-     * taille reellement dessinee, donc la planche a choisir.
+     * <p>L'original dessinait avec une police <b>du systeme</b> (Microsoft YaHei, lue par AWT),
+     * et Minecraft ne sait pas la rendre proprement : il la rasterise sans hinting puis la
+     * reduit. Toutes les facons de contourner ont ete essayees et mesurees (tailles de raster,
+     * sur-echantillonnage, filtrage lisse de l'atlas, gravage des glyphes d'avance) : le port
+     * dessine donc avec la police du jeu, quitte a s'eloigner un peu de la police d'origine.
      *
-     * <p>La planche est ensuite dessinee a sa taille EXACTE, ce qui demande de diviser par
-     * {@code poseScale} : la pose, elle, reste en place. Un rapport d'echelle fractionnaire
-     * reechantillonne les glyphes et ramene le flou — c'est tout l'objet du gravage.
+     * <p>La taille demandee est arrondie au <b>multiple entier</b> de la police : toute taille
+     * fractionnaire est reechantillonnee, donc floue. Sans pose reduite (le panneau, le lecteur
+     * media, les champs), le minimum est donc la taille de la police du jeu. Les apercus, eux,
+     * sont dessines dans une pose <b>reduite</b> : leur texte garde l'echelle demandee, sinon il
+     * sortirait plus gros que l'image qu'il accompagne.
+     *
+     * <p>{@code poseScale} est l'echelle de la pose en place : l'echelle appliquee ici la
+     * compense, pour que le texte tombe sur la taille voulue a l'ecran.
      */
     private void drawText(GuiGraphics graphics, Component text, int left, int top,
                           float scale, float poseScale, int color) {
         blend();
 
-        float wanted = scale * poseScale;
-        int sheet = CustomizeUiLayout.sheetFor(wanted);
-        float inner = CustomizeUiLayout.sheetScale(wanted, sheet) / poseScale;
+        float step = poseScale == 1.0f ? Math.max(1.0f, Math.round(scale)) : scale;
+        float inner = step / poseScale;
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(left, top, 0);
         pose.scale(inner, inner, 1.0f);
-        graphics.drawString(font, text.copy().withStyle(styleOf(sheet)), 0, 0, color, false);
+        graphics.drawString(font, text, 0, 0, color, false);
         pose.popPose();
-    }
-
-    /** Le style qui designe la planche gravee d'une taille donnee. */
-    private static Style styleOf(int sheet) {
-        Style style = SHEET_STYLES[sheet];
-        if (style == null) {
-            style = Style.EMPTY.withFont(
-                    ResourceLocation.fromNamespaceAndPath("academy", "ac_gui_" + sheet));
-            SHEET_STYLES[sheet] = style;
-        }
-        return style;
     }
 
     @Override

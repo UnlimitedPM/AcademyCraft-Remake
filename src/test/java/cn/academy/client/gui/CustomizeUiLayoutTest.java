@@ -66,44 +66,15 @@ class CustomizeUiLayoutTest {
     }
 
     @Test
-    void laPlancheDeGlyphesSuitLaTailleDessinee() {
-        // Les glyphes sont graves d'avance, une planche par taille entiere, et la taille voulue
-        // est arrondie AVANT de choisir : un texte du panneau veut 6,75 pixels, donc la planche
-        // de 7, et celle-la se dessine a l'echelle 1.
-        float panneau = CustomizeUiLayout.fontScale(18.0f);
-        assertEquals(7, CustomizeUiLayout.sheetFor(panneau));
-        assertEquals(1.0f, CustomizeUiLayout.sheetScale(panneau, 7), 0.0001f);
-
-        // Le titre d'une notification est dessine au quart : c'est le produit des deux echelles
-        // qui donne sa taille reelle, donc la planche. 7,13 pixels, donc la planche de 7.
-        float notification = CustomizeUiLayout.plainFontScale(38.0f) * 0.25f;
-        assertEquals(7, CustomizeUiLayout.sheetFor(notification));
-
-        // Le titre du lecteur media, dessine a l'echelle un : 7,5 pixels, donc la planche de 8.
-        assertEquals(8, CustomizeUiLayout.sheetFor(CustomizeUiLayout.plainFontScale(10.0f)));
-
-        // La taille exacte se dessine sans reechantillonnage : c'est ce qui separe un texte net
-        // d'un texte flou. Des que la planche manque, l'ecart reste rattrape par l'echelle.
-        assertEquals(1.0f, CustomizeUiLayout.sheetScale(1.0f, 9), 0.0001f);
-        assertEquals(0.857f, CustomizeUiLayout.sheetScale(0.6667f, 7), 0.001f);
-
-        // Rien ne sort des planches gravees, meme pour un texte enorme ou minuscule.
-        assertEquals(CustomizeUiLayout.SHEET_MIN, CustomizeUiLayout.sheetFor(0.01f));
-        assertEquals(CustomizeUiLayout.SHEET_MAX, CustomizeUiLayout.sheetFor(99.0f));
-    }
-
-    @Test
     void laPoliceEstCelleDeLoriginalRameneeALaNotre() {
-        // La police est declaree a 11 pixels et rasterisee a 11 (sans sur-echantillonnage), pour
-        // que la reduction soit la plus faible possible. Le rapport d'un douzieme fait tomber ses
-        // textes a 8-9 pixels : un corps 18 dans un panneau a moitie donne 18/12 * 0,5 = 0,75.
+        // Le rapport d'un douzieme ramene le corps de l'original a l'echelle du panneau : un
+        // corps 18 dans un panneau a moitie donne 18/12 * 0,5 = 0,75. C'est une echelle de
+        // composition : l'ecran la ramene ensuite a un multiple entier de la police du jeu,
+        // parce qu'une taille fractionnaire est reechantillonnee, donc floue.
         assertEquals(0.75f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
         assertEquals(0.75f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
         assertEquals(3.1667f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
         assertEquals(4.5f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
-        // Le titre du lecteur media : en corps 10 dessine a l'echelle un, donc un em de 9,17 pixels.
-        assertEquals(9.1667f, CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT)
-                * 11.0f, 0.001f);
     }
 
     @Test
