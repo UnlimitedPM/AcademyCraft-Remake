@@ -84,7 +84,7 @@ class CustomizeUiLayoutTest {
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
         assertEquals(15, CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS, "le gris fait 1,5 pixel");
-        assertEquals(20, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 2");
+        assertEquals(21, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 2,1");
         assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
                         > CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS,
                 "le blanc doit deborder du gris");

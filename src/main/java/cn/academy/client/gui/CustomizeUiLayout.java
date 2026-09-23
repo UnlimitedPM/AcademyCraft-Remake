@@ -90,7 +90,7 @@ public final class CustomizeUiLayout {
     public static final int MEDIA_BAR_W = 120;
     public static final float MEDIA_BAR_PROGRESS = 0.5f;
     public static final int MEDIA_BAR_GREY_TENTHS = 15;
-    public static final int MEDIA_BAR_WHITE_TENTHS = 20;
+    public static final int MEDIA_BAR_WHITE_TENTHS = 21;
     public static final int MEDIA_BAR_BACK = 0x1F000000;
     public static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
     /** Le pas de dessin de la barre : un dixieme de pixel. */

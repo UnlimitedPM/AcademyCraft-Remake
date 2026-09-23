@@ -332,11 +332,13 @@ public class CustomizeUiScreen extends Screen {
      * sur-echantillonnage, filtrage lisse de l'atlas, gravage des glyphes d'avance) : le port
      * dessine donc avec la police du jeu, quitte a s'eloigner un peu de la police d'origine.
      *
-     * <p>La taille demandee est arrondie au <b>multiple entier</b> de la police : toute taille
-     * fractionnaire est reechantillonnee, donc floue. Sans pose reduite (le panneau, le lecteur
-     * media, les champs), le minimum est donc la taille de la police du jeu. Les apercus, eux,
-     * sont dessines dans une pose <b>reduite</b> : leur texte garde l'echelle demandee, sinon il
-     * sortirait plus gros que l'image qu'il accompagne.
+     * <p>La taille dessinee vaut {@code scale * poseScale} — c'est le sens de {@code scale}, qui
+     * n'est PAS encore reduit par la pose. Sans pose reduite (le panneau, le lecteur media, les
+     * champs) elle est arrondie au <b>multiple entier</b> de la police : toute taille
+     * fractionnaire est reechantillonnee, donc floue ; le minimum y est donc la taille de la
+     * police du jeu. Les apercus, eux, sont dessines deux fois plus petits par leur pose (0,25) :
+     * leur texte garde l'echelle demandee, sinon il sortirait plus gros que l'image qu'il
+     * accompagne.
      *
      * <p>{@code poseScale} est l'echelle de la pose en place : l'echelle appliquee ici la
      * compense, pour que le texte tombe sur la taille voulue a l'ecran.
@@ -345,7 +347,8 @@ public class CustomizeUiScreen extends Screen {
                           float scale, float poseScale, int color) {
         blend();
 
-        float step = poseScale == 1.0f ? Math.max(1.0f, Math.round(scale)) : scale;
+        float wanted = scale * poseScale;
+        float step = poseScale == 1.0f ? Math.max(1.0f, Math.round(scale)) : wanted;
         float inner = step / poseScale;
 
         PoseStack pose = graphics.pose();
