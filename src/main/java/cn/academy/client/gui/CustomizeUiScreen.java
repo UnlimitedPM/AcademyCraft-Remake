@@ -47,9 +47,9 @@ public class CustomizeUiScreen extends Screen {
      * police <b>du systeme</b>, Microsoft YaHei par defaut, lue par AWT. Elle est donc
      * embarquee ici sous {@code assets/academy/font/ac_gui.ttf}, extraite d'une collection
      * Windows par {@code scripts/ttc-to-ttf.py} — le chargeur de Minecraft ne sait pas lire
-     * un .ttc. Son corps de base est 9, et les tailles de l'original se lisent en dixiemes
-     * (voir {@link CustomizeUiLayout#FONT_RATIO}). Si le fichier est absent, la definition
-     * retombe sur la police du jeu.
+     * un .ttc. Ses deux tailles et la facon de les accorder sont expliquees sur
+     * {@link CustomizeUiLayout#FONT_RATIO}. Si le fichier est absent, la definition retombe
+     * sur la police du jeu.
      */
     private static final Style GUI_STYLE = Style.EMPTY.withFont(
             ResourceLocation.fromNamespaceAndPath("academy", "ac_gui"));
@@ -335,8 +335,8 @@ public class CustomizeUiScreen extends Screen {
     /**
      * Ecrit un texte dans la police de l'original, a l'echelle demandee.
      *
-     * <p>La police est celle de l'original (voir {@link #GUI_STYLE}) : son corps de base est 9,
-     * et une taille de l'original se lit donc en dixiemes.
+     * <p>La police est celle de l'original (voir {@link #GUI_STYLE}) : l'echelle demandee vient
+     * de {@link CustomizeUiLayout#fontScale(float)}, qui porte tout le reglage.
      */
     private void drawText(GuiGraphics graphics, Component text, int left, int top,
                           float scale, int color) {

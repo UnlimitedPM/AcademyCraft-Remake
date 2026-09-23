@@ -93,26 +93,31 @@ public final class CustomizeUiLayout {
      * entièrement grise.
      */
     public static final int MEDIA_BAR_FILL_TOP = MEDIA_BAR_Y - 1;
-    public static final int MEDIA_BAR_FILL_H = 3;
-    public static final int MEDIA_BAR_BACK_H = 1;
+    public static final int MEDIA_BAR_FILL_H = 4;
+    public static final int MEDIA_BAR_BACK_H = 2;
     public static final int MEDIA_BAR_BACK = 0x33000000;
     public static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
 
     /**
      * Le rapport entre la police de l'original et la notre.
      *
-     * <p>La police embarquee est declaree a <b>9 pixels</b>, et Minecraft la rasterise au
-     * double de cette taille (son sur-echantillonnage) avant de la dessiner a 9. Ce n'est pas
-     * un detail : a une taille rasterisee trop petite, certaines boites de glyphes tombent a
-     * zero pixel, et le chargeur de Minecraft les remplace alors <b>par des espaces, en
-     * silence</b> (voir {@code TrueTypeGlyphProvider.getGlyph}). Vecu : rasterise a 9, le 'a',
-     * le 'e' et le 'r' de YaHei disparaissaient, et « blablabla » s'affichait « bl bl bl b ».
+     * <p>Deux tailles comptent, et il ne faut pas les confondre. Le <b>raster</b> vaut
+     * {@code size * oversample} : c'est la resolution a laquelle Minecraft dessine la police
+     * dans son atlas. Le <b>dessin</b> vaut {@code size * ce rapport}, multiplie par l'echelle
+     * du panneau. Minecraft ne fait que reduire le raster, et c'est cette reduction qui rend le
+     * trait mou et pale.
      *
-     * <p>Le rapport vaut un dixieme, ce qui rend le texte environ 10 % plus petit que le corps
+     * <p>Le reglage est donc un compromis : le raster doit rester au-dessus d'un plancher (a
+     * 9 pixels, les lettres 'a', 'e' et 'r' de YaHei ne se dessinent plus du tout, silencieusement),
+     * mais plus il est petit, plus le texte est net et gras. La police est declaree a 7 avec un
+     * sur-echantillonnage de 2, donc un raster de 14 : le plus petit qui reste sain, pour un
+     * texte dessine a 9-10 pixels.
+     *
+     * <p>Le rapport vaut un septieme, ce qui rend le texte environ 10 % plus petit que le corps
      * annonce par l'original : c'est la mesure prise a l'ecran, sa police du systeme dessinant
      * plus petite que son corps nominal.
      */
-    public static final float FONT_RATIO = 1.0f / 10.0f;
+    public static final float FONT_RATIO = 1.0f / 7.0f;
 
     private CustomizeUiLayout() {
     }
