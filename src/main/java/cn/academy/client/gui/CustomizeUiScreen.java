@@ -3,6 +3,7 @@ package cn.academy.client.gui;
 import cn.academy.client.hud.HudConfig;
 import cn.academy.client.hud.HudElement;
 import cn.academy.client.hud.HudLayout;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -13,35 +14,79 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import java.util.List;
 
 /**
- * L'ecran « Customize UI » : ou se posent les elements du HUD.
+ * L'ecran de reglage du HUD : ou se posent les elements.
  *
- * <p>Portage de {@code CustomizeUI}. La disposition est celle de l'original : un panneau
- * <b>Elements</b> en haut a gauche qui liste les quatre elements, un <b>apercu</b> de chacun
- * dessine a sa place reelle, et — pour l'element choisi — deux champs <b>X</b> et <b>Y</b>
- * poses a droite de sa ligne.
+ * <p>Portage de {@code CustomizeUI}, dont la disposition est reprise telle quelle — elle est
+ * dans {@link CustomizeUiLayout} : un panneau <b>Elements</b> a sa place exacte, qui passe
+ * donc sous l'apercu des notifications ; les <b>apercus</b> de chacun, dessines a leur place
+ * reelle ; et, pour l'element choisi, les deux champs <b>X</b> et <b>Y</b> a droite de sa
+ * ligne, jamais a une place fixe.
+ *
+ * <p>Les apercus ne sont pas des vignettes inventees : ce sont les morceaux de l'original,
+ * avec ses nombres. La notification se compose — comme chez lui — de son fond, de son icone
+ * et de deux lignes d'exemple ; le lecteur media n'a pas d'image mais du texte et une barre
+ * de progression ; le rappel des touches et la barre de CP livrent leur image.
+ *
+ * <p>A l'ouverture, <b>rien n'est choisi</b> : c'est ce que faisait l'original, et cela evite
+ * d'entourer de blanc un element qu'on n'a pas designe.
  *
  * <p>Les valeurs sont celles de l'original, bornes comprises : de -512 a 512. Hors bornes,
- * la saisie est refusee et le champ passe au rouge, exactement comme avant. Un element
- * choisi porte un contour blanc, pour qu'on voie lequel on deplace.
- *
- * <p>Les apercus viennent des textures de l'original ({@code guis/edit_preview/}) la ou elles
- * existent. Le lecteur media n'en a pas : il se dessine pour l'instant comme un panneau
- * portant son nom, en attendant son propre rendu.
+ * la saisie est refusee et le champ passe au rouge, exactement comme avant.
  */
 @OnlyIn(Dist.CLIENT)
 public class CustomizeUiScreen extends Screen {
 
-    private static final int MARGIN = 16;
-    private static final int ROW = 12;
-    private static final int PANEL = 0xF0181824;
-    private static final int EDGE = 0xFF6FA8DC;
-    private static final int TEXT = 0xFFE0E0E0;
-    private static final int DIM = 0xFF909090;
-    private static final int SELECTED = 0xFF2A3A50;
-    private static final int FIELD = 0xFF101018;
-    private static final int FIELD_TEXT = 0xFFFFFFFF;
-    private static final int FIELD_BAD = 0xFFBB3333;
     private static final int OUTLINE = 0xFFFFFFFF;
+
+    /** Les images de l'original, telles quelles : aucune n'est redessinee. */
+    private static final ResourceLocation PANEL_TEXTURE = texture("window_ui_resize");
+    private static final ResourceLocation CPBAR_TEXTURE = texture("edit_preview/cpbar");
+    private static final ResourceLocation KEY_HINT_TEXTURE = texture("edit_preview/key_hint");
+    private static final ResourceLocation NOTIFY_LOGO_TEXTURE = texture("edit_preview/notify_logo");
+    private static final ResourceLocation NOTIFY_BACK_TEXTURE = texture("notification/back");
+    private static final int CPBAR_W = 512;
+    private static final int CPBAR_H = 78;
+    private static final int NOTIFY_LOGO = 64;
+
+    /** Le rappel des touches : son image, a l'echelle de l'apercu de l'original. */
+    private static final float KEY_HINT_SCALE = 0.46f;
+    private static final int KEY_HINT_IMAGE_W = 128;
+    private static final int KEY_HINT_IMAGE_H = 193;
+
+    /** La notification de l'original, dans ses propres unites : 517x170 a un quart. */
+    private static final float NOTIFY_SCALE = 0.25f;
+    private static final int NOTIFY_W = 517;
+    private static final int NOTIFY_H = 170;
+    private static final int NOTIFY_ICON_X = 34;
+    private static final int NOTIFY_ICON_Y = 42;
+    private static final int NOTIFY_ICON = 83;
+    private static final int NOTIFY_TITLE_X = 137;
+    private static final int NOTIFY_TITLE_Y = 32;
+    private static final float NOTIFY_TITLE_FONT = 38.0f;
+    private static final int NOTIFY_TEXT_X = 137;
+    private static final int NOTIFY_TEXT_Y = 81;
+    private static final float NOTIFY_TEXT_FONT = 54.0f;
+    /** Ses deux lignes d'exemple, mot pour mot comme avant. */
+    private static final String NOTIFY_DEMO_TITLE = "Some Notification";
+    private static final String NOTIFY_DEMO_TEXT = "blablabla";
+    private static final int NOTIFY_TEXT_COLOR = 0xFFFFFFFF;
+
+    /** Le lecteur media : du texte et une barre, l'original n'a pas de fond. */
+    private static final int MEDIA_TITLE_X = 13;
+    private static final int MEDIA_TITLE_Y = 17;
+    private static final float MEDIA_TITLE_FONT = 10.0f;
+    private static final int MEDIA_TIME_X = 117;
+    private static final int MEDIA_TIME_Y = 27;
+    private static final float MEDIA_TIME_FONT = 8.5f;
+    private static final int MEDIA_BAR_X = 14;
+    private static final int MEDIA_BAR_Y = 27;
+    private static final int MEDIA_BAR_W = 120;
+    private static final float MEDIA_BAR_PROGRESS = 0.5f;
+    private static final int MEDIA_BAR_BACK = 0x33000000;
+    private static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
+    /** Ses textes d'exemple, tels que son xml les porte. */
+    private static final String MEDIA_DEMO_TITLE = "Only My Railgun";
+    private static final String MEDIA_DEMO_TIME = "04:30";
 
     /** L'ecran precedent, pour y revenir sur Echap. */
     private final Screen parent;
@@ -56,151 +101,208 @@ public class CustomizeUiScreen extends Screen {
     private String buffer = "";
     private boolean bufferBad = false;
 
-    private int listLeft;
-    private int listTop;
-    private int listWidth;
-
     public CustomizeUiScreen(Screen parent) {
         super(Component.translatable("ac.gui.uiedit.elements"));
         this.parent = parent;
         this.layout = HudConfig.read();
-        this.selected = elements.get(0);
     }
 
-    @Override
-    protected void init() {
-        listLeft = MARGIN;
-        listTop = MARGIN;
-        listWidth = 0;
-        for (HudElement element : elements) {
-            listWidth = Math.max(listWidth, font.width(Component.translatable(element.getLabelKey())));
-        }
-        listWidth += 24;
+    private static ResourceLocation texture(String path) {
+        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/" + path + ".png");
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
-        // Les apercus, a leur place reelle.
+        // Les apercus, a leur place reelle. Le panneau passe apres eux, comme avant.
         for (HudElement element : elements) {
             drawPreview(graphics, element);
         }
 
-        // Le panneau de la liste.
-        int height = ROW * (elements.size() + 1) + 6;
-        graphics.fill(listLeft, listTop, listLeft + listWidth, listTop + height, PANEL);
-        graphics.renderOutline(listLeft, listTop, listWidth, height, EDGE);
+        drawPanel(graphics, mouseX, mouseY);
 
-        graphics.drawString(font, title, listLeft + 6, listTop + 4, TEXT, false);
-        int y = listTop + 4 + ROW;
-        for (HudElement element : elements) {
-            boolean over = mouseX >= listLeft && mouseX <= listLeft + listWidth
-                    && mouseY >= y - 1 && mouseY < y + ROW - 1;
-            if (element == selected) {
-                graphics.fill(listLeft + 2, y - 1, listLeft + listWidth - 2, y + ROW - 1, SELECTED);
-            }
-            graphics.drawString(font, Component.translatable(element.getLabelKey()),
-                    listLeft + 6, y + 2, element == selected ? TEXT : over ? TEXT : DIM, false);
-            y += ROW;
-        }
-
-        // Les deux champs de l'element choisi, a droite de sa ligne.
         if (selected != null) {
-            int row = listTop + 4 + ROW * (elements.indexOf(selected) + 1);
-            drawField(graphics, fieldX(), row, "X", HudConfigLabel.X, mouseX, mouseY);
-            drawField(graphics, fieldX() + FIELD_WIDTH + 3, row, "Y", HudConfigLabel.Y, mouseX, mouseY);
+            drawEditBox(graphics, selected.ordinal());
+        }
+    }
+
+    /** Le panneau des elements : sa texture d'origine, a moitie, et ses lignes. */
+    private void drawPanel(GuiGraphics graphics, int mouseX, int mouseY) {
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(CustomizeUiLayout.PANEL_X, CustomizeUiLayout.PANEL_Y, 0);
+        pose.scale((float) CustomizeUiLayout.SCALE, (float) CustomizeUiLayout.SCALE, 1.0f);
+
+        graphics.blit(PANEL_TEXTURE, 0, 0, 0, 0,
+                CustomizeUiLayout.PANEL_W, CustomizeUiLayout.PANEL_H,
+                CustomizeUiLayout.PANEL_W, CustomizeUiLayout.PANEL_H);
+
+        for (int i = 0; i < elements.size(); ++i) {
+            graphics.fill(CustomizeUiLayout.BODY_X,
+                    CustomizeUiLayout.BODY_Y + i * CustomizeUiLayout.ROW_H,
+                    CustomizeUiLayout.BODY_X + CustomizeUiLayout.ROW_W,
+                    CustomizeUiLayout.BODY_Y + (i + 1) * CustomizeUiLayout.ROW_H,
+                    isOverRow(i, mouseX, mouseY)
+                            ? CustomizeUiLayout.ROW_TINT_HOVER : CustomizeUiLayout.ROW_TINT);
         }
 
-        graphics.drawString(font, Component.translatable("ac.gui.uiedit.hint"),
-                MARGIN, height + MARGIN + 12, DIM, false);
-    }
+        pose.popPose();
 
-    private static final int FIELD_WIDTH = 54;
-    private static final int FIELD_HEIGHT = 11;
+        float headerScale = CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT);
+        drawText(graphics, title, CustomizeUiLayout.headerTextLeft(),
+                CustomizeUiLayout.textTop(CustomizeUiLayout.headerTextCenterY(),
+                        Math.round(font.lineHeight * headerScale)),
+                headerScale, CustomizeUiLayout.HEADER_TEXT);
 
-    /** Le libelle des deux champs, pour ne pas se tromper de signe. */
-    private enum HudConfigLabel { X, Y }
-
-    private int fieldX() {
-        return listLeft + listWidth + 6;
-    }
-
-    private void drawField(GuiGraphics graphics, int x, int y, String letter,
-                           HudConfigLabel axis, int mouseX, int mouseY) {
-        boolean focused = editing && selected != null
-                && (axis == HudConfigLabel.X) == editingX;
-        int color = bufferBad && focused ? FIELD_BAD : FIELD;
-
-        graphics.fill(x, y - 1, x + FIELD_WIDTH, y + FIELD_HEIGHT, color);
-        graphics.renderOutline(x, y - 1, FIELD_WIDTH, FIELD_HEIGHT + 1, EDGE);
-
-        String value;
-        if (focused) {
-            value = buffer;
-        } else {
-            double number = axis == HudConfigLabel.X ? layout.getX(selected) : layout.getY(selected);
-            value = number == Math.floor(number) ? String.valueOf((int) number) : String.valueOf(number);
+        float rowScale = CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT);
+        for (int i = 0; i < elements.size(); ++i) {
+            drawText(graphics, Component.translatable(elements.get(i).getLabelKey()),
+                    CustomizeUiLayout.rowTextLeft(),
+                    CustomizeUiLayout.textTop(CustomizeUiLayout.rowTextCenterY(i),
+                            Math.round(font.lineHeight * rowScale)),
+                    rowScale, CustomizeUiLayout.ROW_TEXT);
         }
-        graphics.drawString(font, letter + " " + value, x + 3, y + 1, FIELD_TEXT, false);
     }
 
+    /** L'apercu d'un element, a sa place reelle et a la taille de l'original. */
     private void drawPreview(GuiGraphics graphics, HudElement element) {
-        int w = element.getWidth();
-        int h = element.getHeight();
+        int w = element.getPreviewWidth();
+        int h = element.getPreviewHeight();
         int x = layout.placeX(element, width, w);
         int y = layout.placeY(element, height, h);
 
-        ResourceLocation texture = previewTexture(element);
-        if (texture != null) {
-            graphics.blit(texture, x, y, 0, 0, w, h, w, h);
-        } else {
-            graphics.fill(x, y, x + w, y + h, PANEL);
-            graphics.drawString(font, Component.translatable(element.getLabelKey()),
-                    x + 4, y + h / 2 - 4, DIM, false);
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(x, y, 0);
+
+        switch (element) {
+            case CP_BAR -> graphics.blit(CPBAR_TEXTURE, 0, 0, 0, 0, w, h, CPBAR_W, CPBAR_H);
+            case KEY_HINT -> {
+                // Son image, a l'echelle ou l'original la montre dans cet ecran.
+                pose.pushPose();
+                pose.scale(KEY_HINT_SCALE, KEY_HINT_SCALE, 1.0f);
+                graphics.blit(KEY_HINT_TEXTURE, 0, 0, 0, 0,
+                        KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H, KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H);
+                pose.popPose();
+            }
+            case NOTIFICATION -> drawNotificationPreview(graphics);
+            case MEDIA -> drawMediaPreview(graphics);
         }
+
+        pose.popPose();
 
         if (element == selected) {
             graphics.renderOutline(x - 1, y - 1, w + 2, h + 2, OUTLINE);
         }
     }
 
-    /** L'apercu d'un element, quand l'original en livre un. */
-    private static ResourceLocation previewTexture(HudElement element) {
-        String name = switch (element) {
-            case CP_BAR -> "cpbar";
-            case KEY_HINT -> "key_hint";
-            case NOTIFICATION -> "notify_logo";
-            case MEDIA -> null;
-        };
-        if (name == null) return null;
-        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/edit_preview/" + name + ".png");
+    /** La notification : son fond, son icone, et les deux lignes d'exemple de l'original. */
+    private void drawNotificationPreview(GuiGraphics graphics) {
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.scale(NOTIFY_SCALE, NOTIFY_SCALE, 1.0f);
+
+        graphics.blit(NOTIFY_BACK_TEXTURE, 0, 0, 0, 0, NOTIFY_W, NOTIFY_H, NOTIFY_W, NOTIFY_H);
+        graphics.blit(NOTIFY_LOGO_TEXTURE, NOTIFY_ICON_X, NOTIFY_ICON_Y, 0, 0,
+                NOTIFY_ICON, NOTIFY_ICON, NOTIFY_LOGO, NOTIFY_LOGO);
+
+        drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), NOTIFY_TITLE_X, NOTIFY_TITLE_Y,
+                CustomizeUiLayout.plainFontScale(NOTIFY_TITLE_FONT), NOTIFY_TEXT_COLOR);
+        drawText(graphics, Component.literal(NOTIFY_DEMO_TEXT), NOTIFY_TEXT_X, NOTIFY_TEXT_Y,
+                CustomizeUiLayout.plainFontScale(NOTIFY_TEXT_FONT), NOTIFY_TEXT_COLOR);
+
+        pose.popPose();
+    }
+
+    /** Le lecteur media : pas d'image, son titre, sa duree et sa barre de progression. */
+    private void drawMediaPreview(GuiGraphics graphics) {
+        graphics.fill(MEDIA_BAR_X, MEDIA_BAR_Y, MEDIA_BAR_X + MEDIA_BAR_W, MEDIA_BAR_Y + 2,
+                MEDIA_BAR_BACK);
+        graphics.fill(MEDIA_BAR_X, MEDIA_BAR_Y,
+                MEDIA_BAR_X + Math.round(MEDIA_BAR_W * MEDIA_BAR_PROGRESS), MEDIA_BAR_Y + 1,
+                MEDIA_BAR_FILL);
+
+        drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), MEDIA_TITLE_X, MEDIA_TITLE_Y,
+                CustomizeUiLayout.plainFontScale(MEDIA_TITLE_FONT), NOTIFY_TEXT_COLOR);
+        drawText(graphics, Component.literal(MEDIA_DEMO_TIME), MEDIA_TIME_X, MEDIA_TIME_Y,
+                CustomizeUiLayout.plainFontScale(MEDIA_TIME_FONT), NOTIFY_TEXT_COLOR);
+    }
+
+    /** Le cadre des deux champs, a droite de la ligne de l'element choisi. */
+    private void drawEditBox(GuiGraphics graphics, int index) {
+        int x = CustomizeUiLayout.editLeft();
+        int y = CustomizeUiLayout.editTop(index);
+
+        graphics.fill(x, y, x + CustomizeUiLayout.EDIT_W, y + CustomizeUiLayout.EDIT_H,
+                CustomizeUiLayout.EDIT_BACK);
+        // L'original donne a ce cadre un contour de deux pixels.
+        graphics.renderOutline(x, y, CustomizeUiLayout.EDIT_W, CustomizeUiLayout.EDIT_H,
+                CustomizeUiLayout.EDIT_EDGE);
+        graphics.renderOutline(x + 1, y + 1, CustomizeUiLayout.EDIT_W - 2,
+                CustomizeUiLayout.EDIT_H - 2, CustomizeUiLayout.EDIT_EDGE);
+
+        int top = CustomizeUiLayout.fieldTop(index);
+        drawText(graphics, Component.literal("X"), x + CustomizeUiLayout.LABEL_X, top,
+                1.0f, CustomizeUiLayout.FIELD_TEXT);
+        drawText(graphics, Component.literal("Y"), x + CustomizeUiLayout.LABEL_Y, top,
+                1.0f, CustomizeUiLayout.FIELD_TEXT);
+
+        drawField(graphics, index, true);
+        drawField(graphics, index, false);
+    }
+
+    /** Un des deux champs, avec sa valeur ; il passe au rouge si la saisie ne passe pas. */
+    private void drawField(GuiGraphics graphics, int index, boolean x) {
+        int left = CustomizeUiLayout.fieldLeft(x);
+        int top = CustomizeUiLayout.fieldTop(index);
+        boolean focused = editing && x == editingX;
+
+        graphics.fill(left, top, left + CustomizeUiLayout.FIELD_W,
+                top + CustomizeUiLayout.FIELD_H,
+                focused && bufferBad ? CustomizeUiLayout.FIELD_BAD : CustomizeUiLayout.FIELD_BACK);
+
+        String value = focused ? buffer
+                : String.valueOf(x ? layout.getX(selected) : layout.getY(selected));
+        drawText(graphics, Component.literal(value), left + 1, top, 1.0f,
+                CustomizeUiLayout.FIELD_TEXT);
+    }
+
+    /** Ecrit un texte a l'echelle de la police de l'original : un douzieme de son corps. */
+    private void drawText(GuiGraphics graphics, Component text, int left, int top,
+                          float scale, int color) {
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(left, top, 0);
+        pose.scale(scale, scale, 1.0f);
+        graphics.drawString(font, text, 0, 0, color, false);
+        pose.popPose();
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
-        // Les lignes de la liste.
-        int y = listTop + 4 + ROW;
-        for (HudElement element : elements) {
-            if (mouseX >= listLeft && mouseX <= listLeft + listWidth
-                    && mouseY >= y - 1 && mouseY < y + ROW - 1) {
-                selected = element;
-                editing = false;
+        // Les lignes de la liste : cliquer en choisit une, et les champs la suivent.
+        for (int i = 0; i < elements.size(); ++i) {
+            if (isOverRow(i, mouseX, mouseY)) {
+                if (elements.get(i) != selected) {
+                    selected = elements.get(i);
+                    editing = false;
+                    bufferBad = false;
+                }
                 return true;
             }
-            y += ROW;
         }
 
         // Les deux champs de l'element choisi.
         if (selected != null) {
-            int row = listTop + 4 + ROW * (elements.indexOf(selected) + 1);
-            if (inField(mouseX, mouseY, fieldX(), row)) {
+            int index = selected.ordinal();
+            if (isOverField(mouseX, mouseY, index, true)) {
                 beginEdit(true);
                 return true;
             }
-            if (inField(mouseX, mouseY, fieldX() + FIELD_WIDTH + 3, row)) {
+            if (isOverField(mouseX, mouseY, index, false)) {
                 beginEdit(false);
                 return true;
             }
@@ -209,9 +311,18 @@ public class CustomizeUiScreen extends Screen {
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private static boolean inField(double mouseX, double mouseY, int x, int y) {
-        return mouseX >= x && mouseX <= x + FIELD_WIDTH
-                && mouseY >= y - 1 && mouseY <= y + FIELD_HEIGHT;
+    private static boolean isOverRow(int index, double mouseX, double mouseY) {
+        return mouseX >= CustomizeUiLayout.rowLeft()
+                && mouseX < CustomizeUiLayout.rowLeft() + CustomizeUiLayout.rowWidth()
+                && mouseY >= CustomizeUiLayout.rowTop(index)
+                && mouseY < CustomizeUiLayout.rowTop(index) + CustomizeUiLayout.rowHeight();
+    }
+
+    private static boolean isOverField(double mouseX, double mouseY, int index, boolean x) {
+        int left = CustomizeUiLayout.fieldLeft(x);
+        int top = CustomizeUiLayout.fieldTop(index);
+        return mouseX >= left && mouseX < left + CustomizeUiLayout.FIELD_W
+                && mouseY >= top && mouseY < top + CustomizeUiLayout.FIELD_H;
     }
 
     /** Ouvre un champ : on tape dedans, et Entree valide. */
@@ -219,8 +330,8 @@ public class CustomizeUiScreen extends Screen {
         editing = true;
         editingX = x;
         bufferBad = false;
-        double value = x ? layout.getX(selected) : layout.getY(selected);
-        buffer = value == Math.floor(value) ? String.valueOf((int) value) : String.valueOf(value);
+        // Le champ affiche la valeur comme l'original : telle qu'un nombre s'ecrit.
+        buffer = String.valueOf(x ? layout.getX(selected) : layout.getY(selected));
     }
 
     @Override
@@ -276,9 +387,10 @@ public class CustomizeUiScreen extends Screen {
 
         double x = editingX ? value : layout.getX(selected);
         double y = editingX ? layout.getY(selected) : value;
+        // L'original ne referme pas le champ apres avoir valide : on peut corriger sans le
+        // rouvrir, et c'est la couleur du fond qui dit si la valeur est passee.
         if (HudConfig.write(selected, x, y)) {
             layout.set(selected, x, y);
-            editing = false;
             bufferBad = false;
         } else {
             bufferBad = true;

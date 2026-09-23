@@ -55,6 +55,31 @@ class HudLayoutTest {
     }
 
     @Test
+    void chaqueElementPorteLaTailleDeLoriginal() {
+        // La barre de CP fait 964x147 a l'echelle 0.2, le rappel des touches 140x210 a 0.23,
+        // les notifications 517x170 a 0.25, et le lecteur media 145x36 sans echelle : c'est
+        // ce que disent son CPBar, son KeyHintUI, son NotifyUI et son media_player_aux.xml.
+        assertEquals(193, HudElement.CP_BAR.getWidth());
+        assertEquals(29, HudElement.CP_BAR.getHeight());
+
+        assertEquals(32, HudElement.KEY_HINT.getWidth());
+        assertEquals(48, HudElement.KEY_HINT.getHeight());
+        // Mais son apercu est au double : l'original le montre plus grand que l'element.
+        assertEquals(64, HudElement.KEY_HINT.getPreviewWidth());
+        assertEquals(97, HudElement.KEY_HINT.getPreviewHeight());
+
+        assertEquals(129, HudElement.NOTIFICATION.getWidth());
+        assertEquals(43, HudElement.NOTIFICATION.getHeight());
+        assertEquals(129, HudElement.NOTIFICATION.getPreviewWidth());
+        assertEquals(43, HudElement.NOTIFICATION.getPreviewHeight());
+
+        assertEquals(145, HudElement.MEDIA.getWidth());
+        assertEquals(36, HudElement.MEDIA.getHeight());
+        assertEquals(145, HudElement.MEDIA.getPreviewWidth());
+        assertEquals(36, HudElement.MEDIA.getPreviewHeight());
+    }
+
+    @Test
     void uneValeurHorsBornesEstRefusee() {
         HudLayout layout = new HudLayout();
 
@@ -94,11 +119,11 @@ class HudLayoutTest {
         assertEquals(h - 20 - 6, new HudLayout().placeY(HudElement.MEDIA, h, 20),
                 "6 pixels au-dessus du bas de l'ecran");
 
-        // Rappel des touches : accroche a droite, 30 pixels au-dessus du milieu.
-        int keyH = 96;
-        assertEquals(w - 60, new HudLayout().placeX(HudElement.KEY_HINT, w, 60));
-        assertEquals(h / 2 - keyH / 2 - 30, new HudLayout().placeY(HudElement.KEY_HINT, h, keyH),
-                "au-dessus du milieu de l'ecran");
+        // Rappel des touches : accroche a droite, 30 pixels sous le milieu.
+        int keyH = 97;
+        assertEquals(w - 64, new HudLayout().placeX(HudElement.KEY_HINT, w, 64));
+        assertEquals(h / 2 - keyH / 2 + 30, new HudLayout().placeY(HudElement.KEY_HINT, h, keyH),
+                "30 pixels sous le milieu de l'ecran");
     }
 
     @Test

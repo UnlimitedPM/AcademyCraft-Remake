@@ -16,7 +16,7 @@ package cn.academy.client.hud;
  * <ul>
  *   <li>ancre a droite : X negatif rentre vers la gauche de l'ecran ;</li>
  *   <li>ancre en haut : Y positif descend depuis le haut ;</li>
- *   <li>ancre au milieu : Y positif monte depuis le milieu ;</li>
+ *   <li>ancre au milieu : Y positif descend depuis le milieu ;</li>
  *   <li>ancre en bas : Y negatif monte depuis le bas.</li>
  * </ul>
  *
@@ -24,23 +24,32 @@ package cn.academy.client.hud;
  * de l'original la ou il les met. La barre de CP a {@code -12/12} et se pose a 12 pixels du
  * bord droit et 12 du haut ; le lecteur media a {@code -6/-6} et se pose en bas a droite ;
  * les notifications a {@code 0/15} en haut a gauche ; le rappel des touches a {@code 0/30},
- * 30 pixels au-dessus du milieu, contre le bord droit.
+ * 30 pixels sous le milieu, contre le bord droit.
+ *
+ * <p>Chaque element porte deux tailles : la sienne, et celle de son <b>apercu</b> dans
+ * l'ecran de reglage. Les deux ne sont pas toujours egales — l'original montre le rappel
+ * des touches au double de sa taille, pour qu'on le voie — et c'est sa taille d'apercu qui
+ * a servi a le poser dans cet ecran-la, comme il le faisait.
  *
  * <p>Rien ici ne connait Minecraft : c'est un modele, donc relisible en JUnit.
  */
 public enum HudElement {
 
-    /** Le temoin de points de controle : haut a droite. */
-    CP_BAR("cpbar", "ac.gui.uiedit.elm.cpbar", Side.RIGHT, Slide.TOP, -12.0, 12.0, 193, 29),
+    /** Le temoin de points de controle : haut a droite. Sa barre fait 964x147 a l'echelle 0.2. */
+    CP_BAR("cpbar", "ac.gui.uiedit.elm.cpbar", Side.RIGHT, Slide.TOP, -12.0, 12.0,
+            193, 29, 193, 29),
 
-    /** Le rappel des quatre touches d'aptitude : contre le bord droit, au milieu. */
-    KEY_HINT("keyhint", "ac.gui.uiedit.elm.keyhint", Side.RIGHT, Slide.MIDDLE, 0.0, 30.0, 64, 97),
+    /** Le rappel des touches d'aptitude : contre le bord droit, sous le milieu. 140x210 a 0.23. */
+    KEY_HINT("keyhint", "ac.gui.uiedit.elm.keyhint", Side.RIGHT, Slide.MIDDLE, 0.0, 30.0,
+            32, 48, 64, 97),
 
-    /** Les messages du mod : haut a gauche. */
-    NOTIFICATION("notification", "ac.gui.uiedit.elm.notification", Side.LEFT, Slide.TOP, 0.0, 15.0, 100, 32),
+    /** Les messages du mod : haut a gauche. 517x170 a 0.25. */
+    NOTIFICATION("notification", "ac.gui.uiedit.elm.notification", Side.LEFT, Slide.TOP, 0.0, 15.0,
+            129, 43, 129, 43),
 
-    /** Le morceau en cours : bas a droite. */
-    MEDIA("media", "ac.gui.uiedit.elm.media", Side.RIGHT, Slide.BOTTOM, -6.0, -6.0, 120, 20);
+    /** Le morceau en cours : bas a droite. 145x36, sans echelle. */
+    MEDIA("media", "ac.gui.uiedit.elm.media", Side.RIGHT, Slide.BOTTOM, -6.0, -6.0,
+            145, 36, 145, 36);
 
     /** De quel cote de l'ecran l'element est accroche. */
     public enum Side { LEFT, RIGHT }
@@ -56,9 +65,12 @@ public enum HudElement {
     private final double defaultY;
     private final int width;
     private final int height;
+    private final int previewWidth;
+    private final int previewHeight;
 
     HudElement(String name, String labelKey, Side side, Slide slide,
-               double defaultX, double defaultY, int width, int height) {
+               double defaultX, double defaultY,
+               int width, int height, int previewWidth, int previewHeight) {
         this.name = name;
         this.labelKey = labelKey;
         this.side = side;
@@ -67,21 +79,33 @@ public enum HudElement {
         this.defaultY = defaultY;
         this.width = width;
         this.height = height;
+        this.previewWidth = previewWidth;
+        this.previewHeight = previewHeight;
     }
 
-    /**
-     * La largeur de l'element, en pixels d'interface.
-     *
-     * <p>La barre de CP et le rappel des touches ont la taille exacte de l'original (sa
-     * taille multipliee par son echelle). Les deux autres attendent leur propre code de
-     * rendu : leurs valeurs seront reprises a ce moment-la.
-     */
+    /** La largeur de l'element, en pixels d'interface. */
     public int getWidth() {
         return width;
     }
 
+    /** La hauteur de l'element, en pixels d'interface. */
     public int getHeight() {
         return height;
+    }
+
+    /**
+     * La largeur de l'apercu de l'element dans l'ecran de reglage.
+     *
+     * <p>Differente de {@link #getWidth()} pour le rappel des touches : l'original le montre
+     * au double de sa taille, et c'est cette taille-la qu'il utilise pour le poser dans
+     * l'ecran de reglage.
+     */
+    public int getPreviewWidth() {
+        return previewWidth;
+    }
+
+    public int getPreviewHeight() {
+        return previewHeight;
     }
 
     /** Le nom de l'element, tel qu'il est ecrit dans la config. C'est l'identite stable. */

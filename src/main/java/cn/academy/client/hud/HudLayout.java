@@ -92,14 +92,16 @@ public class HudLayout {
     /**
      * Le bord haut de l'element, en pixels, pour un ecran de cette hauteur.
      *
-     * <p>Ancre en haut, Y descend depuis le haut ; ancre au milieu, Y monte depuis le
-     * milieu ; ancre en bas, Y monte depuis le bas (donc negatif dans les defauts).
+     * <p>L'ecart s'ajoute toujours dans le sens de l'ecran : ancre en haut, Y descend depuis
+     * le haut ; ancre au milieu, Y descend depuis le milieu ; ancre en bas, Y monte depuis le
+     * bas (donc negatif dans les defauts). C'est la regle qui pose le rappel des touches a
+     * {@code 0/30} trente pixels sous le milieu, et non au-dessus.
      */
     public int placeY(HudElement element, int screenHeight, int elementHeight) {
         double y = getY(element);
         return switch (element.getSlide()) {
             case TOP -> (int) Math.round(y);
-            case MIDDLE -> (int) Math.round(screenHeight / 2.0 - elementHeight / 2.0 - y);
+            case MIDDLE -> (int) Math.round(screenHeight / 2.0 - elementHeight / 2.0 + y);
             case BOTTOM -> (int) Math.round(screenHeight - elementHeight + y);
         };
     }
