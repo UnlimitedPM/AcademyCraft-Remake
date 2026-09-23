@@ -98,17 +98,23 @@ public final class CustomizeUiLayout {
 
     /**
      * La police n'est plus rasterisee par Minecraft : ses glyphes sont graves d'avance, avec
-     * hinting, par {@code scripts/bake-font.ps1}, une planche par taille entiere. L'ecran choisit
-     * donc la planche la plus proche de la taille voulue, puis compense l'ecart par une echelle
-     * de quelques pour cent — invisible, et sans reduction destructrice.
+     * hinting, par {@code scripts/bake-font.ps1}, une planche par taille entiere.
+     *
+     * <p>Chaque planche est ensuite dessinee a sa taille EXACTE (voir
+     * {@link #sheetScale(float, int)}) : echelle fractionnaire veut dire reechantillonnage, donc
+     * retour du flou. La taille voulue est donc arrondie au pixel, et c'est cet entier qui
+     * designe la planche.
      */
     public static final float FONT_RATIO = 1.0f / 12.0f;
 
-    /** Le corps de reference : l'echelle 1 dessine un em de cette taille. */
-    public static final float BASE_EM = 11.0f;
+    /**
+     * Le corps qui correspond a l'echelle 1 : la taille que la police du systeme dessinait
+     * elle-meme, et donc celle qui a ete acceptee a l'ecran avant le gravage des glyphes.
+     */
+    public static final float BASE_EM = 9.0f;
 
     /** Les tailles de planches que {@code scripts/bake-font.ps1} grave. */
-    public static final int SHEET_MIN = 7;
+    public static final int SHEET_MIN = 6;
     public static final int SHEET_MAX = 20;
 
     /**
@@ -147,19 +153,36 @@ public final class CustomizeUiLayout {
     }
 
     /**
-     * La planche de glyphes a utiliser, pour une echelle qui inclut deja l'echelle du panneau.
+     * La taille voulue, en pixels entiers : {@code BASE_EM} fois l'echelle, arrondi.
      *
-     * <p>La taille reellement dessinee vaut {@code BASE_EM * echelle}. On prend la planche la
-     * plus proche, dans les bornes gravees.
+     * <p>L'arrondi precede le choix de la planche, et non l'inverse : on ne cherche pas la
+     * planche la plus proche d'une taille fractionnaire, on fixe la taille entiere a dessiner
+     * puis on grave exactement cette taille. L'ecart qui en resulte (un demi-pixel au pire)
+     * est celui qu'aurait la police du jeu, et il ne coute rien : la planche est ensuite
+     * dessinee sans reechantillonnage.
      */
-    public static int sheetFor(float scale) {
-        int em = Math.round(BASE_EM * scale);
-        return Math.max(SHEET_MIN, Math.min(SHEET_MAX, em));
+    public static int pixelSize(float scale) {
+        return Math.round(BASE_EM * scale);
     }
 
-    /** L'echelle a appliquer a cette planche pour obtenir exactement la taille voulue. */
+    /**
+     * La planche de glyphes a utiliser, pour une echelle qui inclut deja celle du panneau.
+     *
+     * <p>On prend la planche la plus proche, dans les bornes gravees.
+     */
+    public static int sheetFor(float scale) {
+        return Math.max(SHEET_MIN, Math.min(SHEET_MAX, pixelSize(scale)));
+    }
+
+    /**
+     * L'echelle a appliquer a cette planche pour tomber pile sur la taille voulue.
+     *
+     * <p>Elle vaut 1 quand la planche est celle de cette taille, c'est-a-dire dans tous les cas
+     * ou la taille voulue tombe dans les bornes gravees. Une planche dessinee a l'echelle 1
+     * garde ses pixels : rien n'est reechantillonne, donc rien n'est flou.
+     */
     public static float sheetScale(float scale, int sheet) {
-        return BASE_EM * scale / sheet;
+        return pixelSize(scale) / (float) sheet;
     }
 
     /** Le haut d'un texte dont on veut centrer la ligne sur {@code centerY}. */

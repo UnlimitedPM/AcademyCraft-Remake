@@ -337,24 +337,28 @@ public class CustomizeUiScreen extends Screen {
     }
 
     /**
-     * Ecrit un texte avec la planche de glyphes gravee la plus proche de la taille voulue.
+     * Ecrit un texte avec la planche de glyphes gravee de la taille voulue.
      *
      * <p>{@code scale} est l'echelle du texte (elle inclut deja celle du panneau quand il y en
-     * a une) et {@code poseScale} celle de la pose du dessin, car c'est leur produit qui donne
-     * la taille reellement dessinee — donc la planche a choisir. L'echelle appliquee ensuite a
-     * la planche ne depend que de {@code scale} : la pose du dessin, elle, est deja en place.
+     * a une) et {@code poseScale} celle de la pose du dessin : c'est leur produit qui donne la
+     * taille reellement dessinee, donc la planche a choisir.
+     *
+     * <p>La planche est ensuite dessinee a sa taille EXACTE, ce qui demande de diviser par
+     * {@code poseScale} : la pose, elle, reste en place. Un rapport d'echelle fractionnaire
+     * reechantillonne les glyphes et ramene le flou — c'est tout l'objet du gravage.
      */
     private void drawText(GuiGraphics graphics, Component text, int left, int top,
                           float scale, float poseScale, int color) {
         blend();
 
-        int sheet = CustomizeUiLayout.sheetFor(scale * poseScale);
+        float wanted = scale * poseScale;
+        int sheet = CustomizeUiLayout.sheetFor(wanted);
+        float inner = CustomizeUiLayout.sheetScale(wanted, sheet) / poseScale;
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(left, top, 0);
-        pose.scale(CustomizeUiLayout.sheetScale(scale, sheet),
-                CustomizeUiLayout.sheetScale(scale, sheet), 1.0f);
+        pose.scale(inner, inner, 1.0f);
         graphics.drawString(font, text.copy().withStyle(styleOf(sheet)), 0, 0, color, false);
         pose.popPose();
     }

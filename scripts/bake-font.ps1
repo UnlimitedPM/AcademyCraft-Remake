@@ -36,9 +36,9 @@ param(
 
 Add-Type -AssemblyName System.Drawing
 
-# Les tailles couvertes : le mod dessine son interface entre 8 et 13 pixels, et les titres des
-# autres ecrans montent plus haut. Une planche par taille entiere.
-$Sizes = 7..20
+# Les tailles couvertes : le mod dessine son interface entre 7 et 13 pixels, les titres des
+# autres ecrans plus haut, et le lecteur media descend a 6. Une planche par taille entiere.
+$Sizes = 6..20
 
 # La grille : 32 cases par rangee.
 $Columns = 32
