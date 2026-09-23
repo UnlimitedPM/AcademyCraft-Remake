@@ -79,42 +79,41 @@ public final class CustomizeUiLayout {
     public static final int MEDIA_TIME_X = 117;
     public static final int MEDIA_TIME_BOTTOM = 37;
     public static final float MEDIA_TIME_FONT = 8.5f;
-    /** Sa barre : 120 de large a partir de 14, remplie a moitie, posee sur un fond plus fin. */
+    /**
+     * La barre du lecteur media, en <b>dixiemes de pixel</b> : son xml donne 1,5 de haut pour le
+     * fond gris et un peu plus pour la progression blanche, qui deborde donc a peine de chaque
+     * cote. Au pixel entier ce debordement serait invisible ; a un dixieme il se voit comme chez
+     * lui.
+     */
     public static final int MEDIA_BAR_X = 14;
     public static final int MEDIA_BAR_Y = 27;
     public static final int MEDIA_BAR_W = 120;
     public static final float MEDIA_BAR_PROGRESS = 0.5f;
-    /**
-     * La progression fait 1,5 de haut et son fond 1,1, pose 0,2 sous elle : le fond est donc
-     * <b>au centre</b> du blanc, avec un peu de blanc au-dessus et en dessous.
-     *
-     * <p>Au pixel entier, il faut trois pixels de blanc pour un de fond pour que ce centrage
-     * se voie : a 1,5 et 1,1 les deux se superposeraient exactement, et la barre paraitrait
-     * entièrement grise.
-     */
-    public static final int MEDIA_BAR_FILL_TOP = MEDIA_BAR_Y - 1;
-    public static final int MEDIA_BAR_FILL_H = 3;
-    public static final int MEDIA_BAR_BACK_H = 1;
+    public static final int MEDIA_BAR_GREY_TENTHS = 15;
+    public static final int MEDIA_BAR_WHITE_TENTHS = 19;
     public static final int MEDIA_BAR_BACK = 0x33000000;
     public static final int MEDIA_BAR_FILL = 0xCCFFFFFF;
+    /** Le pas de dessin de la barre : un dixieme de pixel. */
+    public static final float MEDIA_BAR_STEP = 0.1f;
 
     /**
      * Le rapport entre la police de l'original et la notre.
      *
-     * <p>Deux tailles comptent, et il ne faut pas les confondre. Le <b>raster</b> vaut
-     * {@code size * oversample} : la resolution a laquelle Minecraft peint la police dans son
-     * atlas. Le <b>dessin</b> vaut {@code size * ce rapport}, multiplie par l'echelle du
-     * panneau. Minecraft ne fait donc que reduire le raster, et c'est cette reduction qui
-     * abimait le texte : au plus proche voisin, les traits sautent. La parade est dans
-     * {@link FontSmoothing}, qui repose un filtrage lisse sur l'atlas — et le raster peut alors
-     * rester large (18 pixels), ce qui evite la zone ou les glyphes se dessinent mal (a
-     * 9 pixels, les lettres 'a', 'e' et 'r' de YaHei ne sortent plus du tout, silencieusement).
+     * <p>Minecraft ne sait pas dessiner une police TTF proprement : il la peint dans un atlas a
+     * {@code size * oversample} pixels puis la reduit a la taille demandee, et toute reduction
+     * abime le trait. Le reglage cherche donc a la rendre <b>aussi petite que possible</b> : la
+     * police est declaree a 11 pixels sans sur-echantillonnage, donc rasterisee a 11, et le texte
+     * est dessine a 8-9 pixels — une reduction de 1,3 au lieu de 2,2. Sous 9-10 pixels de raster,
+     * le trait devient trop pale pour etre lisible ; c'est la limite basse.
      *
-     * <p>Le rapport vaut un dixieme, ce qui rend le texte environ 10 % plus petit que le corps
+     * <p>La reduction restante est confiee a un filtrage lisse, sans quoi elle cisaille les
+     * lettres : voir {@link FontSmoothing}.
+     *
+     * <p>Le rapport vaut un douzieme, ce qui rend le texte environ 10 % plus petit que le corps
      * annonce par l'original : c'est la mesure prise a l'ecran, sa police du systeme dessinant
      * plus petite que son corps nominal.
      */
-    public static final float FONT_RATIO = 1.0f / 10.0f;
+    public static final float FONT_RATIO = 1.0f / 12.0f;
 
     private CustomizeUiLayout() {
     }

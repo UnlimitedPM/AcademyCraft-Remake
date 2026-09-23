@@ -3,8 +3,8 @@
     {
       "type": "ttf",
       "file": "academy:ac_gui.ttf",
-      "size": 9.0,
-      "oversample": 2.0
+      "size": 11.0,
+      "oversample": 1.0
     },
     {
       "type": "reference",

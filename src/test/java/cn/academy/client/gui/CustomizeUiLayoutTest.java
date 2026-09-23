@@ -67,31 +67,32 @@ class CustomizeUiLayoutTest {
 
     @Test
     void laPoliceEstCelleDeLoriginalRameneeALaNotre() {
-        // La police est rasterisee a size * oversample = 18 pixels et dessinee a 8-10 : c'est le
-        // rapport d'un dixieme qui fait tomber les textes de l'ecran sur ces tailles-la. Un
-        // corps 18 dans un panneau a moitie donne donc 18/10 * 0,5 = 0,9.
-        assertEquals(0.9f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
-        assertEquals(0.9f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
-        assertEquals(3.8f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
-        assertEquals(5.4f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
-        // Le titre du lecteur media, en corps 10 dessine a l'echelle un, donne un em de 9 pixels.
-        assertEquals(9.0f, CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT)
-                * 9.0f, 0.01f);
+        // La police est declaree a 11 pixels et rasterisee a 11 (sans sur-echantillonnage), pour
+        // que la reduction soit la plus faible possible. Le rapport d'un douzieme fait tomber ses
+        // textes a 8-9 pixels : un corps 18 dans un panneau a moitie donne 18/12 * 0,5 = 0,75.
+        assertEquals(0.75f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
+        assertEquals(0.75f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
+        assertEquals(3.1667f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
+        assertEquals(4.5f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
+        // Le titre du lecteur media : en corps 10 dessine a l'echelle un, donc un em de 9,17 pixels.
+        assertEquals(9.1667f, CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT)
+                * 11.0f, 0.001f);
     }
 
     @Test
     void leLecteurMediaEstCeluiDeSonXml() {
-        // Son media_player_aux.xml : une barre de 120 a partir de 14, remplie a moitie, posee
-        // a 27 ; son fond descend un cheveu plus bas (27,2) et fait 1,1 de haut.
+        // Sa barre : le fond gris fait 1,5 pixel de haut et la progression blanche 1,9, donc elle
+        // deborde a peine de chaque cote. Tout est en dixiemes, d'ou les quinze et dix-neuf.
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
-        assertEquals(1, CustomizeUiLayout.MEDIA_BAR_BACK_H, "le fond fait un pixel");
-        // Le fond doit etre AU CENTRE de la progression : du blanc au-dessus et en dessous.
-        assertTrue(CustomizeUiLayout.MEDIA_BAR_FILL_TOP < CustomizeUiLayout.MEDIA_BAR_Y,
-                "il reste du blanc au-dessus du fond");
-        assertTrue(CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_BACK_H
-                        < CustomizeUiLayout.MEDIA_BAR_FILL_TOP + CustomizeUiLayout.MEDIA_BAR_FILL_H,
-                "et du blanc en dessous");
+        assertEquals(15, CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS, "le gris fait 1,5 pixel");
+        assertEquals(19, CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS, "le blanc en fait 1,9");
+        assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
+                        > CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS,
+                "le blanc doit deborder du gris");
+        assertTrue(CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS
+                        - CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS <= 4,
+                "mais a peine : un dixieme de chaque cote au plus");
 
         // Ses deux textes sont cales par le BAS de leur boite de 10 (l'une posee a 17, l'autre
         // a 27) : le titre tombe donc a 27 et la duree a 37, dix pixels plus bas, et non a la

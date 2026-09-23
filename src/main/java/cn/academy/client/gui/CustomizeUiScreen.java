@@ -264,19 +264,25 @@ public class CustomizeUiScreen extends Screen {
     private void drawMediaPreview(GuiGraphics graphics) {
         blend();
 
-        // La progression blanche d'abord, le fond ensuite : c'est l'ordre de ses widgets, donc
-        // chez lui le blanc se retrouve legerement assombri par le noir a 20 % du fond. Le fond
-        // est plus court que la progression et pose au milieu d'elle.
-        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_FILL_TOP,
-                CustomizeUiLayout.MEDIA_BAR_X
-                        + Math.round(CustomizeUiLayout.MEDIA_BAR_W
-                                * CustomizeUiLayout.MEDIA_BAR_PROGRESS),
-                CustomizeUiLayout.MEDIA_BAR_FILL_TOP + CustomizeUiLayout.MEDIA_BAR_FILL_H,
+        // La barre, dessinee au dixieme de pixel : le fond gris fait 1,5 de haut et la
+        // progression blanche 1,9, donc du blanc juste au-dessus et juste en dessous.
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.scale(CustomizeUiLayout.MEDIA_BAR_STEP, CustomizeUiLayout.MEDIA_BAR_STEP, 1.0f);
+
+        int unit = Math.round(1.0f / CustomizeUiLayout.MEDIA_BAR_STEP);
+        int barX = CustomizeUiLayout.MEDIA_BAR_X * unit;
+        int barY = CustomizeUiLayout.MEDIA_BAR_Y * unit;
+        int barW = CustomizeUiLayout.MEDIA_BAR_W * unit;
+        int grey = CustomizeUiLayout.MEDIA_BAR_GREY_TENTHS;
+        int white = CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS;
+        int inset = (white - grey) / 2;
+
+        graphics.fill(barX, barY - inset,
+                barX + Math.round(barW * CustomizeUiLayout.MEDIA_BAR_PROGRESS), barY - inset + white,
                 CustomizeUiLayout.MEDIA_BAR_FILL);
-        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
-                CustomizeUiLayout.MEDIA_BAR_X + CustomizeUiLayout.MEDIA_BAR_W,
-                CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_BACK_H,
-                CustomizeUiLayout.MEDIA_BAR_BACK);
+        graphics.fill(barX, barY, barX + barW, barY + grey, CustomizeUiLayout.MEDIA_BAR_BACK);
+        pose.popPose();
 
         // Le titre se cale par le bas de sa boite (juste au-dessus de la barre), et la duree
         // par le bas de la sienne, dix pixels plus bas : c'est ce qui les met a deux hauteurs.
