@@ -67,16 +67,16 @@ class CustomizeUiLayoutTest {
 
     @Test
     void laPoliceEstCelleDeLoriginalRameneeALaNotre() {
-        // La police est rasterisee a size * oversample = 14 pixels et dessinee a 9-10 : c'est le
-        // rapport d'un septieme qui fait tomber les textes de l'ecran sur ces tailles-la. Un
-        // corps 18 dans un panneau a moitie donne donc 18/7 * 0,5 = 1,2857.
-        assertEquals(1.2857f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
-        assertEquals(1.2857f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
-        assertEquals(5.4286f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
-        assertEquals(7.7143f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
-        // Le titre du lecteur media, en corps 10 dessine a l'echelle un, donne un em de 10 pixels.
-        assertEquals(10.0f, CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT)
-                * 7.0f, 0.01f);
+        // La police est rasterisee a size * oversample = 18 pixels et dessinee a 8-10 : c'est le
+        // rapport d'un dixieme qui fait tomber les textes de l'ecran sur ces tailles-la. Un
+        // corps 18 dans un panneau a moitie donne donc 18/10 * 0,5 = 0,9.
+        assertEquals(0.9f, CustomizeUiLayout.fontScale(CustomizeUiLayout.HEADER_FONT), 0.001f);
+        assertEquals(0.9f, CustomizeUiLayout.fontScale(CustomizeUiLayout.ROW_FONT), 0.001f);
+        assertEquals(3.8f, CustomizeUiLayout.plainFontScale(38.0f), 0.001f);
+        assertEquals(5.4f, CustomizeUiLayout.plainFontScale(54.0f), 0.001f);
+        // Le titre du lecteur media, en corps 10 dessine a l'echelle un, donne un em de 9 pixels.
+        assertEquals(9.0f, CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT)
+                * 9.0f, 0.01f);
     }
 
     @Test
@@ -85,7 +85,7 @@ class CustomizeUiLayoutTest {
         // a 27 ; son fond descend un cheveu plus bas (27,2) et fait 1,1 de haut.
         assertEquals(60, Math.round(CustomizeUiLayout.MEDIA_BAR_W
                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS), "la barre est remplie a moitie");
-        assertEquals(2, CustomizeUiLayout.MEDIA_BAR_BACK_H, "le fond fait deux pixels");
+        assertEquals(1, CustomizeUiLayout.MEDIA_BAR_BACK_H, "le fond fait un pixel");
         // Le fond doit etre AU CENTRE de la progression : du blanc au-dessus et en dessous.
         assertTrue(CustomizeUiLayout.MEDIA_BAR_FILL_TOP < CustomizeUiLayout.MEDIA_BAR_Y,
                 "il reste du blanc au-dessus du fond");

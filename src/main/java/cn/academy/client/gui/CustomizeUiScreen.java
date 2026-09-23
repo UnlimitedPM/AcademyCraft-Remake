@@ -117,6 +117,9 @@ public class CustomizeUiScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
+        // Sans ce lissage, le texte sort cisaille : voir FontSmoothing.
+        FontSmoothing.apply();
+
         // Le fond de l'ecran vient d'etre dessine, et il coupe le melange en partant. Chaque
         // dessin le rallume donc lui-meme : sans cela, tout ce qui a de la transparence sort
         // en aplat opaque et les textes ne se melangent pas.
