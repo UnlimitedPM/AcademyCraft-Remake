@@ -78,6 +78,32 @@ class CustomizeUiLayoutTest {
     }
 
     @Test
+    void laPlancheDeGlyphesSuitLaTailleDessinee() {
+        // Les glyphes sont graves d'avance, une planche par taille entiere, et la taille voulue
+        // est arrondie AVANT de choisir : un texte du panneau veut 6,75 pixels, donc la planche
+        // de 7, et celle-la se dessine a l'echelle 1 — sans reechantillonnage, donc nette.
+        float panneau = CustomizeUiLayout.fontScale(18.0f);
+        assertEquals(7, CustomizeUiLayout.sheetFor(panneau));
+        assertEquals(1.0f, CustomizeUiLayout.sheetScale(panneau, 7), 0.0001f);
+
+        // Le titre d'une notification est dessine au quart : c'est le produit des deux echelles
+        // qui donne sa taille reelle, donc la planche. 7,13 pixels, donc la planche de 7.
+        float notification = CustomizeUiLayout.plainFontScale(38.0f) * 0.25f;
+        assertEquals(7, CustomizeUiLayout.sheetFor(notification));
+
+        // Le titre du lecteur media, dessine a l'echelle un : 7,5 pixels, donc la planche de 8 ;
+        // sa duree veut 6,4, donc la planche de 6.
+        assertEquals(8, CustomizeUiLayout.sheetFor(CustomizeUiLayout.plainFontScale(10.0f)));
+        assertEquals(6, CustomizeUiLayout.sheetFor(
+                CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TIME_FONT)));
+
+        // Rien ne sort des planches gravees, meme pour un texte enorme ou minuscule : la taille
+        // est alors rattrapee par l'echelle, quitte a etre un peu moins nette.
+        assertEquals(CustomizeUiLayout.SHEET_MIN, CustomizeUiLayout.sheetFor(0.01f));
+        assertEquals(CustomizeUiLayout.SHEET_MAX, CustomizeUiLayout.sheetFor(99.0f));
+    }
+
+    @Test
     void leLecteurMediaEstCeluiDeSonXml() {
         // Sa barre : le fond gris fait 1,3 pixel de haut et la progression blanche 2,1, donc elle
         // deborde a peine de chaque cote. Tout est en dixiemes, d'ou les treize et vingt et un.

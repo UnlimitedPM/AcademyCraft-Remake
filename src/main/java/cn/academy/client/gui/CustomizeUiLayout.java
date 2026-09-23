@@ -99,16 +99,29 @@ public final class CustomizeUiLayout {
     /**
      * Le rapport entre la police de l'original et la notre.
      *
-     * <p>L'original dessinait son texte avec une police du systeme a un corps donne ; le port
-     * s'en sert pour retrouver la meme echelle a l'ecran. Le rapport vaut un douzieme, ce qui
-     * rend le texte environ 10 % plus petit que le corps annonce par l'original : c'est la
-     * mesure prise a l'ecran, sa police du systeme dessinant plus petite que son corps nominal.
-     *
-     * <p>La taille qui en sort est ensuite arrondie a un multiple entier de celle de la police
-     * du jeu — voir {@code CustomizeUiScreen#drawText} : toute taille fractionnaire est
-     * reechantillonnee, donc floue.
+     * <p>L'original dessinait son texte avec une police du systeme a un corps donne, ramene a
+     * l'ecran ; le port s'en sert pour retrouver la meme echelle. Le rapport vaut un douzieme,
+     * ce qui rend le texte environ 10 % plus petit que le corps annonce par l'original : c'est
+     * la mesure prise a l'ecran, sa police du systeme dessinant plus petite que son corps
+     * nominal.
      */
     public static final float FONT_RATIO = 1.0f / 12.0f;
+
+    /**
+     * Le corps de reference, en pixels : l'echelle 1 dessine un em de cette taille.
+     *
+     * <p>La police du systeme dessinait elle-meme un em d'environ 9 pixels pour un corps de 18
+     * dans un panneau a moitie ; c'est ce que la police du jeu ne sait PAS reproduire, parce
+     * qu'en dessous de sa taille native (8) tout est reechantillonne, donc flou.
+     */
+    public static final float BASE_EM = 9.0f;
+
+    /**
+     * Les tailles de planches que {@code scripts/bake-font.ps1} grave : une par taille entiere,
+     * jusqu'a la plus petite que l'interface demande (la duree du lecteur media, un peu sous 5).
+     */
+    public static final int SHEET_MIN = 4;
+    public static final int SHEET_MAX = 20;
 
     /**
      * La hauteur de ligne du jeu, pour centrer un texte dans sa ligne.
@@ -143,6 +156,38 @@ public final class CustomizeUiLayout {
     /** L'echelle d'un texte qui n'est pas dans le panneau : il n'y a pas a le reduire. */
     public static float plainFontScale(float fontSize) {
         return fontSize * FONT_RATIO;
+    }
+
+    /**
+     * La taille voulue, en pixels entiers : {@code BASE_EM} fois l'echelle, arrondi.
+     *
+     * <p>L'arrondi precede le choix de la planche, et non l'inverse : on ne cherche pas la
+     * planche la plus proche d'une taille fractionnaire, on fixe la taille entiere a dessiner,
+     * puis on grave exactement cette taille. La planche est ensuite dessinee sans
+     * reechantillonnage, seule facon de ne pas etre flou.
+     */
+    public static int pixelSize(float scale) {
+        return Math.round(BASE_EM * scale);
+    }
+
+    /**
+     * La planche de glyphes a utiliser, pour une echelle qui inclut deja celle du panneau.
+     *
+     * <p>On prend la planche de la taille voulue, dans les bornes gravees.
+     */
+    public static int sheetFor(float scale) {
+        return Math.max(SHEET_MIN, Math.min(SHEET_MAX, pixelSize(scale)));
+    }
+
+    /**
+     * L'echelle a appliquer a cette planche pour tomber pile sur la taille voulue.
+     *
+     * <p>Elle vaut 1 quand la planche est celle de cette taille, c'est-a-dire dans tous les cas
+     * ou la taille voulue tombe dans les bornes gravees. Une planche dessinee a l'echelle 1
+     * garde ses pixels : rien n'est reechantillonne, donc rien n'est flou.
+     */
+    public static float sheetScale(float scale, int sheet) {
+        return pixelSize(scale) / (float) sheet;
     }
 
     /** Le haut d'un texte dont on veut centrer la ligne sur {@code centerY}. */
