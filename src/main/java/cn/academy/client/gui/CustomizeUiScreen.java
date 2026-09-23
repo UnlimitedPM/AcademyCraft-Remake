@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -38,6 +39,20 @@ import java.util.List;
 public class CustomizeUiScreen extends Screen {
 
     private static final int OUTLINE = 0xFFFFFFFF;
+
+    /**
+     * La police de l'original.
+     *
+     * <p>L'original ne dessinait pas avec la police du jeu : il rendait son texte avec une
+     * police <b>du systeme</b>, Microsoft YaHei par defaut, lue par AWT. Elle est donc
+     * embarquee ici sous {@code assets/academy/font/ac_gui.ttf}, extraite d'une collection
+     * Windows par {@code scripts/ttc-to-ttf.py} — le chargeur de Minecraft ne sait pas lire
+     * un .ttc. Son corps de base vaut 12, donc les tailles de l'original s'ecrivent en
+     * douziemes, ce que fait {@link CustomizeUiLayout#fontScale(float)}. Si le fichier est
+     * absent, la definition retombe sur la police du jeu.
+     */
+    private static final Style GUI_STYLE = Style.EMPTY.withFont(
+            ResourceLocation.fromNamespaceAndPath("academy", "ac_gui"));
 
     /** Les images de l'original, telles quelles : aucune n'est redessinee. */
     private static final ResourceLocation PANEL_TEXTURE = texture("window_ui_resize");
@@ -102,12 +117,17 @@ public class CustomizeUiScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
-        // Le fond de l'ecran vient d'etre dessine, et il coupe le melange en partant. Sans le
-        // rallumer, tout ce qui a de la transparence sort en aplat opaque : les fondus des
-        // textures (le contour du panneau, la plaque des notifications, les touches du
-        // rappel) deviennent des blocs, et les teintes des lignes deviennent du blanc.
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        // L'original filtrait ses textures en lineaire, et cet ecran les reduit toutes.
+        GuiTextures.linear(PANEL_TEXTURE);
+        GuiTextures.linear(CPBAR_TEXTURE);
+        GuiTextures.linear(KEY_HINT_TEXTURE);
+        GuiTextures.linear(NOTIFY_LOGO_TEXTURE);
+        GuiTextures.linear(NOTIFY_BACK_TEXTURE);
+
+        // Le fond de l'ecran vient d'etre dessine, et il coupe le melange en partant. Chaque
+        // dessin le rallume donc lui-meme : sans cela, tout ce qui a de la transparence sort
+        // en aplat opaque et les textes ne se melangent pas.
+        blend();
 
         // Les apercus, a leur place reelle. Le panneau passe apres eux, comme avant.
         for (HudElement element : elements) {
@@ -248,17 +268,18 @@ public class CustomizeUiScreen extends Screen {
     private void drawMediaPreview(GuiGraphics graphics) {
         blend();
 
-        // La barre : son fond sur 120, et la progression blanche sur la moitie.
-        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
-                CustomizeUiLayout.MEDIA_BAR_X + CustomizeUiLayout.MEDIA_BAR_W,
-                CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_BACK_H,
-                CustomizeUiLayout.MEDIA_BAR_BACK);
+        // La progression blanche d'abord, le fond ensuite : c'est l'ordre de ses widgets, donc
+        // chez lui le blanc se retrouve legerement assombri par le noir a 20 %.
         graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
                 CustomizeUiLayout.MEDIA_BAR_X
                         + Math.round(CustomizeUiLayout.MEDIA_BAR_W
                                 * CustomizeUiLayout.MEDIA_BAR_PROGRESS),
                 CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_FILL_H,
                 CustomizeUiLayout.MEDIA_BAR_FILL);
+        graphics.fill(CustomizeUiLayout.MEDIA_BAR_X, CustomizeUiLayout.MEDIA_BAR_Y,
+                CustomizeUiLayout.MEDIA_BAR_X + CustomizeUiLayout.MEDIA_BAR_W,
+                CustomizeUiLayout.MEDIA_BAR_Y + CustomizeUiLayout.MEDIA_BAR_BACK_H,
+                CustomizeUiLayout.MEDIA_BAR_BACK);
 
         // Le titre se cale par le bas de sa boite (juste au-dessus de la barre), et la duree
         // par le bas de la sienne, dix pixels plus bas : c'est ce qui les met a deux hauteurs.
@@ -317,14 +338,21 @@ public class CustomizeUiScreen extends Screen {
                 CustomizeUiLayout.FIELD_TEXT);
     }
 
-    /** Ecrit un texte a l'echelle de la police de l'original : un douzieme de son corps. */
+    /**
+     * Ecrit un texte dans la police de l'original, a l'echelle demandee.
+     *
+     * <p>La police est celle de l'original (voir {@link #GUI_STYLE}) : son corps de base vaut
+     * 12, et une taille de l'original se lit donc en douziemes.
+     */
     private void drawText(GuiGraphics graphics, Component text, int left, int top,
                           float scale, int color) {
+        blend();
+
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(left, top, 0);
         pose.scale(scale, scale, 1.0f);
-        graphics.drawString(font, text, 0, 0, color, false);
+        graphics.drawString(font, text.copy().withStyle(GUI_STYLE), 0, 0, color, false);
         pose.popPose();
     }
 
