@@ -56,10 +56,12 @@ public final class Config {
             .comment("Control Points au premier lancement (plafonnes a controlPointMax).")
             .defineInRange("ability.controlPointStart", 100.0d, 0.0d, 1_000_000.0d);
 
-    private static final ForgeConfigSpec.DoubleValue CP_REGEN_PER_TICK = BUILDER
-            .comment("Control Points regeneres par tick (20 ticks = 1 seconde).",
-                     "0.25 = 5 CP par seconde, la valeur de la 1.12.2.")
-            .defineInRange("ability.controlPointRegenPerTick", 0.25d, 0.0d, 1000.0d);
+    private static final ForgeConfigSpec.DoubleValue CP_REGEN_SPEED = BUILDER
+            .comment("Vitesse de recuperation des Control Points.",
+                     "La reserve regagne une part de son PLAFOND par tick (0,0003 chez l'original,"
+                             + " double quand elle est pleine), donc ce reglage est un MULTIPLICATEUR :",
+                     "1.0 = la vitesse de l'original ; 0 = plus rien ne remonte tout seul.")
+            .defineInRange("ability.controlPointRegenSpeed", 1.0d, 0.0d, 100.0d);
 
     private static final ForgeConfigSpec.IntValue CP_SYNC_INTERVAL = BUILDER
             .comment("Frequence (en ticks) de synchronisation des CP vers le client.")
@@ -179,7 +181,7 @@ public final class Config {
 
     public static double controlPointMax = 100.0d;
     public static double controlPointStart = 100.0d;
-    public static double controlPointRegenPerTick = 0.25d;
+    public static double controlPointRegenSpeed = 1.0d;
     public static int controlPointSyncInterval = 20;
     public static int overloadRecoverCooldown = 32;
     public static double overloadRecoverSpeed = 1.0d;
@@ -239,7 +241,7 @@ public final class Config {
         damageScale = DAMAGE_SCALE.get();
         controlPointMax = CP_MAX.get();
         controlPointStart = CP_START.get();
-        controlPointRegenPerTick = CP_REGEN_PER_TICK.get();
+        controlPointRegenSpeed = CP_REGEN_SPEED.get();
         controlPointSyncInterval = CP_SYNC_INTERVAL.get();
         overloadRecoverCooldown = OVERLOAD_RECOVER_COOLDOWN.get();
         overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();

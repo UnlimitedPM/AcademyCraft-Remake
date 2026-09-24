@@ -287,6 +287,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     private static final float CP_INCR_RATE = 0.0025f * CP_SCALE;
 
+    /**
+     * La part du plafond que la reserve regagne par tick, chez l'original ({@code 0,0003}).
+     *
+     * <p>Elle est <b>proportionnelle</b> au plafond : un joueur deux fois plus experimente
+     * regagne deux fois plus de points, et met donc le meme temps a remplir sa barre.
+     */
+    private static final float CP_RECOVER_FRACTION = 0.0003f;
+
     /** Plafond courant, relu depuis la config a chaque appel (rechargement a chaud). */
     public static float configuredMax() {
         return (float) cn.academy.Config.controlPointMax;
@@ -368,8 +376,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return perform(amount, 0f);
     }
 
-    public void tickRegen(float amount) {
-        controlPoint = Math.min(getMaxControlPoint(), controlPoint + amount);
+    public void tickRegen() {
+        float max = getMaxControlPoint();
+        if (max <= 0) return;
+        // Portage de CPData.getCPRecoverSpeed : une part du PLAFOND par tick, et non un
+        // montant fixe, et cette part double quand la reserve est pleine. Le facteur
+        // CP_SCALE lui rend le nombre de points PAR TICK de l'original, celui qu'on voyait
+        // avancer a chaque tick chez lui.
+        float speed = (float) (cn.academy.Config.controlPointRegenSpeed * CP_RECOVER_FRACTION
+                * max * CP_SCALE * (1.0 + Math.min(1.0, controlPoint / max)));
+        controlPoint = Math.min(max, controlPoint + speed);
     }
 
     // ------------------------------------------------------------------

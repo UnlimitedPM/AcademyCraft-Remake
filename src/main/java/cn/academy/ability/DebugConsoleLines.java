@@ -57,12 +57,12 @@ public final class DebugConsoleLines {
 
         lines.add(category.getName());
         lines.add("Level " + data.getCategoryLevel(category));
-        lines.add(String.format(Locale.ROOT, "CP:       %.0f/%.0f(%.1f+%s)",
+        lines.add(String.format(Locale.ROOT, "CP:       %.0f/%.0f(%.1f+%.1f)",
                 data.getControlPoint(), data.getMaxControlPoint(),
-                data.getRawMaxControlPoint(), decimal(addCp)));
-        lines.add(String.format(Locale.ROOT, "Overload: %.0f/%.0f(%.1f+%s)",
+                data.getRawMaxControlPoint(), addCp));
+        lines.add(String.format(Locale.ROOT, "Overload: %.0f/%.0f(%.1f+%.1f)",
                 data.getOverload(), data.getMaxOverload(),
-                data.getMaxOverload() - addOverload, decimal(addOverload)));
+                data.getMaxOverload() - addOverload, addOverload));
         lines.add("CPData.canUseAbility: " + canUseAbility(data));
         lines.add("CPData.activated: " + data.isActivated());
         lines.add("CPData.addMaxCP: " + decimal(addCp));

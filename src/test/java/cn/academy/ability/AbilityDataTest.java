@@ -67,13 +67,35 @@ class AbilityDataTest {
         data.consumeControlPoint(data.getControlPoint());
         assertEquals(0f, data.getControlPoint(), EPSILON);
 
-        float max = data.getMaxControlPoint();
-        // On regenere bien au-dela du plafond.
-        for (int i = 0; i < 100; i++) {
-            data.tickRegen(1f);
+        float before = data.getMaxControlPoint();
+        // Le plafond grandit un peu a chaque depense (l'addMaxControlPoint de
+        // l'original) : on regenere donc bien au-dela du plafond d'avant.
+        for (int i = 0; i < 500; i++) {
+            data.tickRegen();
         }
 
-        assertEquals(max, data.getControlPoint(), EPSILON);
+        assertEquals(data.getMaxControlPoint(), data.getControlPoint(), EPSILON);
+        assertTrue(data.getMaxControlPoint() >= before, "le plafond a suivi");
+    }
+
+    @Test
+    @DisplayName("tickRegen va plus vite quand la reserve se remplit")
+    void tickRegenSpeedsUpAsTheBarFills() {
+        AbilityData empty = new AbilityData();
+        empty.consumeControlPoint(empty.getControlPoint());
+        float beforeEmpty = empty.getControlPoint();
+        empty.tickRegen();
+        float emptyGain = empty.getControlPoint() - beforeEmpty;
+
+        AbilityData half = new AbilityData();
+        half.consumeControlPoint(half.getControlPoint() * 0.5f);
+        float beforeHalf = half.getControlPoint();
+        half.tickRegen();
+        float halfGain = half.getControlPoint() - beforeHalf;
+
+        assertTrue(emptyGain > 0f, "vide, la reserve remonte quand meme : " + emptyGain);
+        assertTrue(halfGain > emptyGain,
+                "et elle va plus vite a moitie pleine : " + halfGain + " > " + emptyGain);
     }
 
     @Test

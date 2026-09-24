@@ -68,6 +68,21 @@ class DebugConsoleLinesTest {
     }
 
     @Test
+    void lesDeuxParenthesesNOntQuUneDecimale() {
+        // Les lignes CP et Overload, elles, montrent une seule decimale, comme l'original :
+        // c'est le detail du texte qu'on lit en jouant, pas la donnee brute des lignes
+        // CPData.addMax* qui suivent.
+        List<String> lines = DebugConsoleLines.info(new AbilityData(),
+                ElectromasterCategory.INSTANCE);
+        String cp = lines.get(3);
+        String overload = lines.get(4);
+
+        assertTrue(cp.matches("CP:       \\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"), cp);
+        assertTrue(overload.matches("Overload: \\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"),
+                overload);
+    }
+
+    @Test
     void lEtatDesCompetencesAligneLesNoms() {
         // Une ligne par competence de la categorie, le nom garni jusqu'a 30 caracteres puis
         // l'experience, ou l'aveu qu'elle n'est pas apprise. La categorie se prend par son
@@ -112,6 +127,24 @@ class DebugConsoleLinesTest {
                 "la seconde categorie est vide dans ce test, mais elle s'annonce");
         assertEquals("electromaster", deux.get(2));
         assertEquals("vecmanip", deux.get(deux.size() - 1));
+    }
+
+    @Test
+    void laReserveRemonteAChaqueTick() {
+        // L'original regagnait une part de son PLAFOND par tick, et non un montant fixe :
+        // c'est ce qui faisait avancer le compteur a chaque tick chez lui. Le port garde la
+        // meme proportion, ramenee a son echelle (28), ce qui donne environ un point par tick
+        // sur une reserve de 100 — au lieu des 5 par seconde d'avant, en gros morceaux.
+        AbilityData data = new AbilityData();
+        data.consumeControlPoint(50.0f);
+        float before = data.getControlPoint();
+
+        data.tickRegen();
+
+        float gain = data.getControlPoint() - before;
+        assertTrue(gain >= 1.0f, "au moins un point par tick, comme chez l'original : " + gain);
+        assertTrue(gain <= 2.0f, "et pas davantage : " + gain);
+        assertTrue(data.getControlPoint() > before, "la reserve remonte");
     }
 
     @Test

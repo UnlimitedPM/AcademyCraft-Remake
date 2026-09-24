@@ -82,7 +82,7 @@ public class AbilityEvents {
             // qu'un rechargement de config soit pris en compte sans reconnexion.
             data.clampToConfiguredMax();
             if (data.getControlPoint() < data.getMaxControlPoint()) {
-                data.tickRegen((float) cn.academy.Config.controlPointRegenPerTick);
+                data.tickRegen();
             }
             if (player.tickCount % syncInterval() == 0) {
                 AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
