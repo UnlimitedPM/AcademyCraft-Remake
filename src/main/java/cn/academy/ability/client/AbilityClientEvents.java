@@ -62,6 +62,12 @@ public class AbilityClientEvents {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+
+        // La reserve remonte d'un tick, chez le client aussi : la synchronisation du
+        // serveur ne passe que tous les dix ticks, et sans ce rejeu les nombres du F4 et
+        // la barre de CP avanceraient par bonds. Voir ClientAbilityData.tick.
+        ClientAbilityData.tick();
+
         for (Binding binding : BINDINGS) {
             tick(binding);
         }
