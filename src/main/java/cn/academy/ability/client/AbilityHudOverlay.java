@@ -1,12 +1,22 @@
 package cn.academy.ability.client;
 
 import cn.academy.ability.AbilityData;
+import cn.academy.client.hud.CpBarHud;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 
-/** Draws the local player's Control Point bar above the hotbar. */
+/**
+ * Les valeurs du joueur, sous forme de barres, et le temoin de points de controle.
+ *
+ * <p>Le <b>temoin</b> est l'element du HUD : il se dessine a la place que le joueur lui a
+ * donnee (voir {@link CpBarHud} et {@code HudElement}).
+ *
+ * <p>Les <b>valeurs</b> — les nombres de CP et de surcharge, avec leurs petites barres — sont
+ * autre chose : l'original les tient en <b>bas a gauche</b>, fixes, et non dans un des quatre
+ * elements reglables. Elles restent donc ici, en bas a gauche, ou elles etaient.
+ */
 public class AbilityHudOverlay implements IGuiOverlay {
 
     private static final int BAR_WIDTH = 100;
@@ -14,6 +24,8 @@ public class AbilityHudOverlay implements IGuiOverlay {
 
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
+        CpBarHud.render(graphics, screenWidth, screenHeight);
+
         AbilityData data = ClientAbilityData.get();
         float maxCp = data.getMaxControlPoint();
         if (maxCp <= 0) return;
