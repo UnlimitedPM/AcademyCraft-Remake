@@ -1,11 +1,13 @@
 package cn.academy.ability;
 
+import cn.academy.AcademyCraft;
 import cn.academy.ability.develop.DeveloperType;
 import cn.academy.ability.develop.condition.ConditionDependency;
 import cn.academy.ability.develop.condition.ConditionDeveloperType;
 import cn.academy.ability.develop.condition.ConditionLevel;
 import cn.academy.ability.develop.condition.LearningCondition;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
@@ -118,6 +120,19 @@ public abstract class Skill {
 
     public Component getDisplayName() {
         return Component.translatable(getDisplayKey());
+    }
+
+    /**
+     * L'icone qui represente la competence : celle de l'arbre et de l'ecran des prereglages.
+     *
+     * <p>Elle vit avec les autres images du mod, sous le nom de sa categorie puis le sien :
+     * {@code textures/abilities/<categorie>/skills/<competence>.png}. C'est le chemin de
+     * l'original, et les images sont deja livrees.
+     */
+    public ResourceLocation getHintIcon() {
+        String categoryName = category == null ? "generic" : category.getName();
+        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+                "textures/abilities/" + categoryName + "/skills/" + name + ".png");
     }
 
     // ------------------------------------------------------------------

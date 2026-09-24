@@ -198,6 +198,7 @@
   "key.academy.debug_console": "Developer info",
 
   "academy.preset.title": "Ability presets",
+  "academy.preset.select": "Select Skill",
   "academy.preset.hint": "Pick a learned ability, then click the key you want it on. Right click clears a key. Click a number to use that preset.",
   "academy.preset.learned": "Learned",
   "academy.preset.slots": "Keys of each preset",
