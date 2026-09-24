@@ -25,94 +25,39 @@ import java.util.List;
 public class AbilityClientEvents {
 
     /**
-     * Une touche, la competence qu'elle declenche, et sa charge eventuelle.
+     * Une touche d'aptitude, et le rang qu'elle occupe dans le prereglage.
      *
-     * <p>Regroupee en tableau : huit blocs recopies a la main auraient fait huit
-     * occasions d'oublier le relachement d'une competence qui se charge.
+     * <p>Les quatre touches ne declenchent rien par elles-memes : c'est le prereglage en
+     * service qui dit ce qu'elles allument, et il peut changer d'un instant a l'autre. La
+     * competence est donc relue a chaque appui — c'est le cablage complet de l'original.
      */
     private static final class Binding {
 
         final KeyMapping key;
-        final String category;
-        final String skill;
-
-        /**
-         * La touche d'aptitude dont cette entree depend, ou -1.
-         *
-         * <p>Les quatre touches d'aptitude ne declenchent rien par elles-memes : c'est le
-         * prereglage en service qui dit ce qu'elles allument, et il peut changer d'un
-         * instant a l'autre. Le reste du cablage est donc le meme, mais la competence est
-         * relue a chaque appui.
-         */
         final int presetSlot;
 
-        /** Vrai entre l'appui et le relachement d'une competence qui se charge. */
+        /** Vrai entre l'appui et le relachement d'une competence qui se charge ou se tient. */
         boolean charging;
 
-        Binding(KeyMapping key, String category, String skill) {
-            this(key, category, skill, -1);
-        }
-
-        Binding(KeyMapping key, String category, String skill, int presetSlot) {
+        Binding(KeyMapping key, int presetSlot) {
             this.key = key;
-            this.category = category;
-            this.skill = skill;
             this.presetSlot = presetSlot;
         }
     }
 
-    // Cablage en attendant le systeme de presets et de touches de l'original.
+    /**
+     * LES QUATRE TOUCHES D'APTITUDE, ET RIEN D'AUTRE.
+     *
+     * <p>Le port avait fini par lier chaque competence a sa propre touche — trente-cinq
+     * liaisons, jusqu'a la ponctuation et aux touches de defilement — parce que c'etait le
+     * chemin le plus court. C'est le systeme de presets de l'original qui les remplace :
+     * quatre touches, et le joueur choisit dans son prereglage quelle competence va dessus.
+     */
     private static final List<Binding> BINDINGS = List.of(
-            // Les quatre touches d'aptitude : ce sont les prereglages qui disent ce
-            // qu'elles font. C'est la reponse de l'original a la penurie de touches.
-            new Binding(AbilityKeyBindings.ABILITY_1, null, null, 0),
-            new Binding(AbilityKeyBindings.ABILITY_2, null, null, 1),
-            new Binding(AbilityKeyBindings.ABILITY_3, null, null, 2),
-            new Binding(AbilityKeyBindings.ABILITY_4, null, null, 3),
-            new Binding(AbilityKeyBindings.ACTIVATE_SKILL, VecmanipCategory.NAME, "vec_accel"),
-            new Binding(AbilityKeyBindings.ACTIVATE_ARC_GEN, ElectromasterCategory.NAME, "arc_gen"),
-            new Binding(AbilityKeyBindings.ACTIVATE_RAILGUN, ElectromasterCategory.NAME, "railgun"),
-            new Binding(AbilityKeyBindings.ACTIVATE_BODY_INTENSIFY, ElectromasterCategory.NAME, "body_intensify"),
-            new Binding(AbilityKeyBindings.ACTIVATE_SHIFT_TP, TeleporterCategory.NAME, "shift_tp"),
-            new Binding(AbilityKeyBindings.ACTIVATE_PENETRATE_TP, TeleporterCategory.NAME, "penetrate_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MELTDOWNER, MeltdownerCategory.NAME, "meltdowner"),
-            new Binding(AbilityKeyBindings.ACTIVATE_ELECTRON_BOMB, MeltdownerCategory.NAME, "electron_bomb"),
-            new Binding(AbilityKeyBindings.ACTIVATE_LIGHT_SHIELD, MeltdownerCategory.NAME, "light_shield"),
-            new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_BOLT, ElectromasterCategory.NAME, "thunder_bolt"),
-            new Binding(AbilityKeyBindings.ACTIVATE_THUNDER_CLAP, ElectromasterCategory.NAME, "thunder_clap"),
-            new Binding(AbilityKeyBindings.ACTIVATE_CHARGING, ElectromasterCategory.NAME, "charging"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MAG_MOVEMENT, ElectromasterCategory.NAME, "mag_movement"),
-            new Binding(AbilityKeyBindings.ACTIVATE_THREATENING_TELEPORT, TeleporterCategory.NAME,
-                    "threatening_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MARK_TELEPORT, TeleporterCategory.NAME, "mark_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_FLESH_RIPPING, TeleporterCategory.NAME, "flesh_ripping"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_BASIC, MeltdownerCategory.NAME, "mine_ray_basic"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_EXPERT, MeltdownerCategory.NAME, "mine_ray_expert"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MINE_RAY_LUCK, MeltdownerCategory.NAME, "mine_ray_luck"),
-            new Binding(AbilityKeyBindings.ACTIVATE_SCATTER_BOMB, MeltdownerCategory.NAME, "scatter_bomb"),
-            new Binding(AbilityKeyBindings.ACTIVATE_JET_ENGINE, MeltdownerCategory.NAME, "jet_engine"),
-            new Binding(AbilityKeyBindings.ACTIVATE_RAY_BARRAGE, MeltdownerCategory.NAME, "ray_barrage"),
-            new Binding(AbilityKeyBindings.ACTIVATE_FLASHING, TeleporterCategory.NAME, "flashing"),
-            new Binding(AbilityKeyBindings.ACTIVATE_LOCATION_TELEPORT, TeleporterCategory.NAME,
-                    "location_teleport"),
-            new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_SHOCK, VecmanipCategory.NAME, "dir_shock"),
-            new Binding(AbilityKeyBindings.ACTIVATE_GROUNDSHOCK, VecmanipCategory.NAME, "ground_shock"),
-            new Binding(AbilityKeyBindings.ACTIVATE_DIRECTED_BLASTWAVE, VecmanipCategory.NAME,
-                    "dir_blast"),
-            new Binding(AbilityKeyBindings.ACTIVATE_BLOOD_RETROGRADE, VecmanipCategory.NAME,
-                    "blood_retro"),
-            new Binding(AbilityKeyBindings.ACTIVATE_VEC_DEVIATION, VecmanipCategory.NAME,
-                    "vec_deviation"),
-            new Binding(AbilityKeyBindings.ACTIVATE_VEC_REFLECTION, VecmanipCategory.NAME,
-                    "vec_reflection"),
-            new Binding(AbilityKeyBindings.ACTIVATE_STORM_WING, VecmanipCategory.NAME,
-                    "storm_wing"),
-            new Binding(AbilityKeyBindings.ACTIVATE_PLASMA_CANNON, VecmanipCategory.NAME,
-                    "plasma_cannon"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MINE_DETECT, ElectromasterCategory.NAME,
-                    "mine_detect"),
-            new Binding(AbilityKeyBindings.ACTIVATE_MAG_MANIP, ElectromasterCategory.NAME,
-                    "mag_manip"));
+            new Binding(AbilityKeyBindings.ABILITY_1, 0),
+            new Binding(AbilityKeyBindings.ABILITY_2, 1),
+            new Binding(AbilityKeyBindings.ABILITY_3, 2),
+            new Binding(AbilityKeyBindings.ABILITY_4, 3));
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -153,12 +98,8 @@ public class AbilityClientEvents {
      */
     @Nullable
     private static Skill skillOf(Binding binding) {
-        if (binding.presetSlot >= 0) {
-            return skillByName(cn.academy.ability.preset.client.ClientPresetData
-                    .skillAt(binding.presetSlot));
-        }
-        Category category = CategoryManager.INSTANCE.getCategory(binding.category);
-        return category == null ? null : category.getSkill(binding.skill);
+        return skillByName(cn.academy.ability.preset.client.ClientPresetData
+                .skillAt(binding.presetSlot));
     }
 
     /** Une competence par son nom, ou {@code null} si aucune categorie ne la porte. */

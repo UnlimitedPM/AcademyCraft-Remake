@@ -12,38 +12,34 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * Les touches du mod : une par competence, et celles des prereglages.
  *
- * <p>Les touches par competence sont un <b>palliatif</b>, herite de la penurie de touches :
- * l'original n'en donnait que quatre, et quatre prereglages pour dire ce qu'elles allument.
- * Les deux systemes vivent cote a cote le temps que les prereglages soient reglables depuis
- * le jeu — les quatre touches d'aptitude etant, elles, deja la reponse complete.
+ * <p>Les touches par competence ont ete <b>retirees de l'enregistrement</b> : l'original n'en
+ * donnait que quatre, avec quatre prereglages pour dire ce qu'elles allument. Le port avait
+ * fini par en poser trente-cinq, jusqu'a la ponctuation et aux touches de defilement, ce qui
+ * n'etait plus utilisable. Les declarations mortes qui les suivaient restent dans le fichier
+ * le temps d'un passage de menage : elles ne sont plus enregistrees, donc invisibles.
  *
  * <p>Le cablage vit dans {@link AbilityClientEvents}.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class AbilityKeyBindings {
 
-    public static final KeyMapping ACTIVATE_SKILL = new KeyMapping(
-            "key.academy.activate_skill", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
-            InputConstants.KEY_R, "key.categories.academy");
-
-    // ------------------------------------------------------------------
-    // Les prereglages
-    // ------------------------------------------------------------------
-
     /**
-     * Les quatre touches d'aptitude : ce sont les prereglages qui disent ce qu'elles font.
+     * Les quatre touches d'aptitude, avec les defauts de l'original.
      *
-     * <p>Le pave numerique est libre, l'alphabet et la ponctuation ne le sont plus : c'est
-     * la consequence directe d'une touche par competence. Comme toutes les touches du mod,
-     * elles se reconfigurent dans les options du jeu.
+     * <p>Chez lui c'etaient {@code MOUSE_LEFT, MOUSE_RIGHT, R, F}, reglables dans son propre
+     * ecran de touches. Ce sont les SEULES touches qui declenchent une competence : le reste
+     * depend du <b>prereglage</b> en service, qui dit quelle competence va sur quelle touche.
+     * C'est la reponse de l'original a la penurie de touches, et elle remplace les trente-cinq
+     * liaisons « une par competence » que le port avait fini par poser sur de la ponctuation
+     * et des touches de defilement.
      */
-    public static final KeyMapping ABILITY_1 = abilityKey("key.academy.ability_1", InputConstants.KEY_NUMPAD1);
-    public static final KeyMapping ABILITY_2 = abilityKey("key.academy.ability_2", InputConstants.KEY_NUMPAD2);
-    public static final KeyMapping ABILITY_3 = abilityKey("key.academy.ability_3", InputConstants.KEY_NUMPAD3);
-    public static final KeyMapping ABILITY_4 = abilityKey("key.academy.ability_4", InputConstants.KEY_NUMPAD4);
+    public static final KeyMapping ABILITY_1 = mouseKey("key.academy.ability_1", InputConstants.MOUSE_BUTTON_LEFT);
+    public static final KeyMapping ABILITY_2 = mouseKey("key.academy.ability_2", InputConstants.MOUSE_BUTTON_RIGHT);
+    public static final KeyMapping ABILITY_3 = abilityKey("key.academy.ability_3", InputConstants.KEY_R);
+    public static final KeyMapping ABILITY_4 = abilityKey("key.academy.ability_4", InputConstants.KEY_F);
 
-    /** Le passage au prereglage suivant, qui fait le tour des quatre. */
-    public static final KeyMapping PRESET_NEXT = abilityKey("key.academy.preset_next", InputConstants.KEY_NUMPAD5);
+    /** Le passage au prereglage suivant, qui fait le tour des quatre. C, comme chez l'original. */
+    public static final KeyMapping PRESET_NEXT = abilityKey("key.academy.preset_next", InputConstants.KEY_C);
 
     /**
      * L'allumage de l'aptitude.
@@ -58,8 +54,8 @@ public class AbilityKeyBindings {
      */
     public static final KeyMapping TOGGLE_ABILITY = abilityKey("key.academy.toggle_ability", InputConstants.KEY_V);
 
-    /** L'ecran qui regle les prereglages. */
-    public static final KeyMapping PRESET_EDIT = abilityKey("key.academy.preset_edit", InputConstants.KEY_NUMPAD6);
+    /** L'ecran qui regle les prereglages. N, comme chez l'original. */
+    public static final KeyMapping PRESET_EDIT = abilityKey("key.academy.preset_edit", InputConstants.KEY_N);
 
     /**
      * L'ecran de debogage du mod : informations du joueur, puis etat des competences.
@@ -74,6 +70,20 @@ public class AbilityKeyBindings {
         return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
                 defaultKey, "key.categories.academy");
     }
+
+    private static KeyMapping mouseKey(String description, int defaultButton) {
+        return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.MOUSE,
+                defaultButton, "key.categories.academy");
+    }
+
+    // ------------------------------------------------------------------
+    // DECLARATIONS MORTES : les trente-cinq touches « une par competence ».
+    //
+    // Elles ne sont PLUS enregistrees (voir register(), en bas du fichier) : la competence
+    // d'une touche vient maintenant du prereglage, et il n'y a plus que quatre touches. Tout
+    // ce qui suit n'est donc lu par personne, et n'apparait plus dans les options du jeu.
+    // Le port les garde le temps d'un passage de menage, pour que rien d'autre ne casse.
+    // ------------------------------------------------------------------
 
     public static final KeyMapping ACTIVATE_ARC_GEN = new KeyMapping(
             "key.academy.activate_arc_gen", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
@@ -268,42 +278,8 @@ public class AbilityKeyBindings {
 
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
-        event.register(ACTIVATE_SKILL);
-        event.register(ACTIVATE_ARC_GEN);
-        event.register(ACTIVATE_RAILGUN);
-        event.register(ACTIVATE_BODY_INTENSIFY);
-        event.register(ACTIVATE_SHIFT_TP);
-        event.register(ACTIVATE_PENETRATE_TP);
-        event.register(ACTIVATE_MELTDOWNER);
-        event.register(ACTIVATE_ELECTRON_BOMB);
-        event.register(ACTIVATE_LIGHT_SHIELD);
-        event.register(ACTIVATE_THUNDER_BOLT);
-        event.register(ACTIVATE_THUNDER_CLAP);
-        event.register(ACTIVATE_CHARGING);
-        event.register(ACTIVATE_MAG_MOVEMENT);
-        event.register(ACTIVATE_THREATENING_TELEPORT);
-        event.register(ACTIVATE_MARK_TELEPORT);
-        event.register(ACTIVATE_FLESH_RIPPING);
-        event.register(ACTIVATE_MINE_RAY_BASIC);
-        event.register(ACTIVATE_MINE_RAY_EXPERT);
-        event.register(ACTIVATE_MINE_RAY_LUCK);
-        event.register(ACTIVATE_SCATTER_BOMB);
-        event.register(ACTIVATE_JET_ENGINE);
-        event.register(ACTIVATE_RAY_BARRAGE);
-        event.register(ACTIVATE_FLASHING);
-        event.register(ACTIVATE_LOCATION_TELEPORT);
-        event.register(ACTIVATE_DIRECTED_SHOCK);
-        event.register(ACTIVATE_GROUNDSHOCK);
-        event.register(ACTIVATE_DIRECTED_BLASTWAVE);
-        event.register(ACTIVATE_BLOOD_RETROGRADE);
-        event.register(ACTIVATE_VEC_DEVIATION);
-        event.register(ACTIVATE_VEC_REFLECTION);
-        event.register(ACTIVATE_STORM_WING);
-        event.register(ACTIVATE_PLASMA_CANNON);
-        event.register(ACTIVATE_MINE_DETECT);
-        event.register(ACTIVATE_MAG_MANIP);
-
-        // Les prereglages : quatre touches d'aptitude, le changement, et l'ecran de reglage.
+        // Les quatre touches d'aptitude, et rien d'autre : la competence de chacune vient du
+        // prereglage en service, comme chez l'original.
         event.register(ABILITY_1);
         event.register(ABILITY_2);
         event.register(ABILITY_3);

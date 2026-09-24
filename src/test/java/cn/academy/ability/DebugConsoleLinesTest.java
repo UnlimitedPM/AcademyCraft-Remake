@@ -48,11 +48,12 @@ class DebugConsoleLinesTest {
         assertEquals("CPData.activated: false", lines.get(6),
                 "l'original ne montrait pas la surcharge ici, mais l'etat allume/eteint");
         assertTrue(lines.get(7).startsWith("CPData.addMaxCP: "), lines.get(7));
-        assertTrue(lines.get(8).startsWith("CPData.addMaxOverload: "), lines.get(8));
-        assertEquals("CPData.interfering: false", lines.get(9));
-        assertTrue(lines.get(10).startsWith(" AData.levelProgress: "),
-                "l'espace de tete est celui de l'original : " + lines.get(10));
-        assertTrue(lines.get(10).endsWith("%"), lines.get(10));
+        assertEquals("CPData.interfering: false", lines.get(8));
+        assertTrue(lines.get(9).startsWith(" AData.levelProgress: "),
+                "l'espace de tete est celui de l'original : " + lines.get(9));
+        assertTrue(lines.get(9).endsWith("%"), lines.get(9));
+        assertEquals(10, lines.size(),
+                "l'original ne liste pas le maximum ajoute de surcharge, seulement celui des CP");
     }
 
     @Test

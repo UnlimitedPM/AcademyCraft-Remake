@@ -92,15 +92,16 @@ public class SettingsScreen extends Screen {
     private void buildRows() {
         if (rows.size() > 0) return;
 
-        // Keys : ce que l'original listait, dans son ordre.
-        rows.add(Row.key("keys", AbilityKeyBindings.ACTIVATE_SKILL));
-        rows.add(Row.key("keys", AbilityKeyBindings.PRESET_EDIT));
-        rows.add(Row.key("keys", AbilityKeyBindings.PRESET_NEXT));
-        rows.add(Row.key("keys", TerminalKeyBindings.OPEN_TERMINAL));
+        // Keys : ce que l'original listait, dans son ordre. Les quatre touches d'aptitude
+        // d'abord, puis l'allumage de l'aptitude, les prereglages et le terminal.
         rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_1));
         rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_2));
         rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_3));
         rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_4));
+        rows.add(Row.key("keys", AbilityKeyBindings.TOGGLE_ABILITY));
+        rows.add(Row.key("keys", AbilityKeyBindings.PRESET_EDIT));
+        rows.add(Row.key("keys", AbilityKeyBindings.PRESET_NEXT));
+        rows.add(Row.key("keys", TerminalKeyBindings.OPEN_TERMINAL));
 
         // Generic : seule « Destroy blocks » a un comportement aujourd'hui.
         rows.add(Row.toggle("generic", "ac.settings.prop.destroyBlocks",

@@ -66,7 +66,6 @@ public final class DebugConsoleLines {
         lines.add("CPData.canUseAbility: " + canUseAbility(data));
         lines.add("CPData.activated: " + data.isActivated());
         lines.add("CPData.addMaxCP: " + decimal(addCp));
-        lines.add("CPData.addMaxOverload: " + decimal(addOverload));
         lines.add("CPData.interfering: " + data.isInterfered());
         lines.add(String.format(Locale.ROOT, " AData.levelProgress: %.2f%%",
                 data.getLevelProgress(category) * 100.0f));
