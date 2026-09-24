@@ -17,7 +17,8 @@ public class ClientAbilityData {
     }
 
     /**
-     * Rejoue la reprise de la reserve, un tick a la fois, entre deux synchronisations.
+     * Rejoue la reprise de la reserve et du surcout, un tick a la fois, entre deux
+     * synchronisations.
      *
      * <p>Le serveur n'envoie son etat que tous les dix ticks (la cadence de l'original),
      * et l'original ne le montrait pas : sa barre etait large et ses nombres ne vivaient
@@ -31,9 +32,19 @@ public class ClientAbilityData {
      * paiement voyage dans la synchronisation — la reprise ne peut donc pas commencer plus
      * tot ici que chez lui.
      */
-    public static void tick() {
+    public static void tick(boolean holding) {
         if (DATA.getControlPoint() < DATA.getMaxControlPoint()) {
             DATA.tickRegen();
+        }
+        // Le surcout aussi, pour la meme raison : le serveur ne l'envoie que tous les dix
+        // ticks, donc sa barre descendait par bonds de sept points (une reserve de 100).
+        //
+        // SAUF pendant un maintien : le serveur epingle alors sa part de surcout
+        // (`isHoldingOverload`) et ne la fait donc pas redescendre. La rejouer ici la ferait
+        // plonger entre deux envois, puis remonter a chaque synchronisation — un
+        // clignotement, pire que la saccade qu'on corrige.
+        if (!holding) {
+            DATA.tickOverload();
         }
     }
 }

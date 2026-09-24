@@ -37,10 +37,20 @@ public final class HudConfig {
                 .push("gui");
 
         for (HudElement element : HudElement.values()) {
+            // defineList, et non define : un define dont la valeur par defaut est une liste
+            // se fait corriger par Forge a CHAQUE chargement (et a chaque rechargement a
+            // chaud), parce que le type attendu est celui de la liste passee en defaut —
+            // une liste immuable de java.util — et non une liste tout court. La valeur
+            // ecrite etait donc lue comme "incorrecte" et remplacee par le defaut : le
+            // joueur deplacait son temoin de CP, Forge le remettait en place au chargement
+            // suivant. C'est le journal qui l'a dit :
+            //   Incorrect key gui.cpbar was corrected from [-12.0, 12.0] to its default
             VALUES.put(element, builder
                     .comment("Position de « " + element.getName() + " » : ecart en pixels depuis son ancrage.",
                             "Defaut de l'original : " + element.getDefaultX() + " / " + element.getDefaultY())
-                    .define(element.getName(), List.of(element.getDefaultX(), element.getDefaultY())));
+                    .defineList(element.getName(),
+                            List.of(element.getDefaultX(), element.getDefaultY()),
+                            o -> o instanceof Double));
         }
 
         builder.pop();
@@ -71,10 +81,13 @@ public final class HudConfig {
             }
             if (pair == null || pair.size() < 2) continue;
 
-            Double x = pair.get(0);
-            Double y = pair.get(1);
-            if (x == null || y == null) continue;
-            layout.setRaw(element, x, y);
+            // Par Number, et non par Double : une valeur ecrite a la main dans le fichier
+            // ("-12" sans decimale) arrive en entier, et la lire en Double leverait une
+            // exception au milieu du rendu du HUD.
+            Object first = pair.get(0);
+            Object second = pair.get(1);
+            if (!(first instanceof Number x) || !(second instanceof Number y)) continue;
+            layout.setRaw(element, x.doubleValue(), y.doubleValue());
         }
         return layout;
     }
