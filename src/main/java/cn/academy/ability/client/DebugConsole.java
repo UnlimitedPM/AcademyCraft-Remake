@@ -9,8 +9,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Le menu F4, celui de l'original : trois etats qui tournent a chaque appui.
@@ -58,10 +58,10 @@ public final class DebugConsole {
         if (state == State.NONE) return;
 
         AbilityData data = ClientAbilityData.get();
-        Category category = highestCategory(data);
+        List<Category> categories = playerCategories(data);
         List<String> lines = state == State.SKILLS
-                ? DebugConsoleLines.skills(data, category)
-                : DebugConsoleLines.info(data, category);
+                ? DebugConsoleLines.skills(data, categories)
+                : DebugConsoleLines.info(data, highest(categories));
 
         int lineHeight = Minecraft.getInstance().font.lineHeight;
         int y = TOP;
@@ -72,20 +72,36 @@ public final class DebugConsole {
     }
 
     /**
-     * La categorie que l'ecran montre.
+     * Les categories que ce joueur connait, dans l'ordre du registre.
      *
-     * <p>L'original n'en avait qu'une. Le port en autorise plusieurs, donc il prend la plus
-     * haute — la meme regle que celle qui decide du plafond de surcharge.
+     * <p>L'original n'en avait qu'une. Le port en autorise plusieurs : l'ecran des competences
+     * les montre donc toutes, sans quoi celles des autres categories sembleraient manquer.
      */
-    private static Category highestCategory(AbilityData data) {
-        String best = null;
-        int bestLevel = 0;
-        for (Map.Entry<String, Integer> entry : data.getCategoryLevels().entrySet()) {
-            if (best == null || entry.getValue() > bestLevel) {
-                best = entry.getKey();
-                bestLevel = entry.getValue();
+    private static List<Category> playerCategories(AbilityData data) {
+        List<Category> found = new ArrayList<>();
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            if (data.hasLearned(category)) {
+                found.add(category);
             }
         }
-        return best == null ? null : CategoryManager.INSTANCE.getCategory(best);
+        return found;
+    }
+
+    /**
+     * La categorie que l'ecran d'informations montre : la plus haute.
+     *
+     * <p>C'est la meme regle que celle qui decide du plafond de surcharge.
+     */
+    private static Category highest(List<Category> categories) {
+        Category best = null;
+        int bestLevel = 0;
+        for (Category category : categories) {
+            int level = ClientAbilityData.get().getCategoryLevel(category);
+            if (best == null || level > bestLevel) {
+                best = category;
+                bestLevel = level;
+            }
+        }
+        return best;
     }
 }

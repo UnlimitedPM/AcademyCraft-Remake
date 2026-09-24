@@ -21,15 +21,18 @@ public class ElectromasterCategory extends Category {
 
     private ElectromasterCategory() {
         super(NAME);
+        // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences
+        // dans cet ordre-la. C'est celui de CatElectromaster, ou `ironSand` est commente par
+        // son auteur — donc absent chez lui aussi.
         addSkill(ARC_GEN);
-        addSkill(RAILGUN);
-        addSkill(BODY_INTENSIFY);
-        addSkill(THUNDER_BOLT);
-        addSkill(THUNDER_CLAP);
         addSkill(CHARGING);
         addSkill(MAG_MOVEMENT);
-        addSkill(MINE_DETECT);
         addSkill(MAG_MANIP);
+        addSkill(MINE_DETECT);
+        addSkill(BODY_INTENSIFY);
+        addSkill(THUNDER_BOLT);
+        addSkill(RAILGUN);
+        addSkill(THUNDER_CLAP);
 
         // L'arbre de l'electromaster, enfin complet : tant que mag_manip manquait, trois
         // de ses liens ne pouvaient pas etre posees (une dependance vers une competence

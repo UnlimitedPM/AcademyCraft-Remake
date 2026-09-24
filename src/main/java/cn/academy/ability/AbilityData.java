@@ -230,6 +230,35 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private float controlPoint = cn.academy.Config.startingControlPoint();
     private float maxControlPoint = (float) cn.academy.Config.controlPointMax;
 
+    /**
+     * Ce que l'usage des competences a ajoute au plafond de la reserve.
+     *
+     * <p>C'est le {@code addMaxCP} de l'original, et son reglage n'est pas un ornement : chez lui
+     * la reserve grandit a mesure qu'on s'en sert, et c'est ce que montrent les deux nombres
+     * entre parentheses du menu F4 ({@code CP: 4071/4071(4000.0+70.7)}).
+     */
+    private float addMaxControlPoint;
+
+    /**
+     * L'echelle des points de controle du port.
+     *
+     * <p>La reserve vaut 100 ici la ou l'original en avait des milliers : tout ce qui vient de
+     * lui est donc ramene d'autant, comme les couts des competences. C'est le rapport 2800/100
+     * deja retenu pour eux.
+     */
+    private static final float CP_SCALE = 28.0f;
+
+    /** Le {@code add_cp} de l'original : ce qu'un joueur peut ajouter a sa reserve, par niveau. */
+    private static final float[] ADD_CP = {0f, 900f, 1000f, 1500f, 1700f, 12000f};
+
+    /**
+     * Le {@code maxcp_incr_rate} de l'original (0,0025), ramene a l'echelle du port.
+     *
+     * <p>Chez lui, quelques reserves suffisaient a remplir l'ajout ; la meme proportion demande
+     * ici le meme facteur, sans quoi grandir prendrait des milliers d'activations.
+     */
+    private static final float CP_INCR_RATE = 0.0025f * CP_SCALE;
+
     /** Plafond courant, relu depuis la config a chaque appel (rechargement a chaud). */
     public static float configuredMax() {
         return (float) cn.academy.Config.controlPointMax;
@@ -271,7 +300,30 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public float getMaxControlPoint() {
+        return maxControlPoint + addMaxControlPoint;
+    }
+
+    /** Le plafond de base : celui de la config, sans ce que l'usage a ajoute. */
+    public float getRawMaxControlPoint() {
         return maxControlPoint;
+    }
+
+    /** Ce que l'usage a ajoute au plafond. */
+    public float getAddMaxControlPoint() {
+        return addMaxControlPoint;
+    }
+
+    /**
+     * Le plafond de l'ajout, pour un niveau de categorie : la table {@code add_cp} de
+     * l'original, ramenee a l'echelle du port.
+     */
+    public static float maxAddControlPoint(int level) {
+        return ADD_CP[Math.max(0, Math.min(ADD_CP.length - 1, level))] / CP_SCALE;
+    }
+
+    /** Pose l'ajout, borne a ce que le niveau autorise et jamais negatif. */
+    public void setAddMaxControlPoint(float value) {
+        addMaxControlPoint = Math.min(maxAddControlPoint(getHighestLevel()), Math.max(0f, value));
     }
 
     /**
@@ -281,7 +333,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     public void clampToConfiguredMax() {
         maxControlPoint = configuredMax();
-        if (controlPoint > maxControlPoint) controlPoint = maxControlPoint;
+        if (controlPoint > getMaxControlPoint()) controlPoint = getMaxControlPoint();
     }
 
     public boolean consumeControlPoint(float amount) {
@@ -289,7 +341,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public void tickRegen(float amount) {
-        controlPoint = Math.min(maxControlPoint, controlPoint + amount);
+        controlPoint = Math.min(getMaxControlPoint(), controlPoint + amount);
     }
 
     // ------------------------------------------------------------------
@@ -407,6 +459,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public boolean perform(float cp, float overloadCost) {
         if (controlPoint < cp) return false;
         controlPoint -= cp;
+        growMaxControlPoint(cp);
         addOverload(overloadCost);
         return true;
     }
@@ -420,7 +473,21 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     public void performForced(float cp, float overloadCost) {
         controlPoint = Math.max(0f, controlPoint - cp);
+        growMaxControlPoint(cp);
         addOverload(overloadCost);
+    }
+
+    /**
+     * Agrandit la reserve quand une competence est payee.
+     *
+     * <p>Portage de {@code CPData.addMaxCP}, appele chez lui des que le paiement a reussi —
+     * force ou non, et avec le montant DEMANDE, pas celui qui restait. C'est ce qui fait qu'un
+     * joueur qui se sert de ses competences finit avec une reserve un peu plus grande, sans
+     * jamais depasser ce que son niveau autorise.
+     */
+    private void growMaxControlPoint(float consumed) {
+        if (consumed <= 0) return;
+        setAddMaxControlPoint(addMaxControlPoint + consumed * CP_INCR_RATE);
     }
 
     /**
@@ -525,6 +592,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         categoryLevels.putAll(other.categoryLevels);
         controlPoint = other.controlPoint;
         maxControlPoint = other.maxControlPoint;
+        addMaxControlPoint = other.addMaxControlPoint;
         overload = other.overload;
         addMaxOverload = other.addMaxOverload;
         overloadFine = other.overloadFine;
@@ -1048,6 +1116,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         tag.put("levels", levels);
         tag.putFloat("cp", controlPoint);
         tag.putFloat("maxCp", maxControlPoint);
+        tag.putFloat("addCp", addMaxControlPoint);
         // Le drapeau voyage pour que le HUD du client puisse l'afficher ; les
         // sources, elles, n'ont aucun sens hors du serveur.
         tag.putBoolean("interfered", interfered);
@@ -1100,6 +1169,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         }
         controlPoint = tag.getFloat("cp");
         maxControlPoint = tag.contains("maxCp") ? tag.getFloat("maxCp") : configuredMax();
+        setAddMaxControlPoint(tag.getFloat("addCp"));
         interfered = tag.getBoolean("interfered");
 
         learnedSkills.clear();
