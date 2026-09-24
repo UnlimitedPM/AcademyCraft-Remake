@@ -13,7 +13,6 @@ import java.util.Random;
 /** Active skill, port of original ArcGen: short-range electric arc, chance to set target on fire. */
 public class ArcGenSkill extends Skill {
 
-    private static final float CP_COST = 20f;
     private static final int IGNITE_TICKS = 80;
 
     private final Random random = new Random();
@@ -25,9 +24,7 @@ public class ArcGenSkill extends Skill {
     //
     // Courbes reprises de l'original : les degats vont de 5 a 9, la portee de 6 a 15
     // blocs, et la chance d'embraser de 0 a 60 %, le tout selon l'experience de la
-    // competence. Le cout en CP, lui, reste celui du port : celui de l'original (30 a
-    // 70) suppose une reserve de plusieurs milliers de points, la ou le port plafonne
-    // a 100. Voir `ability.controlPointMax`.
+    // competence. Le cout en CP suit : 30 a 70, comme chez lui.
     //
 
     public float damage(AbilityData data) {
@@ -59,9 +56,16 @@ public class ArcGenSkill extends Skill {
         return lerp(0.0048f, 0.0072f, data.getSkillExp(this));
     }
 
+    /** Le cout en CP, repris de l'original : de 30 a 70 selon l'experience. */
+    @Override
+    public float getCpCost(AbilityData data) {
+        return lerp(30f, 70f, data.getSkillExp(this));
+    }
+
+    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
     @Override
     public float getCpCost() {
-        return CP_COST;
+        return 30f;
     }
 
     /** Surcout repris de l'original : de 18 a 11 selon l'experience. */

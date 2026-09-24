@@ -81,13 +81,13 @@ public class FlashingSkill extends Skill {
      * et a la fermeture, pas a l'usage.
      */
     public float dashCost(AbilityData data) {
-        return lerp(0.46f, 0.21f, data.getSkillExp(this));
+        return lerp(13f, 6f, data.getSkillExp(this));
     }
 
     /** Cout d'ouverture en CP : 80 a 60 chez l'original, divises par 28. */
     @Override
     public float getCpCost(AbilityData data) {
-        return lerp(2.9f, 2.1f, data.getSkillExp(this));
+        return lerp(80f, 60f, data.getSkillExp(this));
     }
 
     /** Surcout d'ouverture : de 250 a 180, comme l'original. Epingle pour tout le maintien. */

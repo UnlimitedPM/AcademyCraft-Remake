@@ -15,7 +15,6 @@ import java.util.List;
 /** Active skill, port of original ElectronBomb: throws a small area explosion at the aimed spot. */
 public class ElectronBombSkill extends Skill {
 
-    private static final float CP_COST = 30f;
     private static final double RANGE = 15;
     private static final double RADIUS = 3;
 
@@ -40,21 +39,23 @@ public class ElectronBombSkill extends Skill {
         return 0.005f;
     }
 
-    @Override
-    public float getCpCost() {
-        return CP_COST;
-    }
-
     /**
-     * Surcout repris de l'original : 200 points pour ouvrir la competence.
+     * La bombe ne coute rien du tout.
      *
-     * L'original tenait une reserve ({@code overload_keep = 200}) pendant qu'il
-     * lancait ses billes, puis 5 points par bille. Le port joue la competence d'un
-     * seul coup, donc c'est le cout d'ouverture qui s'applique.
+     * <p>L'original ne payait ni CP ni surcout dans cette competence : son
+     * {@code s_Execute} lachait la bille, versait l'experience, posait sa recharge et
+     * s'arretait la. Le port lui avait donne 30 CP et 200 de surcout — une facture
+     * inventee, et corrigee ici. Ce qui la retient, c'est sa recharge de 20 a 10 ticks.
      */
     @Override
+    public float getCpCost() {
+        return 0f;
+    }
+
+    /** Aucun surcout non plus : voir {@link #getCpCost()}. */
+    @Override
     public float getOverloadCost(AbilityData data) {
-        return 200f;
+        return 0f;
     }
 
     @Override

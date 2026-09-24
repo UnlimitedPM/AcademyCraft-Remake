@@ -373,8 +373,8 @@ class PortedSkillsTest {
      * Les surcouts, repris de l'original.
      *
      * Le surcout est la seule des deux ressources dont l'echelle de l'original tient
-     * telle quelle dans le port : les couts en CP, eux, supposent une reserve de
-     * plusieurs milliers de points et restent ceux du port.
+     * telle quelle dans le port : les couts en CP, eux, sont aussi ceux de l'original
+     * maintenant que la reserve l'est (1800 points au niveau 1).
      */
     private static final Map<String, Float> EXPECTED_OVERLOAD = Map.ofEntries(
             Map.entry("electromaster.arc_gen", 18f),
@@ -389,7 +389,6 @@ class PortedSkillsTest {
             Map.entry("teleporter.threatening_teleport", 18f),
             Map.entry("teleporter.mark_teleport", 40f),
             Map.entry("teleporter.flesh_ripping", 60f),
-            Map.entry("meltdowner.electron_bomb", 200f),
             Map.entry("meltdowner.meltdowner", 200f),
             Map.entry("meltdowner.light_shield", 110f),
             Map.entry("meltdowner.scatter_bomb", 80f),
@@ -416,6 +415,9 @@ class PortedSkillsTest {
     void lesSurcoutsSontCeuxDeLOriginal() {
         for (Skill skill : allSkills()) {
             if (skill.isPassive()) continue;
+            // La bombe a electrons est la seule active qui ne charge rien : elle n'a donc
+            // pas de surcout a figer. Voir aucuneCompetenceActiveNeResteSansSurcout.
+            if (fullName(skill).equals("meltdowner.electron_bomb")) continue;
             Float expected = EXPECTED_OVERLOAD.get(fullName(skill));
             assertNotNull(expected, "surcout non fige pour " + fullName(skill));
             assertEquals(expected.floatValue(), skill.getOverloadCost(charged(skill)),
@@ -427,9 +429,12 @@ class PortedSkillsTest {
     void aucuneCompetenceActiveNeResteSansSurcout() {
         // Une competence active qui ne chargerait pas la reserve serait gratuite en
         // surcout : elle pourrait etre enchainee sans jamais mettre le joueur en
-        // surcharge, ce que l'original ne permettait a aucune.
+        // surcharge, ce que l'original ne permettait a aucune... sauf a une seule.
+        // La bombe a electrons ne payait RIEN chez lui : ni CP, ni surcout (son
+        // `s_Execute` lachait la bille et posait sa recharge, sans un seul `consume`).
         for (Skill skill : allSkills()) {
             if (skill.isPassive()) continue;
+            if (fullName(skill).equals("meltdowner.electron_bomb")) continue;
             assertTrue(skill.getOverloadCost(charged(skill)) > 0f,
                     fullName(skill) + " ne charge pas la reserve de surcout");
         }

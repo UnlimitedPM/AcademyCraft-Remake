@@ -13,7 +13,9 @@ import net.minecraft.world.phys.Vec3;
 /** Active skill, port of original ShiftTeleport: blinks toward where the player looks, stopping at any obstacle. */
 public class ShiftTeleportSkill extends Skill {
 
-    private static final float CP_COST = 20f;
+    /** Le prix du depose : 260 a 320 CP, comme l'original, et il monte avec l'experience. */
+    private static final float CP_COST_MIN_EXP = 260f;
+    private static final float CP_COST_MAX_EXP = 320f;
 
     public ShiftTeleportSkill() {
         super("shift_tp", 4);
@@ -46,8 +48,14 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     @Override
+    public float getCpCost(AbilityData data) {
+        return lerp(CP_COST_MIN_EXP, CP_COST_MAX_EXP, data.getSkillExp(this));
+    }
+
+    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
+    @Override
     public float getCpCost() {
-        return CP_COST;
+        return CP_COST_MIN_EXP;
     }
 
     /** Surcout repris de l'original : de 40 a 30 selon l'experience. */

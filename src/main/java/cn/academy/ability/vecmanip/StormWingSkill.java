@@ -95,9 +95,9 @@ public class StormWingSkill extends Skill {
     public static final double LIFT = 0.078;
     public static final double HOVER = 0.1;
 
-    /** Un tick de vol : 40 a 25 CP divises par 28, et 10 a 7 de surcout. */
-    public static final float CP_MIN_EXP = 1.43f;
-    public static final float CP_MAX_EXP = 0.89f;
+    /** Un tick de vol : 40 a 25 CP, et 10 a 7 de surcout, comme l'original. */
+    public static final float CP_MIN_EXP = 40f;
+    public static final float CP_MAX_EXP = 25f;
     public static final float OVERLOAD_MIN_EXP = 10f;
     public static final float OVERLOAD_MAX_EXP = 7f;
 

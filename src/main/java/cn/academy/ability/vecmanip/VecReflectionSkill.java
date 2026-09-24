@@ -78,21 +78,21 @@ public class VecReflectionSkill extends Skill {
     /** Le point vise par un renvoi : vingt blocs devant les yeux. */
     public static final double AIM_RANGE = 20.0;
 
-    /** L'entretien : 15 a 11 CP par tick chez l'original, divises par 28. */
-    public static final float TICK_CP_MIN = 0.54f;
-    public static final float TICK_CP_MAX = 0.39f;
+    /** L'entretien : 15 a 11 CP par tick, comme l'original. */
+    public static final float TICK_CP_MIN = 15f;
+    public static final float TICK_CP_MAX = 11f;
 
-    /** Ce que coute chaque entite renvoyee : 300 a 160 par point de difficulte, divises par 28. */
-    public static final float ENTITY_CP_MIN = 10.7f;
-    public static final float ENTITY_CP_MAX = 5.7f;
+    /** Ce que coute chaque entite renvoyee : 300 a 160 par point de difficulte, comme l'original. */
+    public static final float ENTITY_CP_MIN = 300f;
+    public static final float ENTITY_CP_MAX = 160f;
 
     /** Le surcout epingle a l'ouverture : 350 a 250, verbatim. */
     public static final float PIN_MIN = 350f;
     public static final float PIN_MAX = 250f;
 
-    /** Ce qu'un coup encaisse coute : 20 a 15 CP par point de degats, divises par 28. */
-    public static final float DAMAGE_CP_MIN = 0.71f;
-    public static final float DAMAGE_CP_MAX = 0.54f;
+    /** Ce qu'un coup encaisse coute : 20 a 15 CP par point de degats, comme l'original. */
+    public static final float DAMAGE_CP_MIN = 20f;
+    public static final float DAMAGE_CP_MAX = 15f;
 
     /** La part des degats renvoyee a l'auteur du coup : de 60 % a 120 %. */
     public static final float REFLECT_MIN = 0.6f;

@@ -92,14 +92,14 @@ public class JetEngineSkill extends Skill {
     }
 
     /**
-     * Cout du vol : 170 a 140 CP chez l'original, divises par 28 a l'echelle du port.
+     * Cout du vol : 170 a 140 CP, comme l'original.
      *
      * La visee, elle, n'est facturee par aucun tick — l'original ne faisait que verifier
      * qu'il aurait de quoi payer, ce que le port fait d'avance en payant a l'appui.
      */
     @Override
     public float getCpCost(AbilityData data) {
-        return lerp(6.07f, 5f, data.getSkillExp(this));
+        return lerp(170f, 140f, data.getSkillExp(this));
     }
 
     /** Surcout du vol : de 60 a 50, comme l'original. */

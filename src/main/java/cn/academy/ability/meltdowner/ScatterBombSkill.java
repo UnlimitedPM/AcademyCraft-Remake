@@ -120,13 +120,11 @@ public class ScatterBombSkill extends Skill {
     /**
      * Entretien, par tick, tant que les billes se posent.
      *
-     * L'original demandait 3 a 6 CP par tick sur sa reserve de plusieurs milliers de
-     * points, ce qui represente un peu moins d'un dixieme de la reserve pour la ponte
-     * complete ; ramene a l'echelle du port — le meme rapport de 28 — cela fait 0,11 a
-     * 0,21, soit huit a dix-sept points pour les quatre secondes.
+     * 3 a 6 CP par tick, comme l'original : huit a dix-sept points pour les quatre
+     * secondes de la ponte.
      */
     public float cpPerTick(AbilityData data) {
-        return lerp(0.11f, 0.21f, data.getSkillExp(this));
+        return lerp(3f, 6f, data.getSkillExp(this));
     }
 
     /**

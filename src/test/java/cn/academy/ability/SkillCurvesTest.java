@@ -139,8 +139,8 @@ class SkillCurvesTest {
 
         // ...sauf les couts en CP, ramenes a l'echelle de la reserve du port pour que
         // la duree de maintien reste celle de l'original.
-        assertBounds("entretien par tick", 1f, 0.7f, shield::holdCpCost, shield);
-        assertBounds("CP par coup", 2f, 1f, shield::cpPerHit, shield);
+        assertBounds("entretien par tick", 9f, 4f, shield::holdCpCost, shield);
+        assertBounds("CP par coup", 50f, 30f, shield::cpPerHit, shield);
         assertEquals(0f, shield.getCpCost(), 0.0001f, "pas de cout en CP a l'ouverture");
     }
 
@@ -243,7 +243,7 @@ class SkillCurvesTest {
         assertEquals(35.0, charging.chargeSpeed(atExperience(charging, 1f)), 0.0001);
 
         // Cout en CP ramene a l'echelle du port, et surcout garde tel quel.
-        assertBounds("cout par tick", 0.11f, 0.25f, charging::cpPerTick, charging);
+        assertBounds("cout par tick", 3f, 7f, charging::cpPerTick, charging);
         assertBounds("surcout d'ouverture", 65f, 48f, charging::getOverloadCost, charging);
     }
 
@@ -258,7 +258,7 @@ class SkillCurvesTest {
                 "portee de la visee, comme l'original");
         assertEquals(0f, movement.getCpCost(), 0.0001f, "s'accrocher ne coute rien");
 
-        assertBounds("cout par tick", 0.55f, 0.3f, movement::cpPerTick, movement);
+        assertBounds("cout par tick", 15f, 8f, movement::cpPerTick, movement);
         assertBounds("surcout d'ouverture", 60f, 30f, movement::getOverloadCost, movement);
     }
 
@@ -276,7 +276,7 @@ class SkillCurvesTest {
         assertBounds("portee du lancer", 8f, 15f, range, throwing);
         assertBounds("surcout du lancer", 18f, 10f, throwing::getOverloadCost, throwing);
         Curve cp = throwing::getCpCost;
-        assertBounds("cout en CP du lancer", 1.25f, 3.5f, cp, throwing);
+        assertBounds("cout en CP du lancer", 35f, 100f, cp, throwing);
         assertCooldownBounds("recharge du lancer", throwing, 30, 15);
     }
 
@@ -299,7 +299,7 @@ class SkillCurvesTest {
         assertEquals(10.0, cn.academy.ability.teleporter.MarkTeleportSkill.maxDistance(0f, 4.3f, 999, 0.43f),
                 0.0001, "une reserve a moitie vide ne porte qu'a dix blocs");
 
-        assertBounds("cout par bloc", 0.43f, 0.14f, mark::cpPerBlock, mark);
+        assertBounds("cout par bloc", 12f, 4f, mark::cpPerBlock, mark);
         assertBounds("surcout du saut", 40f, 20f, mark::getOverloadCost, mark);
         assertCooldownBounds("recharge du saut", mark, 30, 0);
 
@@ -321,7 +321,7 @@ class SkillCurvesTest {
         assertBounds("portee de la dechirure", 6f, 14f, range, ripping);
         assertBounds("surcout de la dechirure", 60f, 50f, ripping::getOverloadCost, ripping);
         Curve cp = ripping::cpCost;
-        assertBounds("cout en CP de la dechirure", 4.6f, 9.6f, cp, ripping);
+        assertBounds("cout en CP de la dechirure", 130f, 270f, cp, ripping);
         assertEquals(90, ripping.cooldown(atExperience(ripping, 0f)), "recharge au depart");
         assertEquals(40, ripping.cooldown(atExperience(ripping, 1f)), "recharge au maximum");
 
@@ -353,9 +353,9 @@ class SkillCurvesTest {
         assertBounds("creusement du rayon expert", 0.5f, 1f, expert::speed, expert);
         assertBounds("creusement du rayon chanceux", 0.5f, 1f, luck::speed, luck);
 
-        assertBounds("entretien du rayon de base", 0.43f, 0.25f, basic::cpPerTick, basic);
-        assertBounds("entretien du rayon expert", 0.9f, 0.54f, expert::cpPerTick, expert);
-        assertBounds("entretien du rayon chanceux", 1.8f, 1.25f, luck::cpPerTick, luck);
+        assertBounds("entretien du rayon de base", 12f, 7f, basic::cpPerTick, basic);
+        assertBounds("entretien du rayon expert", 25f, 15f, expert::cpPerTick, expert);
+        assertBounds("entretien du rayon chanceux", 50f, 35f, luck::cpPerTick, luck);
 
         assertBounds("surcout du rayon de base", 200f, 150f, basic::getOverloadCost, basic);
         assertBounds("surcout du rayon expert", 300f, 200f, expert::getOverloadCost, expert);
@@ -420,7 +420,7 @@ class SkillCurvesTest {
                 "au maximum, elles visent toutes");
 
         assertBounds("degats d'une bille", 5f, 9f, bomb::ballDamage, bomb);
-        assertBounds("entretien de la bombe", 0.11f, 0.21f, bomb::cpPerTick, bomb);
+        assertBounds("entretien de la bombe", 3f, 6f, bomb::cpPerTick, bomb);
         assertBounds("surcout de la bombe", 80f, 60f, bomb::getOverloadCost, bomb);
 
         // Rien a l'ouverture en CP : les billes se paient une par une pendant la ponte.
@@ -476,8 +476,8 @@ class SkillCurvesTest {
         assertCooldownBounds("recharge du reacteur", jet, 60, 30);
 
         // Le cout en CP de l'original, divise par 28 : 170 a 140 sur plusieurs milliers.
-        assertEquals(6.07f, jet.getCpCost(atExperience(jet, 0f)), 0.0001f);
-        assertEquals(5f, jet.getCpCost(atExperience(jet, 1f)), 0.0001f);
+        assertEquals(170f, jet.getCpCost(atExperience(jet, 0f)), 0.0001f);
+        assertEquals(140f, jet.getCpCost(atExperience(jet, 1f)), 0.0001f);
     }
 
     /**
@@ -586,8 +586,8 @@ class SkillCurvesTest {
         assertBounds("surcout de la salve", 300f, 140f, barrage::getOverloadCost, barrage);
         assertCooldownBounds("recharge de la salve", barrage, 100, 40);
         // 450 a 380 CP chez l'original, divises par 28.
-        assertEquals(16.07f, barrage.getCpCost(atExperience(barrage, 0f)), 0.0001f);
-        assertEquals(13.57f, barrage.getCpCost(atExperience(barrage, 1f)), 0.0001f);
+        assertEquals(450f, barrage.getCpCost(atExperience(barrage, 0f)), 0.0001f);
+        assertEquals(380f, barrage.getCpCost(atExperience(barrage, 1f)), 0.0001f);
     }
 
     /**
@@ -657,9 +657,9 @@ class SkillCurvesTest {
         // 250 a 180 de surcout a l'ouverture, et la plus longue recharge du port.
         assertEquals(12.0, flashing.distance(atExperience(flashing, 0f)), 0.0001);
         assertEquals(18.0, flashing.distance(atExperience(flashing, 1f)), 0.0001);
-        assertBounds("cout d'un saut", 0.46f, 0.21f, flashing::dashCost, flashing);
-        assertEquals(2.9f, flashing.getCpCost(atExperience(flashing, 0f)), 0.0001f);
-        assertEquals(2.1f, flashing.getCpCost(atExperience(flashing, 1f)), 0.0001f);
+        assertBounds("cout d'un saut", 13f, 6f, flashing::dashCost, flashing);
+        assertEquals(80f, flashing.getCpCost(atExperience(flashing, 0f)), 0.0001f);
+        assertEquals(60f, flashing.getCpCost(atExperience(flashing, 1f)), 0.0001f);
         assertBounds("surcout du scintillement", 250f, 180f, flashing::getOverloadCost, flashing);
         assertEquals(60, flashing.getMaxHoldTicks(atExperience(flashing, 0f)));
         assertEquals(150, flashing.getMaxHoldTicks(atExperience(flashing, 1f)));
@@ -687,7 +687,7 @@ class SkillCurvesTest {
         // Ses courbes : 7 a 15 degats, 50 a 100 CP divisees par 28, 18 a 12 de surcout, et
         // 60 a 20 ticks de recharge.
         assertBounds("degats de dir_shock", 7f, 15f, dirShock::damage, dirShock);
-        assertBounds("cout de dir_shock", 1.79f, 3.57f, dirShock::getCpCost, dirShock);
+        assertBounds("cout de dir_shock", 50f, 100f, dirShock::getCpCost, dirShock);
         assertBounds("surcout de dir_shock", 18f, 12f, dirShock::getOverloadCost, dirShock);
         assertBounds("recharge de dir_shock", 60f, 20f, dirShock::cooldown, dirShock);
 
@@ -776,7 +776,7 @@ class SkillCurvesTest {
         assertBounds("energie de ground_shock", 60f, 120f,
                 data -> (float) groundshock.energy(data), groundshock);
         assertBounds("degats de ground_shock", 4f, 6f, groundshock::damage, groundshock);
-        assertBounds("cout de ground_shock", 2.86f, 5.36f, groundshock::consumption, groundshock);
+        assertBounds("cout de ground_shock", 80f, 150f, groundshock::consumption, groundshock);
         assertBounds("surcout de ground_shock", 15f, 10f, groundshock::overload, groundshock);
         assertBounds("recharge de ground_shock", 80f, 40f, groundshock::cooldown, groundshock);
         assertBounds("butin de ground_shock", 0.3f, 1.0f, groundshock::dropRate, groundshock);
@@ -885,7 +885,7 @@ class SkillCurvesTest {
         // Ses courbes : 10 a 25 degats, 160 a 200 CP (divises par 28), 50 a 30 de surcout,
         // une chance de casse de 0,5 a 0,8 et un butin de 0,4 a 0,9.
         assertBounds("degats de dir_blast", 10f, 25f, blast::damage, blast);
-        assertBounds("cout de dir_blast", 5.71f, 7.14f, blast::consumption, blast);
+        assertBounds("cout de dir_blast", 160f, 200f, blast::consumption, blast);
         assertBounds("surcout de dir_blast", 50f, 30f, blast::overload, blast);
         assertBounds("chance de casse", 0.5f, 0.8f, blast::breakProbability, blast);
         assertBounds("butin de dir_blast", 0.4f, 0.9f, blast::dropRate, blast);
@@ -962,7 +962,7 @@ class SkillCurvesTest {
         // Ses courbes : 30 a 60 degats, 280 a 350 CP (divises par 28), 55 a 40 de surcout,
         // et 90 a 40 ticks de recharge.
         assertBounds("degats de blood_retro", 30f, 60f, blood::damage, blood);
-        assertBounds("cout de blood_retro", 10f, 12.5f, blood::consumption, blood);
+        assertBounds("cout de blood_retro", 280f, 350f, blood::consumption, blood);
         assertBounds("surcout de blood_retro", 55f, 40f, blood::overload, blood);
         assertBounds("recharge de blood_retro", 90f, 40f, blood::cooldown, blood);
 
@@ -990,25 +990,26 @@ class SkillCurvesTest {
 
         // Ses courbes : entretien 0,46 a 0,18 CP par tick (13 a 5 chez l'original, divises
         // par 28), surcout epingle 80 a 50, et 15 a 12 de surcout par entite arretee.
-        assertBounds("entretien de vec_deviation", 0.46f, 0.18f, deviation::tickCost, deviation);
+        assertBounds("entretien de vec_deviation", 13f, 5f, deviation::tickCost, deviation);
         assertBounds("epingle de vec_deviation", 80f, 50f, deviation::pin, deviation);
         assertBounds("surcout par entite", 15f, 12f, deviation::entityOverload, deviation);
 
         // La reduction : de 40 % a 90 % des degats, payee 0,54 a 0,43 CP par coup encaisse,
         // mais jamais plus que ce qu'il reste en reserve.
         assertBounds("reduction de vec_deviation", 0.4f, 0.9f, deviation::reduction, deviation);
-        assertBounds("cout de la reduction", 0.54f, 0.43f, deviation::resistCost, deviation);
+        assertBounds("cout de la reduction", 15f, 12f, deviation::resistCost, deviation);
 
         // La reserve borne la depense, dans les deux sens : avec de quoi payer, un coup
         // encaisse coute le prix du palier et pas la reserve entiere ; a sec, il ne coute
         // que ce qu'il reste — c'est le `min` de l'original, et c'est ce qui fait qu'un
         // dernier coup encaisse ne laisse pas de dette.
         AbilityData rich = atExperience(deviation, 0f);
-        assertEquals(0.54f, deviation.resistCharge(rich), 0.0001f,
+        assertEquals(15f, deviation.resistCharge(rich), 0.0001f,
                 "avec de quoi payer, le coup coute le prix du palier");
 
         AbilityData poor = atExperience(deviation, 0f);
-        assertTrue(poor.consumeControlPoint(100f), "vider la reserve doit marcher");
+        assertTrue(poor.consumeControlPoint(poor.getControlPoint()),
+                "vider la reserve doit marcher");
         assertEquals(0f, poor.getControlPoint(), 0.0001f, "la reserve doit etre vide");
         assertEquals(0f, deviation.resistCharge(poor), 0.0001f,
                 "une reserve vide ne paie rien du tout");
@@ -1043,24 +1044,24 @@ class SkillCurvesTest {
                 "aucune recharge : un maintien se termine et se reprend");
 
         // Ses courbes : entretien 15 a 11 CP par tick, surcout epingle 350 a 250 (verbatim),
-        // et 300 a 160 CP par entite renvoyee — les deux divises par 28, l'epingle non.
-        assertBounds("entretien de vec_reflection", 0.54f, 0.39f, reflection::tickCost, reflection);
+        // et 300 a 160 CP par entite renvoyee.
+        assertBounds("entretien de vec_reflection", 15f, 11f, reflection::tickCost, reflection);
         assertBounds("epingle de vec_reflection", 350f, 250f, reflection::pin, reflection);
         assertBounds("cout d'une entite renvoyee",
-                10.7f, 5.7f, d -> reflection.entityCost(d, 1f), reflection);
+                300f, 160f, d -> reflection.entityCost(d, 1f), reflection);
 
         // La difficulte multiplie ce qu'une entite coute, comme elle multiplie ce qu'elle
         // rapporte : une potion (1,4) coute plus cher qu'une fleche (1,0).
         assertBounds("cout d'une potion",
-                10.7f * 1.4f, 5.7f * 1.4f, d -> reflection.entityCost(d, 1.4f), reflection);
+                300f * 1.4f, 160f * 1.4f, d -> reflection.entityCost(d, 1.4f), reflection);
         assertEquals(reflection.entityCost(atExperience(reflection, 0f), 0f), 0f, 0.0001f,
                 "et ce que la config ne connait pas ne coute rien");
 
         // Les coups : la part renvoyee va de 60 % a 120 %, et son prix suit ce qu'elle rend
-        // — 20 a 15 CP par point de degats, divises par 28.
+        // — 20 a 15 CP par point de degats.
         assertBounds("part renvoyee", 0.6f, 1.2f, reflection::reflectRatio, reflection);
         assertBounds("prix d'un coup de 10 points",
-                7.1f, 5.4f, d -> reflection.damageCost(d, 10f), reflection);
+                200f, 150f, d -> reflection.damageCost(d, 10f), reflection);
 
         // Le prix d'ouverture est le surcout epingle, et rien d'autre.
         assertEquals(0f, reflection.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
@@ -1089,7 +1090,7 @@ class SkillCurvesTest {
         assertEquals(0f, wing.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
 
         // Le vol : 40 a 25 CP par tick (divises par 28) et 10 a 7 de surcout.
-        assertBounds("cout du vol", 1.43f, 0.89f, wing::consumption, wing);
+        assertBounds("cout du vol", 40f, 25f, wing::consumption, wing);
         assertBounds("surcout du vol", 10f, 7f, wing::overload, wing);
         assertEquals(wing.overload(atExperience(wing, 0f)),
                 wing.getOverloadCost(atExperience(wing, 0f)), 0.0001f,
@@ -1121,7 +1122,7 @@ class SkillCurvesTest {
 
         // La charge raccourcit et coute plus cher par tick : 60 a 30 ticks, 18 a 25 CP.
         assertBounds("charge du canon", 60f, 30f, cannon::chargeTime, cannon);
-        assertBounds("cout de la charge", 0.64f, 0.89f, cannon::chargeCost, cannon);
+        assertBounds("cout de la charge", 18f, 25f, cannon::chargeCost, cannon);
 
         // Le surcout epingle : 500 a 400, verbatim, et rien a l'appui en reserve.
         assertBounds("epingle du canon", 500f, 400f, cannon::pin, cannon);
@@ -1157,7 +1158,7 @@ class SkillCurvesTest {
 
         // Ce qu'il paie : 1500 a 1000 CP divises par 28, et 200 a 180 de surcout. Le prix
         // baisse quand la portee grandit, ce qui est l'envers des habitudes.
-        assertBounds("cout de l'eclat", 53.57f, 35.71f, detect::consumption, detect);
+        assertBounds("cout de l'eclat", 1500f, 1000f, detect::consumption, detect);
         assertBounds("surcout de l'eclat", 200f, 180f, detect::overload, detect);
         assertBounds("portee de l'eclat", 15f, 30f, detect::range, detect);
 
@@ -1188,7 +1189,7 @@ class SkillCurvesTest {
                 "et aucune recharge posee par le paquet");
 
         // Le lancer : 140 a 270 CP divises par 28, et 35 a 20 de surcout.
-        assertBounds("cout du lancer", 5f, 9.64f, manip::consumption, manip);
+        assertBounds("cout du lancer", 140f, 270f, manip::consumption, manip);
         assertBounds("surcout du lancer", 35f, 20f, manip::overload, manip);
 
         // Sa vitesse, et la recharge qu'il pose : 60 ticks au depart, 40 au maximum.

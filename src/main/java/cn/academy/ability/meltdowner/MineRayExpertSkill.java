@@ -33,7 +33,7 @@ public class MineRayExpertSkill extends MineRaySkill {
 
     @Override
     public float cpPerTick(AbilityData data) {
-        return lerp(0.9f, 0.54f, data.getSkillExp(this));
+        return lerp(25f, 15f, data.getSkillExp(this));
     }
 
     @Override

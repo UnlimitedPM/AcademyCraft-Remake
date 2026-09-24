@@ -8,8 +8,6 @@ import net.minecraft.world.phys.Vec3;
 /** Active skill, port of original PenetrateTeleport: blinks forward through walls, ignoring obstacles. */
 public class PenetrateTeleportSkill extends Skill {
 
-    private static final float CP_COST = 30f;
-
     public PenetrateTeleportSkill() {
         super("penetrate_teleport", 2);
     }
@@ -17,8 +15,8 @@ public class PenetrateTeleportSkill extends Skill {
     /**
      * Portee reprise de l'original : de 10 a 35 blocs selon l'experience.
      *
-     * Le port se contentait de 6 blocs. Le cout en CP reste le sien : celui de
-     * l'original (14 a 9) se rapporte a une autre reserve.
+     * Le port se contentait de 6 blocs. Le saut se paie desormais au bloc parcouru,
+     * comme chez l'original (14 a 9 par bloc).
      */
     public double range(AbilityData data) {
         return lerp(10f, 35f, data.getSkillExp(this));
@@ -40,9 +38,28 @@ public class PenetrateTeleportSkill extends Skill {
         return 0.00014f * 10f;
     }
 
+    /**
+     * Rien a l'appui : c'est le saut qui se paie, au bloc parcouru.
+     *
+     * <p>Chez l'original le prix ne se connaissait qu'une fois la destination trouvee,
+     * et il se payait <b>sans verification</b> ({@code consumeWithForce}) : un saut plus
+     * long que la reserve la vidait, sans rien refuser. Le port le dit avec
+     * {@link #paysOnEffect()}, comme la teleportation au marqueur.
+     */
     @Override
     public float getCpCost() {
-        return CP_COST;
+        return 0f;
+    }
+
+    /** C'est le saut qui paie : voir {@link #getCpCost()}. */
+    @Override
+    public boolean paysOnEffect() {
+        return true;
+    }
+
+    /** Cout par bloc parcouru : 14 a 9, comme l'original. */
+    public float cpPerBlock(AbilityData data) {
+        return lerp(14f, 9f, data.getSkillExp(this));
     }
 
     /** Surcout repris de l'original : de 80 a 50 selon l'experience. */
@@ -55,7 +72,11 @@ public class PenetrateTeleportSkill extends Skill {
     public void onActivate(Player player, AbilityData data) {
         Vec3 start = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
-        Vec3 dest = start.add(look.scale(range(data)));
+        double distance = range(data);
+        // Portage de consumeWithForce(distance x getConsumption(exp)) : la reserve se vide
+        // au pire, elle ne refuse pas le saut.
+        data.performForced(cpPerBlock(data) * (float) distance, getOverloadCost(data));
+        Vec3 dest = start.add(look.scale(distance));
         player.teleportTo(dest.x, dest.y - 1.6, dest.z);
         player.fallDistance = 0;
         // Le son part au relachement dans l'original, juste avant le message d'execution :

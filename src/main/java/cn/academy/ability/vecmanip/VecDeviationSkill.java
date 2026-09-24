@@ -57,9 +57,9 @@ public class VecDeviationSkill extends Skill {
     /** Le rayon de la veille : cinq blocs autour du joueur. */
     public static final double RANGE = 5.0;
 
-    /** L'entretien : 13 a 5 CP par tick chez l'original, divises par 28. */
-    public static final float TICK_CP_MIN = 0.46f;
-    public static final float TICK_CP_MAX = 0.18f;
+    /** L'entretien : 13 a 5 CP par tick, comme l'original. */
+    public static final float TICK_CP_MIN = 13f;
+    public static final float TICK_CP_MAX = 5f;
 
     /** Le surcout que coute chaque entite arretee : 15 a 12, verbatim. */
     public static final float ENTITY_OVERLOAD_MIN = 15f;
@@ -69,9 +69,9 @@ public class VecDeviationSkill extends Skill {
     public static final float PIN_MIN = 80f;
     public static final float PIN_MAX = 50f;
 
-    /** Ce qu'un coup encaisse coute au plus : 15 a 12 CP, divises par 28. */
-    public static final float RESIST_CP_MIN = 0.54f;
-    public static final float RESIST_CP_MAX = 0.43f;
+    /** Ce qu'un coup encaisse coute au plus : 15 a 12 CP, comme l'original. */
+    public static final float RESIST_CP_MIN = 15f;
+    public static final float RESIST_CP_MAX = 12f;
 
     /** La reduction : de 40 % a 90 % des degats. */
     public static final float RESIST_REDUCTION_MIN = 0.4f;

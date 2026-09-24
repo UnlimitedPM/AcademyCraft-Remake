@@ -10,7 +10,6 @@ import net.minecraft.world.entity.player.Player;
 /** Active skill, port of original Meltdowner: sustained plasma beam, single-target hitscan damage. */
 public class MeltdownerSkill extends Skill {
 
-    private static final float CP_COST = 20f;
     private static final double RANGE = 20;
 
     /** Le tir ne part pas en dessous d'une seconde de charge : {@code TICKS_MIN}. */
@@ -54,12 +53,12 @@ public class MeltdownerSkill extends Skill {
     /**
      * Entretien de la charge, par tick.
      *
-     * L'original demandait 10 a 15 CP par tick sur sa reserve de plusieurs milliers de
-     * points ; ramene a 100, cela fait 0,35 a 0,55 — soit une vingtaine de points pour
-     * un tir tenu au maximum, en plus de son cout d'ouverture.
+     * L'original demandait 10 a 15 CP par tick, et le port reprend ses chiffres :
+     * une vingtaine de points pour un tir tenu au maximum, en plus de son cout
+     * d'ouverture.
      */
     public float chargeCpCost(AbilityData data) {
-        return lerp(0.35f, 0.55f, data.getSkillExp(this));
+        return lerp(10f, 15f, data.getSkillExp(this));
     }
 
     @Override
@@ -115,9 +114,16 @@ public class MeltdownerSkill extends Skill {
         return (int) (timeRate(data) * 20 * lerp(15f, 7f, data.getSkillExp(this)));
     }
 
+    /**
+     * Rien a l'appui : le tir se paie par tick de charge.
+     *
+     * <p>L'original posait 200 a 170 de surcout a l'ouverture et 10 a 15 CP par tick de
+     * charge, et rien d'autre. Le port y ajoutait 20 CP fixes, une facture qu'il ne
+     * devait pas — c'est {@link #chargeCpCost} qui dit le prix du tir.
+     */
     @Override
     public float getCpCost() {
-        return CP_COST;
+        return 0f;
     }
 
     /**

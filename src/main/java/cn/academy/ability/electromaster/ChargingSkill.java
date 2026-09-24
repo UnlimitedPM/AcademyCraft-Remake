@@ -27,10 +27,9 @@ import net.minecraft.world.phys.Vec3;
  * usage. De meme, il rechargeait les generateurs ; le port n'a que des recepteurs.
  *
  * <p>L'energie debloquee, elle, est reprise telle quelle : le reseau du port est celui
- * de l'original, aux memes capacites. Seul le cout en CP est ramene a l'echelle de la
- * reserve du port (3 a 7 sur 2800, soit 0,11 a 0,25 sur 100) : la duree de charge qui
- * en resulte est celle de l'original — une vingtaine de secondes pour vider sa reserve,
- * pour la meme quantite d'energie versee.
+ * de l'original, aux memes capacites. Le cout en CP aussi (3 a 7 par tick) : la duree de
+ * charge qui en resulte est celle de l'original — une vingtaine de secondes pour vider
+ * sa reserve, pour la meme quantite d'energie versee.
  */
 public class ChargingSkill extends Skill {
 
@@ -51,9 +50,9 @@ public class ChargingSkill extends Skill {
         return Math.floor(lerp(15f, 35f, data.getSkillExp(this)));
     }
 
-    /** Cout par tick : 3 a 7 sur la reserve de l'original, donc 0,11 a 0,25 sur 100. */
+    /** Cout par tick : 3 a 7, comme l'original. */
     public float cpPerTick(AbilityData data) {
-        return lerp(0.11f, 0.25f, data.getSkillExp(this));
+        return lerp(3f, 7f, data.getSkillExp(this));
     }
 
     /** Surcout d'ouverture : de 65 a 48, comme l'original. */

@@ -71,9 +71,9 @@ public class PlasmaCannonSkill extends Skill {
     public static final float CHARGE_MIN_EXP = 60f;
     public static final float CHARGE_MAX_EXP = 30f;
 
-    /** Et elle se paie par tick : 18 a 25 CP, divises par 28. */
-    public static final float TICK_CP_MIN_EXP = 0.64f;
-    public static final float TICK_CP_MAX_EXP = 0.89f;
+    /** Et elle se paie par tick : 18 a 25 CP, comme l'original. */
+    public static final float TICK_CP_MIN_EXP = 18f;
+    public static final float TICK_CP_MAX_EXP = 25f;
 
     /** Le surcout epingle a l'ouverture, en attendant le vol : 500 a 400, verbatim. */
     public static final float PIN_MIN_EXP = 500f;

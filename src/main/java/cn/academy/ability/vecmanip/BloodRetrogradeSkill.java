@@ -37,9 +37,9 @@ public class BloodRetrogradeSkill extends Skill {
     public static final float DAMAGE_MIN = 30f;
     public static final float DAMAGE_MAX = 60f;
 
-    /** Le cout en CP : 280 a 350 chez l'original, divises par 28. */
-    public static final float CP_MIN = 10f;
-    public static final float CP_MAX = 12.5f;
+    /** Le cout en CP : 280 a 350, comme l'original, et il monte avec l'experience. */
+    public static final float CP_MIN = 280f;
+    public static final float CP_MAX = 350f;
 
     /** Le surcout : 55 a 40, comme l'original. */
     public static final float OVERLOAD_MIN = 55f;

@@ -42,9 +42,9 @@ public class FleshRippingSkill extends Skill {
         return lerp(6f, 14f, data.getSkillExp(this));
     }
 
-    /** Cout en CP : 130 a 270 sur l'original, soit 4,6 a 9,6 sur 100. */
+    /** Cout en CP : 130 a 270, comme l'original. */
     public float cpCost(AbilityData data) {
-        return lerp(4.6f, 9.6f, data.getSkillExp(this));
+        return lerp(130f, 270f, data.getSkillExp(this));
     }
 
     /** Surcout : de 60 a 50, comme l'original. */
@@ -53,9 +53,10 @@ public class FleshRippingSkill extends Skill {
         return lerp(60f, 50f, data.getSkillExp(this));
     }
 
+    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
     @Override
     public float getCpCost() {
-        return 4.6f;
+        return 130f;
     }
 
     @Override

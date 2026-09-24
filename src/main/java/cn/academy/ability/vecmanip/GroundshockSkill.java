@@ -130,9 +130,9 @@ public class GroundshockSkill extends Skill {
         return lerp(4f, 6f, data.getSkillExp(this));
     }
 
-    /** Le cout en CP : 80 a 150 chez l'original, divises par 28. */
+    /** Le cout en CP : 80 a 150, comme l'original. */
     public float consumption(AbilityData data) {
-        return lerp(2.86f, 5.36f, data.getSkillExp(this));
+        return lerp(80f, 150f, data.getSkillExp(this));
     }
 
     /** Le surcout : 15 a 10, comme l'original. */

@@ -54,12 +54,11 @@ public class LightShieldSkill extends Skill {
     /**
      * Entretien, par tick.
      *
-     * L'original demandait 9 a 4 CP par tick sur une reserve de 2800 ; rapporte a 100,
-     * cela fait 1 a 0,7. Meme duree de maintien, donc : une centaine de ticks sur une
-     * reserve pleine, le reste du temps etant couvert par la regeneration.
+     * 9 a 4 CP par tick, comme l'original : une centaine de ticks sur une reserve
+     * pleine de niveau 1, le reste du temps etant couvert par la regeneration.
      */
     public float holdCpCost(AbilityData data) {
-        return lerp(1f, 0.7f, data.getSkillExp(this));
+        return lerp(9f, 4f, data.getSkillExp(this));
     }
 
     /** Degats absorbes par coup : de 15 a 50, comme l'original. */
@@ -72,9 +71,9 @@ public class LightShieldSkill extends Skill {
         return lerp(2f, 6f, data.getSkillExp(this));
     }
 
-    /** Cout d'un coup absorbe ou inflige, en CP (environ 2 % de la reserve). */
+    /** Cout d'un coup absorbe ou inflige, en CP : de 50 a 30, comme l'original. */
     public float cpPerHit(AbilityData data) {
-        return lerp(2f, 1f, data.getSkillExp(this));
+        return lerp(50f, 30f, data.getSkillExp(this));
     }
 
     /** Surcout d'un coup absorbe ou inflige : de 5 a 3, comme l'original. */

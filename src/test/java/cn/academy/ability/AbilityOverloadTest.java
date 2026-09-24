@@ -96,7 +96,8 @@ class AbilityOverloadTest {
     @Test
     void uneActivationRefuseeNAjoutePasDeSurcout() {
         AbilityData data = atLevel(1);
-        data.consumeControlPoint(95f);
+        // Une reserve a cinq points : de quoi refuser un cout de 20, et pas de quoi payer.
+        data.consumeControlPoint(data.getControlPoint() - 5f);
         float cp = data.getControlPoint();
 
         // Portage de CPData.perform : les deux ressources ensemble, ou aucune. Sans

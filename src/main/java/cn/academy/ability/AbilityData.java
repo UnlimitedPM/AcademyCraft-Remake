@@ -256,7 +256,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     private float controlPoint = cn.academy.Config.startingControlPoint();
-    private float maxControlPoint = (float) cn.academy.Config.controlPointMax;
 
     /**
      * Ce que l'usage des competences a ajoute au plafond de la reserve.
@@ -268,24 +267,26 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private float addMaxControlPoint;
 
     /**
-     * L'echelle des points de controle du port.
+     * Plafond de base de la reserve par niveau, repris de {@code init_cp} de l'original.
      *
-     * <p>La reserve vaut 100 ici la ou l'original en avait des milliers : tout ce qui vient de
-     * lui est donc ramene d'autant, comme les couts des competences. C'est le rapport 2800/100
-     * deja retenu pour eux.
+     * <p>C'est la meme echelle que dans la 1.12.2, a l'unite pres : 1800 points des le niveau 1,
+     * 8000 au niveau 5. Le port y avait substitue un plafond de 100 avec un facteur 28 pour
+     * retomber sur les couts des competences ; ce detour rendait surtout la recuperation
+     * invisible — 0,03 point par tick au lieu de 0,54. La reserve est maintenant celle de
+     * l'original, donc les couts, qui l'etaient deja, s'y lisent sans conversion.
      */
-    private static final float CP_SCALE = 28.0f;
-
-    /** Le {@code add_cp} de l'original : ce qu'un joueur peut ajouter a sa reserve, par niveau. */
-    private static final float[] ADD_CP = {0f, 900f, 1000f, 1500f, 1700f, 12000f};
+    private static final float[] BASE_MAX_CONTROL_POINT = {1800f, 1800f, 2800f, 4000f, 5800f, 8000f};
 
     /**
-     * Le {@code maxcp_incr_rate} de l'original (0,0025), ramene a l'echelle du port.
+     * Ce que l'usage des competences peut ajouter a la reserve, repris de {@code add_cp}.
      *
-     * <p>Chez lui, quelques reserves suffisaient a remplir l'ajout ; la meme proportion demande
-     * ici le meme facteur, sans quoi grandir prendrait des milliers d'activations.
+     * <p>Comme pour le surcout, le plafond grandit a mesure qu'on se sert de ses pouvoirs, et
+     * c'est cette table qui dit jusqu'ou.
      */
-    private static final float CP_INCR_RATE = 0.0025f * CP_SCALE;
+    private static final float[] MAX_ADD_CONTROL_POINT = {0f, 900f, 1000f, 1500f, 1700f, 12000f};
+
+    /** Part du cout qui devient du plafond, reprise de {@code maxcp_incr_rate}. */
+    private static final float CP_INCR_RATE = 0.0025f;
 
     /**
      * La part du plafond que la reserve regagne par tick, chez l'original ({@code 0,0003}).
@@ -295,9 +296,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     private static final float CP_RECOVER_FRACTION = 0.0003f;
 
-    /** Plafond courant, relu depuis la config a chaque appel (rechargement a chaud). */
-    public static float configuredMax() {
-        return (float) cn.academy.Config.controlPointMax;
+    /** Plafond de base de la reserve pour ce niveau. */
+    public static float baseMaxControlPoint(int level) {
+        return BASE_MAX_CONTROL_POINT[clampLevel(level)];
+    }
+
+    /** Gain de plafond maximal pour ce niveau. */
+    public static float maxAddControlPoint(int level) {
+        return MAX_ADD_CONTROL_POINT[clampLevel(level)];
     }
 
     public int getCategoryLevel(Category category) {
@@ -310,10 +316,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * La remise a zero est celle de l'original ({@code setLevel} vidait
      * {@code expAddedThisLevel}) : sans elle, l'avancement accumule pour le niveau
      * precedent ferait monter le suivant d'un coup.
+     *
+     * <p>Un vrai changement de niveau est aussi celui de la reserve : c'est la le
+     * {@code LevelChangeEvent} de l'original, qui donnait la reserve du nouveau niveau,
+     * pleine, en repartant de zero sur les ajouts.
      */
     public void setCategoryLevel(Category category, int level) {
+        int previous = getCategoryLevel(category);
         categoryLevels.put(category.getName(), level);
         levelProgress.remove(category.getName());
+        if (previous != level) {
+            onLevelChanged();
+        }
     }
 
     public boolean hasLearned(Category category) {
@@ -336,25 +350,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public float getMaxControlPoint() {
-        return maxControlPoint + addMaxControlPoint;
+        return getRawMaxControlPoint() + addMaxControlPoint;
     }
 
-    /** Le plafond de base : celui de la config, sans ce que l'usage a ajoute. */
+    /** Le plafond de base : celui du niveau, sans ce que l'usage a ajoute. */
     public float getRawMaxControlPoint() {
-        return maxControlPoint;
+        return baseMaxControlPoint(getHighestLevel());
     }
 
     /** Ce que l'usage a ajoute au plafond. */
     public float getAddMaxControlPoint() {
         return addMaxControlPoint;
-    }
-
-    /**
-     * Le plafond de l'ajout, pour un niveau de categorie : la table {@code add_cp} de
-     * l'original, ramenee a l'echelle du port.
-     */
-    public static float maxAddControlPoint(int level) {
-        return ADD_CP[Math.max(0, Math.min(ADD_CP.length - 1, level))] / CP_SCALE;
     }
 
     /** Pose l'ajout, borne a ce que le niveau autorise et jamais negatif. */
@@ -363,13 +369,21 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
-     * Reapplique le plafond de la config. Appele a chaque tick par
-     * {@code AbilityEvents} : un rechargement de config a chaud est donc pris en
-     * compte sur les joueurs deja connectes.
+     * Le plafond suit le niveau, la reserve se remplit et l'ajout repart a zero.
+     *
+     * <p>Portage de {@code CPData.recalcMaxValue} et des evenements qui l'appelaient :
+     * {@code changedLevel} remettait les deux ajouts a zero avant de recalculer, donc monter
+     * d'un niveau donne la reserve pleine de ce niveau, et le compteur d'ajout repart de zero.
+     * C'est le prix d'une reserve plus grande, et l'original le facturait ainsi.
      */
-    public void clampToConfiguredMax() {
-        maxControlPoint = configuredMax();
-        if (controlPoint > getMaxControlPoint()) controlPoint = getMaxControlPoint();
+    private void onLevelChanged() {
+        addMaxControlPoint = 0f;
+        addMaxOverload = 0f;
+        overload = 0f;
+        overloadFine = true;
+        untilOverloadRecover = 0;
+        untilRecover = 0;
+        controlPoint = getMaxControlPoint();
     }
 
     public boolean consumeControlPoint(float amount) {
@@ -377,15 +391,19 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public void tickRegen() {
-        float max = getMaxControlPoint();
-        if (max <= 0) return;
+        if (untilRecover > 0) {
+            untilRecover--;
+            return;
+        }
         // Portage de CPData.getCPRecoverSpeed : une part du PLAFOND par tick, et non un
-        // montant fixe, et cette part double quand la reserve est pleine. Le facteur
-        // CP_SCALE lui rend le nombre de points PAR TICK de l'original, celui qu'on voyait
-        // avancer a chaque tick chez lui.
+        // montant fixe, et cette part double quand la reserve est pleine. Sur 1800 points,
+        // cela fait 0,54 point par tick a vide et 1,08 a ras bord : de quoi voir le
+        // compteur avancer a chaque tick, comme chez l'original.
+        float base = getRawMaxControlPoint();
+        if (base <= 0f) return;
         float speed = (float) (cn.academy.Config.controlPointRegenSpeed * CP_RECOVER_FRACTION
-                * max * CP_SCALE * (1.0 + Math.min(1.0, controlPoint / max)));
-        controlPoint = Math.min(max, controlPoint + speed);
+                * base * (1f + Math.min(1f, controlPoint / base)));
+        controlPoint = Math.min(getMaxControlPoint(), controlPoint + speed);
     }
 
     // ------------------------------------------------------------------
@@ -462,6 +480,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     /** Ticks restants avant que le surcout ne redescende. */
     private int untilOverloadRecover;
 
+    /**
+     * Ticks restants avant que la reserve ne se remette a remonter.
+     *
+     * <p>Portage de {@code CPData.untilRecover} : chaque paiement arme ce delai
+     * ({@code cp_recover_cooldown}, 15 ticks), pour qu'une salve de competences ne
+     * s'autofinance pas tick par tick.
+     */
+    private int untilRecover;
+
     public float getOverload() {
         return overload;
     }
@@ -505,6 +532,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         controlPoint -= cp;
         growMaxControlPoint(cp);
         addOverload(overloadCost);
+        if (cp > 0f) untilRecover = cn.academy.Config.controlPointRecoverCooldown;
         return true;
     }
 
@@ -519,6 +547,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         controlPoint = Math.max(0f, controlPoint - cp);
         growMaxControlPoint(cp);
         addOverload(overloadCost);
+        if (cp > 0f) untilRecover = cn.academy.Config.controlPointRecoverCooldown;
     }
 
     /**
@@ -635,13 +664,13 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         categoryLevels.clear();
         categoryLevels.putAll(other.categoryLevels);
         controlPoint = other.controlPoint;
-        maxControlPoint = other.maxControlPoint;
         addMaxControlPoint = other.addMaxControlPoint;
         activated = other.activated;
         overload = other.overload;
         addMaxOverload = other.addMaxOverload;
         overloadFine = other.overloadFine;
         untilOverloadRecover = other.untilOverloadRecover;
+        untilRecover = other.untilRecover;
         // Les sources d'interference ne sont pas copiees : elles appartiennent a un
         // monde et a des machines precises, et les brouilleurs encore en place les
         // reposeront dans la dizaine de ticks qui suit.
@@ -1160,8 +1189,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         categoryLevels.forEach(levels::putInt);
         tag.put("levels", levels);
         tag.putFloat("cp", controlPoint);
-        tag.putFloat("maxCp", maxControlPoint);
         tag.putFloat("addCp", addMaxControlPoint);
+        tag.putInt("untilRecover", untilRecover);
         // L'etat allume/eteint voyage avec le reste : se reconnecter ne doit pas eteindre
         // l'aptitude du joueur, et le HUD du client en depend.
         tag.putBoolean("activated", activated);
@@ -1215,9 +1244,11 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         for (String key : levels.getAllKeys()) {
             categoryLevels.put(key, levels.getInt(key));
         }
-        controlPoint = tag.getFloat("cp");
-        maxControlPoint = tag.contains("maxCp") ? tag.getFloat("maxCp") : configuredMax();
         setAddMaxControlPoint(tag.getFloat("addCp"));
+        // Une sauvegarde d'avant les tables de niveau peut porter plus de points que le
+        // plafond du joueur : ils sont rognes plutot que d'etre perdus plus tard sans mot.
+        controlPoint = Math.max(0f, Math.min(getMaxControlPoint(), tag.getFloat("cp")));
+        untilRecover = tag.getInt("untilRecover");
         activated = tag.getBoolean("activated");
         interfered = tag.getBoolean("interfered");
 

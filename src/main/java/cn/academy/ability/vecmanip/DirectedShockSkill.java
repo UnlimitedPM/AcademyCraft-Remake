@@ -73,10 +73,10 @@ public class DirectedShockSkill extends Skill {
         return lerp(7f, 15f, data.getSkillExp(this));
     }
 
-    /** Cout en CP : 50 a 100 chez l'original, divises par 28. */
+    /** Cout en CP : 50 a 100, comme l'original, et il monte avec l'experience. */
     @Override
     public float getCpCost(AbilityData data) {
-        return lerp(1.79f, 3.57f, data.getSkillExp(this));
+        return lerp(50f, 100f, data.getSkillExp(this));
     }
 
     /** Surcout : de 18 a 12, comme l'original. */

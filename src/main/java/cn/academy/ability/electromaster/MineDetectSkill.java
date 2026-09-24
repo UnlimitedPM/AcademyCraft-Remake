@@ -28,7 +28,7 @@ import net.minecraftforge.network.PacketDistributor;
  * d'activation ne paie rien, et c'est l'effet qui decide. C'est la meme mecanique que l'onde
  * de choc au sol, qui ne coute rien quand le joueur a les pieds en l'air.
  *
- * <p>Le prix suit l'experience a l'envers des habitudes : 1500 a 1000 CP (divises par 28) et
+ * <p>Le prix suit l'experience a l'envers des habitudes : 1500 a 1000 CP et
  * 200 a 180 de surcout, donc moins cher quand on sait faire, et la portee grandit en meme
  * temps (15 a 30 blocs). Quarante-cinq secondes de recharge au depart, vingt au maximum.
  *
@@ -60,9 +60,9 @@ public class MineDetectSkill extends Skill {
     public static final float RANGE_MIN_EXP = 15f;
     public static final float RANGE_MAX_EXP = 30f;
 
-    /** Ce qu'il coute : 1500 a 1000 CP divises par 28, et 200 a 180 de surcout. */
-    public static final float CP_MIN_EXP = 53.57f;
-    public static final float CP_MAX_EXP = 35.71f;
+    /** Ce qu'il coute : 1500 a 1000 CP, et 200 a 180 de surcout, comme l'original. */
+    public static final float CP_MIN_EXP = 1500f;
+    public static final float CP_MAX_EXP = 1000f;
     public static final float OVERLOAD_MIN_EXP = 200f;
     public static final float OVERLOAD_MAX_EXP = 180f;
 

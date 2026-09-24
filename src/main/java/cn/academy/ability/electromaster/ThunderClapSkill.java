@@ -73,7 +73,7 @@ public class ThunderClapSkill extends Skill {
      * 0,65 a 0,9, soit une trentaine de points pour la charge obligatoire.
      */
     public float chargeCpCost(AbilityData data) {
-        return lerp(0.65f, 0.9f, data.getSkillExp(this));
+        return lerp(18f, 25f, data.getSkillExp(this));
     }
 
     /**

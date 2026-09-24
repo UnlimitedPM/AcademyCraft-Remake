@@ -87,9 +87,9 @@ public class DirectedBlastwaveSkill extends Skill {
     public static final float DAMAGE_MIN = 10f;
     public static final float DAMAGE_MAX = 25f;
 
-    /** Le cout en CP : 160 a 200 chez l'original, divises par 28. */
-    public static final float CP_MIN = 5.71f;
-    public static final float CP_MAX = 7.14f;
+    /** Le cout en CP : 160 a 200, comme l'original, et il monte avec l'experience. */
+    public static final float CP_MIN = 160f;
+    public static final float CP_MAX = 200f;
 
     /** Le surcout : 50 a 30, comme l'original. */
     public static final float OVERLOAD_MIN = 50f;

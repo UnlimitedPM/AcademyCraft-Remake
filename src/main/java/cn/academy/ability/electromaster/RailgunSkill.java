@@ -11,7 +11,8 @@ import net.minecraft.world.phys.Vec3;
 /** Active skill, port of original Railgun: long-range high-damage snipe with strong knockback. */
 public class RailgunSkill extends Skill {
 
-    private static final float CP_COST = 35f;
+    private static final float CP_COST_MIN_EXP = 200f;
+    private static final float CP_COST_MAX_EXP = 450f;
     private static final double RANGE = 30;
     private static final double KNOCKBACK = 2.5;
 
@@ -25,7 +26,7 @@ public class RailgunSkill extends Skill {
      * C'est le chiffre de la 1.12.2, et il est bien plus eleve que celui du port (20)
      * : le railgun est cense tuer net, et c'est une competence de niveau 4. Le
      * reglage {@code general.damageScale} permet de l'adoucir sans rien recompiler.
-     * Le cout en CP reste celui du port, pour la meme raison que partout ailleurs.
+     * Le cout en CP suit l'original : 200 a 450, et il monte avec l'experience.
      */
     public float damage(AbilityData data) {
         return lerp(60f, 110f, data.getSkillExp(this));
@@ -47,9 +48,16 @@ public class RailgunSkill extends Skill {
         return 0.005f;
     }
 
+    /** Le cout en CP, repris de l'original : de 200 a 450 selon l'experience. */
+    @Override
+    public float getCpCost(AbilityData data) {
+        return lerp(CP_COST_MIN_EXP, CP_COST_MAX_EXP, data.getSkillExp(this));
+    }
+
+    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
     @Override
     public float getCpCost() {
-        return CP_COST;
+        return CP_COST_MIN_EXP;
     }
 
     /**

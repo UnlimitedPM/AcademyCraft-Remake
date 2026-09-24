@@ -8,7 +8,9 @@ import net.minecraft.world.phys.Vec3;
 /** Active skill, port of original VecAccel: propels the player forward along their look vector. */
 public class VecAccelSkill extends Skill {
 
-    private static final float CP_COST = 15f;
+    /** Le cout en CP, repris de l'original : de 120 a 80 selon l'experience. */
+    private static final float CP_COST_MIN_EXP = 120f;
+    private static final float CP_COST_MAX_EXP = 80f;
 
     /** Vitesse maximale de l'original, atteinte a pleine charge. */
     public static final double MAX_VELOCITY = 2.5;
@@ -58,9 +60,16 @@ public class VecAccelSkill extends Skill {
         return (int) lerp(80f, 50f, data.getSkillExp(this));
     }
 
+    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
     @Override
     public float getCpCost() {
-        return CP_COST;
+        return CP_COST_MIN_EXP;
+    }
+
+    /** Le cout en CP, qui suit l'experience. */
+    @Override
+    public float getCpCost(AbilityData data) {
+        return lerp(CP_COST_MIN_EXP, CP_COST_MAX_EXP, data.getSkillExp(this));
     }
 
     /** Surcout repris de l'original : de 30 a 15 selon l'experience. */

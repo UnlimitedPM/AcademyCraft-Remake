@@ -44,9 +44,9 @@ public class MarkTeleportSkill extends Skill {
         super("mark_teleport", 2);
     }
 
-    /** Cout par bloc : 12 a 4 sur la reserve de l'original, donc 0,43 a 0,14 sur 100. */
+    /** Cout par bloc : 12 a 4, comme l'original. */
     public float cpPerBlock(AbilityData data) {
-        return lerp(0.43f, 0.14f, data.getSkillExp(this));
+        return lerp(12f, 4f, data.getSkillExp(this));
     }
 
     /**

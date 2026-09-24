@@ -4641,8 +4641,20 @@ public final class AcademyGameTests {
 
     @GameTest(template = "empty")
     public static void configValuesAreLoaded(GameTestHelper helper) {
-        assertTrue(helper, cn.academy.Config.controlPointMax >= 1.0d,
-                "controlPointMax non charge depuis la config : " + cn.academy.Config.controlPointMax);
+        assertTrue(helper, cn.academy.Config.controlPointStart >= 0.0d,
+                "controlPointStart non charge depuis la config : "
+                        + cn.academy.Config.controlPointStart);
+        assertTrue(helper, cn.academy.Config.controlPointRegenSpeed >= 0.0d,
+                "controlPointRegenSpeed non charge depuis la config : "
+                        + cn.academy.Config.controlPointRegenSpeed);
+        // La reserve, elle, ne vient plus d'un reglage plat mais des tables de l'original :
+        // c'est la valeur du niveau 1 qui doit etre celle de l'init_cp, pas un 0 par defaut.
+        assertTrue(helper, cn.academy.ability.AbilityData.baseMaxControlPoint(1) == 1800f,
+                "plafond de reserve du niveau 1 : "
+                        + cn.academy.ability.AbilityData.baseMaxControlPoint(1));
+        assertTrue(helper, cn.academy.ability.AbilityData.baseMaxControlPoint(5) == 8000f,
+                "plafond de reserve du niveau 5 : "
+                        + cn.academy.ability.AbilityData.baseMaxControlPoint(5));
         assertTrue(helper, cn.academy.Config.damageScale >= 0.0d,
                 "damageScale non charge depuis la config : " + cn.academy.Config.damageScale);
         assertTrue(helper, cn.academy.Config.controlPointSyncInterval >= 1,

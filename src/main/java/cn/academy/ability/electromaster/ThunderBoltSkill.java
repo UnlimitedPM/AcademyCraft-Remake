@@ -30,8 +30,9 @@ public class ThunderBoltSkill extends Skill {
     /** Rayon de la propagation, comme {@code ThunderBolt.AOE_RANGE}. */
     private static final double AOE_RANGE = 8.0;
 
-    /** Environ 10 % de la reserve de l'original, ramene a celle du port. */
-    private static final float CP_COST = 10f;
+    /** Le cout en CP, repris de l'original : de 280 a 420 selon l'experience. */
+    private static final float CP_COST_MIN_EXP = 280f;
+    private static final float CP_COST_MAX_EXP = 420f;
 
     /** Chance d'engourdir, et seuil d'experience, comme l'original. */
     private static final float SLOW_CHANCE = 0.8f;
@@ -64,8 +65,14 @@ public class ThunderBoltSkill extends Skill {
     }
 
     @Override
+    public float getCpCost(AbilityData data) {
+        return lerp(CP_COST_MIN_EXP, CP_COST_MAX_EXP, data.getSkillExp(this));
+    }
+
+    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
+    @Override
     public float getCpCost() {
-        return CP_COST;
+        return CP_COST_MIN_EXP;
     }
 
     /**

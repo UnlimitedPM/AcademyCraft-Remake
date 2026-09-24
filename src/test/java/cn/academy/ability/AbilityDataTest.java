@@ -68,9 +68,9 @@ class AbilityDataTest {
         assertEquals(0f, data.getControlPoint(), EPSILON);
 
         float before = data.getMaxControlPoint();
-        // Le plafond grandit un peu a chaque depense (l'addMaxControlPoint de
-        // l'original) : on regenere donc bien au-dela du plafond d'avant.
-        for (int i = 0; i < 500; i++) {
+        // 0,86 point par tick en moyenne sur une reserve de 1800 : il en faut des milliers
+        // pour la remplir, et c'est justement ce que l'original donnait a voir.
+        for (int i = 0; i < 4000; i++) {
             data.tickRegen();
         }
 
@@ -79,41 +79,55 @@ class AbilityDataTest {
     }
 
     @Test
-    @DisplayName("tickRegen va plus vite quand la reserve se remplit")
-    void tickRegenSpeedsUpAsTheBarFills() {
+    @DisplayName("tickRegen suit la formule de l'original, plafond par plafond")
+    void tickRegenFollowsTheOriginalFormula() {
         AbilityData empty = new AbilityData();
         empty.consumeControlPoint(empty.getControlPoint());
-        float beforeEmpty = empty.getControlPoint();
+        // Le paiement arme le delai de recuperation : quinze ticks pendant lesquels rien ne
+        // remonte, comme le cp_recover_cooldown de l'original.
+        float beforeDelay = empty.getControlPoint();
+        for (int i = 0; i < 15; i++) {
+            empty.tickRegen();
+        }
+        assertEquals(beforeDelay, empty.getControlPoint(), EPSILON,
+                "le delai qui suit un paiement ne regenere rien");
+
+        float before = empty.getControlPoint();
         empty.tickRegen();
-        float emptyGain = empty.getControlPoint() - beforeEmpty;
+        float emptyGain = empty.getControlPoint() - before;
 
-        AbilityData half = new AbilityData();
-        half.consumeControlPoint(half.getControlPoint() * 0.5f);
-        float beforeHalf = half.getControlPoint();
-        half.tickRegen();
-        float halfGain = half.getControlPoint() - beforeHalf;
+        // 0,0003 x 1800 = 0,54 : le chiffre de l'original, sur une barre vide.
+        assertEquals(0.54f, emptyGain, 0.01f);
 
-        assertTrue(emptyGain > 0f, "vide, la reserve remonte quand meme : " + emptyGain);
-        assertTrue(halfGain > emptyGain,
-                "et elle va plus vite a moitie pleine : " + halfGain + " > " + emptyGain);
+        AbilityData entamee = new AbilityData();
+        float beforeEntamee = entamee.getControlPoint();
+        entamee.tickRegen();
+        float entameeGain = entamee.getControlPoint() - beforeEntamee;
+
+        assertTrue(entameeGain > emptyGain,
+                "plus la barre est pleine, plus ca remonte : " + entameeGain + " > " + emptyGain);
     }
 
     @Test
-    @DisplayName("clampToConfiguredMax ramene le plafond et rogne les CP en trop")
-    void clampToConfiguredMax() {
+    @DisplayName("changer de niveau donne la reserve du niveau, pleine et sans ajout")
+    void levelChangeGivesTheNewReserve() {
         AbilityData data = new AbilityData();
-        // On simule un etat sauvegarde avec un plafond plus genereux que la config.
-        CompoundTag tag = data.serializeNBT();
-        tag.putFloat("maxCp", 999_999f);
-        tag.putFloat("cp", 999_999f);
-        data.deserializeNBT(tag);
-        assertEquals(999_999f, data.getMaxControlPoint(), EPSILON);
+        Category category = category("test");
 
-        data.clampToConfiguredMax();
+        data.setCategoryLevel(category, 1);
+        assertEquals(1800f, data.getMaxControlPoint(), EPSILON, "l'init_cp du niveau 1");
+        assertEquals(1800f, data.getControlPoint(), EPSILON,
+                "et la reserve du niveau arrive pleine, comme CPData.recalcMaxValue");
 
-        assertEquals((float) cn.academy.Config.controlPointMax, data.getMaxControlPoint(), EPSILON);
-        assertEquals((float) cn.academy.Config.controlPointMax, data.getControlPoint(), EPSILON,
-                "les CP en trop doivent etre rognes au nouveau plafond");
+        // On s'en sert : le plafond grandit, comme chez l'original.
+        data.consumeControlPoint(20f);
+        assertTrue(data.getAddMaxControlPoint() > 0f, "l'usage agrandit la reserve");
+
+        data.setCategoryLevel(category, 3);
+        assertEquals(4000f, data.getMaxControlPoint(), EPSILON, "l'init_cp du niveau 3");
+        assertEquals(4000f, data.getControlPoint(), EPSILON);
+        assertEquals(0f, data.getAddMaxControlPoint(), EPSILON,
+                "le changeur de niveau remettait l'ajout a zero, chez l'original");
     }
 
     // ------------------------------------------------------------------
@@ -200,8 +214,8 @@ class AbilityDataTest {
     }
 
     @Test
-    @DisplayName("un NBT sans plafond prend la valeur de la config")
-    void missingMaxFallsBackToConfig() {
+    @DisplayName("un NBT sans plafond prend celui du niveau")
+    void missingMaxFallsBackToTheLevelTable() {
         AbilityData data = new AbilityData();
         CompoundTag tag = new CompoundTag();
         tag.putFloat("cp", 12.5f);
@@ -209,6 +223,20 @@ class AbilityDataTest {
         data.deserializeNBT(tag);
 
         assertEquals(12.5f, data.getControlPoint(), EPSILON);
-        assertEquals((float) cn.academy.Config.controlPointMax, data.getMaxControlPoint(), EPSILON);
+        assertEquals(AbilityData.baseMaxControlPoint(0), data.getMaxControlPoint(), EPSILON,
+                "le plafond ne se sauvegarde plus : il vient du niveau");
+    }
+
+    @Test
+    @DisplayName("une sauvegarde trop genereuse est ramenee au plafond du niveau")
+    void oversizedSaveIsCropped() {
+        AbilityData data = new AbilityData();
+        CompoundTag tag = data.serializeNBT();
+        tag.putFloat("cp", 999_999f);
+
+        data.deserializeNBT(tag);
+
+        assertEquals(data.getMaxControlPoint(), data.getControlPoint(), EPSILON,
+                "les CP en trop doivent etre rognes au plafond");
     }
 }

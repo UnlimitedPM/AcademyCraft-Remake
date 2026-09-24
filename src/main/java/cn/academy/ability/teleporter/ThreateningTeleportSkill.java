@@ -53,20 +53,20 @@ public class ThreateningTeleportSkill extends Skill {
     }
 
     /**
-     * Cout en CP : 35 a 100 sur la reserve de l'original, donc 1,25 a 3,5 sur 100.
+     * Cout en CP : 35 a 100, comme l'original, et il monte avec l'experience.
      *
      * C'est la competence qui coute le plus cher de la categorie, et de loin : lancer
      * ce qu'on tient est un geste deguise en attaque.
      */
     @Override
     public float getCpCost() {
-        return 1.25f;
+        return 35f;
     }
 
     /** Le cout suit l'experience : de 1,25 a 3,5 selon le niveau d'usage. */
     @Override
     public float getCpCost(AbilityData data) {
-        return lerp(1.25f, 3.5f, data.getSkillExp(this));
+        return lerp(35f, 100f, data.getSkillExp(this));
     }
 
     /** Recharge : de 30 a 15 ticks. */

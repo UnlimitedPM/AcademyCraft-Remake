@@ -108,13 +108,11 @@ public class LocationTeleportSkill extends Skill {
     /**
      * Le prix d'un saut : {@code (200 a 150) x facteur x (2 si l'on change de dimension)}.
      *
-     * Les deux bornes de l'original sont divisees par 28, comme les autres couts en CP du
-     * port ; le facteur, lui, est un nombre pur et reste tel quel. Le resultat se lit en
-     * points de la reserve du port : une cinquantaine pour un saut court, davantage pour un
-     * long.
+     * C'est la formule de l'original, au chiffre pres : le facteur est un nombre pur et
+     * reste tel quel. Un saut court coute donc ses 200 a 150, un long davantage.
      */
     public float cpCost(AbilityData data, double distance, boolean crossDimension) {
-        float base = lerp(7.14f, 5.36f, data.getSkillExp(this));
+        float base = lerp(200f, 150f, data.getSkillExp(this));
         double factor = Math.max(MIN_FACTOR,
                 Math.sqrt(Math.min(MAX_PRICED_DISTANCE, distance)));
         return (float) (base * (crossDimension ? 2.0 : 1.0) * factor);

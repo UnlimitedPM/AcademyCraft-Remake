@@ -119,20 +119,20 @@ class LocationMarkTest {
         expert.addSkillExp(skill, 1f);
 
         // Un saut court coute son minimum : huit fois la base, jamais moins.
-        assertClose(7.14 * 8, skill.cpCost(fresh, 5, false));
-        assertClose(7.14 * 8, skill.cpCost(fresh, 64, false), "64 blocs donnent aussi huit");
+        assertClose(200.0 * 8, skill.cpCost(fresh, 5, false));
+        assertClose(200.0 * 8, skill.cpCost(fresh, 64, false), "64 blocs donnent aussi huit");
         // Au-dela, c'est la racine de la distance.
-        assertClose(7.14 * 10, skill.cpCost(fresh, 100, false));
-        assertClose(5.36 * 10, skill.cpCost(expert, 100, false), "un expert paie moins");
+        assertClose(200.0 * 10, skill.cpCost(fresh, 100, false));
+        assertClose(150.0 * 10, skill.cpCost(expert, 100, false), "un expert paie moins");
         // Le prix plafonne a 800 blocs : au-dela, la note ne grandit plus.
-        assertClose(7.14 * Math.sqrt(800), skill.cpCost(fresh, 5000, false));
+        assertClose(200.0 * Math.sqrt(800), skill.cpCost(fresh, 5000, false));
         // Changer de monde double la note.
         assertClose(skill.cpCost(fresh, 100, false) * 2, skill.cpCost(fresh, 100, true));
 
-        // Sur la reserve du port, un saut court mange donc plus de la moitie de la barre :
-        // c'est un voyage, pas un deplacement — et c'est ce que l'original vendait.
-        assertTrue(skill.cpCost(fresh, 5, false) > 50,
-                "un saut meme court coute la moitie de la reserve");
+        // C'est un voyage, pas un deplacement : l'original vendait ce prix-la, et sur sa
+        // reserve de 1800 points un saut court en mange la quasi-totalite.
+        assertTrue(skill.cpCost(fresh, 5, false) > 1500,
+                "un saut meme court coute l'essentiel de la reserve");
 
         assertEquals(240f, skill.getOverloadCost(fresh), 0.0001f, "surcout fixe de l'original");
         assertEquals(0f, skill.getCpCost(), 0.0001f, "rien a l'allumage : la touche ouvre une liste");

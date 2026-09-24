@@ -58,9 +58,9 @@ public class MagMovementSkill extends Skill {
         return Math.max(0.005f, 0.0011f * (float) distance);
     }
 
-    /** Cout par tick : 15 a 8 sur la reserve de l'original, donc 0,55 a 0,3 sur 100. */
+    /** Cout par tick : 15 a 8, comme l'original. */
     public float cpPerTick(AbilityData data) {
-        return lerp(0.55f, 0.3f, data.getSkillExp(this));
+        return lerp(15f, 8f, data.getSkillExp(this));
     }
 
     /** Surcout d'ouverture : de 60 a 30, comme l'original. */

@@ -54,9 +54,9 @@ public class MagManipSkill extends Skill {
     /** Le lancer vise a vingt blocs. */
     public static final double THROW_RANGE = 20.0;
 
-    /** Le prix du lancer : 140 a 270 CP divises par 28, et 35 a 20 de surcout. */
-    public static final float CP_MIN_EXP = 5f;
-    public static final float CP_MAX_EXP = 9.64f;
+    /** Le prix du lancer : 140 a 270 CP, et 35 a 20 de surcout, comme l'original. */
+    public static final float CP_MIN_EXP = 140f;
+    public static final float CP_MAX_EXP = 270f;
     public static final float OVERLOAD_MIN_EXP = 35f;
     public static final float OVERLOAD_MAX_EXP = 20f;
 

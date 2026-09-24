@@ -130,24 +130,6 @@ class DebugConsoleLinesTest {
     }
 
     @Test
-    void laReserveRemonteAChaqueTick() {
-        // L'original regagnait une part de son PLAFOND par tick, et non un montant fixe :
-        // c'est ce qui faisait avancer le compteur a chaque tick chez lui. Le port garde la
-        // meme proportion, ramenee a son echelle (28), ce qui donne environ un point par tick
-        // sur une reserve de 100 — au lieu des 5 par seconde d'avant, en gros morceaux.
-        AbilityData data = new AbilityData();
-        data.consumeControlPoint(50.0f);
-        float before = data.getControlPoint();
-
-        data.tickRegen();
-
-        float gain = data.getControlPoint() - before;
-        assertTrue(gain >= 1.0f, "au moins un point par tick, comme chez l'original : " + gain);
-        assertTrue(gain <= 2.0f, "et pas davantage : " + gain);
-        assertTrue(data.getControlPoint() > before, "la reserve remonte");
-    }
-
-    @Test
     void unJoueurSansRienPeutSeServirDeSesCompetences() {
         // La regle que le paquet applique a l'appui : aptitude eteinte, surcharge pleine ou
         // brouillage, et rien ne part. L'etat sature ne se fabrique pas a la main —

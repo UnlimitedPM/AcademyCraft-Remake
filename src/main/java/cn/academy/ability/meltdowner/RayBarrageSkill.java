@@ -109,14 +109,14 @@ public class RayBarrageSkill extends Skill {
     }
 
     /**
-     * Cout : 450 a 380 CP chez l'original, divises par 28 a l'echelle du port.
+     * Cout : 450 a 380 CP, comme l'original.
      *
      * C'est la competence la plus chere du meltdowner, et de loin — mais elle se paie en
      * surcout plus encore qu'en CP.
      */
     @Override
     public float getCpCost(AbilityData data) {
-        return lerp(16.07f, 13.57f, data.getSkillExp(this));
+        return lerp(450f, 380f, data.getSkillExp(this));
     }
 
     /** Surcout : de 300 a 140, comme l'original — un tiers d'une barre pleine au depart. */

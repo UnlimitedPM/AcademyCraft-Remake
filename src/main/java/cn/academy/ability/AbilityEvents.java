@@ -78,9 +78,8 @@ public class AbilityEvents {
             }
             // Les competences tenues vivent tant que la touche reste enfoncee.
             tickSustained(player, data);
-            // Le plafond vient de la config : on le reapplique a chaque tick pour
-            // qu'un rechargement de config soit pris en compte sans reconnexion.
-            data.clampToConfiguredMax();
+            // La reserve ne remonte que si elle est entamee : au ras bord il n'y a rien a
+            // faire, et l'original le testait aussi avant de recalculer son gain.
             if (data.getControlPoint() < data.getMaxControlPoint()) {
                 data.tickRegen();
             }
