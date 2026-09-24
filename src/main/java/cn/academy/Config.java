@@ -67,10 +67,6 @@ public final class Config {
                      "apres chaque paiement. Repris de ac.ability.data.cp_recover_cooldown.")
             .defineInRange("ability.controlPointRecoverCooldown", 15, 0, 20_000);
 
-    private static final ForgeConfigSpec.IntValue CP_SYNC_INTERVAL = BUILDER
-            .comment("Frequence (en ticks) de synchronisation des CP vers le client.")
-            .defineInRange("ability.controlPointSyncInterval", 20, 1, 200);
-
     private static final ForgeConfigSpec.IntValue OVERLOAD_RECOVER_COOLDOWN = BUILDER
             .comment("Ticks d'attente avant que le surcout ne redescende.",
                      "Repris de ac.ability.data.overload_recover_cooldown de la 1.12.2.")
@@ -186,7 +182,6 @@ public final class Config {
     public static double controlPointStart = 100.0d;
     public static double controlPointRegenSpeed = 1.0d;
     public static int controlPointRecoverCooldown = 15;
-    public static int controlPointSyncInterval = 20;
     public static int overloadRecoverCooldown = 32;
     public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
@@ -246,7 +241,6 @@ public final class Config {
         controlPointStart = CP_START.get();
         controlPointRegenSpeed = CP_REGEN_SPEED.get();
         controlPointRecoverCooldown = CP_RECOVER_COOLDOWN.get();
-        controlPointSyncInterval = CP_SYNC_INTERVAL.get();
         overloadRecoverCooldown = OVERLOAD_RECOVER_COOLDOWN.get();
         overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();
         progressIncrRate = PROGRESS_INCR_RATE.get();

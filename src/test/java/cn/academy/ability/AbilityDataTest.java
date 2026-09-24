@@ -130,6 +130,39 @@ class AbilityDataTest {
                 "le changeur de niveau remettait l'ajout a zero, chez l'original");
     }
 
+    @Test
+    @DisplayName("la synchro suit la cadence de l'original, et un paiement la resserre")
+    void laSynchroSuitLaCadenceDeLOriginal() {
+        // Portage de CPData.tick : (aptitude allumee ? 1 : 3) x (changement ? 4 : 10).
+        // Le port envoyait toutes les 20 ticks, donc toujours APRES le debut de la
+        // reprise, et un coup de 70 points semblait en couter 60.
+        AbilityData data = new AbilityData();
+        assertEquals(30, data.syncInterval(), "aptitude eteinte et rien de neuf : 3 x 10");
+
+        data.setCategoryLevel(category("test"), 1);
+        data.setActivated(true);
+        assertEquals(4, data.syncInterval(), "l'allumage lui-meme est un changement");
+
+        assertTrue(tickUntilSync(data) <= 4, "un changement part en quatre ticks au plus");
+        assertEquals(10, data.syncInterval(), "et la cadence de croisiere retombe ensuite");
+
+        // Un paiement la resserre de nouveau — et il partira AVANT que la reserve ne
+        // remonte, puisqu'elle attend quinze ticks. C'est ce qui fait qu'on voit ses
+        // points partir, au lieu de lire un chiffre deja regonfle.
+        data.consumeControlPoint(20f);
+        assertEquals(4, data.syncInterval(), "le paiement resserre la cadence");
+        assertTrue(tickUntilSync(data) < 15,
+                "le client voit le paiement avant que la reprise ne commence");
+    }
+
+    /** Ticks jusqu'au prochain envoi ; l'envoi remet le compteur a zero. */
+    private static int tickUntilSync(AbilityData data) {
+        for (int ticks = 1; ticks <= 100; ticks++) {
+            if (data.tickSync()) return ticks;
+        }
+        throw new AssertionError("aucune synchronisation en cent ticks");
+    }
+
     // ------------------------------------------------------------------
     // Niveaux de categorie
     // ------------------------------------------------------------------

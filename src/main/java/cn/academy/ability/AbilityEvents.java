@@ -20,11 +20,6 @@ import net.minecraftforge.network.PacketDistributor;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public class AbilityEvents {
 
-    /** Intervalle de resynchronisation des CP vers le client, en ticks. */
-    private static int syncInterval() {
-        return cn.academy.Config.controlPointSyncInterval;
-    }
-
     @SubscribeEvent
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
         event.register(AbilityData.class);
@@ -83,7 +78,11 @@ public class AbilityEvents {
             if (data.getControlPoint() < data.getMaxControlPoint()) {
                 data.tickRegen();
             }
-            if (player.tickCount % syncInterval() == 0) {
+            // Le client est resynchronise a la cadence de l'original, et non a cadence
+            // fixe : 4 ticks au pire apres un paiement, 10 en regime normal (voir
+            // AbilityData.syncInterval). C'est ce qui fait qu'on voit ses points partir :
+            // la reserve, elle, attend encore son delai de 15 ticks avant de remonter.
+            if (data.tickSync()) {
                 AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
             }
         });

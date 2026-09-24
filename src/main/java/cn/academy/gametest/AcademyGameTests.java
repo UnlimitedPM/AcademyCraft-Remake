@@ -4657,9 +4657,9 @@ public final class AcademyGameTests {
                         + cn.academy.ability.AbilityData.baseMaxControlPoint(5));
         assertTrue(helper, cn.academy.Config.damageScale >= 0.0d,
                 "damageScale non charge depuis la config : " + cn.academy.Config.damageScale);
-        assertTrue(helper, cn.academy.Config.controlPointSyncInterval >= 1,
-                "controlPointSyncInterval non charge depuis la config : "
-                        + cn.academy.Config.controlPointSyncInterval);
+        assertTrue(helper, cn.academy.Config.controlPointRecoverCooldown >= 0,
+                "controlPointRecoverCooldown non charge depuis la config : "
+                        + cn.academy.Config.controlPointRecoverCooldown);
         helper.succeed();
     }
 

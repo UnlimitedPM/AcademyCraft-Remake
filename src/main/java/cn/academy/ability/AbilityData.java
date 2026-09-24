@@ -253,9 +253,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
     public void setActivated(boolean value) {
         activated = value;
+        markDirty();
     }
 
     private float controlPoint = cn.academy.Config.startingControlPoint();
+
+    /** Compteur de synchronisation, et « quelque chose a change » : voir {@link #syncInterval()}. */
+    private int tickSync;
+    private boolean syncDirty;
 
     /**
      * Ce que l'usage des competences a ajoute au plafond de la reserve.
@@ -384,6 +389,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         untilOverloadRecover = 0;
         untilRecover = 0;
         controlPoint = getMaxControlPoint();
+        markDirty();
     }
 
     public boolean consumeControlPoint(float amount) {
@@ -505,6 +511,49 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     public void setOverload(float value) {
         overload = Math.max(0f, Math.min(getMaxOverload(), value));
+        markDirty();
+    }
+
+    /**
+     * Quelque chose a change : le client doit le savoir au plus vite.
+     *
+     * <p>Portage de {@code CPData.markDirty} : c'est ce drapeau qui resserre la cadence de
+     * synchronisation a 4 ticks (voir {@link #syncInterval()}). Il n'est PAS pose par la
+     * recuperation, qui avance a chaque tick et se contente de la cadence de croisiere —
+     * exactement comme l'original, ou seul {@code curCP += recover} ne marquait rien.
+     */
+    private void markDirty() {
+        syncDirty = true;
+    }
+
+    /**
+     * Ticks avant la prochaine envoi de l'etat au client, portage de {@code CPData.tick}.
+     *
+     * <p>L'original ne renvoyait pas son etat a cadence fixe :
+     * {@code (aptitude allumee ? 1 : 3) x (quelque chose a change ? 4 : 10)}. Un paiement
+     * partait donc vers le client en 4 ticks au pire, alors que la reserve attend son
+     * delai de 15 ticks avant de remonter : le joueur voyait vraiment ses points partir.
+     *
+     * <p>Le port envoyait toutes les 20 ticks, donc TOUJOURS apres le debut de la reprise :
+     * un coup de 70 points semblait en couter 60, et c'est ce qui a mis le joueur sur la
+     * piste. C'est la cadence de l'original qui est revenue ici.
+     */
+    public int syncInterval() {
+        // Le drapeau BRUT, comme chez lui : une aptitude eteinte n'a rien a envoyer vite.
+        return (activated ? 1 : 3) * (syncDirty ? 4 : 10);
+    }
+
+    /**
+     * Un tick du compteur de synchronisation ; vrai quand il faut envoyer l'etat.
+     *
+     * <p>Le compteur et le drapeau se remettent a zero ensemble : c'est l'envoi qui les
+     * efface, comme le {@code dataDirty = false; tickSync = 0;} de l'original.
+     */
+    public boolean tickSync() {
+        if (++tickSync < syncInterval()) return false;
+        tickSync = 0;
+        syncDirty = false;
+        return true;
     }
 
     /** Part du plafond acquise en utilisant ses competences. */
@@ -533,6 +582,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         growMaxControlPoint(cp);
         addOverload(overloadCost);
         if (cp > 0f) untilRecover = cn.academy.Config.controlPointRecoverCooldown;
+        markDirty();
         return true;
     }
 
@@ -548,6 +598,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         growMaxControlPoint(cp);
         addOverload(overloadCost);
         if (cp > 0f) untilRecover = cn.academy.Config.controlPointRecoverCooldown;
+        markDirty();
     }
 
     /**
