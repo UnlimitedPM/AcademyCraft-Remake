@@ -320,8 +320,7 @@ class PortedSkillsTest {
      * experience est versee depuis leur propre crochet (voir les tests suivants).
      */
     private static final Map<String, Float> EXPECTED_EXP = Map.ofEntries(
-            // borne basse de lerpf(0.0048, 0.0072, experience)
-            Map.entry("electromaster.arc_gen", 0.0048f),
+            // arc_gen n'y est pas : l'arc verse selon ce qu'il a touche (voir hitExp/blockExp).
             // un tir ; l'original doublait pour un coup au but, que le paquet ne voit pas
             Map.entry("electromaster.railgun", 0.005f),
             Map.entry("electromaster.body_intensify", 0.01f),

@@ -1260,4 +1260,52 @@ class SkillCurvesTest {
         assertEquals(9f, arcGen.damage(atExperience(arcGen, 5f)), 0.0001f,
                 "un gain enorme doit saturer au maximum");
     }
+
+    @Test
+    void lArcPaieSelonSonExperience() {
+        // Le prix de l'arc n'est PAS un nombre fixe : `ArcGen` de l'original calcule
+        // `cp = lerpf(30, 70, exp)` et `overload = lerpf(18, 11, exp)`. Les deux
+        // varient donc avec ce que la competence a appris, et grandissent en sens
+        // INVERSE : plus l'arc sait faire, plus il coute cher en reserve et moins il
+        // charge la surcharge.
+        var arcGen = cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN;
+
+        assertEquals(30f, arcGen.getCpCost(atExperience(arcGen, 0f)), 0.0001f, "CP au depart");
+        assertEquals(50f, arcGen.getCpCost(atExperience(arcGen, 0.5f)), 0.0001f, "CP a moitie");
+        assertEquals(70f, arcGen.getCpCost(atExperience(arcGen, 1f)), 0.0001f, "CP au maximum");
+
+        assertEquals(18f, arcGen.getOverloadCost(atExperience(arcGen, 0f)), 0.0001f,
+                "surcout au depart");
+        assertEquals(14.5f, arcGen.getOverloadCost(atExperience(arcGen, 0.5f)), 0.0001f,
+                "surcout a moitie");
+        assertEquals(11f, arcGen.getOverloadCost(atExperience(arcGen, 1f)), 0.0001f,
+                "surcout au maximum");
+    }
+
+    @Test
+    void lArcRapporteSelonCeQuIlTouche() {
+        // L'original donnait deux montants d'experience, et rien du tout quand son rayon
+        // ne rencontrait rien : 0,48 % a 0,72 % de la barre pour un etre vivant, 0,18 % a
+        // 0,27 % pour un BLOC — le cas courant, on tire sur un mur — et zero dans le vide.
+        // Le port versait le montant du coup au but a chaque appui, depuis le paquet, qui
+        // ne savait pas encore ce que l'arc allait toucher. C'est l'effet qui le verse
+        // maintenant, et ce test fige les deux montants.
+        var arcGen = cn.academy.ability.electromaster.ElectromasterCategory.ARC_GEN;
+
+        assertEquals(0f, arcGen.getExpGain(atExperience(arcGen, 0.5f)), 0.000001f,
+                "le paquet ne verse plus rien : l'effet s'en charge");
+        assertTrue(arcGen.earnsExpOnEffect(), "et il le declare");
+
+        assertEquals(0.0048f, arcGen.hitExp(atExperience(arcGen, 0f)), 0.000001f);
+        assertEquals(0.006f, arcGen.hitExp(atExperience(arcGen, 0.5f)), 0.000001f);
+        assertEquals(0.0072f, arcGen.hitExp(atExperience(arcGen, 1f)), 0.000001f);
+
+        assertEquals(0.0018f, arcGen.blockExp(atExperience(arcGen, 0f)), 0.000001f);
+        assertEquals(0.00225f, arcGen.blockExp(atExperience(arcGen, 0.5f)), 0.000001f);
+        assertEquals(0.0027f, arcGen.blockExp(atExperience(arcGen, 1f)), 0.000001f);
+
+        assertTrue(arcGen.blockExp(atExperience(arcGen, 0f))
+                        < arcGen.hitExp(atExperience(arcGen, 0f)),
+                "un mur rapporte moins qu'une cible vivante");
+    }
 }

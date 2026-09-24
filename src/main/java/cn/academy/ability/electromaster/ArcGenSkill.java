@@ -3,10 +3,13 @@ package cn.academy.ability.electromaster;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.Random;
 
@@ -46,14 +49,41 @@ public class ArcGenSkill extends Skill {
     }
 
     /**
-     * Experience d'un arc qui touche, reprise de l'original : de 0,0048 a 0,0072 selon
-     * l'experience deja acquise. L'original distinguait le coup porte du coup dans le
-     * vide ; le port ne le peut plus, l'activation etant deja conditionnee a une cible
-     * en vue, donc c'est la branche « touche » qui est reprise.
+     * L'arc ne verse plus son experience a l'activation : c'est l'effet qui sait ce
+     * qu'il vient de toucher.
+     *
+     * <p>L'original donnait deux montants selon ce que son rayon rencontrait, et rien du
+     * tout quand il ne rencontrait rien (voir {@link #onActivate}). Les verser depuis le
+     * paquet, qui les versait avant l'effet, revenait a donner le prix du coup au but a
+     * un arc qui n'avait touche qu'un mur.
      */
     @Override
     public float getExpGain(AbilityData data) {
+        return 0f;
+    }
+
+    /** Oui : le montant depend de ce que le rayon a trouve. */
+    @Override
+    public boolean earnsExpOnEffect() {
+        return true;
+    }
+
+    /**
+     * Ce que rapporte un arc qui touche un etre vivant : 0,48 % a 0,72 % de la barre,
+     * selon l'experience deja acquise.
+     */
+    public float hitExp(AbilityData data) {
         return lerp(0.0048f, 0.0072f, data.getSkillExp(this));
+    }
+
+    /**
+     * Ce que rapporte un arc qui ne touche qu'un bloc : 0,18 % a 0,27 %.
+     *
+     * <p>C'est le cas courant — on tire sur un mur ou sur le sol — et l'original le
+     * payait presque trois fois moins que le coup au but.
+     */
+    public float blockExp(AbilityData data) {
+        return lerp(0.0018f, 0.0027f, data.getSkillExp(this));
     }
 
     /** Le cout en CP, repris de l'original : de 30 a 70 selon l'experience. */
@@ -80,12 +110,34 @@ public class ArcGenSkill extends Skill {
         // savoir sur quoi son rayon tomberait.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_ARC_WEAK, 0.5f);
 
-        Entity target = TargetingUtil.findEntityInSight(player, range(data));
-        if (!(target instanceof LivingEntity living)) return;
+        double range = range(data);
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f);
+        // Le rayon de l'original s'arretait au premier bloc : ce qui se trouve derriere un
+        // mur ne s'attrape pas, et la portee de l'arc se mesure jusqu'a ce mur.
+        BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
+        Vec3 end = block == null ? eye.add(look.scale(range)) : block.getLocation();
+        Entity target = TargetingUtil.findEntityAlong(player, eye, end,
+                e -> e instanceof LivingEntity);
 
-        living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
-        if (random.nextFloat() < igniteChance(data)) {
-            living.setSecondsOnFire(IGNITE_TICKS / 20);
+        if (target instanceof LivingEntity living) {
+            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+            if (random.nextFloat() < igniteChance(data)) {
+                living.setSecondsOnFire(IGNITE_TICKS / 20);
+            }
+            data.addSkillExp(this, hitExp(data));
+            return;
         }
+
+        if (block == null) return;
+
+        // Rien de vivant : c'est le bloc qui a pris l'arc. L'original enflammait alors le
+        // bloc juste au-dessus, quand il y avait de la place — c'est le feu que l'arc
+        // laisse sur les murs, et c'est aussi ce qui paye l'experience.
+        BlockPos above = block.getBlockPos().above();
+        if (random.nextFloat() < igniteChance(data) && player.level().isEmptyBlock(above)) {
+            player.level().setBlockAndUpdate(above, net.minecraft.world.level.block.Blocks.FIRE.defaultBlockState());
+        }
+        data.addSkillExp(this, blockExp(data));
     }
 }
