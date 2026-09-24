@@ -48,6 +48,15 @@ public class AbilityKeyBindings {
     /** L'ecran qui regle les prereglages. */
     public static final KeyMapping PRESET_EDIT = abilityKey("key.academy.preset_edit", InputConstants.KEY_NUMPAD6);
 
+    /**
+     * L'ecran de debogage du mod : informations du joueur, puis etat des competences.
+     *
+     * <p>F4 comme chez l'original. Le jeu s'en sert deja pour changer de mode de jeu, mais
+     * seulement pour les operateurs : les autres joueurs n'y perdent rien, et la touche se
+     * reconfigure dans les options comme toutes les autres.
+     */
+    public static final KeyMapping DEBUG_CONSOLE = abilityKey("key.academy.debug_console", InputConstants.KEY_F4);
+
     private static KeyMapping abilityKey(String description, int defaultKey) {
         return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
                 defaultKey, "key.categories.academy");
@@ -288,5 +297,6 @@ public class AbilityKeyBindings {
         event.register(ABILITY_4);
         event.register(PRESET_NEXT);
         event.register(PRESET_EDIT);
+        event.register(DEBUG_CONSOLE);
     }
 }

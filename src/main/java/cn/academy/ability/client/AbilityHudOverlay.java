@@ -22,5 +22,6 @@ public class AbilityHudOverlay implements IGuiOverlay {
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
         CpBarHud.render(graphics, screenWidth, screenHeight);
+        DebugConsole.render(graphics);
     }
 }

@@ -194,6 +194,7 @@
   "key.academy.ability_4": "Ability 4",
   "key.academy.preset_next": "Next preset",
   "key.academy.preset_edit": "Edit presets",
+  "key.academy.debug_console": "Developer info",
 
   "academy.preset.title": "Ability presets",
   "academy.preset.hint": "Pick a learned ability, then click the key you want it on. Right click clears a key. Click a number to use that preset.",

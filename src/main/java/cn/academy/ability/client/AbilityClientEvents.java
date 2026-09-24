@@ -123,6 +123,12 @@ public class AbilityClientEvents {
 
         tickPresetKeys();
 
+        // L'ecran de debogage du mod, comme avant : F4 fait le tour de ses trois etats. C'est
+        // la seule fenetre ou les points de controle et la surcharge se lisent.
+        if (AbilityKeyBindings.DEBUG_CONSOLE.consumeClick()) {
+            DebugConsole.cycle();
+        }
+
         // Les boucles sonores des maintiens, une seule a la fois : le port retient la
         // competence en cours, et le suivi du joueur se fait tout seul. Appele apres les
         // touches, pour que le relachement coupe la boucle au meme tick.
