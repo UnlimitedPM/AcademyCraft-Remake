@@ -227,6 +227,34 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return id < 0 || id >= marks.size() ? null : marks.get(id);
     }
 
+    /**
+     * L'aptitude est-elle allumee ?
+     *
+     * <p>Portage de l'etat du meme nom chez l'original : elle est <b>eteinte au depart</b>, et
+     * le joueur l'allume avec sa touche (V chez lui). Tant qu'elle est eteinte, aucune
+     * competence ne part — c'est aussi ce qui fait disparaitre les elements du HUD, la barre de
+     * CP comprise.
+     */
+    private boolean activated;
+
+    /**
+     * Le joueur peut-il se servir de son aptitude, s'il en a une ?
+     *
+     * <p>L'original demandait DEUX choses : avoir une categorie, et l'avoir allumee.
+     */
+    public boolean isActivated() {
+        return getHighestLevel() > 0 && activated;
+    }
+
+    /** Le drapeau brut, sans la condition de categorie : ce que la sauvegarde retient. */
+    public boolean isActivatedRaw() {
+        return activated;
+    }
+
+    public void setActivated(boolean value) {
+        activated = value;
+    }
+
     private float controlPoint = cn.academy.Config.startingControlPoint();
     private float maxControlPoint = (float) cn.academy.Config.controlPointMax;
 
@@ -593,6 +621,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         controlPoint = other.controlPoint;
         maxControlPoint = other.maxControlPoint;
         addMaxControlPoint = other.addMaxControlPoint;
+        activated = other.activated;
         overload = other.overload;
         addMaxOverload = other.addMaxOverload;
         overloadFine = other.overloadFine;
@@ -1117,6 +1146,9 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         tag.putFloat("cp", controlPoint);
         tag.putFloat("maxCp", maxControlPoint);
         tag.putFloat("addCp", addMaxControlPoint);
+        // L'etat allume/eteint voyage avec le reste : se reconnecter ne doit pas eteindre
+        // l'aptitude du joueur, et le HUD du client en depend.
+        tag.putBoolean("activated", activated);
         // Le drapeau voyage pour que le HUD du client puisse l'afficher ; les
         // sources, elles, n'ont aucun sens hors du serveur.
         tag.putBoolean("interfered", interfered);
@@ -1170,6 +1202,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         controlPoint = tag.getFloat("cp");
         maxControlPoint = tag.contains("maxCp") ? tag.getFloat("maxCp") : configuredMax();
         setAddMaxControlPoint(tag.getFloat("addCp"));
+        activated = tag.getBoolean("activated");
         interfered = tag.getBoolean("interfered");
 
         learnedSkills.clear();

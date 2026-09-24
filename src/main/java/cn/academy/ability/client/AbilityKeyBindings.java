@@ -45,6 +45,19 @@ public class AbilityKeyBindings {
     /** Le passage au prereglage suivant, qui fait le tour des quatre. */
     public static final KeyMapping PRESET_NEXT = abilityKey("key.academy.preset_next", InputConstants.KEY_NUMPAD5);
 
+    /**
+     * L'allumage de l'aptitude.
+     *
+     * <p>V, comme chez l'original ({@code KEY_ACTIVATE_ABILITY} sur {@code Keyboard.KEY_V}).
+     * Tant qu'elle est eteinte, aucune competence ne part et le HUD reste cache : c'est la
+     * touche qui les fait apparaitre.
+     *
+     * <p>ATTENTION : le port lie encore une competence sur V ({@code mag_movement}) : la touche
+     * fait donc les deux. Le systeme de prereglages de l'original, qui remplace ces touches
+     * par competence, reglera la question a la racine.
+     */
+    public static final KeyMapping TOGGLE_ABILITY = abilityKey("key.academy.toggle_ability", InputConstants.KEY_V);
+
     /** L'ecran qui regle les prereglages. */
     public static final KeyMapping PRESET_EDIT = abilityKey("key.academy.preset_edit", InputConstants.KEY_NUMPAD6);
 
@@ -298,5 +311,6 @@ public class AbilityKeyBindings {
         event.register(PRESET_NEXT);
         event.register(PRESET_EDIT);
         event.register(DEBUG_CONSOLE);
+        event.register(TOGGLE_ABILITY);
     }
 }

@@ -103,6 +103,9 @@ public class AbilityEvents {
                     .ifPresent(data -> {
                         data.clearCooldowns();
                         data.clearCharges();
+                        // L'original eteignait l'aptitude a la mort, et la rallumait a la main :
+                        // repartir avec son pouvoir allume n'est pas ce qu'il faisait.
+                        data.setActivated(false);
                     });
         }
     }

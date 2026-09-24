@@ -43,9 +43,10 @@ class DebugConsoleLinesTest {
         assertTrue(lines.get(4).startsWith("Overload: "), lines.get(4));
         assertTrue(lines.get(4).contains("(") && lines.get(4).endsWith(")"),
                 "la surcharge montre son maximum separe : " + lines.get(4));
-        assertEquals("CPData.canUseAbility: true", lines.get(5),
-                "sans surcharge ni brouillage, le joueur peut s'en servir");
-        assertEquals("CPData.overloaded: false", lines.get(6));
+        assertEquals("CPData.canUseAbility: false", lines.get(5),
+                "sans categorie l'aptitude ne peut pas etre allumee, donc rien ne part");
+        assertEquals("CPData.activated: false", lines.get(6),
+                "l'original ne montrait pas la surcharge ici, mais l'etat allume/eteint");
         assertTrue(lines.get(7).startsWith("CPData.addMaxCP: "), lines.get(7));
         assertTrue(lines.get(8).startsWith("CPData.addMaxOverload: "), lines.get(8));
         assertEquals("CPData.interfering: false", lines.get(9));
@@ -114,12 +115,21 @@ class DebugConsoleLinesTest {
 
     @Test
     void unJoueurSansRienPeutSeServirDeSesCompetences() {
-        // La regle que le paquet applique a l'appui : surcharge pleine ou brouillage, et rien
-        // ne part. L'etat sature ne se fabrique pas a la main — `getCategoryLevels()` rend une
-        // vue non modifiable et le plafond de surcharge vient du niveau — donc ce test ne
-        // couvre que le cas de depart, celui que l'ecran montre a l'ouverture.
-        assertTrue(DebugConsoleLines.canUseAbility(new AbilityData()));
-        assertEquals("CPData.canUseAbility: true",
-                DebugConsoleLines.info(new AbilityData(), ElectromasterCategory.INSTANCE).get(5));
+        // La regle que le paquet applique a l'appui : aptitude eteinte, surcharge pleine ou
+        // brouillage, et rien ne part. L'etat sature ne se fabrique pas a la main —
+        // `getCategoryLevels()` rend une vue non modifiable et le plafond de surcharge vient du
+        // niveau — et l'allumage demande une categorie, donc ce test ne couvre que le cas de
+        // depart, celui que l'ecran montre a l'ouverture.
+        AbilityData data = new AbilityData();
+        assertFalse(data.isActivated(), "l'aptitude est eteinte au depart, comme chez l'original");
+        assertFalse(DebugConsoleLines.canUseAbility(data), "donc aucune competence ne part");
+
+        data.setActivated(true);
+        assertFalse(data.isActivated(),
+                "allumer le drapeau ne suffit pas : il faut aussi une categorie");
+        assertTrue(data.isActivatedRaw(), "le drapeau brut, lui, a bien change");
+
+        assertEquals("CPData.canUseAbility: false",
+                DebugConsoleLines.info(data, ElectromasterCategory.INSTANCE).get(5));
     }
 }

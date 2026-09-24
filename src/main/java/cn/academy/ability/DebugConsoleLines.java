@@ -64,7 +64,7 @@ public final class DebugConsoleLines {
                 data.getOverload(), data.getMaxOverload(),
                 data.getMaxOverload() - addOverload, decimal(addOverload)));
         lines.add("CPData.canUseAbility: " + canUseAbility(data));
-        lines.add("CPData.overloaded: " + data.isOverloaded());
+        lines.add("CPData.activated: " + data.isActivated());
         lines.add("CPData.addMaxCP: " + decimal(addCp));
         lines.add("CPData.addMaxOverload: " + decimal(addOverload));
         lines.add("CPData.interfering: " + data.isInterfered());
@@ -119,10 +119,10 @@ public final class DebugConsoleLines {
     /**
      * Le joueur peut-il se servir de ses competences ?
      *
-     * <p>C'est la regle de {@code CPData.canUseAbility}, que le paquet applique a l'appui : ni
-     * surcharge pleine, ni brouillage.
+     * <p>C'est la regle de {@code CPData.canUseAbility}, que le paquet applique a l'appui :
+     * l'aptitude allumee, pas de surcharge pleine, pas de brouillage.
      */
     public static boolean canUseAbility(AbilityData data) {
-        return !data.isOverloaded() && !data.isInterfered();
+        return data.isActivated() && !data.isOverloaded() && !data.isInterfered();
     }
 }

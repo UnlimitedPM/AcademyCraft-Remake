@@ -58,6 +58,10 @@ public final class CpBarHud {
      */
     public static void render(GuiGraphics graphics, int screenWidth, int screenHeight) {
         AbilityData data = ClientAbilityData.get();
+        // L'aptitude eteinte, chez l'original, il n'y avait plus de barre du tout : c'est la
+        // touche d'allumage qui la fait apparaitre, avec le reste du HUD.
+        if (!data.isActivated()) return;
+
         float maxCp = data.getMaxControlPoint();
         if (maxCp <= 0) return;
 

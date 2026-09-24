@@ -178,6 +178,14 @@ public class ActivateSkillPacket {
      * de contexte dans ce cas, donc la touche ne faisait rien du tout.
      */
     private static boolean canUseAbility(ServerPlayer player, AbilityData data) {
+        // L'aptitude doit etre ALLUMEE : chez l'original c'etait la touche (V) qui l'allumait,
+        // et rien ne partait avant. C'est le premier refus, comme chez lui.
+        if (!data.isActivated()) {
+            player.displayClientMessage(
+                    Component.literal("Ability is off - press the ability key")
+                            .withStyle(ChatFormatting.RED), true);
+            return false;
+        }
         if (data.isInterfered()) {
             player.displayClientMessage(
                     Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);

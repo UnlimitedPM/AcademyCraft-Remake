@@ -123,6 +123,13 @@ public class AbilityClientEvents {
 
         tickPresetKeys();
 
+        // L'allumage et l'extinction de l'aptitude : le serveur decide, et renvoie l'etat
+        // complet. Rien ne part tant qu'elle est eteinte, et le HUD reste cache.
+        if (AbilityKeyBindings.TOGGLE_ABILITY.consumeClick()) {
+            AbilityNetwork.CHANNEL.sendToServer(new cn.academy.ability.network.ToggleAbilityPacket(
+                    !ClientAbilityData.get().isActivatedRaw()));
+        }
+
         // L'ecran de debogage du mod, comme avant : F4 fait le tour de ses trois etats. C'est
         // la seule fenetre ou les points de controle et la surcharge se lisent.
         if (AbilityKeyBindings.DEBUG_CONSOLE.consumeClick()) {
