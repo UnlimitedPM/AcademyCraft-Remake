@@ -41,6 +41,10 @@ run/
 run-data/
 logs/
 
+# Jar local de test : DebugBridge (outil de debug client, non redistribuable).
+# Il est seulement lance par la tache runClient, jamais embarque dans le mod.
+/libs/
+
 # Java
 *.class
 *.log
