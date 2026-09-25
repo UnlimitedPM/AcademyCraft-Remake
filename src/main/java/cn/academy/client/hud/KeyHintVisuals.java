@@ -121,6 +121,21 @@ public final class KeyHintVisuals {
     }
 
     /**
+     * L'opacite d'une icone dont la competence est en recharge : {@code alpha = 0.4f} chez
+     * l'original, quand sa recharge courait ({@code prog != 0}), et pleine opacite sinon.
+     *
+     * <p>C'est ce qui fait lire une competence indisponible d'un coup d'oeil : sans cet
+     * estompage, une touche en recharge s'affiche aussi vive qu'une touche prete, et seule la
+     * barre grise du bas le dit — le joueur appuie et se fait refuser.
+     */
+    public static final float COOLDOWN_ICON_ALPHA = 0.4f;
+
+    /** L'opacite de l'icone : pleine quand la competence est prete, 40 % pendant la recharge. */
+    public static float cooldownIconAlpha(float remaining) {
+        return remaining > 0f ? COOLDOWN_ICON_ALPHA : 1.0f;
+    }
+
+    /**
      * Une competence par son nom, ou {@code null} si aucune categorie ne la porte.
      *
      * <p>Le prereglage ne garde que le <b>nom</b> de la competence : les quatre categories

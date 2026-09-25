@@ -15,6 +15,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class KeyHintVisualsTest {
 
     @Test
+    void lIconeSEstompePendantLaRecharge() {
+        // L'original dessinait l'icone a 40 % tant que la recharge courait (`alpha = 0.4f`),
+        // et pleine sinon : sans cet estompage, une competence en recharge a l'air prete.
+        assertEquals(1.0f, KeyHintVisuals.cooldownIconAlpha(0f), 0.0001f, "prete : pleine opacite");
+        assertEquals(0.4f, KeyHintVisuals.cooldownIconAlpha(0.01f), 0.0001f);
+        assertEquals(0.4f, KeyHintVisuals.cooldownIconAlpha(1f), 0.0001f);
+        assertEquals(KeyHintVisuals.COOLDOWN_ICON_ALPHA,
+                KeyHintVisuals.cooldownIconAlpha(0.5f), 0.0001f);
+    }
+
+    @Test
     void lesTouchesDeLaSourisOntLeurCapuchon() {
         assertEquals(KeyHintVisuals.Cap.MOUSE_LEFT, KeyHintVisuals.cap(true, 0));
         assertEquals(KeyHintVisuals.Cap.MOUSE_RIGHT, KeyHintVisuals.cap(true, 1));

@@ -118,16 +118,19 @@ public final class KeyHintHud {
         Skill skill = KeyHintVisuals.skillByName(ClientPresetData.skillAt(slot));
         if (skill == null) return;
 
+        float remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill),
+                skill.getCooldownTicks(data));
+
         ResourceLocation icon = skill.getHintIcon();
         blit(graphics, icon,
                 KeyHintVisuals.ICON_X, y + KeyHintVisuals.ICON_Y,
                 KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
                 0, 0, KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
-                KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE, 0xFFFFFF, 1.0f);
+                KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE, 0xFFFFFF,
+                KeyHintVisuals.cooldownIconAlpha(remaining));
 
-        // La recharge qui reste : l'original assombrissait le bas de l'icone d'autant.
-        float remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill),
-                skill.getCooldownTicks(data));
+        // La recharge qui reste : l'original assombrissait le bas de l'icone d'autant, en plus
+        // de l'estomper entierement (voir COOLDOWN_ICON_ALPHA).
         if (remaining <= 0f) return;
 
         int filled = Math.round(KeyHintVisuals.ICON_SIZE * remaining);
