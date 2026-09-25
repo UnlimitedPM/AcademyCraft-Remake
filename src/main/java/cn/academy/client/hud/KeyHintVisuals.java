@@ -53,6 +53,23 @@ public final class KeyHintVisuals {
     /** La couleur de l'etiquette d'une touche, chez l'original ({@code 0xff194246}). */
     public static final int LABEL_COLOR = 0xFF194246;
 
+    /**
+     * Le decalage horizontal que l'original appliquait a sa colonne de lignes, en unites.
+     *
+     * <p>C'est le chiffre le plus important de ce fichier, et il vient de son propre code :
+     * avant de dessiner une ligne, `KeyHintUI` faisait
+     * <pre>GL11.glTranslated(-200 - availIdx * 200, y, 0)</pre>
+     * avec `availIdx` = 0 pour le premier groupe de touches (chaque groupe suivant reculait de
+     * 200 unites de plus, c'est ainsi qu'il rangeait ses colonnes). Ses lignes se dessinent
+     * ensuite a partir de x = 122, donc son repere va de -78 a +107 unites — pas de 0 a 185.
+     *
+     * <p>Le port ne connait qu'une colonne et part deja du bord de la plaque (0 au lieu de
+     * 122) : il lui faut donc -200 + 122 = -78. Sans ce decalage, plaque, cadre et icone
+     * mordent de 18 pixels sur le bord droit de l'ecran — le cadre tombe 12 pixels trop a
+     * droite et l'icone y perd la moitie de sa surface (vecu, vu a l'ecran).
+     */
+    public static final int CONTENT_SHIFT_X = -78;
+
     /** Le gris qui noircit le bas d'une icone en recharge : gris 0,6 a 30 %. */
     public static final int COOLDOWN_OVERLAY = 0x4C999999;
 

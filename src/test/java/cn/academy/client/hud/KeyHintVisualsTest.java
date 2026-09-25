@@ -57,6 +57,34 @@ class KeyHintVisualsTest {
     }
 
     @Test
+    void laColonneReculeCommeChezLOriginal() {
+        // L'original translatait sa colonne de -200 unites avant de dessiner a partir de x=122 :
+        // le port part de 0 et doit donc reculer de -78. Perdre ce chiffre pousse le cadre de
+        // 18 pixels vers la droite, et l'icone sort de l'ecran (vecu).
+        assertEquals(-78, KeyHintVisuals.CONTENT_SHIFT_X);
+
+        // Ce que cela donne sur un ecran de 854x480, avec le defaut 0/30 de l'element : boite
+        // posee a x = 822, y = 246 (soit 6 pixels sous le milieu).
+        int left = 854 - 32;
+        float shift = KeyHintVisuals.CONTENT_SHIFT_X * KeyHintVisuals.SCALE;
+
+        // Le cadre de l'icone doit finir a une douzaine de pixels du bord, comme chez lui...
+        float frameRight = left + shift
+                + (KeyHintVisuals.FRAME_X + KeyHintVisuals.FRAME_SIZE) * KeyHintVisuals.SCALE;
+        assertEquals(842.24f, frameRight, 0.1f);
+        assertTrue(frameRight < 854, "le cadre mord sur le bord droit : " + frameRight);
+
+        // ...et la plaque entiere doit tenir dans l'ecran (c'est elle qui va le plus a droite).
+        float plateRight = left + shift + KeyHintVisuals.PLATE_W * KeyHintVisuals.SCALE;
+        assertTrue(plateRight < 854, "la plaque depasse du bord droit : " + plateRight);
+
+        // Les quatre lignes partent du haut de la boite, donc de 6 pixels sous le milieu, et
+        // descendent : c'est ce que montre l'original.
+        int top = 480 / 2 - 48 / 2 + 30;
+        assertEquals(246, top);
+    }
+
+    @Test
     void lesMesuresSontCellesDeLOriginal() {
         // Quatre lignes qui ne se chevauchent pas, et une icone dans son cadre : c'est ce que
         // ces nombres veulent dire, et une faute s'y verrait tout de suite a l'ecran.

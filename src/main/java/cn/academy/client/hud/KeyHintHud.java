@@ -69,6 +69,10 @@ public final class KeyHintHud {
         pose.pushPose();
         pose.translate(left, top, 0);
         pose.scale(KeyHintVisuals.SCALE, KeyHintVisuals.SCALE, 1.0f);
+        // L'original reculait toute sa colonne de lignes avant de dessiner : sans ce decalage,
+        // plaque, cadre et icone mordent sur le bord droit de l'ecran (voir
+        // KeyHintVisuals.CONTENT_SHIFT_X, ou le chiffre est explique).
+        pose.translate(KeyHintVisuals.CONTENT_SHIFT_X, 0, 0);
 
         for (int slot = 0; slot < KeyHintVisuals.ROWS; slot++) {
             drawRow(graphics, data, slot, slot * KeyHintVisuals.ROW_STEP, usable);
