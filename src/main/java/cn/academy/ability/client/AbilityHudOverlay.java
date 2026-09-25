@@ -1,6 +1,7 @@
 package cn.academy.ability.client;
 
 import cn.academy.client.hud.CpBarHud;
+import cn.academy.client.hud.KeyHintHud;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.client.gui.overlay.IGuiOverlay;
@@ -8,10 +9,10 @@ import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 /**
  * Le HUD des competences : les elements dessines a leur place configuree.
  *
- * <p>Pour l'instant il n'y a que le <b>temoin de points de controle</b> (voir {@link CpBarHud}),
- * pose la ou la config le met. Les autres elements — le rappel des touches, les notifications
- * et le lecteur media — viendront s'ajouter ici, avec la meme regle : leur position se lit dans
- * {@code HudConfig}, jamais en dur.
+ * <p>Deux elements sont poses ici, chacun lisant sa place dans {@code HudConfig} : le temoin de
+ * points de controle (voir {@link CpBarHud}) et le rappel des touches d'aptitude (voir
+ * {@link KeyHintHud}). Les deux autres — les notifications et le lecteur media — viendront s'y
+ * ajouter de la meme facon, jamais avec une position en dur.
  *
  * <p>Ce qui a ete retire, et pourquoi : au debut du port, cette classe dessinait deux barres
  * grises et des nombres de CP et de surcharge en bas a gauche. Ca ne venait PAS de l'original —
@@ -21,6 +22,7 @@ public class AbilityHudOverlay implements IGuiOverlay {
 
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
+        KeyHintHud.render(graphics, screenWidth, screenHeight);
         CpBarHud.render(graphics, screenWidth, screenHeight);
         DebugConsole.render(graphics);
     }

@@ -71,6 +71,21 @@ public class AbilityKeyBindings {
                 defaultKey, "key.categories.academy");
     }
 
+    /**
+     * La touche d'une place de prereglage.
+     *
+     * <p>L'ordre est celui des touches d'aptitude, donc celui de {@code BINDINGS} : c'est lui
+     * que le rappel des touches lit pour peindre ses lignes, dans l'ordre.
+     */
+    public static KeyMapping abilityKey(int slot) {
+        return switch (slot) {
+            case 0 -> ABILITY_1;
+            case 1 -> ABILITY_2;
+            case 2 -> ABILITY_3;
+            default -> ABILITY_4;
+        };
+    }
+
     private static KeyMapping mouseKey(String description, int defaultButton) {
         return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.MOUSE,
                 defaultButton, "key.categories.academy");
