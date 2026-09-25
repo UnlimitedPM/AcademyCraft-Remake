@@ -127,8 +127,12 @@ public final class KeyHintHud {
         Skill skill = KeyHintVisuals.skillByName(ClientPresetData.skillAt(slot));
         if (skill == null) return;
 
-        float remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill),
-                skill.getCooldownTicks(data));
+        // La duree vient de la donnee du JOUEUR (celle qui a ete posee), et non de la courbe :
+        // trois competences posent leur recharge depuis leur effet et n'annoncent aucune duree
+        // (voir AbilityData.getCooldownTotal), donc leur icone ne s'estompait jamais.
+        int total = data.getCooldownTotal(skill);
+        if (total <= 0) total = skill.getCooldownTicks(data);
+        float remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill), total);
 
         ResourceLocation icon = skill.getHintIcon();
         blit(graphics, icon,

@@ -28,6 +28,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private static final String TAG_SKILL_EXPS = "skillExps";
     private static final String TAG_LEVEL_PROGRESS = "levelProgress";
     private static final String TAG_COOLDOWNS = "cooldowns";
+    private static final String TAG_COOLDOWN_TOTALS = "cooldownTotals";
     private static final String TAG_MARKS = "marks";
 
     /**
@@ -93,6 +94,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * l'original ({@code onPlayerDead}).
      */
     private final Map<String, Integer> cooldowns = new HashMap<>();
+
+    /**
+     * La duree TOTALE de chaque recharge en cours, telle qu'elle a ete posee.
+     *
+     * <p>Sans elle on saurait qu'une competence est indisponible, mais pas a quel point :
+     * c'est elle qui donne son echelle au gris de l'icone. L'original gardait les deux
+     * nombres dans son {@code SkillCooldown} ({@code getTickLeft} et {@code getMaxTick}).
+     */
+    private final Map<String, Integer> cooldownTotals = new HashMap<>();
 
     /**
      * Charges en cours, en ticks accumules.
@@ -966,6 +976,22 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
+     * La duree totale de la recharge en cours, telle qu'elle a ete posee — c'est elle qui
+     * donne son echelle au gris : sans elle on saurait qu'une competence est indisponible,
+     * mais pas a quel point.
+     *
+     * <p>Le port relisait la COURBE ({@code skill.getCooldownTicks(data)}) pour ce nombre, ce
+     * qui ne marche que pour les competences qui en declarent une. Les trois dont la recharge
+     * est posee par l'effet — {@code dir_shock}, {@code location_teleport}, {@code flesh_ripping}
+     * — annoncaient donc une duree nulle, et leur icone ne s'estompait jamais : c'est ce que le
+     * joueur a vu (« seul le premier slot fait le gris »).
+     */
+    public int getCooldownTotal(Skill skill) {
+        if (skill == null || skill.getCategory() == null) return 0;
+        return cooldownTotals.getOrDefault(skillKey(skill), 0);
+    }
+
+    /**
      * Lance la recharge d'une competence.
      *
      * Reprend {@code CooldownData.set} : une recharge plus longue que celle en cours
@@ -979,6 +1005,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         if (skill == null || skill.getCategory() == null || ticks <= 0) return;
         String key = skillKey(skill);
         cooldowns.merge(key, ticks, Math::max);
+        cooldownTotals.merge(key, ticks, Math::max);
+        // Une recharge qui commence se dit TOUT DE SUITE. Sans ce marquage, le client
+        // n'apprenait qu'elle courait qu'a la prochaine synchronisation ordinaire (jusqu'a
+        // trente ticks plus tard) : le rappel des touches ne s'estompait qu'apres coup, et le
+        // joueur lisait cette latence comme un affichage faux.
+        markDirty();
     }
 
     /**
@@ -992,15 +1024,21 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         Iterator<Map.Entry<String, Integer>> iterator = cooldowns.entrySet().iterator();
         while (iterator.hasNext()) {
             Map.Entry<String, Integer> entry = iterator.next();
+            String key = entry.getKey();
             int left = entry.getValue() - 1;
-            if (left <= 0) iterator.remove();
-            else entry.setValue(left);
+            if (left <= 0) {
+                iterator.remove();
+                cooldownTotals.remove(key);
+            } else {
+                entry.setValue(left);
+            }
         }
     }
 
     /** Oublie toutes les recharges. Appele a la mort du joueur, comme l'original. */
     public void clearCooldowns() {
         cooldowns.clear();
+        cooldownTotals.clear();
     }
 
     /** Nombre de competences en recharge, pour les tests et le debogage. */
@@ -1271,6 +1309,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         cooldowns.forEach(cds::putInt);
         tag.put(TAG_COOLDOWNS, cds);
 
+        // Les durees voyagent avec les ticks restants : c'est ce qui donne son echelle au gris
+        // de l'icone chez le client, qui n'a pas de courbe a relire.
+        CompoundTag cooldownTotalTags = new CompoundTag();
+        cooldownTotals.forEach(cooldownTotalTags::putInt);
+        tag.put(TAG_COOLDOWN_TOTALS, cooldownTotalTags);
+
         // Le surcout voyage avec le reste : l'original le sauvegardait aussi, donc se
         // reconnecter en pleine surcharge ne remet pas la reserve a zero.
         tag.putFloat("overload", overload);
@@ -1322,9 +1366,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         }
 
         cooldowns.clear();
+        cooldownTotals.clear();
         CompoundTag cds = tag.getCompound(TAG_COOLDOWNS);
         for (String key : cds.getAllKeys()) {
-            cooldowns.put(key, cds.getInt(key));
+            int left = cds.getInt(key);
+            cooldowns.put(key, left);
+            // Une sauvegarde d'avant les durees memoirees n'a que les ticks restants : on prend
+            // ce qu'on a, sinon le gris n'aurait aucune echelle au lieu d'une approximative.
+            cooldownTotals.put(key, left);
+        }
+        CompoundTag totalTags = tag.getCompound(TAG_COOLDOWN_TOTALS);
+        for (String key : totalTags.getAllKeys()) {
+            cooldownTotals.merge(key, totalTags.getInt(key), Math::max);
         }
 
         overload = tag.getFloat("overload");
