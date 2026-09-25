@@ -179,6 +179,16 @@ public final class KeyHintHud {
                              int u, int v, int uWidth, int vHeight, int texW, int texH,
                              int rgb, float alpha) {
         if (width <= 0 || height <= 0) return;
+        // Le melange se perd en route, et c'est le piege de cet element. `drawString` (comme
+        // `fill`) dessine via un RenderType translucide dont le nettoyage appelle
+        // `RenderSystem.disableBlend()` : tout ce qui suit l'etiquette d'un capuchon se
+        // dessine donc sans melange. Consequences vecues : les pixels semi-transparents du
+        // cadre et de l'icone s'ecrivent en plein (cadre plus sombre, icone opaque), et
+        // l'estompage de recharge est ignore sur toutes les lignes SAUF la premiere (ses deux
+        // touches sont des boutons de souris, donc sans etiquette). On rallume avant chaque
+        // texture : c'est le seul endroit qui dessine ici.
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(((rgb >> 16) & 0xFF) / 255.0f, ((rgb >> 8) & 0xFF) / 255.0f,
                 (rgb & 0xFF) / 255.0f, alpha);
         graphics.blit(texture, x, y, width, height, u, v, uWidth, vHeight, texW, texH);
