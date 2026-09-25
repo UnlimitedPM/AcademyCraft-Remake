@@ -74,8 +74,17 @@ public final class KeyHintHud {
         // KeyHintVisuals.CONTENT_SHIFT_X, ou le chiffre est explique).
         pose.translate(KeyHintVisuals.CONTENT_SHIFT_X, 0, 0);
 
+        // Seules les touches qui portent une competence s'affichent, et elles se suivent sans
+        // trou : c'est ce que faisait l'original, qui ne parcourait que ses delegues existants
+        // et avancait d'une ligne a chacun.
+        java.util.List<String> names = new java.util.ArrayList<>(KeyHintVisuals.ROWS);
         for (int slot = 0; slot < KeyHintVisuals.ROWS; slot++) {
-            drawRow(graphics, data, slot, slot * KeyHintVisuals.ROW_STEP, usable);
+            names.add(ClientPresetData.skillAt(slot));
+        }
+        int row = 0;
+        for (int slot : KeyHintVisuals.visibleSlots(names)) {
+            drawRow(graphics, data, slot, row * KeyHintVisuals.ROW_STEP, usable);
+            row++;
         }
 
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);

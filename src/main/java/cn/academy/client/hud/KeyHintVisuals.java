@@ -136,6 +136,25 @@ public final class KeyHintVisuals {
     }
 
     /**
+     * Les rangs des touches a dessiner : celles qui portent une competence, dans l'ordre.
+     *
+     * <p>L'original ne parcourait que ses delegues <b>existants</b> et avancait d'une ligne a
+     * chacun : une touche sans competence ne laissait donc ni plaque, ni capuchon, ni trou —
+     * les lignes se suivaient. Le port en dessinait quatre quoi qu'il arrive (il a fallu que le
+     * joueur le signale pour qu'on s'en apercoive) : une touche vide montrait une plaque, un
+     * capuchon et un cadre vide, et laissait un trou luisant dans le rappel.
+     *
+     * <p>PUR : elle ne prend que les noms du prereglage, donc elle se relit en JUnit.
+     */
+    public static java.util.List<Integer> visibleSlots(java.util.List<String> names) {
+        java.util.List<Integer> slots = new java.util.ArrayList<>();
+        for (int slot = 0; slot < names.size(); slot++) {
+            if (names.get(slot) != null) slots.add(slot);
+        }
+        return slots;
+    }
+
+    /**
      * Une competence par son nom, ou {@code null} si aucune categorie ne la porte.
      *
      * <p>Le prereglage ne garde que le <b>nom</b> de la competence : les quatre categories

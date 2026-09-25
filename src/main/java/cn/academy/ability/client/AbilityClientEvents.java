@@ -39,6 +39,9 @@ public class AbilityClientEvents {
         /** Vrai entre l'appui et le relachement d'une competence qui se charge ou se tient. */
         boolean charging;
 
+        /** La touche etait-elle enfoncee au tick precedent ? Voir {@code tick}. */
+        boolean wasDown;
+
         Binding(KeyMapping key, int presetSlot) {
             this.key = key;
             this.presetSlot = presetSlot;
@@ -163,10 +166,29 @@ public class AbilityClientEvents {
         Category category = skill.getCategory();
         if (category == null) return;
 
+        // Un clic n'est un APPUI que si la touche n'etait pas deja enfoncee.
+        //
+        // C'est le piege du clavier : le systeme repet une touche tenue (une trentaine de fois
+        // par seconde, soit un clic tous les deux ticks), et `KeyboardHandler` empile CES
+        // REPETITIONS comme des clics — `set(touche, true)` suivi de `KeyMapping.click`. Tout ce
+        // qui consomme la file les prend donc pour des appuis. Pendant un maintien le serveur
+        // ignore poliment ces appuis en trop (`if (data.isCharging(skill)) return`), mais ils
+        // restent EN ATTENTE : des que le maintien se termine — au relachement, justement — le
+        // premier clic en retard la ROUVRE, et paie son surcout. Vecu : la charge sur F payait
+        // deux ou trois fois son ouverture pour un seul geste, « comme si j'avais spamme ».
+        //
+        // La file est videe dans tous les cas : c'est ce qui empeche les clics en trop de
+        // ressortir plus tard. Un appui bref (touche enfoncee ET relachee entre deux ticks)
+        // reste vu, puisque `wasDown` etait faux.
+        boolean down = binding.key.isDown();
+        boolean clicked = binding.key.consumeClick();
+        boolean pressed = clicked && !binding.wasDown;
+        binding.wasDown = down;
+
         // Appui : l'original envoyait MSG_KEYDOWN. Une competence qui se charge ouvre
         // son compteur, une competence tenue vit a partir de maintenant, une autre part
         // tout de suite.
-        if (binding.key.consumeClick()) {
+        if (pressed) {
             // Une competence qui ouvre un ecran ne part pas : c'est la liste des marques qui
             // decide, et c'est un clic dedans qui enverra quelque chose au serveur.
             if (skill.opensScreen()) {

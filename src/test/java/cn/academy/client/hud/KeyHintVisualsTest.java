@@ -26,6 +26,20 @@ class KeyHintVisualsTest {
     }
 
     @Test
+    void lesTouchesVidesNeSAffichentPas() {
+        // L'original ne listait que les touches garnies, et elles se suivaient sans trou :
+        // le port dessinait quatre lignes quoi qu'il arrive (signale par le joueur).
+        assertEquals(java.util.List.of(0, 2, 3), KeyHintVisuals.visibleSlots(
+                java.util.Arrays.asList("arc_gen", null, "dir_shock", "charging")));
+        assertEquals(java.util.List.of(1), KeyHintVisuals.visibleSlots(
+                java.util.Arrays.asList(null, "charging", null, null)));
+        assertEquals(java.util.List.of(), KeyHintVisuals.visibleSlots(
+                java.util.Arrays.asList(null, null, null, null)));
+        assertEquals(java.util.List.of(0, 1, 2, 3), KeyHintVisuals.visibleSlots(
+                java.util.Arrays.asList("a", "b", "c", "d")));
+    }
+
+    @Test
     void lesTouchesDeLaSourisOntLeurCapuchon() {
         assertEquals(KeyHintVisuals.Cap.MOUSE_LEFT, KeyHintVisuals.cap(true, 0));
         assertEquals(KeyHintVisuals.Cap.MOUSE_RIGHT, KeyHintVisuals.cap(true, 1));
