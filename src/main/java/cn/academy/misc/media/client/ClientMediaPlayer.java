@@ -26,6 +26,9 @@ public final class ClientMediaPlayer {
     private static SoundInstance current;
     private static Media playing;
 
+    /** Le tick client du lancement : c'est lui qui donne la position du morceau. */
+    private static int startTick;
+
     private ClientMediaPlayer() {}
 
     /** Lance un morceau, en arretant celui qui tournait. */
@@ -39,6 +42,8 @@ public final class ClientMediaPlayer {
                 false, 0, SoundInstance.Attenuation.NONE,
                 0.0d, 0.0d, 0.0d, true);
         playing = media;
+        startTick = Minecraft.getInstance().player == null
+                ? 0 : Minecraft.getInstance().player.tickCount;
         Minecraft.getInstance().getSoundManager().play(current);
     }
 
@@ -49,6 +54,18 @@ public final class ClientMediaPlayer {
             current = null;
             playing = null;
         }
+    }
+
+    /**
+     * Depuis combien de temps le morceau tourne, en secondes.
+     *
+     * <p>C'est ce que l'original appelait le {@code playedTime} de son lecteur. Le port le
+     * deduit du tick du joueur : vingt ticks par seconde, et rien a tenir a jour.
+     */
+    public static float elapsedSeconds() {
+        var player = Minecraft.getInstance().player;
+        if (playing == null || player == null) return 0f;
+        return (player.tickCount - startTick) / 20.0f;
     }
 
     /** Bascule : le morceau demande s'il n'est pas en cours, sinon silence. */
