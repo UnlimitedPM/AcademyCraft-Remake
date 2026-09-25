@@ -46,5 +46,16 @@ public class ClientAbilityData {
         if (!holding) {
             DATA.tickOverload();
         }
+        // Les recharges avancent ici AUSSI, et c'est ce qui manquait le plus : le client
+        // recevait bien la valeur posee par le serveur, mais ne la faisait jamais descendre
+        // entre deux envois. Le rappel restait donc fige sur la valeur recue, puis sautait
+        // d'un cran au paquet suivant — et son dernier cran trainait jusqu'a dix ticks apres
+        // que le serveur a rouvert la competence. Le joueur a decrit exactement cela :
+        // « il reste encore un peu gris alors que je peux deja la refaire ».
+        //
+        // Ce n'est pas une decision de jeu, pour la meme raison que ci-dessus : les deux
+        // cotes avancent d'un tick par tick, donc le client arrive a zero au meme moment que
+        // le serveur, et chaque synchronisation reecrit de toute facon la valeur vraie.
+        DATA.tickCooldowns();
     }
 }

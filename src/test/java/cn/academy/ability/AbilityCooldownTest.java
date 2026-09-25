@@ -212,4 +212,86 @@ class AbilityCooldownTest {
 
         assertEquals(0, data.getCooldownCount());
     }
+
+    // ------------------------------------------------------------------
+    // La duree posee : c'est elle qui donne son echelle au gris de l'icone
+    // ------------------------------------------------------------------
+
+    @Test
+    void laRechargeRetientSaDuree() {
+        TestCategory category = new TestCategory("test");
+        DummySkill skill = new DummySkill("skill", 1);
+        category.add(skill);
+        AbilityData data = new AbilityData();
+
+        data.setCooldown(skill, 100);
+
+        assertEquals(100, data.getCooldown(skill));
+        assertEquals(100, data.getCooldownTotal(skill), "la duree posee est celle du gris");
+
+        // Une recharge plus courte ne raccourcit pas celle qui court — et ne doit donc pas
+        // non plus changer l'echelle du gris.
+        data.setCooldown(skill, 20);
+        assertEquals(100, data.getCooldown(skill));
+        assertEquals(100, data.getCooldownTotal(skill));
+
+        // Une plus longue la remplace, duree comprise.
+        data.setCooldown(skill, 300);
+        assertEquals(300, data.getCooldown(skill));
+        assertEquals(300, data.getCooldownTotal(skill));
+    }
+
+    @Test
+    void uneCompetencePreteNAPasDeDuree() {
+        TestCategory category = new TestCategory("test");
+        DummySkill skill = new DummySkill("skill", 1);
+        category.add(skill);
+        AbilityData data = new AbilityData();
+
+        assertEquals(0, data.getCooldownTotal(skill),
+                "sans recharge, le gris n'a rien a mesurer");
+    }
+
+    @Test
+    void laDureePartAvecLaRecharge() {
+        TestCategory category = new TestCategory("test");
+        DummySkill skill = new DummySkill("skill", 1);
+        category.add(skill);
+        AbilityData data = new AbilityData();
+        data.setCooldown(skill, 2);
+
+        data.tickCooldowns();
+        assertEquals(1, data.getCooldown(skill));
+        assertEquals(2, data.getCooldownTotal(skill), "la duree reste tant que la recharge court");
+
+        data.tickCooldowns();
+        assertEquals(0, data.getCooldown(skill));
+        assertEquals(0, data.getCooldownTotal(skill), "et elle part avec la recharge");
+    }
+
+    @Test
+    void laSauvegardeConserveLaDuree() {
+        TestCategory category = new TestCategory("test");
+        DummySkill skill = new DummySkill("skill", 1);
+        category.add(skill);
+        AbilityData data = new AbilityData();
+        data.setCooldown(skill, 120);
+
+        AbilityData reloaded = new AbilityData();
+        reloaded.deserializeNBT(data.serializeNBT());
+
+        assertEquals(120, reloaded.getCooldown(skill));
+        assertEquals(120, reloaded.getCooldownTotal(skill),
+                "c'est la duree qui voyage avec les ticks restants pour eclairer le gris");
+    }
+
+    @Test
+    void leBranchementSeReposeUneDemiSecondeApresLeRelachement() {
+        // L'original n'imposait aucune attente, on pouvait spammer le branchement. Mais le
+        // port recoit la repetition du clavier : un clic livre juste apres le relachement
+        // rouvrait la competence et refacturait son surcout. Dix ticks suffisent a avaler
+        // ce clic de trop — voir ChargingSkill.RELEASE_COOLDOWN, que le joueur a demande.
+        assertEquals(10, new cn.academy.ability.electromaster.ChargingSkill()
+                .getCooldownTicks(new AbilityData()));
+    }
 }

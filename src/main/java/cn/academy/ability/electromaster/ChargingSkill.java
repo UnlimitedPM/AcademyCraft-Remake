@@ -36,6 +36,17 @@ public class ChargingSkill extends Skill {
     /** Portee de la visee, comme l'original. */
     private static final double RANGE = 15.0;
 
+    /**
+     * Attente avant de pouvoir rebrancher : 10 ticks, une demi-seconde.
+     *
+     * <p>L'original n'en posait aucune, on pouvait spammer. Le port, lui, recoit la
+     * repetition du clavier : une touche tenue se repete une trentaine de fois par seconde,
+     * et un de ces clics peut arriver juste apres le relachement, quand le maintien est deja
+     * ferme — la competence se rouvrait donc toute seule, et repayait son surcout. Une
+     * demi-seconde suffit a avaler ce clic de trop ; le joueur l'a demandee lui-meme.
+     */
+    private static final int RELEASE_COOLDOWN = 10;
+
     public ChargingSkill() {
         super("charging", 1);
     }
@@ -59,6 +70,16 @@ public class ChargingSkill extends Skill {
     @Override
     public float getOverloadCost(AbilityData data) {
         return lerp(65f, 48f, data.getSkillExp(this));
+    }
+
+    /**
+     * Une demi-seconde avant de pouvoir rebrancher. Voir {@link #RELEASE_COOLDOWN} :
+     * c'est ce delai qui empeche un clic en trop de rouvrir le branchement et de
+     * refacturer le surcout.
+     */
+    @Override
+    public int getCooldownTicks(AbilityData data) {
+        return RELEASE_COOLDOWN;
     }
 
     /** Le branchement lui-meme ne coute pas de CP : c'est l'entretien qui paie. */
