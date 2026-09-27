@@ -2,7 +2,7 @@
   "parent": "academy:getting_phase",
   "display": {
     "icon": {
-      "item": "academy:phase_generator"
+      "item": "academy:phase_gen"
     },
     "title": {
       "translate": "advancements.general.phase_generator"

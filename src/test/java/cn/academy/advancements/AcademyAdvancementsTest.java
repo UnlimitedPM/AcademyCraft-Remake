@@ -64,7 +64,7 @@ class AcademyAdvancementsTest {
         assertEquals(4, AcademyAdvancementDispatcher.CRAFTED.size(),
                 "l'original recompensait quatre fabrications");
         assertEquals(AcademyAdvancements.PHASE_GENERATOR,
-                AcademyAdvancementDispatcher.CRAFTED.get("phase_generator"));
+                AcademyAdvancementDispatcher.CRAFTED.get("phase_gen"));
         assertEquals(AcademyAdvancements.AC_NODE,
                 AcademyAdvancementDispatcher.CRAFTED.get("node_basic"));
         assertEquals(AcademyAdvancements.AC_MATRIX,

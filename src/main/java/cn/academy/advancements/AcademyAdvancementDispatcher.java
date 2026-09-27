@@ -33,7 +33,7 @@ public class AcademyAdvancementDispatcher {
 
     /** Fabriquer ces objets donne le succes en face. */
     public static final Map<String, String> CRAFTED = Map.of(
-            "phase_generator", AcademyAdvancements.PHASE_GENERATOR,
+            "phase_gen", AcademyAdvancements.PHASE_GENERATOR,
             "node_basic", AcademyAdvancements.AC_NODE,
             "matrix", AcademyAdvancements.AC_MATRIX,
             "developer_portable", AcademyAdvancements.AC_DEVELOPER);

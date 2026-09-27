@@ -375,7 +375,10 @@ if (lang.missing) {
     else add('INFO', 'lang tab', t, candidates.join(' | '));
   }
   for (const k of [...keys].sort()) {
-    const m = k.match(/^(?:item|block)\.academy\.(.+)$/);
+    // Seules les cles qui nomment un objet tout court viennent du registre
+    // ("item.academy.magnetic_coil"). Une cle a plusieurs points est une description posee
+    // a la main ("item.academy.magnetic_coil.desc") : elle ne peut pas etre orpheline.
+    const m = k.match(/^(?:item|block)\.academy\.([^.]+)$/);
     if (m && !blocks.has(m[1]) && !items.has(m[1])) {
       add('INFO', 'lang orpheline', m[1], k);
     }

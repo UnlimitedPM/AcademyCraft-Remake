@@ -60,7 +60,9 @@ public class ModBlocks {
                     .strength(3.5f)
                     .sound(SoundType.METAL)));
 
-    public static final RegistryObject<Block> PHASE_GENERATOR = BLOCKS.register("phase_generator",
+    // Les identifiants sont ceux de la 1.12.2 (`phase_gen`) : c'est ce que le jeu affiche
+    // sous le nom de l'objet, et ce que les recettes, succes et tutoriels nomment.
+    public static final RegistryObject<Block> PHASE_GENERATOR = BLOCKS.register("phase_gen",
             () -> new PhaseGeneratorBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
                     .strength(4.0f)
                     .sound(SoundType.METAL)
@@ -115,7 +117,7 @@ public class ModBlocks {
     public static final RegistryObject<Block> DEV_NORMAL = BLOCKS.register("dev_normal",
             () -> new DeveloperBlock(BlockBehaviour.Properties.of().strength(4.0f).noOcclusion(),
                     () -> cn.academy.ability.develop.DeveloperType.NORMAL));
-    public static final RegistryObject<Block> DEV_ADVANCED = BLOCKS.register("developer_advanced",
+    public static final RegistryObject<Block> DEV_ADVANCED = BLOCKS.register("dev_advanced",
             () -> new DeveloperBlock(BlockBehaviour.Properties.of()
                     .strength(4.5f) // Un peu plus rÃ©sistant que le normal
                     .noOcclusion(),

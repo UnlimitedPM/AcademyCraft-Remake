@@ -451,6 +451,6 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     @Override
     public Component getDisplayName() {
         return Component.translatable("block.academy."
-                + (type == DeveloperType.ADVANCED ? "developer_advanced" : "dev_normal"));
+                + (type == DeveloperType.ADVANCED ? "dev_advanced" : "dev_normal"));
     }
 }

@@ -71,7 +71,8 @@ class TutorialLibraryTest {
 
     @Test
     void lesTutorielsDObjetDemandentDesObjetsQuiExistent() {
-        // Les noms sont ceux du port, qui a garde deux noms de la 1.12.2 (dev_normal).
+        // Les noms sont ceux du port, qui a garde ceux de la 1.12.2 (dev_normal,
+        // dev_advanced, phase_gen).
         // Un nom faux ne ferait rien tomber en jeu : le tutoriel resterait simplement
         // ferme pour toujours, sans message. Le fait que ces objets existent vraiment se
         // verifie dans un GameTest, ou les registres sont charges.
@@ -82,7 +83,7 @@ class TutorialLibraryTest {
 
         assertTrue(named.contains("academy:constraint_metal"), "les minerais de l'original");
         assertTrue(named.contains("academy:dev_normal"), "le developpeur normal, nom de 1.12.2");
-        assertTrue(named.contains("academy:developer_advanced"), "et le developpeur avance");
+        assertTrue(named.contains("academy:dev_advanced"), "et le developpeur avance");
         assertTrue(named.contains("academy:terminal_installer"), "l'objet du terminal");
         assertEquals(17, named.size(), "la liste des objets ouvreurs a change");
     }

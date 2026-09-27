@@ -59,6 +59,19 @@ public final class AcademyGameTests {
         helper.assertTrue(ModItems.CRYSTAL_LOW.get() != null, "crystal_low non enregistre");
         helper.assertTrue(ModItems.MATTER_UNIT.get() != null, "matter_unit non enregistre");
         helper.assertTrue(ModItems.FACTOR_ELECTRO.get() != null, "factor_electromaster non enregistre");
+
+        // Les identifiants sont ceux de l'original : c'est ce que le jeu ecrit sous le nom de
+        // l'objet, et ce que les recettes, succes et tutoriels nomment.
+        assertTrue(helper, "phase_gen".equals(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                        .getKey(ModItems.PHASE_GENERATOR.get()).getPath()),
+                "le generateur de phase s'appelle phase_gen");
+        assertTrue(helper, "dev_advanced".equals(net.minecraft.core.registries.BuiltInRegistries.ITEM
+                        .getKey(ModItems.DEV_ADVANCED_ITEM.get()).getPath()),
+                "le developpeur avance s'appelle dev_advanced");
+        // Et le chargeur de debogage a ete retire : rien ne le nomme plus.
+        assertTrue(helper, !net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(
+                        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("academy", "debug_charger")),
+                "le chargeur de debogage a ete retire");
         helper.succeed();
     }
 

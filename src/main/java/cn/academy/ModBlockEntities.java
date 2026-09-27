@@ -75,14 +75,14 @@ public class ModBlockEntities {
                             ModBlocks.DEV_NORMAL.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<DeveloperBlockEntity>> DEVELOPER_ADVANCED =
-            BLOCK_ENTITIES.register("developer_advanced", () ->
+            BLOCK_ENTITIES.register("dev_advanced", () ->
                     BlockEntityType.Builder.of(
                             (pos, state) -> new DeveloperBlockEntity(pos, state,
                                     cn.academy.ability.develop.DeveloperType.ADVANCED),
                             ModBlocks.DEV_ADVANCED.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<PhaseGeneratorBlockEntity>> PHASE_GENERATOR =
-            BLOCK_ENTITIES.register("phase_generator", () ->
+            BLOCK_ENTITIES.register("phase_gen", () ->
                     BlockEntityType.Builder.of(PhaseGeneratorBlockEntity::new,
                             ModBlocks.PHASE_GENERATOR.get()).build(null));
 

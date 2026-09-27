@@ -50,7 +50,10 @@ public class ModItems {
     public static final RegistryObject<Item> REINFORCED_IRON_PLATE = ITEMS.register("reinforced_iron_plate", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> CALC_CHIP = ITEMS.register("calc_chip", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> DATA_CHIP = ITEMS.register("data_chip", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> MAGNETIC_COIL = ITEMS.register("magnetic_coil", () -> new Item(new Item.Properties()));
+    // Elle surcharge le developeur pour reecrire la realite personnelle : l'original le
+    // disait sous son nom, et le port le dit pareil (voir TooltipItem).
+    public static final RegistryObject<Item> MAGNETIC_COIL = ITEMS.register("magnetic_coil",
+            () -> new TooltipItem("item.academy.magnetic_coil.desc"));
 
 
     // Machines
@@ -58,7 +61,7 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.IMAG_FUSOR.get(), new Item.Properties()));
     public static final RegistryObject<Item> METAL_FORMER = ITEMS.register("metal_former",
             () -> new BlockItem(ModBlocks.METAL_FORMER.get(), new Item.Properties()));
-    public static final RegistryObject<Item> PHASE_GENERATOR = ITEMS.register("phase_generator",
+    public static final RegistryObject<Item> PHASE_GENERATOR = ITEMS.register("phase_gen",
             () -> new BlockItem(ModBlocks.PHASE_GENERATOR.get(), new Item.Properties()));
     public static final RegistryObject<Item> MATRIX = ITEMS.register("matrix",
             () -> new BlockItem(ModBlocks.MATRIX.get(), new Item.Properties()));
@@ -107,7 +110,7 @@ public class ModItems {
     public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new TutorialItem());
     public static final RegistryObject<Item> DEV_NORMAL_ITEM = ITEMS.register("dev_normal",
             () -> new BlockItem(ModBlocks.DEV_NORMAL.get(), new Item.Properties()));
-    public static final RegistryObject<Item> DEV_ADVANCED_ITEM = ITEMS.register("developer_advanced",
+    public static final RegistryObject<Item> DEV_ADVANCED_ITEM = ITEMS.register("dev_advanced",
             () -> new BlockItem(ModBlocks.DEV_ADVANCED.get(), new Item.Properties()));
     public static final RegistryObject<Item> CAT_ENGINE = ITEMS.register("cat_engine",
             () -> new BlockItem(ModBlocks.CAT_ENGINE.get(), new Item.Properties()));
@@ -264,19 +267,6 @@ public class ModItems {
         }
     }
 
-    public static final RegistryObject<Item> DEBUG_CHARGER = ITEMS.register("debug_charger",
-            () -> new Item(new Item.Properties()) {
-                @Override
-                public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-                    ItemStack energyUnit = player.getOffhandItem(); // Energy Unit en main gauche
-                    if (energyUnit.getItem() == ModItems.ENERGY_UNIT.get()) {
-                        EnergyUnit.charge(energyUnit, EnergyUnit.MAX_ENERGY * 0.5f);
-                        return InteractionResultHolder.success(player.getItemInHand(hand));
-                    }
-                    return InteractionResultHolder.pass(player.getItemInHand(hand));
-                }
-            });
-
     /**
      * Etat de l'unite d'energie, porte par le NBT {@code ac_energy}.
      *
@@ -329,7 +319,12 @@ public class ModItems {
         }
         @Override
         public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-            tooltip.add(Component.translatable(tooltipKey).withStyle(ChatFormatting.GRAY));
+            // L'original portait sa description sur une seule ligne et la coupait sur `<br>`
+            // (ItemMagneticCoil) : ici la ligne se coupe sur un retour a la ligne, que
+            // Minecraft dessine tel quel. Une description d'une seule ligne ne change pas.
+            for (String line : Component.translatable(tooltipKey).getString().split("\n")) {
+                tooltip.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
+            }
         }
     }
 

@@ -6,11 +6,11 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "academy:developer_advanced",
+          "name": "academy:dev_advanced",
           "conditions": [
             {
               "condition": "minecraft:block_state_property",
-              "block": "academy:developer_advanced",
+              "block": "academy:dev_advanced",
               "properties": {
                 "part": "base"
               }

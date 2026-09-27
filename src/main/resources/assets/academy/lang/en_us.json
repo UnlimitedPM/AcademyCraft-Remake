@@ -44,7 +44,7 @@
   "block.academy.machine_frame": "Machine Frame",
   "block.academy.imag_fusor": "Imag Fusor",
   "block.academy.metal_former": "Metal Former",
-  "block.academy.phase_generator": "Phase Generator",
+  "block.academy.phase_gen": "Phase Generator",
   "block.academy.solar_gen": "Solar Generator",
   "block.academy.cat_engine": "Toast and Cat",
   "block.academy.matrix": "Wireless Imag Matrix",
@@ -55,7 +55,7 @@
   "block.academy.windgen_pillar": "Wind Generator Pillar",
   "block.academy.windgen_main": "Wind Generator",
   "block.academy.dev_normal": "Normal Ability Developer",
-  "block.academy.developer_advanced": "Advanced Ability Developer",
+  "block.academy.dev_advanced": "Advanced Ability Developer",
 
   "academy.developer.type.portable": "Portable Developer",
   "academy.developer.portable.energy": "Energy %s / %s",
@@ -66,7 +66,7 @@
 
 
 
-  "item.academy.phase_generator": "Phase Generator",
+  "item.academy.phase_gen": "Phase Generator",
   "item.academy.crystal_low": "Low-purity Imag Crystal",
   "item.academy.crystal_normal": "Mid-purity Imag Crystal",
   "item.academy.crystal_pure": "High-purity Imag Crystal",
@@ -84,6 +84,7 @@
   "item.academy.calc_chip": "Calculation Chip",
   "item.academy.data_chip": "Data Chip",
   "item.academy.magnetic_coil": "High Voltage Magnetic Coil",
+  "item.academy.magnetic_coil.desc": "Overcharges the developer\nIn order to rewrite personal reality",
   "item.academy.matter_unit": "Empty Unit",
   "item.academy.matter_unit_phase_liquid": "Imag Phase Liquid Unit",
   "item.academy.mat_core_0": "Basic Matrix Core",
@@ -98,7 +99,6 @@
   "item.academy.terminal_installer": "Data Terminal",
   "item.academy.developer_portable": "Portable Developer",
   "item.academy.tutorial": "MisakaCloud Terminal",
-  "item.academy.debug_charger": "Debug Charger",
 
   "item.academy.media_only_my_railgun": "only my railgun",
   "ac.media.only_my_railgun.desc": "Toaru Kagaku no Railgun OP1",

@@ -13,13 +13,13 @@
     "academy:machine_frame",
     "academy:imag_fusor",
     "academy:metal_former",
-    "academy:phase_generator",
+    "academy:phase_gen",
     "academy:solar_gen",
     "academy:windgen_base",
     "academy:windgen_pillar",
     "academy:windgen_main",
     "academy:matrix",
     "academy:dev_normal",
-    "academy:developer_advanced"
+    "academy:dev_advanced"
   ]
 }

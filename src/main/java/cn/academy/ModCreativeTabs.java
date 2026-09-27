@@ -111,9 +111,8 @@ public class ModCreativeTabs {
                         output.accept(ModItems.IMAG_PHASE.get());
                         output.accept(ModItems.LOGO.get());
 
-                        // --- ÉNERGIE ET DEBUG ---
+                        // --- ÉNERGIE ---
                         output.accept(ModItems.ENERGY_UNIT.get());
-                        output.accept(ModItems.DEBUG_CHARGER.get());
                     })
                     .build());
 

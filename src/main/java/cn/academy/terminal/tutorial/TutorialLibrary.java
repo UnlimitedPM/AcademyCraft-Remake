@@ -49,8 +49,8 @@ public final class TutorialLibrary {
     /**
      * Les tutoriels, dans l'ordre ou l'original les declarait.
      *
-     * <p>Les objets sont nommes comme les enregistre le port, qui a garde deux noms de
-     * la 1.12.2 ({@code dev_normal}, {@code phase_gen} devenu {@code phase_generator}).
+     * <p>Les objets sont nommes comme les enregistre le port, qui a garde les noms de la
+     * 1.12.2 ({@code dev_normal}, {@code dev_advanced}, {@code phase_gen}).
      * Le tutoriel du terminal demande aussi l'objet de la seule application non
      * preinstallee que le port livre : l'original y ajoutait, en boucle, l'objet de
      * chaque application, et les autres n'existent pas encore.
@@ -59,7 +59,7 @@ public final class TutorialLibrary {
             new Entry("welcome", List.of()),
             new Entry("ores", List.of("academy:constraint_metal", "academy:imagsil_ore",
                     "academy:crystal_ore", "academy:reso_ore")),
-            new Entry("phase_generator", List.of("academy:phase_generator")),
+            new Entry("phase_generator", List.of("academy:phase_gen")),
             new Entry("solar_generator", List.of("academy:solar_gen")),
             new Entry("wind_generator", List.of("academy:windgen_base", "academy:windgen_fan",
                     "academy:windgen_main", "academy:windgen_pillar")),
@@ -67,7 +67,7 @@ public final class TutorialLibrary {
             new Entry("imag_fusor", List.of("academy:imag_fusor")),
             new Entry("terminal", List.of("academy:terminal_installer", "academy:app_skill_tree")),
             new Entry("ability_developer", List.of("academy:developer_portable",
-                    "academy:dev_normal", "academy:developer_advanced")),
+                    "academy:dev_normal", "academy:dev_advanced")),
             new Entry("ability_basis", List.of()),
             new Entry("misc", List.of()),
             new Entry("develop_ability", List.of()),

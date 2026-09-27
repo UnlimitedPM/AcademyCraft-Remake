@@ -362,6 +362,6 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.phase_generator");
+        return Component.translatable("block.academy.phase_gen");
     }
 }
