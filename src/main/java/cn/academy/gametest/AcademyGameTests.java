@@ -5055,6 +5055,50 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le missile atteint aussi ce qui est dans le COIN de sa portee.
+     *
+     * <p>L'original ne filtrait que par boite : une cible a 6,4 blocs sur la diagonale est
+     * atteignable avec une portee de 5, alors qu'un filtre spherique la refuserait. C'est la
+     * difference que le joueur a sentie comme une portee trop courte, et ce test la fige.
+     */
+    @GameTest(template = "empty")
+    public static void leMissileAtteintLeCoinDeSaPortee(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.ELECTRON_MISSILE;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 200);
+
+        var player = ownPlayer(helper, "corner_missileer");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        clearCorridor(helper, abs, 10);
+
+        // 4,5 sur deux axes : plus loin que les 5 blocs de portee au depart, mais dans la
+        // boite, et bien le seul vivant a portee.
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 5.0, abs.getY(), abs.getZ() + 5.0, 0f, 0f);
+        level.addFreshEntity(zombie);
+        float before = zombie.getHealth();
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(skill.getCategory(), 5);
+        data.learnSkill(skill);
+
+        data.beginCharge(skill);
+        skill.onStart(player, data);
+        for (int tick = 0; tick <= 8; tick++) {
+            assertTrue(helper, skill.onHoldTick(player, data, tick), "le maintien doit tenir");
+        }
+
+        assertTrue(helper, zombie.getHealth() < before,
+                "une cible en coin doit etre atteinte : " + zombie.getHealth() + " contre " + before);
+
+        zombie.discard();
+        data.endCharge(skill);
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,

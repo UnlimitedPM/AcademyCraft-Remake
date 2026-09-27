@@ -6,7 +6,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 
 /**
  * Electron Missile : la derniere competence du meltdowner, portage de {@code ElectronMissile}.
@@ -88,7 +87,14 @@ public class ElectronMissileSkill extends Skill {
         return lerp(10f, 18f, data.getSkillExp(this));
     }
 
-    /** Portee de la chasse : de 5 a 13 blocs. */
+    /**
+     * Portee de la chasse : de 5 a 13 blocs.
+     *
+     * <p>C'est un <b>demi-cote de boite</b>, pas un rayon de sphere : l'original elargissait la
+     * boite englobante du joueur ({@code WorldUtils.getEntities}) et gardait le plus proche, sans
+     * autre filtre. Une cible dans un coin est donc atteignable jusqu'a {@code range} sur chaque
+     * axe, soit un peu moins de 1,42 fois cela sur la diagonale.
+     */
     public float range(AbilityData data) {
         return lerp(5f, 13f, data.getSkillExp(this));
     }
@@ -148,18 +154,21 @@ public class ElectronMissileSkill extends Skill {
     /**
      * L'ennemi le plus proche de la portee, ou {@code null}.
      *
-     * <p>L'original parcourait les vivants autour de lui et gardait le plus proche : le port fait
-     * la meme chose, sans tri, donc sans dependre de l'ordre de la liste.
+     * <p>L'original parcourait les vivants autour de lui dans une <b>boite</b> — sa
+     * {@code WorldUtils.getEntities} elargit la boite englobante du joueur — et gardait le plus
+     * proche, sans tri ni filtre de distance. Le port y ajoutait une coupe spherique que
+     * l'original n'avait pas : une cible en coin, atteignable chez lui, ne l'etait plus ici, et
+     * c'est exactement ce que le joueur a senti comme une portee trop courte. La boite est donc
+     * la seule limite, elle est prise sur le corps du joueur comme chez lui, et le plus proche
+     * gagne.
      */
     private static LivingEntity closest(Player player, float range) {
-        Vec3 center = player.position();
-        AABB area = new AABB(center, center).inflate(range);
+        AABB area = player.getBoundingBox().inflate(range);
         LivingEntity best = null;
         double bestDistance = Double.MAX_VALUE;
         for (Entity entity : player.level().getEntities(player, area,
                 e -> e instanceof LivingEntity && e.isAlive())) {
             double distance = entity.distanceToSqr(player);
-            if (distance > (double) range * range) continue;
             if (distance < bestDistance) {
                 bestDistance = distance;
                 best = (LivingEntity) entity;
