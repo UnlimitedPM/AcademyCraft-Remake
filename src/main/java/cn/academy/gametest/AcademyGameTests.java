@@ -5055,6 +5055,42 @@ public final class AcademyGameTests {
     }
 
     /**
+     * L'experience du passif de radiation, telle que le joueur l'a relevee sur l'original.
+     *
+     * <p>Le passif tire son experience de la reserve : son plafond, rapporte a celui du niveau 5.
+     * Le detail qui compte est que l'original lisait ce plafond-la par {@code CPData.getInitCP},
+     * qui declenchait le meme evenement que la reserve — si bien que les bonus des cursus
+     * s'ajoutent aux DEUX cotes de la division. Le joueur a mesure 31,1 % au premier cours et
+     * 41 % au second, la ou un denominateur reste a 8000 aurait donne 35 % et 53,8 %.
+     */
+    @GameTest(template = "empty")
+    public static void laRadiationSuitLaReserveEtSesBonus(GameTestHelper helper) {
+        var meltdowner = cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE;
+        var rad = cn.academy.ability.meltdowner.MeltdownerCategory.RADIATION_INTENSIFY;
+        var brain = meltdowner.getSkill("brain_course");
+        var advanced = meltdowner.getSkill("brain_course_advanced");
+
+        var player = ownPlayer(helper, "radiation_reader");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(meltdowner, 1);
+        data.learnSkill(rad);
+
+        // Sans les cursus : 1800 sur les 8000 du niveau 5, soit un peu moins d'un quart.
+        assertClose(helper, 1800d / 8000d, rad.computeExp(data), "au depart, 22,5 %");
+        // Avec le premier cours : (1800 + 1000) / (8000 + 1000) = 31,1 %.
+        data.learnSkill(brain);
+        assertClose(helper, 2800d / 9000d, rad.computeExp(data),
+                "le cours de cerveau ajoute ses 1000 des deux cotes");
+        // Et avec le cours avance : (1800 + 2500) / (8000 + 2500) = 41 %.
+        data.learnSkill(advanced);
+        assertClose(helper, 4300d / 10500d, rad.computeExp(data),
+                "et le cours avance ses 1500, toujours des deux cotes");
+
+        helper.succeed();
+    }
+
+    /**
      * La marque de radiation alourdit les coups recus, puis s'efface.
      *
      * <p>Portage de {@code MDDamageHelper} : une cible touchee par un tir du meltdowner porte la

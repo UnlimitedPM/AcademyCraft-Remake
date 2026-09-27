@@ -56,14 +56,22 @@ public class RadiationIntensifySkill extends Skill {
     /**
      * L'experience du passif : {@code clamp(maxCP / maxCP du niveau 5)}.
      *
-     * <p>C'est le calcul de l'original ({@code getInitCP(5)}), et il compte la reserve
-     * <b>avec</b> ses ajouts et les bonus des cursus : un joueur qui a pousse sa reserve voit
-     * donc ses radiations progresser.
+     * <p>Deux details de l'original, qui se voient tous les deux dans le chiffre :
+     *
+     * <ul>
+     * <li>le numerateur est la reserve <b>avec</b> ses ajouts ;</li>
+     * <li>et le <b>denominateur aussi</b>. L'original le lisait par {@code CPData.getInitCP(5)},
+     *     qui declenchait le meme evenement de plafond que la reserve elle-meme : Brain Course y
+     *     ajoutait donc ses 1000 points AVANT la division. Sans cela le passif bondirait de
+     *     22,5 a 35 % au premier cours ; l'original fait 31,1 %, puis 41 % avec le cours avance —
+     *     les chiffres que le joueur a releves sur le vrai mod, et que le GameTest
+     *     {@code laRadiationSuitLaReserveEtSesBonus} fige.</li>
+     * </ul>
      */
     @Override
     public float computeExp(AbilityData data) {
         if (data == null) return 0f;
-        float full = AbilityData.baseMaxControlPoint(5);
+        float full = AbilityData.baseMaxControlPoint(5) + data.getPassiveMaxControlPoint();
         if (full <= 0f) return 0f;
         return Math.min(1f, data.getMaxControlPoint() / full);
     }
