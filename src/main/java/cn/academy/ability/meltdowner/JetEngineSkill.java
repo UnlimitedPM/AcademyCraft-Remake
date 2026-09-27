@@ -189,6 +189,7 @@ public class JetEngineSkill extends Skill {
         if (hit instanceof LivingEntity living) {
             living.hurt(player.damageSources().indirectMagic(player, player),
                     scaled(flightDamage(data)));
+            RadiationMarks.mark(living, data);
         }
     }
 }

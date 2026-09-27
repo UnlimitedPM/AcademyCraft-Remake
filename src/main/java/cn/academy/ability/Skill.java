@@ -264,6 +264,23 @@ public abstract class Skill {
         return 1f;
     }
 
+    /**
+     * L'experience de cette competence se calcule au lieu de s'apprendre.
+     *
+     * <p>Portage de {@code expCustomized} de l'original : une competence peut tirer son
+     * experience d'un etat du joueur — l'intensification par radiation la tire de sa reserve —
+     * au lieu de la gagner en s'en servant. Elle n'a alors pas d'avancement a elle, et
+     * {@code AbilityData.getSkillExp} appelle {@link #computeExp} a chaque lecture.
+     */
+    public boolean hasComputedExp() {
+        return false;
+    }
+
+    /** L'experience calculee, quand {@link #hasComputedExp()} est vrai. */
+    public float computeExp(AbilityData data) {
+        return 0f;
+    }
+
     // ------------------------------------------------------------------
     // Experience d'usage
     // ------------------------------------------------------------------

@@ -907,6 +907,9 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public float getSkillExp(Skill skill) {
         if (skill == null || skill.getCategory() == null) return 0f;
         if (!hasLearned(skill.getCategory())) return 0f;
+        // Une competence dont l'experience se calcule (voir Skill.hasComputedExp) n'en apprend
+        // aucune : c'est l'etat du joueur qui parle, et il peut changer tout seul.
+        if (skill.hasComputedExp()) return skill.computeExp(this);
         return skillExps.getOrDefault(skillKey(skill), 0f);
     }
 

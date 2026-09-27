@@ -73,6 +73,9 @@ public class ElectronBombSkill extends Skill {
         List<LivingEntity> nearby = player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         for (LivingEntity living : nearby) {
             living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+            // Le tir marque la cible, si le joueur a appris l'intensification par radiation :
+            // c'est elle qui alourdit ensuite tous les coups qu'elle encaisse.
+            RadiationMarks.mark(living, data);
         }
     }
 }

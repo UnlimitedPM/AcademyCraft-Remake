@@ -242,6 +242,7 @@ public class ScatterBombSkill extends Skill {
                 living.invulnerableTime = 0;
                 living.hurt(player.damageSources().indirectMagic(player, player),
                         scaled(ballDamage(data)));
+                RadiationMarks.mark(living, data);
             }
         }
 

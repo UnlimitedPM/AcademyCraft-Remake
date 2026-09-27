@@ -44,6 +44,7 @@ class PortedSkillsTest {
             Map.entry("electromaster.mine_detect", 3),
             Map.entry("electromaster.mag_manip", 2),
             Map.entry("meltdowner.electron_bomb", 1),
+            Map.entry("meltdowner.rad_intensify", 1),
             Map.entry("meltdowner.light_shield", 2),
             Map.entry("meltdowner.scatter_bomb", 2),
             Map.entry("meltdowner.meltdowner", 3),
@@ -111,6 +112,7 @@ class PortedSkillsTest {
             Map.entry("teleporter.flesh_ripping",
                     List.of("teleporter.mark_teleport", "teleporter.penetrate_teleport")),
             Map.entry("meltdowner.light_shield", List.of("meltdowner.electron_bomb")),
+            Map.entry("meltdowner.rad_intensify", List.of("meltdowner.electron_bomb")),
             Map.entry("meltdowner.scatter_bomb", List.of("meltdowner.electron_bomb")),
             // La deuxieme a deux parentes : la bombe pour le plasma, le bouclier pour
             // l'avoir tenu. L'original les demandait toutes les deux a 0,8.
@@ -355,9 +357,10 @@ class PortedSkillsTest {
                         "body_intensify", "thunder_bolt", "railgun", "thunder_clap",
                         "brain_course", "brain_course_advanced", "mind_course"),
                 namesOf(cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE));
-        assertEquals(List.of("electron_bomb", "scatter_bomb", "light_shield", "meltdowner",
-                        "mine_ray_basic", "ray_barrage", "jet_engine", "mine_ray_expert",
-                        "mine_ray_luck", "brain_course", "brain_course_advanced", "mind_course"),
+        assertEquals(List.of("electron_bomb", "rad_intensify", "scatter_bomb", "light_shield",
+                        "meltdowner", "mine_ray_basic", "ray_barrage", "jet_engine",
+                        "mine_ray_expert", "mine_ray_luck", "brain_course",
+                        "brain_course_advanced", "mind_course"),
                 namesOf(cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE));
         assertEquals(List.of("threatening_teleport", "dim_folding_theorem", "penetrate_teleport",
                         "mark_teleport", "flesh_ripping", "location_teleport", "shift_tp",

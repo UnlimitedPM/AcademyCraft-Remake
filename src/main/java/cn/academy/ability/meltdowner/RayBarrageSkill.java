@@ -155,6 +155,7 @@ public class RayBarrageSkill extends Skill {
             living.invulnerableTime = 0;
             living.hurt(player.damageSources().indirectMagic(player, player),
                     scaled(plainDamage(data)));
+            RadiationMarks.mark(living, data);
         }
     }
 
@@ -183,6 +184,7 @@ public class RayBarrageSkill extends Skill {
             target.invulnerableTime = 0;
             target.hurt(player.damageSources().indirectMagic(player, player),
                     scaled(scatteredDamage(data)));
+            RadiationMarks.mark(target, data);
         }
     }
 }

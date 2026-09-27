@@ -9,6 +9,7 @@ public class MeltdownerCategory extends Category {
 
     public static final MeltdownerSkill MELTDOWNER = new MeltdownerSkill();
     public static final ElectronBombSkill ELECTRON_BOMB = new ElectronBombSkill();
+    public static final RadiationIntensifySkill RADIATION_INTENSIFY = new RadiationIntensifySkill();
     public static final LightShieldSkill LIGHT_SHIELD = new LightShieldSkill();
     public static final ScatterBombSkill SCATTER_BOMB = new ScatterBombSkill();
     public static final JetEngineSkill JET_ENGINE = new JetEngineSkill();
@@ -23,8 +24,9 @@ public class MeltdownerCategory extends Category {
         super(NAME);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatMeltdowner.
-        // (rad_intensify et electron_missile, absents du port, se rangeront ici.)
+        // (electron_missile, absent du port, se rangera apres le rayon chanceux.)
         addSkill(ELECTRON_BOMB);
+        addSkill(RADIATION_INTENSIFY);
         addSkill(SCATTER_BOMB);
         addSkill(LIGHT_SHIELD);
         addSkill(MELTDOWNER);
@@ -39,6 +41,9 @@ public class MeltdownerCategory extends Category {
 
         // Dependances de l'original dont les deux bouts sont portes. Il ne reste que
         // l'ecran de la bombe a electrons, qui attend une application du terminal.
+        // L'original demandait la moitie de l'experience de la bombe a electrons : le passif
+        // vient de la meme source que le reste du plasma.
+        RADIATION_INTENSIFY.setParent(ELECTRON_BOMB, 0.5f);
         LIGHT_SHIELD.setParent(ELECTRON_BOMB, 1f);
         SCATTER_BOMB.setParent(ELECTRON_BOMB, 0.8f);
         // Le meltdowner demande les deux : la bombe pour la maitrise du plasma, le

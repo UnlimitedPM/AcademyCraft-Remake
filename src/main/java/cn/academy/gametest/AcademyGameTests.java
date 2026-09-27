@@ -5055,6 +5055,60 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La marque de radiation alourdit les coups recus, puis s'efface.
+     *
+     * <p>Portage de {@code MDDamageHelper} : une cible touchee par un tir du meltdowner porte la
+     * marque pendant soixante ticks, et tout degat qu'elle encaisse pendant ce temps est
+     * multiplie. Le test frappe un zombie avec un evenement de degats construit a la main plutot
+     * qu'avec une arme : c'est le seul moyen de chiffrer exactement le facteur, et de verifier
+     * qu'un coup sans marque n'est pas touche du tout.
+     */
+    @GameTest(template = "empty")
+    public static void laMarqueDeRadiationAlourditLesCoups(GameTestHelper helper) {
+        var rad = cn.academy.ability.meltdowner.MeltdownerCategory.RADIATION_INTENSIFY;
+
+        var player = ownPlayer(helper, "radiator");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(rad.getCategory(), 1);
+        data.learnSkill(rad);
+
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, helper.getLevel());
+        helper.getLevel().addFreshEntity(zombie);
+
+        // Sans marque, un coup de dix points reste dix points.
+        var plain = new net.minecraftforge.event.entity.living.LivingHurtEvent(zombie,
+                player.damageSources().playerAttack(player), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(plain);
+        assertClose(helper, 10d, plain.getAmount(), "sans marque, le coup n'est pas touche");
+
+        // Avec la marque, le meme coup est multiplie par le facteur du passif.
+        cn.academy.ability.meltdowner.RadiationMarks.mark(zombie, data);
+        assertTrue(helper, cn.academy.ability.meltdowner.RadiationMarks.isMarked(zombie),
+                "un tir du meltdowner marque sa cible");
+        var marked = new net.minecraftforge.event.entity.living.LivingHurtEvent(zombie,
+                player.damageSources().playerAttack(player), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(marked);
+        assertClose(helper, 10d * rad.rate(data), marked.getAmount(),
+                "la marque multiplie les degats recus");
+
+        // Et elle s'efface toute seule, au bout des soixante ticks de l'original.
+        for (int i = 0; i < cn.academy.ability.meltdowner.RadiationIntensifySkill.MARK_TICKS; i++) {
+            cn.academy.ability.meltdowner.RadiationMarks.tick(zombie);
+        }
+        assertTrue(helper, !cn.academy.ability.meltdowner.RadiationMarks.isMarked(zombie),
+                "la marque doit expirer");
+        var after = new net.minecraftforge.event.entity.living.LivingHurtEvent(zombie,
+                player.damageSources().playerAttack(player), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(after);
+        assertClose(helper, 10d, after.getAmount(), "et le coup redevient normal");
+
+        zombie.discard();
+        helper.succeed();
+    }
+
+    /**
      * Les trois cursus generiques donnent leurs bonus au joueur qui les apprend.
      *
      * <p>{@code PortedSkillsTest} fige les valeurs ; ce test-ci verifie l'autre bout, celui que

@@ -108,8 +108,21 @@ public class AbilityEvents {
         }
     }
 
+    /**
+     * Les marques de radiation avancent d'un tick, comme l'evenement de mise a jour d'un vivant
+     * chez l'original.
+     */
+    @SubscribeEvent
+    public static void onLivingTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
+        cn.academy.ability.meltdowner.RadiationMarks.tick(event.getEntity());
+    }
+
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
+        // La marque de radiation multiplie les degats recus, d'ou qu'ils viennent : c'est ce
+        // que faisait l'original dans son propre evenement. Le port l'applique en premier, pour
+        // que les crochets des competences partent des degats deja augmentes.
+        cn.academy.ability.meltdowner.RadiationMarks.apply(event);
         if (!(event.getEntity() instanceof Player player)) return;
         player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
             for (Category category : CategoryManager.INSTANCE.getCategories()) {

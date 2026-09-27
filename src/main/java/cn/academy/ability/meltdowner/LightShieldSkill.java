@@ -175,6 +175,7 @@ public class LightShieldSkill extends Skill {
             if (target.hurtTime > 0) continue;
             if (!data.perform(cpPerHit(data), overloadPerHit(data))) return;
             target.hurt(player.damageSources().indirectMagic(player, player), scaled(touchDamage(data)));
+            RadiationMarks.mark(target, data);
             data.addSkillExp(this, 0.001f);
         }
     }
