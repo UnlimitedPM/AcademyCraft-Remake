@@ -36,7 +36,43 @@ import org.joml.Matrix4f;
  */
 public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiquidBlockEntity> {
 
-    /** Une nappe : la texture de sa couche, et le rendu qui va avec. */
+    /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
+    private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
+            new RenderStateShard.TransparencyStateShard("academy_imag_phase_translucent",
+                    () -> {
+                        RenderSystem.enableBlend();
+                        RenderSystem.defaultBlendFunc();
+                    },
+                    () -> {
+                        RenderSystem.defaultBlendFunc();
+                        RenderSystem.disableBlend();
+                    });
+
+    /**
+     * La profondeur est toujours acceptee ({@code GL_ALWAYS}) : c'est ce que faisait
+     * l'original, et sans cela les nappes restent enfermees dans le bloc de fluide, qui
+     * est noir et opaque.
+     */
+    private static final RenderStateShard.DepthTestStateShard ALWAYS =
+            new RenderStateShard.DepthTestStateShard("academy_imag_phase_always", 519);
+
+    /** La couleur, mais pas la profondeur : une nappe ne cache pas celle qui la suit. */
+    private static final RenderStateShard.WriteMaskStateShard COLOR_ONLY =
+            new RenderStateShard.WriteMaskStateShard(true, false);
+
+    private static final RenderStateShard.OverlayStateShard NO_OVERLAY =
+            new RenderStateShard.OverlayStateShard(false);
+
+    private static final RenderStateShard.LightmapStateShard NO_LIGHTMAP =
+            new RenderStateShard.LightmapStateShard(false);
+
+    /**
+     * Une nappe : la texture de sa couche, et le rendu qui va avec.
+     *
+     * <p>A declarer <b>apres</b> les etats ci-dessus : une classe s'initialise de haut en
+     * bas, et un etat encore nul fait tomber le jeu au demarrage (le constructeur de
+     * {@code CompositeState} refuse le vide).
+     */
     private static final RenderType[] LAYERS = {
             layer(texture("0")), layer(texture("1")), layer(texture("2")),
     };
@@ -67,36 +103,6 @@ public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiq
                         .setLightmapState(NO_LIGHTMAP)
                         .createCompositeState(false));
     }
-
-    /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
-    private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
-            new RenderStateShard.TransparencyStateShard("academy_imag_phase_translucent",
-                    () -> {
-                        RenderSystem.enableBlend();
-                        RenderSystem.defaultBlendFunc();
-                    },
-                    () -> {
-                        RenderSystem.defaultBlendFunc();
-                        RenderSystem.disableBlend();
-                    });
-
-    /**
-     * La profondeur est toujours acceptee ({@code GL_ALWAYS}) : c'est ce que faisait
-     * l'original, et sans cela les nappes restent enfermees dans le bloc de fluide, qui
-     * est noir et opaque.
-     */
-    private static final RenderStateShard.DepthTestStateShard ALWAYS =
-            new RenderStateShard.DepthTestStateShard("academy_imag_phase_always", 519);
-
-    /** La couleur, mais pas la profondeur : une nappe ne cache pas celle qui la suit. */
-    private static final RenderStateShard.WriteMaskStateShard COLOR_ONLY =
-            new RenderStateShard.WriteMaskStateShard(true, false);
-
-    private static final RenderStateShard.OverlayStateShard NO_OVERLAY =
-            new RenderStateShard.OverlayStateShard(false);
-
-    private static final RenderStateShard.LightmapStateShard NO_LIGHTMAP =
-            new RenderStateShard.LightmapStateShard(false);
 
     public ImagPhaseLiquidRenderer(BlockEntityRendererProvider.Context context) {}
 
