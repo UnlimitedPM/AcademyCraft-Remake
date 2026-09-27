@@ -58,6 +58,7 @@ class PortedSkillsTest {
             Map.entry("teleporter.flesh_ripping", 3),
             Map.entry("teleporter.penetrate_teleport", 2),
             Map.entry("teleporter.shift_tp", 4),
+            Map.entry("teleporter.space_fluct", 4),
             Map.entry("teleporter.flashing", 5),
             Map.entry("teleporter.location_teleport", 3),
             Map.entry("vecmanip.vec_accel", 2),
@@ -121,6 +122,8 @@ class PortedSkillsTest {
             Map.entry("meltdowner.jet_engine", List.of("meltdowner.meltdowner")),
             Map.entry("meltdowner.ray_barrage", List.of("meltdowner.meltdowner")),
             Map.entry("teleporter.flashing", List.of("teleporter.shift_tp")),
+            // Le passif des critiques descend du saut, sans seuil d'experience.
+            Map.entry("teleporter.space_fluct", List.of("teleporter.shift_tp")),
             // La troisieme a deux parentes : savoir traverser un mur, et savoir marquer.
             Map.entry("teleporter.location_teleport",
                     List.of("teleporter.penetrate_teleport", "teleporter.mark_teleport")),
@@ -358,7 +361,8 @@ class PortedSkillsTest {
                 namesOf(cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE));
         assertEquals(List.of("threatening_teleport", "dim_folding_theorem", "penetrate_teleport",
                         "mark_teleport", "flesh_ripping", "location_teleport", "shift_tp",
-                        "flashing", "brain_course", "brain_course_advanced", "mind_course"),
+                        "space_fluct", "flashing", "brain_course", "brain_course_advanced",
+                        "mind_course"),
                 namesOf(cn.academy.ability.teleporter.TeleporterCategory.INSTANCE));
         assertEquals(List.of("dir_shock", "ground_shock", "vec_accel", "vec_deviation",
                         "dir_blast", "storm_wing", "blood_retro", "vec_reflection",

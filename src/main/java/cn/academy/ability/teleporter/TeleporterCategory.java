@@ -8,6 +8,7 @@ public class TeleporterCategory extends Category {
     public static final String NAME = "teleporter";
 
     public static final ShiftTeleportSkill SHIFT_TELEPORT = new ShiftTeleportSkill();
+    public static final SpaceFluctuationSkill SPACE_FLUCTUATION = new SpaceFluctuationSkill();
     public static final PenetrateTeleportSkill PENETRATE_TELEPORT = new PenetrateTeleportSkill();
     public static final DimFoldingTheoremSkill DIM_FOLDING_THEOREM = new DimFoldingTheoremSkill();
     public static final ThreateningTeleportSkill THREATENING_TELEPORT = new ThreateningTeleportSkill();
@@ -23,7 +24,6 @@ public class TeleporterCategory extends Category {
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatTeleporter ; le port les rangeait
         // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.
-        // (space_fluct, le passif de niveau 4, viendra se ranger entre le saut et le scintillement.)
         addSkill(THREATENING_TELEPORT);
         addSkill(DIM_FOLDING_THEOREM);
         addSkill(PENETRATE_TELEPORT);
@@ -31,6 +31,7 @@ public class TeleporterCategory extends Category {
         addSkill(FLESH_RIPPING);
         addSkill(LOCATION_TELEPORT);
         addSkill(SHIFT_TELEPORT);
+        addSkill(SPACE_FLUCTUATION);
         addSkill(FLASHING);
 
         // Les trois cursus generiques ferment la categorie, comme dans l'original.
@@ -53,5 +54,9 @@ public class TeleporterCategory extends Category {
         // port a deux parentes.
         LOCATION_TELEPORT.setParent(PENETRATE_TELEPORT, 0.8f);
         LOCATION_TELEPORT.addDependency(MARK_TELEPORT, 0.8f);
+        // La fluctuation d'espace descend du saut, et l'original la liait SANS seuil : l'avoir
+        // appris suffisait. Elle ne fait rien toute seule — elle augmente les coups critiques de
+        // toutes les autres teleportations (voir TeleportCrits).
+        SPACE_FLUCTUATION.setParent(SHIFT_TELEPORT);
     }
 }

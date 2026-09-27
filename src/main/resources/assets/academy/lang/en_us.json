@@ -255,6 +255,9 @@
   "ac.ability.generic.brain_course_advanced.name": "Brain Course Advanced",
   "ac.ability.generic.mind_course.name": "Mind Course",
 
+  "ac.ability.teleporter.space_fluct.name": "Space Fluctuation",
+  "ac.ability.teleporter.crithit": "%sx critical hit!",
+
   "academy.learn.any_skill_of_level": "Any skill of level %s",
 
   "ac.command.invalid": "§cInvalid input, please try again.",

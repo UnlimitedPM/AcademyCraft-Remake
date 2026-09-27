@@ -115,7 +115,10 @@ public class FleshRippingSkill extends Skill {
         // Paiement force, comme consumeWithForce : le tick de visee a deja verifie que la
         // reserve suivait, et un coup parti se paie.
         data.performForced(cpCost(data), getOverloadCost(data));
-        target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        // Les degats passent par les critiques de la teleportation : c'est par la que l'original
+        // les faisait passer (TPSkillHelper.attackIgnoreArmor), et c'est ce qui donne son sens a
+        // Space Fluctuation.
+        TeleportCrits.strike(player, data, target, scaled(damage(data)));
         // Le son du coup, pose sur la cible dans l'original — mais il n'y a qu'un joueur
         // pour l'entendre, donc le port le lui donne directement.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_GUTS, 0.6f);

@@ -131,9 +131,10 @@ public class ThreateningTeleportSkill extends Skill {
         boolean hit = false;
         if (target instanceof LivingEntity living) {
             hit = true;
-            // indirectMagic : c'est le type de degats qui traverse l'armure, ce que
-            // l'original demandait explicitement.
-            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data, stack)));
+            // Le coup passe par les critiques de la teleportation : Dimension Folding Theorem
+            // et Space Fluctuation augmentent ses degats, comme dans l'original ou il partait de
+            // TPSkillHelper.attackIgnoreArmor.
+            TeleportCrits.strike(player, data, living, scaled(damage(data, stack)));
             // Le son ne part que si l'objet a frappe : l'original le jouait sous un
             // `if(attacked)`, un lancer dans le vide restant muet.
             cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
