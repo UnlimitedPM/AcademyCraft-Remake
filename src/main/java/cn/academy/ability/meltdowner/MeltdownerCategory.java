@@ -21,19 +21,25 @@ public class MeltdownerCategory extends Category {
 
     private MeltdownerCategory() {
         super(NAME);
-        addSkill(MELTDOWNER);
+        // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
+        // cet ordre-la, niveau par niveau. C'est celui de CatMeltdowner.
+        // (rad_intensify et electron_missile, absents du port, se rangeront ici.)
         addSkill(ELECTRON_BOMB);
-        addSkill(LIGHT_SHIELD);
         addSkill(SCATTER_BOMB);
-        addSkill(JET_ENGINE);
-        addSkill(RAY_BARRAGE);
+        addSkill(LIGHT_SHIELD);
+        addSkill(MELTDOWNER);
         addSkill(MINE_RAY_BASIC);
+        addSkill(RAY_BARRAGE);
+        addSkill(JET_ENGINE);
         addSkill(MINE_RAY_EXPERT);
         addSkill(MINE_RAY_LUCK);
 
+        // Les trois cursus generiques ferment la categorie, comme dans l'original.
+        cn.academy.ability.generic.GenericSkills.addTo(this);
+
         // Dependances de l'original dont les deux bouts sont portes. Il ne reste que
         // l'ecran de la bombe a electrons, qui attend une application du terminal.
-        LIGHT_SHIELD.setParent(ELECTRON_BOMB);
+        LIGHT_SHIELD.setParent(ELECTRON_BOMB, 1f);
         SCATTER_BOMB.setParent(ELECTRON_BOMB, 0.8f);
         // Le meltdowner demande les deux : la bombe pour la maitrise du plasma, le
         // bouclier pour l'avoir tenu. C'est la deuxieme competence du port a deux

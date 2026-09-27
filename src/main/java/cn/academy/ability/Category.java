@@ -18,7 +18,15 @@ public class Category {
         this.name = name;
     }
 
-    protected final void addSkill(Skill skill) {
+    /**
+     * Ajoute une competence a la categorie.
+     *
+     * <p>Publique, et non protegee : les trois cursus generiques sont batis par une fabrique
+     * ({@code GenericSkills.addTo}), qui n'est pas une sous-classe de {@code Category}. Une
+     * competence n'appartient qu'a une categorie : {@code Skill.bind} y pose son identifiant, et
+     * deux competences du meme nom dans une categorie levent.
+     */
+    public final void addSkill(Skill skill) {
         if (getSkill(skill.getName()) != null) {
             throw new IllegalStateException("Duplicate skill " + skill.getName() + " in category " + name);
         }

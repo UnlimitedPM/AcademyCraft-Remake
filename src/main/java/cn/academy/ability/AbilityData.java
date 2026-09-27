@@ -365,7 +365,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public float getMaxControlPoint() {
-        return getRawMaxControlPoint() + addMaxControlPoint;
+        return getRawMaxControlPoint() + addMaxControlPoint + getPassiveMaxControlPoint();
     }
 
     /** Le plafond de base : celui du niveau, sans ce que l'usage a ajoute. */
@@ -376,6 +376,50 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     /** Ce que l'usage a ajoute au plafond. */
     public float getAddMaxControlPoint() {
         return addMaxControlPoint;
+    }
+
+    /**
+     * Le plafond que les competences passives apprises ajoutent.
+     *
+     * <p>Portage des evenements {@code CalcEvent.MaxCP} / {@code MaxOverload} /
+     * {@code CPRecoverSpeed} de l'original : la, chaque competence passive s'inscrivait aupres
+     * du bus de Forge et ajoutait sa part au moment du calcul. Ici, la competence dit seulement
+     * ce qu'elle donne ({@code Skill.getMaxControlPointBonus}) et la somme se fait au moment du
+     * calcul, comme chez lui.
+     *
+     * <p>En test unitaire le registre des categories est vide, donc ces trois methodes rendent
+     * 0 et 1 : un calcul de reserve n'y depend jamais de ce que le joueur a appris.
+     */
+    public float getPassiveMaxControlPoint() {
+        float bonus = 0f;
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            for (Skill skill : getLearnedSkills(category)) {
+                bonus += skill.getMaxControlPointBonus(this);
+            }
+        }
+        return bonus;
+    }
+
+    /** Le plafond de surcout que les competences passives apprises ajoutent. */
+    public float getPassiveMaxOverload() {
+        float bonus = 0f;
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            for (Skill skill : getLearnedSkills(category)) {
+                bonus += skill.getMaxOverloadBonus(this);
+            }
+        }
+        return bonus;
+    }
+
+    /** Le facteur de recuperation des competences passives apprises, multiplie entre elles. */
+    public float getPassiveRecoverScale() {
+        float scale = 1f;
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            for (Skill skill : getLearnedSkills(category)) {
+                scale *= skill.getControlPointRecoverScale(this);
+            }
+        }
+        return scale;
     }
 
     /** Pose l'ajout, borne a ce que le niveau autorise et jamais negatif. */
@@ -419,6 +463,9 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         if (base <= 0f) return;
         float speed = (float) (cn.academy.Config.controlPointRegenSpeed * CP_RECOVER_FRACTION
                 * base * (1f + Math.min(1f, controlPoint / base)));
+        // L'entrainement mental (Mind Course) accelere la recuperation : c'est le
+        // `CalcEvent.CPRecoverSpeed` de l'original, ou la competence multipliait la vitesse.
+        speed *= getPassiveRecoverScale();
         controlPoint = Math.min(getMaxControlPoint(), controlPoint + speed);
     }
 
@@ -510,7 +557,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     public float getMaxOverload() {
-        return baseMaxOverload(getHighestLevel()) + addMaxOverload;
+        return baseMaxOverload(getHighestLevel()) + addMaxOverload + getPassiveMaxOverload();
     }
 
     /**

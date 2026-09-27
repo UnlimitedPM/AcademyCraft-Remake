@@ -34,6 +34,10 @@ public class ElectromasterCategory extends Category {
         addSkill(RAILGUN);
         addSkill(THUNDER_CLAP);
 
+        // Les trois cursus generiques ferment la categorie, comme dans l'original : ils occupent
+        // les niveaux 3, 4 et 5 pour TOUS les pouvoirs, et ne se rangent pas sur une touche.
+        cn.academy.ability.generic.GenericSkills.addTo(this);
+
         // L'arbre de l'electromaster, enfin complet : tant que mag_manip manquait, trois
         // de ses liens ne pouvaient pas etre posees (une dependance vers une competence
         // absente rendrait la competence inapprenable pour toujours). Les seuils sont

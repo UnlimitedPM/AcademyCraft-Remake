@@ -220,6 +220,50 @@ public abstract class Skill {
         return false;
     }
 
+    /**
+     * Cette competence peut-elle etre rangee sur une touche d'aptitude ?
+     *
+     * <p>Portage de {@code canControl} de l'original. Une competence passive s'apprend et agit
+     * toute seule : la proposer dans l'editeur de prereglaGes laisserait croire qu'elle se
+     * lance, et le joueur la chercherait en vain sur le rappel des touches. L'original ne la
+     * montrait pas non plus.
+     */
+    public boolean canControl() {
+        return true;
+    }
+
+    // ------------------------------------------------------------------
+    // Bonus permanents, pour les competences passives qui en donnent
+    // ------------------------------------------------------------------
+
+    /**
+     * Plafond de reserve ajoute tant que cette competence est apprise.
+     *
+     * <p>Portage de {@code CalcEvent.MaxCP} : chez l'original, chaque competence passive
+     * s'inscrivait au bus d'evenements et ajoutait sa part au moment du calcul. Le port lit la
+     * meme chose en interrogeant les competences apprises (voir
+     * {@code AbilityData.getPassiveMaxControlPoint}) — le resultat est identique, sans bus.
+     */
+    public float getMaxControlPointBonus(AbilityData data) {
+        return 0f;
+    }
+
+    /** Plafond de surcout ajoute tant que cette competence est apprise. */
+    public float getMaxOverloadBonus(AbilityData data) {
+        return 0f;
+    }
+
+    /**
+     * Facteur applique a la recuperation de la reserve, tant que cette competence est apprise.
+     *
+     * <p>Les facteurs se <b>multiplient</b> entre eux, comme des pourcentages qui s'ajoutent
+     * l'un a l'autre : c'est ce que faisait l'original, ou l'entrainement mental multipliait la
+     * vitesse de recuperation.
+     */
+    public float getControlPointRecoverScale(AbilityData data) {
+        return 1f;
+    }
+
     // ------------------------------------------------------------------
     // Experience d'usage
     // ------------------------------------------------------------------

@@ -89,6 +89,10 @@ public class PresetEditScreen extends Screen {
         AbilityData data = ClientAbilityData.get();
         for (Category category : CategoryManager.INSTANCE.getCategories()) {
             for (Skill skill : category.getSkills()) {
+                // Une competence passive ne se range pas sur une touche : l'original ne la
+                // proposait pas non plus (`canControl`). Sans ce filtre, l'editeur laisse
+                // croire qu'on peut lancer un cours de cerveau.
+                if (!skill.canControl()) continue;
                 if (data.isSkillLearned(skill)) learned.add(skill);
             }
         }

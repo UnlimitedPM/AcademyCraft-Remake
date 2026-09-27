@@ -5055,6 +5055,49 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Les trois cursus generiques donnent leurs bonus au joueur qui les apprend.
+     *
+     * <p>{@code PortedSkillsTest} fige les valeurs ; ce test-ci verifie l'autre bout, celui que
+     * le joueur voit : que sa reserve les compte. C'est la seule facon de le prouver, le registre
+     * des categories etant vide en test unitaire — et c'est bien l'absence de ces trois
+     * competences que le joueur a signalee.
+     */
+    @GameTest(template = "empty")
+    public static void lesCursusGeneriquesGonflentLaReserve(GameTestHelper helper) {
+        var category = cn.academy.ability.CategoryManager.INSTANCE.getCategory("electromaster");
+        var brain = category.getSkill("brain_course");
+        var advanced = category.getSkill("brain_course_advanced");
+        var mind = category.getSkill("mind_course");
+
+        var player = ownPlayer(helper, "course_reader");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+
+        // Le niveau donne la reserve du niveau, pleine : c'est l'etat d'avant les cursus.
+        data.setCategoryLevel(category, 5);
+        double reserve = data.getMaxControlPoint();
+        double overload = data.getMaxOverload();
+
+        data.learnSkill(brain);
+        assertClose(helper, reserve + 1000d, data.getMaxControlPoint(),
+                "le cours de cerveau ajoute 1000 points de reserve");
+        assertClose(helper, 1d, data.getPassiveRecoverScale(),
+                "et ne touche pas a la recuperation");
+
+        data.learnSkill(advanced);
+        assertClose(helper, reserve + 2500d, data.getMaxControlPoint(),
+                "le cours avance ajoute 1500 de plus");
+        assertClose(helper, overload + 100d, data.getMaxOverload(),
+                "et 100 de surcout");
+
+        data.learnSkill(mind);
+        assertClose(helper, 1.2d, data.getPassiveRecoverScale(),
+                "l'entrainement mental accelere la recuperation d'un cinquieme");
+
+        helper.succeed();
+    }
+
+    /**
      * Les commandes de debogage de l'original, bout en bout.
      *
      * <p>Le test tape les vraies commandes dans le distributeur du serveur ({@code /aim ...})

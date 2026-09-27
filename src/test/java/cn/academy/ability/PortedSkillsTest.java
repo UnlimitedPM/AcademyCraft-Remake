@@ -68,7 +68,21 @@ class PortedSkillsTest {
             Map.entry("vecmanip.vec_deviation", 2),
             Map.entry("vecmanip.vec_reflection", 4),
             Map.entry("vecmanip.storm_wing", 3),
-            Map.entry("vecmanip.plasma_cannon", 5));
+            Map.entry("vecmanip.plasma_cannon", 5),
+            // Les trois cursus generiques, ajoutes a CHAQUE categorie comme dans l'original
+            // (`VanillaCategories.addGenericSkills`) : ils y occupent les niveaux 3, 4 et 5.
+            Map.entry("electromaster.brain_course", 3),
+            Map.entry("electromaster.brain_course_advanced", 4),
+            Map.entry("electromaster.mind_course", 5),
+            Map.entry("meltdowner.brain_course", 3),
+            Map.entry("meltdowner.brain_course_advanced", 4),
+            Map.entry("meltdowner.mind_course", 5),
+            Map.entry("teleporter.brain_course", 3),
+            Map.entry("teleporter.brain_course_advanced", 4),
+            Map.entry("teleporter.mind_course", 5),
+            Map.entry("vecmanip.brain_course", 3),
+            Map.entry("vecmanip.brain_course_advanced", 4),
+            Map.entry("vecmanip.mind_course", 5));
 
     /** Les dependances de l'original dont les deux bouts sont portes. */
     private static final Map<String, List<String>> EXPECTED_DEPENDENCIES = Map.ofEntries(
@@ -130,7 +144,18 @@ class PortedSkillsTest {
             Map.entry("vecmanip.storm_wing", List.of("vecmanip.vec_accel")),
             // Et le canon a plasma descend des ailes : c'est la competence la plus chere de
             // la categorie, et la derniere de l'arbre.
-            Map.entry("vecmanip.plasma_cannon", List.of("vecmanip.storm_wing")));
+            Map.entry("vecmanip.plasma_cannon", List.of("vecmanip.storm_wing")),
+            // Les cursus generiques s'enchainent, dans chaque categorie : le cours avance
+            // demande le premier, l'entrainement mental demande le cours avance. Sans seuil
+            // d'experience — l'original les liait sans en demander.
+            Map.entry("electromaster.brain_course_advanced", List.of("electromaster.brain_course")),
+            Map.entry("electromaster.mind_course", List.of("electromaster.brain_course_advanced")),
+            Map.entry("meltdowner.brain_course_advanced", List.of("meltdowner.brain_course")),
+            Map.entry("meltdowner.mind_course", List.of("meltdowner.brain_course_advanced")),
+            Map.entry("teleporter.brain_course_advanced", List.of("teleporter.brain_course")),
+            Map.entry("teleporter.mind_course", List.of("teleporter.brain_course_advanced")),
+            Map.entry("vecmanip.brain_course_advanced", List.of("vecmanip.brain_course")),
+            Map.entry("vecmanip.mind_course", List.of("vecmanip.brain_course_advanced")));
 
     private static List<Category> categories() {
         return List.of(
@@ -292,6 +317,10 @@ class PortedSkillsTest {
             String key = skill.getDisplayKey();
             assertTrue(key.startsWith("ac.ability."), "cle inattendue : " + key);
             assertTrue(key.endsWith(".name"), "cle inattendue : " + key);
+            // Les trois cursus generiques sont les SEULS a partager leur cle : la meme
+            // competence est ajoutee aux quatre categories, et l'original ne lui donnait
+            // qu'un nom (ac.ability.generic.*) au lieu d'un par categorie.
+            if (key.startsWith("ac.ability.generic.")) continue;
             assertTrue(seen.add(key), "cle en double : " + key);
         }
     }
@@ -306,6 +335,62 @@ class PortedSkillsTest {
         }
         for (String name : EXPECTED_LEVELS.keySet()) {
             assertNotNull(found.get(name), name + " attendue mais absente du port");
+        }
+    }
+
+    /**
+     * L'ORDRE des competences dans chaque categorie, qui est celui que le menu F4 affiche.
+     *
+     * <p>Le joueur l'a vu avant nous : le port rangeait les competences dans l'ordre ou elles
+     * avaient ete codees, ce qui melangeait les niveaux (le saut du teleporteur avant le lancer
+     * d'objet, le meltdowner avant sa bombe). C'est celui des {@code Cat*} de l'original, et les
+     * trois cursus generiques ferment chaque categorie.
+     */
+    @Test
+    void lesCompetencesSontRangeesDansLOrdreDeLOriginal() {
+        assertEquals(List.of("arc_gen", "charging", "mag_movement", "mag_manip", "mine_detect",
+                        "body_intensify", "thunder_bolt", "railgun", "thunder_clap",
+                        "brain_course", "brain_course_advanced", "mind_course"),
+                namesOf(cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE));
+        assertEquals(List.of("electron_bomb", "scatter_bomb", "light_shield", "meltdowner",
+                        "mine_ray_basic", "ray_barrage", "jet_engine", "mine_ray_expert",
+                        "mine_ray_luck", "brain_course", "brain_course_advanced", "mind_course"),
+                namesOf(cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE));
+        assertEquals(List.of("threatening_teleport", "dim_folding_theorem", "penetrate_teleport",
+                        "mark_teleport", "flesh_ripping", "location_teleport", "shift_tp",
+                        "flashing", "brain_course", "brain_course_advanced", "mind_course"),
+                namesOf(cn.academy.ability.teleporter.TeleporterCategory.INSTANCE));
+        assertEquals(List.of("dir_shock", "ground_shock", "vec_accel", "vec_deviation",
+                        "dir_blast", "storm_wing", "blood_retro", "vec_reflection",
+                        "plasma_cannon", "brain_course", "brain_course_advanced", "mind_course"),
+                namesOf(cn.academy.ability.vecmanip.VecmanipCategory.INSTANCE));
+    }
+
+    private static List<String> namesOf(Category category) {
+        return category.getSkills().stream().map(Skill::getName).toList();
+    }
+
+    /**
+     * Les bonus des trois cursus generiques, et leur refus de la touche d'aptitude.
+     *
+     * <p>Les valeurs sont celles de l'original : +1000 et +1500 de reserve, +100 de surcout, et
+     * x1,2 sur la recuperation. Le joueur a rappele que ce sont des bonus, pas des pouvoirs : ils
+     * ne se rangent donc pas sur une touche (voir {@code Skill.canControl}).
+     */
+    @Test
+    void lesCursusGeneriquesDonnentLeursBonus() {
+        var brain = new cn.academy.ability.generic.GenericSkills.BrainCourse();
+        var advanced = new cn.academy.ability.generic.GenericSkills.BrainCourseAdvanced();
+        var mind = new cn.academy.ability.generic.GenericSkills.MindCourse();
+
+        assertEquals(1000f, brain.getMaxControlPointBonus(null), 0.0001f);
+        assertEquals(1500f, advanced.getMaxControlPointBonus(null), 0.0001f);
+        assertEquals(100f, advanced.getMaxOverloadBonus(null), 0.0001f);
+        assertEquals(1.2f, mind.getControlPointRecoverScale(null), 0.0001f);
+
+        for (Skill skill : List.of(brain, advanced, mind)) {
+            assertTrue(skill.isPassive(), skill.getName() + " est un passif");
+            assertTrue(!skill.canControl(), skill.getName() + " ne se range pas sur une touche");
         }
     }
 

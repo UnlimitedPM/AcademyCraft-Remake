@@ -18,6 +18,16 @@ public class DimFoldingTheoremSkill extends Skill {
         return true;
     }
 
+    /**
+     * Elle ne se range pas sur une touche : c'est le bonus des autres teleportations, pas un
+     * pouvoir a part entiere. L'original le disait par {@code canControl = false}, et le joueur
+     * l'a rappele — la proposer dans l'editeur de prereglaGes laisserait croire qu'elle se lance.
+     */
+    @Override
+    public boolean canControl() {
+        return false;
+    }
+
     @Override
     public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
         if (event.getSource().is(DamageTypes.FALL)) {

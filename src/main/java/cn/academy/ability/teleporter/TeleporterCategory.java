@@ -20,21 +20,25 @@ public class TeleporterCategory extends Category {
 
     private TeleporterCategory() {
         super(NAME);
-        addSkill(SHIFT_TELEPORT);
-        addSkill(PENETRATE_TELEPORT);
-        addSkill(DIM_FOLDING_THEOREM);
+        // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
+        // cet ordre-la, niveau par niveau. C'est celui de CatTeleporter ; le port les rangeait
+        // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.
+        // (space_fluct, le passif de niveau 4, viendra se ranger entre le saut et le scintillement.)
         addSkill(THREATENING_TELEPORT);
+        addSkill(DIM_FOLDING_THEOREM);
+        addSkill(PENETRATE_TELEPORT);
         addSkill(MARK_TELEPORT);
         addSkill(FLESH_RIPPING);
-        addSkill(FLASHING);
         addSkill(LOCATION_TELEPORT);
+        addSkill(SHIFT_TELEPORT);
+        addSkill(FLASHING);
+
+        // Les trois cursus generiques ferment la categorie, comme dans l'original.
+        cn.academy.ability.generic.GenericSkills.addTo(this);
 
         // L'arbre de l'original part du lancer d'objet : c'est lui qui apprend a
-        // viser, et tout le reste en descend. Les competences dont les deux bouts sont
-        // portes reposent leur dependance ; celles qui manquent encore
-        // (location_teleport, et la fluctuation d'espace qui descend d'elle) attendent
-        // leur tour, une dependance vers une competence absente rendant la competence
-        // inapprenable pour toujours.
+        // viser, et tout le reste en descend. Les seuils sont ceux de l'original, au mot
+        // pres, et chaque lien est pose.
         DIM_FOLDING_THEOREM.setParent(THREATENING_TELEPORT, 0.2f);
         PENETRATE_TELEPORT.setParent(THREATENING_TELEPORT, 0.5f);
         MARK_TELEPORT.setParent(THREATENING_TELEPORT, 0.4f);

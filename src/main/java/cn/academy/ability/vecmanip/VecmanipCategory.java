@@ -22,15 +22,21 @@ public class VecmanipCategory extends Category {
 
     private VecmanipCategory() {
         super(NAME);
+        // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
+        // cet ordre-la, niveau par niveau. C'est celui de CatVecManip ; le port les rangeait
+        // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.
         addSkill(DIRECTED_SHOCK);
         addSkill(GROUNDSHOCK);
-        addSkill(DIRECTED_BLASTWAVE);
-        addSkill(BLOOD_RETROGRADE);
-        addSkill(VEC_REFLECTION);
         addSkill(VEC_ACCEL);
         addSkill(VEC_DEVIATION);
+        addSkill(DIRECTED_BLASTWAVE);
         addSkill(STORM_WING);
+        addSkill(BLOOD_RETROGRADE);
+        addSkill(VEC_REFLECTION);
         addSkill(PLASMA_CANNON);
+
+        // Les trois cursus generiques ferment la categorie, comme dans l'original.
+        cn.academy.ability.generic.GenericSkills.addTo(this);
 
         // L'arbre de l'original part du choc dirige : c'est lui qui apprend a pousser, et
         // tout vecmanip en descend. L'acceleration de vecteur et l'onde de choc lui doivent
