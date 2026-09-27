@@ -61,11 +61,11 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     /** Production maximale, atteinte en altitude. */
     public static final double MAX_GENERATION_SPEED = 15.0d;
 
-    /** Nombre de piliers exiges entre la base et le rotor. */
-    public static final int MIN_PILLARS = 8;
+    /** Nombre de piliers exiges entre la base et le rotor. Voir {@link WindgenStructure}. */
+    public static final int MIN_PILLARS = WindgenStructure.MIN_PILLARS;
 
     /** Nombre de piliers au-dela duquel la colonne est refusee. */
-    public static final int MAX_PILLARS = 40;
+    public static final int MAX_PILLARS = WindgenStructure.MAX_PILLARS;
 
     /** Altitude a partir de laquelle la production est maximale. */
     private static final double FULL_HEIGHT = 160.0d;

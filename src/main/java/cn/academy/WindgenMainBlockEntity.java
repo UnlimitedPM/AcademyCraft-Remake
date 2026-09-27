@@ -78,7 +78,26 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     /** Dernier resultat connu de la verification de la zone balayee. */
     private boolean noObstacle;
 
+    /**
+     * La colonne est-elle assez haute ?
+     *
+     * <p>C'est la base qui produit, mais c'est le rotor qui doit savoir si ses pales
+     * tournent : il remonte donc sa colonne lui-meme, comme le faisait l'original. Le
+     * resultat est envoye au client avec le reste de son etat.
+     */
+    private boolean complete;
+
     private int obstacleCounter;
+
+    // ------------------------------------------------------------------
+    // Etat d'affichage (client seulement, rien n'est sauvegarde)
+    // ------------------------------------------------------------------
+
+    /** Angle des pales, en degres. */
+    private float fanRotation;
+
+    /** Instant de la derniere image, en secondes, pour avancer l'angle du bon pas. */
+    private double fanFrame = -1.0d;
 
     public WindgenMainBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.WINDGEN_MAIN.get(), pos, state);
@@ -90,8 +109,10 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
         rotor.obstacleCounter = 0;
 
         boolean now = computeNoObstacle(level, pos, state);
-        if (now != rotor.noObstacle) {
+        boolean standing = computeComplete(level, pos, state);
+        if (now != rotor.noObstacle || standing != rotor.complete) {
             rotor.noObstacle = now;
+            rotor.complete = standing;
             rotor.setChanged();
             level.sendBlockUpdated(pos, state, state, 3);
         }
@@ -108,6 +129,30 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     /** Vrai si rien ne gene la rotation des pales, d'apres la derniere revision. */
     public boolean isNoObstacle() {
         return noObstacle;
+    }
+
+    /** Vrai si la colonne qui porte ce rotor est assez haute, d'apres la derniere revision. */
+    public boolean isComplete() {
+        return complete;
+    }
+
+    /** Vrai si les pales doivent tourner : helice installee, zone degagee, colonne complete. */
+    public boolean isSpinning() {
+        return isFanInstalled() && isNoObstacle() && complete;
+    }
+
+    /**
+     * L'angle des pales, avance d'une image.
+     *
+     * <p>Appele par le rendu, et rien d'autre : l'original tenait cet angle dans son block
+     * entity, cote client, pour qu'une eolienne qui s'arrete s'arrete *ou* elle est au lieu
+     * de repartir de la verticale a chaque revision de la structure.
+     */
+    public float advanceFan(double seconds) {
+        if (fanFrame < 0.0d) fanFrame = seconds;
+        fanRotation = WindgenStructure.spin(fanRotation, seconds - fanFrame, isSpinning());
+        fanFrame = seconds;
+        return fanRotation;
     }
 
     /**
@@ -138,6 +183,31 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
         return true;
     }
 
+    /**
+     * Remonte la colonne a l'envers : les piliers, puis la base.
+     *
+     * <p>C'est ce que fait {@code TileWindGenMain.isCompleteStructure} de l'original, et
+     * c'est la seule chose que le rotor ait besoin de savoir de la base : la hauteur suffit
+     * elle ? La production, elle, se calcule en bas.
+     *
+     * <p>Un troncon non charge vaut un refus : mieux vaut une eolienne qui ne tourne pas
+     * qu'une eolienne qui tourne dans un vide dont on ne sait rien.
+     */
+    public static boolean computeComplete(Level level, BlockPos pos, BlockState state) {
+        int pillars = 0;
+        BlockPos probe = pos.below();
+        while (level.isLoaded(probe)) {
+            BlockState below = level.getBlockState(probe);
+            if (below.is(ModBlocks.WINDGEN_PILLAR.get())) {
+                if (++pillars > WindgenStructure.MAX_PILLARS) return false;
+                probe = probe.below();
+                continue;
+            }
+            return WindgenStructure.isComplete(pillars, below.is(ModBlocks.WINDGEN_BASE.get()));
+        }
+        return false;
+    }
+
     // ------------------------------------------------------------------
     // Persistance
     // ------------------------------------------------------------------
@@ -147,6 +217,7 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
         super.saveAdditional(tag);
         tag.put("inventory", inventory.serializeNBT());
         tag.putBoolean("no_obstacle", noObstacle);
+        tag.putBoolean("complete", complete);
     }
 
     @Override
@@ -154,6 +225,7 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
         super.load(tag);
         inventory.deserializeNBT(tag.getCompound("inventory"));
         noObstacle = tag.getBoolean("no_obstacle");
+        complete = tag.getBoolean("complete");
     }
 
     @Override
