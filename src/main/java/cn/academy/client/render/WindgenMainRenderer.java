@@ -49,10 +49,9 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
 
         pose.pushPose();
         // L'origine des modeles du mod : le centre du bloc, pose sur son bas. C'est la
-        // convention de leurs fichiers OBJ, et le blockstate fait tourner le tout autour
-        // du centre du bloc.
+        // convention de leurs fichiers OBJ, et le tout tourne autour du centre du bloc.
         pose.translate(0.5d, 0.0d, 0.5d);
-        pose.mulPose(Axis.YP.rotationDegrees(-degreesFor(state.getValue(WindgenMainBlock.FACING))));
+        pose.mulPose(Axis.YP.rotationDegrees(-state.getValue(WindgenMainBlock.FACING).toYRot()));
 
         VertexConsumer body = buffers.getBuffer(ObjModels.type(BODY_TEXTURE));
         ObjModels.draw(ObjModels.get(BODY_MODEL).all(), pose, body, light, overlay);
@@ -77,17 +76,12 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
     /**
      * De combien le modele tourne pour cette orientation.
      *
-     * <p>Les chiffres sont ceux du blockstate ({@code blockstates/windgen_main.json}), qui
-     * les pose par orientation : le modele est dessine tel quel pour {@code north}, et
-     * tourne d'un quart de tour par direction suivante. Le sens est celui de Minecraft :
-     * une rotation dans le sens des aiguilles, vue de dessus.
+     * <p>Le nez du modele regarde vers +z, et il doit regarder du cote de la partie avant du
+     * rotor — celle que l'eolienne surveille pour ses pales. C'est donc la rotation qui
+     * amene +z sur la direction du bloc, comme pour n'importe quelle entite : l'oppose de
+     * {@code toYRot}, qui est l'angle de cette direction.
      */
-    private static int degreesFor(Direction facing) {
-        return switch (facing) {
-            case EAST -> 90;
-            case SOUTH -> 180;
-            case WEST -> 270;
-            default -> 0;
-        };
+    private static float degreesFor(Direction facing) {
+        return -facing.toYRot();
     }
 }

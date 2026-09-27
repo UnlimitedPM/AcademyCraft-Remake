@@ -59,12 +59,11 @@ public class MatrixRenderer implements BlockEntityRenderer<MatrixBlockEntity> {
         VertexConsumer out = buffers.getBuffer(ObjModels.type(TEXTURE));
 
         pose.pushPose();
-        // L'origine du modele : le centre du multi-bloc, au sol, et donc un bloc devant le
-        // coin du bloc d'ancrage.
+        // L'origine du modele : le centre du multi-bloc, au sol. Le bloc d'ancrage est le
+        // coin de ce carre, donc aucun decalage.
         pose.translate(0.5d, 0.0d, 0.5d);
         pose.mulPose(Axis.YP.rotationDegrees(-degreesFor(state.getValue(MatrixBlock.FACING))));
         pose.translate(-0.5d, 0.0d, -0.5d);
-        pose.translate(0.0d, 0.0d, 1.0d);
 
         ObjModels.draw(mesh.group(BASE), pose, out, light, overlay);
         ObjModels.draw(mesh.group(CORE), pose, out, light, overlay);

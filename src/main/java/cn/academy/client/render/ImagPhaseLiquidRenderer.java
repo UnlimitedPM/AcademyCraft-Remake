@@ -2,11 +2,16 @@ package cn.academy.client.render;
 
 import cn.academy.AcademyCraft;
 import cn.academy.ImagPhaseLiquidBlockEntity;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -24,16 +29,74 @@ import org.joml.Matrix4f;
  * hauteurs differentes, qui defilent chacun a sa vitesse, avec la meme texture pour les trois
  * (une par couche dans l'original) et une opacite qui decroit avec la distance.
  *
- * <p>La difference assumee : l'original dessinait avec le test de profondeur desactive, donc
- * a travers le monde. Ici les nappes respectent la profondeur mais n'ecrivent pas dedans, ce
- * qui evite qu'un lac se voie a travers la colline d'a cote. Le reste — hauteurs, vitesses,
- * densites, opacite — est repris tel quel.
+ * <p>Comme l'original, les nappes se dessinent sans test de profondeur : elles passent a
+ * travers le bloc de fluide, qui est noir et opaque — sans cela, les deux nappes du haut
+ * seraient enfermees dans le liquide et on ne verrait que celle du dessous. C'est aussi ce
+ * qui fait qu'un lac se voit de loin, avant meme qu'on en approche.
  */
 public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiquidBlockEntity> {
 
-    private static final ResourceLocation[] LAYERS = {
-            texture("0"), texture("1"), texture("2"),
+    /** Une nappe : la texture de sa couche, et le rendu qui va avec. */
+    private static final RenderType[] LAYERS = {
+            layer(texture("0")), layer(texture("1")), layer(texture("2")),
     };
+
+    /**
+     * Le rendu d'une nappe : lumineux, transparent, sans cull, et surtout sans test de
+     * profondeur.
+     *
+     * <p>Les etats de Minecraft sont inaccessibles depuis un mod, donc refaits ici :
+     * melange alpha comme l'eau, profondeur toujours acceptee (c'est la difference),
+     * couleur ecrite mais pas la profondeur, et aucune lumiere — les nappes brillent.
+     */
+    private static RenderType layer(ResourceLocation texture) {
+        return RenderType.create("academy_imag_phase_layer",
+                DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getRendertypeEntityTranslucentEmissiveShader))
+                        .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                        .setTransparencyState(TRANSLUCENT)
+                        .setDepthTestState(ALWAYS)
+                        .setWriteMaskState(COLOR_ONLY)
+                        .setOverlayState(NO_OVERLAY)
+                        .setLightmapState(NO_LIGHTMAP)
+                        .createCompositeState(false));
+    }
+
+    /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
+    private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
+            new RenderStateShard.TransparencyStateShard("academy_imag_phase_translucent",
+                    () -> {
+                        RenderSystem.enableBlend();
+                        RenderSystem.defaultBlendFunc();
+                    },
+                    () -> {
+                        RenderSystem.defaultBlendFunc();
+                        RenderSystem.disableBlend();
+                    });
+
+    /**
+     * La profondeur est toujours acceptee ({@code GL_ALWAYS}) : c'est ce que faisait
+     * l'original, et sans cela les nappes restent enfermees dans le bloc de fluide, qui
+     * est noir et opaque.
+     */
+    private static final RenderStateShard.DepthTestStateShard ALWAYS =
+            new RenderStateShard.DepthTestStateShard("academy_imag_phase_always", 519);
+
+    /** La couleur, mais pas la profondeur : une nappe ne cache pas celle qui la suit. */
+    private static final RenderStateShard.WriteMaskStateShard COLOR_ONLY =
+            new RenderStateShard.WriteMaskStateShard(true, false);
+
+    private static final RenderStateShard.OverlayStateShard NO_OVERLAY =
+            new RenderStateShard.OverlayStateShard(false);
+
+    private static final RenderStateShard.LightmapStateShard NO_LIGHTMAP =
+            new RenderStateShard.LightmapStateShard(false);
 
     public ImagPhaseLiquidRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -60,7 +123,7 @@ public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiq
         pose.pushPose();
         Matrix4f matrix = pose.last().pose();
         for (int i = 0; i < layers.length; i++) {
-            VertexConsumer out = buffers.getBuffer(RenderType.entityTranslucentEmissive(LAYERS[i], false));
+            VertexConsumer out = buffers.getBuffer(LAYERS[i]);
             drawLayer(out, matrix, layers[i], time, alpha);
         }
         pose.popPose();
