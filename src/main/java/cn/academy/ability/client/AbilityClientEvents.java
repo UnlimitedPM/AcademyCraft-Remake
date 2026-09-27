@@ -72,6 +72,8 @@ public class AbilityClientEvents {
         // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur.
         // Voir ClientAbilityData.tick.
         ClientAbilityData.tick(ClientCharge.getSkill() != null);
+        // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
+        cn.academy.client.hud.NotificationHud.tick();
 
         for (Binding binding : BINDINGS) {
             tick(binding);

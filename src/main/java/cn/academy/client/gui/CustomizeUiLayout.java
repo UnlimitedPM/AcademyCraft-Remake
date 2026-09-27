@@ -97,6 +97,33 @@ public final class CustomizeUiLayout {
     public static final float MEDIA_BAR_STEP = 0.1f;
 
     /**
+     * La notification, telle que {@code NotifyUI} et l'apercu de l'original la posent : 517x170 a
+     * un quart.
+     *
+     * <p>Les mesures sont ici, comme celles du lecteur media, pour que le HUD et son apercu les
+     * lisent au meme endroit : deux copies de ces nombres finiraient par diverger, et c'est le
+     * genre d'ecart qui ne se voit qu'a l'ecran.
+     */
+    public static final float NOTIFY_SCALE = 0.25f;
+    public static final int NOTIFY_W = 517;
+    public static final int NOTIFY_H = 170;
+    /** Ou l'icone se pose une fois arrivee, et sa taille : 83x83, comme chez lui. */
+    public static final int NOTIFY_ICON_X = 34;
+    public static final int NOTIFY_ICON_Y = 42;
+    public static final int NOTIFY_ICON = 83;
+    /** L'endroit d'ou elle arrive : l'original la fait glisser depuis la droite du panneau. */
+    public static final int NOTIFY_ICON_START_X = 420;
+    /** Les deux lignes, dans les unites de l'original (police 38 et 54). */
+    public static final int NOTIFY_TITLE_X = 137;
+    public static final int NOTIFY_TITLE_Y = 32;
+    public static final float NOTIFY_TITLE_FONT = 38.0f;
+    public static final int NOTIFY_TEXT_X = 137;
+    public static final int NOTIFY_TEXT_Y = 81;
+    public static final float NOTIFY_TEXT_FONT = 54.0f;
+    /** La couleur de ses deux lignes : blanc, comme chez lui. */
+    public static final int NOTIFY_TEXT_COLOR = 0xFFFFFFFF;
+
+    /**
      * Le rapport entre la police de l'original et la notre.
      *
      * <p>L'original dessinait son texte avec une police du systeme a un corps donne ; le port

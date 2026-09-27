@@ -54,23 +54,14 @@ public class CustomizeUiScreen extends Screen {
     private static final int KEY_HINT_IMAGE_W = 128;
     private static final int KEY_HINT_IMAGE_H = 193;
 
-    /** La notification de l'original, dans ses propres unites : 517x170 a un quart. */
-    private static final float NOTIFY_SCALE = 0.25f;
-    private static final int NOTIFY_W = 517;
-    private static final int NOTIFY_H = 170;
-    private static final int NOTIFY_ICON_X = 34;
-    private static final int NOTIFY_ICON_Y = 42;
-    private static final int NOTIFY_ICON = 83;
-    private static final int NOTIFY_TITLE_X = 137;
-    private static final int NOTIFY_TITLE_Y = 32;
-    private static final float NOTIFY_TITLE_FONT = 38.0f;
-    private static final int NOTIFY_TEXT_X = 137;
-    private static final int NOTIFY_TEXT_Y = 81;
-    private static final float NOTIFY_TEXT_FONT = 54.0f;
-    /** Ses deux lignes d'exemple, mot pour mot comme avant. */
+    /**
+     * Ses deux lignes d'exemple, mot pour mot comme avant.
+     *
+     * <p>Le reste de ses mesures vit dans {@link CustomizeUiLayout}, avec le HUD : l'apercu et le
+     * HUD ne peuvent donc pas diverger.
+     */
     private static final String NOTIFY_DEMO_TITLE = "Some Notification";
     private static final String NOTIFY_DEMO_TEXT = "blablabla";
-    private static final int NOTIFY_TEXT_COLOR = 0xFFFFFFFF;
     /** Ses textes d'exemple, tels que son xml les porte. */
     private static final String MEDIA_DEMO_TITLE = "Only My Railgun";
     private static final String MEDIA_DEMO_TIME = "04:30";
@@ -225,19 +216,24 @@ public class CustomizeUiScreen extends Screen {
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
-        pose.scale(NOTIFY_SCALE, NOTIFY_SCALE, 1.0f);
+        pose.scale(CustomizeUiLayout.NOTIFY_SCALE, CustomizeUiLayout.NOTIFY_SCALE, 1.0f);
 
-        graphics.blit(NOTIFY_BACK_TEXTURE, 0, 0, NOTIFY_W, NOTIFY_H, 0.0f, 0.0f,
-                NOTIFY_W, NOTIFY_H, NOTIFY_W, NOTIFY_H);
-        graphics.blit(NOTIFY_LOGO_TEXTURE, NOTIFY_ICON_X, NOTIFY_ICON_Y,
-                NOTIFY_ICON, NOTIFY_ICON, 0.0f, 0.0f,
+        graphics.blit(NOTIFY_BACK_TEXTURE, 0, 0, CustomizeUiLayout.NOTIFY_W,
+                CustomizeUiLayout.NOTIFY_H, 0.0f, 0.0f, CustomizeUiLayout.NOTIFY_W,
+                CustomizeUiLayout.NOTIFY_H, CustomizeUiLayout.NOTIFY_W, CustomizeUiLayout.NOTIFY_H);
+        graphics.blit(NOTIFY_LOGO_TEXTURE, CustomizeUiLayout.NOTIFY_ICON_X, CustomizeUiLayout.NOTIFY_ICON_Y,
+                CustomizeUiLayout.NOTIFY_ICON, CustomizeUiLayout.NOTIFY_ICON, 0.0f, 0.0f,
                 NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO);
 
         blend();
-        drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), NOTIFY_TITLE_X, NOTIFY_TITLE_Y,
-                CustomizeUiLayout.plainFontScale(NOTIFY_TITLE_FONT), NOTIFY_SCALE, NOTIFY_TEXT_COLOR);
-        drawText(graphics, Component.literal(NOTIFY_DEMO_TEXT), NOTIFY_TEXT_X, NOTIFY_TEXT_Y,
-                CustomizeUiLayout.plainFontScale(NOTIFY_TEXT_FONT), NOTIFY_SCALE, NOTIFY_TEXT_COLOR);
+        drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), CustomizeUiLayout.NOTIFY_TITLE_X,
+                CustomizeUiLayout.NOTIFY_TITLE_Y,
+                CustomizeUiLayout.plainFontScale(CustomizeUiLayout.NOTIFY_TITLE_FONT),
+                CustomizeUiLayout.NOTIFY_SCALE, CustomizeUiLayout.NOTIFY_TEXT_COLOR);
+        drawText(graphics, Component.literal(NOTIFY_DEMO_TEXT), CustomizeUiLayout.NOTIFY_TEXT_X,
+                CustomizeUiLayout.NOTIFY_TEXT_Y,
+                CustomizeUiLayout.plainFontScale(CustomizeUiLayout.NOTIFY_TEXT_FONT),
+                CustomizeUiLayout.NOTIFY_SCALE, CustomizeUiLayout.NOTIFY_TEXT_COLOR);
 
         pose.popPose();
     }
@@ -275,11 +271,11 @@ public class CustomizeUiScreen extends Screen {
         blend();
         drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), CustomizeUiLayout.MEDIA_TITLE_X,
                 textTopForBottom(CustomizeUiLayout.MEDIA_TITLE_BOTTOM),
-                titleScale, 1.0f, NOTIFY_TEXT_COLOR);
+                titleScale, 1.0f, CustomizeUiLayout.NOTIFY_TEXT_COLOR);
         blend();
         drawText(graphics, Component.literal(MEDIA_DEMO_TIME), CustomizeUiLayout.MEDIA_TIME_X,
                 textTopForBottom(CustomizeUiLayout.MEDIA_TIME_BOTTOM),
-                timeScale, 1.0f, NOTIFY_TEXT_COLOR);
+                timeScale, 1.0f, CustomizeUiLayout.NOTIFY_TEXT_COLOR);
     }
 
     /** Le cadre des deux champs, a droite de la ligne de l'element choisi. */
