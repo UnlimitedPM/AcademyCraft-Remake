@@ -97,6 +97,10 @@ public class AcademyCraft {
             // L'eolienne : sa nacelle et ses pales, qui tournent.
             event.registerBlockEntityRenderer(ModBlockEntities.WINDGEN_MAIN.get(),
                     cn.academy.client.render.WindgenMainRenderer::new);
+            // Le matrix : son socle, et ses plaques, qui ne se montrent que sur une machine
+            // complete.
+            event.registerBlockEntityRenderer(ModBlockEntities.MATRIX.get(),
+                    cn.academy.client.render.MatrixRenderer::new);
             // La bille de silicium : la premiere entite du mod, et donc son premier rendu
             // d'entite. Sans cette ligne, l'objet se lancerait sans qu'on voie rien.
             event.registerEntityRenderer(ModEntities.SILBARN.get(), cn.academy.client.SilbarnRenderer::new);

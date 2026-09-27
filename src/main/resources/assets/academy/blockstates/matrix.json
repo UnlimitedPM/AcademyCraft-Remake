@@ -1,9 +1,9 @@
 {
   "variants": {
-    "part=b_f_r,facing=north": { "model": "academy:block/matrix" },
-    "part=b_f_r,facing=south": { "model": "academy:block/matrix", "y": 180 },
-    "part=b_f_r,facing=west":  { "model": "academy:block/matrix", "y": 270 },
-    "part=b_f_r,facing=east":  { "model": "academy:block/matrix", "y": 90 },
+    "part=b_f_r,facing=north": { "model": "academy:block/matrix_dummy" },
+    "part=b_f_r,facing=south": { "model": "academy:block/matrix_dummy" },
+    "part=b_f_r,facing=west":  { "model": "academy:block/matrix_dummy" },
+    "part=b_f_r,facing=east":  { "model": "academy:block/matrix_dummy" },
 
     "part=b_f_l": { "model": "academy:block/matrix_dummy" },
     "part=b_b_r": { "model": "academy:block/matrix_dummy" },
