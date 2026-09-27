@@ -90,6 +90,10 @@ public class AcademyCraft {
         @SubscribeEvent
         public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerBlockEntityRenderer(ModBlockEntities.CAT_ENGINE.get(), CatEngineRenderer::new);
+            // L'imag phase liquide : un bloc de fluide n'a pas de modele, ses nappes se
+            // dessinent donc par-dessus, bloc de fluide par bloc de fluide.
+            event.registerBlockEntityRenderer(ModBlockEntities.IMAG_PHASE.get(),
+                    cn.academy.client.render.ImagPhaseLiquidRenderer::new);
             // La bille de silicium : la premiere entite du mod, et donc son premier rendu
             // d'entite. Sans cette ligne, l'objet se lancerait sans qu'on voie rien.
             event.registerEntityRenderer(ModEntities.SILBARN.get(), cn.academy.client.SilbarnRenderer::new);

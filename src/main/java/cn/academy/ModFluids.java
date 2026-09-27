@@ -30,9 +30,12 @@ public class ModFluids {
                 @Override
                 public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
                     consumer.accept(new IClientFluidTypeExtensions() {
-                        // Syntaxe compatible 1.20.1 pour éviter les erreurs de version
-                        private static final ResourceLocation STILL = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/phase_liquid");
-                        private static final ResourceLocation FLOW = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/phase_liquid");
+                        // L'original : `academy:blocks/black` pour les deux. Le fluide ne se
+                        // dessine pas lui-meme — c'est son rendu (ImagPhaseLiquidRenderer)
+                        // qui lui donne son aspect. Sa texture d'objet, elle, reste l'image
+                        // de l'imag phase.
+                        private static final ResourceLocation STILL = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/black");
+                        private static final ResourceLocation FLOW = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/black");
 
                         @Override
                         public ResourceLocation getStillTexture() { return STILL; }

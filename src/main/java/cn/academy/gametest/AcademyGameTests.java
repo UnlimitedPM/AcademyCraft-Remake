@@ -203,6 +203,10 @@ public final class AcademyGameTests {
         assertTrue(helper, set, "setBlock a refuse la pose de academy:phase_liquid");
         assertTrue(helper, readBack.is(ModBlocks.PHASE_LIQUID_BLOCK.get()),
                 "le bloc phase_liquid n'a pas survecu a la pose, lu : " + readBack);
+        // Et il porte son block entity : c'est lui qui fait dessiner les nappes du liquide.
+        // Sans lui, l'imag phase serait un bloc noir.
+        assertTrue(helper, helper.getBlockEntity(rel) != null,
+                "le bloc de fluide doit porter un block entity pour ses nappes");
         helper.succeed();
     }
 

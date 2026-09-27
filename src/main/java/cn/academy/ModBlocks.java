@@ -130,8 +130,11 @@ public class ModBlocks {
                     .sound(SoundType.METAL)
             ));
 
+    // Le bloc de fluide porte un block entity : c'est lui qui fait dessiner les
+    // nappes du liquide (voir ImagPhaseLiquidRenderer). L'original faisait pareil.
     public static final RegistryObject<LiquidBlock> PHASE_LIQUID_BLOCK = BLOCKS.register("phase_liquid",
-            () -> new LiquidBlock(ModFluids.SOURCE_PHASE_LIQUID, BlockBehaviour.Properties.copy(Blocks.WATER).noLootTable()));
+            () -> new ImagPhaseLiquidBlock(ModFluids.SOURCE_PHASE_LIQUID,
+                    BlockBehaviour.Properties.copy(Blocks.WATER).noLootTable()));
 
     // --- MÉTHODES UTILITAIRES ---
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {
