@@ -5053,4 +5053,60 @@ public final class AcademyGameTests {
         var data = terminalOf(player);
         if (data != null) data.reset();
     }
+
+    /**
+     * Les commandes de debogage de l'original, bout en bout.
+     *
+     * <p>Le test tape les vraies commandes dans le distributeur du serveur ({@code /aim ...})
+     * et relit la donnee du joueur : c'est la seule facon de verifier le cablage Brigadier,
+     * qu'aucune compilation ne voit. Un noeud mal attache, une sous-commande oubliee ou un
+     * argument mal nomme ne se decouvriraient qu'a la main.
+     *
+     * <p>Il couvre aussi la regle du <b>seul pouvoir</b> : prendre le vecteur manipulation
+     * doit lacher l'electromaster, ses competences et son niveau — c'est ce que faisait
+     * {@code setCategory} de l'original, qui remplacait la categorie du joueur.
+     */
+    @GameTest(template = "empty")
+    public static void lesCommandesAimFontCeQuEllesDisent(GameTestHelper helper) {
+        var electromaster = cn.academy.ability.CategoryManager.INSTANCE.getCategory("electromaster");
+        var vecmanip = cn.academy.ability.CategoryManager.INSTANCE.getCategory("vecmanip");
+        var railgun = electromaster.getSkill("railgun");
+
+        var player = ownPlayer(helper, "aim_commander");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        var source = player.createCommandSourceStack();
+        var commands = helper.getLevel().getServer().getCommands();
+
+        // /aim arrive desarmee : c'est son premier controle, et cheats_on le dit.
+        commands.performPrefixedCommand(source, "aim cheats_on");
+
+        commands.performPrefixedCommand(source, "aim cat electromaster");
+        assertValue(helper, 1, data.getCategoryLevel(electromaster),
+                "la categorie adoptee est posee au niveau 1, sinon l'aptitude reste eteinte");
+
+        commands.performPrefixedCommand(source, "aim learn railgun");
+        assertTrue(helper, data.isSkillLearned(railgun), "la competence doit etre apprise");
+        assertClose(helper, 0d, data.getSkillExp(railgun), "elle part sans experience");
+
+        commands.performPrefixedCommand(source, "aim exp railgun 1");
+        assertClose(helper, 1d, data.getSkillExp(railgun), "l'experience se pose telle quelle");
+
+        commands.performPrefixedCommand(source, "aim level 5");
+        assertValue(helper, 5, data.getCategoryLevel(electromaster), "le niveau se pose");
+
+        commands.performPrefixedCommand(source, "aim fullcp");
+        assertClose(helper, data.getMaxControlPoint(), data.getControlPoint(),
+                "la reserve se remplit jusqu'a son plafond");
+        assertClose(helper, 0d, data.getOverload(), "et le surcout retombe a zero");
+
+        // Un pouvoir, un seul : le second lache le premier, et tout ce qu'il savait.
+        commands.performPrefixedCommand(source, "aim cat vecmanip");
+        assertTrue(helper, data.getCategoryLevel(vecmanip) > 0, "le nouveau pouvoir est pose");
+        assertFalse(helper, data.hasLearned(electromaster),
+                "le premier pouvoir doit etre oublie : on ne peut pas en porter deux");
+        assertFalse(helper, data.isSkillLearned(railgun), "et ses competences avec");
+
+        helper.succeed();
+    }
 }

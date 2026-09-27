@@ -24,6 +24,8 @@ public class AbilityCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
+        // Les commandes de debogage du mod d'origine : /aim (sur soi) et /aimp (sur un autre).
+        cn.academy.command.AimCommands.register(dispatcher);
         dispatcher.register(Commands.literal("academy")
                 .then(Commands.literal("learn")
                         .then(Commands.argument("category", StringArgumentType.word())

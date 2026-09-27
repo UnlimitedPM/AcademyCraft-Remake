@@ -514,6 +514,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
+     * Force la reserve courante, bornee au plafond du niveau.
+     *
+     * Portage de {@code CPData.setCP} : la commande de debogage s'en sert pour rendre la
+     * reserve pleine (`/aim fullcp`), comme l'original qui remplissait alors sa barre.
+     */
+    public void setControlPoint(float value) {
+        controlPoint = Math.max(0f, Math.min(getMaxControlPoint(), value));
+        markDirty();
+    }
+
+    /**
      * Force le surcout courant, borne a la reserve.
      *
      * Portage de {@code CPData.setOverload} : l'original s'en servait pour remettre le
@@ -888,6 +899,20 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         }
 
         addLevelProgress(skill.getCategory(), effective);
+    }
+
+    /**
+     * Force l'experience d'une competence, sans toucher au niveau en cours.
+     *
+     * <p>La voie normale est {@link #addSkillExp}, qui verse aussi de l'avancement : c'est le
+     * jeu. La commande de debogage, elle, doit poser une valeur et rien d'autre — c'est la
+     * contrepartie de `/aim exp <competence> <valeur>` de l'original, ou `setSkillExp`
+     * ecrivait directement dans sa table.
+     */
+    public void setSkillExp(Skill skill, float exp) {
+        if (skill == null || skill.getCategory() == null) return;
+        skillExps.put(skillKey(skill), Math.max(0f, Math.min(1f, exp)));
+        markDirty();
     }
 
     /** Verse de l'avancement dans le niveau en cours d'une categorie. */
