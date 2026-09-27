@@ -258,6 +258,7 @@
   "ac.ability.teleporter.space_fluct.name": "Space Fluctuation",
   "ac.ability.teleporter.crithit": "%sx critical hit!",
   "ac.ability.meltdowner.rad_intensify.name": "β Radiation Intensify",
+  "ac.ability.meltdowner.electron_missile.name": "Electron Missile",
 
   "academy.learn.any_skill_of_level": "Any skill of level %s",
 

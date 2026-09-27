@@ -17,6 +17,7 @@ public class MeltdownerCategory extends Category {
     public static final MineRayBasicSkill MINE_RAY_BASIC = new MineRayBasicSkill();
     public static final MineRayExpertSkill MINE_RAY_EXPERT = new MineRayExpertSkill();
     public static final MineRayLuckSkill MINE_RAY_LUCK = new MineRayLuckSkill();
+    public static final ElectronMissileSkill ELECTRON_MISSILE = new ElectronMissileSkill();
 
     public static final MeltdownerCategory INSTANCE = new MeltdownerCategory();
 
@@ -35,6 +36,9 @@ public class MeltdownerCategory extends Category {
         addSkill(JET_ENGINE);
         addSkill(MINE_RAY_EXPERT);
         addSkill(MINE_RAY_LUCK);
+
+        // Le missile ferme la categorie, comme dans l'original.
+        addSkill(ELECTRON_MISSILE);
 
         // Les trois cursus generiques ferment la categorie, comme dans l'original.
         cn.academy.ability.generic.GenericSkills.addTo(this);
@@ -61,5 +65,8 @@ public class MeltdownerCategory extends Category {
         MINE_RAY_BASIC.setParent(MELTDOWNER, 0.3f);
         MINE_RAY_EXPERT.setParent(MINE_RAY_BASIC, 0.8f);
         MINE_RAY_LUCK.setParent(MINE_RAY_EXPERT, 1f);
+        // Et le missile descend du reacteur, avec les 30 % d'experience que l'original
+        // demandait : c'est la meme propulsion, appliquee a une charge.
+        ELECTRON_MISSILE.setParent(JET_ENGINE, 0.3f);
     }
 }

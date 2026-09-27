@@ -171,6 +171,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
          * sans ce souvenir, un joueur de mode survie garderait le vol apres sa competence.
          */
         private boolean flying;
+
+        /**
+         * Billes accumulees par le maintien.
+         *
+         * Le missile a electrons en pose une toutes les dix ticks — jusqu'a cinq — et chaque
+         * tir en consomme une. L'original en faisait des entites visibles (des spheres dessinees
+         * par un shader) ; le port, qui n'a pas d'effets de ce genre, les compte, et le compte
+         * disparait avec le maintien comme le reste.
+         */
+        private int balls;
     }
 
     private final Map<Skill, Hold> holds = new HashMap<>();
@@ -1278,6 +1288,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public List<net.minecraft.world.phys.Vec3> getHoldPoints(Skill skill) {
         Hold hold = holds.get(skill);
         return hold == null ? List.of() : List.copyOf(hold.points);
+    }
+
+    /** Les billes accumulees par ce maintien ; 0 s'il n'en a pas. */
+    public int getHoldBalls(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? 0 : hold.balls;
+    }
+
+    /** Pose le nombre de billes du maintien. */
+    public void setHoldBalls(Skill skill, int balls) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.balls = balls;
     }
 
     /**

@@ -51,6 +51,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_basic", 3),
             Map.entry("meltdowner.mine_ray_expert", 4),
             Map.entry("meltdowner.mine_ray_luck", 5),
+            Map.entry("meltdowner.electron_missile", 5),
             Map.entry("meltdowner.jet_engine", 4),
             Map.entry("meltdowner.ray_barrage", 4),
             Map.entry("teleporter.dim_folding_theorem", 1),
@@ -123,6 +124,8 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_luck", List.of("meltdowner.mine_ray_expert")),
             Map.entry("meltdowner.jet_engine", List.of("meltdowner.meltdowner")),
             Map.entry("meltdowner.ray_barrage", List.of("meltdowner.meltdowner")),
+            // Et le missile descend du reacteur, avec les 30 % d'experience de l'original.
+            Map.entry("meltdowner.electron_missile", List.of("meltdowner.jet_engine")),
             Map.entry("teleporter.flashing", List.of("teleporter.shift_tp")),
             // Le passif des critiques descend du saut, sans seuil d'experience.
             Map.entry("teleporter.space_fluct", List.of("teleporter.shift_tp")),
@@ -359,7 +362,7 @@ class PortedSkillsTest {
                 namesOf(cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE));
         assertEquals(List.of("electron_bomb", "rad_intensify", "scatter_bomb", "light_shield",
                         "meltdowner", "mine_ray_basic", "ray_barrage", "jet_engine",
-                        "mine_ray_expert", "mine_ray_luck", "brain_course",
+                        "mine_ray_expert", "mine_ray_luck", "electron_missile", "brain_course",
                         "brain_course_advanced", "mind_course"),
                 namesOf(cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE));
         assertEquals(List.of("threatening_teleport", "dim_folding_theorem", "penetrate_teleport",
@@ -488,6 +491,7 @@ class PortedSkillsTest {
             Map.entry("meltdowner.mine_ray_luck", 350f),
             Map.entry("meltdowner.jet_engine", 60f),
             Map.entry("meltdowner.ray_barrage", 300f),
+            Map.entry("meltdowner.electron_missile", 200f),
             Map.entry("teleporter.flashing", 250f),
             Map.entry("teleporter.location_teleport", 240f),
             Map.entry("vecmanip.dir_shock", 18f),

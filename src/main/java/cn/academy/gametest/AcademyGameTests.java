@@ -5055,6 +5055,50 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
+     *
+     * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,
+     * et la seule qui rende l'attaque deterministe : la premiere bille tombe au tick 0, le premier
+     * tir au tick 8, sur une cible posee a trois blocs.
+     */
+    @GameTest(template = "empty")
+    public static void leMissileAElectronsTireSesBilles(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.ELECTRON_MISSILE;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 160);
+
+        var player = ownPlayer(helper, "missileer");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        clearCorridor(helper, abs, 8);
+
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 3.5, 0f, 0f);
+        level.addFreshEntity(zombie);
+        float before = zombie.getHealth();
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(skill.getCategory(), 5);
+        data.learnSkill(skill);
+
+        data.beginCharge(skill);
+        skill.onStart(player, data);
+        for (int tick = 0; tick <= 8; tick++) {
+            assertTrue(helper, skill.onHoldTick(player, data, tick), "le maintien doit tenir");
+        }
+
+        assertTrue(helper, zombie.getHealth() < before,
+                "le missile doit avoir frappe : " + zombie.getHealth() + " contre " + before);
+        assertClose(helper, 0d, data.getHoldBalls(skill), "la bille envoyee est consommee");
+        assertClose(helper, 0.001d, data.getSkillExp(skill), "et le tir verse son experience");
+
+        zombie.discard();
+        data.endCharge(skill);
+        helper.succeed();
+    }
+
+    /**
      * L'experience du passif de radiation, telle que le joueur l'a relevee sur l'original.
      *
      * <p>Le passif tire son experience de la reserve : son plafond, rapporte a celui du niveau 5.
