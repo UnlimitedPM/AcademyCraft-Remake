@@ -1,6 +1,7 @@
 package cn.academy.client.render;
 
 import cn.academy.MatrixBlock;
+import cn.academy.MatrixStructure;
 import cn.academy.energy.MatrixBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -58,13 +59,16 @@ public class MatrixRenderer implements BlockEntityRenderer<MatrixBlockEntity> {
         ObjMesh mesh = ObjModels.get(MODEL);
         VertexConsumer out = buffers.getBuffer(ObjModels.type(TEXTURE));
 
+        Direction facing = state.getValue(MatrixBlock.FACING);
+
         pose.pushPose();
         // L'origine du modele : le centre du multi-bloc, au sol. Le bloc d'ancrage n'est
-        // qu'un COIN de ce carre de quatre blocs, pas son centre : le modele, lui, est
-        // centre. D'ou le demi-bloc, dans l'axe du multi-bloc (il tourne avec lui).
-        pose.translate(0.5d, 0.0d, 0.5d);
-        pose.mulPose(Axis.YP.rotationDegrees(-degreesFor(state.getValue(MatrixBlock.FACING))));
-        pose.translate(-0.5d, 0.0d, 0.0d);
+        // qu'un COIN de ce cube de deux blocs de cote, et le modele, lui, est centre sur
+        // son origine. D'ou le demi-bloc du coin du bloc, plus le demi-bloc du cote ou le
+        // multi-bloc s'etend : chaque axe recoit alors zero ou un bloc plein, jamais un
+        // demi — voir {@link MatrixStructure}.
+        pose.translate(MatrixStructure.centreX(facing), 0.0d, MatrixStructure.centreZ(facing));
+        pose.mulPose(Axis.YP.rotationDegrees(-degreesFor(facing)));
 
         ObjModels.draw(mesh.group(BASE), pose, out, light, overlay);
         ObjModels.draw(mesh.group(CORE), pose, out, light, overlay);

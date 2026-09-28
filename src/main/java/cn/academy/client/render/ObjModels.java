@@ -36,14 +36,14 @@ public final class ObjModels {
     /**
      * La texture d'un modele.
      *
-     * <p>Dans {@code textures/block}, comme les modeles de bloc du port l'ecrivent
-     * ({@code "textures": {"base": "academy:block/windgen_main_model"}}). Le dossier
-     * {@code textures/models} en contient une seconde copie, plus ancienne et differente :
-     * s'y tromper fait disparaitre des faces entieres, l'alpha de l'autre image ne
-     * correspondant plus aux coordonnees du fichier OBJ.
+     * <p>Dans {@code textures/models}, comme l'original ({@code Resources.getTexture("models/...")}).
+     * Le dossier {@code textures/block} en contient une seconde copie, sous le meme nom :
+     * c'est un autre atlas, redecoupe. Les coordonnees du fichier OBJ y tombent alors sur
+     * les mauvaises cases — parfois sur du vide, ce qui fait des faces entieres
+     * transparentes, et c'est exactement ce qu'on voyait sur la nacelle de l'eolienne.
      */
     public static ResourceLocation texture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/block/" + name + ".png");
+        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/models/" + name + ".png");
     }
 
     /** Le type de rendu des modeles : decoupe, et sans cull — les OBJ du mod sont fins. */
