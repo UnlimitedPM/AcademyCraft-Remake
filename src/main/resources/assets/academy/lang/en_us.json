@@ -327,18 +327,7 @@
   "academy.interferer.state.off": "Idle",
   "academy.interferer.action.toggle": "On / Off",
 
-  "academy.discord.menu": "In the main menu",
-  "academy.discord.solo": "Playing solo",
-  "academy.discord.multiplayer": "Playing on a server",
-  "academy.discord.server": "Playing on %s",
-  "academy.discord.state": "In %s",
-  "academy.discord.dimension.overworld": "the Overworld",
-  "academy.discord.dimension.nether": "the Nether",
-  "academy.discord.dimension.end": "the End",
-  "academy.discord.large": "AcademyCraft Remake %s",
-  "academy.discord.image.menu": "Main menu",
-  "academy.discord.image.solo": "Singleplayer",
-  "academy.discord.image.multi": "Multiplayer",
+
 
   "itemGroup.academy_tab": "AcademyCraft Remake",
 

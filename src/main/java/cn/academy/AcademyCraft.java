@@ -47,14 +47,6 @@ public class AcademyCraft {
         // dedie, Forge ignore simplement cette config.
         context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.CLIENT,
                 cn.academy.client.hud.HudConfig.SPEC);
-        // La presence Discord est elle aussi une affaire de client : c'est le joueur qui a
-        // un compte Discord, et lui seul qui decide de ce qu'on y montre.
-        // Le fichier est nomme a la main, et c'est obligatoire : Forge range toutes les
-        // configs CLIENT d'un mod dans le meme fichier, et refuse la deuxieme —
-        //   Detected config file conflict academy-client.toml between academy and academy
-        // — ce qui fait echouer le chargement du mod entier, serveur compris.
-        context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.CLIENT,
-                cn.academy.client.discord.DiscordConfig.SPEC, "academy-discord.toml");
 
         MinecraftForge.EVENT_BUS.register(this);
     }
@@ -138,10 +130,6 @@ public class AcademyCraft {
                 // Sans cet appel, l'unite d'energie gardait toujours sa texture pleine :
                 // la propriete d'item "academy:energy" n'etait jamais enregistree.
                 ModItemProperties.addCustomItemProperties();
-                // La presence Discord : un fil a part, qui parle au client Discord installe
-                // sur la machine. Rien ne part tant que le joueur n'a pas colle l'identifiant
-                // de son application ; sans compte ni identifiant, ce fil ne fait rien.
-                cn.academy.client.discord.DiscordService.start();
             });
         }
     }
