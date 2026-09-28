@@ -33,6 +33,11 @@ public class AbilityNetwork {
         // chose au client : c'est lui qui balaie le monde et l'allume.
         CHANNEL.registerMessage(nextId++, MineDetectPacket.class,
                 MineDetectPacket::encode, MineDetectPacket::decode, MineDetectPacket::handle);
+        // Les eclairs des competences : le serveur sait ou ils sont partis et jusqu'ou, et
+        // il le dit a ceux qui voient le tireur. Sans ce paquet, un arc ne se dessinerait
+        // que chez celui qui appuie sur la touche.
+        CHANNEL.registerMessage(nextId++, ArcEffectPacket.class,
+                ArcEffectPacket::encode, ArcEffectPacket::decode, ArcEffectPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

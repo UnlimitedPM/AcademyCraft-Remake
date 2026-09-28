@@ -3,6 +3,9 @@ package cn.academy.ability.electromaster;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.client.arc.ArcPattern;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.ArcEffectPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -10,6 +13,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Random;
 
@@ -17,6 +21,9 @@ import java.util.Random;
 public class ArcGenSkill extends Skill {
 
     private static final int IGNITE_TICKS = 80;
+
+    /** La duree de l'eclair, en ticks : le {@code Life(10)} de l'original. */
+    private static final int ARC_TICKS = 10;
 
     private final Random random = new Random();
 
@@ -117,6 +124,14 @@ public class ArcGenSkill extends Skill {
         // mur ne s'attrape pas, et la portee de l'arc se mesure jusqu'a ce mur.
         BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
         Vec3 end = block == null ? eye.add(look.scale(range)) : block.getLocation();
+
+        // L'eclair se dessine chez tous ceux qui voient le tireur, et pas seulement chez
+        // lui : c'est le message d'effet de l'original, et c'est ce qui fait qu'on voit
+        // l'attaque venir. Les motifs d'arcs sont purs — aucun type de Minecraft — donc le
+        // serveur peut les nommer sans rien connaitre du rendu.
+        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+                new ArcEffectPacket(ArcPattern.WEAK.name(), eye, end, ARC_TICKS, true));
+
         Entity target = TargetingUtil.findEntityAlong(player, eye, end,
                 e -> e instanceof LivingEntity);
 
