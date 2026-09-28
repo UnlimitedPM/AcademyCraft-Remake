@@ -28,7 +28,23 @@ public final class ShieldVisuals {
     /** Ticks au bout desquels la rotation atteint sa vitesse maximale. */
     private static final float SPIN_TICKS = 30f;
 
+    /** La competence qui possede ce bouclier : celle de la meltdowner, et elle seule. */
+    public static final String SKILL = "light_shield";
+
     private ShieldVisuals() {}
+
+    /**
+     * Ce maintien doit-il dessiner ce bouclier ?
+     *
+     * <p>Le port le dessinait pour n'importe quel maintien, sans jamais regarder lequel :
+     * les quatorze competences tenues du mod affichaient donc le bouclier de la meltdowner
+     * devant les yeux — un arc de charge, une detection de minerais ou un moteur a
+     * reaction compris. Le nom de la competence est pourtant disponible juste a cote, dans
+     * {@code ClientCharge}, et c'est deja lui qui choisit la boucle sonore du maintien.
+     */
+    public static boolean showsShield(String skill, boolean sustained) {
+        return sustained && SKILL.equals(skill);
+    }
 
     /** Taille du bouclier apres {@code ticks} ticks de maintien. */
     public static float scale(int ticks) {

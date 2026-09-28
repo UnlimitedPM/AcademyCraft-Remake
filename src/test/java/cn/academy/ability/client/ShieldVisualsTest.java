@@ -3,6 +3,8 @@ package cn.academy.ability.client;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Les nombres du bouclier de lumiere.
@@ -46,5 +48,22 @@ class ShieldVisualsTest {
         assertEquals(1.0, ShieldVisuals.DISTANCE, 0.0001);
         assertEquals(1.1, ShieldVisuals.HEIGHT, 0.0001);
         assertEquals(1.8f, ShieldVisuals.SIZE, 0.0001f);
+    }
+
+    @Test
+    void leBouclierNappartientQuaSaCompetence() {
+        assertTrue(ShieldVisuals.showsShield("light_shield", true));
+
+        // Les maintiens de l'electromaster, et tous les autres : le port les affichait
+        // avec le bouclier de la meltdowner, ce qui n'a aucun sens.
+        assertFalse(ShieldVisuals.showsShield("charging", true));
+        assertFalse(ShieldVisuals.showsShield("mag_movement", true));
+        assertFalse(ShieldVisuals.showsShield("mag_manip", true));
+        assertFalse(ShieldVisuals.showsShield("jet_engine", true));
+        assertFalse(ShieldVisuals.showsShield(null, true));
+
+        // Et hors maintien, il n'y a rien a dessiner, meme pour la bonne competence :
+        // une charge de light_shield n'est pas un bouclier.
+        assertFalse(ShieldVisuals.showsShield("light_shield", false));
     }
 }

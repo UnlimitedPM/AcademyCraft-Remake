@@ -47,7 +47,7 @@ public class ShieldRenderer {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
-        if (!ClientCharge.isSustained()) {
+        if (!ShieldVisuals.showsShield(ClientCharge.getSkill(), ClientCharge.isSustained())) {
             // Rien a dessiner : on remet le disque a zero pour que le prochain bouclier
             // reparte de la meme position, comme une entite neuve.
             spin = 0;
