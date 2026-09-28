@@ -33,9 +33,17 @@ public final class ObjModels {
         return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "models/" + name + ".obj");
     }
 
-    /** La texture d'un modele, dans {@code textures/models}. */
+    /**
+     * La texture d'un modele.
+     *
+     * <p>Dans {@code textures/block}, comme les modeles de bloc du port l'ecrivent
+     * ({@code "textures": {"base": "academy:block/windgen_main_model"}}). Le dossier
+     * {@code textures/models} en contient une seconde copie, plus ancienne et differente :
+     * s'y tromper fait disparaitre des faces entieres, l'alpha de l'autre image ne
+     * correspondant plus aux coordonnees du fichier OBJ.
+     */
     public static ResourceLocation texture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/models/" + name + ".png");
+        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/block/" + name + ".png");
     }
 
     /** Le type de rendu des modeles : decoupe, et sans cull — les OBJ du mod sont fins. */
