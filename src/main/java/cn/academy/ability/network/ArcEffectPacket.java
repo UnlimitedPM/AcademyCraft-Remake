@@ -24,20 +24,12 @@ import java.util.function.Supplier;
 public class ArcEffectPacket {
 
     private final String pattern;
-    private final double[] from;
-    private final double[] to;
+    private final Vec3 from;
+    private final Vec3 to;
     private final int lifeTicks;
     private final boolean clipToDistance;
 
     public ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean clipToDistance) {
-        this(pattern,
-                new double[] { from.x, from.y, from.z },
-                new double[] { to.x, to.y, to.z },
-                lifeTicks, clipToDistance);
-    }
-
-    private ArcEffectPacket(String pattern, double[] from, double[] to, int lifeTicks,
-                            boolean clipToDistance) {
         this.pattern = pattern;
         this.from = from;
         this.to = to;
@@ -47,28 +39,58 @@ public class ArcEffectPacket {
 
     public static void encode(ArcEffectPacket msg, FriendlyByteBuf buf) {
         buf.writeUtf(msg.pattern);
-        // Des doubles, et non des floats : un eclair a l'autre bout d'un monde de mille
-        // blocs n'a pas besoin de la meme precision qu'a cote, mais il en a besoin d'un peu.
-        for (double value : msg.from) buf.writeDouble(value);
-        for (double value : msg.to) buf.writeDouble(value);
+        writePoint(buf, msg.from);
+        writePoint(buf, msg.to);
         buf.writeVarInt(msg.lifeTicks);
         buf.writeBoolean(msg.clipToDistance);
     }
 
     public static ArcEffectPacket decode(FriendlyByteBuf buf) {
         String pattern = buf.readUtf();
-        double[] from = { buf.readDouble(), buf.readDouble(), buf.readDouble() };
-        double[] to = { buf.readDouble(), buf.readDouble(), buf.readDouble() };
+        Vec3 from = readPoint(buf);
+        Vec3 to = readPoint(buf);
         return new ArcEffectPacket(pattern, from, to, buf.readVarInt(), buf.readBoolean());
     }
 
     public static void handle(ArcEffectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> cn.academy.ability.client.arc.ArcRenderer.spawn(
-                msg.pattern,
-                new Vec3(msg.from[0], msg.from[1], msg.from[2]),
-                new Vec3(msg.to[0], msg.to[1], msg.to[2]),
-                msg.lifeTicks, msg.clipToDistance));
+                msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.clipToDistance));
         ctx.setPacketHandled(true);
+    }
+
+    private static void writePoint(FriendlyByteBuf buf, Vec3 point) {
+        buf.writeDouble(point.x);
+        buf.writeDouble(point.y);
+        buf.writeDouble(point.z);
+    }
+
+    private static Vec3 readPoint(FriendlyByteBuf buf) {
+        return new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
+    }
+
+    /** Le motif demande. Lisible par le test, qui relit l'aller-retour du paquet. */
+    String pattern() {
+        return pattern;
+    }
+
+    /** Le point de depart de l'eclair. */
+    Vec3 from() {
+        return from;
+    }
+
+    /** Le point d'arrivee de l'eclair. */
+    Vec3 to() {
+        return to;
+    }
+
+    /** La duree de vie de l'eclair, en ticks. */
+    int lifeTicks() {
+        return lifeTicks;
+    }
+
+    /** Vrai si l'eclair s'arrete au point vise plutot qu'a la portee de son motif. */
+    boolean clipToDistance() {
+        return clipToDistance;
     }
 }

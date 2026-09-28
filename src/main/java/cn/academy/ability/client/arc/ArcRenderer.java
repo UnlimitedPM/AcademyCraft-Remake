@@ -5,8 +5,10 @@ import cn.academy.ability.client.arc.ArcMesh.Segment;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -130,9 +132,17 @@ public class ArcRenderer {
             double[] p4 = shift(end, width, -segment.width1());
 
             float alpha = (float) segment.alpha();
-            // Les deux faces : le rendu translucide de Minecraft ecarte les faces arriere.
-            quad(out, matrix, camera, p1, p2, p3, p4, alpha);
-            quad(out, matrix, camera, p4, p3, p2, p1, alpha);
+            // La normale du ruban : le format de sommet des entites l'exige, et sans elle
+            // Minecraft refuse le sommet et fait tomber le jeu des la premiere image
+            // ("Not filled all elements of the vertex"). L'eclairage ne s'en sert pas —
+            // l'arc est dessine en pleine lumiere — mais elle doit etre la.
+            double[] face = cross(direction[0], direction[1], direction[2],
+                    width[0], width[1], width[2]);
+            double[] normal = normalize(face[0], face[1], face[2]);
+
+            // Les deux faces : le rendu translucide des entites ecarte les faces arriere.
+            quad(out, matrix, camera, p1, p2, p3, p4, alpha, normal);
+            quad(out, matrix, camera, p4, p3, p2, p1, alpha, normal);
         }
     }
 
@@ -169,23 +179,38 @@ public class ArcRenderer {
 
     /** Un carre du ruban, dans l'ordre donne. */
     private static void quad(VertexConsumer out, Matrix4f matrix, Vec3 camera,
-                             double[] a, double[] b, double[] c, double[] d, float alpha) {
-        vertex(out, matrix, camera, a, 0f, 0f, alpha);
-        vertex(out, matrix, camera, b, 0f, 1f, alpha);
-        vertex(out, matrix, camera, c, 1f, 1f, alpha);
-        vertex(out, matrix, camera, d, 1f, 0f, alpha);
+                             double[] a, double[] b, double[] c, double[] d, float alpha,
+                             double[] normal) {
+        vertex(out, matrix, camera, a, 0f, 0f, alpha, normal);
+        vertex(out, matrix, camera, b, 0f, 1f, alpha, normal);
+        vertex(out, matrix, camera, c, 1f, 1f, alpha, normal);
+        vertex(out, matrix, camera, d, 1f, 0f, alpha, normal);
     }
 
+    /**
+     * Un sommet du ruban.
+     *
+     * <p>Les morceaux attendus par le format des entites, un par un : la position relative a
+     * la camera, la couleur avec l'opacite de la branche, la texture du bout de trait, la
+     * normale, et l'absence d'ecran de degats — {@link OverlayTexture#NO_OVERLAY} n'est pas
+     * zero, et passer zero afficherait le rouge d'une blessure sur tout l'eclair.
+     *
+     * <p>Il en manquait un, et le jeu tombait a la premiere image : « Not filled all
+     * elements of the vertex ». Le format des entites demande six choses, pas cinq.
+     */
     private static void vertex(VertexConsumer out, Matrix4f matrix, Vec3 camera,
-                               double[] point, float u, float v, float alpha) {
+                               double[] point, float u, float v, float alpha, double[] normal) {
         out.vertex(matrix,
                         (float) (point[0] - camera.x),
                         (float) (point[1] - camera.y),
                         (float) (point[2] - camera.z))
                 .color(1f, 1f, 1f, alpha)
                 .uv(u, v)
-                .overlayCoords(0)
-                .uv2(0xf000f0)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                // L'arc eclaire : pleine lumiere, comme l'original, qui le dessinait sans
+                // jamais interroger la lumiere du monde.
+                .uv2(LightTexture.FULL_BRIGHT)
+                .normal((float) normal[0], (float) normal[1], (float) normal[2])
                 .endVertex();
     }
 
