@@ -3,6 +3,7 @@ package cn.academy.ability.electromaster;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.client.arc.ArcOrigins;
 import cn.academy.ability.client.arc.ArcPattern;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ArcEffectPacket;
@@ -120,6 +121,9 @@ public class ArcGenSkill extends Skill {
         double range = range(data);
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
+        // L'arc part de la main, pas des yeux : voir ArcOrigins, ou l'ecart avec l'original
+        // est explique. Le rayon, lui, continue de partir des yeux — c'est ce qu'on vise.
+        Vec3 hand = ArcOrigins.hand(eye, look);
         // Le rayon de l'original s'arretait au premier bloc : ce qui se trouve derriere un
         // mur ne s'attrape pas, et la portee de l'arc se mesure jusqu'a ce mur.
         BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
@@ -130,7 +134,7 @@ public class ArcGenSkill extends Skill {
         // l'attaque venir. Les motifs d'arcs sont purs — aucun type de Minecraft — donc le
         // serveur peut les nommer sans rien connaitre du rendu.
         AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new ArcEffectPacket(ArcPattern.WEAK.name(), eye, end, ARC_TICKS, true));
+                new ArcEffectPacket(ArcPattern.WEAK.name(), hand, end, ARC_TICKS, true));
 
         Entity target = TargetingUtil.findEntityAlong(player, eye, end,
                 e -> e instanceof LivingEntity);

@@ -1,13 +1,13 @@
 package cn.academy.ability.client.arc;
 
-import cn.academy.ability.client.arc.ArcMesh.Segment;
+import cn.academy.ability.client.arc.ArcMesh.Quad;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 /**
- * La generation des eclairs, portage de {@code ArcFactory.generate}.
+ * La generation des eclairs, portage de {@code ArcFactory}.
  *
  * <p>Le principe, tel que l'original l'ecrivait : on part d'un segment droit de la portee du
  * motif ; a chaque passe, chaque segment est coupe en deux et son milieu est deplace au
@@ -16,21 +16,30 @@ import java.util.Random;
  * plus fin ; et de temps en temps, une branche part du milieu dans la direction du premier
  * morceau, raccourcie et deviee.
  *
+ * <p>Puis chaque ligne ainsi obtenue est transformee en rubans, exactement comme
+ * {@code handleSegment} le faisait : pour chaque segment, deux coins au depart et deux a
+ * l'arrivee, la direction du ruban etant perpendiculaire au segment et au plan du motif —
+ * et le bord de depart reprenant la direction du segment PRECEDENT, donc les quads se
+ * partagent leurs bords au lieu de se chevaucher. Un petit quart de tour au hasard, comme
+ * le {@code randomRotate(15)} de l'original, evite que tout soit parfaitement aligne.
+ *
  * <p>Deux differences avec l'original, et elles sont voulues :
  * <ul>
- *   <li>le hasard est <b>amorce</b>. L'original tirait ses motifs a chaque lancement (et
- *       meme a chaque image pour les arcs non figes), donc rien de tout cela n'etait
- *       reproductible ni testable. Ici, une graine donne toujours le meme eclair ;</li>
- *   <li>l'orientation des rubans n'est pas tiree au hasard ici : c'est le rendu qui fait
- *       toujours face a la camera. L'original retournait chaque ruban a chaque image, ce
- *       qui participait a son scintillement — mais un ruban qu'on regarde de profil
- *       disparait, et c'est justement ce qu'on ne veut pas.</li>
+ *   <li>le hasard est <b>amorce</b>. L'original tirait ses motifs a chaque lancement, donc
+ *       rien de tout cela n'etait reproductible ni testable ;</li>
+ *   <li>le quart de tour se fait <b>autour du segment</b>, et non autour d'un axe tire au
+ *       hasard : le ruban reste ainsi perpendiculaire au trait qu'il dessine, alors que
+ *       l'original pouvait le faire basculer hors de son axe. Meme intention, et une
+ *       surface qui ne se retourne jamais.</li>
  * </ul>
  */
 public final class ArcGenerator {
 
-    /** L'angle maximal dont une branche est deviee, en degres. */
-    private static final double BRANCH_DEVIATION = 10;
+    /** L'angle maximal dont un ruban est tourne autour de son segment, en degres. */
+    private static final double RIBBON_TWIST = 15;
+
+    /** Le plan du motif : tout ce qui n'est pas l'axe de l'arc. */
+    private static final double[] PATTERN_NORMAL = { 0, 0, 1 };
 
     private ArcGenerator() {}
 
@@ -41,7 +50,8 @@ public final class ArcGenerator {
 
         // La ligne de depart : un seul segment, de l'origine jusqu'a la portee du motif.
         List<List<Segment>> current = new ArrayList<>();
-        current.add(List.of(new Segment(0, 0, 0, length, 0, 0, width, width, 1.0)));
+        current.add(List.of(new Segment(new Point(0, 0, 0, width),
+                new Point(length, 0, 0, width), 1.0)));
 
         double offset = pattern.maxOffset();
         for (int pass = 0; pass < pattern.passes(); pass++) {
@@ -66,11 +76,64 @@ public final class ArcGenerator {
             offset /= 2;
         }
 
-        List<Segment> all = new ArrayList<>();
+        List<Quad> quads = new ArrayList<>();
         for (List<Segment> line : current) {
-            all.addAll(line);
+            ribbons(line, rng, quads);
         }
-        return new ArcMesh(all, length);
+        return new ArcMesh(quads, length);
+    }
+
+    /**
+     * Les rubans d'une ligne, enchaines comme dans l'original.
+     *
+     * <p>C'est ici que se joue l'aspect de l'eclair : chaque quad utilise la direction du
+     * ruban du segment precedent pour son bord de depart, donc deux quads voisins decrivent
+     * exactement le meme bord. Sans ce chainage, ils se croisent, et deux surfaces
+     * translucides superposees se melangent deux fois.
+     */
+    private static void ribbons(List<Segment> line, Random rng, List<Quad> out) {
+        double[] last = null;
+        for (Segment segment : line) {
+            double[] direction = ribbonDirection(segment, rng);
+            double[] start = last == null ? direction : last;
+
+            // Les quatre coins, dans l'ordre de la texture : le bord de depart d'un cote
+            // puis de l'autre, et le bord d'arrivee dans le meme sens. C'est l'ordre exact
+            // des addVert de l'original.
+            Point a = shift(segment.start(), start, segment.start().width());
+            Point b = shift(segment.start(), start, -segment.start().width());
+            Point c = shift(segment.end(), direction, -segment.end().width());
+            Point d = shift(segment.end(), direction, segment.end().width());
+
+            out.add(new Quad(segment.start().x(), segment.alpha(),
+                    a.x(), a.y(), a.z(),
+                    b.x(), b.y(), b.z(),
+                    c.x(), c.y(), c.z(),
+                    d.x(), d.y(), d.z()));
+
+            last = direction;
+        }
+    }
+
+    /**
+     * La direction du ruban d'un segment : perpendiculaire au segment et au plan du motif.
+     *
+     * <p>L'original prenait {@code crossProduct(dir, normal)} avec la normale de son motif,
+     * puis tournait le resultat d'un angle tire au hasard inferieur a quinze degres. Ici la
+     * rotation se fait autour du segment, pour que le ruban reste perpendiculaire a ce
+     * qu'il dessine.
+     */
+    private static double[] ribbonDirection(Segment segment, Random rng) {
+        double[] direction = normalize(subtract(segment.start(), segment.end()));
+        double[] ribbon = cross(direction, PATTERN_NORMAL);
+        if (length(ribbon) < 1e-6) {
+            // Segment parallele au plan du motif : il n'y a pas de perpendiculaire unique,
+            // on prend la verticale du motif plutot que de rendre un vecteur nul.
+            ribbon = new double[] { 0, 1, 0 };
+        }
+
+        double angle = (rng.nextDouble() * 2 - 1) * Math.toRadians(RIBBON_TWIST);
+        return rotateAround(ribbon, direction, angle);
     }
 
     /**
@@ -79,10 +142,12 @@ public final class ArcGenerator {
      * <p>Rend le premier morceau, dont la direction sert a celle d'une eventuelle branche.
      */
     private static Segment half(Segment segment, double offset, Random rng, List<Segment> out) {
-        double midX = (segment.x0() + segment.x1()) / 2;
-        double midY = (segment.y0() + segment.y1()) / 2;
-        double midZ = (segment.z0() + segment.z1()) / 2;
-        double midWidth = (segment.width0() + segment.width1()) / 2;
+        Point start = segment.start();
+        Point end = segment.end();
+        double midX = (start.x() + end.x()) / 2;
+        double midY = (start.y() + end.y()) / 2;
+        double midZ = (start.z() + end.z()) / 2;
+        double midWidth = (start.width() + end.width()) / 2;
 
         // Le milieu part dans une direction quelconque du plan perpendiculaire a l'arc.
         double angle = rng.nextDouble() * Math.PI * 2;
@@ -90,10 +155,8 @@ public final class ArcGenerator {
         midY += distance * Math.sin(angle);
         midZ += distance * Math.cos(angle);
 
-        Segment first = new Segment(segment.x0(), segment.y0(), segment.z0(),
-                midX, midY, midZ, segment.width0(), midWidth, segment.alpha());
-        Segment second = new Segment(midX, midY, midZ,
-                segment.x1(), segment.y1(), segment.z1(), midWidth, segment.width1(), segment.alpha());
+        Segment first = new Segment(start, new Point(midX, midY, midZ, midWidth), segment.alpha());
+        Segment second = new Segment(new Point(midX, midY, midZ, midWidth), end, segment.alpha());
         out.add(first);
         out.add(second);
         return first;
@@ -101,23 +164,25 @@ public final class ArcGenerator {
 
     /** La branche qui part du milieu d'un segment, dans la direction de sa premiere moitie. */
     private static List<Segment> branch(Segment first, Segment whole, ArcPattern pattern, Random rng) {
-        double dx = (first.x1() - first.x0()) * pattern.lengthShrink();
-        double dy = (first.y1() - first.y0()) * pattern.lengthShrink();
-        double dz = (first.z1() - first.z0()) * pattern.lengthShrink();
-        double[] dir = deviate(dx, dy, dz, BRANCH_DEVIATION, rng);
+        Point start = first.start();
+        Point end = first.end();
+        double dx = (end.x() - start.x()) * pattern.lengthShrink();
+        double dy = (end.y() - start.y()) * pattern.lengthShrink();
+        double dz = (end.z() - start.z()) * pattern.lengthShrink();
+        double[] turned = deviate(dx, dy, dz, 10, rng);
 
-        double width = first.width1() * pattern.widthShrink();
-        return List.of(new Segment(first.x1(), first.y1(), first.z1(),
-                first.x1() + dir[0], first.y1() + dir[1], first.z1() + dir[2],
-                width, width, whole.alpha() * pattern.alphaShrink()));
+        double width = end.width() * pattern.widthShrink();
+        return List.of(new Segment(end,
+                new Point(end.x() + turned[0], end.y() + turned[1], end.z() + turned[2], width),
+                whole.alpha() * pattern.alphaShrink()));
     }
 
     /**
-     * Un vecteur devie au hasard, de moins de {@code degrees} sur chaque axe.
+     * Un vecteur devie au hasard, de moins de {@code degrees} sur deux axes.
      *
      * <p>L'original faisait tourner la direction sur les trois axes, chacun d'un angle tire
      * entre -a et +a. Deux axes suffisent a donner la meme chose a l'oeil, et la troisieme
-     * rotation n'etait jamais visible : un ruban d'eclair n'a pas d'orientation propre.
+     * rotation n'etait jamais visible.
      */
     static double[] deviate(double x, double y, double z, double degrees, Random rng) {
         double limit = Math.toRadians(degrees);
@@ -130,4 +195,56 @@ public final class ArcGenerator {
         double finalZ = Math.sin(pitch) * y + Math.cos(pitch) * turnedZ;
         return new double[] { turnedX, turnedY, finalZ };
     }
+
+    /**
+     * Fait tourner un vecteur perpendiculaire autour d'un axe.
+     *
+     * <p>Le cas general de Rodrigues se simplifie ici : le vecteur tourne dans le plan
+     * perpendiculaire a l'axe, donc le terme qui le longe disparait.
+     */
+    private static double[] rotateAround(double[] vector, double[] axis, double angle) {
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        double[] turned = cross(axis, vector);
+        return new double[] {
+                vector[0] * cos + turned[0] * sin,
+                vector[1] * cos + turned[1] * sin,
+                vector[2] * cos + turned[2] * sin };
+    }
+
+    // ------------------------------------------------------------------
+    // Le petit calcul de vecteurs, pour ne dependre de rien
+    // ------------------------------------------------------------------
+
+    private static Point shift(Point point, double[] direction, double amount) {
+        return new Point(point.x() + direction[0] * amount,
+                point.y() + direction[1] * amount,
+                point.z() + direction[2] * amount,
+                point.width());
+    }
+
+    private static double[] subtract(Point from, Point to) {
+        return new double[] { to.x() - from.x(), to.y() - from.y(), to.z() - from.z() };
+    }
+
+    private static double[] cross(double[] a, double[] b) {
+        return new double[] { a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0] };
+    }
+
+    private static double length(double[] vector) {
+        return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
+    }
+
+    private static double[] normalize(double[] vector) {
+        double size = length(vector);
+        if (size < 1e-9) return new double[] { 1, 0, 0 };
+        return new double[] { vector[0] / size, vector[1] / size, vector[2] / size };
+    }
+
+    /** Un point du motif, avec la largeur du trait a cet endroit. */
+    private record Point(double x, double y, double z, double width) {}
+
+    /** Un bout de la ligne de l'eclair, avant d'etre transforme en ruban. */
+    private record Segment(Point start, Point end, double alpha) {}
 }

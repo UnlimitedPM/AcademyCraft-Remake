@@ -78,19 +78,19 @@ class ClientArcsTest {
     @Test
     @DisplayName("la forme suit la longueur demandee, ou la portee du motif")
     void laFormeSuitLaLongueurDemandee() {
-        int full = ArcPatterns.variant(ArcPattern.WEAK, 0).segments().size();
+        int full = ArcPatterns.variant(ArcPattern.WEAK, 0).quads().size();
 
         // Un arc non fige (la genese d'arc) s'arrete au point vise : cinq blocs, donc
-        // moins de bouts que le motif entier de vingt blocs.
+        // moins de rubans que le motif entier de vingt blocs.
         ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, true, 0, always(0.99));
-        int clipped = ClientArcs.live().get(0).mesh().segments().size();
+        int clipped = ClientArcs.live().get(0).mesh().quads().size();
         assertTrue(clipped < full, "un arc de cinq blocs est plus court qu'un arc de vingt");
         assertTrue(clipped > 0, "mais il en reste quelque chose");
 
         // Un arc fige (l'eclair) garde toute sa portee, meme si la cible est plus proche.
         ClientArcs.clear();
         ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, false, 0, always(0.99));
-        assertEquals(full, ClientArcs.live().get(0).mesh().segments().size());
+        assertEquals(full, ClientArcs.live().get(0).mesh().quads().size());
     }
 
     @Test

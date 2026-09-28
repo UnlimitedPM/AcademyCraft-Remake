@@ -1,12 +1,17 @@
 package cn.academy.ability.client.arc;
 
 import cn.academy.AcademyCraft;
-import cn.academy.ability.client.arc.ArcMesh.Segment;
+import cn.academy.ability.client.arc.ArcMesh.Quad;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
@@ -18,25 +23,34 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 /**
  * Dessine les eclairs des competences.
  *
- * <p>Portage du rendu d'{@code EntityArc} : l'original posait une entite au point de depart,
- * l'orientait vers la cible (lacet puis tangage), et dessinait son motif le long de l'axe.
- * Ici, le repere se construit directement : l'axe X du motif devient la direction de l'arc,
- * et les ecarts lateraux du motif sont poses sur les deux perpendiculaires. C'est le meme
- * dessin, sans angles d'Euler — et sans le cas ou viser droit vers le haut les rend
- * indetermines.
+ * <p>Portage du rendu d'{@code EntityArc} : l'original posait une entite au depart, l'orientait
+ * vers la cible (lacet puis tangage), et dessinait son motif le long de l'axe. Ici, le repere
+ * se construit directement : l'axe X du motif devient la direction de l'arc, et les deux
+ * autres axes du motif sont poses sur les deux perpendiculaires. C'est le meme dessin, sans
+ * angles d'Euler — et sans le cas ou viser droit vers le haut les rend indetermines.
  *
- * <p>Chaque bout d'arc est un ruban de deux faces. Les deux faces, et pas une : le type de
- * rendu de Minecraft ecarte les faces arriere, et un ruban qu'on ne voit que d'un cote
- * disparait une fois sur deux quand on tourne autour. Le ruban est tourne vers la camera,
- * ce qui n'est pas exactement ce que faisait l'original — lui retournait chaque ruban au
- * hasard a chaque image, et cet effacement participait a son scintillement. On garde le
- * scintillement du motif, on perd son vacillement, et on y gagne un eclair qu'on voit
- * toujours.
+ * <p>Le rendu n'a plus aucune decision a prendre : un motif est une suite de quads deja
+ * habilles, avec leurs quatre coins et l'ordre de la texture. Tout ce qu'il fait est un
+ * changement de repere. C'est ce qui garantit que deux quads voisins, calcules par
+ * {@code ArcGenerator} pour partager leur bord, le partagent encore une fois dessines.
+ *
+ * <p>Deux choses different des types de rendu de vanilla, et les deux sont necessaires :
+ * <ul>
+ *   <li>les <b>faces arriere ne sont pas ecartees</b>. Un ruban n'a qu'une face, et sans
+ *       cela il disparait des qu'on le regarde de l'autre cote. L'original desactivait le
+ *       meme tri ({@code glDisable(GL_CULL_FACE)}) le temps de dessiner ses eclairs ;</li>
+ *   <li>un <b>seul</b> quad par ruban. Dessiner la face avant ET la face arriere au meme
+ *       endroit les fait se disputer la profondeur et se melanger deux fois : l'eclair se
+ *       retrouve parseme de morceaux plus clairs que d'autres. C'est exactement ce que
+ *       l'original ne faisait pas.</li>
+ * </ul>
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class ArcRenderer {
@@ -44,6 +58,9 @@ public class ArcRenderer {
     /** La texture d'un bout de trait : celle de l'original, inchangee. */
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
             AcademyCraft.MOD_ID, "textures/effects/arc/line_segment.png");
+
+    /** Un type de rendu par texture : le construire a chaque image allouerait pour rien. */
+    private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
 
     private static final Random RANDOM = new Random();
 
@@ -82,7 +99,7 @@ public class ArcRenderer {
         Vec3 camera = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer out = buffers.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
+        VertexConsumer out = buffers.getBuffer(arc(TEXTURE));
 
         for (ClientArcs.LiveArc arc : ClientArcs.live()) {
             if (arc.visible()) {
@@ -92,7 +109,14 @@ public class ArcRenderer {
         buffers.endBatch();
     }
 
-    /** Un eclair entier : ses bouts, mis bout a bout le long de la direction visee. */
+    /**
+     * Un eclair entier : chacun de ses rubans, pose entre les deux points vises.
+     *
+     * <p>Le repere est construit pour que le plan du motif regarde la camera : l'eclair est
+     * une surface plate, et un plan vu de profil disparaitrait. Le repere ne change pas
+     * d'un segment a l'autre — c'est ce qui evite le vrillage, ou un ruban tourne vers
+     * l'oeil et son voisin de travers.
+     */
     private static void draw(VertexConsumer out, Matrix4f matrix, Vec3 camera, ClientArcs.LiveArc arc) {
         double[] from = arc.from();
         double[] to = arc.to();
@@ -103,108 +127,51 @@ public class ArcRenderer {
         double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (length < 1e-6) return;
 
-        // L'axe de l'arc, et les deux perpendiculaires du motif : l'une porte les ecarts
-        // lateraux du motif (son y), l'autre son z.
-        double ux = dx / length, uy = dy / length, uz = dz / length;
-        double[] side = perpendicular(ux, uy, uz);
-        double[] up = cross(ux, uy, uz, side[0], side[1], side[2]);
+        double[] axis = { dx / length, dy / length, dz / length };
+        // Perpendiculaire a l'axe et tournee vers l'oeil : le plan du motif lui fait face.
+        double[] facing = normalize(camera.x - from[0], camera.y - from[1], camera.z - from[2]);
+        double[] side = cross(axis, facing);
+        if (length(side) < 1e-4) {
+            // L'arc vise droit dans l'oeil : il n'y a plus de direction privilegiee, et un
+            // repere quelconque vaut mieux qu'un repere nul.
+            side = perpendicular(axis);
+        } else {
+            side = normalize(side[0], side[1], side[2]);
+        }
+        double[] up = cross(axis, side);
 
-        // La largeur d'un bout se prend dans le plan perpendiculaire a l'axe : celle de
-        // l'original, qui croisait la direction du bout avec la normale de son motif.
-        double[] lastWidth = side;
-        for (Segment segment : arc.mesh().segments()) {
-            double[] start = point(from, ux, uy, uz, side, up, segment.x0(), segment.y0(), segment.z0());
-            double[] end = point(from, ux, uy, uz, side, up, segment.x1(), segment.y1(), segment.z1());
-
-            double[] direction = normalize(end[0] - start[0], end[1] - start[1], end[2] - start[2]);
-            double[] width = ribbonDirection(direction, start, camera);
-            if (width == null) {
-                // Le bout vise droit dans l'oeil : deux directions opposees tiennent le
-                // meme ruban, donc on garde celle du bout precedent plutot que d'en tirer
-                // une au hasard, qui ferait clignoter l'eclair.
-                width = lastWidth;
-            }
-            lastWidth = width;
-
-            double[] p1 = shift(start, width, -segment.width0());
-            double[] p2 = shift(start, width, segment.width0());
-            double[] p3 = shift(end, width, segment.width1());
-            double[] p4 = shift(end, width, -segment.width1());
-
-            float alpha = (float) segment.alpha();
-            // La normale du ruban : le format de sommet des entites l'exige, et sans elle
-            // Minecraft refuse le sommet et fait tomber le jeu des la premiere image
-            // ("Not filled all elements of the vertex"). L'eclairage ne s'en sert pas —
-            // l'arc est dessine en pleine lumiere — mais elle doit etre la.
-            double[] face = cross(direction[0], direction[1], direction[2],
-                    width[0], width[1], width[2]);
-            double[] normal = normalize(face[0], face[1], face[2]);
-
-            // Les deux faces : le rendu translucide des entites ecarte les faces arriere.
-            quad(out, matrix, camera, p1, p2, p3, p4, alpha, normal);
-            quad(out, matrix, camera, p4, p3, p2, p1, alpha, normal);
+        for (Quad quad : arc.mesh().quads()) {
+            // Une seule face : le tri des faces arriere est desactive par le type de rendu,
+            // donc ce quad se voit des deux cotes.
+            vertex(out, matrix, camera, from, axis, side, up, quad, quad.ax(), quad.ay(), quad.az(), 0f, 0f);
+            vertex(out, matrix, camera, from, axis, side, up, quad, quad.bx(), quad.by(), quad.bz(), 0f, 1f);
+            vertex(out, matrix, camera, from, axis, side, up, quad, quad.cx(), quad.cy(), quad.cz(), 1f, 1f);
+            vertex(out, matrix, camera, from, axis, side, up, quad, quad.dx(), quad.dy(), quad.dz(), 1f, 0f);
         }
     }
 
-    /**
-     * Un point du motif dans le monde : {@code from} plus l'avance le long de l'axe, plus
-     * les deux ecarts lateraux du motif.
-     */
-    private static double[] point(double[] from, double ux, double uy, double uz,
-                                  double[] side, double[] up,
-                                  double x, double y, double z) {
-        return new double[] {
-                from[0] + ux * x + side[0] * y + up[0] * z,
-                from[1] + uy * x + side[1] * y + up[1] * z,
-                from[2] + uz * x + side[2] * y + up[2] * z };
-    }
-
-    /** La direction de la largeur du ruban : perpendiculaire au trait, et tournee vers l'oeil. */
-    private static double[] ribbonDirection(double[] direction, double[] start, Vec3 camera) {
-        double[] toCamera = normalize(camera.x - start[0], camera.y - start[1], camera.z - start[2]);
-        double[] width = cross(direction[0], direction[1], direction[2], toCamera[0], toCamera[1], toCamera[2]);
-        double widthLength = Math.sqrt(width[0] * width[0] + width[1] * width[1] + width[2] * width[2]);
-        if (widthLength < 1e-4) return null;
-        return new double[] { width[0] / widthLength, width[1] / widthLength, width[2] / widthLength };
-    }
-
-    /** Une perpendiculaire quelconque a l'axe, choisie stable pour ne pas tourner d'une image a l'autre. */
-    private static double[] perpendicular(double x, double y, double z) {
-        // Le repere le plus eloigne de l'axe : prend la verticale, sauf si l'arc est
-        // justement vertical ou le croisement serait nul.
-        double[] reference = Math.abs(y) > 0.9 ? new double[] { 1, 0, 0 } : new double[] { 0, 1, 0 };
-        double[] side = cross(x, y, z, reference[0], reference[1], reference[2]);
-        return normalize(side[0], side[1], side[2]);
-    }
-
-    /** Un carre du ruban, dans l'ordre donne. */
-    private static void quad(VertexConsumer out, Matrix4f matrix, Vec3 camera,
-                             double[] a, double[] b, double[] c, double[] d, float alpha,
-                             double[] normal) {
-        vertex(out, matrix, camera, a, 0f, 0f, alpha, normal);
-        vertex(out, matrix, camera, b, 0f, 1f, alpha, normal);
-        vertex(out, matrix, camera, c, 1f, 1f, alpha, normal);
-        vertex(out, matrix, camera, d, 1f, 0f, alpha, normal);
-    }
-
-    /**
-     * Un sommet du ruban.
-     *
-     * <p>Les morceaux attendus par le format des entites, un par un : la position relative a
-     * la camera, la couleur avec l'opacite de la branche, la texture du bout de trait, la
-     * normale, et l'absence d'ecran de degats — {@link OverlayTexture#NO_OVERLAY} n'est pas
-     * zero, et passer zero afficherait le rouge d'une blessure sur tout l'eclair.
-     *
-     * <p>Il en manquait un, et le jeu tombait a la premiere image : « Not filled all
-     * elements of the vertex ». Le format des entites demande six choses, pas cinq.
-     */
+    /** Un coin de ruban : du repere du motif a celui du monde, puis sous la camera. */
     private static void vertex(VertexConsumer out, Matrix4f matrix, Vec3 camera,
-                               double[] point, float u, float v, float alpha, double[] normal) {
+                               double[] from, double[] axis, double[] side, double[] up,
+                               Quad quad, double x, double y, double z, float u, float v) {
+        double worldX = from[0] + axis[0] * x + side[0] * y + up[0] * z;
+        double worldY = from[1] + axis[1] * x + side[1] * y + up[1] * z;
+        double worldZ = from[2] + axis[2] * x + side[2] * y + up[2] * z;
+
+        // La normale du ruban : le format de sommet des entites l'exige, et sans elle
+        // Minecraft refuse le sommet et fait tomber le jeu des la premiere image
+        // ("Not filled all elements of the vertex"). L'eclairage ne s'en sert pas — l'arc
+        // est dessine en pleine lumiere — mais elle doit etre la.
+        //
+        // Elle est celle du plan du motif, donc celle de toute la surface : un ruban n'a
+        // qu'une face, et lui donner une normale par coin ne changerait rien a l'ecran.
+        double[] normal = cross(axis, side);
+
         out.vertex(matrix,
-                        (float) (point[0] - camera.x),
-                        (float) (point[1] - camera.y),
-                        (float) (point[2] - camera.z))
-                .color(1f, 1f, 1f, alpha)
+                        (float) (worldX - camera.x),
+                        (float) (worldY - camera.y),
+                        (float) (worldZ - camera.z))
+                .color(1f, 1f, 1f, (float) quad.alpha())
                 .uv(u, v)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 // L'arc eclaire : pleine lumiere, comme l'original, qui le dessinait sans
@@ -214,20 +181,54 @@ public class ArcRenderer {
                 .endVertex();
     }
 
-    private static double[] shift(double[] point, double[] direction, double amount) {
-        return new double[] {
-                point[0] + direction[0] * amount,
-                point[1] + direction[1] * amount,
-                point[2] + direction[2] * amount };
+    /**
+     * Le type de rendu des eclairs : translucide, sans tri des faces arriere, et assombri
+     * par rien.
+     *
+     * <p>Les constantes de vanilla sont protegees, mais les constructeurs de ses morceaux ne
+     * le sont pas : on rebatit donc le meme etat, avec les deux differences qui comptent ici.
+     */
+    private static RenderType arc(ResourceLocation texture) {
+        return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_arc",
+                DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.QUADS,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getRendertypeEntityTranslucentEmissiveShader))
+                        .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
+                        .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_arc",
+                                () -> {
+                                    RenderSystem.enableBlend();
+                                    RenderSystem.defaultBlendFunc();
+                                },
+                                () -> RenderSystem.disableBlend()))
+                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .setLightmapState(new RenderStateShard.LightmapStateShard(false))
+                        .setOverlayState(new RenderStateShard.OverlayStateShard(true))
+                        .createCompositeState(true)));
+    }
+
+    private static double[] perpendicular(double[] axis) {
+        double[] reference = Math.abs(axis[1]) > 0.9 ? new double[] { 1, 0, 0 } : new double[] { 0, 1, 0 };
+        double[] side = cross(axis, reference);
+        return normalize(side[0], side[1], side[2]);
+    }
+
+    private static double[] cross(double[] a, double[] b) {
+        return new double[] { a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0] };
     }
 
     private static double[] normalize(double x, double y, double z) {
-        double length = Math.sqrt(x * x + y * y + z * z);
-        if (length < 1e-9) return new double[] { 0, 1, 0 };
-        return new double[] { x / length, y / length, z / length };
+        double size = Math.sqrt(x * x + y * y + z * z);
+        if (size < 1e-9) return new double[] { 0, 1, 0 };
+        return new double[] { x / size, y / size, z / size };
     }
 
-    private static double[] cross(double ax, double ay, double az, double bx, double by, double bz) {
-        return new double[] { ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx };
+    private static double length(double[] vector) {
+        return Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
     }
 }

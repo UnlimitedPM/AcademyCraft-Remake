@@ -10,38 +10,48 @@ import java.util.List;
  * jusqu'a sa portee (vingt blocs, comme les motifs de l'original). C'est le rendu qui pose
  * ce repere entre les deux points vises — l'axe X devient la direction de l'arc.
  *
- * <p>Ce decoupage est ce qui rend la generation verifiable : un eclair est une liste de
- * bouts de ruban avec leur largeur et leur opacite, et c'est tout. Aucun type de Minecraft
- * ici, donc les tests peuvent le lire entierement, mesurer sa portee et le couper.
+ * <p>Un eclair est une suite de <b>quads</b>, et non une suite de segments. Ce n'est pas un
+ * detail : l'original calculait, pour chaque segment, deux coins au depart et deux a
+ * l'arrivee, et le bord de depart reprenait la direction du segment PRECEDENT — les quads
+ * se partagent donc leurs bords exactement, sans recouvrement. Calculer chaque segment pour
+ * soi, comme je l'avais fait, les fait se croiser : deux surfaces translucides superposees
+ * se melangent deux fois, et l'eclair se retrouve parseme de morceaux plus clairs que
+ * d'autres.
+ *
+ * <p>Les quatre coins sont deja dans l'ordre de la texture — {@code (0,0)}, {@code (0,1)},
+ * {@code (1,1)}, {@code (1,0)} — donc le rendu n'a aucune decision a prendre : il deplace
+ * des points, et c'est tout. Toute la forme se relit ainsi en test : deux quads voisins
+ * partagent leurs bords, et l'opacite ne remonte jamais.
  */
-public record ArcMesh(List<Segment> segments, double extent) {
+public record ArcMesh(List<Quad> quads, double extent) {
 
     /**
-     * Un bout d'arc : de son debut a sa fin, avec la largeur du ruban a chaque bout.
+     * Un ruban du motif : quatre coins dans l'ordre de la texture, et son opacite.
      *
-     * <p>Les largeurs different parce qu'une branche s'amincit en s'eloignant, et l'opacite
-     * aussi : c'est elle qui fait disparaitre les branches les plus profondes, et donc
-     * apparaitre la forme de l'eclair plutot qu'un buisson.
+     * <p>{@code startX} est l'abscisse de son bord de depart, le long de l'arc : c'est elle
+     * qui dit si le quad tombe dans la longueur demandee quand l'arc est coupe.
      */
-    public record Segment(double x0, double y0, double z0, double x1, double y1, double z1,
-                          double width0, double width1, double alpha) {}
+    public record Quad(double startX, double alpha,
+                       double ax, double ay, double az,
+                       double bx, double by, double bz,
+                       double cx, double cy, double cz,
+                       double dx, double dy, double dz) {}
 
     public ArcMesh {
-        segments = List.copyOf(segments);
+        quads = List.copyOf(quads);
     }
 
     /**
      * L'arc, coupe a cette longueur.
      *
      * <p>L'original ne redimensionnait pas ses motifs : il en existait de vingt blocs, et
-     * un arc de dix blocs ne dessinait que les bouts qui tombent dans ces dix blocs. C'est
+     * un arc de dix blocs ne dessinait que les quads qui tombent dans ces dix blocs. C'est
      * pour cela que {@link ArcPattern} porte une longueur, et que ce n'est pas une echelle.
      */
     public ArcMesh clippedTo(double length) {
-        List<Segment> kept = new ArrayList<>(segments.size());
-        for (Segment segment : segments) {
-            if (segment.x0() > length) continue;
-            kept.add(segment);
+        List<Quad> kept = new ArrayList<>(quads.size());
+        for (Quad quad : quads) {
+            if (quad.startX() <= length) kept.add(quad);
         }
         return new ArcMesh(kept, extent);
     }
@@ -49,13 +59,14 @@ public record ArcMesh(List<Segment> segments, double extent) {
     /** Jusqu'ou ce motif dessine quelque chose, en blocs. */
     public double reach() {
         double reach = 0;
-        for (Segment segment : segments) {
-            reach = Math.max(reach, Math.max(segment.x0(), segment.x1()));
+        for (Quad quad : quads) {
+            reach = Math.max(reach, Math.max(Math.max(quad.ax(), quad.bx()),
+                    Math.max(quad.cx(), quad.dx())));
         }
         return reach;
     }
 
     public boolean isEmpty() {
-        return segments.isEmpty();
+        return quads.isEmpty();
     }
 }
