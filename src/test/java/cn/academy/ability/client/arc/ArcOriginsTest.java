@@ -64,14 +64,30 @@ class ArcOriginsTest {
         for (Vec3 hand : new Vec3[] { down, up }) {
             assertTrue(Double.isFinite(hand.x) && Double.isFinite(hand.y) && Double.isFinite(hand.z),
                     "aucune coordonnee ne doit devenir infinie ni nulle part");
-            assertTrue(hand.distanceTo(EYE) < 1, "et la main reste a portee de main");
+            assertTrue(hand.distanceTo(EYE) < 1.2, "et la main reste a portee de main");
         }
-        // Regard au sol : la main descend franchement. Regard au ciel : elle monte un peu
-        // plus haut que les yeux, ce qui est juste — la main est devant le visage, et un
-        // visage qui regarde en l'air emmene sa main avec lui.
+        // La main est SOUS les yeux dans les deux cas : le decalage vers le bas l'emporte
+        // sur l'avance, sinon le bras se tiendrait au-dessus du visage.
         assertTrue(down.y < EYE.y, "regarder le sol pose la main plus bas");
-        assertTrue(up.y > EYE.y, "et regarder le ciel la pose devant les yeux");
-        assertTrue(down.y < up.y);
+        assertTrue(up.y < EYE.y, "et regarder le ciel la garde sous les yeux");
+        assertTrue(down.y < up.y, "le regard au sol la pose plus bas que le regard au ciel");
+    }
+
+    @Test
+    @DisplayName("la main se tient sous l'epaule, pas a sa hauteur")
+    void laMainEstSousLEpaule() {
+        // C'est ce que le joueur a vu de travers en F5 : le depart etait a 1,40 bloc, soit
+        // la hauteur de l'epaule (le modele l'attache a 1,375), et l'eclair semblait donc
+        // flotter a cote du joueur au lieu de sortir de sa main. Le modele donne la main
+        // tendue vers 1,05 bloc : le depart doit se tenir entre les deux.
+        //
+        // Les yeux sont a 1,62 bloc au-dessus des pieds, sur un joueur d'1,8 bloc.
+        double hauteurMain = 1.62 - ArcOrigins.HAND_DOWN;
+
+        assertTrue(hauteurMain < 1.2, "sous les 1,2 bloc d'une main tendue : " + hauteurMain);
+        assertTrue(hauteurMain > 0.9, "mais au-dessus de la taille, pas aux genoux : " + hauteurMain);
+        assertEquals(0.31, ArcOrigins.HAND_RIGHT, 1e-9,
+                "le cote est celui du modele : 0,3125 bloc du corps");
     }
 
     @Test

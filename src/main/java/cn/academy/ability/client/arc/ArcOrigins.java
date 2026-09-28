@@ -7,30 +7,36 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p><b>Attention, ce n'est pas ce que faisait l'original.</b> Il posait son arc aux YEUX du
  * joueur ({@code setPosition(player.posX, player.posY + eyeHeight, player.posZ)}) et le
- * long de son regard : l'eclair partait donc de la camera, c'est-a-dire du milieu de
- * l'ecran, sans origine visible. C'est ce que le joueur a vu et n'a pas aime.
+ * long de son regard : l'eclair partait donc de la camera, sans origine visible.
  *
- * <p>Ici l'arc part de la MAIN, c'est-a-dire decale du cote du bras qui tient la baguette,
- * un peu en avant et un peu plus bas que les yeux. L'arc va ensuite de la main jusqu'au
- * point vise, donc le trait est legerement en diagonale — ce que le joueur decrit, et ce
- * qu'il demande.
+ * <p>Ici l'arc part de la MAIN. Les trois nombres viennent de la geometrie du modele du
+ * joueur, qui est fixe : le bras s'attache a 1,375 bloc au-dessus des pieds, mesure 0,75
+ * bloc de long, et se tient a 0,3125 bloc du corps. Une main qui pend est donc a
+ * {@code y + 0.625}, et une main tenue devant soi — la pose d'un lanceur — se tient vers
+ * {@code y + 1.05}. Les yeux, eux, sont a 1,62.
  *
- * <p>Le decalage se calcule sur la direction <b>horizontale</b> du regard, et non sur le
- * regard entier : un bras ne se deplace pas quand on leve les yeux au ciel, et un cote
- * calcule sur un regard vertical serait indetermine. Le cote droit se trouve par
- * {@code regard x vertical}, qui donne bien la droite du joueur — verifie par un test, parce
- * qu'une erreur de signe poserait l'eclair dans la mauvaise main sans rien casser.
+ * <p>La hauteur est le seul de ces trois nombres qu'on ait vraiment a choisir : c'est elle
+ * qui se voit. {@code HAND_DOWN = 0.55} pose le depart un peu au-dessus de la main tendue,
+ * donc nettement sous l'epaule — la ou il faut. Le premier reglage le posait a 0,22, soit
+ * 1,40 bloc, c'est-a-dire a la hauteur de l'epaule : on croyait alors que l'eclair flottait
+ * a cote du joueur au lieu de sortir de sa main.
+ *
+ * <p>Le decalage se calcule sur la direction <b>horizontale</b> du regard : un bras ne se
+ * deplace pas quand on leve les yeux au ciel, et un cote calcule sur un regard vertical
+ * serait indetermine. Le cote droit se trouve par {@code regard x vertical}, qui donne bien
+ * la droite du joueur — verifie par un test, parce qu'une erreur de signe poserait l'eclair
+ * dans la mauvaise main sans rien casser.
  */
 public final class ArcOrigins {
 
-    /** Devant les yeux : la main est un peu en avant du visage. */
-    public static final double HAND_FORWARD = 0.35;
+    /** Devant les yeux : la main se tient en avant du visage. */
+    public static final double HAND_FORWARD = 0.45;
 
-    /** Du cote du bras qui tient l'objet, en blocs. */
-    public static final double HAND_RIGHT = 0.30;
+    /** Du cote du bras, en blocs : les 0,3125 bloc du modele. */
+    public static final double HAND_RIGHT = 0.31;
 
-    /** Et un peu plus bas que les yeux. */
-    public static final double HAND_DOWN = 0.22;
+    /** Et plus bas que les yeux : 1,62 d'yeux moins 1,05 de main tendue. */
+    public static final double HAND_DOWN = 0.55;
 
     private ArcOrigins() {}
 
