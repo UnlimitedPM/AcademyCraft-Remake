@@ -1,9 +1,12 @@
 package cn.academy.client.render;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Un modele OBJ lu en memoire.
@@ -184,44 +187,65 @@ public final class ObjMesh {
     /** Tolerance sur l'aire commune, en blocs carres : en dessous, ce n'est qu'un bord. */
     private static final double OVERLAP_EPSILON = 1.0e-5d;
 
-    /**
-     * Le meme modele, sans les faces recouvertes par une AUTRE face du meme plan.
-     *
-     * <p>C'est le nettoyage qui manquait. Les fichiers du mod viennent d'un export qui
-     * double chaque paroi : une face vers l'exterieur, et la meme exactement au meme plan
-     * vers l'interieur (mesure : 42 faces recouvertes dans {@code matrix.obj}, 18 dans
-     * {@code windgen_base}, 8 dans {@code windgen_pillar}, 2 dans {@code windgen_main},
-     * aucune dans {@code windgen_fan}). Les deux sont dessinees, donc elles se disputent la
-     * profondeur, et la gagnante change avec l'angle de la camera : c'est le scintillement.
-     *
-     * <p>On garde la DERNIERE de chaque groupe — c'est celle qui gagne deja aujourd'hui a
-     * profondeur egale, donc l'aspect ne change pas d'un pixel — et le combat disparait. Les
-     * faces qui ne font que se toucher par une arete (les deux triangles d'un meme panneau,
-     * ou deux morceaux voisins) ne se recouvrent pas et restent toutes : c'est le
-     * recouvrement REEL qui decide, pas le plan partage.
-     */
-    public ObjMesh withoutCoveredFaces() {
-        List<Face> all = new ArrayList<>();
-        for (List<Face> faces : groups.values()) all.addAll(faces);
-        boolean[] covered = new boolean[all.size()];
+    /** Les faces recouvertes par une autre du meme plan, calculees une fois. */
+    private Set<Face> background;
 
+    /**
+     * Les faces d'un groupe qui passent DERRIERE : une autre face du meme plan les recouvre.
+     *
+     * <p>Les fichiers du mod viennent d'un export qui double chaque paroi, et les deux copies
+     * ne sont pas superposables : elles se recouvrent en partie (mesure : 42 faces du matrix,
+     * 18 dans la base, 8 dans le pilier, 2 dans la nacelle, aucune dans les pales). Deux faces
+     * du meme plan ne se departagent pas par la profondeur, et son infime imprecision change
+     * avec l'angle de la camera : c'est le scintillement.
+     *
+     * <p>On ne retire AUCUNE face : une face recouverte en partie est encore visible ailleurs,
+     * et la retirer faisait un trou (le grand panneau efface par un petit detail qui le
+     * chevauche). Elles sont seulement dessinees en premier, avec un recul de profondeur — voir
+     * {@link ObjModels#behind} — pour que celle qui les recouvre gagne toujours.
+     */
+    public List<Face> behind(String name) {
+        Set<Face> hidden = background();
+        List<Face> out = new ArrayList<>();
+        for (Face face : groups.getOrDefault(name, List.of())) {
+            if (hidden.contains(face)) out.add(face);
+        }
+        return out;
+    }
+
+    /** Les faces d'un groupe qui passent devant : tout le reste. */
+    public List<Face> front(String name) {
+        Set<Face> hidden = background();
+        List<Face> out = new ArrayList<>();
+        for (Face face : groups.getOrDefault(name, List.of())) {
+            if (!hidden.contains(face)) out.add(face);
+        }
+        return out;
+    }
+
+    /** Toutes les faces qui passent derriere, tous groupes confondus. A lire seulement. */
+    public Set<Face> behind() {
+        return background();
+    }
+
+    private Set<Face> background() {
+        if (background == null) background = computeBackground();
+        return background;
+    }
+
+    private Set<Face> computeBackground() {
+        List<Face> all = all();
+        // Par identite : deux faces distinctes peuvent porter les memes nombres.
+        Set<Face> out = Collections.newSetFromMap(new IdentityHashMap<>());
         for (int i = 0; i < all.size(); i++) {
             Face face = all.get(i);
             float[] normal = faceNormal(face.vertices());
-            for (int j = i + 1; j < all.size() && !covered[i]; j++) {
-                if (isCoveredBy(face, normal, all.get(j))) covered[i] = true;
+            for (int j = i + 1; j < all.size(); j++) {
+                if (isCoveredBy(face, normal, all.get(j))) {
+                    out.add(face);
+                    break;
+                }
             }
-        }
-
-        ObjMesh out = new ObjMesh();
-        int index = 0;
-        for (Map.Entry<String, List<Face>> entry : groups.entrySet()) {
-            List<Face> kept = new ArrayList<>(entry.getValue().size());
-            for (Face face : entry.getValue()) {
-                if (!covered[index]) kept.add(face);
-                index++;
-            }
-            if (!kept.isEmpty()) out.groups.put(entry.getKey(), kept);
         }
         return out;
     }

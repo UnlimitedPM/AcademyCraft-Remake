@@ -3,7 +3,6 @@ package cn.academy.client.render;
 import cn.academy.WindgenMainBlock;
 import cn.academy.WindgenMainBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -39,6 +38,9 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
     private static final ResourceLocation FAN_MODEL = ObjModels.model("windgen_fan");
     private static final ResourceLocation FAN_TEXTURE = ObjModels.texture("windgen_fan_model");
 
+    /** Le seul groupe du fichier des pales (releve dans {@code windgen_fan.obj}). */
+    private static final String FAN_GROUP = "initialShadingGroup";
+
     /** Le nez du corps, dans son espace : c'est la que le moyeu de l'helice se pose. */
     private static final double HUB_Y = 0.5d;
     private static final double HUB_Z = 0.82d;
@@ -68,8 +70,7 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
             pose.translate(0.0d, HUB_Y, HUB_Z);
             // L'axe de l'helice : elle tourne dans le plan du nez, comme l'original.
             pose.mulPose(Axis.ZP.rotationDegrees(-spin));
-            VertexConsumer fan = buffers.getBuffer(ObjModels.type(FAN_TEXTURE));
-            ObjModels.draw(ObjModels.get(FAN_MODEL).all(), pose, fan, light, overlay);
+            ObjModels.draw(ObjModels.get(FAN_MODEL), FAN_GROUP, FAN_TEXTURE, pose, buffers, light, overlay);
             pose.popPose();
         }
         pose.popPose();

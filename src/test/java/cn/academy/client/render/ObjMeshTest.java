@@ -142,11 +142,12 @@ class ObjMeshTest {
     }
 
     @Test
-    @DisplayName("les faces recouvertes sont retirees, et rien d'autre ne bouge")
-    void lesFacesRecouvertesSontRetirees() {
-        // Un modele double : la meme face deux fois, exactement au meme plan. Sans nettoyage,
-        // les deux se disputent la profondeur et la gagnante change avec l'angle de la
-        // camera — le scintillement signale sur le matrix.
+    @DisplayName("les faces recouvertes passent derriere, et aucune n'est retiree")
+    void lesFacesRecouvertesPassentDerriere() {
+        // Un modele double : la meme face deux fois, au meme plan. Au meme plan, la
+        // profondeur ne departage pas et son infime imprecision change avec l'angle de la
+        // camera : c'est le scintillement signale sur le matrix. La premiere passe donc
+        // derriere, et rien n'est retire.
         ObjMesh miroir = ObjMesh.parse("""
                 v 0 0 0
                 v 1 0 0
@@ -155,12 +156,12 @@ class ObjMeshTest {
                 f 1 2 3
                 f 3 2 1
                 """);
-        assertEquals(2, miroir.all().size(), "le lecteur, lui, ne touche a rien");
-        assertEquals(1, miroir.withoutCoveredFaces().all().size(), "le nettoyage en garde une");
-        assertEquals(1, miroir.withoutCoveredFaces().group("socle").size(), "et dans son groupe");
+        assertEquals(1, miroir.behind("socle").size(), "la premiere passe derriere");
+        assertEquals(1, miroir.front("socle").size(), "la seconde reste devant");
+        assertEquals(2, miroir.group("socle").size(), "et le groupe les garde toutes");
 
-        // Deux triangles qui ne font que se TOUCHER (le pave d'un meme panneau) restent deux :
-        // ce n'est pas le plan partage qui decide, c'est le recouvrement.
+        // Deux triangles qui ne font que se TOUCHER (le pave d'un meme panneau) : aucune des
+        // deux ne recouvre l'autre, donc aucune ne passe derriere.
         ObjMesh pave = ObjMesh.parse("""
                 v 0 0 0
                 v 1 0 0
@@ -169,9 +170,11 @@ class ObjMeshTest {
                 f 1 2 4
                 f 2 3 4
                 """);
-        assertEquals(2, pave.withoutCoveredFaces().all().size(), "un panneau en deux triangles reste entier");
+        assertTrue(pave.behind("" ).isEmpty(), "un panneau pave ne cache rien");
+        assertEquals(2, pave.front("").size());
 
-        // Un vrai recouvrement partiel : la petite face posee sur la grande disparait.
+        // Un vrai recouvrement PARTIEL : le grand panneau passe derriere (il est recouvert),
+        // mais il reste dessine — le retirer faisait un trou, et c'est ce qu'on a vu.
         ObjMesh recouvre = ObjMesh.parse("""
                 v 0 0 0
                 v 4 0 0
@@ -182,28 +185,33 @@ class ObjMeshTest {
                 f 1 2 3
                 f 4 5 6
                 """);
-        assertEquals(1, recouvre.withoutCoveredFaces().all().size(), "la plus petite est recouverte");
+        assertEquals(1, recouvre.behind("").size(), "le grand panneau recule");
+        assertEquals(1, recouvre.front("").size(), "le detail reste devant");
+        assertEquals(2, recouvre.all().size(), "et les deux sont dessines");
     }
 
     @Test
-    @DisplayName("les modeles livres perdent leurs faces recouvertes")
-    void lesModelesLivresPerdentLeursFacesRecouvertes() throws Exception {
+    @DisplayName("les modeles livres : ce qui passe derriere, face par face")
+    void lesModelesLivresOntUnFondConnu() throws Exception {
         // Les fichiers du mod viennent d'un export qui double chaque paroi. Ce sont ces
-        // nombres qui diront si un modele a change : 42 faces recouvertes dans le matrix,
-        // 18 dans la base, 8 dans le pilier, 2 dans la nacelle, aucune dans les pales.
-        assertEquals(216, facesNettoyees("windgen_fan"), "les pales n'ont aucune face recouverte");
-        assertEquals(54, facesNettoyees("windgen_main"));
-        assertEquals(126, facesNettoyees("windgen_base"));
-        assertEquals(24, facesNettoyees("windgen_pillar"));
-        assertEquals(240, facesNettoyees("matrix"));
+        // nombres qui diront si un modele a change : 42 faces derriere dans le matrix, 18
+        // dans la base, 8 dans le pilier, 2 dans la nacelle, aucune dans les pales.
+        assertEquals(0, derriere("windgen_fan"), "les pales n'ont aucune face recouverte");
+        assertEquals(2, derriere("windgen_main"));
+        assertEquals(18, derriere("windgen_base"));
+        assertEquals(8, derriere("windgen_pillar"));
+        assertEquals(42, derriere("matrix"));
     }
 
-    /** Le nombre de faces d'un modele livre, une fois les faces recouvertes retirees. */
-    private static int facesNettoyees(String nom) throws Exception {
+    /** Le nombre de faces d'un modele livre qui passent derriere. */
+    private static int derriere(String nom) throws Exception {
+        return lit(nom).behind().size();
+    }
+
+    private static ObjMesh lit(String nom) throws Exception {
         try (var in = ObjMeshTest.class.getResourceAsStream("/assets/academy/models/" + nom + ".obj")) {
             assertNotNull(in, nom + " doit etre livre");
-            String texte = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            return ObjMesh.parse(texte).withoutCoveredFaces().all().size();
+            return ObjMesh.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
 }

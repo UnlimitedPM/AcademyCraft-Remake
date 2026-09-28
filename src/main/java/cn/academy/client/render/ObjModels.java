@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
@@ -33,6 +34,9 @@ public final class ObjModels {
 
     /** Un type de rendu par texture : le construire a chaque image allouerait pour rien. */
     private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
+
+    /** Idem, pour les faces qui passent derriere (un recul de profondeur en plus). */
+    private static final Map<ResourceLocation, RenderType> BEHIND = new HashMap<>();
 
     private ObjModels() {}
 
@@ -75,26 +79,60 @@ public final class ObjModels {
      * recouvertes, et il n'y a plus deux surfaces pour se disputer la profondeur.
      */
     public static RenderType type(ResourceLocation texture) {
-        return TYPES.computeIfAbsent(texture, ObjModels::createType);
+        return TYPES.computeIfAbsent(texture, tex -> createType(tex, false));
     }
 
-    private static RenderType createType(ResourceLocation texture) {
-        return RenderType.create("academy_obj",
+    /**
+     * Le type de rendu des faces qui passent DERRIERE : le meme, avec un recul de profondeur.
+     *
+     * <p>C'est le « polygon offset » de vanilla, celui qui sert a plaquer un decor sur une
+     * face. Les modeles du mod doublent chaque paroi, et les deux copies se recouvrent en
+     * partie (voir {@link ObjMesh#behind}) : au meme plan, la profondeur ne les departage pas,
+     * et son infime imprecision change avec l'angle de la camera — c'est le scintillement du
+     * matrix. Avec ce recul, la face qui recouvre l'emporte TOUJOURS, et la face recouverte
+     * reste visible partout ou elle ne l'est pas.
+     */
+    public static RenderType behind(ResourceLocation texture) {
+        return BEHIND.computeIfAbsent(texture, tex -> createType(tex, true));
+    }
+
+    private static RenderType createType(ResourceLocation texture, boolean behind) {
+        RenderType.CompositeState.CompositeStateBuilder states = RenderType.CompositeState.builder()
+                .setShaderState(new RenderStateShard.ShaderStateShard(
+                        GameRenderer::getRendertypeEntityCutoutNoCullShader))
+                .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_obj",
+                        () -> RenderSystem.disableBlend(), () -> { }))
+                .setCullState(new RenderStateShard.CullStateShard(false))
+                .setLightmapState(new RenderStateShard.LightmapStateShard(true))
+                .setOverlayState(new RenderStateShard.OverlayStateShard(true));
+        if (behind) {
+            states = states.setLayeringState(new RenderStateShard.LayeringStateShard("academy_obj_behind",
+                    () -> { RenderSystem.polygonOffset(1.0f, 1.0f); RenderSystem.enablePolygonOffset(); },
+                    () -> { RenderSystem.polygonOffset(0.0f, 0.0f); RenderSystem.disablePolygonOffset(); }));
+        }
+
+        return RenderType.create(behind ? "academy_obj_behind" : "academy_obj",
                 DefaultVertexFormat.NEW_ENTITY,
                 VertexFormat.Mode.TRIANGLES,
                 256,
                 false,
                 true,
-                RenderType.CompositeState.builder()
-                        .setShaderState(new RenderStateShard.ShaderStateShard(
-                                GameRenderer::getRendertypeEntityCutoutNoCullShader))
-                        .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
-                        .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_obj",
-                                () -> RenderSystem.disableBlend(), () -> { }))
-                        .setCullState(new RenderStateShard.CullStateShard(false))
-                        .setLightmapState(new RenderStateShard.LightmapStateShard(true))
-                        .setOverlayState(new RenderStateShard.OverlayStateShard(true))
-                        .createCompositeState(true));
+                states.createCompositeState(true));
+    }
+
+    /**
+     * Dessine un morceau de modele : les faces recouvertes d'abord, en recul, puis les autres.
+     *
+     * <p>L'ordre compte : le recul ne departage que ce qui est deja dessine.
+     */
+    public static void draw(ObjMesh mesh, String group, ResourceLocation texture, PoseStack pose,
+                            MultiBufferSource buffers, int light, int overlay) {
+        List<ObjMesh.Face> behind = mesh.behind(group);
+        if (!behind.isEmpty()) {
+            draw(behind, pose, buffers.getBuffer(behind(texture)), light, overlay);
+        }
+        draw(mesh.front(group), pose, buffers.getBuffer(type(texture)), light, overlay);
     }
 
     /** Le modele, lu la premiere fois qu'on le demande. */
@@ -104,10 +142,7 @@ public final class ObjModels {
 
         ObjMesh mesh = ObjMesh.empty();
         try (var in = Minecraft.getInstance().getResourceManager().open(model)) {
-            // Nettoye a la lecture : l'export du mod double chaque paroi, et deux faces au
-            // meme plan se disputent la profondeur (voir ObjMesh#withoutCoveredFaces).
-            mesh = ObjMesh.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8))
-                    .withoutCoveredFaces();
+            mesh = ObjMesh.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
         } catch (Exception e) {
             // Un modele absent ne fait pas tomber le rendu d'un bloc : la machine se
             // dessine simplement sans cette piece, ce qui se voit tout de suite.

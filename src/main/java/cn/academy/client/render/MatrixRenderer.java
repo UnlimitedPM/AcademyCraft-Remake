@@ -4,7 +4,6 @@ import cn.academy.MatrixBlock;
 import cn.academy.MatrixStructure;
 import cn.academy.energy.MatrixBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -57,7 +56,6 @@ public class MatrixRenderer implements BlockEntityRenderer<MatrixBlockEntity> {
         if (!(state.getBlock() instanceof MatrixBlock)) return;
 
         ObjMesh mesh = ObjModels.get(MODEL);
-        VertexConsumer out = buffers.getBuffer(ObjModels.type(TEXTURE));
 
         Direction facing = state.getValue(MatrixBlock.FACING);
 
@@ -70,8 +68,8 @@ public class MatrixRenderer implements BlockEntityRenderer<MatrixBlockEntity> {
         pose.translate(MatrixStructure.centreX(facing), 0.0d, MatrixStructure.centreZ(facing));
         pose.mulPose(Axis.YP.rotationDegrees(-degreesFor(facing)));
 
-        ObjModels.draw(mesh.group(BASE), pose, out, light, overlay);
-        ObjModels.draw(mesh.group(CORE), pose, out, light, overlay);
+        ObjModels.draw(mesh, BASE, TEXTURE, pose, buffers, light, overlay);
+        ObjModels.draw(mesh, CORE, TEXTURE, pose, buffers, light, overlay);
 
         if (matrix.isWorking()) {
             double time = matrix.getLevel() == null
@@ -85,7 +83,7 @@ public class MatrixRenderer implements BlockEntityRenderer<MatrixBlockEntity> {
                         FLOAT_HEIGHT * Math.sin(time * FLOAT_SPEED + FLOAT_PHASE * i), 0.0d);
                 pose.mulPose(Axis.YP.rotationDegrees(
                         (float) (phase + 360.0d / PLATES * i)));
-                ObjModels.draw(mesh.group(PLATE), pose, out, light, overlay);
+                ObjModels.draw(mesh, PLATE, TEXTURE, pose, buffers, light, overlay);
                 pose.popPose();
             }
         }
