@@ -1,9 +1,9 @@
 {
   "variants": {
-    "part=center,facing=north": { "model": "academy:block/windgen_main_dummy" },
-    "part=center,facing=south": { "model": "academy:block/windgen_main_dummy" },
-    "part=center,facing=west":  { "model": "academy:block/windgen_main_dummy" },
-    "part=center,facing=east":  { "model": "academy:block/windgen_main_dummy" },
+    "part=center,facing=north": { "model": "academy:block/windgen_main", "y": 180 },
+    "part=center,facing=south": { "model": "academy:block/windgen_main" },
+    "part=center,facing=west":  { "model": "academy:block/windgen_main", "y": 90 },
+    "part=center,facing=east":  { "model": "academy:block/windgen_main", "y": 270 },
 
     "part=front,facing=north": { "model": "academy:block/windgen_main_dummy" },
     "part=front,facing=south": { "model": "academy:block/windgen_main_dummy" },

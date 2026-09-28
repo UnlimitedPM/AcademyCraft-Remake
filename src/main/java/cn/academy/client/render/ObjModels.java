@@ -36,14 +36,16 @@ public final class ObjModels {
     /**
      * La texture d'un modele.
      *
-     * <p>Dans {@code textures/models}, comme l'original ({@code Resources.getTexture("models/...")}).
-     * Le dossier {@code textures/block} en contient une seconde copie, sous le meme nom :
-     * c'est un autre atlas, redecoupe. Les coordonnees du fichier OBJ y tombent alors sur
-     * les mauvaises cases — parfois sur du vide, ce qui fait des faces entieres
-     * transparentes, et c'est exactement ce qu'on voyait sur la nacelle de l'eolienne.
+     * <p>Dans {@code textures/block}, comme TOUS les autres modeles de blocs du port
+     * ({@code academy:block/<nom>_model}), et pas dans {@code textures/models} : un modele
+     * de bloc OBJ passe par l'atlas des blocs, et une texture referencee depuis
+     * {@code textures/models} n'y est pas cousue. Le client le dit alors lui-meme —
+     * « Missing textures in model academy:windgen_pillar# : ...academy:models/... » — et le
+     * bloc se dessine sans texture. Le dossier {@code textures/models} garde des copies
+     * pour les rendus qui lisent un fichier directement, jamais pour un modele de bloc.
      */
     public static ResourceLocation texture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/models/" + name + ".png");
+        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/block/" + name + ".png");
     }
 
     /** Le type de rendu des modeles : decoupe, et sans cull — les OBJ du mod sont fins. */
