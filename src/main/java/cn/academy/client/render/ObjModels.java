@@ -66,13 +66,13 @@ public final class ObjModels {
      * faces etirees entre deux morceaux du modele, qui semblent dessinees a l'envers, et
      * d'autres qui disparaissent. Vecu sur les pales de l'eolienne.
      *
-     * <p>Le reste reprend ce que fait {@code entityCutoutNoCull} : decoupe, lumiere du bloc
-     * et superposition. Avec une difference, le CULL, garde ici (l'original le gardait
-     * aussi, et un modele de bloc dessine par Forge aussi) : les modeles du mod sont
-     * doubles paroi par paroi — une face vers l'exterieur, et la meme exactement au meme
-     * plan vers l'interieur — et sans cull les deux se disputent la profondeur, ce qui
-     * scintille des qu'on bouge la camera (mesure : 89 paires coplanaires dans
-     * {@code matrix.obj}, 64 a normales opposees).
+     * <p>Le reste reprend ce que fait {@code entityCutoutNoCull} : decoupe, SANS cull,
+     * lumiere du bloc et superposition. Le cull est justement laisse de cote : les modeles
+     * du mod sont doubles paroi par paroi, mais ils sont aussi ouverts par endroits (73
+     * aretes libres dans {@code matrix.obj}), donc cacher le cote qui regarde ailleurs y
+     * ferait des trous — on voyait l'herbe au travers de la base. Le scintillement, lui, se
+     * regle a la source : {@link ObjMesh#withoutCoveredFaces()} retire les faces
+     * recouvertes, et il n'y a plus deux surfaces pour se disputer la profondeur.
      */
     public static RenderType type(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, ObjModels::createType);
@@ -91,7 +91,7 @@ public final class ObjModels {
                         .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
                         .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_obj",
                                 () -> RenderSystem.disableBlend(), () -> { }))
-                        .setCullState(new RenderStateShard.CullStateShard(true))
+                        .setCullState(new RenderStateShard.CullStateShard(false))
                         .setLightmapState(new RenderStateShard.LightmapStateShard(true))
                         .setOverlayState(new RenderStateShard.OverlayStateShard(true))
                         .createCompositeState(true));
@@ -104,7 +104,10 @@ public final class ObjModels {
 
         ObjMesh mesh = ObjMesh.empty();
         try (var in = Minecraft.getInstance().getResourceManager().open(model)) {
-            mesh = ObjMesh.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            // Nettoye a la lecture : l'export du mod double chaque paroi, et deux faces au
+            // meme plan se disputent la profondeur (voir ObjMesh#withoutCoveredFaces).
+            mesh = ObjMesh.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8))
+                    .withoutCoveredFaces();
         } catch (Exception e) {
             // Un modele absent ne fait pas tomber le rendu d'un bloc : la machine se
             // dessine simplement sans cette piece, ce qui se voit tout de suite.
