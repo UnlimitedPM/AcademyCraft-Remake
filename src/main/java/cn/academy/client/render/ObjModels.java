@@ -66,9 +66,13 @@ public final class ObjModels {
      * faces etirees entre deux morceaux du modele, qui semblent dessinees a l'envers, et
      * d'autres qui disparaissent. Vecu sur les pales de l'eolienne.
      *
-     * <p>Le reste reprend ce que fait {@code entityCutoutNoCull} : decoupe, sans cull (les
-     * plaques du matrix sont des surfaces fines, il faut les voir des deux cotes), lumiere
-     * du bloc et superposition.
+     * <p>Le reste reprend ce que fait {@code entityCutoutNoCull} : decoupe, lumiere du bloc
+     * et superposition. Avec une difference, le CULL, garde ici (l'original le gardait
+     * aussi, et un modele de bloc dessine par Forge aussi) : les modeles du mod sont
+     * doubles paroi par paroi — une face vers l'exterieur, et la meme exactement au meme
+     * plan vers l'interieur — et sans cull les deux se disputent la profondeur, ce qui
+     * scintille des qu'on bouge la camera (mesure : 89 paires coplanaires dans
+     * {@code matrix.obj}, 64 a normales opposees).
      */
     public static RenderType type(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, ObjModels::createType);
@@ -87,7 +91,7 @@ public final class ObjModels {
                         .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
                         .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_obj",
                                 () -> RenderSystem.disableBlend(), () -> { }))
-                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .setCullState(new RenderStateShard.CullStateShard(true))
                         .setLightmapState(new RenderStateShard.LightmapStateShard(true))
                         .setOverlayState(new RenderStateShard.OverlayStateShard(true))
                         .createCompositeState(true));
