@@ -3,10 +3,12 @@ package cn.academy.client.render;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -110,5 +112,32 @@ class ObjMeshTest {
         // La face sans trois sommets valides, et celle qui vise des sommets absents, sont
         // simplement laissees de cote : mieux vaut un modele incomplet qu'un plantage.
         assertEquals(0, mesh.all().size());
+    }
+
+    @Test
+    @DisplayName("les modeles livres ne sont faits que de triangles")
+    void lesModelesLivresSontDesTriangles() throws Exception {
+        // Le rendu ecrit les faces telles quelles : ses TRIANGLES doivent donc tomber sur un
+        // type de rendu qui en dessine (ceux de Minecraft declarent des QUADS, et la carte
+        // recollerait alors la fin d'un triangle au debut du suivant). Ce test tient
+        // l'invariant de l'autre cote : aucun fichier ne contient de face a quatre sommets,
+        // et aucune coordonnee de texture ne sort de l'image.
+        for (String nom : List.of("windgen_fan", "windgen_main", "windgen_base", "windgen_pillar", "matrix")) {
+            String texte;
+            try (var in = getClass().getResourceAsStream("/assets/academy/models/" + nom + ".obj")) {
+                assertNotNull(in, nom + " doit etre livre");
+                texte = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            }
+
+            ObjMesh mesh = ObjMesh.parse(texte);
+            assertFalse(mesh.isEmpty(), nom + " doit se lire");
+            for (ObjMesh.Face face : mesh.all()) {
+                assertEquals(3, face.vertices().size(), nom + " : une face de trois sommets");
+                for (ObjMesh.Vertex vertex : face.vertices()) {
+                    assertTrue(vertex.u() >= 0f && vertex.u() <= 1f, nom + " : u dans l'image");
+                    assertTrue(vertex.v() >= 0f && vertex.v() <= 1f, nom + " : v dans l'image");
+                }
+            }
+        }
     }
 }

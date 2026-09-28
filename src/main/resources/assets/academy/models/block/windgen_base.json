@@ -8,6 +8,6 @@
     "particle": "academy:block/windgen_base_model"
   },
   "transform": {
-    "translation": [0.5, 0, 0.5]
+    "translation": [0.5, -0.006, 0.5]
   }
 }

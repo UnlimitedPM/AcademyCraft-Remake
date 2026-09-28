@@ -1,9 +1,14 @@
 package cn.academy.client.render;
 
 import cn.academy.AcademyCraft;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
@@ -25,6 +30,9 @@ public final class ObjModels {
 
     /** Chaque fichier n'est lu qu'une fois : le rendu passe ici a chaque image. */
     private static final Map<ResourceLocation, ObjMesh> CACHE = new HashMap<>();
+
+    /** Un type de rendu par texture : le construire a chaque image allouerait pour rien. */
+    private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
 
     private ObjModels() {}
 
@@ -48,9 +56,41 @@ public final class ObjModels {
         return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/block/" + name + ".png");
     }
 
-    /** Le type de rendu des modeles : decoupe, et sans cull — les OBJ du mod sont fins. */
+    /**
+     * Le type de rendu des modeles.
+     *
+     * <p>Il est construit a la main pour une seule raison : les faces du lecteur OBJ sont
+     * des TRIANGLES, alors que tous les types d'entite de Minecraft declarent
+     * {@code VertexFormat.Mode.QUADS} — quatre sommets par face. Le lecteur en ecrit trois,
+     * donc la carte graphique recollait la fin d'un triangle avec le debut du suivant : des
+     * faces etirees entre deux morceaux du modele, qui semblent dessinees a l'envers, et
+     * d'autres qui disparaissent. Vecu sur les pales de l'eolienne.
+     *
+     * <p>Le reste reprend ce que fait {@code entityCutoutNoCull} : decoupe, sans cull (les
+     * plaques du matrix sont des surfaces fines, il faut les voir des deux cotes), lumiere
+     * du bloc et superposition.
+     */
     public static RenderType type(ResourceLocation texture) {
-        return RenderType.entityCutoutNoCull(texture);
+        return TYPES.computeIfAbsent(texture, ObjModels::createType);
+    }
+
+    private static RenderType createType(ResourceLocation texture) {
+        return RenderType.create("academy_obj",
+                DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.TRIANGLES,
+                256,
+                false,
+                true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getRendertypeEntityCutoutNoCullShader))
+                        .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                        .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_obj",
+                                () -> RenderSystem.disableBlend(), () -> { }))
+                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .setLightmapState(new RenderStateShard.LightmapStateShard(true))
+                        .setOverlayState(new RenderStateShard.OverlayStateShard(true))
+                        .createCompositeState(true));
     }
 
     /** Le modele, lu la premiere fois qu'on le demande. */
