@@ -41,19 +41,22 @@ public final class SurroundArcs {
     }
 
     /**
-     * Le cote de la boite ou semer pour qu'aucun arc ne sorte d'un cube donne.
+     * Le cote de la boite ou semer, pour qu'un arc ne sorte d'un cube que de la moitie de lui-meme.
      *
-     * <p>Un arc d'entourage nait a un point de la boite et file dans une direction tiree :
-     * pose au bord, il en sort donc de toute sa longueur. L'original ne s'en souciait pas —
-     * ses arcs etaient tailles pour un corps, ou depasser se voit peu.
+     * <p>Un arc d'entourage nait a un point de la boite et file dans une direction tiree : pose
+     * au bord, il en sort donc de toute sa longueur. L'original ne s'en souciait pas — ses arcs
+     * etaient tailles pour un corps, ou depasser se voit peu.
      *
-     * <p>Pour un cube de cote {@code cubeSize}, le point de depart doit donc rester a la
-     * longueur du plus long arc du bord. Quand la boite est plus petite que cela — les gros
-     * gabarits dans un bloc — il ne reste rien a retrecir, et la fonction rend zero : l'appelant
-     * garde alors son point au centre, et laisse les arcs depasser, comme l'original.
+     * <p>Le point de depart recule donc d'une longueur d'arc, et pas de deux : un arc peut
+     * encore depasser de la moitie de sa taille, ce qui se voit — le joueur a demande "un peu"
+     * de debordement — sans que l'eclair aille se planter dans le bloc d'a cote.
+     *
+     * <p>Quand la boite est plus petite que cela — les gros gabarits dans un bloc — il ne reste
+     * rien a retrecir, et la fonction rend zero : l'appelant garde alors son point au centre, et
+     * laisse les arcs depasser, comme l'original.
      */
     public static double inset(double cubeSize, Gabarit gabarit) {
-        return Math.max(0.0, cubeSize - 2.0 * gabarit.maxLength());
+        return Math.max(0.0, cubeSize - gabarit.maxLength());
     }
 
     /**

@@ -33,7 +33,8 @@ class ChargingEffectTest {
         // Les gabarits de l'original sont tailles pour un corps : 1,5 a 2 blocs. Autour d'une
         // machine d'un bloc, le joueur les a trouves trop grands et trop sortants, meme une fois
         // raccourcis : ce sont donc les arcs les plus courts ET le dessin le plus fin.
-        assertEquals(4, ChargingEffect.MACHINE_SWARM.count());
+        assertEquals(8, ChargingEffect.MACHINE_SWARM.count(),
+                "le joueur n'en voyait pas assez a quatre");
         assertEquals(0.2, ChargingEffect.MACHINE_SWARM.minLength(), 1e-6);
         assertEquals(0.4, ChargingEffect.MACHINE_SWARM.maxLength(), 1e-6);
         assertEquals(ArcPattern.SURROUND_MICRO, ChargingEffect.MACHINE_SWARM.pattern(),

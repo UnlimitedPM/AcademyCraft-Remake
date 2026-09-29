@@ -68,20 +68,27 @@ class SurroundArcsTest {
     }
 
     @Test
-    void lePointDeDepartReculeDeLaLongueurDeLArc() {
-        // Un arc nait dans la boite et file dans une direction tiree : pour qu'il ne sorte pas
-        // d'un bloc d'un cube, le point doit rester a la longueur du plus long arc du bord.
-        assertEquals(0.2, SurroundArcs.inset(1.0, new SurroundArcs.Gabarit(
-                ArcPattern.SURROUND_MICRO, 4, 0.2, 0.4)), 1e-6);
+    void lePointDeDepartReculeDEUneLongueurDArc() {
+        // Un arc nait dans la boite et file dans une direction tiree. Le point recule d'une
+        // longueur d'arc, pas de deux : l'eclair peut encore depasser de la moitie de lui-meme,
+        // ce que le joueur a demande a voir, sans aller dans le bloc d'a cote.
+        assertTrue(SurroundArcs.inset(1.0, MACHINE) >= 0.5,
+                "la boite de la machine reste large");
         assertEquals(0.0, SurroundArcs.inset(1.0, SurroundArcs.BOLD), 1e-6,
                 "des arcs de 3,5 a 4,5 dans un cube de un : il ne reste rien a retrecir");
         assertEquals(0.0, SurroundArcs.inset(0.5, SurroundArcs.BOLD), 1e-6,
                 "et un reste negatif vaut zero, jamais un recul");
 
-        // Et la promesse tient : demi-boite plus longueur d'arc, cela fait bien la moitie du cube.
-        SurroundArcs.Gabarit micro = new SurroundArcs.Gabarit(ArcPattern.SURROUND_MICRO, 4, 0.2, 0.4);
-        assertTrue(SurroundArcs.inset(1.0, micro) / 2.0 + micro.maxLength() <= 0.5);
+        // La promesse : demi-boite plus longueur d'arc, cela reste dans le cube, plus la moitie
+        // de l'arc.
+        assertTrue(SurroundArcs.inset(1.0, MACHINE) / 2.0 + MACHINE.maxLength()
+                        <= 0.5 + MACHINE.maxLength() / 2.0,
+                "un arc ne depasse jamais de plus de la moitie de sa taille");
     }
+
+    /** Le gabarit de la charge : huit arcs courts et fins autour d'un bloc. */
+    private static final SurroundArcs.Gabarit MACHINE =
+            new SurroundArcs.Gabarit(ArcPattern.SURROUND_MICRO, 8, 0.2, 0.4);
 
     private static void assertPattern(ArcPattern pattern, double width, double maxOffset,
                                       double branchFactor) {
