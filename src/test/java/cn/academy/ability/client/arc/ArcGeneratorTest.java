@@ -196,15 +196,19 @@ class ArcGeneratorTest {
         assertEquals(0.13, ArcPattern.AOE.width(), 1e-9);
         assertEquals(0.28, ArcPattern.AOE.branchFactor(), 1e-9);
 
-        // Tous les motifs font vingt blocs et vingt variantes, comme les generateList de
-        // l'original, et l'amincissement comme l'affaiblissement sont les memes partout.
-        for (ArcPattern pattern : ArcPattern.all()) {
+        // Tous les motifs de la genese d'arc font vingt blocs et vingt variantes, comme les
+        // generateList de l'original, et l'amincissement comme l'affaiblissement sont les memes
+        // partout. Les trois gabarits d'entourage n'en font pas partie : leur longueur, elle,
+        // est tiree entre deux bornes a chaque essaim (voir SurroundArcsTest).
+        for (ArcPattern pattern : List.of(ArcPattern.WEAK, ArcPattern.THIN_CONTINUOUS,
+                ArcPattern.CHARGING, ArcPattern.STRONG, ArcPattern.AOE)) {
             assertEquals(20.0, pattern.length(), 1e-9);
             assertEquals(0.7, pattern.lengthShrink(), 1e-9);
             assertEquals(0.9, pattern.alphaShrink(), 1e-9);
             assertEquals(0.7, pattern.widthShrink(), 1e-9);
         }
         assertEquals(20, ArcPattern.VARIANTS);
+        assertEquals(8, ArcPattern.all().size(), "cinq motifs, plus les trois de l'entourage");
 
         assertEquals(ArcPattern.STRONG, ArcPattern.byName("strong"));
         assertEquals(ArcPattern.WEAK, ArcPattern.byName("n'importe quoi"),

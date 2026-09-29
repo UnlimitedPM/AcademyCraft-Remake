@@ -50,6 +50,35 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     public static final ArcPattern AOE =
             new ArcPattern("aoe", 0.13, 0.7, 0.9, 1.2, 0.28, 0.7, 5, 20, 0.5, 0.2, 0.2, 5L);
 
+    // ------------------------------------------------------------------
+    // Les arcs d'entourage (EntitySurroundArc de l'original)
+    // ------------------------------------------------------------------
+    //
+    // Ce sont les arcs qui GRESILLENT AUTOUR d'une chose plutot que de la relier a une autre :
+    // autour du joueur qui charge une machine ou qui s'electrise, autour du bloc que la
+    // manipulation magnetique tient en l'air. L'original en avait trois gabarits, tries par
+    // epaisseur, et son ArcFactory partait des memes valeurs par defaut que les cinq motifs
+    // ci-dessus (lengthShrink 0,7, alphaShrink 0,9) pour n'en changer que cinq :
+    //
+    //   THIN    largeur 0,2  depassement 0,8  branches 0,7   retrecissement 0,9  3 passes
+    //   NORMAL  largeur 0,3  depassement 0,8  branches 0,7   retrecissement 0,9  3 passes
+    //   BOLD    largeur 0,35 depassement 1,2  branches 0,45  retrecissement 0,9  3 passes
+    //
+    // Leur longueur, elle, etait tiree entre deux bornes au moment ou le gabarit etait fabrique
+    // (1,5 a 2, 3 a 4, 3,5 a 4,5) : ces bornes vivent dans SurroundArcs, avec la portee des arcs.
+
+    /** L'arc d'entourage fin, celui dont le corps s'entoure chez l'original. */
+    public static final ArcPattern SURROUND_THIN =
+            new ArcPattern("surround_thin", 0.2, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 1.75, 0.5, 0.2, 0.2, 6L);
+
+    /** L'arc d'entourage moyen : meme dessin, trait plus epais. */
+    public static final ArcPattern SURROUND_NORMAL =
+            new ArcPattern("surround_normal", 0.3, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 3.5, 0.5, 0.2, 0.2, 7L);
+
+    /** L'arc d'entourage gras, le plus branche et le plus large : l'eclair qui claque. */
+    public static final ArcPattern SURROUND_BOLD =
+            new ArcPattern("surround_bold", 0.35, 0.7, 0.9, 1.2, 0.45, 0.9, 3, 4.0, 0.5, 0.2, 0.2, 8L);
+
     /**
      * Le nombre de variantes tirees par motif.
      *
@@ -59,9 +88,10 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
      */
     public static final int VARIANTS = 20;
 
-    /** Les cinq motifs, dans l'ordre ou ils sont nommes. */
+    /** Les motifs, dans l'ordre ou ils sont nommes : les cinq de l'original, puis l'entourage. */
     public static List<ArcPattern> all() {
-        return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE);
+        return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE,
+                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD);
     }
 
     /** Le motif qui porte ce nom, ou l'arc faible si le nom est inconnu. */
