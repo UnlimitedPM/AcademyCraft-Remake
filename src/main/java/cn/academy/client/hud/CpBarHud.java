@@ -47,6 +47,16 @@ public final class CpBarHud {
     /** Le bandeau strie de la surcharge. */
     private static final float STRIPE_ALPHA = 0.5f;
 
+    /**
+     * Le blanc qui ne teinte rien, opacite comprise.
+     *
+     * <p>Il porte ses huit chiffres : {@code 0xFFFFFF} n'en a que six, donc pas d'opacite du
+     * tout — et comme le dessin la multiplie a celle de la couleur, un blanc sans opacite ne
+     * dessinait rien. C'est exactement ce qui a rendu invisible le fond de la barre et tout
+     * l'etat de surcharge.
+     */
+    private static final int WHITE = 0xFFFFFFFF;
+
     /** Ce que la barre montre en ce moment : l'animation a besoin de la valeur precedente. */
     private static float bufferedOverload;
     private static float bufferedCp;
@@ -94,7 +104,7 @@ public final class CpBarHud {
             drawOverloaded(graphics);
         } else {
             blit(graphics, BACK_NORMAL, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
-                    0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, 0xFFFFFF, BACK_ALPHA);
+                    0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, BACK_ALPHA);
             drawOverloadBand(graphics, bufferedOverload);
             drawFill(graphics, bufferedCp);
         }
@@ -164,17 +174,17 @@ public final class CpBarHud {
     /** La surcharge pleine : fond rouge, bandeau strie, et l'etiquette qui clignote. */
     private static void drawOverloaded(GuiGraphics graphics) {
         blit(graphics, BACK_OVERLOAD, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
-                0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, 0xFFFFFF, BACK_ALPHA);
+                0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, BACK_ALPHA);
         blit(graphics, FRONT_OVERLOAD, CpBarVisuals.STRIPE_X, 0,
                 CpBarVisuals.STRIPE_W, CpBarVisuals.TEX_H,
                 CpBarVisuals.STRIPE_X, 0, CpBarVisuals.STRIPE_W, CpBarVisuals.TEX_H,
-                0xFFFFFF, STRIPE_ALPHA);
+                WHITE, STRIPE_ALPHA);
 
         // Le clignotement de l'original : entre 0,3 et 1,0 d'opacite, une seconde et quart par
         // battement.
         float pulse = 0.3f + 0.35f * (float) (Math.sin(Util.getMillis() / 200.0) + 1.0);
         blit(graphics, HIGHLIGHT, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
-                0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, 0xFFFFFF, Math.min(pulse, 1.0f));
+                0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, Math.min(pulse, 1.0f));
     }
 
     /**

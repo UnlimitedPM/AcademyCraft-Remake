@@ -110,6 +110,10 @@ class CpBarVisualsTest {
         assertEquals(10 / 255.0f, CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(0.0f)), 1e-6);
         assertEquals(1.0f, CpBarVisuals.alphaOf(0xFFFFFFFF), 1e-6);
         assertEquals(0.0f, CpBarVisuals.alphaOf(0x00FF0000), 1e-6);
+        // Un blanc sans ses deux chiffres d'opacite n'en a aucune : c'est le piege qui a rendu
+        // invisible tout ce que la barre teintait en blanc — son fond et l'etat de surcharge
+        // entier, dessines avec 0xFFFFFF.
+        assertEquals(0.0f, CpBarVisuals.alphaOf(0xFFFFFF), 1e-6);
         assertTrue(CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(1.0f)) < 0.35f,
                 "meme pleine, la surcharge reste bien plus transparente que le remplissage");
     }
