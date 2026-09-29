@@ -60,17 +60,12 @@ public class MagMovementSkill extends Skill {
     }
 
     /**
-     * Surcout d'un bloc SUPPLEMENTAIRE de la lignee : 10, et 5 quand la competence est a fond.
+     * Experience d'un bloc supplementaire de la lignee : un dixieme de pourcent.
      *
-     * <p>C'est la seule depense que le joueur a voulue au-dela de celles de l'original : le
-     * premier bloc se paie comme dans le vrai mod, chaque nouveau bloc se paie dix de surcout
-     * — cinq une fois la competence remplie — pour le dixieme de pourcent qu'il rapporte.
+     * <p>Le joueur l'a garde, et lui seul : un nouveau bloc ne coute rien de plus que les
+     * vraies donnees du maintien, il verse juste ce dixieme de pourcent — une fois, comme le
+     * premier bloc verse son trajet une fois.
      */
-    public static float overloadPerNewBlock(float exp) {
-        return lerp(10f, 5f, exp);
-    }
-
-    /** Experience d'un bloc supplementaire de la lignee : un dixieme de pourcent. */
     public static final float EXP_PER_NEW_BLOCK = 0.001f;
 
     /** Cout par tick : 15 a 8, comme l'original. */
@@ -135,9 +130,8 @@ public class MagMovementSkill extends Skill {
      *     surcout de {@link #getOverloadCost} pose a l'ouverture, qui ne redescend plus tant que
      *     la prise tient. Sa recompense est celle de l'original, versee a la fin : le trajet
      *     entier, avec son plancher de 0,5 pour cent — voir {@link #onHoldEnd} ;</li>
-     * <li><b>chaque nouveau bloc</b> ajoute {@link #overloadPerNewBlock} de surcout et
-     *     {@link #EXP_PER_NEW_BLOCK} d'experience, une seule fois : la lignee se souvient des
-     *     blocs deja pris ;</li>
+     * <li><b>chaque nouveau bloc</b> verse {@link #EXP_PER_NEW_BLOCK} d'experience, une seule
+     *     fois : la lignee se souvient des blocs deja pris, et il ne coute rien de plus ;</li>
      * <li><b>sans metal devant</b>, l'ancre gardee continue de tirer et de se payer. C'est le
      *     vrai mod, et c'est ce que le joueur a vu manquer : une fois accroche, detourner les
      *     yeux ne doit rien arreter ;</li>
@@ -183,15 +177,15 @@ public class MagMovementSkill extends Skill {
     /**
      * Compte un bloc dans la lignee du maintien.
      *
-     * Le premier bloc ne coute rien de plus — c'est celui du vrai mod, recompense a la fin.
-     * Les suivants paient leur surcout et versent leur dixieme de pourcent, une seule fois
-     * chacun : reviser un bloc deja pris ne repaie rien.
+     * Le premier bloc ne verse rien ici — c'est celui du vrai mod, recompense a la fin du
+     * trajet. Les suivants versent leur dixieme de pourcent, une seule fois chacun : reviser
+     * un bloc deja pris ne redonne rien. Aucun surcout ne s'y ajoute, comme le joueur l'a
+     * demande : la lignee ne coute rien de plus que le maintien lui-meme.
      */
     private void enterLineage(AbilityData data, BlockPos pos) {
         if (pos == null) return;
         if (!data.addHoldLineageBlock(this, pos.asLong())) return;
         if (data.getHoldLineageSize(this) <= 1) return;
-        data.perform(0f, overloadPerNewBlock(data.getSkillExp(this)));
         data.addSkillExp(this, EXP_PER_NEW_BLOCK);
     }
 

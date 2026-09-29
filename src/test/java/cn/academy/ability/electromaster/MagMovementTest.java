@@ -71,18 +71,9 @@ class MagMovementTest {
     }
 
     @Test
-    void unNouveauBlocCouteDixDeSurcoutEtCinqALaFin() {
-        // La seule depense que le joueur a ajoutee a celles de l'original : dix de surcout
-        // par nouveau bloc, et la moitie une fois la competence remplie.
-        assertEquals(10f, MagMovementSkill.overloadPerNewBlock(0f), 0.0001f);
-        assertEquals(7.5f, MagMovementSkill.overloadPerNewBlock(0.5f), 0.0001f);
-        assertEquals(5f, MagMovementSkill.overloadPerNewBlock(1f), 0.0001f);
-    }
-
-    @Test
     void unNouveauBlocVautUnDixiemeDePourcent() {
         // Mille fois moins que le plancher du premier bloc : une lignee ne se monnaie pas
-        // en trajets.
+        // en trajets. Aucun surcout ne s'y ajoute — le joueur a retire cette regle.
         assertEquals(0.001f, MagMovementSkill.EXP_PER_NEW_BLOCK, 0.000001f);
         assertEquals(5f, MagMovementSkill.getExpIncr(0) / MagMovementSkill.EXP_PER_NEW_BLOCK,
                 0.0001f, "le premier bloc vaut cinq nouveaux blocs");

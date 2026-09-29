@@ -2366,8 +2366,8 @@ public final class AcademyGameTests {
      * <p>Ce que le joueur a demande et qu'aucun test unitaire ne peut voir : le premier bloc
      * se paie comme dans l'original — son vrai CP a chaque tick, meme quand le regard l'a
      * quitte — le surcout de l'ouverture ne redescend plus tant qu'on est accroche, chaque
-     * nouveau bloc ajoute son surcout et son dixieme de pourcent une seule fois, et le trajet
-     * entier se verse a la fin avec son plancher de 0,5 %.
+     * nouveau bloc verse son dixieme de pourcent une seule fois, et le trajet entier se verse
+     * a la fin avec son plancher de 0,5 %.
      */
     @GameTest(template = "empty")
     public static void laLigneeDuMagMovementSePaieParBloc(GameTestHelper helper) {
@@ -2427,26 +2427,22 @@ public final class AcademyGameTests {
         assertValue(helper, 1, data.getHoldLineageSize(skill), "sans nouveau bloc vise");
         assertClose(helper, 30f, data.getOverload(), "et le surcout reste epingle");
 
-        // Le deuxieme bloc : sur le cote, dans l'axe du regard. Il ajoute son surcout et son
-        // dixieme de pourcent, une seule fois.
+        // Le deuxieme bloc : sur le cote, dans l'axe du regard. Il verse son dixieme de
+        // pourcent, une seule fois, et ne coute aucun surcout de plus.
         BlockPos second = eyes.offset(4, 0, 0);
         helper.setBlock(second, iron);
         lookAt(player, helper.absolutePos(second));
         float expAvant = data.getSkillExp(skill);
         assertTrue(helper, skill.onHoldTick(player, data, 7), "le maintien prend le deuxieme bloc");
         assertValue(helper, 2, data.getHoldLineageSize(skill), "deux blocs dans la lignee");
-        assertClose(helper, 30f + cn.academy.ability.electromaster.MagMovementSkill
-                        .overloadPerNewBlock(expAvant), data.getOverload(),
-                "dix de surcout pour le nouveau bloc");
         assertClose(helper, expAvant + cn.academy.ability.electromaster.MagMovementSkill
-                        .EXP_PER_NEW_BLOCK, data.getSkillExp(skill), "et un dixieme de pourcent");
+                        .EXP_PER_NEW_BLOCK, data.getSkillExp(skill), "un dixieme de pourcent");
+        assertClose(helper, 30f, data.getOverload(), "et aucun surcout de plus");
 
-        // Le reviser ne repaie rien : c'est le meme bloc de la lignee.
-        float overloadAvant = data.getOverload();
+        // Le reviser ne redonne rien : c'est le meme bloc de la lignee.
         float expStable = data.getSkillExp(skill);
         assertTrue(helper, skill.onHoldTick(player, data, 8), "le maintien continue");
-        assertClose(helper, overloadAvant, data.getOverload(), "reviser un bloc ne le repaie pas");
-        assertClose(helper, expStable, data.getSkillExp(skill), "ni ne redonne son experience");
+        assertClose(helper, expStable, data.getSkillExp(skill), "reviser un bloc ne redonne rien");
 
         // La fin : le trajet entier, avec son plancher de 0,5 %, verse une seule fois — et
         // c'est la recompense du premier bloc, celle de l'original.
