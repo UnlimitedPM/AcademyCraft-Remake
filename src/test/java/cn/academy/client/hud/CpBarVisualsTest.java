@@ -97,6 +97,47 @@ class CpBarVisualsTest {
                 Math.round(CpBarVisuals.TEX_H * CpBarVisuals.SCALE));
     }
 
+    @Test
+    void laSurchargeEstBienPlusTransparenteQueLeRemplissage() {
+        // C'est le point que le joueur a vu : la bande de surcharge n'est pas opaque. Ses trois
+        // arrets portent 10, 35 puis 80 sur 255 d'opacite — a peine visible au debut, rouge pale
+        // a la fin. Le dessin doit lire ces nombres-la, et non imposer les siens.
+        assertEquals(10, alpha(CpBarVisuals.overloadColor(0.0f)));
+        assertEquals(35, alpha(CpBarVisuals.overloadColor(0.55f)));
+        assertEquals(80, alpha(CpBarVisuals.overloadColor(1.0f)));
+        assertEquals(255, alpha(CpBarVisuals.fillColor(0.5f)), "le remplissage, lui, est opaque");
+
+        assertEquals(10 / 255.0f, CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(0.0f)), 1e-6);
+        assertEquals(1.0f, CpBarVisuals.alphaOf(0xFFFFFFFF), 1e-6);
+        assertEquals(0.0f, CpBarVisuals.alphaOf(0x00FF0000), 1e-6);
+        assertTrue(CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(1.0f)) < 0.35f,
+                "meme pleine, la surcharge reste bien plus transparente que le remplissage");
+    }
+
+    @Test
+    void laBarreSuitSaValeurAuLieuDeLaSauter() {
+        // Le balance de l'original : un pas lineaire, jamais de depassement, et le meme dans les
+        // deux sens. C'est ce qui fait glisser la surcharge — et c'est ce glissement vers le bas,
+        // couleur comprise, que le joueur appelle « l'overload qui va a l'envers ».
+        assertEquals(0.2f, CpBarVisuals.balance(0.0f, 1.0f, 0.2f), 1e-6, "un pas vers le haut");
+        assertEquals(0.8f, CpBarVisuals.balance(1.0f, 0.0f, 0.2f), 1e-6, "et un vers le bas");
+        assertEquals(1.0f, CpBarVisuals.balance(0.9f, 1.0f, 0.2f), 1e-6,
+                "sans jamais depasser la valeur visee");
+        assertEquals(0.0f, CpBarVisuals.balance(0.1f, 0.0f, 0.2f), 1e-6);
+        assertEquals(0.5f, CpBarVisuals.balance(0.5f, 0.5f, 0.2f), 1e-6, "immobile si rien ne bouge");
+    }
+
+    @Test
+    void lAnimationVaADeuxUnitesParSeconde() {
+        // La vitesse de l'original, la meme pour les deux barres : 2,0. Une seconde de jeu fait
+        // donc traverser la barre en un demi-seconde, au lieu de la faire sauter d'un coup.
+        assertEquals(2.0f, CpBarVisuals.BALANCE_SPEED, 1e-6);
+        assertEquals(0.02f, CpBarVisuals.balanceStep(0.01f), 1e-6, "dix millisecondes");
+        assertEquals(2.0f, CpBarVisuals.balanceStep(1.0f), 1e-6, "une seconde entiere");
+        assertEquals(0.0f, CpBarVisuals.balanceStep(-1.0f), 1e-6,
+                "un temps negatif ne fait pas reculer la barre");
+    }
+
     private static int alpha(int argb) {
         return (argb >>> 24) & 0xFF;
     }

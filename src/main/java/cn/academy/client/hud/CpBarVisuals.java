@@ -45,6 +45,16 @@ public final class CpBarVisuals {
     public static final float FILL_MIN = 0.16f;
     public static final float FILL_SPAN = 0.8f;
 
+    /**
+     * La vitesse de l'animation, celle de l'original : deux unites de progression par seconde.
+     *
+     * <p>Chez lui, {@code CP_BALANCE_SPEED} et {@code O_BALANCE_SPEED} valent tous deux 2,0.
+     * C'est elle qui fait GLISSER la surcharge au lieu de la faire sauter — dans un sens comme
+     * dans l'autre, donc aussi quand la surcharge reflue apres une surcharge pleine. C'est ce
+     * reflux, couleur comprise, que le joueur appelle « l'overload qui va a l'envers ».
+     */
+    public static final float BALANCE_SPEED = 2.0f;
+
     /** La surcharge se dessine dans cette bande, posee vers le haut de l'image. */
     public static final int OVER_X = 0;
     public static final int OVER_Y = 21;
@@ -105,6 +115,36 @@ public final class CpBarVisuals {
     /** La couleur de la surcharge : presque transparente, doree, puis rouge. */
     public static int overloadColor(float overload) {
         return ramp(OVER_STOP, OVER_COLOR, clamp01(overload));
+    }
+
+    /**
+     * La valeur affichee, avancee vers la valeur reelle d'au plus {@code step}.
+     *
+     * <p>Portage exact du {@code balance} de l'original : un pas lineaire, jamais de
+     * depassement, et le meme pas dans les deux sens. C'est ce qui donne a la barre un mouvement
+     * regulier plutot qu'une suite de sauts.
+     */
+    public static float balance(float from, float to, float step) {
+        float delta = to - from;
+        if (Math.abs(delta) <= step) return to;
+        return from + Math.signum(delta) * step;
+    }
+
+    /** Le pas d'un intervalle de temps, en secondes : la vitesse de l'original. */
+    public static float balanceStep(float seconds) {
+        return Math.max(0.0f, seconds) * BALANCE_SPEED;
+    }
+
+    /**
+     * L'opacite d'une couleur, de 0 a 1.
+     *
+     * <p>Les couleurs de la surcharge portent leur propre transparence — {@code 0x0A}, {@code 0x23}
+     * puis {@code 0x50} sur 255 chez l'original, soit a peine visible au debut. Encore faut-il
+     * la lire : un dessin qui impose son opacite a la place efface justement ce que ces nombres
+     * disent.
+     */
+    public static float alphaOf(int rgb) {
+        return ((rgb >>> 24) & 0xFF) / 255.0f;
     }
 
     /** La couleur d'un canal alpha compris, entre deux arrets. */

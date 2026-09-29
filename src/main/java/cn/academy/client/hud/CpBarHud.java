@@ -47,6 +47,11 @@ public final class CpBarHud {
     /** Le bandeau strie de la surcharge. */
     private static final float STRIPE_ALPHA = 0.5f;
 
+    /** Ce que la barre montre en ce moment : l'animation a besoin de la valeur precedente. */
+    private static float bufferedOverload;
+    private static float bufferedCp;
+    private static long lastFrame;
+
     private CpBarHud() {
     }
 
@@ -81,17 +86,40 @@ public final class CpBarHud {
         if (data.isOverloaded()) {
             drawOverloaded(graphics);
         } else {
+            // Les deux barres suivent leur valeur au lieu de la sauter : c'est l'animation de
+            // l'original, et c'est elle qui montre la surcharge refluer apres une surcharge
+            // pleine, au lieu de la voir disparaitre d'un coup.
+            smooth(data.getMaxOverload() > 0 ? data.getOverload() / data.getMaxOverload() : 0.0f,
+                    data.getControlPoint() / maxCp);
+
             blit(graphics, BACK_NORMAL, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
                     0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, 0xFFFFFF, BACK_ALPHA);
-            drawOverloadBand(graphics,
-                    data.getMaxOverload() > 0 ? data.getOverload() / data.getMaxOverload() : 0.0f);
-            drawFill(graphics, data.getControlPoint() / maxCp);
+            drawOverloadBand(graphics, bufferedOverload);
+            drawFill(graphics, bufferedCp);
         }
 
         // La couleur du shader teinte TOUT ce qui suit tant qu'on ne la remet pas : sans cette
         // ligne, le texte du HUD dessine apres sortirait colore.
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         pose.popPose();
+    }
+
+    /**
+     * Avance les deux valeurs affichees vers les valeurs reelles.
+     *
+     * <p>L'original faisait ce pas une fois par image, avec le temps ecoule depuis la
+     * precedente — et jamais plus de 100 ms, pour qu'une pause du jeu ne fasse pas bondir la
+     * barre au retour. Le pas lui-meme vient de {@link CpBarVisuals#BALANCE_SPEED} : c'est la
+     * meme animation pour les deux barres, comme chez lui.
+     */
+    private static void smooth(float overload, float cp) {
+        long now = Util.getMillis();
+        float seconds = lastFrame == 0L ? 0.0f : Math.min(now - lastFrame, 100L) / 1000.0f;
+        lastFrame = now;
+
+        float step = CpBarVisuals.balanceStep(seconds);
+        bufferedOverload = CpBarVisuals.balance(bufferedOverload, overload, step);
+        bufferedCp = CpBarVisuals.balance(bufferedCp, cp, step);
     }
 
     /**
@@ -155,13 +183,18 @@ public final class CpBarHud {
      * taille du morceau : c'est ce couple qui permet de <b>recadrer</b> au lieu d'etirer, et
      * c'est indispensable ici — la barre ne montre que la partie droite de son remplissage, sans
      * jamais changer l'echelle de son dessin.
+     *
+     * <p>L'opacite demandee <b>multiplie</b> celle de la couleur au lieu de la remplacer : les
+     * couleurs de la surcharge portent la leur, et c'est elle qui la rend presque invisible au
+     * debut puis de plus en plus rouge. La remplacer rendait la surcharge opaque, ce qui n'etait
+     * pas ce que ces nombres disaient.
      */
     private static void blit(GuiGraphics graphics, ResourceLocation texture,
                              int x, int y, int width, int height,
                              int u, int v, int uWidth, int vHeight, int rgb, float alpha) {
         if (width <= 0 || height <= 0) return;
         RenderSystem.setShaderColor(((rgb >> 16) & 0xFF) / 255.0f, ((rgb >> 8) & 0xFF) / 255.0f,
-                (rgb & 0xFF) / 255.0f, alpha);
+                (rgb & 0xFF) / 255.0f, CpBarVisuals.alphaOf(rgb) * alpha);
         graphics.blit(texture, x, y, width, height, u, v, uWidth, vHeight,
                 CpBarVisuals.TEX_W, CpBarVisuals.TEX_H);
     }
