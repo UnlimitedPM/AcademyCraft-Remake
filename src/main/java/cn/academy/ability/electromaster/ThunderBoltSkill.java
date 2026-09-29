@@ -38,6 +38,14 @@ public class ThunderBoltSkill extends Skill {
     private static final float SLOW_CHANCE = 0.8f;
     private static final float SLOW_EXP = 0.2f;
 
+    /** Trois gros arcs pour l'eclair lui-meme, comme l'original, et vingt ticks de vie. */
+    private static final int MAIN_ARCS = 3;
+    private static final int MAIN_ARC_TICKS = 20;
+
+    /** Duree d'un arc de propagation : l'original tirait entre 15 et 25 ticks. */
+    private static final int AOE_ARC_MIN_TICKS = 15;
+    private static final int AOE_ARC_SPAN = 11;
+
     public ThunderBoltSkill() {
         super("thunder_bolt", 4);
     }
@@ -92,6 +100,18 @@ public class ThunderBoltSkill extends Skill {
         // l'original jouait 0,6 contre 0,5.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_ARC_STRONG, 0.6f);
 
+        // L'eclair se dessine, et chez tous ceux qui voient le tireur : c'est le message
+        // d'effet de l'original, qui faisait naitre ses trois arcs chez chaque client. Ils
+        // partent des YEUX et vont jusqu'au bout de la portee, meme si un mur est plus proche —
+        // l'original envoyait sa portee sans regarder le bloc rencontre. Le moteur tire un
+        // dessin different pour chacun, donc les trois se voient.
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f);
+        for (int i = 0; i < MAIN_ARCS; i++) {
+            sendArc(player, cn.academy.ability.client.arc.ArcPattern.STRONG.name(), eye,
+                    eye.add(look.scale(RANGE)), MAIN_ARC_TICKS);
+        }
+
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         Vec3 impact = target != null
                 ? target.position().add(0, target.getEyeHeight(), 0)
@@ -111,6 +131,11 @@ public class ThunderBoltSkill extends Skill {
         for (LivingEntity around : entitiesAround(player, impact, target)) {
             effective = true;
             around.hurt(player.damageSources().indirectMagic(player, player), scaled(aoeDamage(data)));
+            // Un arc par voisine : l'original reliait le point d'impact a chacune, d'une duree
+            // tiree au hasard entre 15 et 25 ticks.
+            sendArc(player, cn.academy.ability.client.arc.ArcPattern.AOE.name(), impact,
+                    around.position().add(0, around.getEyeHeight(), 0),
+                    AOE_ARC_MIN_TICKS + player.getRandom().nextInt(AOE_ARC_SPAN));
             // L'original appliquait cet engourdissement a la cible principale dans sa
             // boucle de propagation, donc jamais a l'entite concernee. Le port suit
             // l'intention : chaque entite prise dans l'arc est engourdie.
@@ -129,6 +154,21 @@ public class ThunderBoltSkill extends Skill {
     private static List<LivingEntity> entitiesAround(Player player, Vec3 impact, Entity target) {
         AABB area = new AABB(impact, impact).inflate(AOE_RANGE);
         return player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player && e != target);
+    }
+
+    /**
+     * Envoie un arc a tous ceux qui voient le tireur.
+     *
+     * <p>Le motif voyage par son <b>nom</b> : le serveur nomme un motif pur, et n'a donc rien a
+     * connaitre du rendu. Sans ce message, l'eclair ne se dessinerait que chez celui qui appuie
+     * sur la touche, et les autres joueurs prendraient les degats sans rien voir venir.
+     */
+    private static void sendArc(Player player, String pattern, Vec3 from, Vec3 to, int ticks) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
+                        .with(() -> player),
+                new cn.academy.ability.network.ArcEffectPacket(pattern, from, to, ticks, false,
+                        player.getId()));
     }
 
     /** Les 80 % de chance de l'original : un tirage par entite, pas un par competence. */
