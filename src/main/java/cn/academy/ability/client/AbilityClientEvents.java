@@ -275,6 +275,14 @@ public class AbilityClientEvents {
                     MagMovementEffect.tick(player, skill, ClientCharge.getTicks());
                 }
             }
+            // L'electricite des charges : l'orage s'amase autour de celui qui le prepare.
+            // Comme les precedents, des images et rien d'autre — voir ThunderClapEffect.
+            if (skill.isChargeable()) {
+                var player = net.minecraft.client.Minecraft.getInstance().player;
+                if (player != null) {
+                    ThunderClapEffect.tick(player, skill, ClientCharge.getTicks());
+                }
+            }
             return;
         }
 
