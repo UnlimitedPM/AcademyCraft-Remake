@@ -191,7 +191,10 @@ public class ActivateSkillPacket {
                     Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
             return false;
         }
-        if (data.isOverloaded()) {
+        // Le verrou de l'original vaut pour toute la descente, et pas seulement pour le delai
+        // pendant lequel le temoin affiche la surcharge : sinon le joueur relancerait une
+        // competence au milieu de sa propre recuperation.
+        if (data.isOverloadRecovering()) {
             player.displayClientMessage(
                     Component.literal("Overloaded - wait for your overload to drop")
                             .withStyle(ChatFormatting.RED), true);

@@ -122,6 +122,6 @@ public final class DebugConsoleLines {
      * l'aptitude allumee, pas de surcharge pleine, pas de brouillage.
      */
     public static boolean canUseAbility(AbilityData data) {
-        return data.isActivated() && !data.isOverloaded() && !data.isInterfered();
+        return data.isActivated() && !data.isOverloadRecovering() && !data.isInterfered();
     }
 }

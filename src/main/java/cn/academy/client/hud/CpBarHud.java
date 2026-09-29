@@ -83,15 +83,16 @@ public final class CpBarHud {
         pose.translate(left, top, 0);
         pose.scale(CpBarVisuals.SCALE, CpBarVisuals.SCALE, 1.0f);
 
+        // Les deux valeurs affichees suivent les vraies au lieu de les sauter : c'est l'animation
+        // de l'original. Ce pas se fait a CHAQUE image, meme quand la barre est en surcharge,
+        // sinon la valeur affichee resterait figee en arriere et la bande ne pourrait pas refluer
+        // depuis le plein quand la surcharge redescend.
+        smooth(data.getMaxOverload() > 0 ? data.getOverload() / data.getMaxOverload() : 0.0f,
+                data.getControlPoint() / maxCp);
+
         if (data.isOverloaded()) {
             drawOverloaded(graphics);
         } else {
-            // Les deux barres suivent leur valeur au lieu de la sauter : c'est l'animation de
-            // l'original, et c'est elle qui montre la surcharge refluer apres une surcharge
-            // pleine, au lieu de la voir disparaitre d'un coup.
-            smooth(data.getMaxOverload() > 0 ? data.getOverload() / data.getMaxOverload() : 0.0f,
-                    data.getControlPoint() / maxCp);
-
             blit(graphics, BACK_NORMAL, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
                     0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, 0xFFFFFF, BACK_ALPHA);
             drawOverloadBand(graphics, bufferedOverload);

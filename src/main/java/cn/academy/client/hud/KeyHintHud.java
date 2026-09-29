@@ -59,8 +59,10 @@ public final class KeyHintHud {
         int top = layout.placeY(element, screenHeight, element.getHeight());
 
         // L'aptitude ne peut pas servir : l'original grisait le capuchon plutot que de cacher
-        // le rappel, pour que le joueur voie ce qu'il a sous la main.
-        boolean usable = !data.isOverloaded() && !data.isInterfered();
+        // le rappel, pour que le joueur voie ce qu'il a sous la main. C'est le VERROU qui
+        // compte ici — il tient jusqu'a la fin de la descente — et non l'etat montre par la
+        // barre, qui s'efface des le delai ecoule.
+        boolean usable = !data.isOverloadRecovering() && !data.isInterfered();
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();

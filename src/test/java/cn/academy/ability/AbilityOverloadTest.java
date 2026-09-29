@@ -124,7 +124,39 @@ class AbilityOverloadTest {
 
         data.perform(0f, 500f);
 
-        assertTrue(data.isOverloaded(), "une reserve pleine doit bloquer les competences");
+        assertTrue(data.isOverloadRecovering(), "une reserve pleine doit bloquer les competences");
+        // Et le temoin la montre : le delai de recuperation vient d'etre arme.
+        assertTrue(data.isOverloaded(), "le temoin doit afficher la surcharge des qu'elle est atteinte");
+    }
+
+    @Test
+    void laSurchargeMontreeSEffaceAvantLaFinDeLaDescente() {
+        AbilityData data = atLevel(1);
+        data.perform(0f, 500f);
+
+        // Le delai de recuperation s'ecoule : c'est le temps pendant lequel l'original
+        // affichait la surcharge. Une fois passe il ne la montrait plus — la bande refluait vers
+        // la gauche — alors que le verrou, lui, tenait encore.
+        for (int i = 0; i < 32; i++) {
+            data.tickOverload();
+        }
+
+        assertTrue(data.getOverload() > 0f, "la reserve n'a pas encore commence a redescendre");
+        assertFalse(data.isOverloaded(), "l'etat montre doit s'effacer des le delai ecoule");
+        assertTrue(data.isOverloadRecovering(), "mais le verrou des competences tient toujours");
+
+        for (int i = 0; i < 400 && data.getOverload() > 0f; i++) {
+            data.tickOverload();
+            // Le dernier tick de la descente vide la reserve : c'est LA que le verrou se
+            // releve, comme chez l'original.
+            if (data.getOverload() > 0f) {
+                assertTrue(data.isOverloadRecovering(), "le verrou tient pendant toute la descente");
+            }
+        }
+
+        assertEquals(0f, data.getOverload(), 0.0001f);
+        assertFalse(data.isOverloadRecovering(), "la reserve videe rend ses competences");
+        assertFalse(data.isOverloaded());
     }
 
     @Test
@@ -157,6 +189,7 @@ class AbilityOverloadTest {
 
         assertEquals(0f, data.getOverload(), 0.0001f);
         assertFalse(data.isOverloaded(), "la reserve vide doit rendre ses competences au joueur");
+        assertFalse(data.isOverloadRecovering());
     }
 
     @Test

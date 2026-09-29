@@ -540,13 +540,11 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private float addMaxOverload;
 
     /**
-     * Faux quand le surcout a atteint son maximum : plus aucune competence ne part.
+     * Faux quand le surcout a atteint son maximum, et jusqu'a ce que la reserve soit vide.
      *
-     * L'original distingait ce drapeau de {@code isOverloaded()} pour l'affichage,
-     * dont le temoin s'eteignait au bout du delai de recuperation alors que les
-     * competences restaient bloquees. Le port garde un seul drapeau : un verrou qui
-     * ne se montre plus est un verrou invisible, et le joueur ne comprendrait pas
-     * pourquoi ses touches ne repondent plus alors que la barre redescend.
+     * <p>C'est le verrou : tant qu'il est faux, plus aucune competence ne part. Il se releve
+     * seulement quand la reserve est entierement redescendue, donc le joueur ne relance rien
+     * pendant que sa surcharge reflue.
      */
     private boolean overloadFine = true;
 
@@ -639,8 +637,26 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return addMaxOverload;
     }
 
-    public boolean isOverloaded() {
+    /**
+     * Vrai tant que la reserve de surcout tient le joueur : c'est le verrou des competences.
+     *
+     * <p>Portage de {@code CPData.canUseAbility}, qui ne regardait que ce drapeau.
+     */
+    public boolean isOverloadRecovering() {
         return !overloadFine;
+    }
+
+    /**
+     * Vrai pendant la surcharge <b>montree</b> : le delai avant que la reserve ne redescende.
+     *
+     * <p>Portage de {@code CPData.isOverloaded}, qui exigeait les deux : le verrou ET le delai
+     * en cours. Le temoin ne montre donc l'etat de surcharge que le temps de ce delai
+     * ({@code overloadRecoverCooldown}, 32 ticks) ; passe ce delai la barre revient au fond
+     * normal et sa bande de surcharge <b>reflue</b> vers la gauche, au lieu de rester plantee a
+     * fond jusqu'a la derniere goutte.
+     */
+    public boolean isOverloaded() {
+        return !overloadFine && untilOverloadRecover > 0;
     }
 
     public int getUntilOverloadRecover() {
