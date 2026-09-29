@@ -16,16 +16,18 @@ import net.minecraft.world.phys.Vec3;
  * {@code y + 1.05}. Les yeux, eux, sont a 1,62.
  *
  * <p>La hauteur est le seul de ces trois nombres qu'on ait vraiment a choisir : c'est elle
- * qui se voit. {@code HAND_DOWN = 0.55} pose le depart un peu au-dessus de la main tendue,
- * donc nettement sous l'epaule — la ou il faut. Le premier reglage le posait a 0,22, soit
- * 1,40 bloc, c'est-a-dire a la hauteur de l'epaule : on croyait alors que l'eclair flottait
- * a cote du joueur au lieu de sortir de sa main.
+ * qui se voit. {@code HAND_DOWN = 0.87} pose le depart a 0,75 bloc des pieds — c'est-a-dire
+ * sur la main elle-meme, telle qu'on la voit pendre en vue de troisieme personne, devant le
+ * joueur a l'ecran. Les deux reglages precedents se sont trompes : 0,22 mettait l'eclair a
+ * l'epaule (1,40 bloc) et 0,55 encore au-dessus de la main (1,07 bloc, soit la poitrine).
  *
- * <p>Le decalage se calcule sur la direction <b>horizontale</b> du regard : un bras ne se
- * deplace pas quand on leve les yeux au ciel, et un cote calcule sur un regard vertical
- * serait indetermine. Le cote droit se trouve par {@code regard x vertical}, qui donne bien
- * la droite du joueur — verifie par un test, parce qu'une erreur de signe poserait l'eclair
- * dans la mauvaise main sans rien casser.
+ * <p><b>Les deux decalages horizontaux se calculent sur la direction horizontale du
+ * regard</b>, jamais sur le regard entier. Un bras ne monte pas quand on leve les yeux au
+ * ciel : avec un avant pris sur le regard complet, l'origine suivait le tangage et grimpait
+ * jusqu'au cou des qu'on visait vers le haut — mesure en jeu, 1,24 bloc au lieu de 0,75.
+ * Le cote droit se trouve par {@code avant x vertical}, qui donne bien la droite du joueur,
+ * verifie par un test : une erreur de signe poserait l'eclair dans la mauvaise main sans
+ * rien casser.
  */
 public final class ArcOrigins {
 
@@ -35,26 +37,26 @@ public final class ArcOrigins {
     /** Du cote du bras, en blocs : les 0,3125 bloc du modele. */
     public static final double HAND_RIGHT = 0.31;
 
-    /** Et plus bas que les yeux : 1,62 d'yeux moins 1,05 de main tendue. */
-    public static final double HAND_DOWN = 0.55;
+    /** Et plus bas que les yeux : 1,62 d'yeux moins 0,75 de main qui pend. */
+    public static final double HAND_DOWN = 0.87;
+
+    /** La hauteur des yeux dans le modele du joueur : {@code HAND_DOWN} se compte depuis la. */
+    public static final double EYE_HEIGHT = 1.62;
 
     private ArcOrigins() {}
 
     /** Le point de depart d'un eclair : la main, vue depuis les yeux et la direction du regard. */
     public static Vec3 hand(Vec3 eye, Vec3 look) {
-        Vec3 forward = look.normalize();
-
-        // Le cote se calcule sans la composante verticale du regard : un bras ne monte pas
-        // quand on regarde le ciel.
+        // Tout le bras se lit a l'horizontale : c'est la direction du corps, pas celle du
+        // regard. Un regard vertical ne dit plus de quel cote le joueur est tourne ; la
+        // main reste alors le long du corps, ce qui vaut mieux qu'une direction inventee.
         Vec3 flat = new Vec3(look.x, 0, look.z);
-        Vec3 right;
         if (flat.lengthSqr() < 1e-6) {
-            // Regard droit au sol ou au ciel : le cote n'est plus lisible, et la droite
-            // habituelle vaut mieux qu'une direction nulle.
-            right = new Vec3(-1, 0, 0);
-        } else {
-            right = flat.cross(new Vec3(0, 1, 0)).normalize();
+            return eye.add(-HAND_RIGHT, -HAND_DOWN, 0);
         }
+
+        Vec3 forward = flat.normalize();
+        Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
 
         return eye
                 .add(forward.scale(HAND_FORWARD))

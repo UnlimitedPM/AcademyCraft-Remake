@@ -28,7 +28,7 @@ class ArcOriginsTest {
         Vec3 hand = ArcOrigins.hand(EYE, new Vec3(0, 0, 1));
 
         assertEquals(EYE.x - ArcOrigins.HAND_RIGHT, hand.x, 1e-9, "la main est a l'ouest");
-        assertEquals(EYE.y - ArcOrigins.HAND_DOWN, hand.y, 1e-9, "et un peu plus bas que les yeux");
+        assertEquals(EYE.y - ArcOrigins.HAND_DOWN, hand.y, 1e-9, "et 0,75 bloc plus bas que les yeux");
         assertEquals(EYE.z + ArcOrigins.HAND_FORWARD, hand.z, 1e-9, "et devant le visage");
     }
 
@@ -65,27 +65,42 @@ class ArcOriginsTest {
             assertTrue(Double.isFinite(hand.x) && Double.isFinite(hand.y) && Double.isFinite(hand.z),
                     "aucune coordonnee ne doit devenir infinie ni nulle part");
             assertTrue(hand.distanceTo(EYE) < 1.2, "et la main reste a portee de main");
+            assertEquals(EYE.y - ArcOrigins.HAND_DOWN, hand.y, 1e-9,
+                    "la hauteur de la main ne depend pas du tout du regard");
         }
-        // La main est SOUS les yeux dans les deux cas : le decalage vers le bas l'emporte
-        // sur l'avance, sinon le bras se tiendrait au-dessus du visage.
-        assertTrue(down.y < EYE.y, "regarder le sol pose la main plus bas");
-        assertTrue(up.y < EYE.y, "et regarder le ciel la garde sous les yeux");
-        assertTrue(down.y < up.y, "le regard au sol la pose plus bas que le regard au ciel");
+        assertEquals(down.y, up.y, 1e-9, "viser le sol et viser le ciel donnent la meme main");
     }
 
     @Test
-    @DisplayName("la main se tient sous l'epaule, pas a sa hauteur")
-    void laMainEstSousLEpaule() {
-        // C'est ce que le joueur a vu de travers en F5 : le depart etait a 1,40 bloc, soit
-        // la hauteur de l'epaule (le modele l'attache a 1,375), et l'eclair semblait donc
-        // flotter a cote du joueur au lieu de sortir de sa main. Le modele donne la main
-        // tendue vers 1,05 bloc : le depart doit se tenir entre les deux.
+    @DisplayName("lever ou baisser les yeux ne deplace pas le depart")
+    void leTangageNeDeplacePasLeDepart() {
+        // C'est la faute qui a echappe aux deux premiers reglages, et elle ne se voyait qu'en
+        // jeu : l'avance se prenait sur le regard ENTIER, tangage compris. Des qu'on visait
+        // vers le haut, l'origine montait avec lui — mesure en jeu a 1,24 bloc, soit le cou,
+        // alors que la main est a 0,75. Seule la direction du corps, horizontale, a le droit
+        // d'entrer dans le calcul.
+        Vec3 nord = ArcOrigins.hand(EYE, new Vec3(0, 0, -1));
+        Vec3 nordEnLAir = ArcOrigins.hand(EYE, new Vec3(0, 0.9, -0.44));
+        Vec3 nordVersLeSol = ArcOrigins.hand(EYE, new Vec3(0, -0.9, -0.44));
+
+        assertEquals(nord.y, nordEnLAir.y, 1e-9, "viser le ciel ne monte pas le depart");
+        assertEquals(nord.y, nordVersLeSol.y, 1e-9, "et viser le sol ne le baisse pas");
+        assertEquals(nord.x, nordEnLAir.x, 1e-9, "le cote non plus ne bouge pas");
+        assertEquals(nord.z, nordVersLeSol.z, 1e-9, "l'avance se mesure sur la direction du corps");
+    }
+
+    @Test
+    @DisplayName("le depart part de la main, ni de l'epaule ni de la poitrine")
+    void leDepartPartDeLaMain() {
+        // Ce que le joueur a vu de travers en F5, deux fois : le depart se posait d'abord a
+        // 1,40 bloc, la hauteur de l'epaule (le modele l'attache a 1,375) et l'eclair
+        // semblait flotter a cote de lui ; puis a 1,07, la poitrine. Le modele donne la main
+        // qui pend au milieu de l'avant-bras, 1,375 - 0,625 = 0,75 bloc des pieds.
         //
         // Les yeux sont a 1,62 bloc au-dessus des pieds, sur un joueur d'1,8 bloc.
-        double hauteurMain = 1.62 - ArcOrigins.HAND_DOWN;
+        double hauteurMain = ArcOrigins.EYE_HEIGHT - ArcOrigins.HAND_DOWN;
 
-        assertTrue(hauteurMain < 1.2, "sous les 1,2 bloc d'une main tendue : " + hauteurMain);
-        assertTrue(hauteurMain > 0.9, "mais au-dessus de la taille, pas aux genoux : " + hauteurMain);
+        assertEquals(0.75, hauteurMain, 1e-9, "la main qui pend, mesuree en jeu");
         assertEquals(0.31, ArcOrigins.HAND_RIGHT, 1e-9,
                 "le cote est celui du modele : 0,3125 bloc du corps");
     }
