@@ -83,11 +83,9 @@ public class MagMovementSkill extends Skill {
     /**
      * Tenir ne demande plus rien a viser.
      *
-     * <p>ECART ASSUME, demande du joueur : son laser se voit quoi qu'il regarde, meme dans le
-     * vide. L'original, lui, terminait la competence des le {@code MSG_MADEALIVE} quand son
-     * rayon ne trouvait ni bloc ni entite metallique, donc sans rien facturer. Ici la visee est
-     * relue a chaque tick, et c'est la <b>depense</b> qui exige du metal : voir
-     * {@link #onHoldTick}. L'experience se paie au trajet, elle aussi seulement quand on tire.
+     * <p>ECART ASSUME, demande du joueur : son laser se voit meme dans le vide, et le maintien
+     * s'ouvre tout de suite. C'est la <b>depense</b> qui demande une cible metallique, et elle
+     * se decide a chaque tick — voir {@link #onHoldTick}.
      */
     @Override
     public boolean canStart(Player player, AbilityData data) {
@@ -98,48 +96,76 @@ public class MagMovementSkill extends Skill {
     public void onStart(Player player, AbilityData data) {
         data.setHeldOverload(this, data.getOverload());
         data.setHoldOrigin(this, player.position());
+        // Aucune ancre au depart, et c'est voulu : le maintien s'ouvre sans rien viser.
+        data.setHoldTarget(this, 0);
+        data.setHoldPoint(this, null);
     }
 
     /**
-     * Un tick de traction : la cible est relue, et rien n'est paye quand il n'y en a pas.
+     * Un tick de traction : l'ancre colle, et rien n'est paye sans elle.
      *
-     * <p>Le port fixait sa cible a l'appui, comme l'original. Le joueur veut autre chose :
-     * viser du metal paie — CP, surcout, experience du trajet — et viser autre chose ne paie
-     * rien du tout, sans interrompre le maintien ni eteindre le laser. La position du tick
-     * precedent se garde dans le point de maintien, faute d'un autre endroit ou la mettre :
-     * c'est ce qui permet de ne payer l'experience qu'au trajet reellement parcouru.
+     * <p>L'original fixait sa cible a l'appui et ne la lachait plus. Le port relisait le regard a
+     * chaque tick, ce qui lachait la proie des qu'on detournait les yeux — le joueur l'a vu :
+     * quand on arrete de le regarder, cela n'aimante plus du tout.
+     *
+     * <p>L'ancre colle donc :
+     *
+     * <ul>
+     * <li>viser du metal en <b>pose</b> une, ou <b>remplace</b> celle qu'on tient — c'est le
+     *     « tant qu'il n'y a pas de nouveau metal devant nous » du joueur ;</li>
+     * <li>sans metal devant, l'ancienne reste, et la traction continue meme en regardant
+     *     ailleurs — comme dans le vrai mod ;</li>
+     * <li>sans ancre du tout, le maintien tient, le laser se voit, et il ne se paie rien.</li>
+     * </ul>
+     *
+     * <p>L'experience se paie au trajet, tick par tick, et sans le plancher de
+     * {@link #getExpIncr} : ce plancher vaut pour un trajet entier, et le payer a chaque tick
+     * donnait un demi pour cent de competence par tick — le bug que le joueur a signale.
      */
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
-        Vec3 previous = data.getHoldPoint(this);
-        data.setHoldPoint(this, player.position());
+        Anchor aimed = findTarget(player, data);
+        if (aimed != null) {
+            if (aimed.entity() != null) {
+                data.setHoldTarget(this, aimed.entity().getId());
+                data.setHoldPoint(this, null);
+            } else {
+                data.setHoldTarget(this, 0);
+                data.setHoldPoint(this, aimed.point());
+            }
+        }
 
-        Anchor target = findTarget(player, data);
-        if (target == null) return true;
+        Vec3 anchor = resolveAnchor(player, data, data.getHoldTargetId(this), data.getHoldPoint(this));
+        if (anchor == null) return true;
 
         if (!data.consumeControlPoint(cpPerTick(data))) return false;
 
-        Vec3 anchor = target.entity() != null
-                ? target.entity().position().add(0, target.entity().getEyeHeight(), 0)
-                : target.point();
+        Vec3 previous = player.position();
         pull(player, anchor);
-
-        if (previous != null) {
-            data.addSkillExp(this, getExpIncr(previous.distanceTo(player.position())));
-        }
+        data.addSkillExp(this, getTickExpIncr(previous.distanceTo(player.position())));
         return true;
     }
 
     /**
-     * La fin du maintien : rien a payer, tout s'est paye au tick.
+     * La fin du maintien : tout s'est paye au tick, il n'y a plus rien a compter.
      *
-     * <p>L'original donnait son experience d'un coup, a la fin, sur la distance du trajet. Le
-     * port la donne a chaque tick ou la traction tire vraiment, ce qui revient au meme quand on
-     * vise du metal — et a rien du tout quand on ne vise rien.
+     * <p>L'original donnait son experience d'un coup, sur la distance du trajet entier. Le port
+     * la donne a chaque tick de traction reelle, ce qui revient au meme sur un trajet droit — et
+     * a rien du tout quand rien ne tire.
      */
     @Override
     public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
         player.fallDistance = 0.0f;
+    }
+
+    /**
+     * Experience d'un tick de traction : 0,0011 par bloc parcouru, sans plancher.
+     *
+     * <p>{@link #getExpIncr} garde le plancher de l'original, qui valait pour un trajet entier ;
+     * l'appliquer a chaque tick payait le minimum meme quand le joueur ne bougeait pas.
+     */
+    public static float getTickExpIncr(double distance) {
+        return 0.0011f * (float) distance;
     }
 
     /**
