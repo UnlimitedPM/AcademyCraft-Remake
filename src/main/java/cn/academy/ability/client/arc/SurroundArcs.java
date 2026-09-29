@@ -43,6 +43,16 @@ public final class SurroundArcs {
     /** Gras : cinq arcs, longs de 3,5 a 4,5 blocs. Le claquement d'orage. */
     public static final Gabarit BOLD = new Gabarit(ArcPattern.SURROUND_BOLD, 5, 6.0, 12.0);
 
+    /**
+     * L'orage du claquement : quatre arcs courts et minces, serres contre le corps.
+     *
+     * <p>ECART ASSUME, demande du joueur : le gras ci-dessus, qui est celui de l'original,
+     * lui a paru beaucoup trop grand et beaucoup trop gros autour de lui. Les bornes de
+     * longueur n'ont d'effet que sous la longueur du motif, qui est donc la vraie taille de
+     * l'arc — 1,2 bloc ici.
+     */
+    public static final Gabarit CLAP = new Gabarit(ArcPattern.SURROUND_FINE, 4, 1.2, 2.0);
+
     /** La vie d'un arc d'entourage, en ticks : trois, comme {@code EntityIntensifyEffect}. */
     public static final int LIFE_TICKS = 3;
 

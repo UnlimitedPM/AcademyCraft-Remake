@@ -23,16 +23,30 @@ import net.minecraft.world.phys.Vec3;
 public final class ThunderClapEffect {
 
     /**
-     * La boite d'ou l'electricite part.
-     *
-     * <p>Plus large que le corps et haute comme lui : un arc qui nait au bord d'une boite en
-     * sort de toute sa longueur, donc les bornes restent serrees autour du joueur.
+     * La boite d'ou l'electricite part, et le dezoom de la vue. Deux etats de classe : c'est
+     * un effet du joueur local, et il n'y en a qu'un.
      */
-    private static final double SIZE_XZ = 1.5;
-    private static final double MIN_Y = -0.2;
-    private static final double MAX_Y = 2.0;
+    private static final double SIZE_XZ = 1.0;
+    private static final double MIN_Y = -0.1;
+    private static final double MAX_Y = 1.8;
+
+    /** Le dezoom a pleine charge, en part du champ de vision. */
+    private static final float FOV_AT_FULL = 0.12f;
+
+    /** Où en est la charge montree, de 0 a 1 ; 0 quand rien ne charge. */
+    private static float progress;
 
     private ThunderClapEffect() {
+    }
+
+    /** Le dezoom de la charge, a appliquer au champ de vision. */
+    public static float fovBoost() {
+        return FOV_AT_FULL * progress;
+    }
+
+    /** La charge s'arrete : la vue reprend sa place. */
+    public static void end() {
+        progress = 0f;
     }
 
     /**
@@ -46,12 +60,23 @@ public final class ThunderClapEffect {
      * @param chargeTicks les ticks de charge comptes par le client
      */
     public static void tick(Player player, Skill skill, int chargeTicks) {
-        if (skill != ElectromasterCategory.THUNDER_CLAP) return;
+        if (skill != ElectromasterCategory.THUNDER_CLAP) {
+            // Une autre charge : la vue reprend sa place tout de suite, sans attendre la fin
+            // de celle-ci. Les charges qui s'arretent ne rappellent personne.
+            progress = 0f;
+            return;
+        }
+
+        // Le dezoom suit la charge, et s'arrete a son maximum : au-dela, l'orage ne grossit
+        // plus, donc la vue non plus.
+        int max = Math.max(1, skill.getMaxChargeTicks(ClientAbilityData.get()));
+        progress = Math.min(1f, chargeTicks / (float) max);
+
         if (chargeTicks % SurroundArcs.LIFE_TICKS != 0) return;
 
         // Le centre est au milieu du corps : la boite monte du sol a la tete.
         Vec3 centre = player.position();
-        SurroundArcs.spawn(SurroundArcs.BOLD, centre, SIZE_XZ, MIN_Y, MAX_Y, player.getId(),
+        SurroundArcs.spawn(SurroundArcs.CLAP, centre, SIZE_XZ, MIN_Y, MAX_Y, player.getId(),
                 player.getRandom());
     }
 }

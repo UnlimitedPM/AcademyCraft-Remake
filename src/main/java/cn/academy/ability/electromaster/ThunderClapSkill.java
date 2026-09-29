@@ -110,9 +110,24 @@ public class ThunderClapSkill extends Skill {
 
     @Override
     public void onStart(Player player, AbilityData data) {
-        // Meme epinglage que le meltdowner : la reserve ne redescend pas pendant qu'on
-        // charge.
+        // Le surcout de l'orage se paie a la CHARGE, et pas au claquement : c'est le
+        // {@code s_onStart} de l'original, qui consommait son surcout des l'appui. La
+        // competence paie donc elle-meme, et le declenchement ne repaie rien — voir
+        // {@link #paysOnEffect}.
+        data.perform(0f, getOverloadCost(data));
+        // Meme epinglage que le meltdowner : la reserve ne redescend pas pendant qu'on charge.
         data.setHeldOverload(this, data.getOverload());
+    }
+
+    /**
+     * L'orage paie lui-meme, et a sa facon.
+     *
+     * <p>Le surcout tombe a l'appui (voir {@link #onStart}) et les CP tick par tick pendant la
+     * charge (voir {@link #onChargeTick}) : il ne reste donc rien a payer au declenchement.
+     */
+    @Override
+    public boolean paysOnEffect() {
+        return true;
     }
 
     @Override

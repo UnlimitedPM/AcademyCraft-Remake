@@ -281,6 +281,20 @@ public class AbilityClientEvents {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
                     ThunderClapEffect.tick(player, skill, ClientCharge.getTicks());
+                    // L'orage tombe TOUT SEUL au bout de sa charge maximale : l'original
+                    // terminait sa charge a MAX_TICKS pour frapper, sans attendre que la touche
+                    // se relache. Le serveur ne peut pas s'en charger — c'est le client qui tient
+                    // la touche — donc la charge se termine ici, par le meme chemin que le
+                    // relachement.
+                    int max = skill.getMaxChargeTicks(ClientAbilityData.get());
+                    if (max > 0 && ClientCharge.getTicks() >= max) {
+                        binding.charging = false;
+                        ClientCharge.end();
+                        ThunderClapEffect.end();
+                        endDirections();
+                        send(category, skill, Phase.RELEASE);
+                        return;
+                    }
                 }
             }
             return;
@@ -290,8 +304,25 @@ public class AbilityClientEvents {
         // competence avec le temps qu'il avait compte de son cote.
         binding.charging = false;
         ClientCharge.end();
+        ThunderClapEffect.end();
         endDirections();
         send(category, skill, Phase.RELEASE);
+    }
+
+    /**
+     * Le dezoom de la charge de l'orage : plus elle monte, plus la vue s'elargit.
+     *
+     * <p>C'est le retour visuel que l'original donnait, et qui manquait ici. Il l'obtenait en
+     * ralentissant la marche du joueur, dont le champ de vision se tire aussi — le port ne
+     * touche pas au deplacement, il elargit la vue directement.
+     *
+     * <p>C'est un <b>facteur</b> et pas un reglage : il s'applique au champ courant, donc il se
+     * voit meme quand le joueur l'a pousse au maximum, comme il l'avait remarque.
+     */
+    @SubscribeEvent
+    public static void onComputeFov(net.minecraftforge.client.event.ComputeFovModifierEvent event) {
+        float boost = ThunderClapEffect.fovBoost();
+        if (boost > 0f) event.setNewFovModifier(event.getFovModifier() * (1f + boost));
     }
 
     /**

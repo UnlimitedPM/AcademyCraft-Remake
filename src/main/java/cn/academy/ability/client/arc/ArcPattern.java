@@ -100,6 +100,19 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
             new ArcPattern("surround_micro", 0.1, 0.7, 0.9, 0.18, 0.7, 0.9, 3, 0.4, 0.5, 0.2, 0.2, 9L);
 
     /**
+     * L'entourage de l'orage qui s'amasse.
+     *
+     * <p>ECART ASSUME, demande du joueur : le gras de l'original entourait le corps d'eclairs
+     * qu'il a trouves beaucoup trop grands et beaucoup trop gros. Celui-ci est court et mince.
+     *
+     * <p>La longueur et le depassement vont ensemble, comme pour {@link #SURROUND_MICRO} :
+     * 1,2 de long, 0,5 de depassement, soit la proportion de l'entourage fin de l'original
+     * (1,75 pour 0,8). La largeur, elle, est la moitie de ce fin.
+     */
+    public static final ArcPattern SURROUND_FINE =
+            new ArcPattern("surround_fine", 0.15, 0.7, 0.9, 0.5, 0.6, 0.9, 3, 1.2, 0.5, 0.2, 0.2, 10L);
+
+    /**
      * Le nombre de variantes tirees par motif.
      *
      * <p>L'original en tirait vingt et changeait de variante toutes les quelques dixiemes
@@ -111,7 +124,7 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     /** Les motifs, dans l'ordre ou ils sont nommes : les cinq de l'original, puis l'entourage. */
     public static List<ArcPattern> all() {
         return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE,
-                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO);
+                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO, SURROUND_FINE);
     }
 
     /** Le motif qui porte ce nom, ou l'arc faible si le nom est inconnu. */
