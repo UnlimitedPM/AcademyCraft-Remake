@@ -138,10 +138,18 @@ public class MagMovementSkill extends Skill {
         Vec3 anchor = resolveAnchor(player, data, data.getHoldTargetId(this), data.getHoldPoint(this));
         if (anchor == null) return true;
 
-        if (!data.consumeControlPoint(cpPerTick(data))) return false;
-
         Vec3 previous = player.position();
         pull(player, anchor);
+
+        // Rien de metallique DEVANT : la traction continue sur l'ancre gardee, mais elle ne se
+        // paie pas. C'est la combinaison que le joueur a demandee — rester colle a sa proie meme
+        // en regardant ailleurs, et ne payer que ce qu'on vise. Les mesures du 30/09 le disent :
+        // viser le ciel ne coutait rien mais ne trouvait aucune ancre, et le fer posait bien son
+        // ancre en payant. C'est le paiement qui doit suivre le regard, pas l'ancre.
+        if (aimed == null) return true;
+
+        if (!data.consumeControlPoint(cpPerTick(data))) return false;
+
         data.addSkillExp(this, getTickExpIncr(previous.distanceTo(player.position())));
         return true;
     }
