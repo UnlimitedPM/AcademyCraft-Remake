@@ -232,12 +232,16 @@ public class AbilityClientEvents {
                 AbilityScreens.open(category, skill);
                 return;
             }
+            // L'aptitude eteinte, le serveur refusera l'activation : le client n'ouvre donc pas
+            // le maintien du tout. Avant, il l'ouvrait quand meme, et le tick suivant rejouait
+            // l'animation du pouvoir pour rien — c'est ce que le joueur a signale, sa touche V
+            // eteinte. Le PRESS part quand meme, pour que le serveur dise pourquoi il refuse.
+            if (!ClientAbilityData.get().isActivated()) {
+                send(category, skill, Phase.PRESS);
+                return;
+            }
             binding.charging = skill.isChargeable() || skill.isHeld();
             send(category, skill, Phase.PRESS);
-            // Le maintien n'est ouvert chez le client que si l'aptitude est allumee : sinon le
-            // serveur refusait l'activation, et le joueur voyait quand meme l'animation et
-            // entendait le son de la competence — c'est ce qu'il a signale avec sa touche V.
-            if (!ClientAbilityData.get().isActivated()) return;
             if (skill.isChargeable()) {
                 // Une charge sans maximum n'a rien a montrer : la barre serait pleine des le
                 // premier tick. L'original, lui, faisait plonger le regard du joueur pendant

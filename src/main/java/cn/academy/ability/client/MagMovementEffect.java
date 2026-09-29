@@ -40,17 +40,20 @@ public final class MagMovementEffect {
 
         Vec3 eye = player.getEyePosition();
         Vec3 target = aimTarget(player, eye);
-        // Rien de vise : rien a quoi s'accrocher, donc pas d'eclair. Le serveur refuse
-        // l'activation dans ce cas-la — son canStart cherche une cible metallique — et le
-        // joueur voyait l'electricite quand meme. C'est ce qu'il a signale.
-        if (target == null) return;
-
         SustainedArcs.spawn(ArcPattern.THIN_CONTINUOUS, eye, target, player.getId());
     }
 
-    /** Ou le regard se pose : le bloc touche, ou rien du tout. */
+    /**
+     * Ou le regard se pose : le bloc touche, ou la portee de la competence.
+     *
+     * <p>ECART ASSUME, demande du joueur : son laser se voit <b>quoi qu'il regarde</b>, meme
+     * dans le vide. C'est la depense qui exige du metal, et elle se decide cote serveur a chaque
+     * tick — voir {@code MagMovementSkill.onHoldTick}. L'original, lui, terminait la competence
+     * des l'appui quand il n'y avait rien a quoi s'accrocher.
+     */
     private static Vec3 aimTarget(Player player, Vec3 eye) {
-        BlockHitResult block = TargetingUtil.findBlockInSight(player, MagMovementSkill.getMaxDistance());
-        return block == null ? null : block.getLocation();
+        double range = MagMovementSkill.getMaxDistance();
+        BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
+        return block == null ? eye.add(player.getLookAngle().scale(range)) : block.getLocation();
     }
 }

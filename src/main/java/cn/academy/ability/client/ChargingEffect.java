@@ -74,16 +74,17 @@ public final class ChargingEffect {
         if (minecraft.level == null) return;
 
         BlockHitResult block = TargetingUtil.findBlockInSight(player, ChargingSkill.RANGE);
-        // Rien de vise : rien a brancher, donc pas d'eclair. Le serveur refuse l'activation dans
-        // ce cas-la, et le joueur voyait l'electricite quand meme — c'est ce qu'il a signale.
-        if (block == null) return;
-
         int ownerId = player.getId();
         Vec3 eye = player.getEyePosition();
-        Vec3 target = block.getLocation();
+        // Le laser se voit quoi qu'on vise — demande du joueur, et c'est ainsi chez l'original
+        // aussi : son arc partait vers la portee du regard quand rien ne le retenait. C'est le
+        // BRANCHEMENT qui demande une vraie machine, et il se verifie par l'essaim plus bas.
+        Vec3 target = block == null
+                ? eye.add(player.getLookAngle().scale(ChargingSkill.RANGE))
+                : block.getLocation();
 
         SustainedArcs.spawn(ArcPattern.CHARGING, eye, target, ownerId);
-        if (swarmDue(heldTicks)) {
+        if (block != null && swarmDue(heldTicks)) {
             sowSwarm(player, block.getBlockPos(), ownerId);
         }
     }
