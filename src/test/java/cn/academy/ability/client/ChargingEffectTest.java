@@ -40,6 +40,12 @@ class ChargingEffectTest {
                 "le dessin le plus fin du port, la moitie de l'entourage fin de l'original");
         assertEquals(0.1, ArcPattern.SURROUND_MICRO.width(), 1e-6,
                 "soit la moitie de son entourage fin, qui fait 0,2");
+        // Le moteur genere le motif a sa longueur puis le recadre : un motif court avec les
+        // depassements d'un grand motif ferait un gribouillis de la taille des depassements.
+        // Les deux vont donc ensemble, dans la proportion de l'entourage fin de l'original.
+        assertEquals(0.4, ArcPattern.SURROUND_MICRO.length(), 1e-6);
+        assertEquals(0.8 * 0.4 / 1.75, ArcPattern.SURROUND_MICRO.maxOffset(), 0.01,
+                "le depassement suit la longueur du motif");
     }
 
     @Test

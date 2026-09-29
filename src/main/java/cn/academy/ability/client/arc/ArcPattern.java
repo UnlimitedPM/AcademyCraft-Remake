@@ -86,9 +86,18 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
      * machine d'un bloc, le joueur a trouve le plus fin encore trop gros — c'est alors sa
      * <b>largeur</b> qui depassait, ses arcs une fois raccourcis a la taille du bloc. Voir
      * {@code ChargingEffect}.
+     *
+     * <p>ATTENTION A LA LONGUEUR DU MOTIF. Le moteur <b>genere</b> le motif a cette longueur,
+     * puis le <b>recadre</b> a la portee demandee — il ne le met pas a l'echelle. Un motif court
+     * avec les depassements d'un grand motif ne fait donc pas un petit eclair : il fait un
+     * gribouillis de la taille des depassements. C'est ce qui est arrive au premier essai, avec
+     * 0,8 de depassement pour 0,3 de longueur, et le joueur a vu des arcs d'un bloc entier.
+     *
+     * <p>Les deux vont donc ensemble : 0,4 de long, et 0,18 de depassement — exactement la
+     * proportion de l'entourage fin de l'original, qui fait 1,75 pour 0,8.
      */
     public static final ArcPattern SURROUND_MICRO =
-            new ArcPattern("surround_micro", 0.1, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 0.3, 0.5, 0.2, 0.2, 9L);
+            new ArcPattern("surround_micro", 0.1, 0.7, 0.9, 0.18, 0.7, 0.9, 3, 0.4, 0.5, 0.2, 0.2, 9L);
 
     /**
      * Le nombre de variantes tirees par motif.
