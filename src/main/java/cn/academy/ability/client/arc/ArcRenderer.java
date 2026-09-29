@@ -11,11 +11,9 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -59,11 +57,18 @@ import java.util.Random;
  *       alors plus gros que celui de l'original, ce qui se voit au premier coup d'oeil.</li>
  * </ul>
  *
- * <p>Et la <b>normale</b> doit voyager comme celle d'une entite de vanilla, c'est-a-dire etre
- * ramenee par la pose dans le repere de la vue — la ou le shader l'attend, comme la lumiere
- * du monde qu'il lui compare. Une normale laissee en coordonnees du monde s'y fait tourner
- * une seconde fois par la camera : l'eclair s'assombrissait alors des qu'on levait ou
- * baissait les yeux ailleurs qu'au sud, comme si la lumiere ne tombait plus dessus.
+ * <p>Et l'eclair <b>n'est pas eclaire du tout</b>. C'est ce que faisait l'original, qui
+ * desactivait purement et simplement l'eclairage ({@code glDisable(GL_LIGHTING)}) le temps de
+ * dessiner ses arcs, et ce n'est pas un detail : le shader des entites eclaircit et assombrit
+ * ses sommets selon leur normale, par {@code 0,4 + 0,6 x max(dot(normale, lumiere), 0)} — un
+ * eclair y vaut donc au mieux 40 % de sa couleur, et bien moins selon l'orientation. Un arc
+ * qui emet sa lumiere n'a rien a faire d'une normale, d'une lumiere ni d'une superposition.
+ *
+ * <p>Le programme de la <b>balise de phare</b> dit exactement cela, et c'est celui qui est
+ * employe ici : une bande texturee, teintee par la couleur du sommet, transparente et
+ * eclairante. Il n'y a pas de programme plus juste dans la 1.20.1 pour ce dessin-la. Celui de
+ * {@code position_color_tex} a ete essaye d'abord, et n'affichait rien du tout — d'ou le
+ * format de sommet, qui ne porte plus que la position, la couleur et la texture.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class ArcRenderer {
@@ -171,47 +176,36 @@ public class ArcRenderer {
                                double x, double y, double z, float u, float v, double alpha) {
         double[] world = frame.point(from, x, y, z);
 
-        // La normale du ruban : celle du plan du motif. Un ruban n'a qu'une face, et une
-        // normale par coin ne changerait rien a l'ecran — mais elle doit voyager comme celle
-        // d'une entite, ramenee par la pose dans le repere de la vue. C'est la que le shader
-        // la compare a la lumiere du monde, et de la vient que l'eclair s'eclaire toujours
-        // pareil, d'ou qu'on le regarde.
-        double[] normal = frame.up();
-
+        // Trois attributs : position, couleur, texture. Ni normale, ni lumiere du monde, ni
+        // superposition — un eclair emet sa lumiere, il n'en recoit pas, et le programme de la
+        // balise ne demande rien de plus.
         out.vertex(pose.pose(),
                         (float) (world[0] - camera.x),
                         (float) (world[1] - camera.y),
                         (float) (world[2] - camera.z))
                 .color(1f, 1f, 1f, (float) alpha)
                 .uv(u, v)
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                // L'arc eclaire : pleine lumiere, comme l'original, qui le dessinait sans
-                // jamais interroger la lumiere du monde.
-                .uv2(LightTexture.FULL_BRIGHT)
-                // La matrice de normales de la pose : c'est ce que fait vanilla pour ses
-                // entites, et ce qui ramene la normale dans le repere ou le shader la compare
-                // a la lumiere. Sans elle, la camera la tournait une seconde fois.
-                .normal(pose.normal(), (float) normal[0], (float) normal[1], (float) normal[2])
                 .endVertex();
     }
 
     /**
-     * Le type de rendu des eclairs : translucide sans tri des faces arriere, et sans lumiere
-     * du monde.
+     * Le type de rendu des eclairs : une bande texturee sans eclairage, transparente, et sans
+     * tri des faces arriere.
      *
      * <p>Les constantes de vanilla sont protegees, mais les constructeurs de ses morceaux ne
-     * le sont pas : on rebatit donc le meme etat, avec les deux differences qui comptent ici.
+     * le sont pas : on rebatit donc le meme etat, avec ce qui compte ici — le programme de la
+     * balise, qui ne connait ni normale ni lumiere.
      */
     private static RenderType arc(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_arc",
-                DefaultVertexFormat.NEW_ENTITY,
+                DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,
                 256,
                 false,
                 true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
-                                GameRenderer::getRendertypeEntityTranslucentEmissiveShader))
+                                GameRenderer::getRendertypeBeaconBeamShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
                         // Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA.
                         .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_arc",
@@ -224,8 +218,6 @@ public class ArcRenderer {
                                     RenderSystem.defaultBlendFunc();
                                 }))
                         .setCullState(new RenderStateShard.CullStateShard(false))
-                        .setLightmapState(new RenderStateShard.LightmapStateShard(false))
-                        .setOverlayState(new RenderStateShard.OverlayStateShard(true))
                         .createCompositeState(true)));
     }
 }
