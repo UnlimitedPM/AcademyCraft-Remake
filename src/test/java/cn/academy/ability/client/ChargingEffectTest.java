@@ -31,13 +31,15 @@ class ChargingEffectTest {
     @Test
     void lEssaimDeLaMachineTientDansLeBloc() {
         // Les gabarits de l'original sont tailles pour un corps : 1,5 a 2 blocs. Autour d'une
-        // machine d'un bloc, le joueur les a trouves trop grands et trop sortants. Ceux-ci
-        // tiennent dans le bloc, gabarit le plus fin compris.
+        // machine d'un bloc, le joueur les a trouves trop grands et trop sortants, meme une fois
+        // raccourcis : ce sont donc les arcs les plus courts ET le dessin le plus fin.
         assertEquals(4, ChargingEffect.MACHINE_SWARM.count());
-        assertTrue(ChargingEffect.MACHINE_SWARM.maxLength() <= 1.0,
-                "aucun arc ne doit depasser le bloc");
-        assertEquals(ArcPattern.SURROUND_THIN, ChargingEffect.MACHINE_SWARM.pattern(),
-                "c'est le meme dessin que l'entourage fin de l'original");
+        assertEquals(0.2, ChargingEffect.MACHINE_SWARM.minLength(), 1e-6);
+        assertEquals(0.4, ChargingEffect.MACHINE_SWARM.maxLength(), 1e-6);
+        assertEquals(ArcPattern.SURROUND_MICRO, ChargingEffect.MACHINE_SWARM.pattern(),
+                "le dessin le plus fin du port, la moitie de l'entourage fin de l'original");
+        assertEquals(0.1, ArcPattern.SURROUND_MICRO.width(), 1e-6,
+                "soit la moitie de son entourage fin, qui fait 0,2");
     }
 
     @Test

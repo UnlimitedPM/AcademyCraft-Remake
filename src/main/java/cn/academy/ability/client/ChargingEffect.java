@@ -54,11 +54,12 @@ public final class ChargingEffect {
      * <p>ECART ASSUME. Les gabarits de l'original sont tailles pour un <b>corps</b> : son arc
      * fin mesure 1,5 a 2 blocs, et autour d'un joueur cela se lit comme une etincelle. Autour
      * d'une machine d'un bloc, les memes arcs la depassent de deux fois sa taille, et le joueur
-     * les a trouves trop grands — ils ressortaient de partout. Ici, donc, des arcs de 0,4 a 0,8
-     * bloc : ils tiennent dans le bloc qu'ils entourent.
+     * les a trouves trop grands — ils ressortaient de partout. Ici, donc, des arcs de 0,2 a 0,4
+     * bloc, dessines avec le motif le plus fin du port : ils tiennent dans le bloc, et leur
+     * trait ne le deborde plus non plus.
      */
     public static final SurroundArcs.Gabarit MACHINE_SWARM =
-            new SurroundArcs.Gabarit(ArcPattern.SURROUND_THIN, 4, 0.4, 0.8);
+            new SurroundArcs.Gabarit(ArcPattern.SURROUND_MICRO, 4, 0.2, 0.4);
 
     private ChargingEffect() {
     }

@@ -80,6 +80,17 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
             new ArcPattern("surround_bold", 0.35, 0.7, 0.9, 1.2, 0.45, 0.9, 3, 4.0, 0.5, 0.2, 0.2, 8L);
 
     /**
+     * L'arc d'entourage le plus fin, celui du port : la moitie de l'epaisseur du fin.
+     *
+     * <p>ECART ASSUME. L'original n'en avait que trois, tailles pour un corps. Autour d'une
+     * machine d'un bloc, le joueur a trouve le plus fin encore trop gros — c'est alors sa
+     * <b>largeur</b> qui depassait, ses arcs une fois raccourcis a la taille du bloc. Voir
+     * {@code ChargingEffect}.
+     */
+    public static final ArcPattern SURROUND_MICRO =
+            new ArcPattern("surround_micro", 0.1, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 0.3, 0.5, 0.2, 0.2, 9L);
+
+    /**
      * Le nombre de variantes tirees par motif.
      *
      * <p>L'original en tirait vingt et changeait de variante toutes les quelques dixiemes
@@ -91,7 +102,7 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     /** Les motifs, dans l'ordre ou ils sont nommes : les cinq de l'original, puis l'entourage. */
     public static List<ArcPattern> all() {
         return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE,
-                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD);
+                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO);
     }
 
     /** Le motif qui porte ce nom, ou l'arc faible si le nom est inconnu. */
