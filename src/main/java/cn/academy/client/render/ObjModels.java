@@ -157,10 +157,18 @@ public final class ObjModels {
      *
      * <p>La coordonnee v est retournee : les OBJ mesurent leurs textures depuis le bas,
      * les textures de Minecraft depuis le haut.
+     *
+     * <p>Et la normale passe par la <b>matrice de normales de la pose</b>, comme celle d'une
+     * entite de vanilla. Le shader des entites eclaircit et assombrit ses sommets selon cette
+     * normale : laissee dans le repere du modele, elle y est tournee par la camera, et
+     * l'eclairage d'une piece se met a suivre les rotations du modele au lieu de la lumiere
+     * du monde. Cela ne se voyait sur rien — tous les modeles du port sont fixes — sauf sur
+     * les pales de l'eolienne, les seules qui tournent : leur lumiere changeait a chaque tour.
      */
     public static void draw(List<ObjMesh.Face> faces, PoseStack pose, VertexConsumer out,
                             int light, int overlay) {
         Matrix4f matrix = pose.last().pose();
+        PoseStack.Pose frame = pose.last();
         for (ObjMesh.Face face : faces) {
             for (ObjMesh.Vertex vertex : face.vertices()) {
                 out.vertex(matrix, vertex.x(), vertex.y(), vertex.z())
@@ -168,7 +176,7 @@ public final class ObjModels {
                         .uv(vertex.u(), 1f - vertex.v())
                         .overlayCoords(overlay)
                         .uv2(light)
-                        .normal(vertex.nx(), vertex.ny(), vertex.nz())
+                        .normal(frame.normal(), vertex.nx(), vertex.ny(), vertex.nz())
                         .endVertex();
             }
         }
