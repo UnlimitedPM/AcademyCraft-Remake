@@ -70,8 +70,16 @@ public final class CpBarVisuals {
     private static final int[] CP_COLOR = {0xFFF06767, 0xFFFFAE44, 0xFFFFFFFF};
 
     /** Les trois arrets de la surcharge : presque transparente, doree, puis rouge. */
+    /**
+     * Les trois arrets de la surcharge, opacite comprise.
+     *
+     * <p>Ce sont ceux de l'original (10, 35 puis 80 sur 255), densifies d'un facteur 1,5 a la
+     * demande du joueur (30/09) : sa barre lisait plus pale que la sienne, la faute au voile
+     * d'ecran de l'original qui n'existe pas encore ici. Le facteur est garde ici, en clair,
+     * pour pouvoir le retirer d'un geste le jour ou ce voile arrive.
+     */
     private static final float[] OVER_STOP = {0.0f, 0.55f, 1.0f};
-    private static final int[] OVER_COLOR = {0x0ADFDFDF, 0x23F0D49D, 0x50F56464};
+    private static final int[] OVER_COLOR = {0x0FDFDFDF, 0x34F0D49D, 0x78F56464};
 
     private CpBarVisuals() {
     }

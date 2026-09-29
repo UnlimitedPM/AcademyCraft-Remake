@@ -42,8 +42,13 @@ public final class CpBarHud {
     private static final ResourceLocation FRONT_OVERLOAD = texture("cpbar/front_overload");
     private static final ResourceLocation HIGHLIGHT = texture("cpbar/highlight_overload");
 
-    /** Le fond se pose a 80 % d'opacite chez l'original. */
-    private static final float BACK_ALPHA = 0.8f;
+    /**
+     * Le fond se pose a 80 % d'opacite chez l'original, mais sa texture n'en porte que 50 :
+     * la plaque sortait donc a 40 % et le joueur l'a trouvee trop pale (30/09). Elle est
+     * maintenant posee pleine, ce qui la fait lire a 50 % — l'ecart est assume, et il se
+     * retire d'un chiffre si le voile d'ecran de l'original arrive un jour.
+     */
+    private static final float BACK_ALPHA = 1.0f;
     /** Le bandeau strie de la surcharge. */
     private static final float STRIPE_ALPHA = 0.5f;
 

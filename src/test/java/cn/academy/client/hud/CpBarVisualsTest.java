@@ -71,10 +71,11 @@ class CpBarVisualsTest {
         assertEquals(0xFFFFFFFF, CpBarVisuals.fillColor(1.0f));
 
         // La surcharge : presque transparente, puis doree, puis rouge. Son opacite monte, donc
-        // la bande se voit de plus en plus.
-        assertEquals(0x0ADFDFDF, CpBarVisuals.overloadColor(0.0f));
-        assertEquals(0x23F0D49D, CpBarVisuals.overloadColor(0.55f));
-        assertEquals(0x50F56464, CpBarVisuals.overloadColor(1.0f));
+        // la bande se voit de plus en plus. Memes teintes que l'original, opacite densifiee
+        // d'un facteur 1,5 a la demande du joueur (voir CpBarVisuals).
+        assertEquals(0x0FDFDFDF, CpBarVisuals.overloadColor(0.0f));
+        assertEquals(0x34F0D49D, CpBarVisuals.overloadColor(0.55f));
+        assertEquals(0x78F56464, CpBarVisuals.overloadColor(1.0f));
         assertTrue(alpha(CpBarVisuals.overloadColor(1.0f))
                         > alpha(CpBarVisuals.overloadColor(0.0f)),
                 "la surcharge s'opacifie en montant");
@@ -100,22 +101,23 @@ class CpBarVisualsTest {
     @Test
     void laSurchargeEstBienPlusTransparenteQueLeRemplissage() {
         // C'est le point que le joueur a vu : la bande de surcharge n'est pas opaque. Ses trois
-        // arrets portent 10, 35 puis 80 sur 255 d'opacite — a peine visible au debut, rouge pale
-        // a la fin. Le dessin doit lire ces nombres-la, et non imposer les siens.
-        assertEquals(10, alpha(CpBarVisuals.overloadColor(0.0f)));
-        assertEquals(35, alpha(CpBarVisuals.overloadColor(0.55f)));
-        assertEquals(80, alpha(CpBarVisuals.overloadColor(1.0f)));
+        // arrets portent 10, 35 puis 80 sur 255 chez l'original — a peine visible au debut,
+        // rouge pale a la fin — densifies d'un facteur 1,5 a sa demande (30/09), soit 15, 52
+        // et 120. Le dessin doit lire ces nombres-la, et non imposer les siens.
+        assertEquals(15, alpha(CpBarVisuals.overloadColor(0.0f)));
+        assertEquals(52, alpha(CpBarVisuals.overloadColor(0.55f)));
+        assertEquals(120, alpha(CpBarVisuals.overloadColor(1.0f)));
         assertEquals(255, alpha(CpBarVisuals.fillColor(0.5f)), "le remplissage, lui, est opaque");
 
-        assertEquals(10 / 255.0f, CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(0.0f)), 1e-6);
+        assertEquals(15 / 255.0f, CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(0.0f)), 1e-6);
         assertEquals(1.0f, CpBarVisuals.alphaOf(0xFFFFFFFF), 1e-6);
         assertEquals(0.0f, CpBarVisuals.alphaOf(0x00FF0000), 1e-6);
         // Un blanc sans ses deux chiffres d'opacite n'en a aucune : c'est le piege qui a rendu
         // invisible tout ce que la barre teintait en blanc — son fond et l'etat de surcharge
         // entier, dessines avec 0xFFFFFF.
         assertEquals(0.0f, CpBarVisuals.alphaOf(0xFFFFFF), 1e-6);
-        assertTrue(CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(1.0f)) < 0.35f,
-                "meme pleine, la surcharge reste bien plus transparente que le remplissage");
+        assertTrue(CpBarVisuals.alphaOf(CpBarVisuals.overloadColor(1.0f)) < 0.6f,
+                "meme pleine, la surcharge reste plus transparente que le remplissage");
     }
 
     @Test
