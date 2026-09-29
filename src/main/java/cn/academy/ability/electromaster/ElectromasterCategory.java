@@ -21,6 +21,9 @@ public class ElectromasterCategory extends Category {
 
     private ElectromasterCategory() {
         super(NAME);
+        // La teinte de la categorie, celle que l'original posait sur CatElectromaster : un bleu
+        // a 100 d'opacite. C'est la couleur du voile d'ecran quand l'aptitude est allumee.
+        setColorStyle(20, 113, 208, 100);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences
         // dans cet ordre-la. C'est celui de CatElectromaster, ou `ironSand` est commente par
         // son auteur — donc absent chez lui aussi.

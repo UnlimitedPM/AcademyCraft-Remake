@@ -22,6 +22,9 @@ public class VecmanipCategory extends Category {
 
     private VecmanipCategory() {
         super(NAME);
+        // La teinte de la categorie, telle que l'original la posait sur CatVecManip : trois
+        // canaux et aucune opacite, donc aucun voile. C'est voulu chez lui, pas un oubli.
+        setColorStyle(0, 0, 0);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatVecManip ; le port les rangeait
         // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.

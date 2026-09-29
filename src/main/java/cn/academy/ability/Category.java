@@ -14,6 +14,17 @@ public class Category {
     private final List<Skill> skills = new ArrayList<>();
     private int categoryId = -1;
 
+    /**
+     * La teinte de la categorie, ARGB : la couleur du voile d'ecran quand l'aptitude est
+     * allumee (voir {@code BackgroundMask}).
+     *
+     * <p>Portage du {@code colorStyle} de l'original, qu'il posait par {@code setColorStyle}.
+     * Il la gardait cote client seulement et partait d'un blanc opaque ; le port en fait un
+     * simple entier, disponible des deux cotes, et les quatre categories la posent dans leur
+     * constructeur — comme son {@code CatElectromaster} faisait.
+     */
+    private int colorStyle = 0xFFFFFFFF;
+
     public Category(String name) {
         this.name = name;
     }
@@ -55,6 +66,26 @@ public class Category {
 
     void setCategoryId(int id) {
         categoryId = id;
+    }
+
+    /**
+     * Pose la teinte de la categorie, sans opacite.
+     *
+     * <p>C'est la signature de l'original : trois canaux valent une opacite nulle — un voile
+     * qui ne se voit pas. C'est ainsi que vecmanip n'en a aucun.
+     */
+    public final void setColorStyle(int r, int g, int b) {
+        setColorStyle(r, g, b, 0);
+    }
+
+    /** Pose la teinte de la categorie, opacite comprise. */
+    public final void setColorStyle(int r, int g, int b, int a) {
+        colorStyle = ((a & 0xFF) << 24) | ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+    }
+
+    /** La teinte de la categorie, ARGB. */
+    public final int getColorStyle() {
+        return colorStyle;
     }
 
     public List<Skill> getSkills() {

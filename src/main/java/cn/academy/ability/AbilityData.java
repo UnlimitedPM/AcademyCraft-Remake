@@ -536,6 +536,29 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return highest;
     }
 
+    /**
+     * La categorie du joueur : la mieux montee, comme {@link #getHighestLevel()}.
+     *
+     * <p>L'original n'accordait qu'une aptitude par joueur ; le port en accepte plusieurs, et
+     * prend donc la mieux montee — sinon un joueur qui a monte une aptitude au niveau 4 serait
+     * juge sur celle qu'il delaisse. C'est cette categorie qui donne sa couleur au voile d'ecran
+     * quand l'aptitude est allumee, et {@code null} quand le joueur n'en a aucune.
+     */
+    public Category getHighestCategory() {
+        Category best = null;
+        int level = 0;
+        for (Map.Entry<String, Integer> entry : categoryLevels.entrySet()) {
+            if (entry.getValue() > level) {
+                Category category = CategoryManager.INSTANCE.getCategory(entry.getKey());
+                if (category != null) {
+                    level = entry.getValue();
+                    best = category;
+                }
+            }
+        }
+        return best;
+    }
+
     private float overload;
     private float addMaxOverload;
 

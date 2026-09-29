@@ -23,6 +23,9 @@ public class MeltdownerCategory extends Category {
 
     private MeltdownerCategory() {
         super(NAME);
+        // La teinte de la categorie, celle que l'original posait sur CatMeltdowner : un vert a
+        // 80 d'opacite.
+        setColorStyle(126, 255, 132, 80);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatMeltdowner.
         // (electron_missile, absent du port, se rangera apres le rayon chanceux.)

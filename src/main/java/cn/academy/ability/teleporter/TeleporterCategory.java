@@ -21,6 +21,9 @@ public class TeleporterCategory extends Category {
 
     private TeleporterCategory() {
         super(NAME);
+        // La teinte de la categorie, celle que l'original posait sur CatTeleporter : un gris a
+        // 145 d'opacite, le voile le plus dense des quatre.
+        setColorStyle(164, 164, 164, 145);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatTeleporter ; le port les rangeait
         // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.
