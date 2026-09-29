@@ -35,16 +35,16 @@ class MaskVisualsTest {
 
     @Test
     void lAptitudeAllumeePrendLaCouleurDeSaCategorie() {
-        // La teinte de la categorie, opacite doublee : 100 sur 255 devient 200.
-        assertEquals(0xC81471D0, MaskVisuals.target(0x00000000, false, true, ELECTRO));
+        // La teinte de la categorie, opacite densifiee : 100 sur 255 devient 150.
+        assertEquals(0x961471D0, MaskVisuals.target(0x00000000, false, true, ELECTRO));
     }
 
     @Test
     void leVoileEstDensifieSansChangerDeTeinte() {
-        assertEquals(0xC81471D0, MaskVisuals.boost(ELECTRO), "100 devient 200");
-        assertEquals(0xA07EFF84, MaskVisuals.boost(0x507EFF84), "80 devient 160");
-        assertEquals(0xFFA4A4A4, MaskVisuals.boost(0x91A4A4A4), "145 double plafonne a 255");
-        assertEquals(0xFFD01414, MaskVisuals.boost(0xAAD01414), "et 170 aussi");
+        assertEquals(0x961471D0, MaskVisuals.boost(ELECTRO), "100 devient 150");
+        assertEquals(0x787EFF84, MaskVisuals.boost(0x507EFF84), "80 devient 120");
+        assertEquals(0xDAA4A4A4, MaskVisuals.boost(0x91A4A4A4), "145 devient 218");
+        assertEquals(0xFFD01414, MaskVisuals.boost(0xAAD01414), "170 monte a 255, sans depasser");
         assertEquals(0x00000000, MaskVisuals.boost(0), "un voile sans opacite le reste");
     }
 
@@ -72,7 +72,7 @@ class MaskVisualsTest {
         // Plus que le reste a parcourir : on s'arrete sur la visee, sans la depasser.
         assertEquals(0x00FFFFFF, MaskVisuals.smooth(0x20FFFFFF, 0x00FFFFFF, MaskVisuals.step(5.0f)));
         // Et au repos, rien ne bouge.
-        assertEquals(0xC81471D0, MaskVisuals.smooth(0xC81471D0, 0xC81471D0, MaskVisuals.step(1.0f)));
+        assertEquals(0x961471D0, MaskVisuals.smooth(0x961471D0, 0x961471D0, MaskVisuals.step(1.0f)));
     }
 
     @Test

@@ -26,12 +26,13 @@ public final class MaskVisuals {
      *
      * <p>L'image du voile est presque vide : son opacite ne monte qu'a 0,25 sur les bords, et son
      * degrade s'arrete aux 19 % de sa largeur (voir {@code screen_mask.png}). La teinte de
-     * l'electromaster (100 sur 255) n'y laisse donc que 0,10 d'opacite a l'ecran — soit a peine.
-     * Le joueur a trouve le voile moins rouge et moins etendu que dans le vrai mod, d'ou ce
-     * facteur, applique a l'opacite seulement. Le rouge, lui, plafonne a 255 : 170 fois 2 y vaut
-     * 255.
+     * l'electromaster (100 sur 255) n'y laisse donc que 0,10 d'opacite a l'ecran, sur une bande
+     * etroite — le joueur l'a trouvee trop pale. Un premier essai a 2,0 s'est revele trop sombre
+     * compare au vrai mod (30/09), d'ou ce facteur, applique a l'opacite seulement.
+     *
+     * <p>Le rouge de la surcharge, lui, y gagne aussi : 170 fois 1,5 vaut 255.
      */
-    public static final float ALPHA_BOOST = 2.0f;
+    public static final float ALPHA_BOOST = 1.5f;
 
     private MaskVisuals() {
     }

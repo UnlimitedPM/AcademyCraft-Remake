@@ -30,21 +30,6 @@ public class BackgroundMask implements IGuiOverlay {
     private static final ResourceLocation MASK =
             ResourceLocation.fromNamespaceAndPath("academy", "textures/effects/screen_mask.png");
 
-    /** La taille de l'image du voile : 512 sur 288, comme dans l'original. */
-    private static final int TEX_W = 512;
-    private static final int TEX_H = 288;
-
-    /**
-     * La part de l'ecran que l'image couvre en largeur.
-     *
-     * <p>L'original l'etirait sur tout l'ecran, mais son degrade ne vit que sur les 19 %
-     * exterieurs de l'image : la teinte se voyait donc a peine, et le joueur l'a trouvee trop
-     * etroite. En resserrant l'image sur les trois quarts de l'ecran, ce degrade occupe le quart
-     * exterieur, et les bords de l'ecran tombent sur le bord de l'image — sa partie la plus
-     * dense. En hauteur, rien ne bouge : cette image n'a pas de degrade vertical.
-     */
-    private static final float SPREAD = 0.75f;
-
     /** Ce que le voile montre en ce moment, ARGB : l'animation a besoin de la valeur precedente. */
     private static int current;
     private static long lastFrame;
@@ -74,12 +59,11 @@ public class BackgroundMask implements IGuiOverlay {
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(((current >> 16) & 0xFF) / 255.0f,
                 ((current >> 8) & 0xFF) / 255.0f, (current & 0xFF) / 255.0f, alpha);
-        // L'image est posee sur tout l'ecran, mais ses coordonnees couvrent un peu plus que ses
-        // 512 pixels : elle est donc resserree au centre, et le bord de l'ecran echantillonne son
-        // bord a elle — la partie la plus dense de son degrade, qui se repete faute d'au-dela.
-        float span = TEX_W / SPREAD;
-        graphics.blit(MASK, 0, 0, screenWidth, screenHeight,
-                (TEX_W - span) / 2.0f, 0.0f, Math.round(span), TEX_H, TEX_W, TEX_H);
+        // L'original etirait son image sur tout l'ecran : c'est ce qu'il faut, et rien d'autre.
+        // La resserrer pour elargir sa teinte a ete essaye le 30/09 : le bord de l'ecran tombait
+        // alors hors de l'image, ce qui laissait un liseré clair sur les cotes et faisait
+        // deborder la teinte bien trop loin dans la vue. Le joueur a tranche.
+        graphics.blit(MASK, 0, 0, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 }
