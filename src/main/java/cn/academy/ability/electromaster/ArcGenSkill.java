@@ -157,11 +157,21 @@ public class ArcGenSkill extends Skill {
             return;
         }
 
-        if (block == null) return;
+        // Rien de vivant devant : soit un bloc a pris l'arc, soit l'arc n'a rien touche.
+        if (block == null) {
+            // L'arc part dans le vide. L'original n'accordait alors AUCUNE experience : sa
+            // ligne d'experience etait enfermee dans son « si le rayon a touche quelque
+            // chose », et lancer dans le ciel ne rapportait donc rien. Le port s'en ecarte a
+            // la demande du joueur — une competence qu'on peut lancer doit instruire, meme
+            // quand elle ne touche rien. C'est le gain du bloc, le plus faible des deux :
+            // toucher quelque chose vaut mieux que lancer dans le vide.
+            data.addSkillExp(this, blockExp(data));
+            return;
+        }
 
-        // Rien de vivant : c'est le bloc qui a pris l'arc. L'original enflammait alors le
-        // bloc juste au-dessus, quand il y avait de la place — c'est le feu que l'arc
-        // laisse sur les murs, et c'est aussi ce qui paye l'experience.
+        // C'est le bloc qui a pris l'arc. L'original enflammait alors le bloc juste au-dessus,
+        // quand il y avait de la place — c'est le feu que l'arc laisse sur les murs, et c'est
+        // aussi ce qui paye l'experience.
         BlockPos above = block.getBlockPos().above();
         if (random.nextFloat() < igniteChance(data) && player.level().isEmptyBlock(above)) {
             player.level().setBlockAndUpdate(above, net.minecraft.world.level.block.Blocks.FIRE.defaultBlockState());
