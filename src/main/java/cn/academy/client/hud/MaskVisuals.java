@@ -21,6 +21,18 @@ public final class MaskVisuals {
     /** La vitesse de l'original, son {@code CHANGE_PER_SEC} : une unite sur une, par seconde. */
     public static final float CHANGE_PER_SEC = 1.0f;
 
+    /**
+     * Le facteur d'opacite du port, absent de l'original.
+     *
+     * <p>L'image du voile est presque vide : son opacite ne monte qu'a 0,25 sur les bords, et son
+     * degrade s'arrete aux 19 % de sa largeur (voir {@code screen_mask.png}). La teinte de
+     * l'electromaster (100 sur 255) n'y laisse donc que 0,10 d'opacite a l'ecran — soit a peine.
+     * Le joueur a trouve le voile moins rouge et moins etendu que dans le vrai mod, d'ou ce
+     * facteur, applique a l'opacite seulement. Le rouge, lui, plafonne a 255 : 170 fois 2 y vaut
+     * 255.
+     */
+    public static final float ALPHA_BOOST = 2.0f;
+
     private MaskVisuals() {
     }
 
@@ -32,9 +44,19 @@ public final class MaskVisuals {
      * {@code current} — la couleur affichee en ce moment.
      */
     public static int target(int current, boolean overloaded, boolean activated, int categoryColor) {
-        if (overloaded) return OVERLOAD_COLOR;
-        if (activated) return categoryColor;
+        if (overloaded) return boost(OVERLOAD_COLOR);
+        if (activated) return boost(categoryColor);
         return current & 0x00FFFFFF;
+    }
+
+    /**
+     * L'opacite d'une couleur, multipliee par {@link #ALPHA_BOOST} et bornee.
+     *
+     * <p>Les trois canaux ne bougent pas : c'est la meme teinte, seulement plus dense.
+     */
+    public static int boost(int argb) {
+        float alpha = Math.min(255.0f, alpha(argb) * ALPHA_BOOST);
+        return (Math.round(alpha) << 24) | (argb & 0x00FFFFFF);
     }
 
     /** Le pas d'une image, exprime en unites de canal (0 a 255). */

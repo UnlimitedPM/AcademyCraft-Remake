@@ -24,9 +24,10 @@ class MaskVisualsTest {
     @Test
     void laSurchargeTeintToutEnRouge() {
         // Elle prime sur la couleur de la categorie : le joueur voit qu'il est en surcharge.
-        assertEquals(0xAAD01414, MaskVisuals.target(ELECTRO, true, true, ELECTRO));
-        assertEquals(MaskVisuals.OVERLOAD_COLOR, MaskVisuals.target(ELECTRO, true, true, ELECTRO));
-        assertEquals(170, alpha(MaskVisuals.OVERLOAD_COLOR), "170 sur 255 d'opacite");
+        // Son opacite d'origine, 170 sur 255, est doublee et plafonne donc a 255 — la teinte, elle,
+        // ne bouge pas d'un chiffre.
+        assertEquals(0xFFD01414, MaskVisuals.target(ELECTRO, true, true, ELECTRO));
+        assertEquals(170, alpha(MaskVisuals.OVERLOAD_COLOR), "170 sur 255 chez l'original");
         assertEquals(208, channel(MaskVisuals.OVERLOAD_COLOR, 16));
         assertEquals(20, channel(MaskVisuals.OVERLOAD_COLOR, 8));
         assertEquals(20, channel(MaskVisuals.OVERLOAD_COLOR, 0));
@@ -34,7 +35,17 @@ class MaskVisualsTest {
 
     @Test
     void lAptitudeAllumeePrendLaCouleurDeSaCategorie() {
-        assertEquals(ELECTRO, MaskVisuals.target(0x00000000, false, true, ELECTRO));
+        // La teinte de la categorie, opacite doublee : 100 sur 255 devient 200.
+        assertEquals(0xC81471D0, MaskVisuals.target(0x00000000, false, true, ELECTRO));
+    }
+
+    @Test
+    void leVoileEstDensifieSansChangerDeTeinte() {
+        assertEquals(0xC81471D0, MaskVisuals.boost(ELECTRO), "100 devient 200");
+        assertEquals(0xA07EFF84, MaskVisuals.boost(0x507EFF84), "80 devient 160");
+        assertEquals(0xFFA4A4A4, MaskVisuals.boost(0x91A4A4A4), "145 double plafonne a 255");
+        assertEquals(0xFFD01414, MaskVisuals.boost(0xAAD01414), "et 170 aussi");
+        assertEquals(0x00000000, MaskVisuals.boost(0), "un voile sans opacite le reste");
     }
 
     @Test
@@ -61,7 +72,7 @@ class MaskVisualsTest {
         // Plus que le reste a parcourir : on s'arrete sur la visee, sans la depasser.
         assertEquals(0x00FFFFFF, MaskVisuals.smooth(0x20FFFFFF, 0x00FFFFFF, MaskVisuals.step(5.0f)));
         // Et au repos, rien ne bouge.
-        assertEquals(ELECTRO, MaskVisuals.smooth(ELECTRO, ELECTRO, MaskVisuals.step(1.0f)));
+        assertEquals(0xC81471D0, MaskVisuals.smooth(0xC81471D0, 0xC81471D0, MaskVisuals.step(1.0f)));
     }
 
     @Test
