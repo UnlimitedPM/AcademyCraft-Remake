@@ -71,6 +71,25 @@ class MagMovementTest {
     }
 
     @Test
+    void laMonteeNeFreinePas() {
+        // L'approche de l'original freine : arrive sous le bloc, la traction retirait la
+        // vitesse qui allait le depasser, et on s'arretait a sa hauteur — « je ne peux jamais
+        // depasser cette hauteur ».
+        assertEquals(0.92, MagMovementSkill.approach(1.0, 0.7), 0.0001);
+        // La montee, elle, laisse aller.
+        assertEquals(1.0, MagMovementSkill.lift(1.0, 0.7), 0.0001);
+        assertEquals(0.7, MagMovementSkill.lift(0.7, 0.7), 0.0001, "a la vitesse voulue, on la garde");
+    }
+
+    @Test
+    void laMonteePousseAuMemePasQueLOriginal() {
+        // Le depart ne change pas : sous la valeur voulue, la montee avance de ACCEL par
+        // tick et ne la depasse pas.
+        assertEquals(0.08, MagMovementSkill.lift(0, 0.7), 0.0001);
+        assertEquals(0.7, MagMovementSkill.lift(0.62, 0.7), 0.0001);
+    }
+
+    @Test
     void unNouveauBlocVautUnDixiemeDePourcent() {
         // Mille fois moins que le plancher du premier bloc : une lignee ne se monnaie pas
         // en trajets. Aucun surcout ne s'y ajoute — le joueur a retire cette regle.

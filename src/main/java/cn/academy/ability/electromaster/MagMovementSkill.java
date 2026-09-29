@@ -23,11 +23,13 @@ import javax.annotation.Nullable;
  * <p>C'est le deplacement de l'electromaster : viser un rail, un bloc de fer ou un
  * wagonnet a vingt-cinq blocs, tenir la touche, et partir. La traction monte
  * progressivement — chaque tick rapproche la vitesse de la direction voulue de
- * {@code ACCEL} — donc le depart est mou et l'arrivee rapide, comme dans l'original.
+ * {@code ACCEL} — donc le depart est mou et l'arrivee rapide, comme dans l'original. Une
+ * exception, demandee par le joueur : la <b>montee</b> ne freine pas — voir {@link #lift}.
  *
- * <p>La cible est <b>fixee a l'appui</b> : un bloc reste un point, une entite continue
- * d'etre suivie, et si elle meurt le maintien s'arrete. L'experience se paie a la
- * distance parcourue, avec un minimum pour un trajet trop court.
+ * <p>L'ancre <b>colle</b> : viser du metal en pose une, ou la remplace, et detourner les yeux
+ * ne la lache pas — la traction continue, comme dans le vrai mod. Le maintien se paie tant
+ * qu'elle tient, et la <b>lignee</b> des blocs accroches a ses propres regles — voir
+ * {@link #onHoldTick}.
  */
 public class MagMovementSkill extends Skill {
 
@@ -230,7 +232,12 @@ public class MagMovementSkill extends Skill {
         return point;
     }
 
-    /** Traction : la vitesse se rapproche de la direction voulue, d'un pas a la fois. */
+    /**
+     * Traction : la vitesse se rapproche de la direction voulue, d'un pas a la fois.
+     *
+     * <p>Sauf a la montee : quand l'ancre est au-dessus, le vertical passe par {@link #lift},
+     * qui ne freine jamais. C'est l'ecart que le joueur a demande — voir cette methode.
+     */
     private static void pull(Player player, Vec3 anchor) {
         Vec3 want = wantedVelocity(player.position(), anchor);
         if (want == null) return;
@@ -238,12 +245,33 @@ public class MagMovementSkill extends Skill {
         Vec3 motion = player.getDeltaMovement();
         player.setDeltaMovement(
                 approach(motion.x, want.x),
-                approach(motion.y, want.y),
+                want.y > 0 ? lift(motion.y, want.y) : approach(motion.y, want.y),
                 approach(motion.z, want.z));
         // Le client doit accepter cette vitesse : sans cela il la corrigerait au tick
         // suivant, et la traction ne se verrait pas.
         player.hurtMarked = true;
         player.fallDistance = 0.0f;
+    }
+
+    /**
+     * La montee : une vitesse verticale qui va vers le haut n'est jamais reduite.
+     *
+     * <p>L'original rapprochait les trois axes de la meme facon. La traction freinait donc la
+     * vitesse qui allait justement depasser le bloc : arrive a sa hauteur, le joueur s'y
+     * arretait, et ne montait jamais plus haut. C'est ce qu'il a signale — « si je m'accroche a
+     * un bloc en hauteur je ne peux jamais depasser cette hauteur » — et ce qu'il a demande :
+     * grimper plus vite.
+     *
+     * <p>Ici le vertical ne connait qu'un frein, la gravite, que la traction rattrape a chaque
+     * tick : on grimpe a la vitesse pleine de la direction, on passe au-dessus du bloc, et le
+     * frein revient de lui-meme des que l'ancre passe sous le joueur — {@code to} devient
+     * negatif, et c'est de nouveau {@link #approach} qui mene la descente.
+     *
+     * <p>Le pas de montee, lui, ne change pas : au depart cela pousse de {@code ACCEL} par
+     * tick, exactement comme l'original. Ce qui change est ce qui se passe a l'arrivee.
+     */
+    public static double lift(double from, double to) {
+        return from >= to ? from : Math.min(to, from + ACCEL);
     }
 
     /**
