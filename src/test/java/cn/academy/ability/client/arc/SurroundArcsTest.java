@@ -67,6 +67,22 @@ class SurroundArcsTest {
         assertNotEquals(points.get(0), points.get(1));
     }
 
+    @Test
+    void lePointDeDepartReculeDeLaLongueurDeLArc() {
+        // Un arc nait dans la boite et file dans une direction tiree : pour qu'il ne sorte pas
+        // d'un bloc d'un cube, le point doit rester a la longueur du plus long arc du bord.
+        assertEquals(0.2, SurroundArcs.inset(1.0, new SurroundArcs.Gabarit(
+                ArcPattern.SURROUND_MICRO, 4, 0.2, 0.4)), 1e-6);
+        assertEquals(0.0, SurroundArcs.inset(1.0, SurroundArcs.BOLD), 1e-6,
+                "des arcs de 3,5 a 4,5 dans un cube de un : il ne reste rien a retrecir");
+        assertEquals(0.0, SurroundArcs.inset(0.5, SurroundArcs.BOLD), 1e-6,
+                "et un reste negatif vaut zero, jamais un recul");
+
+        // Et la promesse tient : demi-boite plus longueur d'arc, cela fait bien la moitie du cube.
+        SurroundArcs.Gabarit micro = new SurroundArcs.Gabarit(ArcPattern.SURROUND_MICRO, 4, 0.2, 0.4);
+        assertTrue(SurroundArcs.inset(1.0, micro) / 2.0 + micro.maxLength() <= 0.5);
+    }
+
     private static void assertPattern(ArcPattern pattern, double width, double maxOffset,
                                       double branchFactor) {
         assertEquals(width, pattern.width(), 1e-6);

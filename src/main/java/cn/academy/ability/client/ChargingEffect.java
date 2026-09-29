@@ -113,13 +113,18 @@ public final class ChargingEffect {
      * cube d'un bloc, centre. C'est le gabarit le plus fin des trois — le joueur avait trouve
      * ceux du port trop gros, ils l'etaient deux fois : trop epais, et autour de lui.
      *
+     * <p>Et le point de depart se tient a une longueur d'arc du bord, sans quoi un arc ne
+     * tombant pres du bord sortait du bloc de presque toute sa taille — le joueur a vu un
+     * eclair depasser d'un bloc entier. Voir {@link SurroundArcs#inset}.
+     *
      * <p>Il n'y a d'etincelle que sur une vraie machine : viser un mur ne fait que l'arc.
      */
     private static void sowSwarm(Player player, BlockPos pos, int ownerId) {
         BlockEntity entity = player.level().getBlockEntity(pos);
         if (!(entity instanceof EnergyReceiver)) return;
 
-        SurroundArcs.spawn(MACHINE_SWARM, Vec3.atCenterOf(pos), 1.0, -0.5, 0.5,
+        double inside = SurroundArcs.inset(1.0, MACHINE_SWARM) / 2.0;
+        SurroundArcs.spawn(MACHINE_SWARM, Vec3.atCenterOf(pos), inside * 2.0, -inside, inside,
                 ownerId, RANDOM);
     }
 }
