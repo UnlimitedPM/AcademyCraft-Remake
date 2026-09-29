@@ -23,23 +23,17 @@ public final class SustainedArcs {
     }
 
     /**
-     * L'arc se repose quand le precedent s'eteint : il n'y en a jamais deux.
+     * Pose l'arc, ou le deplace s'il est deja la.
      *
-     * <p>Le premier tick fait exception : sans cela, le compteur du maintien partant de un, le
-     * joueur tiendrait sa touche une demi-seconde avant de voir quoi que ce soit.
-     */
-    public static boolean due(int heldTicks) {
-        return heldTicks <= 1 || heldTicks % LIFE_TICKS == 0;
-    }
-
-    /**
-     * Pose l'arc, s'il est l'heure.
+     * <p>A appeler a chaque tick du maintien : le premier appel le pose, les suivants le font
+     * suivre ce que le joueur regarde. Il n'y en a donc jamais deux, et il n'a jamais de retard
+     * sur le regard — c'est le defaut que le joueur avait vu, un eclair qui mettait une
+     * demi-seconde a se retourner.
      *
      * <p>Le motif doit etre celui de la competence : l'original donnait a chacune le sien, et
      * c'est toute la difference entre un trait de charge et un trait de traction.
      */
-    public static void spawn(ArcPattern pattern, Vec3 from, Vec3 to, int heldTicks, int ownerId) {
-        if (!due(heldTicks)) return;
-        ArcRenderer.spawn(pattern.name(), from, to, LIFE_TICKS, false, ownerId);
+    public static void spawn(ArcPattern pattern, Vec3 from, Vec3 to, int ownerId) {
+        ArcRenderer.sustain(pattern.name(), from, to, LIFE_TICKS, ownerId);
     }
 }

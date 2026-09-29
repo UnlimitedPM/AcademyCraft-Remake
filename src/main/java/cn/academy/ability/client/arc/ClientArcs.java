@@ -31,8 +31,8 @@ public final class ClientArcs {
         private final ArcPattern pattern;
         private final double[] from;
         private final double[] to;
-        private final double clip;
-        private final long endTick;
+        private double clip;
+        private long endTick;
         private final int ownerId;
         private final ArcWiggle wiggle;
 
@@ -86,6 +86,25 @@ public final class ClientArcs {
         void advance(Random rng) {
             wiggle.advance(rng);
         }
+
+        /**
+         * Deplace l'eclair : ses deux bouts suivent ce que le joueur vise, tout de suite.
+         *
+         * <p>C'est ce qu'il fallait a la charge et a la traction. L'original accrochait son
+         * eclair a une entite, donc il suivait le regard par construction ; le port le posait
+         * entre deux points fixes, et l'arc mettait dix ticks — une demi-seconde — a se retourner
+         * quand le joueur regardait ailleurs. Le joueur l'a vu : "l'eclair met du temps avant de
+         * changer de direction".
+         */
+        void follow(double[] newFrom, double[] newTo, long newEndTick) {
+            System.arraycopy(newFrom, 0, from, 0, 3);
+            System.arraycopy(newTo, 0, to, 0, 3);
+            double dx = to[0] - from[0];
+            double dy = to[1] - from[1];
+            double dz = to[2] - from[2];
+            clip = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            endTick = newEndTick;
+        }
     }
 
     private static final List<LiveArc> ARCS = new ArrayList<>();
@@ -115,6 +134,36 @@ public final class ClientArcs {
         double clip = lengthFixed ? pattern.length() : distance;
         ARCS.add(new LiveArc(pattern, from, to, clip, gameTime + lifeTicks, ownerId,
                 new ArcWiggle(pattern, rng.nextInt(ArcPatterns.variants()))));
+    }
+
+    /**
+     * Un eclair qui dure : le meme, deplace sur sa cible, tant qu'on le rafraichit.
+     *
+     * <p>A appeler a chaque tick d'un maintien. Il n'y en a jamais deux : le premier appel le
+     * pose, les suivants le deplacent et repoussent sa fin. Quand le joueur relache, plus rien
+     * ne le rafraichit et il s'eteint tout seul, comme un eclair ordinaire.
+     *
+     * <p>C'est pour cela qu'il n'est pas re-pose chaque tick : le re-poser donnerait un eclair
+     * neuf a chaque fois, donc une nouvelle forme a chaque fois — et le joueur avait deja vu ce
+     * defaut-la, trois eclairs superposes. Ici la forme continue de scintiller d'elle-meme.
+     */
+    public static void sustain(ArcPattern pattern, double[] from, double[] to, int lifeTicks,
+                               int ownerId, long gameTime, Random rng) {
+        LiveArc arc = held(pattern, ownerId);
+        if (arc == null) {
+            spawn(pattern, from, to, lifeTicks, false, ownerId, gameTime, rng);
+        } else {
+            arc.follow(from, to, gameTime + lifeTicks);
+        }
+    }
+
+    /** L'eclair tenu de ce motif pour ce tireur, s'il est deja la. */
+    private static LiveArc held(ArcPattern pattern, int ownerId) {
+        for (int i = ARCS.size() - 1; i >= 0; i--) {
+            LiveArc arc = ARCS.get(i);
+            if (arc.pattern == pattern && arc.ownerId() == ownerId) return arc;
+        }
+        return null;
     }
 
     /** Un tick du client : les eclairs scintillent, et les morts s'en vont. */

@@ -74,14 +74,16 @@ public final class ChargingEffect {
         if (minecraft.level == null) return;
 
         BlockHitResult block = TargetingUtil.findBlockInSight(player, ChargingSkill.RANGE);
+        // Rien de vise : rien a brancher, donc pas d'eclair. Le serveur refuse l'activation dans
+        // ce cas-la, et le joueur voyait l'electricite quand meme — c'est ce qu'il a signale.
+        if (block == null) return;
+
         int ownerId = player.getId();
         Vec3 eye = player.getEyePosition();
-        Vec3 target = block == null
-                ? eye.add(player.getLookAngle().scale(ChargingSkill.RANGE))
-                : block.getLocation();
+        Vec3 target = block.getLocation();
 
-        SustainedArcs.spawn(ArcPattern.CHARGING, eye, target, heldTicks, ownerId);
-        if (block != null && swarmDue(heldTicks)) {
+        SustainedArcs.spawn(ArcPattern.CHARGING, eye, target, ownerId);
+        if (swarmDue(heldTicks)) {
             sowSwarm(player, block.getBlockPos(), ownerId);
         }
     }

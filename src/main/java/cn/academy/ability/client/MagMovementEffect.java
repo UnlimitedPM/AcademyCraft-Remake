@@ -40,13 +40,17 @@ public final class MagMovementEffect {
 
         Vec3 eye = player.getEyePosition();
         Vec3 target = aimTarget(player, eye);
-        SustainedArcs.spawn(ArcPattern.THIN_CONTINUOUS, eye, target, heldTicks, player.getId());
+        // Rien de vise : rien a quoi s'accrocher, donc pas d'eclair. Le serveur refuse
+        // l'activation dans ce cas-la — son canStart cherche une cible metallique — et le
+        // joueur voyait l'electricite quand meme. C'est ce qu'il a signale.
+        if (target == null) return;
+
+        SustainedArcs.spawn(ArcPattern.THIN_CONTINUOUS, eye, target, player.getId());
     }
 
-    /** Ou le regard se pose : le bloc touche, ou la portee de la competence. */
+    /** Ou le regard se pose : le bloc touche, ou rien du tout. */
     private static Vec3 aimTarget(Player player, Vec3 eye) {
-        double range = MagMovementSkill.getMaxDistance();
-        BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
-        return block == null ? eye.add(player.getLookAngle().scale(range)) : block.getLocation();
+        BlockHitResult block = TargetingUtil.findBlockInSight(player, MagMovementSkill.getMaxDistance());
+        return block == null ? null : block.getLocation();
     }
 }

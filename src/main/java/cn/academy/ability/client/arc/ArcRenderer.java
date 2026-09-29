@@ -107,6 +107,22 @@ public class ArcRenderer {
                 lifeTicks, lengthFixed, ownerId, gameTime, RANDOM);
     }
 
+    /**
+     * Le meme eclair, deplace sur sa cible : voir {@link ClientArcs#sustain}.
+     *
+     * <p>A appeler a chaque tick d'un maintien, au lieu de re-poser un eclair neuf : c'est ce
+     * qui le fait suivre le regard sans jamais en poser un deuxieme.
+     */
+    public static void sustain(String pattern, Vec3 from, Vec3 to, int lifeTicks, int ownerId) {
+        Minecraft minecraft = Minecraft.getInstance();
+        long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
+
+        ClientArcs.sustain(ArcPattern.byName(pattern),
+                new double[] { from.x, from.y, from.z },
+                new double[] { to.x, to.y, to.z },
+                lifeTicks, ownerId, gameTime, RANDOM);
+    }
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;

@@ -234,6 +234,10 @@ public class AbilityClientEvents {
             }
             binding.charging = skill.isChargeable() || skill.isHeld();
             send(category, skill, Phase.PRESS);
+            // Le maintien n'est ouvert chez le client que si l'aptitude est allumee : sinon le
+            // serveur refusait l'activation, et le joueur voyait quand meme l'animation et
+            // entendait le son de la competence — c'est ce qu'il a signale avec sa touche V.
+            if (!ClientAbilityData.get().isActivated()) return;
             if (skill.isChargeable()) {
                 // Une charge sans maximum n'a rien a montrer : la barre serait pleine des le
                 // premier tick. L'original, lui, faisait plonger le regard du joueur pendant
