@@ -261,9 +261,10 @@ public class AbilityClientEvents {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
                     skill.onClientHoldTick(player, ClientAbilityData.get(), ClientCharge.getTicks(), aimed);
-                    // L'electricite de la charge : l'arc de l'oeil vers la cible et l'entourage
-                    // du corps. Une image, rien d'autre — voir ChargingEffect.
+                    // L'electricite des maintiens : l'arc de la charge et son essaim, celui de
+                    // la traction magnetique. Des images, rien d'autre — voir leurs classes.
                     ChargingEffect.tick(player, skill, ClientCharge.getTicks());
+                    MagMovementEffect.tick(player, skill, ClientCharge.getTicks());
                 }
             }
             return;

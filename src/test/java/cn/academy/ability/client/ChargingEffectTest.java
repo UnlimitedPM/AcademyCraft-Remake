@@ -16,19 +16,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ChargingEffectTest {
 
     @Test
-    void unSeulArcALaFois() {
-        // Le compteur du maintien part de un : le premier arc part donc tout de suite, puis plus
-        // rien tant qu'il vit — dix ticks plus tard, et pas avant.
-        assertTrue(ChargingEffect.arcDue(0), "le premier arc part tout de suite");
-        assertTrue(ChargingEffect.arcDue(1), "et au premier tick du maintien");
-        for (int t = 2; t < 10; t++) {
-            assertFalse(ChargingEffect.arcDue(t), "un arc vit dix ticks");
-        }
-        assertTrue(ChargingEffect.arcDue(10));
-        assertTrue(ChargingEffect.arcDue(20));
-    }
-
-    @Test
     void lEssaimDeLaMachineTientDansLeBloc() {
         // Les gabarits de l'original sont tailles pour un corps : 1,5 a 2 blocs. Autour d'une
         // machine d'un bloc, le joueur les a trouves trop grands et trop sortants, meme une fois

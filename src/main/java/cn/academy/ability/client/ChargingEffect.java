@@ -3,8 +3,8 @@ package cn.academy.ability.client;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.arc.ArcPattern;
-import cn.academy.ability.client.arc.ArcRenderer;
 import cn.academy.ability.client.arc.SurroundArcs;
+import cn.academy.ability.client.arc.SustainedArcs;
 import cn.academy.ability.electromaster.ChargingSkill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
 import cn.academy.energy.EnergyReceiver;
@@ -41,11 +41,8 @@ public final class ChargingEffect {
      * eclairs superposes. C'est le scintillement de l'arc lui-meme qui doit donner le mouvement,
      * et il le donne : c'est le meme reglage que la genese d'arc, validee.
      *
-     * <p>Dix ticks, comme la genese d'arc justement : assez long pour que le trait se lise, assez
-     * court pour qu'un nouvel eclair reprenne la place aussitot.
+     * <p>Ce rythme est celui de {@link SustainedArcs}, que la traction magnetique partage.
      */
-    private static final int ARC_LIFE_TICKS = 10;
-
     private static final RandomSource RANDOM = RandomSource.create();
 
     /**
@@ -83,22 +80,10 @@ public final class ChargingEffect {
                 ? eye.add(player.getLookAngle().scale(ChargingSkill.RANGE))
                 : block.getLocation();
 
-        if (arcDue(heldTicks)) {
-            ArcRenderer.spawn(ArcPattern.CHARGING.name(), eye, target, ARC_LIFE_TICKS, false, ownerId);
-        }
+        SustainedArcs.spawn(ArcPattern.CHARGING, eye, target, heldTicks, ownerId);
         if (block != null && swarmDue(heldTicks)) {
             sowSwarm(player, block.getBlockPos(), ownerId);
         }
-    }
-
-    /**
-     * L'arc se repose quand le precedent s'eteint : il n'y en a jamais deux.
-     *
-     * <p>Le premier tick fait exception : sans cela, le compteur du maintien partant de un, le
-     * joueur brancherait sa machine et attendrait une demi-seconde avant de voir quoi que ce soit.
-     */
-    public static boolean arcDue(int heldTicks) {
-        return heldTicks <= 1 || heldTicks % ARC_LIFE_TICKS == 0;
     }
 
     /** L'essaim se re-seme a chaque fois que ses arcs s'eteignent. */
