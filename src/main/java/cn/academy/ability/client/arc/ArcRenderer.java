@@ -58,6 +58,12 @@ import java.util.Random;
  *       briller ses bords presque transparents, donc l'eclair s'epaissit. Le trait parait
  *       alors plus gros que celui de l'original, ce qui se voit au premier coup d'oeil.</li>
  * </ul>
+ *
+ * <p>Et la <b>normale</b> doit voyager comme celle d'une entite de vanilla, c'est-a-dire etre
+ * ramenee par la pose dans le repere de la vue — la ou le shader l'attend, comme la lumiere
+ * du monde qu'il lui compare. Une normale laissee en coordonnees du monde s'y fait tourner
+ * une seconde fois par la camera : l'eclair s'assombrissait alors des qu'on levait ou
+ * baissait les yeux ailleurs qu'au sud, comme si la lumiere ne tombait plus dessus.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class ArcRenderer {
@@ -121,7 +127,7 @@ public class ArcRenderer {
 
         for (ClientArcs.LiveArc arc : ClientArcs.live()) {
             if (arc.visible()) {
-                draw(out, pose.last().pose(), camera, above, arc,
+                draw(out, pose.last(), camera, above, arc,
                         firstPerson && arc.ownerId() == ownId);
             }
         }
@@ -139,7 +145,7 @@ public class ArcRenderer {
      * decalage de l'original : celui de la vue interne pour l'eclair du tireur dans sa propre
      * vue, et celui de la main pour tout le reste.
      */
-    private static void draw(VertexConsumer out, Matrix4f matrix, Vec3 camera, double[] above,
+    private static void draw(VertexConsumer out, PoseStack.Pose pose, Vec3 camera, double[] above,
                              ClientArcs.LiveArc arc, boolean ownFirstPerson) {
         double[][] fixed = ArcView.fix(arc.from(), arc.to(), above,
                 ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
@@ -152,29 +158,27 @@ public class ArcRenderer {
         for (Quad quad : arc.mesh().quads()) {
             // Une seule face : le tri des faces arriere est desactive par le type de rendu,
             // donc ce quad se voit des deux cotes.
-            vertex(out, matrix, camera, frame, from, quad.ax(), quad.ay(), quad.az(), 0f, 0f, quad.alpha());
-            vertex(out, matrix, camera, frame, from, quad.bx(), quad.by(), quad.bz(), 0f, 1f, quad.alpha());
-            vertex(out, matrix, camera, frame, from, quad.cx(), quad.cy(), quad.cz(), 1f, 1f, quad.alpha());
-            vertex(out, matrix, camera, frame, from, quad.dx(), quad.dy(), quad.dz(), 1f, 0f, quad.alpha());
+            vertex(out, pose, camera, frame, from, quad.ax(), quad.ay(), quad.az(), 0f, 0f, quad.alpha());
+            vertex(out, pose, camera, frame, from, quad.bx(), quad.by(), quad.bz(), 0f, 1f, quad.alpha());
+            vertex(out, pose, camera, frame, from, quad.cx(), quad.cy(), quad.cz(), 1f, 1f, quad.alpha());
+            vertex(out, pose, camera, frame, from, quad.dx(), quad.dy(), quad.dz(), 1f, 0f, quad.alpha());
         }
     }
 
     /** Un coin de ruban : du repere du motif a celui du monde, puis sous la camera. */
-    private static void vertex(VertexConsumer out, Matrix4f matrix, Vec3 camera,
+    private static void vertex(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
                                ArcFrame frame, double[] from,
                                double x, double y, double z, float u, float v, double alpha) {
         double[] world = frame.point(from, x, y, z);
 
-        // La normale du ruban : le format de sommet des entites l'exige, et sans elle
-        // Minecraft refuse le sommet et fait tomber le jeu des la premiere image
-        // ("Not filled all elements of the vertex"). L'eclairage ne s'en sert pas — l'arc
-        // est dessine en pleine lumiere — mais elle doit etre la.
-        //
-        // Celle du plan du motif : un ruban n'a qu'une face, et une normale par coin ne
-        // changerait rien a l'ecran.
+        // La normale du ruban : celle du plan du motif. Un ruban n'a qu'une face, et une
+        // normale par coin ne changerait rien a l'ecran — mais elle doit voyager comme celle
+        // d'une entite, ramenee par la pose dans le repere de la vue. C'est la que le shader
+        // la compare a la lumiere du monde, et de la vient que l'eclair s'eclaire toujours
+        // pareil, d'ou qu'on le regarde.
         double[] normal = frame.up();
 
-        out.vertex(matrix,
+        out.vertex(pose.pose(),
                         (float) (world[0] - camera.x),
                         (float) (world[1] - camera.y),
                         (float) (world[2] - camera.z))
@@ -184,7 +188,10 @@ public class ArcRenderer {
                 // L'arc eclaire : pleine lumiere, comme l'original, qui le dessinait sans
                 // jamais interroger la lumiere du monde.
                 .uv2(LightTexture.FULL_BRIGHT)
-                .normal((float) normal[0], (float) normal[1], (float) normal[2])
+                // La matrice de normales de la pose : c'est ce que fait vanilla pour ses
+                // entites, et ce qui ramene la normale dans le repere ou le shader la compare
+                // a la lumiere. Sans elle, la camera la tournait une seconde fois.
+                .normal(pose.normal(), (float) normal[0], (float) normal[1], (float) normal[2])
                 .endVertex();
     }
 
