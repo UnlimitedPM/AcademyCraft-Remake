@@ -124,17 +124,22 @@ public class ArcGenSkill extends Skill {
         // L'arc part de la main, pas des yeux : voir ArcOrigins, ou l'ecart avec l'original
         // est explique. Le rayon, lui, continue de partir des yeux — c'est ce qu'on vise.
         Vec3 hand = ArcOrigins.hand(eye, look);
-        // Le rayon de l'original s'arretait au premier bloc : ce qui se trouve derriere un
-        // mur ne s'attrape pas, et la portee de l'arc se mesure jusqu'a ce mur.
+        // Le rayon des degats s'arrete au premier bloc : ce qui se trouve derriere un mur ne
+        // s'attrape pas.
         BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
         Vec3 end = block == null ? eye.add(look.scale(range)) : block.getLocation();
+        // L'eclair, lui, va jusqu'au bout de la portee, meme si le mur est plus proche.
+        // L'original faisait exactement cela : il envoyait sa portee au client, et son arc se
+        // dessinait jusque-la quel que soit le bloc rencontre. Le couper au premier mur le
+        // rendait beaucoup plus court que dans l'original.
+        Vec3 visualEnd = hand.add(look.scale(range));
 
         // L'eclair se dessine chez tous ceux qui voient le tireur, et pas seulement chez
         // lui : c'est le message d'effet de l'original, et c'est ce qui fait qu'on voit
         // l'attaque venir. Les motifs d'arcs sont purs — aucun type de Minecraft — donc le
         // serveur peut les nommer sans rien connaitre du rendu.
         AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new ArcEffectPacket(ArcPattern.WEAK.name(), hand, end, ARC_TICKS, true));
+                new ArcEffectPacket(ArcPattern.WEAK.name(), hand, visualEnd, ARC_TICKS, false));
 
         Entity target = TargetingUtil.findEntityAlong(player, eye, end,
                 e -> e instanceof LivingEntity);

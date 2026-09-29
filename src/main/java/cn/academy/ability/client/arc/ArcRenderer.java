@@ -44,7 +44,7 @@ import java.util.Random;
  * changement de repere. C'est ce qui garantit que deux quads voisins, calcules par
  * {@code ArcGenerator} pour partager leur bord, le partagent encore une fois dessines.
  *
- * <p>Trois choses differents des types de rendu de vanilla, et les trois sont necessaires :
+ * <p>Trois choses different des types de rendu de vanilla, et les trois sont necessaires :
  * <ul>
  *   <li>les <b>faces arriere ne sont pas ecartees</b>. Un ruban n'a qu'une face, et sans
  *       cela il disparait des qu'on le regarde de l'autre cote. L'original desactivait le
@@ -52,10 +52,11 @@ import java.util.Random;
  *   <li>un <b>seul</b> quad par ruban. Dessiner la face avant ET la face arriere au meme
  *       endroit les fait se disputer la profondeur et se melanger deux fois : l'eclair se
  *       retrouve parseme de morceaux plus clairs que d'autres ;</li>
- *   <li>l'eclair <b>ajoute</b> sa lumiere au decor au lieu de s'y melanger. La bande de la
- *       texture est un degrade doux : ses bords sont presque transparents, et un simple
- *       melange n'en faisait qu'un voile pale. En ajoutant, ces bords deviennent une lueur
- *       et le coeur sature en blanc.</li>
+ *   <li>l'eclair <b>se melange normalement</b>, comme l'original ({@code SRC_ALPHA},
+ *       {@code ONE_MINUS_SRC_ALPHA}), et non en ajoutant sa lumiere. Ajouter avait ete tente
+ *       pour eclaircir l'arc : sur une bande de texture au degrade doux, cela fait surtout
+ *       briller ses bords presque transparents, donc l'eclair s'epaissit. Le trait parait
+ *       alors plus gros que celui de l'original, ce qui se voit au premier coup d'oeil.</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -84,14 +85,14 @@ public class ArcRenderer {
     }
 
     /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
-    public static void spawn(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean clipToDistance) {
+    public static void spawn(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed) {
         Minecraft minecraft = Minecraft.getInstance();
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
 
         ClientArcs.spawn(ArcPattern.byName(pattern),
                 new double[] { from.x, from.y, from.z },
                 new double[] { to.x, to.y, to.z },
-                lifeTicks, clipToDistance, gameTime, RANDOM);
+                lifeTicks, lengthFixed, gameTime, RANDOM);
     }
 
     @SubscribeEvent
@@ -170,11 +171,11 @@ public class ArcRenderer {
     }
 
     /**
-     * Le type de rendu des eclairs : translucide qui ajoute sa lumiere, sans tri des faces
-     * arriere, et sans lumiere du monde.
+     * Le type de rendu des eclairs : translucide sans tri des faces arriere, et sans lumiere
+     * du monde.
      *
      * <p>Les constantes de vanilla sont protegees, mais les constructeurs de ses morceaux ne
-     * le sont pas : on rebatit donc le meme etat, avec les trois differences qui comptent ici.
+     * le sont pas : on rebatit donc le meme etat, avec les deux differences qui comptent ici.
      */
     private static RenderType arc(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_arc",
@@ -187,10 +188,11 @@ public class ArcRenderer {
                         .setShaderState(new RenderStateShard.ShaderStateShard(
                                 GameRenderer::getRendertypeEntityTranslucentEmissiveShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
+                        // Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA.
                         .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_arc",
                                 () -> {
                                     RenderSystem.enableBlend();
-                                    RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
+                                    RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
                                 },
                                 () -> {
                                     RenderSystem.disableBlend();

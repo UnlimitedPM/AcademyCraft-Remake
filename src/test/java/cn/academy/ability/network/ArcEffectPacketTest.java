@@ -40,7 +40,7 @@ class ArcEffectPacketTest {
         assertEquals(original.from(), round.from(), "un eclair a mille blocs garde sa position");
         assertEquals(original.to(), round.to());
         assertEquals(10, round.lifeTicks());
-        assertTrue(round.clipToDistance());
+        assertTrue(round.lengthFixed(), "un arc fige garde la portee entiere de son motif");
     }
 
     @Test
@@ -52,6 +52,6 @@ class ArcEffectPacketTest {
         assertEquals("weak", round.pattern());
         assertEquals(1_200, round.lifeTicks(), "un arc long vit plus de cent ticks");
         assertEquals(1, round.to().x, 1e-12, "et le dernier chiffre apres la virgule reste");
-        assertFalse(round.clipToDistance(), "un arc fige garde la portee de son motif");
+        assertFalse(round.lengthFixed(), "un arc non fige s'arrete au point vise");
     }
 }

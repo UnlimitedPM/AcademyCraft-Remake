@@ -88,21 +88,22 @@ public final class ClientArcs {
     /**
      * Ouvre un eclair entre deux points du monde.
      *
-     * <p>{@code clipToDistance} est la longueur du motif de l'original : ses arcs non figes
-     * se dessinaient jusqu'au point vise et pas au-dela. Les autres gardaient leur portee
-     * entiere, meme si la cible etait plus proche — un eclair qui s'arrete avant le bout de
-     * son motif se verrait tout de suite.
+     * <p>{@code lengthFixed} est le drapeau de l'original, dans le meme sens : vrai, l'eclair
+     * garde toute la portee de son motif — vingt blocs — meme si les deux bouts sont plus
+     * proches ; faux, il se dessine jusqu'au bout vise et pas au-dela. La genese d'arc, dont
+     * l'original reglait la longueur sur la portee de la competence, est dans le second cas :
+     * sans cela son arc s'arretait au premier bloc rencontre et paraissait tout petit.
      */
     public static void spawn(ArcPattern pattern, double[] from, double[] to, int lifeTicks,
-                             boolean clipToDistance, long gameTime, Random rng) {
+                             boolean lengthFixed, long gameTime, Random rng) {
         double dx = to[0] - from[0];
         double dy = to[1] - from[1];
         double dz = to[2] - from[2];
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-        double clip = clipToDistance ? distance : pattern.length();
+        double clip = lengthFixed ? pattern.length() : distance;
         ARCS.add(new LiveArc(pattern, from, to, clip, gameTime + lifeTicks,
-                new ArcWiggle(rng.nextInt(ArcPatterns.variants()))));
+                new ArcWiggle(pattern, rng.nextInt(ArcPatterns.variants()))));
     }
 
     /** Un tick du client : les eclairs scintillent, et les morts s'en vont. */

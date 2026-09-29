@@ -43,7 +43,7 @@ class ClientArcsTest {
     @Test
     @DisplayName("un eclair vit exactement sa duree de vie")
     void unEclairVitSaDureeDeVie() {
-        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 10, 0, 0 }, 10, true, 100,
+        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 10, 0, 0 }, 10, false, 100,
                 always(0.99));
 
         assertEquals(1, ClientArcs.live().size());
@@ -60,7 +60,7 @@ class ClientArcsTest {
     @Test
     @DisplayName("il scintille pendant sa vie, et meurt visible ou non")
     void ilScintillePendantSaVie() {
-        ClientArcs.spawn(ArcPattern.STRONG, ORIGIN, new double[] { 0, 8, 0 }, 4, false, 0,
+        ClientArcs.spawn(ArcPattern.STRONG, ORIGIN, new double[] { 0, 8, 0 }, 4, true, 0,
                 always(0.99));
         assertTrue(ClientArcs.live().get(0).visible(), "visible a sa naissance");
 
@@ -82,22 +82,37 @@ class ClientArcsTest {
 
         // Un arc non fige (la genese d'arc) s'arrete au point vise : cinq blocs, donc
         // moins de rubans que le motif entier de vingt blocs.
-        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, true, 0, always(0.99));
+        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, false, 0, always(0.99));
         int clipped = ClientArcs.live().get(0).mesh().quads().size();
         assertTrue(clipped < full, "un arc de cinq blocs est plus court qu'un arc de vingt");
         assertTrue(clipped > 0, "mais il en reste quelque chose");
 
         // Un arc fige (l'eclair) garde toute sa portee, meme si la cible est plus proche.
         ClientArcs.clear();
-        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, false, 0, always(0.99));
+        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, true, 0, always(0.99));
         assertEquals(full, ClientArcs.live().get(0).mesh().quads().size());
+    }
+
+    @Test
+    @DisplayName("un arc non fige va jusqu'au bout de sa portee, pas jusqu'au premier mur")
+    void unArcNonFigeVaJusquAuBout() {
+        // C'est la faute qui rendait la genese d'arc plus courte que dans l'original : la
+        // portee envoyee au client valait la distance jusqu'au bloc touche. L'original, lui,
+        // envoyait la portee de la competence et dessinait son arc jusque-la, mur ou pas.
+        // Ici la longueur se lit sur le bout vise : la main plus la portee, et non le mur.
+        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 15, 0, 0 }, 10, false, 0, always(0.99));
+        double reach = ClientArcs.live().get(0).mesh().reach();
+        // Jusqu'au bout, et pas au-dela : l'original coupait a l'abscisse demandee, donc le
+        // dernier ruban garde se termine juste apres elle, jamais a la fin du motif.
+        assertTrue(reach >= 15, "un arc de quinze blocs va jusqu'a quinze : " + reach);
+        assertTrue(reach < 20, "mais pas jusqu'au bout de son motif de vingt : " + reach);
     }
 
     @Test
     @DisplayName("plusieurs eclairs vivent ensemble, et le depart les emporte tous")
     void plusieursEclairsViventEnsemble() {
-        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, true, 0, always(0.99));
-        ClientArcs.spawn(ArcPattern.AOE, ORIGIN, new double[] { 0, 0, 5 }, 4, true, 0, always(0.99));
+        ClientArcs.spawn(ArcPattern.WEAK, ORIGIN, new double[] { 5, 0, 0 }, 10, false, 0, always(0.99));
+        ClientArcs.spawn(ArcPattern.AOE, ORIGIN, new double[] { 0, 0, 5 }, 4, false, 0, always(0.99));
         assertEquals(2, ClientArcs.live().size(), "l'eclair frappe trois cibles : trois arcs");
 
         ClientArcs.tick(4, always(0.99));

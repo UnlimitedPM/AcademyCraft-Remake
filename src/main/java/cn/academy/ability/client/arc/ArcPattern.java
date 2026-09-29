@@ -17,33 +17,38 @@ import java.util.List;
  * celui des cibles de zone. Un motif plus large et plus branche fait un eclair plus
  * « puissant » a l'oeil — c'est toute la difference entre eux.
  *
+ * <p>Le scintillement en fait partie, et il est <b>par motif</b> : l'original le reglait dans
+ * chaque competence, mais chacune n'emploie qu'un seul motif — la valeur y est donc chez elle,
+ * et le paquet n'a pas a la transporter.
+ *
  * <p>Le hasard est amorce : l'original tirait ses motifs a chaque lancement, donc ses
  * eclairs changeaient d'une partie a l'autre, et rien de tout cela n'etait testable. Ici,
  * la meme graine redonne le meme eclair, toujours.
  */
 public record ArcPattern(String name, double width, double lengthShrink, double alphaShrink,
                          double maxOffset, double branchFactor, double widthShrink,
-                         int passes, double length, long seed) {
+                         int passes, double length,
+                         double texWiggle, double showWiggle, double hideWiggle, long seed) {
 
     /** L'arc faible de la genese d'arc : peu de branches, trait moyen. */
     public static final ArcPattern WEAK =
-            new ArcPattern("weak", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 6, 20, 1L);
+            new ArcPattern("weak", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 6, 20, 0.7, 0.1, 0.4, 1L);
 
     /** L'arc fin et continu de la manipulation magnetique : trait mince, portee longue. */
     public static final ArcPattern THIN_CONTINUOUS =
-            new ArcPattern("thin", 0.08, 0.7, 0.9, 1.2, 0.2, 0.7, 5, 20, 2L);
+            new ArcPattern("thin", 0.08, 0.7, 0.9, 1.2, 0.2, 0.7, 5, 20, 1.0, 0.1, 0.6, 2L);
 
     /** L'arc de la charge en cours : plus branche que le faible. */
     public static final ArcPattern CHARGING =
-            new ArcPattern("charging", 0.1, 0.7, 0.9, 1.2, 0.3, 0.7, 5, 20, 3L);
+            new ArcPattern("charging", 0.1, 0.7, 0.9, 1.2, 0.3, 0.7, 5, 20, 0.8, 0.2, 0.8, 3L);
 
     /** Le gros arc de l'eclair : le trait le plus epais des cinq. */
     public static final ArcPattern STRONG =
-            new ArcPattern("strong", 0.3, 0.7, 0.9, 1.4, 0.3, 0.7, 5, 20, 4L);
+            new ArcPattern("strong", 0.3, 0.7, 0.9, 1.4, 0.3, 0.7, 5, 20, 0.5, 0.2, 0.2, 4L);
 
     /** L'arc des cibles de zone, quand l'eclair rebondit sur les voisines. */
     public static final ArcPattern AOE =
-            new ArcPattern("aoe", 0.13, 0.7, 0.9, 1.2, 0.28, 0.7, 5, 20, 5L);
+            new ArcPattern("aoe", 0.13, 0.7, 0.9, 1.2, 0.28, 0.7, 5, 20, 0.5, 0.2, 0.2, 5L);
 
     /**
      * Le nombre de variantes tirees par motif.

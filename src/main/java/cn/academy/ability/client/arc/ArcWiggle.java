@@ -14,23 +14,23 @@ import java.util.Random;
  * </ul>
  *
  * <p>Ces trois nombres sont ceux de l'original, et ils sont <b>par tick</b> : les changer
- * d'unite suffirait a rendre l'arc immobile (par seconde) ou epileptique (par image).
+ * d'unite suffirait a rendre l'arc immobile (par seconde) ou epileptique (par image). Ils
+ * viennent du motif, parce que l'original les reglait dans la competence : la genese d'arc
+ * laissait son eclair visible huit ticks sur dix, la charge en cours la moitie.
  */
 public final class ArcWiggle {
 
-    /** Chance, par tick, de changer de variante. */
-    public static final double TEX_WIGGLE = 0.5;
-
-    /** Chance, par tick, de disparaitre. */
-    public static final double SHOW_WIGGLE = 0.2;
-
-    /** Chance, par tick, de revenir. */
-    public static final double HIDE_WIGGLE = 0.2;
+    private final double texWiggle;
+    private final double showWiggle;
+    private final double hideWiggle;
 
     private boolean visible = true;
     private int variant;
 
-    public ArcWiggle(int variant) {
+    public ArcWiggle(ArcPattern pattern, int variant) {
+        this.texWiggle = pattern.texWiggle();
+        this.showWiggle = pattern.showWiggle();
+        this.hideWiggle = pattern.hideWiggle();
         this.variant = Math.floorMod(variant, ArcPatterns.variants());
     }
 
@@ -41,15 +41,15 @@ public final class ArcWiggle {
      * decision en test, avec un hasard qui repond toujours la meme chose.
      */
     public void advance(Random rng) {
-        if (rng.nextDouble() < TEX_WIGGLE) {
+        if (rng.nextDouble() < texWiggle) {
             variant = rng.nextInt(ArcPatterns.variants());
         }
 
         // Un seul des deux, comme dans l'original : un eclair qui disparait ne peut pas
         // revenir dans le meme tick.
-        if (visible && rng.nextDouble() < SHOW_WIGGLE) {
+        if (visible && rng.nextDouble() < showWiggle) {
             visible = false;
-        } else if (!visible && rng.nextDouble() < HIDE_WIGGLE) {
+        } else if (!visible && rng.nextDouble() < hideWiggle) {
             visible = true;
         }
     }

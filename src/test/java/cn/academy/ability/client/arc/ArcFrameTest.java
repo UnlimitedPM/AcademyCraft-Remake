@@ -139,10 +139,17 @@ class ArcFrameTest {
         assertEquals(FROM[1], end[1], 1e-9);
         assertEquals(FROM[2], end[2], 1e-9);
 
-        // Et un ecart lateral deplace le coin d'exactement cette distance.
-        double[] shifted = frame.point(FROM, 0, 0.5, 0);
-        double moved = Math.sqrt(Math.pow(shifted[0] - FROM[0], 2) + Math.pow(shifted[1] - FROM[1], 2)
-                + Math.pow(shifted[2] - FROM[2], 2));
-        assertEquals(0.5, moved, 1e-9);
+        // Le Y du motif est la LARGEUR du ruban, et le Z sa normale. Dans l'original, cette
+        // largeur venait de crossProduct(direction, (0,0,1)), donc du Y local : la face du
+        // ruban regarde le cote. Les echanger couche les rubans a plat, et l'eclair prend
+        // l'apparence d'une lame vue de dessus — le joueur l'a vu tout de suite.
+        double[] width = frame.point(FROM, 0, 0.5, 0);
+        double[] normal = frame.point(FROM, 0, 0, 0.5);
+        for (int i = 0; i < 3; i++) {
+            assertEquals(frame.up()[i] * 0.5, width[i] - FROM[i], 1e-9,
+                    "la largeur du ruban suit la hauteur de l'ecran");
+            assertEquals(frame.side()[i] * 0.5, normal[i] - FROM[i], 1e-9,
+                    "et sa normale suit le cote");
+        }
     }
 }

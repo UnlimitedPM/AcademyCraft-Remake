@@ -19,6 +19,14 @@ package cn.academy.ability.client.arc;
  * l'original, dont le motif suivait le regard du tireur. Sans cela, une des deux directions
  * tombe le long de la vue, l'ecart part vers l'oeil, et l'eclair perd la moitie de son
  * zigzag.
+ *
+ * <p><b>Motif Y sur {@code up}, motif Z sur {@code side}</b>, dans cet ordre — et l'ordre
+ * compte. Dans le motif, l'original construisait la largeur de ses rubans par
+ * {@code crossProduct(direction, normal)}, sa normale etant le Z local : la largeur tombe
+ * donc sur l'axe Y du motif, et la normale du ruban sur son Z. Un ruban est alors pose dans
+ * le plan qui contient la visee et la hauteur — sa face regarde de cote. Avec les deux axes
+ * echanges, les rubans s'allongent a l'horizontale et l'eclair ressemble a une lame vue de
+ * dessus, ce qui se voit tout de suite a l'ecran.
  */
 public record ArcFrame(double[] axis, double[] side, double[] up) {
 
@@ -64,11 +72,17 @@ public record ArcFrame(double[] axis, double[] side, double[] up) {
                 a[0] * b[1] - a[1] * b[0] };
     }
 
-    /** Un coin du motif dans le monde : le long de l'axe, puis les deux ecarts. */
+    /**
+     * Un coin du motif dans le monde : le long de l'axe, puis les deux ecarts.
+     *
+     * <p>X va le long de l'arc, <b>Y est la largeur du ruban</b> (la hauteur de l'ecran) et
+     * Z sa normale (le cote). C'est l'ordre du motif de l'original : sa largeur est le Y
+     * local, parce qu'il la prenait par {@code crossProduct(direction, (0,0,1))}.
+     */
     public double[] point(double[] from, double x, double y, double z) {
         return new double[] {
-                from[0] + axis[0] * x + side[0] * y + up[0] * z,
-                from[1] + axis[1] * x + side[1] * y + up[1] * z,
-                from[2] + axis[2] * x + side[2] * y + up[2] * z };
+                from[0] + axis[0] * x + up[0] * y + side[0] * z,
+                from[1] + axis[1] * x + up[1] * y + side[1] * z,
+                from[2] + axis[2] * x + up[2] * y + side[2] * z };
     }
 }

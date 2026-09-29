@@ -27,14 +27,14 @@ public class ArcEffectPacket {
     private final Vec3 from;
     private final Vec3 to;
     private final int lifeTicks;
-    private final boolean clipToDistance;
+    private final boolean lengthFixed;
 
-    public ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean clipToDistance) {
+    public ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed) {
         this.pattern = pattern;
         this.from = from;
         this.to = to;
         this.lifeTicks = lifeTicks;
-        this.clipToDistance = clipToDistance;
+        this.lengthFixed = lengthFixed;
     }
 
     public static void encode(ArcEffectPacket msg, FriendlyByteBuf buf) {
@@ -42,7 +42,7 @@ public class ArcEffectPacket {
         writePoint(buf, msg.from);
         writePoint(buf, msg.to);
         buf.writeVarInt(msg.lifeTicks);
-        buf.writeBoolean(msg.clipToDistance);
+        buf.writeBoolean(msg.lengthFixed);
     }
 
     public static ArcEffectPacket decode(FriendlyByteBuf buf) {
@@ -55,7 +55,7 @@ public class ArcEffectPacket {
     public static void handle(ArcEffectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> cn.academy.ability.client.arc.ArcRenderer.spawn(
-                msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.clipToDistance));
+                msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed));
         ctx.setPacketHandled(true);
     }
 
@@ -89,8 +89,8 @@ public class ArcEffectPacket {
         return lifeTicks;
     }
 
-    /** Vrai si l'eclair s'arrete au point vise plutot qu'a la portee de son motif. */
-    boolean clipToDistance() {
-        return clipToDistance;
+    /** Vrai si l'eclair garde la portee entiere de son motif, comme {@code EntityArc.lengthFixed}. */
+    boolean lengthFixed() {
+        return lengthFixed;
     }
 }

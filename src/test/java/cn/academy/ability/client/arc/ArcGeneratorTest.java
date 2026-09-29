@@ -122,8 +122,8 @@ class ArcGeneratorTest {
     @Test
     @DisplayName("plus de passes, un trait plus casse")
     void plusDePassesUnTraitPlusCasse() {
-        ArcPattern one = new ArcPattern("essai", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 1, 20, 5L);
-        ArcPattern six = new ArcPattern("essai", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 6, 20, 5L);
+        ArcPattern one = new ArcPattern("essai", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 1, 20, 0.5, 0.2, 0.2, 5L);
+        ArcPattern six = new ArcPattern("essai", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 6, 20, 0.5, 0.2, 0.2, 5L);
 
         assertTrue(ArcGenerator.generate(six, new Random(5)).quads().size()
                         > ArcGenerator.generate(one, new Random(5)).quads().size(),
