@@ -14,6 +14,7 @@ import cn.academy.ability.teleporter.TeleporterCategory;
 import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -61,6 +62,40 @@ public class AbilityClientEvents {
             new Binding(AbilityKeyBindings.ABILITY_2, 1),
             new Binding(AbilityKeyBindings.ABILITY_3, 2),
             new Binding(AbilityKeyBindings.ABILITY_4, 3));
+
+    /**
+     * La competence prend le pas sur l'action de base du clic.
+     *
+     * <p>Dans l'original, appuyer sur une touche d'aptitude ne faisait QUE la competence :
+     * le coup d'epee et l'utilisation de l'objet n'avaient pas lieu. Le port, lui, laissait
+     * faire les deux, parce que sa touche d'aptitude n'est qu'une liaison de plus posee sur
+     * le meme bouton de souris. C'est ici que la chose se decide, et nulle part ailleurs :
+     * le jeu demande s'il peut lancer son action, et on lui repond non.
+     *
+     * <p>La comparaison porte sur la <b>touche physique</b> et non sur le nom de l'action :
+     * elle vaut donc aussi pour un joueur qui a deplace ses touches. Et elle ne s'applique
+     * que si l'aptitude est allumee et qu'une competence occupe ce rang du prereglage —
+     * sinon le clic reste un clic.
+     */
+    @SubscribeEvent
+    public static void onInteraction(InputEvent.InteractionKeyMappingTriggered event) {
+        if (!event.isAttack() && !event.isUseItem()) return;
+        if (skillOnSameKey(event.getKeyMapping()) == null) return;
+
+        // Rien d'autre que la competence : le bras ne frappe pas, et l'objet ne part pas.
+        event.setSwingHand(false);
+        event.setCanceled(true);
+    }
+
+    /** La competence qui occupe la meme touche que cette action de base, s'il y en a une. */
+    @Nullable
+    private static Skill skillOnSameKey(KeyMapping base) {
+        if (!ClientAbilityData.get().isActivated()) return null;
+        for (Binding binding : BINDINGS) {
+            if (binding.key.getKey().equals(base.getKey())) return skillOf(binding);
+        }
+        return null;
+    }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
