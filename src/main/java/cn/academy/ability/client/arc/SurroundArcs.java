@@ -25,14 +25,23 @@ public final class SurroundArcs {
     /** Un gabarit : son motif, le nombre d'arcs vivants, et la longueur tiree de chacun. */
     public record Gabarit(ArcPattern pattern, int count, double minLength, double maxLength) {}
 
+    // LES LONGUEURS CI-DESSOUS NE SONT PAS TOUJOURS CELLES DE L'ORIGINAL : le joueur les a
+    // rallongees le 30/09 (2 a 6, 4 a 8, 6 a 12 au lieu de 1,5 a 2, 3 a 4, 3,5 a 4,5).
+    //
+    // ATTENTION : la portee d'un arc est bornee par la longueur de son MOTIF, que le moteur
+    // genere a ArcPattern.length() avant de le recadrer. Au-dela de cette longueur, la borne
+    // haute ne fait donc rien du tout — c'est le cas ici, ou ces bornes depassent les motifs
+    // (1,75 / 3,5 / 4,0). Le jour ou une competence s'en servira pour de bon, c'est la longueur
+    // du motif qu'il faudra monter en meme temps que son depassement, comme pour SURROUND_MICRO.
+
     /** Fin : quatre arcs, longs de 1,5 a 2 blocs. C'est le corps qui s'electrise. */
-    public static final Gabarit THIN = new Gabarit(ArcPattern.SURROUND_THIN, 4, 1.5, 2.0);
+    public static final Gabarit THIN = new Gabarit(ArcPattern.SURROUND_THIN, 4, 2.0, 6.0);
 
     /** Moyen : six arcs, longs de 3 a 4 blocs. */
-    public static final Gabarit NORMAL = new Gabarit(ArcPattern.SURROUND_NORMAL, 6, 3.0, 4.0);
+    public static final Gabarit NORMAL = new Gabarit(ArcPattern.SURROUND_NORMAL, 6, 4.0, 8.0);
 
     /** Gras : cinq arcs, longs de 3,5 a 4,5 blocs. Le claquement d'orage. */
-    public static final Gabarit BOLD = new Gabarit(ArcPattern.SURROUND_BOLD, 5, 3.5, 4.5);
+    public static final Gabarit BOLD = new Gabarit(ArcPattern.SURROUND_BOLD, 5, 6.0, 12.0);
 
     /** La vie d'un arc d'entourage, en ticks : trois, comme {@code EntityIntensifyEffect}. */
     public static final int LIFE_TICKS = 3;

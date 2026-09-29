@@ -18,17 +18,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SurroundArcsTest {
 
     @Test
-    void lesTroisGabaritsSontCeuxDeLoriginal() {
+    void lesTroisGabaritsSontCeuxDuJoueur() {
+        // L'original en semait quatre, six et cinq arcs de 1,5 a 2, 3 a 4 et 3,5 a 4,5 blocs.
+        // Le joueur a rallonge les portees le 30/09, en attendant de les voir a l'oeuvre.
         assertEquals(4, SurroundArcs.THIN.count(), "le fin seme quatre arcs");
         assertEquals(6, SurroundArcs.NORMAL.count(), "le moyen en seme six");
         assertEquals(5, SurroundArcs.BOLD.count(), "le gras en seme cinq");
 
-        assertEquals(1.5, SurroundArcs.THIN.minLength(), 1e-6);
-        assertEquals(2.0, SurroundArcs.THIN.maxLength(), 1e-6);
-        assertEquals(3.0, SurroundArcs.NORMAL.minLength(), 1e-6);
-        assertEquals(4.0, SurroundArcs.NORMAL.maxLength(), 1e-6);
-        assertEquals(3.5, SurroundArcs.BOLD.minLength(), 1e-6);
-        assertEquals(4.5, SurroundArcs.BOLD.maxLength(), 1e-6);
+        assertEquals(2.0, SurroundArcs.THIN.minLength(), 1e-6);
+        assertEquals(6.0, SurroundArcs.THIN.maxLength(), 1e-6);
+        assertEquals(4.0, SurroundArcs.NORMAL.minLength(), 1e-6);
+        assertEquals(8.0, SurroundArcs.NORMAL.maxLength(), 1e-6);
+        assertEquals(6.0, SurroundArcs.BOLD.minLength(), 1e-6);
+        assertEquals(12.0, SurroundArcs.BOLD.maxLength(), 1e-6);
     }
 
     @Test
