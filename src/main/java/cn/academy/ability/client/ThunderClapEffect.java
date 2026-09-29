@@ -26,12 +26,12 @@ public final class ThunderClapEffect {
      * La boite d'ou l'electricite part, et le dezoom de la vue. Deux etats de classe : c'est
      * un effet du joueur local, et il n'y en a qu'un.
      */
-    private static final double SIZE_XZ = 1.0;
-    private static final double MIN_Y = -0.1;
-    private static final double MAX_Y = 1.8;
+    private static final double SIZE_XZ = 0.6;
+    private static final double MIN_Y = 0.0;
+    private static final double MAX_Y = 1.6;
 
     /** Le dezoom a pleine charge, en part du champ de vision. */
-    private static final float FOV_AT_FULL = 0.12f;
+    private static final float FOV_AT_FULL = 0.25f;
 
     /** Où en est la charge montree, de 0 a 1 ; 0 quand rien ne charge. */
     private static float progress;

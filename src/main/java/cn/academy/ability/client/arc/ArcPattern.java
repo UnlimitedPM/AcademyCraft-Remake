@@ -103,14 +103,15 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
      * L'entourage de l'orage qui s'amasse.
      *
      * <p>ECART ASSUME, demande du joueur : le gras de l'original entourait le corps d'eclairs
-     * qu'il a trouves beaucoup trop grands et beaucoup trop gros. Celui-ci est court et mince.
+     * qu'il a trouves beaucoup trop grands et beaucoup trop gros.
      *
-     * <p>La longueur et le depassement vont ensemble, comme pour {@link #SURROUND_MICRO} :
-     * 1,2 de long, 0,5 de depassement, soit la proportion de l'entourage fin de l'original
-     * (1,75 pour 0,8). La largeur, elle, est la moitie de ce fin.
+     * <p>La longueur et le depassement vont ensemble, comme pour {@link #SURROUND_MICRO} : le
+     * moteur genere le motif a cette longueur, donc c'est elle qui fait la taille de l'arc. Le
+     * joueur a trouve le premier essai encore trop grand et trop loin de lui, et le tout a ete
+     * resserre : moins d'un bloc de long, 0,3 de depassement, et une largeur de 0,13.
      */
     public static final ArcPattern SURROUND_FINE =
-            new ArcPattern("surround_fine", 0.15, 0.7, 0.9, 0.5, 0.6, 0.9, 3, 1.2, 0.5, 0.2, 0.2, 10L);
+            new ArcPattern("surround_fine", 0.13, 0.7, 0.9, 0.3, 0.6, 0.9, 3, 0.7, 0.5, 0.2, 0.2, 10L);
 
     /**
      * Le nombre de variantes tirees par motif.
