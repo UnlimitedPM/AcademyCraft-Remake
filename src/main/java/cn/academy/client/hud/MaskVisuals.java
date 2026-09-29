@@ -32,7 +32,7 @@ public final class MaskVisuals {
      *
      * <p>Le rouge de la surcharge, lui, y gagne aussi : 170 fois 1,5 vaut 255.
      */
-    public static final float ALPHA_BOOST = 1.5f;
+    public static final float ALPHA_BOOST = 1.8f;
 
     private MaskVisuals() {
     }
