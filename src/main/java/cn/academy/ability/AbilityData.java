@@ -165,6 +165,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         private final List<net.minecraft.world.phys.Vec3> points = new ArrayList<>();
 
         /**
+         * Les blocs pris par ce maintien, dans l'ordre de prise.
+         *
+         * <p>C'est la « lignee » de {@code mag_movement} : l'ensemble dit quels blocs ont
+         * deja ete accroches, donc lesquels sont nouveaux. Le rang de la prise se lit a la
+         * taille : la premiere entree est le premier bloc, celui qui se paie comme dans
+         * l'original. Un ensemble par maintien, et rien de sauvegarde : relacher remet la
+         * lignee a zero, et l'activer a nouveau aussi.
+         */
+        private final java.util.Set<Long> lineage = new java.util.HashSet<>();
+
+        /**
          * Le vol libre du joueur avant le maintien.
          *
          * Les ailes de tempete l'ouvrent pour la duree de leur vol et le rendent a la fin :
@@ -1339,6 +1350,35 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public void setHoldBalls(Skill skill, int balls) {
         Hold hold = holdOf(skill);
         if (hold != null) hold.balls = balls;
+    }
+
+    /**
+     * Ouvre une lignee : plus aucun bloc pris.
+     *
+     * <p>Appele a l'activation de {@code mag_movement}, et c'est ce qui garantit qu'il n'y a
+     * qu'un seul premier bloc par activation : la lignee precedente est oubliee, donc le
+     * bloc suivant redevient le premier.
+     */
+    public void clearHoldLineage(Skill skill) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.lineage.clear();
+    }
+
+    /**
+     * Prend un bloc dans la lignee ; vrai s'il est nouveau.
+     *
+     * C'est le seul juge du « nouveau bloc » : un bloc deja pris ne se repaie pas quand le
+     * joueur le revise.
+     */
+    public boolean addHoldLineageBlock(Skill skill, long packedPos) {
+        Hold hold = holdOf(skill);
+        return hold != null && hold.lineage.add(packedPos);
+    }
+
+    /** Nombre de blocs pris par la lignee ; 0 s'il n'y en a aucun. */
+    public int getHoldLineageSize(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? 0 : hold.lineage.size();
     }
 
     /**

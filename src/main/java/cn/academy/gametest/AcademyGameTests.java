@@ -2361,6 +2361,112 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La lignee de {@code mag_movement}.
+     *
+     * <p>Ce que le joueur a demande et qu'aucun test unitaire ne peut voir : le premier bloc
+     * se paie comme dans l'original — son vrai CP a chaque tick, meme quand le regard l'a
+     * quitte — le surcout de l'ouverture ne redescend plus tant qu'on est accroche, chaque
+     * nouveau bloc ajoute son surcout et son dixieme de pourcent une seule fois, et le trajet
+     * entier se verse a la fin avec son plancher de 0,5 %.
+     */
+    @GameTest(template = "empty")
+    public static void laLigneeDuMagMovementSePaieParBloc(GameTestHelper helper) {
+        var skill = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MOVEMENT;
+        var iron = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, 320);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + 320 + 1, floor.getZ());
+
+        // La chambre du test est nettoyee AVANT de poser quoi que ce soit : le monde des tests
+        // est partage et sauvegarde, donc un bloc de fer laisse par l'execution precedente
+        // serait accroche a la place de celui qu'on vient de poser. La dalle qui porte le faux
+        // joueur (un cran sous les yeux) n'est pas touchee.
+        for (int dz = 0; dz <= 6; dz++) {
+            for (int dx = -1; dx <= 5; dx++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "lineage-rider");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 180f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 2);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        // Le premier bloc : trois blocs devant les yeux, et le regard pile dessus.
+        BlockPos premier = eyes.offset(0, 0, 3);
+        helper.setBlock(premier, iron);
+        lookAt(player, helper.absolutePos(premier));
+
+        skill.onStart(player, data);
+        // Le surcout de l'ouverture est deja pose par l'activation ; on le repose ici pour
+        // lire ce que le premier bloc y ajoute : rien.
+        data.setOverload(30f);
+        assertTrue(helper, skill.onHoldTick(player, data, 1), "le maintien s'accroche au fer");
+        assertValue(helper, 1, data.getHoldLineageSize(skill), "un seul bloc dans la lignee");
+        assertClose(helper, 30f, data.getOverload(),
+                "le premier bloc ne coute pas de surcout de plus");
+        double apresUnTick = data.getControlPoint();
+        assertTrue(helper, apresUnTick < data.getMaxControlPoint(),
+                "et le maintien se paie des le premier tick : " + apresUnTick);
+
+        // Le regard monte au ciel : l'ancre reste, et la depense continue. C'est le vrai mod,
+        // et c'est ce que le joueur a vu manquer — une fois accroche, detourner les yeux
+        // n'arrete ni la traction ni le paiement.
+        player.setXRot(-60f);
+        for (int tick = 2; tick <= 6; tick++) {
+            assertTrue(helper, skill.onHoldTick(player, data, tick), "la traction tient sans viser");
+        }
+        assertTrue(helper, data.getControlPoint() < apresUnTick,
+                "et elle continue de se payer : " + data.getControlPoint());
+        assertValue(helper, 1, data.getHoldLineageSize(skill), "sans nouveau bloc vise");
+        assertClose(helper, 30f, data.getOverload(), "et le surcout reste epingle");
+
+        // Le deuxieme bloc : sur le cote, dans l'axe du regard. Il ajoute son surcout et son
+        // dixieme de pourcent, une seule fois.
+        BlockPos second = eyes.offset(4, 0, 0);
+        helper.setBlock(second, iron);
+        lookAt(player, helper.absolutePos(second));
+        float expAvant = data.getSkillExp(skill);
+        assertTrue(helper, skill.onHoldTick(player, data, 7), "le maintien prend le deuxieme bloc");
+        assertValue(helper, 2, data.getHoldLineageSize(skill), "deux blocs dans la lignee");
+        assertClose(helper, 30f + cn.academy.ability.electromaster.MagMovementSkill
+                        .overloadPerNewBlock(expAvant), data.getOverload(),
+                "dix de surcout pour le nouveau bloc");
+        assertClose(helper, expAvant + cn.academy.ability.electromaster.MagMovementSkill
+                        .EXP_PER_NEW_BLOCK, data.getSkillExp(skill), "et un dixieme de pourcent");
+
+        // Le reviser ne repaie rien : c'est le meme bloc de la lignee.
+        float overloadAvant = data.getOverload();
+        float expStable = data.getSkillExp(skill);
+        assertTrue(helper, skill.onHoldTick(player, data, 8), "le maintien continue");
+        assertClose(helper, overloadAvant, data.getOverload(), "reviser un bloc ne le repaie pas");
+        assertClose(helper, expStable, data.getSkillExp(skill), "ni ne redonne son experience");
+
+        // La fin : le trajet entier, avec son plancher de 0,5 %, verse une seule fois — et
+        // c'est la recompense du premier bloc, celle de l'original.
+        float avantLaFin = data.getSkillExp(skill);
+        skill.onHoldEnd(player, data, 8);
+        assertTrue(helper, data.getSkillExp(skill) >= avantLaFin + 0.005f,
+                "le premier bloc verse le trajet, plancher de 0,5 % : " + data.getSkillExp(skill));
+
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(gone -> gone.forgetSkill(skill));
+        helper.succeed();
+    }
+
+    /** Tourne le regard d'un faux joueur vers un point du monde, des yeux. */
+    private static void lookAt(net.minecraft.world.entity.Entity player, BlockPos target) {
+        player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+                net.minecraft.world.phys.Vec3.atCenterOf(target));
+    }
+
+    /**
      * L'aiguille du lancer d'objet, le seul objet que l'original distinguait.
      *
      * Le bonus se lit sur un objet reel, donc dans les registres : c'est pourquoi il est

@@ -2,6 +2,7 @@ package cn.academy.ability.electromaster;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
@@ -58,6 +59,20 @@ public class MagMovementSkill extends Skill {
         return Math.max(0.005f, 0.0011f * (float) distance);
     }
 
+    /**
+     * Surcout d'un bloc SUPPLEMENTAIRE de la lignee : 10, et 5 quand la competence est a fond.
+     *
+     * <p>C'est la seule depense que le joueur a voulue au-dela de celles de l'original : le
+     * premier bloc se paie comme dans le vrai mod, chaque nouveau bloc se paie dix de surcout
+     * — cinq une fois la competence remplie — pour le dixieme de pourcent qu'il rapporte.
+     */
+    public static float overloadPerNewBlock(float exp) {
+        return lerp(10f, 5f, exp);
+    }
+
+    /** Experience d'un bloc supplementaire de la lignee : un dixieme de pourcent. */
+    public static final float EXP_PER_NEW_BLOCK = 0.001f;
+
     /** Cout par tick : 15 a 8, comme l'original. */
     public float cpPerTick(AbilityData data) {
         return lerp(15f, 8f, data.getSkillExp(this));
@@ -84,8 +99,11 @@ public class MagMovementSkill extends Skill {
      * Tenir ne demande plus rien a viser.
      *
      * <p>ECART ASSUME, demande du joueur : son laser se voit meme dans le vide, et le maintien
-     * s'ouvre tout de suite. C'est la <b>depense</b> qui demande une cible metallique, et elle
-     * se decide a chaque tick — voir {@link #onHoldTick}.
+     * s'ouvre tout de suite — l'original, lui, refusait de naitre sans cible. Sans ancre, rien
+     * ne se paie non plus : c'est le prix de ce confort.
+     *
+     * <p>Une fois accroche, en revanche, tout est au vrai mod : le maintien se paie a chaque
+     * tick, que le regard suive le bloc ou non — voir {@link #onHoldTick}.
      */
     @Override
     public boolean canStart(Player player, AbilityData data) {
@@ -94,33 +112,38 @@ public class MagMovementSkill extends Skill {
 
     @Override
     public void onStart(Player player, AbilityData data) {
-        data.setHeldOverload(this, data.getOverload());
+        // Rien n'est epingle tant qu'on n'est pas accroche : sans ancre, le surcout doit pouvoir
+        // redescendre — l'original n'avait meme pas de contexte dans ce cas.
+        data.setHeldOverload(this, 0f);
         data.setHoldOrigin(this, player.position());
+        // La lignee repart de zero : c'est ce qui fait qu'il n'y a qu'un seul premier bloc par
+        // activation, comme le joueur l'a demande. Le bloc suivant redevient le premier.
+        data.clearHoldLineage(this);
         // Aucune ancre au depart, et c'est voulu : le maintien s'ouvre sans rien viser.
         data.setHoldTarget(this, 0);
         data.setHoldPoint(this, null);
     }
 
     /**
-     * Un tick de traction : l'ancre colle, et rien n'est paye sans elle.
+     * Un tick de traction : la lignee s'agrandit, et le maintien se paie tant qu'il tient.
      *
-     * <p>L'original fixait sa cible a l'appui et ne la lachait plus. Le port relisait le regard a
-     * chaque tick, ce qui lachait la proie des qu'on detournait les yeux — le joueur l'a vu :
-     * quand on arrete de le regarder, cela n'aimante plus du tout.
-     *
-     * <p>L'ancre colle donc :
+     * <p>Le partage des roles, tel que le joueur l'a demande :
      *
      * <ul>
-     * <li>viser du metal en <b>pose</b> une, ou <b>remplace</b> celle qu'on tient — c'est le
-     *     « tant qu'il n'y a pas de nouveau metal devant nous » du joueur ;</li>
-     * <li>sans metal devant, l'ancienne reste, et la traction continue meme en regardant
-     *     ailleurs — comme dans le vrai mod ;</li>
-     * <li>sans ancre du tout, le maintien tient, le laser se voit, et il ne se paie rien.</li>
+     * <li><b>le premier bloc de la lignee</b> — le premier metal accroche depuis l'activation —
+     *     se paie exactement comme dans l'original : {@link #cpPerTick} a chaque tick, et le
+     *     surcout de {@link #getOverloadCost} pose a l'ouverture, qui ne redescend plus tant que
+     *     la prise tient. Sa recompense est celle de l'original, versee a la fin : le trajet
+     *     entier, avec son plancher de 0,5 pour cent — voir {@link #onHoldEnd} ;</li>
+     * <li><b>chaque nouveau bloc</b> ajoute {@link #overloadPerNewBlock} de surcout et
+     *     {@link #EXP_PER_NEW_BLOCK} d'experience, une seule fois : la lignee se souvient des
+     *     blocs deja pris ;</li>
+     * <li><b>sans metal devant</b>, l'ancre gardee continue de tirer et de se payer. C'est le
+     *     vrai mod, et c'est ce que le joueur a vu manquer : une fois accroche, detourner les
+     *     yeux ne doit rien arreter ;</li>
+     * <li><b>sans ancre du tout</b>, le maintien tient, le laser se voit, et il ne se paie rien.
+     *     </li>
      * </ul>
-     *
-     * <p>L'experience se paie au trajet, tick par tick, et sans le plancher de
-     * {@link #getExpIncr} : ce plancher vaut pour un trajet entier, et le payer a chaque tick
-     * donnait un demi pour cent de competence par tick — le bug que le joueur a signale.
      */
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
@@ -132,48 +155,67 @@ public class MagMovementSkill extends Skill {
             } else {
                 data.setHoldTarget(this, 0);
                 data.setHoldPoint(this, aimed.point());
+                enterLineage(data, aimed.block());
             }
+            // L'overloadKeep de l'original : pose juste apres l'accrochage, il gele le surcout
+            // tant que la prise tient.
+            data.setHeldOverload(this, data.getOverload());
         }
 
         Vec3 anchor = resolveAnchor(player, data, data.getHoldTargetId(this), data.getHoldPoint(this));
-        if (anchor == null) return true;
+        if (anchor == null) {
+            // Rien a quoi s'accrocher : rien n'est paye, et le surcout repart en recuperation.
+            data.setHeldOverload(this, 0f);
+            return true;
+        }
 
-        Vec3 previous = player.position();
+        // La traction passe AVANT le paiement. L'original payait puis terminait — mais son
+        // client tirait de son cote, donc le dernier tick tirait quand meme. Ici tout passe par
+        // le serveur : payer d'abord laissait le tick d'epuisement sans traction, ce que le
+        // joueur a lu comme une competence qui ne fait rien sur un bloc de fer.
         pull(player, anchor);
 
-        // Rien de metallique DEVANT : la traction continue sur l'ancre gardee, mais elle ne se
-        // paie pas. C'est la combinaison que le joueur a demandee — rester colle a sa proie meme
-        // en regardant ailleurs, et ne payer que ce qu'on vise. Les mesures du 30/09 le disent :
-        // viser le ciel ne coutait rien mais ne trouvait aucune ancre, et le fer posait bien son
-        // ancre en payant. C'est le paiement qui doit suivre le regard, pas l'ancre.
-        if (aimed == null) return true;
-
-        if (!data.consumeControlPoint(cpPerTick(data))) return false;
-
-        data.addSkillExp(this, getTickExpIncr(previous.distanceTo(player.position())));
-        return true;
+        // Les vraies donnees de l'original : tant qu'on est accroche, le maintien se paie a
+        // chaque tick, meme quand le regard a quitte le bloc.
+        return data.consumeControlPoint(cpPerTick(data));
     }
 
     /**
-     * La fin du maintien : tout s'est paye au tick, il n'y a plus rien a compter.
+     * Compte un bloc dans la lignee du maintien.
      *
-     * <p>L'original donnait son experience d'un coup, sur la distance du trajet entier. Le port
-     * la donne a chaque tick de traction reelle, ce qui revient au meme sur un trajet droit — et
-     * a rien du tout quand rien ne tire.
+     * Le premier bloc ne coute rien de plus — c'est celui du vrai mod, recompense a la fin.
+     * Les suivants paient leur surcout et versent leur dixieme de pourcent, une seule fois
+     * chacun : reviser un bloc deja pris ne repaie rien.
+     */
+    private void enterLineage(AbilityData data, BlockPos pos) {
+        if (pos == null) return;
+        if (!data.addHoldLineageBlock(this, pos.asLong())) return;
+        if (data.getHoldLineageSize(this) <= 1) return;
+        data.perform(0f, overloadPerNewBlock(data.getSkillExp(this)));
+        data.addSkillExp(this, EXP_PER_NEW_BLOCK);
+    }
+
+    /**
+     * La fin du maintien : la recompense du premier bloc, celle de l'original.
+     *
+     * <p>C'est le {@code s_onEnd} de {@code MagMovement.scala} : le trajet entier, mesure du
+     * point de depart a l'arrivee, paye une fois, avec son plancher de 0,5 pour cent
+     * ({@code 0.005}). Le joueur l'a voulu pour le premier bloc <b>uniquement</b> : les blocs
+     * suivants de la lignee se sont deja payes en route, un dixieme de pourcent chacun.
+     *
+     * <p>Rien n'est verse quand le maintien n'a rien accroche : viser le ciel ne rapporte pas
+     * d'experience, comme il ne coute rien.
+     *
+     * <p>L'etat du maintien vit encore : {@code AbilityEvents.endHeld} appelle cet effet AVANT
+     * de l'oublier, comme l'original le faisait depuis son contexte mourant.
      */
     @Override
     public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
         player.fallDistance = 0.0f;
-    }
-
-    /**
-     * Experience d'un tick de traction : 0,0011 par bloc parcouru, sans plancher.
-     *
-     * <p>{@link #getExpIncr} garde le plancher de l'original, qui valait pour un trajet entier ;
-     * l'appliquer a chaque tick payait le minimum meme quand le joueur ne bougeait pas.
-     */
-    public static float getTickExpIncr(double distance) {
-        return 0.0011f * (float) distance;
+        if (data.getHoldLineageSize(this) <= 0 && data.getHoldTargetId(this) == 0) return;
+        Vec3 origin = data.getHoldOrigin(this);
+        if (origin == null) return;
+        data.addSkillExp(this, getExpIncr(origin.distanceTo(player.position())));
     }
 
     /**
@@ -236,8 +278,13 @@ public class MagMovementSkill extends Skill {
         return delta > 0 ? from + ACCEL : from - ACCEL;
     }
 
-    /** Ce que la visee a trouve : une entite, ou un point sur un bloc. */
-    private record Anchor(Vec3 point, Entity entity) {}
+    /**
+     * Ce que la visee a trouve : une entite, ou un point sur un bloc.
+     *
+     * {@code block} n'est renseigne que pour un bloc : c'est la position qui entre dans la
+     * lignee du maintien. Une entite n'y entre pas — le joueur a parle de blocs.
+     */
+    private record Anchor(Vec3 point, Entity entity, BlockPos block) {}
 
     /**
      * Cherche ce que le joueur vise.
@@ -255,7 +302,7 @@ public class MagMovementSkill extends Skill {
         EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
                 player, eye, end, box, e -> !e.isSpectator() && e.isPickable() && e != player, RANGE * RANGE);
         if (entityHit != null && MetalTargets.isMetallic(entityHit.getEntity())) {
-            return new Anchor(null, entityHit.getEntity());
+            return new Anchor(null, entityHit.getEntity(), null);
         }
 
         BlockHitResult blockHit = player.level().clip(
@@ -263,7 +310,7 @@ public class MagMovementSkill extends Skill {
         if (blockHit.getType() == HitResult.Type.BLOCK) {
             BlockState state = player.level().getBlockState(blockHit.getBlockPos());
             if (MetalTargets.canHook(state.getBlock(), data.getSkillExp(this))) {
-                return new Anchor(blockHit.getLocation(), null);
+                return new Anchor(blockHit.getLocation(), null, blockHit.getBlockPos());
             }
         }
         return null;
