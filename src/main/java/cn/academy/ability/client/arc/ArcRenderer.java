@@ -111,14 +111,18 @@ public class ArcRenderer {
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer out = buffers.getBuffer(arc(TEXTURE));
 
-        // Le tireur, pour savoir quels eclairs sont les siens : ce sont les seuls dont le
-        // depart se recolle a sa camera. Voir ArcView, ou l'illusion est expliquee.
+        // Quel decalage de vue s'applique : celui de la vue interne, et seulement pour l'eclair
+        // du tireur lui-meme — c'est la condition de l'original, « thirdPersonView == 0 &&
+        // clientPlayer == entity.getPlayer() ». Tout le reste est pose sur la main : la sienne
+        // vue de l'exterieur, comme celle des autres joueurs.
         Minecraft minecraft = Minecraft.getInstance();
         int ownId = minecraft.player == null ? -1 : minecraft.player.getId();
+        boolean firstPerson = minecraft.options.getCameraType().isFirstPerson();
 
         for (ClientArcs.LiveArc arc : ClientArcs.live()) {
             if (arc.visible()) {
-                draw(out, pose.last().pose(), camera, above, arc, arc.ownerId() == ownId);
+                draw(out, pose.last().pose(), camera, above, arc,
+                        firstPerson && arc.ownerId() == ownId);
             }
         }
         buffers.endBatch();
@@ -131,20 +135,16 @@ public class ArcRenderer {
      * qui se coupent a angle droit. C'est la que s'etait glissee la faute qui faisait partir
      * l'eclair de travers — deux fois la meme direction au lieu de deux perpendiculaires.
      *
-     * <p>L'eclair du tireur se recolle a sa camera ({@link ArcView}) : c'est ce que faisait
-     * l'optimisation de vue de l'original, et c'est ce qui fait qu'il semble partir de la ou
-     * on regarde plutot que de la tete du personnage.
+     * <p>L'eclair se pose dans le repere de la main de son tireur ({@link ArcView}), avec le
+     * decalage de l'original : celui de la vue interne pour l'eclair du tireur dans sa propre
+     * vue, et celui de la main pour tout le reste.
      */
     private static void draw(VertexConsumer out, Matrix4f matrix, Vec3 camera, double[] above,
-                             ClientArcs.LiveArc arc, boolean ownView) {
-        double[] from = arc.from();
-        double[] to = arc.to();
-        if (ownView) {
-            double[][] fixed = ArcView.fix(from, to,
-                    new double[] { camera.x, camera.y, camera.z });
-            from = fixed[0];
-            to = fixed[1];
-        }
+                             ClientArcs.LiveArc arc, boolean ownFirstPerson) {
+        double[][] fixed = ArcView.fix(arc.from(), arc.to(), above,
+                ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
+        double[] from = fixed[0];
+        double[] to = fixed[1];
 
         ArcFrame frame = ArcFrame.between(from, to, above);
         if (frame == null) return;
