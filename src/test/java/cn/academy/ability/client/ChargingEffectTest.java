@@ -1,7 +1,9 @@
 package cn.academy.ability.client;
 
+import cn.academy.ability.client.arc.ArcPattern;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -24,6 +26,18 @@ class ChargingEffectTest {
         }
         assertTrue(ChargingEffect.arcDue(10));
         assertTrue(ChargingEffect.arcDue(20));
+    }
+
+    @Test
+    void lEssaimDeLaMachineTientDansLeBloc() {
+        // Les gabarits de l'original sont tailles pour un corps : 1,5 a 2 blocs. Autour d'une
+        // machine d'un bloc, le joueur les a trouves trop grands et trop sortants. Ceux-ci
+        // tiennent dans le bloc, gabarit le plus fin compris.
+        assertEquals(4, ChargingEffect.MACHINE_SWARM.count());
+        assertTrue(ChargingEffect.MACHINE_SWARM.maxLength() <= 1.0,
+                "aucun arc ne doit depasser le bloc");
+        assertEquals(ArcPattern.SURROUND_THIN, ChargingEffect.MACHINE_SWARM.pattern(),
+                "c'est le meme dessin que l'entourage fin de l'original");
     }
 
     @Test
