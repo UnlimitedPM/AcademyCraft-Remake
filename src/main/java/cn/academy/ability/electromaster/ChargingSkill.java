@@ -33,8 +33,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public class ChargingSkill extends Skill {
 
-    /** Portee de la visee, comme l'original. */
-    private static final double RANGE = 15.0;
+    /** Portee de la visee, comme l'original. Publique : l'effet client s'en sert pour son arc. */
+    public static final double RANGE = 15.0;
 
     /**
      * Attente avant de pouvoir rebrancher : 10 ticks, une demi-seconde.
