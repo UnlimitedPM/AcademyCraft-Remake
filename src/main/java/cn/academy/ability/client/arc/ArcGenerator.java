@@ -116,12 +116,18 @@ public final class ArcGenerator {
     }
 
     /**
-     * La direction du ruban d'un segment : perpendiculaire au segment et au plan du motif.
+     * La direction du ruban d'un segment : perpendiculaire au segment, puis tournee au hasard.
      *
-     * <p>L'original prenait {@code crossProduct(dir, normal)} avec la normale de son motif,
-     * puis tournait le resultat d'un angle tire au hasard inferieur a quinze degres. Ici la
-     * rotation se fait autour du segment, pour que le ruban reste perpendiculaire a ce
-     * qu'il dessine.
+     * <p>L'original prenait {@code crossProduct(dir, normal)} avec la normale de son motif, puis
+     * passait le resultat a {@code randomRotate(15)} : trois rotations tirees au hasard, sur les
+     * trois axes. Le ruban n'est donc pas dans un plan fixe, il est de travers, chacun a sa
+     * facon.
+     *
+     * <p>Ce n'est pas un detail de finition, et le joueur l'a vu. Mon portage tournait le ruban
+     * autour du segment, ce qui le laissait dans le plan du motif : de profil les deux se
+     * ressemblent, mais le tireur, lui, regarde son eclair par la tranche, et une tranche ne se
+     * voit pas. Son attaque paraissait donc plus fine que celle de l'original, alors que vue de
+     * l'exterieur elle faisait exactement la meme taille.
      */
     private static double[] ribbonDirection(Segment segment, Random rng) {
         double[] direction = normalize(subtract(segment.start(), segment.end()));
@@ -132,8 +138,7 @@ public final class ArcGenerator {
             ribbon = new double[] { 0, 1, 0 };
         }
 
-        double angle = (rng.nextDouble() * 2 - 1) * Math.toRadians(RIBBON_TWIST);
-        return rotateAround(ribbon, direction, angle);
+        return deviate(ribbon[0], ribbon[1], ribbon[2], RIBBON_TWIST, rng);
     }
 
     /**
@@ -178,38 +183,38 @@ public final class ArcGenerator {
     }
 
     /**
-     * Un vecteur devie au hasard, de moins de {@code degrees} sur deux axes.
+     * Un vecteur devie au hasard : c'est le {@code randomRotate} de l'original, aux memes
+     * nombres. Un angle est tire dans la plage demandee, puis le vecteur tourne sur les trois
+     * axes, chacun d'un angle tire au hasard dans cette portee et de signe tire au hasard.
      *
-     * <p>L'original faisait tourner la direction sur les trois axes, chacun d'un angle tire
-     * entre -a et +a. Deux axes suffisent a donner la meme chose a l'oeil, et la troisieme
-     * rotation n'etait jamais visible.
+     * <p>L'original faisait bien ces trois rotations. J'en avais garde deux, en jugeant la
+     * troisieme invisible : c'est faux, et cela s'est paye ailleurs — voir
+     * {@link #ribbonDirection}, qui a justement besoin des trois pour sortir les rubans du plan
+     * du motif.
      */
     static double[] deviate(double x, double y, double z, double degrees, Random rng) {
-        double limit = Math.toRadians(degrees);
-        double yaw = (rng.nextDouble() * 2 - 1) * limit;
-        double pitch = (rng.nextDouble() * 2 - 1) * limit;
-
-        double turnedX = Math.cos(yaw) * x + Math.sin(yaw) * z;
-        double turnedZ = -Math.sin(yaw) * x + Math.cos(yaw) * z;
-        double turnedY = Math.cos(pitch) * y - Math.sin(pitch) * turnedZ;
-        double finalZ = Math.sin(pitch) * y + Math.cos(pitch) * turnedZ;
-        return new double[] { turnedX, turnedY, finalZ };
+        double reach = (rng.nextDouble() * 2 - 1) * Math.toRadians(degrees);
+        double[] turned = rotateX(new double[] { x, y, z }, (rng.nextDouble() * 2 - 1) * reach);
+        turned = rotateY(turned, (rng.nextDouble() * 2 - 1) * reach);
+        return rotateZ(turned, (rng.nextDouble() * 2 - 1) * reach);
     }
 
-    /**
-     * Fait tourner un vecteur perpendiculaire autour d'un axe.
-     *
-     * <p>Le cas general de Rodrigues se simplifie ici : le vecteur tourne dans le plan
-     * perpendiculaire a l'axe, donc le terme qui le longe disparait.
-     */
-    private static double[] rotateAround(double[] vector, double[] axis, double angle) {
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-        double[] turned = cross(axis, vector);
-        return new double[] {
-                vector[0] * cos + turned[0] * sin,
-                vector[1] * cos + turned[1] * sin,
-                vector[2] * cos + turned[2] * sin };
+    /** Une rotation autour de l'axe X du motif — le tangage de l'original. */
+    private static double[] rotateX(double[] v, double angle) {
+        double cos = Math.cos(angle), sin = Math.sin(angle);
+        return new double[] { v[0], v[1] * cos - v[2] * sin, v[1] * sin + v[2] * cos };
+    }
+
+    /** Une rotation autour de l'axe Y du motif — le lacet de l'original. */
+    private static double[] rotateY(double[] v, double angle) {
+        double cos = Math.cos(angle), sin = Math.sin(angle);
+        return new double[] { v[0] * cos + v[2] * sin, v[1], -v[0] * sin + v[2] * cos };
+    }
+
+    /** Une rotation autour de l'axe Z du motif — l'axe de son {@code rotateAroundZ}. */
+    private static double[] rotateZ(double[] v, double angle) {
+        double cos = Math.cos(angle), sin = Math.sin(angle);
+        return new double[] { v[0] * cos - v[1] * sin, v[0] * sin + v[1] * cos, v[2] };
     }
 
     // ------------------------------------------------------------------

@@ -28,13 +28,16 @@ public class ArcEffectPacket {
     private final Vec3 to;
     private final int lifeTicks;
     private final boolean lengthFixed;
+    private final int ownerId;
 
-    public ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed) {
+    public ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed,
+                           int ownerId) {
         this.pattern = pattern;
         this.from = from;
         this.to = to;
         this.lifeTicks = lifeTicks;
         this.lengthFixed = lengthFixed;
+        this.ownerId = ownerId;
     }
 
     public static void encode(ArcEffectPacket msg, FriendlyByteBuf buf) {
@@ -43,19 +46,21 @@ public class ArcEffectPacket {
         writePoint(buf, msg.to);
         buf.writeVarInt(msg.lifeTicks);
         buf.writeBoolean(msg.lengthFixed);
+        buf.writeVarInt(msg.ownerId);
     }
 
     public static ArcEffectPacket decode(FriendlyByteBuf buf) {
         String pattern = buf.readUtf();
         Vec3 from = readPoint(buf);
         Vec3 to = readPoint(buf);
-        return new ArcEffectPacket(pattern, from, to, buf.readVarInt(), buf.readBoolean());
+        return new ArcEffectPacket(pattern, from, to, buf.readVarInt(), buf.readBoolean(),
+                buf.readVarInt());
     }
 
     public static void handle(ArcEffectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> cn.academy.ability.client.arc.ArcRenderer.spawn(
-                msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed));
+                msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed, msg.ownerId));
         ctx.setPacketHandled(true);
     }
 
@@ -92,5 +97,10 @@ public class ArcEffectPacket {
     /** Vrai si l'eclair garde la portee entiere de son motif, comme {@code EntityArc.lengthFixed}. */
     boolean lengthFixed() {
         return lengthFixed;
+    }
+
+    /** Le tireur : c'est sa camera qui sert de depart quand il se regarde tirer. */
+    int ownerId() {
+        return ownerId;
     }
 }

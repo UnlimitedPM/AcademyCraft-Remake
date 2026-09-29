@@ -33,18 +33,20 @@ public final class ClientArcs {
         private final double[] to;
         private final double clip;
         private final long endTick;
+        private final int ownerId;
         private final ArcWiggle wiggle;
 
         private ArcMesh mesh;
         private int meshVariant = -1;
 
         LiveArc(ArcPattern pattern, double[] from, double[] to, double clip, long endTick,
-                ArcWiggle wiggle) {
+                int ownerId, ArcWiggle wiggle) {
             this.pattern = pattern;
             this.from = from;
             this.to = to;
             this.clip = clip;
             this.endTick = endTick;
+            this.ownerId = ownerId;
             this.wiggle = wiggle;
         }
 
@@ -56,6 +58,11 @@ public final class ClientArcs {
         /** Le point d'arrivee, en coordonnees du monde. */
         public double[] to() {
             return to;
+        }
+
+        /** Le tireur, tel que le serveur l'a nomme. */
+        public int ownerId() {
+            return ownerId;
         }
 
         public boolean visible() {
@@ -93,16 +100,20 @@ public final class ClientArcs {
      * proches ; faux, il se dessine jusqu'au bout vise et pas au-dela. La genese d'arc, dont
      * l'original reglait la longueur sur la portee de la competence, est dans le second cas :
      * sans cela son arc s'arretait au premier bloc rencontre et paraissait tout petit.
+     *
+     * <p>{@code ownerId} est le tireur. Il ne sert pas a dessiner l'eclair, mais a savoir que
+     * c'est le sien : le rendu recollera son depart sur la camera du joueur, comme le faisait
+     * l'optimisation de vue de l'original. Voir {@link ArcView}.
      */
     public static void spawn(ArcPattern pattern, double[] from, double[] to, int lifeTicks,
-                             boolean lengthFixed, long gameTime, Random rng) {
+                             boolean lengthFixed, int ownerId, long gameTime, Random rng) {
         double dx = to[0] - from[0];
         double dy = to[1] - from[1];
         double dz = to[2] - from[2];
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
         double clip = lengthFixed ? pattern.length() : distance;
-        ARCS.add(new LiveArc(pattern, from, to, clip, gameTime + lifeTicks,
+        ARCS.add(new LiveArc(pattern, from, to, clip, gameTime + lifeTicks, ownerId,
                 new ArcWiggle(pattern, rng.nextInt(ArcPatterns.variants()))));
     }
 

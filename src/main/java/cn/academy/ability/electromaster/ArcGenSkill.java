@@ -3,7 +3,6 @@ package cn.academy.ability.electromaster;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
-import cn.academy.ability.client.arc.ArcOrigins;
 import cn.academy.ability.client.arc.ArcPattern;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ArcEffectPacket;
@@ -121,25 +120,30 @@ public class ArcGenSkill extends Skill {
         double range = range(data);
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
-        // L'arc part de la main, pas des yeux : voir ArcOrigins, ou l'ecart avec l'original
-        // est explique. Le rayon, lui, continue de partir des yeux — c'est ce qu'on vise.
-        Vec3 hand = ArcOrigins.hand(eye, look);
-        // Le rayon des degats s'arrete au premier bloc : ce qui se trouve derriere un mur ne
-        // s'attrape pas.
+        // L'eclair part des YEUX, comme dans l'original : il posait son entite a
+        // `posY + eyeHeight` et l'orientait selon le regard. Ce n'est donc pas une main, et il
+        // ne faut pas en chercher une : en vue interne le depart est sur la camera, donc
+        // invisible, et en vue externe il tombe sur l'axe qui va de la camera au personnage —
+        // d'ou l'impression qu'il sort du corps quand on vise devant soi, et de nulle part
+        // quand on vise le ciel. ArcView recolle l'arc du tireur sur sa camera : c'est l'autre
+        // moitie du meme mecanisme.
+        // Le rayon des degats, lui, s'arrete au premier bloc : ce qui se trouve derriere un
+        // mur ne s'attrape pas.
         BlockHitResult block = TargetingUtil.findBlockInSight(player, range);
         Vec3 end = block == null ? eye.add(look.scale(range)) : block.getLocation();
         // L'eclair, lui, va jusqu'au bout de la portee, meme si le mur est plus proche.
         // L'original faisait exactement cela : il envoyait sa portee au client, et son arc se
         // dessinait jusque-la quel que soit le bloc rencontre. Le couper au premier mur le
         // rendait beaucoup plus court que dans l'original.
-        Vec3 visualEnd = hand.add(look.scale(range));
 
         // L'eclair se dessine chez tous ceux qui voient le tireur, et pas seulement chez
         // lui : c'est le message d'effet de l'original, et c'est ce qui fait qu'on voit
         // l'attaque venir. Les motifs d'arcs sont purs — aucun type de Minecraft — donc le
         // serveur peut les nommer sans rien connaitre du rendu.
+        // Le tireur voyage avec l'arc : c'est sa vue qui se recolle a sa camera.
         AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new ArcEffectPacket(ArcPattern.WEAK.name(), hand, visualEnd, ARC_TICKS, false));
+                new ArcEffectPacket(ArcPattern.WEAK.name(), eye, eye.add(look.scale(range)),
+                        ARC_TICKS, false, player.getId()));
 
         Entity target = TargetingUtil.findEntityAlong(player, eye, end,
                 e -> e instanceof LivingEntity);

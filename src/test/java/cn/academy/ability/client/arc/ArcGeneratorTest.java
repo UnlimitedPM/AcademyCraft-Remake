@@ -120,6 +120,36 @@ class ArcGeneratorTest {
     }
 
     @Test
+    @DisplayName("les rubans sont de biais, pas seulement tournes")
+    void lesRubansSontDeBiais() {
+        // L'original passait la direction de ses rubans a son randomRotate(15) : trois rotations
+        // tirees au hasard, sur les trois axes. Un ruban de l'original n'est donc pas
+        // perpendiculaire a la ligne qu'il dessine — il est de biais.
+        //
+        // Le portage, lui, le faisait tourner AUTOUR du segment : il restait exactement
+        // perpendiculaire, et rien ne se voyait. Sauf depuis l'oeil qui tire, qui regarde son
+        // attaque par la tranche : d'un ruban perpendiculaire on ne voit que la tranche, d'un
+        // ruban de biais on voit la surface. C'est toute la difference entre les deux, et le
+        // joueur l'a vue tout de suite.
+        ArcMesh mesh = ArcGenerator.generate(ArcPattern.STRONG, new Random(4));
+        double skew = 0;
+
+        for (Quad quad : mesh.quads()) {
+            // La largeur du ruban, de son coin « a » a son coin « b », et le sens de la ligne,
+            // du milieu de son bord de depart a celui de son bord d'arrivee.
+            double wx = quad.ax() - quad.bx(), wy = quad.ay() - quad.by(), wz = quad.az() - quad.bz();
+            double lx = (quad.cx() + quad.dx()) / 2 - (quad.ax() + quad.bx()) / 2;
+            double ly = (quad.cy() + quad.dy()) / 2 - (quad.ay() + quad.by()) / 2;
+            double lz = (quad.cz() + quad.dz()) / 2 - (quad.az() + quad.bz()) / 2;
+            double width = Math.sqrt(wx * wx + wy * wy + wz * wz);
+            double along = Math.sqrt(lx * lx + ly * ly + lz * lz);
+            skew = Math.max(skew, Math.abs(wx * lx + wy * ly + wz * lz) / (width * along));
+        }
+
+        assertTrue(skew > 0.1, "les rubans sont de biais par rapport a la ligne : " + skew);
+    }
+
+    @Test
     @DisplayName("plus de passes, un trait plus casse")
     void plusDePassesUnTraitPlusCasse() {
         ArcPattern one = new ArcPattern("essai", 0.1, 0.7, 0.9, 1.1, 0.15, 0.7, 1, 20, 0.5, 0.2, 0.2, 5L);

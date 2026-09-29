@@ -32,7 +32,7 @@ class ArcEffectPacketTest {
         ArcEffectPacket original = new ArcEffectPacket("strong",
                 new Vec3(12.5, 64.06250001, -31.125),
                 new Vec3(-7.75, 70.5, 2004.25),
-                10, true);
+                10, true, 42);
 
         ArcEffectPacket round = relire(original);
 
@@ -41,17 +41,19 @@ class ArcEffectPacketTest {
         assertEquals(original.to(), round.to());
         assertEquals(10, round.lifeTicks());
         assertTrue(round.lengthFixed(), "un arc fige garde la portee entiere de son motif");
+        assertEquals(42, round.ownerId(), "et le tireur voyage avec son arc");
     }
 
     @Test
     @DisplayName("la duree de vie et l'arrondi voyagent aussi")
     void laDureeDeVieVoyage() {
         ArcEffectPacket round = relire(new ArcEffectPacket("weak",
-                new Vec3(0, 0, 0), new Vec3(1, 1, 1), 1_200, false));
+                new Vec3(0, 0, 0), new Vec3(1, 1, 1), 1_200, false, 7));
 
         assertEquals("weak", round.pattern());
         assertEquals(1_200, round.lifeTicks(), "un arc long vit plus de cent ticks");
         assertEquals(1, round.to().x, 1e-12, "et le dernier chiffre apres la virgule reste");
         assertFalse(round.lengthFixed(), "un arc non fige s'arrete au point vise");
+        assertEquals(7, round.ownerId());
     }
 }

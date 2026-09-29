@@ -85,14 +85,15 @@ public class ArcRenderer {
     }
 
     /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
-    public static void spawn(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed) {
+    public static void spawn(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed,
+                             int ownerId) {
         Minecraft minecraft = Minecraft.getInstance();
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
 
         ClientArcs.spawn(ArcPattern.byName(pattern),
                 new double[] { from.x, from.y, from.z },
                 new double[] { to.x, to.y, to.z },
-                lifeTicks, lengthFixed, gameTime, RANDOM);
+                lifeTicks, lengthFixed, ownerId, gameTime, RANDOM);
     }
 
     @SubscribeEvent
@@ -110,9 +111,14 @@ public class ArcRenderer {
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer out = buffers.getBuffer(arc(TEXTURE));
 
+        // Le tireur, pour savoir quels eclairs sont les siens : ce sont les seuls dont le
+        // depart se recolle a sa camera. Voir ArcView, ou l'illusion est expliquee.
+        Minecraft minecraft = Minecraft.getInstance();
+        int ownId = minecraft.player == null ? -1 : minecraft.player.getId();
+
         for (ClientArcs.LiveArc arc : ClientArcs.live()) {
             if (arc.visible()) {
-                draw(out, pose.last().pose(), camera, above, arc);
+                draw(out, pose.last().pose(), camera, above, arc, arc.ownerId() == ownId);
             }
         }
         buffers.endBatch();
@@ -124,11 +130,23 @@ public class ArcRenderer {
      * <p>Le repere vient de {@link ArcFrame}, ou il est verifie : trois directions unitaires
      * qui se coupent a angle droit. C'est la que s'etait glissee la faute qui faisait partir
      * l'eclair de travers — deux fois la meme direction au lieu de deux perpendiculaires.
+     *
+     * <p>L'eclair du tireur se recolle a sa camera ({@link ArcView}) : c'est ce que faisait
+     * l'optimisation de vue de l'original, et c'est ce qui fait qu'il semble partir de la ou
+     * on regarde plutot que de la tete du personnage.
      */
     private static void draw(VertexConsumer out, Matrix4f matrix, Vec3 camera, double[] above,
-                             ClientArcs.LiveArc arc) {
+                             ClientArcs.LiveArc arc, boolean ownView) {
         double[] from = arc.from();
-        ArcFrame frame = ArcFrame.between(from, arc.to(), above);
+        double[] to = arc.to();
+        if (ownView) {
+            double[][] fixed = ArcView.fix(from, to,
+                    new double[] { camera.x, camera.y, camera.z });
+            from = fixed[0];
+            to = fixed[1];
+        }
+
+        ArcFrame frame = ArcFrame.between(from, to, above);
         if (frame == null) return;
 
         for (Quad quad : arc.mesh().quads()) {
