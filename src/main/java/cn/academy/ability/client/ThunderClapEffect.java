@@ -16,6 +16,13 @@ import net.minecraft.world.phys.Vec3;
  * la fin. Le port n'a pas d'entite d'arc : il seme des arcs courts qui vivent trois ticks et
  * se renouvellent, ce qui donne le meme gresillement continu — voir {@link SurroundArcs}.
  *
+ * <p>La taille, elle, a ete raccourcie une fois : le joueur trouvait ces arcs beaucoup trop
+ * grands, et ils l'etaient — mais c'etait l'echelle qui manquait, pas la borne. Une fois la
+ * mise a l'echelle de l'original retrouvee, le gras reprend ses vraies bornes, celles de
+ * {@link SurroundArcs#BOLD} : cinq arcs de 1,05 a 1,35 bloc. Entre-temps le joueur avait vu
+ * des arcs trois fois trop courts, et l'a dit ainsi : « ils sont un peu trop petit, peut-etre
+ * que tu n'avais pas bien remis leur vraie taille d'origine depuis la modif ».
+ *
  * <p>Comme les autres effets du genre, tout est cote client et rien ne voyage : chacun voit
  * l'eclair s'amasser autour de celui qui le prepare, sans que le serveur ait a en savoir quoi
  * que ce soit.
@@ -84,7 +91,7 @@ public final class ThunderClapEffect {
         // le prenait sur la boite de collision de l'entite, multipliee par 1,3 — c'est le meme
         // endroit, et c'est ce qui fait que les arcs tournent AUTOUR du joueur.
         Vec3 centre = player.getBoundingBox().getCenter();
-        SurroundArcs.spawn(SurroundArcs.CLAP, centre, SIZE_XZ, MIN_Y, MAX_Y, player.getId(),
+        SurroundArcs.spawn(SurroundArcs.BOLD, centre, SIZE_XZ, MIN_Y, MAX_Y, player.getId(),
                 player.getRandom());
     }
 }

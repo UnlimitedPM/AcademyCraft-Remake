@@ -75,28 +75,6 @@ class SurroundArcsTest {
         assertNotEquals(points.get(0), points.get(1));
     }
 
-    @Test
-    void lePointDeDepartReculeDUneDemiLongueurDArc() {
-        // Un arc est centre sur son point, comme chez l'original : pose au bord du cube, il en
-        // sort donc de la moitie de sa longueur, et c'est ce que le point recule.
-        assertTrue(SurroundArcs.inset(1.0, MACHINE) >= 0.5,
-                "la boite de la machine reste large");
-        assertEquals(0.325, SurroundArcs.inset(1.0, SurroundArcs.BOLD), 1e-6,
-                "des arcs de 1,05 a 1,35 dans un cube de un : il reste de quoi retrecir");
-        assertEquals(0.0, SurroundArcs.inset(0.5, SurroundArcs.BOLD), 1e-6,
-                "et un reste negatif vaut zero, jamais un recul");
-
-        // La promesse : demi-boite plus demi-longueur d'arc, cela reste dans le cube, plus la
-        // moitie de l'arc.
-        assertTrue(SurroundArcs.inset(1.0, MACHINE) / 2.0 + MACHINE.maxLength() / 2.0
-                        <= 0.5 + MACHINE.maxLength() / 2.0,
-                "un arc ne depasse jamais de plus de la moitie de sa taille");
-    }
-
-    /** Le gabarit de la charge : huit arcs courts et fins autour d'un bloc. */
-    private static final SurroundArcs.Gabarit MACHINE =
-            new SurroundArcs.Gabarit(ArcPattern.SURROUND_MICRO, 8, 0.2, 0.4);
-
     private static void assertPattern(ArcPattern pattern, double width, double maxOffset,
                                       double branchFactor) {
         assertEquals(width, pattern.width(), 1e-6);

@@ -27,8 +27,9 @@ import java.util.List;
  * <p>Portage d'{@code EntityIntensifyEffect}. L'original semait son gresillement sur SEPT
  * hauteurs — 2, 1,8, 1,5, 1, 0,5, 0 et moins 0,1 bloc au-dessus des pieds — en <b>descendant</b> :
  * une hauteur apres 0, 1, 3, 4, 6, 7 et 8 ticks, de la tete vers le sol. Chacune portait trois
- * ou quatre arcs, poses sur un <b>anneau</b> de 0,5 a 0,6 bloc de rayon, et chacun vivait trois
- * ticks. Le tout etait fini en quinze : une onde qui descend, pas une nappe.
+ * arcs — deux ici, pour la raison dite a {@link #ARCS_PER_HEIGHT} — poses sur un <b>anneau</b>
+ * de 0,5 a 0,6 bloc de rayon, et chacun vivait trois ticks. Le tout etait fini en quinze : une
+ * onde qui descend, pas une nappe.
  *
  * <p>Elle ne se joue qu'au RELACHEMENT, et le serveur l'annonce par {@code BodyIntensifyPacket} :
  * les hauteurs, les arcs et leurs delais sont une affaire d'image, et c'est ce crochet-ci qui les
@@ -53,21 +54,32 @@ public final class BodyIntensifyEffect {
     // --- L'ONDE, AUTOUR DU CORPS ---
 
     /** Les sept hauteurs de l'original, en blocs au-dessus des pieds. */
-    private static final double[] HEIGHTS = { 2.0, 1.8, 1.5, 1.0, 0.5, 0.0, -0.1 };
+    public static final double[] HEIGHTS = { 2.0, 1.8, 1.5, 1.0, 0.5, 0.0, -0.1 };
 
     /** Le tick de chacune : l'onde descend, de la tete vers le sol. */
-    private static final int[] DELAYS = { 0, 1, 3, 4, 6, 7, 8 };
+    public static final int[] DELAYS = { 0, 1, 3, 4, 6, 7, 8 };
 
     /** L'anneau du corps : de 0,5 a 0,6 bloc, soit juste au-dela de ses 0,3 de rayon. */
-    private static final double RING_MIN = 0.5;
-    private static final double RING_MAX = 0.6;
+    public static final double RING_MIN = 0.5;
+    public static final double RING_MAX = 0.6;
 
-    /** Trois ou quatre arcs par hauteur, comme son {@code RandUtils.rangei(3, 4)}. */
-    private static final int ARC_MIN = 3;
-    private static final int ARC_MAX = 4;
+    /**
+     * Les arcs d'une hauteur : deux.
+     *
+     * <p>L'original en semait trois — son {@code RandUtils.rangei(3, 4)} exclut le 4, donc
+     * toujours trois — et le port en semait trois ou quatre, un de trop. Mais le compte n'est
+     * pas toute l'histoire : ses arcs <b>naissent invisibles</b>. Son {@code SubArc} part avec
+     * {@code draw = false} et ne se montre qu'a une chance sur cinq par tick, si bien qu'un arc
+     * qui ne vit que trois ticks ne se voit guere plus d'un tick sur trois. Les notres naissent
+     * visibles et se montrent deux ticks sur trois : trois par anneau se liraient donc comme six
+     * chez lui, et le joueur l'a vu tout de suite — « ils sont trop nombreux ». Deux rendent son
+     * grain. Cela vaut aussi pour les anneaux des pieds, qui plongeaient dans le sol plus
+     * souvent que chez lui.
+     */
+    public static final int ARCS_PER_HEIGHT = 2;
 
     /** La vie de l'entite de l'original : quinze ticks, soit trois quarts de seconde. */
-    private static final int LIFE_TICKS = 15;
+    public static final int LIFE_TICKS = 15;
 
     // --- L'ECRAN ---
 
@@ -167,13 +179,12 @@ public final class BodyIntensifyEffect {
         }
     }
 
-    /** Une hauteur de l'onde : trois ou quatre arcs sur son anneau. */
+    /** Une hauteur de l'onde : deux arcs sur son anneau. */
     private static void sow(Entity owner, double height) {
-        int count = ARC_MIN + RANDOM.nextInt(ARC_MAX - ARC_MIN + 1);
         Vec3 base = owner.position();
-        List<Vec3> points = new ArrayList<>(count);
+        List<Vec3> points = new ArrayList<>(ARCS_PER_HEIGHT);
 
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < ARCS_PER_HEIGHT; i++) {
             double theta = RANDOM.nextDouble() * Math.PI * 2.0;
             double radius = RING_MIN + RANDOM.nextDouble() * (RING_MAX - RING_MIN);
             points.add(base.add(Math.sin(theta) * radius, height, Math.cos(theta) * radius));

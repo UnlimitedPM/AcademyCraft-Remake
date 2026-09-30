@@ -1,6 +1,7 @@
 package cn.academy.ability.client;
 
 import cn.academy.ability.client.arc.ArcPattern;
+import cn.academy.ability.client.arc.SurroundArcs;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,24 +17,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ChargingEffectTest {
 
     @Test
-    void lEssaimDeLaMachineTientDansLeBloc() {
-        // Les gabarits de l'original sont tailles pour un corps : 1,5 a 2 blocs. Autour d'une
-        // machine d'un bloc, le joueur les a trouves trop grands et trop sortants, meme une fois
-        // raccourcis : ce sont donc les arcs les plus courts ET le dessin le plus fin.
-        assertEquals(8, ChargingEffect.MACHINE_SWARM.count(),
-                "le joueur n'en voyait pas assez a quatre");
-        assertEquals(0.2, ChargingEffect.MACHINE_SWARM.minLength(), 1e-6);
-        assertEquals(0.4, ChargingEffect.MACHINE_SWARM.maxLength(), 1e-6);
-        assertEquals(ArcPattern.SURROUND_MICRO, ChargingEffect.MACHINE_SWARM.pattern(),
-                "le dessin le plus fin du port, la moitie de l'entourage fin de l'original");
-        assertEquals(0.1, ArcPattern.SURROUND_MICRO.width(), 1e-6,
-                "soit la moitie de son entourage fin, qui fait 0,2");
-        // Le moteur genere le motif a sa longueur puis le recadre : un motif court avec les
-        // depassements d'un grand motif ferait un gribouillis de la taille des depassements.
-        // Les deux vont donc ensemble, dans la proportion de l'entourage fin de l'original.
-        assertEquals(0.4, ArcPattern.SURROUND_MICRO.length(), 1e-6);
-        assertEquals(0.8 * 0.4 / 1.75, ArcPattern.SURROUND_MICRO.maxOffset(), 0.01,
-                "le depassement suit la longueur du motif");
+    void lEssaimDeLaMachineEstCeluiDeLoriginal() {
+        // La machine recoit l'entourage MOYEN de l'original — six arcs de 3 a 4 blocs, donc 0,9
+        // a 1,2 une fois la mise a l'echelle de son dessin retrouvee. Le port les avait
+        // raccourcis a 0,2 : il croyait corriger une taille, il rattrapait une echelle.
+        assertEquals(ArcPattern.SURROUND_NORMAL, SurroundArcs.NORMAL.pattern());
+        assertEquals(6, SurroundArcs.NORMAL.count());
+        assertEquals(0.9, SurroundArcs.NORMAL.minLength(), 1e-6);
+        assertEquals(1.2, SurroundArcs.NORMAL.maxLength(), 1e-6);
+
+        // Et la longueur du motif est la vraie taille de l'arc : le moteur le genere a cette
+        // longueur, puis le recadre a la portee demandee — il ne le met pas a l'echelle.
+        assertEquals(1.05, ArcPattern.SURROUND_NORMAL.length(), 1e-6);
+        assertEquals(0.09, ArcPattern.SURROUND_NORMAL.width(), 1e-6,
+                "l'original fait 0,3 de large, dessine a 0,3");
+        assertEquals(0.24, ArcPattern.SURROUND_NORMAL.maxOffset(), 1e-6,
+                "et 0,8 de depassement, dessine a 0,3");
     }
 
     @Test

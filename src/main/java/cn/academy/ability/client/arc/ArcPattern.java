@@ -71,8 +71,12 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     // l'echelle, et les arcs du bloc faisaient trois fois la taille de ceux du vrai mod — ce
     // que le joueur a vu tout de suite : « ce n'est pas la taille, c'est l'echelle ».
     //
-    // Les trois motifs d'entourage portent donc DEJA la mise a l'echelle, comme le micro et
-    // le fin du port, qui sont nés aux bonnes proportions.
+    // Les trois motifs d'entourage portent donc DEJA la mise a l'echelle.
+    //
+    // Le port avait ajoute un quatrieme et un cinquieme motif, plus fins, pour la machine
+    // (surround_micro) et pour l'orage (surround_fine) : deux rattrapages de cette echelle
+    // manquante, qui n'ont plus lieu d'etre une fois l'echelle retrouvee. Voir ChargingEffect
+    // et ThunderClapEffect.
 
     /** L'arc d'entourage fin, celui dont le corps s'entoure chez l'original. */
     public static final ArcPattern SURROUND_THIN =
@@ -85,41 +89,6 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     /** L'arc d'entourage gras, le plus branche et le plus large : l'eclair qui claque. */
     public static final ArcPattern SURROUND_BOLD =
             new ArcPattern("surround_bold", 0.105, 0.7, 0.9, 0.36, 0.45, 0.9, 3, 1.2, 0.5, 0.2, 0.2, 8L);
-
-    /**
-     * L'arc d'entourage le plus fin, celui du port : la moitie de l'epaisseur du fin.
-     *
-     * <p>ECART ASSUME. L'original n'en avait que trois, tailles pour un corps. Autour d'une
-     * machine d'un bloc, le joueur a trouve le plus fin encore trop gros — c'est alors sa
-     * <b>largeur</b> qui depassait, ses arcs une fois raccourcis a la taille du bloc. Voir
-     * {@code ChargingEffect}.
-     *
-     * <p>ATTENTION A LA LONGUEUR DU MOTIF. Le moteur <b>genere</b> le motif a cette longueur,
-     * puis le <b>recadre</b> a la portee demandee — il ne le met pas a l'echelle. Un motif court
-     * avec les depassements d'un grand motif ne fait donc pas un petit eclair : il fait un
-     * gribouillis de la taille des depassements. C'est ce qui est arrive au premier essai, avec
-     * 0,8 de depassement pour 0,3 de longueur, et le joueur a vu des arcs d'un bloc entier.
-     *
-     * <p>Les deux vont donc ensemble : 0,4 de long, et 0,18 de depassement — exactement la
-     * proportion de l'entourage fin de l'original, qui fait 1,75 pour 0,8.
-     */
-    public static final ArcPattern SURROUND_MICRO =
-            new ArcPattern("surround_micro", 0.1, 0.7, 0.9, 0.18, 0.7, 0.9, 3, 0.4, 0.5, 0.2, 0.2, 9L);
-
-    /**
-     * L'entourage de l'orage qui s'amasse.
-     *
-     * <p>ECART ASSUME, demande du joueur : le gras de l'original entourait le corps d'eclairs
-     * qu'il a trouves beaucoup trop grands et beaucoup trop gros.
-     *
-     * <p>La longueur et le depassement vont ensemble, comme pour {@link #SURROUND_MICRO} : le
-     * moteur genere le motif a cette longueur, donc c'est elle qui fait la taille de l'arc. Le
-     * joueur l'a trouve trop grande deux fois de suite, et le tout a ete divise par trois :
-     * 0,35 de long, 0,18 de depassement, 0,1 de large — soit les proportions du micro, qui
-     * etaient deja celles qu'il avait choisies pour la machine.
-     */
-    public static final ArcPattern SURROUND_FINE =
-            new ArcPattern("surround_fine", 0.1, 0.7, 0.9, 0.18, 0.6, 0.9, 3, 0.35, 0.5, 0.2, 0.2, 10L);
 
     /**
      * Le rail du railgun : les arcs que l'original semait le long de son rayon.
@@ -144,8 +113,7 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     /** Les motifs, dans l'ordre ou ils sont nommes : les cinq de l'original, puis l'entourage. */
     public static List<ArcPattern> all() {
         return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE,
-                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO, SURROUND_FINE,
-                RAILGUN);
+                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, RAILGUN);
     }
 
     /** Le motif qui porte ce nom, ou l'arc faible si le nom est inconnu. */

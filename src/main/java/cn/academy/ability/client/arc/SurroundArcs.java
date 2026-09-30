@@ -44,36 +44,10 @@ public final class SurroundArcs {
     /** Gras : cinq arcs, longs de 3,5 a 4,5 blocs. Le claquement d'orage. */
     public static final Gabarit BOLD = new Gabarit(ArcPattern.SURROUND_BOLD, 5, 1.05, 1.35);
 
-    /**
-     * L'orage du claquement : quatre arcs courts et minces, serres contre le corps.
-     *
-     * <p>ECART ASSUME, demande du joueur : le gras ci-dessus, qui est celui de l'original,
-     * lui a paru beaucoup trop grand et beaucoup trop gros autour de lui. Les bornes de
-     * longueur n'ont d'effet que sous la longueur du motif, qui est donc la vraie taille de
-     * l'arc — 1,2 bloc ici.
-     */
-    public static final Gabarit CLAP = new Gabarit(ArcPattern.SURROUND_FINE, 4, 0.35, 0.6);
-
     /** La vie d'un arc d'entourage, en ticks : trois, comme {@code EntityIntensifyEffect}. */
     public static final int LIFE_TICKS = 3;
 
     private SurroundArcs() {
-    }
-
-    /**
-     * Le cote de la boite ou semer, pour qu'un arc ne sorte d'un cube que de la moitie de lui-meme.
-     *
-     * <p>Un arc d'entourage nait a un point de la boite et file dans une direction tiree : pose
-     * au bord, il en sort donc de la MOITIE de sa longueur, puisqu'il est centre sur son point —
-     * voir {@link #spawnAt}, qui suit l'original. Le point de depart recule d'autant, et la
-     * boite reste ainsi dans ses murs.
-     *
-     * <p>Quand la boite est plus petite que cela — les gros gabarits dans un bloc — il ne reste
-     * rien a retrecir, et la fonction rend zero : l'appelant garde alors son point au centre, et
-     * laisse les arcs depasser, comme l'original.
-     */
-    public static double inset(double cubeSize, Gabarit gabarit) {
-        return Math.max(0.0, cubeSize - gabarit.maxLength() / 2.0);
     }
 
     /**
