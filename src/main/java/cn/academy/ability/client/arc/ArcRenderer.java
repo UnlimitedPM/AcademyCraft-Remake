@@ -106,14 +106,17 @@ public class ArcRenderer {
     /**
      * Le coeur : 241, 240, 222, rayon 0,09 — les nombres de l'original.
      *
-     * <p>Son opacite, elle, a ete baissee. L'original la tenait a 200 sur 255, mais son
-     * cylindre n'etait dessine qu'une fois par face vue ; ici, le tri des faces arriere etant
-     * desactive, le demi-cylindre qui nous tourne le dos se dessine AUSSI, par-dessus le
-     * premier. Le faisceau paraissait donc deux fois trop lumineux — ce que le joueur a vu.
-     * La retouche s'arrete la : c'est la meme geometrie, avec une opacite de moitie.
+     * <p>C'est le PLUS PETIT des deux cylindres, et le joueur le decrit comme un laser blanc a
+     * l'interieur du gros, qui prend la couleur jaune de celui-ci : « pour donner l'impression
+     * que c'est la piece qui est foncee en ligne droite ». C'est exactement ca — la piece de
+     * l'original, celle qu'on lance et qu'on tire, et son trait dans le vide.
+     *
+     * <p>Son opacite est donc pleine, et celle du halo bien plus faible : le blanc se voit a
+     * travers l'orange, qui le rechauffe. Le premier essai le laissait a 150 sur 255, donc sous
+     * son halo — il ne s'y lisait pas.
      */
     private static final double CORE_RADIUS = 0.09;
-    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 150 / 255f };
+    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 255 / 255f };
 
     /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 50 pour la meme raison. */
     private static final double HALO_RADIUS = 0.13;
@@ -130,10 +133,10 @@ public class ArcRenderer {
      * <p>Le joueur decrit exactement ce que faisait l'original : « pendant environ deux
      * secondes le laser grossit et retrecis tres rapidement, pour donner une impression de
      * mouvement ». C'etaient ses {@code widthWiggleRadius} de 0,3 et {@code maxWiggleSpeed} de
-     * 0,8 : la largeur du rayon tremble autour de la sienne.
+     * 0,8, mais l'amplitude a ete reduite de moitie : il l'a trouvee plus forte que la vraie.
      */
-    private static final double WIGGLE_RADIUS = 0.3;
-    private static final double WIGGLE_TICKS = 4.0;
+    private static final double WIGGLE_RADIUS = 0.15;
+    private static final double WIGGLE_TICKS = 3.0;
 
     /**
      * La ligne du milieu de la texture du faisceau : blanche, donc sans effet sur la couleur.
@@ -495,7 +498,7 @@ public class ArcRenderer {
         return Math.max(0.0, left / BEAM_SHRINK);
     }
 
-    /** La pulsation rapide : plus ou moins trente pour cent, une oscillation toutes les quatre images. */
+    /** La pulsation rapide : plus ou moins quinze pour cent, une oscillation toutes les trois images. */
     private static double wiggle(double age) {
         return 1.0 + WIGGLE_RADIUS * Math.sin(age * Math.PI * 2.0 / WIGGLE_TICKS);
     }
