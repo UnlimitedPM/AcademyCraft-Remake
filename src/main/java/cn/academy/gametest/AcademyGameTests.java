@@ -4213,6 +4213,125 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La PORTEE du lancer, sur un sol plat, a une experience donnee.
+     *
+     * <p>Le joueur a fait le test dans les deux versions : a 45 degres vers le haut, sur une
+     * ligne droite, le bloc du port tombe 11 blocs plus loin avec 11 % d'experience, et celui
+     * du vrai mod 18 blocs plus loin avec 7 %. Un lancer qui va plus loin avec MOINS
+     * d'experience ne peut pas venir des nombres du lancer : la vitesse suit la meme courbe
+     * dans les deux versions — 0,5 a 1 bloc par tick — et la gravite est la meme, 0,04 par
+     * tick, ecrite dans les deux sources.
+     *
+     * <p>Ce test fige donc ce que le port fait pour de bon, sur un sol plat et sans mur :
+     * la distance horizontale entre le joueur et le bloc pose, comparee a la portee theorique
+     * d'un tir a 45 degres,
+     *
+     * <pre>R = (v cos) / g * (v sin + racine(v^2 sin^2 + 2 g h))</pre>
+     *
+     * <p>avec {@code h} la hauteur du bloc au-dessus du sol. Si le port s'en ecarte, c'est lui
+     * qui a un probleme, et le message du test dit de combien.
+     *
+     * <p>MESURE DU 30/09 : 8,67 blocs en 24 ticks, pour un calcul de 9,11 — l'ecart vient des
+     * deux degres de plus que fait le lancer, parce que le bloc n'est pas tout a fait pose sur
+     * son point de portage quand il part. Le port est donc exactement aux nombres du vrai mod :
+     * pour aller a 19 blocs a 45 degres, il faudrait une vitesse de 0,85 bloc par tick, soit
+     * 70 % d'experience et non 7. C'est ce que le joueur avait dans le vrai mod — son 7 % etait
+     * l'experience d'AUTRE CHOSE que de la competence.
+     */
+    @GameTest(template = "empty")
+    public static void laPorteeDuLancerEstCelleDuCalcul(GameTestHelper helper) {
+        var manip = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        var iron = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        var air = net.minecraft.world.level.block.Blocks.AIR;
+        int height = 100;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Un sol plat, large et long : le bloc doit retomber dessus, pas sur un decor.
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dz = -6; dz <= 40; dz++) {
+                helper.setBlock(eyes.offset(dx, -1, dz), stone);
+                for (int dy = 0; dy <= 4; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz), air);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "portee-du-lancer");
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(manip.getCategory(), 2);
+        data.learnSkill(manip);
+        // L'experience du joueur au moment de son essai : onze pour cent.
+        data.addSkillExp(manip, 0.11f);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        helper.setBlock(eyes.offset(0, 0, 3), iron);
+        assertTrue(helper, manip.canStart(player, data), "le bloc de fer est dans le regard");
+
+        // Le monde de test est partage : un bloc laisse par un essai precedent y traine
+        // encore, et le lancer en trouverait deux.
+        var box = new net.minecraft.world.phys.AABB(
+                abs.getX() - 8, abs.getY() - 3, abs.getZ() - 8,
+                abs.getX() + 9, abs.getY() + 8, abs.getZ() + 45);
+        for (var stray : helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box)) {
+            stray.discard();
+        }
+
+        manip.onStart(player, data);
+
+        var carried = helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box);
+        assertValue(helper, 1, carried.size(), "le bloc est devenu une entite");
+        var block = carried.get(0);
+
+        // Le regard : quarante-cinq degres vers le haut, droit devant. Le bloc monte avec lui,
+        // et il lui faut le temps de s'y poser : sa vitesse de portage s'annule sur le point
+        // au carre de la distance, donc les derniers dixiemes de bloc sont longs.
+        player.setXRot(-45f);
+        for (int i = 0; i < 200; i++) {
+            manip.onHoldTick(player, data, i);
+            block.tick();
+        }
+
+        net.minecraft.world.phys.Vec3 launch = block.position();
+        assertFalse(helper, manip.onRelease(player, data, 40), "le lancer termine le maintien");
+        double speed = 0.5 + 0.5 * 0.11;
+        net.minecraft.world.phys.Vec3 velocity = block.getDeltaMovement();
+        assertClose(helper, speed, velocity.length(), "la vitesse du lancer");
+        // Le regard est droit devant (+Z) : la part horizontale est donc en Z, pas en X.
+        assertTrue(helper,
+                Math.abs(Math.hypot(velocity.x, velocity.z) - speed * Math.cos(Math.PI / 4)) < 0.03,
+                "un tir a 45 degres : la part horizontale vaut la part verticale, " + velocity);
+
+        // Le vol, tick par tick, jusqu'a la pose.
+        int ticks = 0;
+        while (block.isAlive() && ticks < 400) {
+            block.tick();
+            ticks++;
+        }
+        assertFalse(helper, block.isAlive(), "le bloc finit par se poser");
+
+        double distance = Math.hypot(block.position().x - launch.x, block.position().z - launch.z);
+        double drop = launch.y - block.position().y;
+        double w = speed * Math.cos(Math.PI / 4);
+        double g = 0.04;
+        double expected = w / g * (w + Math.sqrt(w * w + 2 * g * drop));
+        assertTrue(helper, Math.abs(distance - expected) < 1.5,
+                "portee " + (Math.round(distance * 100) / 100.0) + " blocs en " + ticks
+                        + " ticks pour un calcul de " + (Math.round(expected * 100) / 100.0)
+                        + " a la vitesse " + speed + " | depart " + launch
+                        + " vitesse " + velocity);
+
+        helper.succeed();
+    }
+
+    /**
      * Le sol du couloir : une bande de pierre d'un bloc de large, et de l'air au-dessus.
      *
      * <p>L'air sert a deux choses : il laisse la place aux cinq colonnes de l'onde, qui
