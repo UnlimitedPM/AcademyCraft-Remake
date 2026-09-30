@@ -96,4 +96,33 @@ class MagManipTest {
         // A l'instant zero, tous les blocs sont droits.
         assertEquals(0.0, MagManipVisuals.spinYaw(0, 7), EPS);
     }
+
+    @Test
+    void leGresillementGardeQuatreArcsVivants() {
+        // L'original avait quatre arcs d'entourage vivants a la fois, et chacun vivait trente
+        // ticks : il en reensemencait donc un de temps en temps. Ici un arc ne vit que trois
+        // ticks, donc les semis se repartissent sur ces trois ticks : deux, un, un.
+        assertEquals(2, MagManipVisuals.arcsToSow(0));
+        assertEquals(1, MagManipVisuals.arcsToSow(1));
+        assertEquals(1, MagManipVisuals.arcsToSow(2));
+        assertEquals(2, MagManipVisuals.arcsToSow(3));
+
+        // Et le compte retombe toujours sur quatre arcs vivants par periode.
+        int sown = 0;
+        for (long tick = 0; tick < MagManipVisuals.ARC_LIFE; tick++) {
+            sown += MagManipVisuals.arcsToSow(tick);
+        }
+        assertEquals(MagManipVisuals.ARCS_ALIVE, sown, "quatre arcs par vie d'arc");
+
+        // Aucun tick ne seme rien : ca s'eteindrait un instant, et cela se verrait.
+        for (long tick = 0; tick < 100; tick++) {
+            assertTrue(MagManipVisuals.arcsToSow(tick) >= 1, "rien seme au tick " + tick);
+        }
+    }
+
+    @Test
+    void leCubeDuGresillementEstCeluiDuBloc() {
+        // Un bloc, fois le sizeMultiplyer de 1,3 de l'original.
+        assertEquals(1.3, MagManipVisuals.SURROUND_CUBE, EPS);
+    }
 }

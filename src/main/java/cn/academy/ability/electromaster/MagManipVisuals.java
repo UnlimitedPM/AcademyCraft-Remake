@@ -37,7 +37,39 @@ public final class MagManipVisuals {
     /** La portee du lancer : cinq blocs — vingt-cinq, au carre. */
     public static final double THROW_RANGE_SQ = 25.0;
 
+    /**
+     * Le cote du cube ou gresille l'electricite, autour du bloc tenu.
+     *
+     * <p>Un bloc, fois le {@code sizeMultiplyer} de 1,3 de l'original : sa boite a points etait
+     * faite des dimensions de ce qu'elle entourait, multipliees par ce facteur. Et centree sur le
+     * bloc, donc etendue de plus ou moins 0,65 dans les trois directions.
+     */
+    public static final double SURROUND_CUBE = 1.3;
+
+    /** La vie d'un arc d'entourage, en ticks — celle de {@code SurroundArcs}. */
+    public static final int ARC_LIFE = 3;
+
+    /** Les arcs vivants a la fois : les quatre de l'original, un {@code ArcType.THIN}. */
+    public static final int ARCS_ALIVE = 4;
+
     private MagManipVisuals() {}
+
+    /**
+     * Combien d'arcs semer ce tick pour en garder {@link #ARCS_ALIVE} vivants.
+     *
+     * <p>L'original avait quatre arcs vivants a la fois, mais chacun vivait jusqu'a trente ticks :
+     * il n'en reensemencait donc qu'un de temps en temps, au fil des morts. Un arc d'entourage ne
+     * vit ici que trois ticks — {@link #ARC_LIFE} —, donc les quatre tiennent en trois ticks de
+     * semis : deux, puis un, puis un. C'est ce decalage qui fait un gresillement continu plutot
+     * qu'une salve qui s'allume et s'eteint trois fois par seconde.
+     *
+     * <p>Le compte est pose pour que la moyenne tombe sur {@link #ARCS_ALIVE} quel que soit le
+     * couple de constantes : la part entiere, plus un tant que le reste n'est pas epuise.
+     */
+    public static int arcsToSow(long tick) {
+        return ARCS_ALIVE / ARC_LIFE
+                + (Math.floorMod(tick, ARC_LIFE) < ARCS_ALIVE % ARC_LIFE ? 1 : 0);
+    }
 
     /**
      * Ou le bloc se tient : deux blocs devant les yeux, un dixieme sous la tete.

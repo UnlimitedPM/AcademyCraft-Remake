@@ -29,6 +29,11 @@ import net.minecraftforge.fml.common.Mod;
  * hasard, un pour le lacet et un pour le tangage. Le port les deduit de l'identifiant de
  * l'entite — voir {@link MagManipVisuals} — donc deux blocs attrapes ne tournent pas au meme
  * rythme, sans qu'aucun tirage n'ait lieu a chaque image.
+ *
+ * <p>Le modele se pose <b>centre sur la position de l'entite</b>, qui est le centre du bloc : le
+ * moteur dessine ses modeles de 0 a 1, il faut donc reculer d'un demi-bloc sur les TROIS axes.
+ * L'original reculait des trois — {@code translate(-bp.x - 0.5, -bp.y - 0.5, -bp.z - 0.5)} — et
+ * c'est un demi-bloc de trop vers le haut que le port avait oublie sur la hauteur.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class MagManipRenderer {
@@ -51,7 +56,7 @@ public final class MagManipRenderer {
             if (!(entity instanceof EntityMagManipBlock block)) continue;
 
             pose.pushPose();
-            pose.translate(block.getX() - camera.x - 0.5, block.getY() - camera.y,
+            pose.translate(block.getX() - camera.x - 0.5, block.getY() - camera.y - 0.5,
                     block.getZ() - camera.z - 0.5);
             pose.mulPose(Axis.YP.rotationDegrees(
                     (float) MagManipVisuals.spinYaw(block.tickCount, block.getId())));

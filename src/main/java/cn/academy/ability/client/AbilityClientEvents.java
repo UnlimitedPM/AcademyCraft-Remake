@@ -112,6 +112,9 @@ public class AbilityClientEvents {
         // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
         // arcs d'ecran scintillent a chaque tick — voir BodyIntensifyEffect.
         BodyIntensifyEffect.tick();
+        // Et le bloc tenu par la manipulation magnetique gresille tout le temps qu'il vit :
+        // l'essaim se reensemence a chaque tick, voir MagManipEffect.
+        MagManipEffect.tick();
 
         for (Binding binding : BINDINGS) {
             tick(binding);
