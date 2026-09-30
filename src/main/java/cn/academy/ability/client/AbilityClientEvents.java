@@ -316,13 +316,19 @@ public class AbilityClientEvents {
      * ralentissant la marche du joueur, dont le champ de vision se tire aussi — le port ne
      * touche pas au deplacement, il elargit la vue directement.
      *
-     * <p>C'est un <b>facteur</b> et pas un reglage : il s'applique au champ courant, donc il se
-     * voit meme quand le joueur l'a pousse au maximum, comme il l'avait remarque.
+     * <p>C'est un <b>nombre de degres</b> ajoute au champ du joueur, donc il se voit quel que soit
+     * son reglage, et il grandit avec la charge.
      */
     @SubscribeEvent
     public static void onComputeFov(net.minecraftforge.client.event.ComputeFovModifierEvent event) {
-        float boost = ThunderClapEffect.fovBoost();
-        if (boost > 0f) event.setNewFovModifier(event.getFovModifier() * (1f + boost));
+        float degrees = ThunderClapEffect.fovDegrees();
+        if (degrees <= 0f) return;
+
+        // Le facteur attendu est un rapport au champ de BASE — celui du reglage, pas celui de
+        // l'image en cours — donc les degres se divisent par lui.
+        int base = net.minecraft.client.Minecraft.getInstance().options.fov().get();
+        if (base <= 0) return;
+        event.setNewFovModifier(event.getFovModifier() + degrees / base);
     }
 
     /**

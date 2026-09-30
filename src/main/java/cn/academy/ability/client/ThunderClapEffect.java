@@ -26,12 +26,18 @@ public final class ThunderClapEffect {
      * La boite d'ou l'electricite part, et le dezoom de la vue. Deux etats de classe : c'est
      * un effet du joueur local, et il n'y en a qu'un.
      */
-    private static final double SIZE_XZ = 0.6;
-    private static final double MIN_Y = 0.0;
-    private static final double MAX_Y = 1.6;
+    private static final double SIZE_XZ = 0.5;
+    private static final double MIN_Y = -0.5;
+    private static final double MAX_Y = 0.7;
 
-    /** Le dezoom a pleine charge, en part du champ de vision. */
-    private static final float FOV_AT_FULL = 0.25f;
+    /**
+     * Le dezoom a pleine charge, en <b>degres</b> de champ de vision.
+     *
+     * <p>Un nombre de degres et non une part : c'est ce que le joueur a demande pour l'essayer,
+     * et c'est plus lisible — « quarante degres de plus » se verifie a l'oeil, « vingt-cinq pour
+     * cent » ne se voit qu'en comparant deux reglages.
+     */
+    private static final float FOV_DEGREES = 40f;
 
     /** Où en est la charge montree, de 0 a 1 ; 0 quand rien ne charge. */
     private static float progress;
@@ -39,9 +45,9 @@ public final class ThunderClapEffect {
     private ThunderClapEffect() {
     }
 
-    /** Le dezoom de la charge, a appliquer au champ de vision. */
-    public static float fovBoost() {
-        return FOV_AT_FULL * progress;
+    /** Le dezoom de la charge, en degres a ajouter au champ de vision. */
+    public static float fovDegrees() {
+        return FOV_DEGREES * progress;
     }
 
     /** La charge s'arrete : la vue reprend sa place. */
@@ -74,8 +80,10 @@ public final class ThunderClapEffect {
 
         if (chargeTicks % SurroundArcs.LIFE_TICKS != 0) return;
 
-        // Le centre est au milieu du corps : la boite monte du sol a la tete.
-        Vec3 centre = player.position();
+        // Le centre est au milieu du corps : la boite monte du bassin a la tete. L'originale
+        // le prenait sur la boite de collision de l'entite, multipliee par 1,3 — c'est le meme
+        // endroit, et c'est ce qui fait que les arcs tournent AUTOUR du joueur.
+        Vec3 centre = player.getBoundingBox().getCenter();
         SurroundArcs.spawn(SurroundArcs.CLAP, centre, SIZE_XZ, MIN_Y, MAX_Y, player.getId(),
                 player.getRandom());
     }

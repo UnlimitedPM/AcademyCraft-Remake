@@ -107,11 +107,12 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
      *
      * <p>La longueur et le depassement vont ensemble, comme pour {@link #SURROUND_MICRO} : le
      * moteur genere le motif a cette longueur, donc c'est elle qui fait la taille de l'arc. Le
-     * joueur a trouve le premier essai encore trop grand et trop loin de lui, et le tout a ete
-     * resserre : moins d'un bloc de long, 0,3 de depassement, et une largeur de 0,13.
+     * joueur l'a trouve trop grande deux fois de suite, et le tout a ete divise par trois :
+     * 0,35 de long, 0,18 de depassement, 0,1 de large — soit les proportions du micro, qui
+     * etaient deja celles qu'il avait choisies pour la machine.
      */
     public static final ArcPattern SURROUND_FINE =
-            new ArcPattern("surround_fine", 0.13, 0.7, 0.9, 0.3, 0.6, 0.9, 3, 0.7, 0.5, 0.2, 0.2, 10L);
+            new ArcPattern("surround_fine", 0.1, 0.7, 0.9, 0.18, 0.6, 0.9, 3, 0.35, 0.5, 0.2, 0.2, 10L);
 
     /**
      * Le nombre de variantes tirees par motif.

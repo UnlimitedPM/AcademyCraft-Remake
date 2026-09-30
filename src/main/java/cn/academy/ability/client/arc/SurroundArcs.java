@@ -51,7 +51,7 @@ public final class SurroundArcs {
      * longueur n'ont d'effet que sous la longueur du motif, qui est donc la vraie taille de
      * l'arc — 1,2 bloc ici.
      */
-    public static final Gabarit CLAP = new Gabarit(ArcPattern.SURROUND_FINE, 4, 0.7, 1.2);
+    public static final Gabarit CLAP = new Gabarit(ArcPattern.SURROUND_FINE, 4, 0.35, 0.6);
 
     /** La vie d'un arc d'entourage, en ticks : trois, comme {@code EntityIntensifyEffect}. */
     public static final int LIFE_TICKS = 3;
