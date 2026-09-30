@@ -119,6 +119,23 @@ public class ArcRenderer {
     /** La part de largeur qui reste une fois le faisceau retreci. */
     private static final double BEAM_SHRUNK = 0.6;
 
+    /**
+     * La ligne du milieu de la texture du faisceau : blanche, donc sans effet sur la couleur.
+     *
+     * <p>Les cylindres de l'original ne sont PAS textures — son {@code RendererRayCylinder} les
+     * dessine avec un shader sans texture, et sa couleur est une couleur pleine. Notre bande de
+     * sommets demande bien une texture, alors on lui donne la ligne blanche du milieu :
+     * multipliee par la couleur du sommet, elle ne la change pas. C'est ce placage qui manquait,
+     * et qui etirait le degrade jaune sur toute la longueur du tir.
+     */
+    private static final float BEAM_FLAT_V = 0.5f;
+
+    /** La largeur du ruban de lueur, comme le {@code glow.width} de l'original : 1,1. */
+    private static final double GLOW_WIDTH = 1.1;
+
+    /** Son opacite, le reste venant de l'alpha de sa texture. */
+    private static final float GLOW_ALPHA = 0.75f;
+
     /** Un faisceau vivant : ses deux bouts, sa naissance et sa duree. */
     private record Beam(double[] from, double[] to, long birth, int life) {}
 
@@ -299,6 +316,33 @@ public class ArcRenderer {
         double shrink = shrink(age);
         cylinder(out, pose, camera, from, to, u, v, CORE_RADIUS * shrink, CORE_COLOR, alpha);
         cylinder(out, pose, camera, from, to, u, v, HALO_RADIUS * shrink, HALO_COLOR, alpha);
+        glow(out, pose, camera, from, to, axis, alpha);
+    }
+
+    /**
+     * Le ruban large qui enveloppe le faisceau : la « lueur » de l'original.
+     *
+     * <p>C'est la seule partie texturee. {@code railgun.png} est une bande dont le milieu est
+     * blanc et les bords orange, et c'est ce degrade-la qui se plaque EN TRAVERS du ruban — le
+     * long de la longueur, la texture ne varie pas, donc l'etirement ne se voit pas.
+     *
+     * <p>Le ruban se voit de face : sa largeur est perpendiculaire a l'axe ET au regard, donc
+     * il tourne avec la camera. C'est lui qui donne au tir son epaisseur lumineuse, les deux
+     * cylindres n'etant larges que de quelques centimetres.
+     */
+    private static void glow(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                             double[] from, double[] to, double[] axis, float alpha) {
+        double[] view = normalize(camera.x - from[0], camera.y - from[1], camera.z - from[2]);
+        double[] side = view == null ? null : cross(axis, view);
+        if (side == null) return;
+
+        double half = GLOW_WIDTH / 2.0;
+        float[] color = { 1f, 1f, 1f, GLOW_ALPHA };
+
+        beamVertex(out, pose, camera, from, side, half, 0f, 0f, color, alpha);
+        beamVertex(out, pose, camera, from, side, -half, 0f, 1f, color, alpha);
+        beamVertex(out, pose, camera, to, side, -half, 1f, 1f, color, alpha);
+        beamVertex(out, pose, camera, to, side, half, 1f, 0f, color, alpha);
     }
 
     /** L'alpha du faisceau selon son age : entree en matiere, puis effacement. */
@@ -336,10 +380,12 @@ public class ArcRenderer {
             float u0 = i / (float) BEAM_SIDES;
             float u1 = (i + 1) / (float) BEAM_SIDES;
 
-            beamVertex(out, pose, camera, from, d0, radius, u0, 0f, color, alpha);
-            beamVertex(out, pose, camera, from, d1, radius, u1, 0f, color, alpha);
-            beamVertex(out, pose, camera, to, d1, radius, u1, 1f, color, alpha);
-            beamVertex(out, pose, camera, to, d0, radius, u0, 1f, color, alpha);
+            // Le long de l'axe, u varie ; en travers, v reste sur la ligne blanche du milieu —
+            // voir BEAM_FLAT_V. Un cylindre n'a pas de degrade, il a une couleur.
+            beamVertex(out, pose, camera, from, d0, radius, u0, BEAM_FLAT_V, color, alpha);
+            beamVertex(out, pose, camera, from, d1, radius, u1, BEAM_FLAT_V, color, alpha);
+            beamVertex(out, pose, camera, to, d1, radius, u1, BEAM_FLAT_V, color, alpha);
+            beamVertex(out, pose, camera, to, d0, radius, u0, BEAM_FLAT_V, color, alpha);
         }
     }
 
