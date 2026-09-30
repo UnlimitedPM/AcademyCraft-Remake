@@ -126,6 +126,21 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
             new ArcPattern("railgun", 0.3, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 2.5, 0.5, 0.2, 0.2, 11L);
 
     /**
+     * Le faisceau du railgun : le trait lumineux que les arcs entourent.
+     *
+     * <p>L'original le dessinait a part, avec son {@code RendererRayComposite} — un halo
+     * large, un coeur clair, un halo orange. Le port n'a aucun rendu de rayon, mais son moteur
+     * d'eclairs sait deja faire un ruban texture le long d'un axe : il suffit de lui demander
+     * le motif le plus simple possible. <b>Un depassement nul et aucun branchement</b> — le
+     * generateur n'a alors plus rien a deplacer, et son eclair devient une ligne droite, large
+     * de 1,1 comme le halo de l'original, et longue de toute la portee du tir.
+     *
+     * <p>Aucun scintillement : un faisceau ne clignote pas comme un eclair.
+     */
+    public static final ArcPattern RAIL_BEAM =
+            new ArcPattern("rail_beam", 1.1, 0.7, 0.9, 0.0, 0.0, 0.9, 1, 45.0, 0.0, 0.0, 0.0, 12L);
+
+    /**
      * Le nombre de variantes tirees par motif.
      *
      * <p>L'original en tirait vingt et changeait de variante toutes les quelques dixiemes
@@ -138,7 +153,7 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     public static List<ArcPattern> all() {
         return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE,
                 SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO, SURROUND_FINE,
-                RAILGUN);
+                RAILGUN, RAIL_BEAM);
     }
 
     /** Le motif qui porte ce nom, ou l'arc faible si le nom est inconnu. */

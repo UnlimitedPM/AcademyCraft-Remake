@@ -114,11 +114,23 @@ public class RailgunSkill extends Skill {
         Vec3 look = player.getViewVector(1.0f);
         net.minecraft.util.RandomSource random = player.getRandom();
 
+        // Le faisceau d'abord : le trait lumineux que tout le reste entoure. C'est le motif
+        // droit du moteur d'eclairs — voir ArcPattern.RAIL_BEAM.
+        //
+        // Il part des YEUX, comme dans l'original, et va jusqu'au bout de la portee du tir.
+        sendArc(player, cn.academy.ability.client.arc.ArcPattern.RAIL_BEAM.name(), eye,
+                eye.add(look.scale(BEAM_LENGTH)), BEAM_ARC_TICKS);
+
         for (int i = 0; i < BEAM_ARCS; i++) {
             double start = 1.0 + i * (BEAM_LENGTH - 1.0) / BEAM_ARCS;
             double end = Math.min(BEAM_LENGTH, start + 1.5 + random.nextDouble() * 1.5);
             // Les arcs ne sont pas SUR l'axe : ils gresillent autour, comme les siens. Un rail
             // parfaitement droit ne ressemblerait a rien.
+            //
+            // ECART ASSUME, et c'est un bug de l'original que le joueur a remarque : chez lui
+            // les arcs partaient toujours vers l'est, quelle que soit la visee — sa fabrique
+            // les generait le long de l'axe X, et seule leur POSITION etait tournee. Ici les
+            // deux bouts sont pris sur la visee, donc les arcs suivent le faisceau.
             Vec3 from = wobble(eye.add(look.scale(start)), random);
             Vec3 to = wobble(eye.add(look.scale(end)), random);
             sendArc(player, cn.academy.ability.client.arc.ArcPattern.RAILGUN.name(), from, to,
