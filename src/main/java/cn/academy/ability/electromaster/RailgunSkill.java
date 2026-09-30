@@ -19,9 +19,24 @@ public class RailgunSkill extends Skill {
     /** La longueur du rail, comme le rayon de l'original : quarante-cinq blocs. */
     private static final double BEAM_LENGTH = 45.0;
 
-    /** Quinze arcs, comme ses {@code ARC_SIZE}, vivant le temps d'un tir. */
+    /** Quinze arcs, comme ses {@code ARC_SIZE}. */
     private static final int BEAM_ARCS = 15;
-    private static final int BEAM_ARC_TICKS = 15;
+
+    /**
+     * La vie du tir, en ticks : cinquante, comme le {@code life} de l'original.
+     *
+     * <p>Le premier essai le faisait vivre quinze ticks — trois quarts de seconde, quand
+     * l'original en tenait cinquante (deux secondes et demie). C'est la duree qui manquait le
+     * plus au tir : le joueur l'a vue trop courte.
+     *
+     * <p>Chez lui le rayon s'estompait ensuite en deux temps : sa <b>largeur diminuait</b>
+     * pendant 800 millisecondes ({@code widthShrinkTime}), puis il disparaissait en une seconde
+     * ({@code blendOutTime}, avec l'entree en matiere a 150). Le port n'a pas encore de quoi
+     * retrecir un arc pendant qu'il le dessine : c'est une retouche du moteur d'eclairs, a faire
+     * avec sa teinte — voir {@code ArcRenderer}, dont chaque arc tire sa couleur de sa texture
+     * et non d'un reglage.
+     */
+    private static final int BEAM_ARC_TICKS = 50;
 
     /** L'ecart lateral des arcs autour de l'axe, comme le sien (0,1 a 0,25). */
     private static final double BEAM_WOBBLE = 0.25;
