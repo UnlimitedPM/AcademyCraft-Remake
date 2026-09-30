@@ -7,17 +7,25 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import java.util.List;
+
 /**
- * Le voile du renfort : l'ecran bleui une fraction de seconde quand il prend.
+ * L'electricite du renfort sur l'ecran : le voile bleu, et les arcs qui y scintillent.
  *
- * <p>Portage de la partie « masque » de {@code CurrentChargingHUD}. L'original posait, sous ses
- * arcs d'ecran, un noir a 10 % puis son image {@code em_intensify_mask} etiree sur tout l'ecran,
- * le tout a une opacite qui tombait de un a zero en 200 millisecondes. C'est ce court flash qui
- * accompagne le corps qui s'electrise, et c'est tout ce qui reste a montrer du HUD d'origine :
- * le port n'a pas de charge a tenir, donc ni barre de charge, ni arcs d'ecran pendant un
- * maintien — seulement l'eclair de l'activation.
+ * <p>Portage de {@code CurrentChargingHUD}. Tant que le joueur tient la touche, l'original
+ * couvrait l'ecran de son image {@code em_intensify_mask}, entree en matiere en une demi-seconde,
+ * et faisait scintiller cinq ou six arcs d'ecran par-dessus. Au relachement, la gerbe remplacait
+ * ceux-ci et le tout s'effacait en deux dixiemes de seconde.
  *
- * <p>Il se dessine par-dessus tout le reste, comme l'{@code AuxGui} de l'original.
+ * <p>Ce que le port ne reprend PAS : le noir a 10 pour cent que l'original posait sous son image.
+ * Le joueur l'a vu tout de suite — « l'ecran noir n'est pas bon » — et il avait raison : le voile
+ * de l'original est bleu, et c'est sa teinte qui doit passer, pas un fond sombre.
+ *
+ * <p>Sa place est au-dessus de tout le reste : chez l'original c'etait une {@code AuxGui}, donc
+ * dessinee apres le HUD.
+ *
+ * <p>Les positions et les tailles des arcs sont en unites de demi-ecran et en pixels, comme chez
+ * lui : voir {@code BodyIntensifyEffect.HudArc}.
  */
 @OnlyIn(Dist.CLIENT)
 public final class BodyIntensifyHud {
@@ -25,25 +33,41 @@ public final class BodyIntensifyHud {
     private static final ResourceLocation MASK = ResourceLocation.fromNamespaceAndPath(
             "academy", "textures/effects/em_intensify_mask.png");
 
-    /** Le noir a 10 % de l'original, pose sous son image. */
-    private static final float DIM = 0.1f;
-
     private BodyIntensifyHud() {
     }
 
     public static void render(GuiGraphics graphics, int screenWidth, int screenHeight) {
-        float alpha = BodyIntensifyEffect.veilAlpha();
-        if (alpha <= 0f) return;
+        float mask = BodyIntensifyEffect.maskAlpha();
+        List<BodyIntensifyEffect.HudArc> arcs = BodyIntensifyEffect.hudArcs();
+        if (mask <= 0f && arcs.isEmpty()) return;
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
-        int dim = ((int) (DIM * alpha * 255f)) << 24;
-        graphics.fill(0, 0, screenWidth, screenHeight, dim);
+        if (mask > 0f) {
+            RenderSystem.setShaderColor(1f, 1f, 1f, mask);
+            // L'original etirait son image sur tout l'ecran : c'est ce qu'il faut, et rien
+            // d'autre.
+            graphics.blit(MASK, 0, 0, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
+        }
 
-        RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
-        // L'original etirait son image sur tout l'ecran : c'est ce qu'il faut, et rien d'autre.
-        graphics.blit(MASK, 0, 0, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
+        float alpha = BodyIntensifyEffect.arcAlpha();
+        if (alpha > 0f) {
+            RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
+            for (BodyIntensifyEffect.HudArc arc : arcs) {
+                if (!arc.visible()) continue;
+
+                int size = (int) arc.size();
+                int x = (int) (arc.x() * screenWidth / 2.0 - size / 2.0);
+                int y = (int) (arc.y() * screenHeight / 2.0 - size / 2.0);
+                // La zone lue et la taille declaree valent la taille d'affichage : les UV
+                // restent donc dans 0..1 quelle que soit la dimension du fichier, et l'image
+                // est etiree. C'est ce que faisait l'original, qui dessinait un rectangle la ou
+                // sa texture etait liee sans jamais lire ses dimensions.
+                graphics.blit(arc.texture(), x, y, size, size, 0f, 0f, size, size, size, size);
+            }
+        }
+
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
     }
 }

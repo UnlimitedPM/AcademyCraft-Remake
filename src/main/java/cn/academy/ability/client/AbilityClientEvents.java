@@ -109,8 +109,8 @@ public class AbilityClientEvents {
         ClientAbilityData.tick(ClientCharge.getSkill() != null);
         // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
         cn.academy.client.hud.NotificationHud.tick();
-        // Le renfort du corps a besoin du meme crochet : ses sept hauteurs s'egrenent sur huit
-        // ticks, et rien d'autre ne peut le faire vieillir — voir BodyIntensifyEffect.
+        // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
+        // arcs d'ecran scintillent a chaque tick — voir BodyIntensifyEffect.
         BodyIntensifyEffect.tick();
 
         for (Binding binding : BINDINGS) {
@@ -284,6 +284,9 @@ public class AbilityClientEvents {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
                     ThunderClapEffect.tick(player, skill, ClientCharge.getTicks());
+                    // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
+                    // la charge : voir BodyIntensifyEffect.
+                    BodyIntensifyEffect.tickCharge(skill);
                     // L'orage tombe TOUT SEUL au bout de sa charge maximale : l'original
                     // terminait sa charge a MAX_TICKS pour frapper, sans attendre que la touche
                     // se relache. Le serveur ne peut pas s'en charger — c'est le client qui tient
@@ -294,6 +297,9 @@ public class AbilityClientEvents {
                         binding.charging = false;
                         ClientCharge.end();
                         ThunderClapEffect.end();
+                        // Une charge qui va jusqu'a son plafond a passe le minimum : le renfort
+                        // prend, et sa gerbe aussi.
+                        BodyIntensifyEffect.endCharge(true);
                         endDirections();
                         send(category, skill, Phase.RELEASE);
                         return;
@@ -305,9 +311,16 @@ public class AbilityClientEvents {
 
         // Relachement : l'original envoyait MSG_KEYUP et le serveur executait la
         // competence avec le temps qu'il avait compte de son cote.
+        //
+        // Ce que le client doit savoir du temps tenu se lit MAINTENANT : une charge trop courte
+        // ne declenche rien du tout chez le serveur (voir ActivateSkillPacket), et le renfort
+        // n'aura donc pas de gerbe. C'est le meme minimum, relu ici.
+        boolean performed = skill.isChargeable()
+                && ClientCharge.getTicks() >= skill.getMinChargeTicks(ClientAbilityData.get());
         binding.charging = false;
         ClientCharge.end();
         ThunderClapEffect.end();
+        BodyIntensifyEffect.endCharge(performed);
         endDirections();
         send(category, skill, Phase.RELEASE);
     }
