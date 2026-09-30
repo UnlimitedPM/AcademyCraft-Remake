@@ -45,6 +45,15 @@ public final class MagManipEffect {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) return;
 
+        // Le portage du tick precedent ne vaut plus rien : les blocs qu'il ne reprendra pas
+        // reprennent leur vol tout seuls. Et ceux du joueur local sont a lui, donc c'est ce
+        // client-ci qui les fait vivre. Voir EntityMagManipBlock.markCarried.
+        for (Entity entity : client.level.entitiesForRendering()) {
+            if (!(entity instanceof EntityMagManipBlock block)) continue;
+            block.unmarkCarried();
+            if (block.getOwner() == client.player) block.markOwnedByLocalPlayer();
+        }
+
         int count = MagManipVisuals.arcsToSow(RANDOM);
         double half = MagManipVisuals.SURROUND_CUBE / 2.0;
 
@@ -88,6 +97,7 @@ public final class MagManipEffect {
         Vec3 target = MagManipVisuals.carryTarget(player.getEyePosition(1f),
                 player.getViewVector(1f));
         Vec3 velocity = MagManipVisuals.carryVelocity(block.position(), target);
+        block.markCarried();
         block.setDeltaMovement(velocity);
         block.move(net.minecraft.world.entity.MoverType.SELF, velocity);
     }

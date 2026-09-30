@@ -78,6 +78,24 @@ public class EntityMagManipBlock extends Projectile {
     /** Le bloc s'est-il deja pose ? */
     private boolean placed;
 
+    /**
+     * Cote client : ce bloc est celui du JOUEUR LOCAL, donc c'est son client qui le fait vivre.
+     *
+     * <p>Rien a voir avec le {@code carryTo} du serveur, qui n'est pas synchronise : c'est
+     * {@code MagManipEffect} qui le pose, une fois, en voyant un bloc dont le proprietaire est le
+     * joueur. Les blocs des autres joueurs n'y ont pas droit : ils suivent les positions du
+     * serveur, comme toute entite.
+     */
+    private boolean clientOwned;
+
+    /**
+     * Et le portage client s'occupe de lui, pour ce tick.
+     *
+     * <p>Pose par {@code MagManipEffect} tant que la touche est tenue, et efface a chaque tick
+     * client avant : un bloc qui n'est plus porte reprend donc son vol tout seul.
+     */
+    private boolean clientCarried;
+
     public EntityMagManipBlock(EntityType<? extends EntityMagManipBlock> type, Level level) {
         super(type, level);
     }
@@ -119,10 +137,45 @@ public class EntityMagManipBlock extends Projectile {
         this.carryTo = null;
     }
 
+    /** Marque le bloc comme celui du joueur local. Voir {@link #clientOwned}. */
+    public void markOwnedByLocalPlayer() {
+        this.clientOwned = true;
+    }
+
+    /**
+     * Marque le bloc comme porte, pour ce tick client. Voir {@link #clientCarried}.
+     *
+     * <p>Appele par {@code MagManipEffect} tant que la touche est tenue, et efface a chaque tick
+     * client avant : un bloc qui n'est plus porte reprend donc son vol tout seul.
+     */
+    public void markCarried() {
+        this.clientCarried = true;
+    }
+
+    /** Le portage client ne veut plus de ce bloc : il vole de ses propres ailes. */
+    public void unmarkCarried() {
+        this.clientCarried = false;
+    }
+
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) return;
+
+        if (level().isClientSide) {
+            // Le client avance la copie de SON joueur comme le serveur, mais sans RIEN poser :
+            // c'est le serveur qui decide ou le bloc s'arrete, et il le fait savoir en enlevant
+            // l'entite.
+            //
+            // C'est ce que faisait l'original, et ce qui manquait ici : son c_perform donnait la
+            // vitesse a la copie cliente, dont le tick la faisait voler. Sans cela le bloc
+            // n'avançait que la ou le serveur le mettait, et le serveur n'envoie sa position que
+            // tous les deux ticks : le lancer paraissait mou et lent, ce que le joueur a vu.
+            if (!clientOwned || clientCarried) return;
+            if (getDeltaMovement().lengthSqr() < 1.0E-6) return;
+            setDeltaMovement(getDeltaMovement().add(0, -GRAVITY, 0));
+            move(MoverType.SELF, getDeltaMovement());
+            return;
+        }
 
         if (carryTo != null) {
             setDeltaMovement(MagManipVisuals.carryVelocity(position(), carryTo));
