@@ -134,9 +134,17 @@ public class ArcRenderer {
     private static final double INNER_RADIUS = 0.035;
     private static final float[] INNER_COLOR = { 1f, 1f, 1f, 1f };
 
-    /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 50 pour la meme raison. */
+    /**
+     * Le halo : rayon 0,13 comme l'original, mais un orange BEAUCOUP plus dense que le sien.
+     *
+     * <p>L'original le posait a 60 sur 255, et le premier essai est descendu a 50 : a cette
+     * part, le halo ne teintait plus, il voilait. Le joueur a vu le resultat : « le rayon jaune
+     * du milieu est trop clair et pas assez orange » — un beige delave. Sa couleur descend donc
+     * vers un orange franc (236, 140, 45) et sa part monte a 150 sur 255 : le coeur blanc se lit
+     * encore a travers, mais c'est l'orange qui donne la teinte.
+     */
     private static final double HALO_RADIUS = 0.13;
-    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 50 / 255f };
+    private static final float[] HALO_COLOR = { 236 / 255f, 140 / 255f, 45 / 255f, 150 / 255f };
 
     /** Les temps de l'original, en ticks : entree en matiere 150 ms, retrecissement 800, effacement 1000. */
     private static final int BEAM_BLEND_IN = 3;
@@ -169,14 +177,21 @@ public class ArcRenderer {
     /**
      * La largeur du ruban de lueur, et son opacite.
      *
-     * <p>L'original annonce 1,1 — mais c'est un nombre de son repere, et un ruban de 1,1 bloc
-     * qui part de la MAIN du joueur occupe tout l'ecran : c'est le cone enorme que le joueur a
-     * vu. Sa lueur, sur la capture du vrai mod, fait a peine le double du coeur. Reste donc
-     * 0,45 de large, et une opacite tiree vers le bas : elle doit etre un halo, pas une
-     * surface — le joueur l'a dit, « elle n'est pas transparente ».
+     * <p>C'est la SEULE partie texturee. {@code railgun.png} est une bande dont la colonne du
+     * milieu est blanche et opaque, encadree de deux bandes orange qui s'effacent vers les
+     * bords : le ruban n'est donc pas un halo pose AUTOUR du rayon, c'est le rayon lui-meme,
+     * coeur compris — sa bande blanche doit tomber sur le coeur. C'est pour ca que l'original
+     * annoncait 1,1, onze fois le rayon du coeur.
+     *
+     * <p>Un premier essai l'avait ramene a 0,45 pour ne pas remplir l'ecran : trop court. Ses
+     * bandes orange se retrouvaient a l'INTERIEUR du halo, qui les cachait, et il ne restait
+     * que la queue transparente du degrade. Le joueur l'a vu tout de suite : « on ne voit plus
+     * du tout le ruban a cote, ce qui change la couleur du rayon le plus en dehors en le rendant
+     * plus transparent que le vrai ». Il fait donc 0,85 : la bande orange la plus dense tombe
+     * juste au bord du halo, et le degrade s'efface vers l'exterieur.
      */
-    private static final double GLOW_WIDTH = 0.45;
-    private static final float GLOW_ALPHA = 0.40f;
+    private static final double GLOW_WIDTH = 0.85;
+    private static final float GLOW_ALPHA = 0.55f;
 
     /**
      * De combien le rayon est pousse vers l'avant.
@@ -476,8 +491,12 @@ public class ArcRenderer {
      * long de la longueur, la texture ne varie pas, donc l'etirement ne se voit pas.
      *
      * <p>Le ruban se voit de face : sa largeur est perpendiculaire a l'axe ET au regard, donc
-     * il tourne avec la camera. C'est lui qui donne au tir son epaisseur lumineuse, les deux
+     * il tourne avec la camera. C'est lui qui donne au tir son epaisseur lumineuse, les trois
      * cylindres n'etant larges que de quelques centimetres.
+     *
+     * <p>Sa bande blanche tombe sur les cylindres, qui la cachent : c'est voulu, et c'est ce
+     * que faisait l'original. Ce qui reste visible, ce sont ses bandes orange, de part et
+     * d'autre du halo — le « ruban a cote » que le joueur veut revoir.
      */
     private static void glow(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
                              double[] from, double[] to, double[] axis, float alpha,
