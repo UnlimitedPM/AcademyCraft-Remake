@@ -115,12 +115,24 @@ public class ArcRenderer {
      * travers l'orange, qui le rechauffe. Le premier essai le laissait a 150 sur 255, donc sous
      * son halo — il ne s'y lisait pas.
      *
-     * <p>Il est encore plus FIN et plus BLANC depuis : le joueur l'a demande petit et lumineux.
-     * L'original le teintait legerement chaud (241, 240, 222) ; ici c'est du blanc pur, et le
-     * rayon tombe de 0,09 a 0,06 — c'est un trait, pas un tuyau.
+     * <p>Le joueur a d'abord cru qu'on parlait d'un AUTRE rayon que celui-ci : il a demande
+     * « un coeur encore plus petit a l'interieur de ce coeur la ». Le trait fin et blanc essaye
+     * entre-temps etait donc la mauvaise reponse — ce coeur-ci reprend sa taille et sa teinte
+     * d'origine, et le trait blanc devient un troisieme cylindre, encore plus petit — voir
+     * INNER_RADIUS.
      */
-    private static final double CORE_RADIUS = 0.06;
-    private static final float[] CORE_COLOR = { 1f, 1f, 1f, 1f };
+    private static final double CORE_RADIUS = 0.09;
+    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 255 / 255f };
+
+    /**
+     * Le troisieme cylindre, tout au fond : le trait blanc pur du joueur.
+     *
+     * <p>Il est plus PETIT que le coeur — 0,035 contre 0,09 — et opaque a fond, donc il se lit
+     * comme la ligne du milieu, celle qui donne l'impression que la piece fonce en ligne droite.
+     * Le coeur le rechauffe de sa teinte, le halo l'adoucit, et le trait reste blanc.
+     */
+    private static final double INNER_RADIUS = 0.035;
+    private static final float[] INNER_COLOR = { 1f, 1f, 1f, 1f };
 
     /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 50 pour la meme raison. */
     private static final double HALO_RADIUS = 0.13;
@@ -137,9 +149,10 @@ public class ArcRenderer {
      * <p>Le joueur decrit exactement ce que faisait l'original : « pendant environ deux
      * secondes le laser grossit et retrecis tres rapidement, pour donner une impression de
      * mouvement ». C'etaient ses {@code widthWiggleRadius} de 0,3 et {@code maxWiggleSpeed} de
-     * 0,8, mais l'amplitude a ete reduite de moitie : il l'a trouvee plus forte que la vraie.
+     * 0,8, mais l'amplitude a ete reduite deux fois : 0,15, puis 0,08, et le joueur a demande
+     * 4 % au final.
      */
-    private static final double WIGGLE_RADIUS = 0.08;
+    private static final double WIGGLE_RADIUS = 0.04;
     private static final double WIGGLE_TICKS = 3.0;
 
     /**
@@ -359,7 +372,8 @@ public class ArcRenderer {
     }
 
     /**
-     * Un faisceau : deux cylindres concentriques, le coeur puis le halo.
+     * Un faisceau : trois cylindres concentriques — le trait blanc, le coeur qui le rechauffe,
+     * puis le halo orange par-dessus.
      *
      * <p>La largeur se retrecis un peu avant la fin et l'alpha suit : c'est l'animation de
      * l'original, ou le rayon diminuait avant de disparaitre.
@@ -387,11 +401,14 @@ public class ArcRenderer {
 
         double size = width(age, beam.life()) * wiggle(age);
         double core = CORE_RADIUS * size;
+        double inner = INNER_RADIUS * size;
         double halo = HALO_RADIUS * size;
         cylinder(out, pose, camera, from, to, u, v, core, CORE_COLOR, alpha);
+        cylinder(out, pose, camera, from, to, u, v, inner, INNER_COLOR, alpha);
         cylinder(out, pose, camera, from, to, u, v, halo, HALO_COLOR, alpha);
         // Les deux bouts sont arrondis : c'est une boule tres allongee, pas un tuyau coupe.
         caps(out, pose, camera, from, to, u, v, axis, core, CORE_COLOR, alpha);
+        caps(out, pose, camera, from, to, u, v, axis, inner, INNER_COLOR, alpha);
         caps(out, pose, camera, from, to, u, v, axis, halo, HALO_COLOR, alpha);
         glow(out, pose, camera, from, to, axis, alpha, size);
     }
