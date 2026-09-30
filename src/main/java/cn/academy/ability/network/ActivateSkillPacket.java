@@ -161,7 +161,7 @@ public class ActivateSkillPacket {
 
     /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */
     private static boolean canBegin(ServerPlayer player, AbilityData data, Skill skill) {
-        if (!canUseAbility(player, data)) return false;
+        if (!canUseAbility(player, data, false)) return false;
         int cooldown = data.getCooldown(skill);
         if (cooldown > 0) {
             announceCooldown(player, cooldown);
@@ -177,7 +177,7 @@ public class ActivateSkillPacket {
      * tout, y compris les competences qui se chargent — l'original ne creait meme pas
      * de contexte dans ce cas, donc la touche ne faisait rien du tout.
      */
-    private static boolean canUseAbility(ServerPlayer player, AbilityData data) {
+    private static boolean canUseAbility(ServerPlayer player, AbilityData data, boolean released) {
         // L'aptitude doit etre ALLUMEE : chez l'original c'etait la touche (V) qui l'allumait,
         // et rien ne partait avant. C'est le premier refus, comme chez lui.
         if (!data.isActivated()) {
@@ -194,7 +194,14 @@ public class ActivateSkillPacket {
         // Le verrou de l'original vaut pour toute la descente, et pas seulement pour le delai
         // pendant lequel le temoin affiche la surcharge : sinon le joueur relancerait une
         // competence au milieu de sa propre recuperation.
-        if (data.isOverloadRecovering()) {
+        //
+        // Sauf pour une charge deja tenue : une competence qui paie son surcout A LA CHARGE
+        // (le thunder clap, voir Skill#paysOnEffect) arrive ici avec sa propre surcharge dans
+        // la reserve, et la refuser a ce moment-la avalerait la charge entiere sans rien
+        // declencher — c'est ce que le joueur a vu, « le tonnerre ne fait pas assez de
+        // degats », et rien du tout sous terre. L'original ne revalidait rien a la fin d'une
+        // charge : il frappait, quel que soit l'etat de sa reserve.
+        if (!released && data.isOverloadRecovering()) {
             player.displayClientMessage(
                     Component.literal("Overloaded - wait for your overload to drop")
                             .withStyle(ChatFormatting.RED), true);
@@ -205,7 +212,11 @@ public class ActivateSkillPacket {
 
     /** Le declenchement lui-meme, commun aux competences instantanees et chargees. */
     private static void activate(ServerPlayer player, AbilityData data, Skill skill) {
-        if (!canUseAbility(player, data)) return;
+        // Une charge arrive ici APRES avoir pris son surcout : il n'est donc pas une raison de
+        // la refuser, sans quoi tout ce qu'elle a amasse serait perdu. Voir canUseAbility.
+        boolean released = skill.isChargeable()
+                && data.getChargeTicks(skill) >= skill.getMinChargeTicks(data);
+        if (!canUseAbility(player, data, released)) return;
 
         // Recharge : l'original tenait un compteur par competence dans
         // CooldownData et refusait le declenchement tant qu'il n'etait pas
