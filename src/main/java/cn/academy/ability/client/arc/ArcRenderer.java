@@ -111,9 +111,11 @@ public class ArcRenderer {
      * que c'est la piece qui est foncee en ligne droite ». C'est exactement ca — la piece de
      * l'original, celle qu'on lance et qu'on tire, et son trait dans le vide.
      *
-     * <p>Son opacite est donc pleine, et celle du halo bien plus faible : le blanc se voit a
-     * travers l'orange, qui le rechauffe. Le premier essai le laissait a 150 sur 255, donc sous
-     * son halo — il ne s'y lisait pas.
+     * <p>Sa part est de 200 sur 255, PAS pleine : c'est le chiffre de l'original, et c'est lui
+     * qui decide de la clarte du CENTRE. Le premier essai la laissait a 150, donc sous son halo
+     * — le coeur ne s'y lisait plus — et le deuxieme a 255, donc au-dessus. Le joueur a trouve
+     * le resultat « encore un chouillat trop eclaire par rapport au vrai » : 200 tombe entre les
+     * deux, et c'est la valeur de l'original.
      *
      * <p>Le joueur a d'abord cru qu'on parlait d'un AUTRE rayon que celui-ci : il a demande
      * « un coeur encore plus petit a l'interieur de ce coeur la ». Le trait fin et blanc essaye
@@ -122,7 +124,7 @@ public class ArcRenderer {
      * INNER_RADIUS.
      */
     private static final double CORE_RADIUS = 0.09;
-    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 255 / 255f };
+    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 200 / 255f };
 
     /**
      * Le troisieme cylindre, tout au fond : le trait blanc pur du joueur.
@@ -182,18 +184,34 @@ public class ArcRenderer {
      * <p>C'est la SEULE partie texturee. {@code railgun.png} est une bande dont la colonne du
      * milieu est blanche et opaque, encadree de deux bandes orange qui s'effacent vers les
      * bords : le ruban n'est donc pas un halo pose AUTOUR du rayon, c'est le rayon lui-meme,
-     * coeur compris — sa bande blanche doit tomber sur le coeur. C'est pour ca que l'original
-     * annoncait 1,1, onze fois le rayon du coeur.
+     * coeur compris — sa bande blanche doit tomber sur le coeur.
      *
-     * <p>Un premier essai l'avait ramene a 0,45 pour ne pas remplir l'ecran : trop court. Ses
-     * bandes orange se retrouvaient a l'INTERIEUR du halo, qui les cachait, et il ne restait
-     * que la queue transparente du degrade. Le joueur l'a vu tout de suite : « on ne voit plus
-     * du tout le ruban a cote, ce qui change la couleur du rayon le plus en dehors en le rendant
-     * plus transparent que le vrai ». Il fait donc 0,85 : la bande orange la plus dense tombe
-     * juste au bord du halo, et le degrade s'efface vers l'exterieur.
+     * <p>D'ou les 1,1 de l'original. C'est la LARGEUR qui decide de la couleur des bords, parce
+     * qu'elle decide de quelle bande de la texture tombe ou : trop court de moitie (0,85), le
+     * ruban amenait sa bande orange la plus dense juste au bord du halo, ce qui dessinait un
+     * liseré orange sature colle au rayon. L'original, lui, commence par une bande claire
+     * (255, 251, 229) a cet endroit et ne fait tomber l'ambre que plus loin. Le joueur l'a vu
+     * sans savoir pourquoi : « les bords n'ont pas vraiment la meme couleur ». C'est cette bande
+     * claire qui manquait.
+     *
+     * <p>Sa part n'est pas une constante de l'original mais le produit de son blanc (255) par
+     * son alpha de vie et son {@code getGlowAlpha}, qui vaut entre 0,7 et 1 : 0,85 est sa
+     * moyenne. A 0,55, essaye avant, tout le degrade etait assombri d'autant.
      */
-    private static final double GLOW_WIDTH = 0.85;
-    private static final float GLOW_ALPHA = 0.55f;
+    private static final double GLOW_WIDTH = 1.1;
+    private static final float GLOW_ALPHA = 0.85f;
+
+    /**
+     * De combien le ruban depasse du rayon, a chaque bout — les deux nombres de l'original.
+     *
+     * <p>Ils ne sont pas symetriques, et c'est voulu : son rayon partait des YEUX, et il
+     * reculait le debut de son ruban de 0,3, donc DERRIERE la camera. Sa premiere partie est
+     * avalee par le plan proche du frustum, et c'est ce qui evite la nappe enorme qui s'ouvre
+     * devant l'ecran quand la source est a un dixieme de bloc de l'oeil. La fin, elle, depasse
+     * de 0,3 : le ruban s'effile un peu au-dela du point d'impact.
+     */
+    private static final double GLOW_BACK = 0.3;
+    private static final double GLOW_FORWARD = 0.3;
 
     /**
      * De combien le rayon est pousse vers l'avant.
@@ -507,13 +525,20 @@ public class ArcRenderer {
         double[] side = view == null ? null : cross(axis, view);
         if (side == null) return;
 
+        // Le ruban depasse du rayon a ses deux bouts, celui du debut jusque derriere la camera :
+        // voir GLOW_BACK.
+        double[] head = { from[0] - axis[0] * GLOW_BACK, from[1] - axis[1] * GLOW_BACK,
+                          from[2] - axis[2] * GLOW_BACK };
+        double[] tail = { to[0] + axis[0] * GLOW_FORWARD, to[1] + axis[1] * GLOW_FORWARD,
+                          to[2] + axis[2] * GLOW_FORWARD };
+
         double half = GLOW_WIDTH / 2.0 * size;
         float[] color = { 1f, 1f, 1f, GLOW_ALPHA };
 
-        beamVertex(out, pose, camera, from, side, half, 0f, 0f, color, alpha);
-        beamVertex(out, pose, camera, from, side, -half, 0f, 1f, color, alpha);
-        beamVertex(out, pose, camera, to, side, -half, 1f, 1f, color, alpha);
-        beamVertex(out, pose, camera, to, side, half, 1f, 0f, color, alpha);
+        beamVertex(out, pose, camera, head, side, half, 0f, 0f, color, alpha);
+        beamVertex(out, pose, camera, head, side, -half, 0f, 1f, color, alpha);
+        beamVertex(out, pose, camera, tail, side, -half, 1f, 1f, color, alpha);
+        beamVertex(out, pose, camera, tail, side, half, 1f, 0f, color, alpha);
     }
 
     /** L'alpha du faisceau selon son age : entree en matiere, puis effacement. */
