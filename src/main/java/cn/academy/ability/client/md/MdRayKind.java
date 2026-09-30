@@ -36,8 +36,8 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>Il est donne par son <b>nom</b> et non par son objet : un {@code RegistryObject} n'existe
  * que sur un jeu en marche, et les nombres d'un rayon se relisent donc en test, sans lancer
- * Minecraft — c'est tout l'interet de les tenir ici. Le paquet du rayon refait l'objet au
- * moment de jouer.
+ * Minecraft — c'est tout l'interet de les tenir ici. Le serveur le retrouve par ce nom au
+ * moment de le jouer, par {@code SoundLookup}.
  */
 public record MdRayKind(String name,
                         ResourceLocation glowIn, ResourceLocation glowTile, ResourceLocation glowOut,

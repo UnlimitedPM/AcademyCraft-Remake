@@ -79,6 +79,23 @@ public final class MdBallVisuals {
     public static final double GLOW_SIZE = 0.7;
     public static final double CORE_SIZE = 0.5;
 
+    /**
+     * La hauteur a laquelle la bille se DESSINE, par rapport a sa position.
+     *
+     * <p>Sa position logique est celle de son porteur plus l'ecart — donc au niveau des pieds.
+     * L'original l'y dessinait pourtant <b>1,6 bloc plus haut</b>, et c'est ce que le joueur voit
+     * dans le vrai mod : la bille flotte a hauteur d'yeux, et son rayon part de la. Le port
+     * l'avait oubliee, et le joueur l'a vu tout de suite : « l'endroit ou la boule apparait et
+     * l'endroit d'ou le laser part ne sont pas les memes ». La bille se dessinait donc dans les
+     * jambes — jusqu'a 1,2 bloc sous les pieds — pendant que son rayon partait un bloc et demi
+     * plus haut, a la hauteur des yeux, ou il prend sa source (voir {@code EntityMdBall.fire}).
+     *
+     * <p>1,6 et non 1,62 : c'est le chiffre de l'original, qui compensait la hauteur des yeux a
+     * la main. Les deux centimetres qui restent ne se voient pas, et la bille n'a pas a
+     * descendre quand son porteur s'accroupit.
+     */
+    public static final double RENDER_HEIGHT = 1.6;
+
     /** L'opacite au repos, et celle du tir. */
     public static final float BASE_ALPHA = 0.6f;
 

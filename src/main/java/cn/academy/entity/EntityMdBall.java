@@ -234,6 +234,21 @@ public class EntityMdBall extends Entity {
         AbilityNetwork.CHANNEL.send(
                 PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> this),
                 new MdRayPacket(MdRayKind.SMALL.name(), from, to));
+
+        // Et le rayon s'annonce, comme le faisait l'entite de rayon de l'original en naissant.
+        //
+        // C'est le SERVEUR qui le joue, et c'est le seul chemin qui marche : le port avait
+        // essaye un evenement de son fabrique a la main chez le client, et il ne s'entendait
+        // pas du tout — le client cherche ses sons dans son propre fichier, et un evenement qui
+        // n'est pas passe par le registre ne s'y resout pas. Le joueur l'a signale aussitot :
+        // « quand on lance un laser, il n'y a aucun son ». Les autres sons du port passent tous
+        // par le registre, et s'entendent.
+        net.minecraft.sounds.SoundEvent sound =
+                cn.academy.sound.SoundLookup.event(MdRayKind.SMALL.sound());
+        if (sound != null) {
+            level().playSound(null, from.x, from.y, from.z, sound,
+                    net.minecraft.sounds.SoundSource.AMBIENT, MdRayKind.SMALL.soundVolume(), 1f);
+        }
     }
 
     // --- LE RENDU, CHEZ LE CLIENT ---

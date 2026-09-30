@@ -168,25 +168,6 @@ public final class MdRays {
         spawn(kind, from, to, Util.getMillis());
     }
 
-    /**
-     * Un rayon qui arrive du serveur : il nait, et il s'annonce.
-     *
-     * <p>Le son se joue ici et non dans le paquet, et ce n'est pas un detail de gout : le paquet
-     * est enregistre des deux cotes, et une classe de paquet qui touche un
-     * {@code ClientLevel} fait tomber un serveur dedie — Forge refuse de charger une classe de
-     * client chez lui, et le refuse au moment ou le paquet s'enregistre. La partie cliente est
-     * donc ici, chez le client, et le paquet ne fait que l'appeler.
-     */
-    public static void play(MdRayKind kind, Vec3 from, Vec3 to) {
-        spawn(kind, from, to);
-
-        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        if (minecraft.level != null) {
-            cn.academy.sound.AcademySounds.playAt(minecraft.level, from, kind.sound(),
-                    kind.soundVolume(), 1.0f);
-        }
-    }
-
     /** Le meme, a un instant donne — pour le test, qui deroule sa vie sans horloge. */
     public static void spawn(MdRayKind kind, Vec3 from, Vec3 to, long nowMs) {
         RAYS.add(new LiveRay(kind, new double[] { from.x, from.y, from.z },

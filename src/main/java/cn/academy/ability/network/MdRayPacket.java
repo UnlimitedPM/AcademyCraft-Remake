@@ -50,7 +50,7 @@ public class MdRayPacket {
 
     public static void handle(MdRayPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.md.MdRays.play(
+        ctx.enqueueWork(() -> cn.academy.ability.client.md.MdRays.spawn(
                 cn.academy.ability.client.md.MdRayKind.byName(msg.kind), msg.from, msg.to));
         ctx.setPacketHandled(true);
     }

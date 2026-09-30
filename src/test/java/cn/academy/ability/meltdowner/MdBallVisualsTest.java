@@ -107,4 +107,18 @@ class MdBallVisualsTest {
         assertEquals(0.7, MdBallVisuals.GLOW_SIZE, 1e-9);
         assertEquals(0.5, MdBallVisuals.CORE_SIZE, 1e-9, "le coeur est plus petit que le halo");
     }
+
+    @Test
+    void elleSeDessineAEtuteurDEux() {
+        // Sa position est celle des pieds, mais l'original la dessinait 1,6 bloc plus haut :
+        // c'est ce qui la met a hauteur d'yeux, la ou son rayon prend sa source. Sans ce
+        // decalage elle se dessinait dans les jambes — jusqu'a 1,2 bloc sous les pieds, ce que
+        // le joueur a vu — pendant que le rayon partait un bloc et demi plus haut.
+        assertEquals(1.6, MdBallVisuals.RENDER_HEIGHT, 1e-9);
+        assertTrue(MdBallVisuals.RENDER_HEIGHT + MdBallVisuals.SUB_Y_MIN > 0,
+                "meme la bille la plus basse se dessine au-dessus des pieds : "
+                        + (MdBallVisuals.RENDER_HEIGHT + MdBallVisuals.SUB_Y_MIN));
+        assertTrue(MdBallVisuals.RENDER_HEIGHT + MdBallVisuals.SUB_Y_MAX < 2,
+                "et la plus haute reste sous le sommet du corps");
+    }
 }

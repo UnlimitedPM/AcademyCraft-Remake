@@ -52,6 +52,9 @@ public class MdBallRenderer extends EntityRenderer<EntityMdBall> {
         if (alpha <= 0f) return;
 
         pose.pushPose();
+        // La bille se dessine a hauteur d'yeux, quelle que soit sa position logique : c'est le
+        // decalage de l'original, et c'est ce qui la fait coincider avec le depart de son rayon.
+        pose.translate(0.0, MdBallVisuals.RENDER_HEIGHT, 0.0);
         // Le balancement : la bille vibre autour de sa place au lieu d'y etre posee.
         pose.translate(MdBallVisuals.wobbleX(age), MdBallVisuals.wobbleY(age),
                 MdBallVisuals.wobbleZ(age));
