@@ -124,8 +124,16 @@ public class ArcRenderer {
     private static final int BEAM_SHRINK = 16;
     private static final int BEAM_FADE = 20;
 
-    /** La part de largeur qui reste une fois le faisceau retreci. */
-    private static final double BEAM_SHRUNK = 0.6;
+    /**
+     * La pulsation de la largeur pendant la vie du rayon, et sa periode en ticks.
+     *
+     * <p>Le joueur decrit exactement ce que faisait l'original : « pendant environ deux
+     * secondes le laser grossit et retrecis tres rapidement, pour donner une impression de
+     * mouvement ». C'etaient ses {@code widthWiggleRadius} de 0,3 et {@code maxWiggleSpeed} de
+     * 0,8 : la largeur du rayon tremble autour de la sienne.
+     */
+    private static final double WIGGLE_RADIUS = 0.3;
+    private static final double WIGGLE_TICKS = 4.0;
 
     /**
      * La ligne du milieu de la texture du faisceau : blanche, donc sans effet sur la couleur.
@@ -370,15 +378,15 @@ public class ArcRenderer {
         float alpha = fade(age, beam.life());
         if (alpha <= 0f) return;
 
-        double shrink = shrink(age);
-        double core = CORE_RADIUS * shrink;
-        double halo = HALO_RADIUS * shrink;
+        double size = width(age, beam.life()) * wiggle(age);
+        double core = CORE_RADIUS * size;
+        double halo = HALO_RADIUS * size;
         cylinder(out, pose, camera, from, to, u, v, core, CORE_COLOR, alpha);
         cylinder(out, pose, camera, from, to, u, v, halo, HALO_COLOR, alpha);
         // Les deux bouts sont arrondis : c'est une boule tres allongee, pas un tuyau coupe.
         caps(out, pose, camera, from, to, u, v, axis, core, CORE_COLOR, alpha);
         caps(out, pose, camera, from, to, u, v, axis, halo, HALO_COLOR, alpha);
-        glow(out, pose, camera, from, to, axis, alpha);
+        glow(out, pose, camera, from, to, axis, alpha, size);
     }
 
     /** Les deux bouts arrondis d'un cylindre. */
@@ -448,12 +456,13 @@ public class ArcRenderer {
      * cylindres n'etant larges que de quelques centimetres.
      */
     private static void glow(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
-                             double[] from, double[] to, double[] axis, float alpha) {
+                             double[] from, double[] to, double[] axis, float alpha,
+                             double size) {
         double[] view = normalize(camera.x - from[0], camera.y - from[1], camera.z - from[2]);
         double[] side = view == null ? null : cross(axis, view);
         if (side == null) return;
 
-        double half = GLOW_WIDTH / 2.0;
+        double half = GLOW_WIDTH / 2.0 * size;
         float[] color = { 1f, 1f, 1f, GLOW_ALPHA };
 
         beamVertex(out, pose, camera, from, side, half, 0f, 0f, color, alpha);
@@ -471,10 +480,24 @@ public class ArcRenderer {
         return Math.max(0f, Math.min(1f, alpha));
     }
 
-    /** Le retrecissement de la largeur : les 800 millisecondes de l'original. */
-    private static double shrink(double age) {
-        if (age >= BEAM_SHRINK) return BEAM_SHRUNK;
-        return 1.0 + (BEAM_SHRUNK - 1.0) * (age / BEAM_SHRINK);
+    /**
+     * La largeur du rayon : pleine pendant sa vie, puis elle TOMBE a zero dans les dernieres
+     * 800 millisecondes.
+     *
+     * <p>Le premier essai la faisait retrecir au DEBUT, a 60 pour cent : c'etait une erreur de
+     * lecture de {@code widthShrinkTime}, qui se compte a partir de la FIN, comme son nom ne le
+     * dit pas. Le joueur l'a vu : « a la fin du pouvoir, presque en meme temps que le son part,
+     * le laser devient petit jusqu'a disparaitre ».
+     */
+    private static double width(double age, int life) {
+        double left = life - age;
+        if (left >= BEAM_SHRINK) return 1.0;
+        return Math.max(0.0, left / BEAM_SHRINK);
+    }
+
+    /** La pulsation rapide : plus ou moins trente pour cent, une oscillation toutes les quatre images. */
+    private static double wiggle(double age) {
+        return 1.0 + WIGGLE_RADIUS * Math.sin(age * Math.PI * 2.0 / WIGGLE_TICKS);
     }
 
     /** Un cylindre : {@code BEAM_SIDES} quadrilateres entre les deux cercles. */
