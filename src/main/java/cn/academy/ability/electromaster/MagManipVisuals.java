@@ -37,6 +37,44 @@ public final class MagManipVisuals {
     /** La portee du lancer : cinq blocs — vingt-cinq, au carre. */
     public static final double THROW_RANGE_SQ = 25.0;
 
+    /** La gravite du bloc, par tick : le {@code motionY -= 0,04} de l'original. */
+    public static final double GRAVITY = 0.04;
+
+    /**
+     * Le nombre de fois que le bloc avance de son mouvement dans un meme tick : <b>DEUX</b>.
+     *
+     * <p>Ce n'est pas une fantaisie, c'est l'original, et c'est ce qui manquait le plus au port :
+     * le joueur a mesure 55 blocs chez lui a 100 % d'experience, contre 29 ici.
+     *
+     * <p>Son bloc etait une {@code EntityAdvanced} de LambdaLib, avec un {@code Rigidbody} pour
+     * suiveur de mouvement : ce suiveur faisait deja
+     * {@code setPosition(posX + motionX, ...)} a chaque tick. Et le {@code onUpdate} du bloc
+     * ajoutait <b>encore une fois</b> ce meme mouvement a sa position :
+     * {@code posX += motionX; posY += motionY; posZ += motionZ;}. Le bloc avancait donc deux fois
+     * son mouvement par tick.
+     *
+     * <p>La gravite, elle, n'etait posee qu'une fois par tick — dans le meme {@code onUpdate} —
+     * donc le bloc tombait aussi deux fois plus vite en chemin. Tout le reste en decoule : il part
+     * deux fois plus vite, vole deux fois moins longtemps, et tombe deux fois plus loin que ce que
+     * disent ses seuls nombres. C'est le lancer que le joueur connait, et c'est pour cela que le
+     * port lui paraissait mou.
+     *
+     * <p>Le port n'a qu'un seul deplacement par tick — celui du moteur, qui resout les collisions
+     * — alors il l'avance de {@code STEPS} fois le mouvement, et le rayon de pose couvre la meme
+     * distance : un mur d'un bloc ne peut pas etre saute.
+     */
+    public static final int STEPS = 2;
+
+    /** La vitesse vraie d'un bloc lance, en blocs par tick : sa vitesse, deux fois. */
+    public static double flightSpeed(double speed) {
+        return speed * STEPS;
+    }
+
+    /** Et la gravite qu'il subit vraiment, en blocs par tick au carre. */
+    public static double flightGravity() {
+        return GRAVITY * STEPS;
+    }
+
     /**
      * Le cote du cube ou gresille l'electricite, autour du bloc tenu.
      *
@@ -94,7 +132,8 @@ public final class MagManipVisuals {
         Vec3 delta = target.subtract(position);
         double distSq = delta.lengthSqr();
         if (distSq < 1.0E-6) return Vec3.ZERO;
-        double scale = CARRY_PULL * (distSq < CARRY_SLOW_SQ ? distSq / CARRY_SLOW_SQ : 1.0);
+        double scale = CARRY_PULL * (distSq < CARRY_SLOW_SQ ? distSq / CARRY_SLOW_SQ : 1.0)
+                * STEPS;
         return delta.normalize().scale(scale);
     }
 
@@ -105,11 +144,16 @@ public final class MagManipVisuals {
      * <p>L'original prenait {@code normalize(lookPoint - entity) * speed} : un bloc qui part
      * droit vers le point vise, d'autant plus vite qu'on sait faire — de 0,5 a 1 bloc par
      * tick, et sa gravite le fait ensuite plonger.
+     *
+     * <p>ET SON BLOC AVANCAIT DEUX FOIS CE MOUVEMENT DANS LE MEME TICK : la vitesse qui part
+     * d'ici vaut donc le double — voir {@link #STEPS}, qui explique d'ou cela vient et pourquoi
+     * c'est ce que le joueur connait. C'est pour cela que le port lance deux fois moins loin que
+     * le vrai mod si on ne le fait pas.
      */
     public static Vec3 throwVelocity(Vec3 position, Vec3 lookPoint, double speed) {
         Vec3 delta = lookPoint.subtract(position);
         if (delta.lengthSqr() < 1.0E-6) return Vec3.ZERO;
-        return delta.normalize().scale(speed);
+        return delta.normalize().scale(flightSpeed(speed));
     }
 
     /**

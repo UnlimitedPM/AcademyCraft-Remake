@@ -58,8 +58,11 @@ public class EntityMagManipBlock extends Projectile {
     /** Les degats d'un bloc lance : la constante de l'original. */
     public static final float HIT_DAMAGE = 10f;
 
-    /** La gravite d'un bloc lache, par tick : le {@code motionY -= 0.04} de l'original. */
-    public static final double GRAVITY = 0.04;
+    /**
+     * La gravite d'un bloc lache, par tick : le {@code motionY -= 0.04} de l'original, fois
+     * l'avance double de son bloc — voir {@code MagManipVisuals.STEPS}.
+     */
+    public static final double GRAVITY = MagManipVisuals.flightGravity();
 
     /** La quantite d'emplacements essayes apres le bloc touche : les huit coins. */
     private static final int[][] CORNERS = {
@@ -185,10 +188,12 @@ public class EntityMagManipBlock extends Projectile {
 
         setDeltaMovement(getDeltaMovement().add(0, -GRAVITY, 0));
 
-        // Le rayon se lance AVANT le deplacement, sur le trajet voulu entier. Le faire apres,
-        // entre la position d'arrivee et elle-meme, ne trouverait rien : `move` a deja resolu
-        // la collision, donc le bloc s'arrete colle au mur, son rayon est de longueur nulle, et
-        // il reste la, en l'air, sans jamais se poser. C'est le GameTest qui l'a vu.
+        // Le rayon se lance AVANT le deplacement, sur le trajet voulu entier.
+        //
+        // Le faire APRES, entre la position d'arrivee et elle-meme, ne trouverait rien : `move`
+        // a deja resolu la collision, donc le bloc s'arrete colle au mur, son rayon est de
+        // longueur nulle, et il reste la, en l'air, sans jamais se poser. C'est le GameTest qui
+        // l'a vu.
         Vec3 from = position();
         Vec3 motion = getDeltaMovement();
         if (hitSomething(from, from.add(motion))) return;

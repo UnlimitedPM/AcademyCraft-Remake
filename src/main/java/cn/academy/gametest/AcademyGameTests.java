@@ -4202,12 +4202,21 @@ public final class AcademyGameTests {
                         cn.academy.entity.EntityMagManipBlock.class, box).size(),
                 "aucun bloc de fer ne reste en l'air");
         int placed = 0;
-        for (int dz = 2; dz <= 8; dz++) {
-            for (int dy = 0; dy <= 3; dy++) {
-                if (helper.getBlockState(eyes.offset(0, dy, dz)).is(iron)) placed++;
+        StringBuilder ou = new StringBuilder();
+        for (int dz = -2; dz <= 16; dz++) {
+            for (int dy = -2; dy <= 4; dy++) {
+                if (helper.getBlockState(eyes.offset(0, dy, dz)).is(iron)) {
+                    placed++;
+                    ou.append(" (dy ").append(dy).append(", dz ").append(dz).append(")");
+                }
             }
         }
-        assertValue(helper, 1, placed, "et on le retrouve pose dans le couloir");
+        // Le mur est a dz 6 : le bloc doit s'arreter AVANT lui, pas le traverser. Sa vitesse a
+        // double — voir MagManipVisuals.STEPS — donc c'est cette avance double que le rayon de
+        // pose doit couvrir, et le test verifie ici qu'aucun mur d'un bloc n'est saute.
+        assertValue(helper, 1, placed, "et on le retrouve pose dans le couloir" + ou);
+        assertTrue(helper, ou.toString().contains("dz 5") || ou.toString().contains("dz 6"),
+                "et il s'arrete au mur, pas derriere : " + ou);
 
         helper.succeed();
     }
@@ -4231,12 +4240,16 @@ public final class AcademyGameTests {
      * <p>avec {@code h} la hauteur du bloc au-dessus du sol. Si le port s'en ecarte, c'est lui
      * qui a un probleme, et le message du test dit de combien.
      *
-     * <p>MESURE DU 30/09 : 8,67 blocs en 24 ticks, pour un calcul de 9,11 — l'ecart vient des
-     * deux degres de plus que fait le lancer, parce que le bloc n'est pas tout a fait pose sur
-     * son point de portage quand il part. Le port est donc exactement aux nombres du vrai mod :
-     * pour aller a 19 blocs a 45 degres, il faudrait une vitesse de 0,85 bloc par tick, soit
-     * 70 % d'experience et non 7. C'est ce que le joueur avait dans le vrai mod — son 7 % etait
-     * l'experience d'AUTRE CHOSE que de la competence.
+     * <p>MESURE DU 30/09 : 8,67 blocs en 24 ticks pour un calcul de 9,11 — l'ecart venant des deux
+     * degres de plus que fait le lancer, parce que le bloc n'est pas tout a fait pose sur son point
+     * de portage quand il part.
+     *
+     * <p>MAIS CE N'ETAIT PAS LA BONNE COMPARAISON, et le joueur l'a montre en poussant les deux
+     * versions a 100 % d'experience : 55 blocs chez l'original, 29 ici. L'original avancait son
+     * bloc DEUX FOIS par tick — son {@code Rigidbody} le deplacait, et son propre {@code onUpdate}
+     * ajoutait encore le meme mouvement a sa position. Voir {@code MagManipVisuals.STEPS}, qui
+     * porte maintenant cette avance double dans le port : la vitesse vraie est {@code speed * 2} et
+     * la gravite vraie {@code 0,04 * 2}.
      */
     @GameTest(template = "empty")
     public static void laPorteeDuLancerEstCelleDuCalcul(GameTestHelper helper) {
@@ -4249,11 +4262,12 @@ public final class AcademyGameTests {
         BlockPos abs = aboveTestArea(helper, floor, height);
         BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
 
-        // Un sol plat, large et long : le bloc doit retomber dessus, pas sur un decor.
+        // Un sol plat, large et long, et de l'air haut : le bloc doit retomber dessus, pas sur un
+        // decor — et il monte maintenant a plus de cinq blocs, l'avance double y compris.
         for (int dx = -6; dx <= 6; dx++) {
             for (int dz = -6; dz <= 40; dz++) {
                 helper.setBlock(eyes.offset(dx, -1, dz), stone);
-                for (int dy = 0; dy <= 4; dy++) {
+                for (int dy = 0; dy <= 14; dy++) {
                     helper.setBlock(eyes.offset(dx, dy, dz), air);
                 }
             }
@@ -4277,7 +4291,7 @@ public final class AcademyGameTests {
         // encore, et le lancer en trouverait deux.
         var box = new net.minecraft.world.phys.AABB(
                 abs.getX() - 8, abs.getY() - 3, abs.getZ() - 8,
-                abs.getX() + 9, abs.getY() + 8, abs.getZ() + 45);
+                abs.getX() + 9, abs.getY() + 20, abs.getZ() + 45);
         for (var stray : helper.getLevel().getEntitiesOfClass(
                 cn.academy.entity.EntityMagManipBlock.class, box)) {
             stray.discard();
@@ -4301,7 +4315,8 @@ public final class AcademyGameTests {
 
         net.minecraft.world.phys.Vec3 launch = block.position();
         assertFalse(helper, manip.onRelease(player, data, 40), "le lancer termine le maintien");
-        double speed = 0.5 + 0.5 * 0.11;
+        double speed = cn.academy.ability.electromaster.MagManipVisuals.flightSpeed(
+                0.5 + 0.5 * 0.11);
         net.minecraft.world.phys.Vec3 velocity = block.getDeltaMovement();
         assertClose(helper, speed, velocity.length(), "la vitesse du lancer");
         // Le regard est droit devant (+Z) : la part horizontale est donc en Z, pas en X.
@@ -4319,8 +4334,10 @@ public final class AcademyGameTests {
 
         double distance = Math.hypot(block.position().x - launch.x, block.position().z - launch.z);
         double drop = launch.y - block.position().y;
+        // Le bloc avance DEUX FOIS son mouvement par tick — voir MagManipVisuals.STEPS : la
+        // vitesse vraie est le double, et la gravite le double aussi, pour la meme chute.
         double w = speed * Math.cos(Math.PI / 4);
-        double g = 0.04;
+        double g = cn.academy.ability.electromaster.MagManipVisuals.flightGravity();
         double expected = w / g * (w + Math.sqrt(w * w + 2 * g * drop));
         assertTrue(helper, Math.abs(distance - expected) < 1.5,
                 "portee " + (Math.round(distance * 100) / 100.0) + " blocs en " + ticks

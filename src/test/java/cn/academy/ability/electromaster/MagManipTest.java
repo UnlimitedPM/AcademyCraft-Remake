@@ -42,14 +42,15 @@ class MagManipTest {
     void laVitesseDePortageSAnnuleSurLePoint() {
         Vec3 target = new Vec3(0, 0, 0);
 
-        // Loin : la vitesse pleine, 0,2 par tick, dans la direction du point.
+        // Loin : la vitesse pleine, 0,2 par tick — deux fois, parce que le bloc de l'original
+        // avance deux fois son mouvement dans le meme tick. Voir MagManipVisuals.STEPS.
         Vec3 far = MagManipVisuals.carryVelocity(new Vec3(0, 0, 10), target);
-        assertEquals(0.2, far.length(), EPS);
-        assertEquals(-0.2, far.z, 1.0e-6, "elle va vers le point");
+        assertEquals(0.4, far.length(), EPS);
+        assertEquals(-0.4, far.z, 1.0e-6, "elle va vers le point");
 
         // A un bloc : ralentie au quart — c'est le distSq / 4 de l'original.
         Vec3 near = MagManipVisuals.carryVelocity(new Vec3(0, 0, 1), target);
-        assertEquals(0.2 * 1.0 / 4.0, near.length(), EPS, "a un bloc, un quart de la vitesse");
+        assertEquals(0.4 * 1.0 / 4.0, near.length(), EPS, "a un bloc, un quart de la vitesse");
 
         // Et sur le point : nulle, donc le bloc s'y arrete au lieu de le depasser d'un cote
         // puis de l'autre.
@@ -59,16 +60,17 @@ class MagManipTest {
     @Test
     void leLancerPartVersCeQueLeRegardTouche() {
         // Un bloc au-dessus de la tete, un point vise devant : il part vers le bas et
-        // devant, a la vitesse demandee et pas a une autre.
+        // devant, a la vitesse demandee et pas a une autre — deux fois celle de l'experience,
+        // toujours pour la meme raison : l'avance double du bloc. Voir MagManipVisuals.STEPS.
         Vec3 velocity = MagManipVisuals.throwVelocity(new Vec3(0, 10, 0), new Vec3(0, 0, 10), 1.0);
-        assertEquals(1.0, velocity.length(), EPS);
+        assertEquals(2.0, velocity.length(), EPS);
         assertTrue(velocity.y < 0, "il descend vers le point : " + velocity);
         assertTrue(velocity.z > 0, "et il avance : " + velocity);
 
-        // La vitesse suit l'experience : de 0,5 a 1.
-        assertEquals(0.5, MagManipVisuals.throwVelocity(new Vec3(0, 10, 0),
-                new Vec3(0, 0, 10), 0.5).length(), EPS);
+        // La vitesse suit l'experience : de 0,5 a 1 bloc par tick, donc de 1 a 2 ici.
         assertEquals(1.0, MagManipVisuals.throwVelocity(new Vec3(0, 10, 0),
+                new Vec3(0, 0, 10), 0.5).length(), EPS);
+        assertEquals(2.0, MagManipVisuals.throwVelocity(new Vec3(0, 10, 0),
                 new Vec3(0, 0, 10), 1.0).length(), EPS);
 
         // Un point confondu avec le bloc n'a pas de direction : pas de division par zero.
