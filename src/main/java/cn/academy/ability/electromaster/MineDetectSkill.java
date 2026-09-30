@@ -168,7 +168,11 @@ public class MineDetectSkill extends Skill {
     public void onActivate(Player player, AbilityData data) {
         if (!data.perform(consumption(data), overload(data))) return;
 
-        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, TIME));
+        // L'aveuglement, sans ses particules : l'original laissait celles de la cecite, et le
+        // joueur les a refusees — elles tourbillonnent autour de lui et se lisent par-dessus la
+        // pierre qu'il est justement en train de regarder. Le temoin du HUD, lui, reste : c'est
+        // la seule chose qui dit que l'effet est encore la.
+        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, TIME, 0, false, false, true));
         data.addSkillExp(this, EXP_PER_CAST);
         data.setCooldown(this, cooldown(data));
 
