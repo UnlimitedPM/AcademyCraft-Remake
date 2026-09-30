@@ -54,9 +54,28 @@ public class ModEntities {
                     .updateInterval(2)
                     .build("mag_manip_block"));
 
+    /**
+     * La bille de plasma du meltdowner, portage d'{@code EntityMdBall}.
+     *
+     * <p>Elle ne vole pas : elle se tient a cote de son porteur, qui la voit donc de pres, et
+     * c'est de la qu'elle tire son rayon. Un quart de bloc de cote, suivie de pres et
+     * rafraichie tous les ticks : l'ecart au porteur et sa duree de vie ne changent pas, mais
+     * sa position est recalculee a chaque tick chez le client pour qu'elle suive le joueur sans
+     * a-coup.
+     */
+    public static final RegistryObject<EntityType<cn.academy.entity.EntityMdBall>> MD_BALL =
+            ENTITIES.register("md_ball", () -> EntityType.Builder
+                    .<cn.academy.entity.EntityMdBall>of(cn.academy.entity.EntityMdBall::new,
+                            MobCategory.MISC)
+                    .sized(0.25f, 0.25f)
+                    .clientTrackingRange(10)
+                    .updateInterval(1)
+                    .build("md_ball"));
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) {
         ENTITIES.register(bus);
     }
+
     private ModEntities() {
     }
 }

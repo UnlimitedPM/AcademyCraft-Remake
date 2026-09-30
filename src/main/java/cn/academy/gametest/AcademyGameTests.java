@@ -5360,6 +5360,101 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La bombe a electrons : une bille devant les yeux, puis son rayon.
+     *
+     * <p>Le port faisait une explosion instantanee d'un rayon de trois blocs au point vise, et
+     * ce n'etait pas ce que fait l'original : sa bille flottait une seconde a cote du porteur,
+     * puis tirait <b>d'elle-meme</b> un rayon vers ce que le regard touche, et ne frappait que
+     * ce que ce rayon rencontrait. Le test suit ces deux temps : la bille est la des le lancer,
+     * et c'est elle qui frappe.
+     *
+     * <p>L'experience est poussee a fond pour abreger : passe 80 %, la bille ne vit plus que
+     * cinq ticks et tire au troisieme, au lieu d'une seconde pleine.
+     *
+     * <p>La cible est posee <b>douze</b> blocs devant, et c'est un detail qui compte : la bille
+     * se tient a un ecart tire au hasard, jusqu'a 1,3 bloc de cote, et c'est de <b>la</b> que
+     * part le rayon. Plus la cible est loin, plus ce decalage se resserre sur le regard — a
+     * douze blocs il ne reste que la moitie d'un bloc, et la cible est donc touchee quel que
+     * soit le tirage. Plus pres, le test dependrait du hasard.
+     */
+    @GameTest(template = "empty")
+    public static void laBombeAElectronsLacheUneBilleQuiTireSonRayon(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.ELECTRON_BOMB;
+        ServerLevel level = helper.getLevel();
+        int height = 120;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Le couloir se creuse dans la pierre : sans cela le premier bloc devant le regard
+        // arreterait le rayon, et la cible posee plus loin ne serait jamais atteinte.
+        clearCorridor(helper, abs, 16);
+        for (int dz = 0; dz <= 16; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 3; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "bomber");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        // La cible se pose exactement la ou le regard touche, et ce n'est pas un caprice : la
+        // bille nait a un ecart tire au hasard — jusqu'a 1,3 bloc de cote — et son rayon part de
+        // LA. Posee ailleurs, la cible serait touchee ou manquee selon ce tirage. La ou le regard
+        // touche, la ligne de la bille y aboutit toujours.
+        var aim = cn.academy.ability.TargetingUtil.findImpactPoint(player,
+                cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(aim.x, abs.getY(), aim.z, 0f, 0f);
+        level.addFreshEntity(zombie);
+        float before = zombie.getHealth();
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(skill.getCategory(), 5);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 1f);
+
+        skill.onActivate(player, data);
+
+        var balls = level.getEntitiesOfClass(cn.academy.entity.EntityMdBall.class,
+                new net.minecraft.world.phys.AABB(abs).inflate(4));
+        assertValue(helper, 1, balls.size(), "la bombe lache une bille de plasma");
+        var ball = balls.get(0);
+        assertTrue(helper, ball.position().distanceTo(player.position()) > 0.5,
+                "qui flotte a cote de son porteur, pas dans ses pieds : " + ball.position());
+
+        // Le tir part de la BILLE, pas de l'oeil : la cible doit donc etre dans sa ligne, de la
+        // bille jusqu'ou le regard touche. On la verifie avant de tirer, sans quoi un echec ne
+        // dirait pas si c'est le tir ou la ligne qui est en faute.
+        net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
+                ball.getX(), ball.getY() + player.getEyeHeight(), ball.getZ());
+        net.minecraft.world.phys.Vec3 to = cn.academy.ability.TargetingUtil.findImpactPoint(
+                player, cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+        var seen = cn.academy.ability.TargetingUtil.findEntityAlong(player, from, to,
+                e -> !(e instanceof cn.academy.entity.EntityMdBall));
+        assertTrue(helper, seen == zombie, "la cible est dans la ligne de la bille : vu "
+                + (seen == null ? "rien" : seen.getName().getString()) + " ; bille a "
+                + ball.position() + ", cible a " + zombie.position() + ", vise " + to);
+
+        for (int tick = 0; tick < 5 && ball.isAlive(); tick++) {
+            ball.tick();
+        }
+
+        assertFalse(helper, ball.isAlive(), "et qui s'efface au bout de sa vie");
+        assertTrue(helper, zombie.getHealth() < before,
+                "apres avoir tire son rayon : " + zombie.getHealth() + " contre " + before);
+
+        zombie.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,

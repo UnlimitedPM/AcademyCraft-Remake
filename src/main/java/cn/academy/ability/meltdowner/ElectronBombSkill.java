@@ -2,21 +2,27 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
-import net.minecraft.world.entity.LivingEntity;
+import cn.academy.entity.EntityMdBall;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.HitResult;
-import net.minecraft.world.phys.Vec3;
 
-import java.util.List;
-
-/** Active skill, port of original ElectronBomb: throws a small area explosion at the aimed spot. */
+/**
+ * La bombe a electrons, portage d'{@code ElectronBomb} : le premier tir du meltdowner.
+ *
+ * <p>Elle ne lance pas une grenade. L'original <b>lache une bille</b> devant son porteur —
+ * {@link EntityMdBall} — qui flotte la une seconde en scintillant, puis tire son rayon vers ce
+ * que le regard touche, a quinze blocs. Le trait frappe la premiere cible qu'il rencontre, et
+ * rien d'autre : c'est une bille de plasma, pas une explosion.
+ *
+ * <p>Le port faisait autrement : une explosion instantanee d'un rayon de trois blocs au point
+ * vise. C'etait plus simple, et c'etait faux — l'original ne frappait que d'une cible, et le
+ * temps de la bille est tout le sel de la competence. La duree de vie, elle, fond avec
+ * l'experience : vingt ticks, puis cinq seulement passe 80 % — la bombe devient alors presque
+ * instantanee.
+ */
 public class ElectronBombSkill extends Skill {
 
-    private static final double RANGE = 15;
-    private static final double RADIUS = 3;
+    /** La portee du regard, et donc la longueur du rayon. */
+    public static final double RANGE = 15;
 
     public ElectronBombSkill() {
         super("electron_bomb", 1);
@@ -58,24 +64,20 @@ public class ElectronBombSkill extends Skill {
         return 0f;
     }
 
+    /**
+     * Le lancer : une bille, et rien de plus.
+     *
+     * <p>Tout le reste est dans la bille : elle porte les degats du trait qu'elle tirera, et
+     * c'est elle qui marque sa cible au nom du passif de radiation. La competence, elle, ne
+     * fait que la lacher — exactement comme le {@code s_Execute} de l'original.
+     */
     @Override
     public void onActivate(Player player, AbilityData data) {
-        Level level = player.level();
-        Vec3 eye = player.getEyePosition(1.0f);
-        Vec3 look = player.getViewVector(1.0f);
-        Vec3 end = eye.add(look.scale(RANGE));
+        int life = data.getSkillExp(this) > MdBallVisuals.IMPROVED_EXP
+                ? MdBallVisuals.LIFE_IMPROVED_TICKS
+                : MdBallVisuals.LIFE_TICKS;
 
-        // Stop at the first block in the way instead of always exploding at max range.
-        HitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        Vec3 target = hit.getType() == HitResult.Type.MISS ? end : hit.getLocation();
-
-        AABB area = new AABB(target, target).inflate(RADIUS);
-        List<LivingEntity> nearby = player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
-        for (LivingEntity living : nearby) {
-            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
-            // Le tir marque la cible, si le joueur a appris l'intensification par radiation :
-            // c'est elle qui alourdit ensuite tous les coups qu'elle encaisse.
-            RadiationMarks.mark(living, data);
-        }
+        player.level().addFreshEntity(
+                new EntityMdBall(player.level(), player, life, scaled(damage(data))));
     }
 }

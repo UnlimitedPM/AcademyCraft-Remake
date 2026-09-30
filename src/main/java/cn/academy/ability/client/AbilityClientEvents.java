@@ -115,6 +115,11 @@ public class AbilityClientEvents {
         // Et le bloc tenu par la manipulation magnetique gresille tout le temps qu'il vit :
         // l'essaim se reensemence a chaque tick, voir MagManipEffect.
         MagManipEffect.tick();
+        // Les rayons du plasma et leurs etincelles : leur forme se lit en millisecondes et se
+        // dessine a chaque image, mais c'est bien au tick qu'ils meurent et que les etincelles
+        // avancent — voir MdRays et MdSparks.
+        cn.academy.ability.client.md.MdRays.tick();
+        cn.academy.ability.client.md.MdSparks.tick();
 
         for (Binding binding : BINDINGS) {
             tick(binding);

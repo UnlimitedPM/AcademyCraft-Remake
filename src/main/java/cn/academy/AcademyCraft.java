@@ -112,6 +112,10 @@ public class AcademyCraft {
             // « Cannot invoke EntityRenderer.shouldRender because "entityrenderer" is null ».
             event.registerEntityRenderer(ModEntities.MAG_MANIP_BLOCK.get(),
                     net.minecraft.client.renderer.entity.NoopRenderer::new);
+            // La bille de plasma du meltdowner : deux images tournees vers le joueur, un halo
+            // et un coeur qui clignotent — voir MdBallRenderer.
+            event.registerEntityRenderer(ModEntities.MD_BALL.get(),
+                    cn.academy.ability.client.md.MdBallRenderer::new);
         }
 
         @SubscribeEvent

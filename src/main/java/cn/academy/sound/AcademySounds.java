@@ -1,5 +1,7 @@
 package cn.academy.sound;
 
+import cn.academy.AcademyCraft;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
@@ -46,6 +48,24 @@ public final class AcademySounds {
                               SoundSource source, float volume, float pitch) {
         if (event == null || !event.isPresent()) return;
         level.playSound(null, pos.x, pos.y, pos.z, event.get(), source, volume, pitch);
+    }
+
+    /**
+     * Un son du mod, donne par son <b>nom</b> plutot que par son objet.
+     *
+     * <p>C'est ce qu'il faut aux effets dont les nombres se relisent en test : un
+     * {@code RegistryObject} n'existe que sur un jeu en marche, et le simple fait de le
+     * <b>nommer</b> dans une table de constantes fait tomber un test unitaire sur un
+     * « Not bootstrapped ». Les classes d'effet gardent donc le nom du son, et l'evenement se
+     * refabrique ici, au moment de le jouer — sa portee de seize blocs est celle par defaut,
+     * exactement comme les entrees de {@code sounds.json}.
+     */
+    public static void playAt(Level level, Vec3 pos, String name, float volume, float pitch) {
+        if (level == null || name == null) return;
+        level.playSound(null, pos.x, pos.y, pos.z,
+                SoundEvent.createVariableRangeEvent(
+                        ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, name)),
+                DEFAULT_SOURCE, volume, pitch);
     }
 
     /**

@@ -43,6 +43,11 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, BodyIntensifyPacket.class,
                 BodyIntensifyPacket::encode, BodyIntensifyPacket::decode,
                 BodyIntensifyPacket::handle);
+        // Les rayons du meltdowner : le serveur sait d'ou ils partent et jusqu'ou, et il le dit
+        // a ceux qui voient le tireur. Le genre du rayon voyage par son nom, comme le motif des
+        // eclairs, et c'est lui qui porte le son a jouer. Voir MdRayPacket.
+        CHANNEL.registerMessage(nextId++, MdRayPacket.class,
+                MdRayPacket::encode, MdRayPacket::decode, MdRayPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,
