@@ -1,5 +1,6 @@
 package cn.academy.ability.client;
 
+import cn.academy.client.hud.BodyIntensifyHud;
 import cn.academy.client.hud.CpBarHud;
 import cn.academy.client.hud.KeyHintHud;
 import cn.academy.client.hud.MediaHud;
@@ -29,6 +30,9 @@ public class AbilityHudOverlay implements IGuiOverlay {
         MediaHud.render(graphics, screenWidth, screenHeight);
         CpBarHud.render(graphics, screenWidth, screenHeight);
         NotificationHud.render(graphics, screenWidth, screenHeight);
+        // Le voile du renfort se pose par-dessus tout le reste : chez l'original il etait une
+        // AuxGui, donc dessine apres le HUD — voir BodyIntensifyHud.
+        BodyIntensifyHud.render(graphics, screenWidth, screenHeight);
         DebugConsole.render(graphics);
     }
 }

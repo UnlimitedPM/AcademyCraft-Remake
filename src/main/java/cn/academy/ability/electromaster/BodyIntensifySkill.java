@@ -62,5 +62,26 @@ public class BodyIntensifySkill extends Skill {
         player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, DURATION_TICKS, 1));
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, DURATION_TICKS, 0));
         player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, DURATION_TICKS, 0));
+
+        sendEffect(player);
+    }
+
+    /**
+     * L'electricite du renfort, chez ceux qui voient le joueur.
+     *
+     * <p>L'original en faisait une entite cliente, nee chez chacun quand le serveur annoncait
+     * que le renfort avait pris — c'est son {@code MSG_EFFECT_END} avec l'argument vrai. Le port
+     * envoie la meme chose, et un seul message : les sept hauteurs, leurs trois ou quatre arcs
+     * et leurs delais sont une affaire d'<b>image</b>, et c'est le client qui les rejoue (voir
+     * {@code BodyIntensifyEffect}). Le serveur, lui, n'a rien a savoir de tout ca.
+     *
+     * <p>Sans ce message, le renfort ne se verrait que chez celui qui appuie sur la touche, et
+     * les autres joueurs ne verraient rien du tout.
+     */
+    private static void sendEffect(Player player) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
+                        .with(() -> player),
+                new cn.academy.ability.network.BodyIntensifyPacket(player.getId()));
     }
 }

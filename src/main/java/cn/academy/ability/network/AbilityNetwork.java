@@ -38,6 +38,11 @@ public class AbilityNetwork {
         // que chez celui qui appuie sur la touche.
         CHANNEL.registerMessage(nextId++, ArcEffectPacket.class,
                 ArcEffectPacket::encode, ArcEffectPacket::decode, ArcEffectPacket::handle);
+        // Le renfort du corps : un seul message, et pas un arc — ses sept hauteurs et leurs
+        // delais sont une affaire d'image, que le client rejoue seul. Voir BodyIntensifyEffect.
+        CHANNEL.registerMessage(nextId++, BodyIntensifyPacket.class,
+                BodyIntensifyPacket::encode, BodyIntensifyPacket::decode,
+                BodyIntensifyPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

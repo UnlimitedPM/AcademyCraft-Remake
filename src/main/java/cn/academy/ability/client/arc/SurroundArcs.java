@@ -90,7 +90,23 @@ public final class SurroundArcs {
      */
     public static void spawn(Gabarit gabarit, Vec3 centre, double sizeXZ, double minY, double maxY,
                              int ownerId, RandomSource random) {
-        for (Vec3 point : spread(centre, sizeXZ, minY, maxY, gabarit.count(), random)) {
+        spawnAt(gabarit, spread(centre, sizeXZ, minY, maxY, gabarit.count(), random), ownerId,
+                random);
+    }
+
+    /**
+     * Seme un essaim a des points DONNES plutot que dans une boite.
+     *
+     * <p>L'intensification du corps s'en sert : ses arcs ne sont pas tires dans un volume mais
+     * poses sur un ANNEAU, a une hauteur fixe — le {@code phi} de 0,5 a 0,6 de l'original est un
+     * rayon, pas une demi-largeur. Voir {@code BodyIntensifyEffect}.
+     *
+     * <p>La longueur de chaque arc est tiree dans les bornes du gabarit, et la direction sur la
+     * sphere : c'est ce qui donne le gresillement, l'original ayant ses arcs tout faits.
+     */
+    public static void spawnAt(Gabarit gabarit, List<Vec3> points, int ownerId,
+                               RandomSource random) {
+        for (Vec3 point : points) {
             double length = gabarit.minLength()
                     + random.nextDouble() * (gabarit.maxLength() - gabarit.minLength());
             ArcRenderer.spawn(gabarit.pattern().name(), point,

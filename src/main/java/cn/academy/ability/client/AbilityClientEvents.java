@@ -109,6 +109,9 @@ public class AbilityClientEvents {
         ClientAbilityData.tick(ClientCharge.getSkill() != null);
         // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
         cn.academy.client.hud.NotificationHud.tick();
+        // Le renfort du corps a besoin du meme crochet : ses sept hauteurs s'egrenent sur huit
+        // ticks, et rien d'autre ne peut le faire vieillir — voir BodyIntensifyEffect.
+        BodyIntensifyEffect.tick();
 
         for (Binding binding : BINDINGS) {
             tick(binding);
