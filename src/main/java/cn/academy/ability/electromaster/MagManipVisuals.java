@@ -59,16 +59,17 @@ public final class MagManipVisuals {
      *
      * <p>L'original avait quatre arcs vivants a la fois, mais chacun vivait jusqu'a trente ticks :
      * il n'en reensemencait donc qu'un de temps en temps, au fil des morts. Un arc d'entourage ne
-     * vit ici que trois ticks — {@link #ARC_LIFE} —, donc les quatre tiennent en trois ticks de
-     * semis : deux, puis un, puis un. C'est ce decalage qui fait un gresillement continu plutot
-     * qu'une salve qui s'allume et s'eteint trois fois par seconde.
+     * vit ici que trois ticks — {@link #ARC_LIFE} —, donc il faut en semer quatre par vie d'arc,
+     * soit un tiers de plus qu'un par tick.
      *
-     * <p>Le compte est pose pour que la moyenne tombe sur {@link #ARCS_ALIVE} quel que soit le
-     * couple de constantes : la part entiere, plus un tant que le reste n'est pas epuise.
+     * <p>Et c'est un TIRAGE, pas un tour de role : le premier essai semait deux arcs, puis un,
+     * puis un, et les quatre s'allumaient donc de concert — le joueur l'a vu, « dans le vrai mod
+     * ils n'apparaissent pas toujours en meme temps ». Ici chacun arrive quand il veut.
      */
-    public static int arcsToSow(long tick) {
-        return ARCS_ALIVE / ARC_LIFE
-                + (Math.floorMod(tick, ARC_LIFE) < ARCS_ALIVE % ARC_LIFE ? 1 : 0);
+    public static int arcsToSow(net.minecraft.util.RandomSource random) {
+        int base = ARCS_ALIVE / ARC_LIFE;
+        int extra = ARCS_ALIVE % ARC_LIFE;
+        return base + (extra > 0 && random.nextFloat() < (float) extra / ARC_LIFE ? 1 : 0);
     }
 
     /**

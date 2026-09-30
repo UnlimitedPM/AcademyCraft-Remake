@@ -36,6 +36,13 @@ import net.minecraftforge.fml.common.Mod;
  * centre sur ce point. Dans l'autre ordre le bloc tournait autour de son COIN : son centre
  * decrivait alors un petit cercle autour du curseur, et le joueur a vu le bloc pencher en bas a
  * gauche de sa visee au lieu de rester dessus.
+ *
+ * <p>Le bloc se dessine AVANT les arcs, et c'est la seule raison de cette etape-ci : l'etape des
+ * particules, celle des arcs, vient apres celle des entites, donc le bloc est deja pose quand le
+ * gresillement passe devant lui. Dans l'autre ordre — le bloc apres les arcs — le ruban d'arc
+ * ecrivait sa profondeur, y compris dans les parties transparentes de sa texture, et le bloc
+ * dessine derriere se faisait refuser : le joueur voyait le monde a travers lui, dans la forme
+ * exacte du carre de l'arc. C'est le meme piege que le fond transparent du railgun.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class MagManipRenderer {
@@ -44,7 +51,9 @@ public final class MagManipRenderer {
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        // Les ENTITES, pas les particules : le bloc doit etre dessine avant les arcs, qui
+        // passent leur temps devant lui. Voir la tete de la classe.
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
 
         Minecraft client = Minecraft.getInstance();
         if (client.level == null || client.player == null) return;

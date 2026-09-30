@@ -1,7 +1,11 @@
 package cn.academy.ability.electromaster;
 
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -101,23 +105,24 @@ class MagManipTest {
     void leGresillementGardeQuatreArcsVivants() {
         // L'original avait quatre arcs d'entourage vivants a la fois, et chacun vivait trente
         // ticks : il en reensemencait donc un de temps en temps. Ici un arc ne vit que trois
-        // ticks, donc les semis se repartissent sur ces trois ticks : deux, un, un.
-        assertEquals(2, MagManipVisuals.arcsToSow(0));
-        assertEquals(1, MagManipVisuals.arcsToSow(1));
-        assertEquals(1, MagManipVisuals.arcsToSow(2));
-        assertEquals(2, MagManipVisuals.arcsToSow(3));
-
-        // Et le compte retombe toujours sur quatre arcs vivants par periode.
+        // ticks, donc il faut en semer un tiers de plus qu'un par tick — et au HASARD, sinon
+        // les quatre s'allument ensemble, ce que le joueur a vu chez le port.
+        RandomSource random = RandomSource.create(7L);
         int sown = 0;
-        for (long tick = 0; tick < MagManipVisuals.ARC_LIFE; tick++) {
-            sown += MagManipVisuals.arcsToSow(tick);
+        Set<Integer> nombres = new HashSet<>();
+        for (int tick = 0; tick < 300; tick++) {
+            int count = MagManipVisuals.arcsToSow(random);
+            nombres.add(count);
+            sown += count;
         }
-        assertEquals(MagManipVisuals.ARCS_ALIVE, sown, "quatre arcs par vie d'arc");
 
-        // Aucun tick ne seme rien : ca s'eteindrait un instant, et cela se verrait.
-        for (long tick = 0; tick < 100; tick++) {
-            assertTrue(MagManipVisuals.arcsToSow(tick) >= 1, "rien seme au tick " + tick);
-        }
+        // Cent vies d'arc en trois cents ticks : quatre cents arcs, a la louche.
+        assertTrue(Math.abs(sown - 100 * MagManipVisuals.ARCS_ALIVE) < 50,
+                "quatre arcs par vie d'arc, pas " + sown + " sur trois cents ticks");
+        // Et les deux nombres sortent : un arc presque toujours, deux des fois.
+        assertEquals(Set.of(1, 2), nombres);
+        // Jamais zero : ca s'eteindrait un instant, et cela se verrait.
+        assertTrue(nombres.stream().allMatch(n -> n >= 1));
     }
 
     @Test

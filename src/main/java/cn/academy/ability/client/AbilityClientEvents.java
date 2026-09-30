@@ -279,6 +279,10 @@ public class AbilityClientEvents {
                     // la traction magnetique. Des images, rien d'autre — voir leurs classes.
                     ChargingEffect.tick(player, skill, ClientCharge.getTicks());
                     MagMovementEffect.tick(player, skill, ClientCharge.getTicks());
+                    // Et le bloc de la manipulation magnetique, que le client porte lui aussi :
+                    // sans cela il attend les positions du serveur, et traine derriere le regard
+                    // des qu'on tourne la tete. Voir MagManipEffect.tickHeld.
+                    MagManipEffect.tickHeld(player, skill);
                 }
             }
             // L'electricite des charges : l'orage s'amase autour de celui qui le prepare.

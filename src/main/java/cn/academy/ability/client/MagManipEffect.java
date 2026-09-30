@@ -45,7 +45,7 @@ public final class MagManipEffect {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) return;
 
-        int count = MagManipVisuals.arcsToSow(client.level.getGameTime());
+        int count = MagManipVisuals.arcsToSow(RANDOM);
         double half = MagManipVisuals.SURROUND_CUBE / 2.0;
 
         for (Entity entity : client.level.entitiesForRendering()) {
@@ -60,5 +60,53 @@ public final class MagManipEffect {
             // bloc, son identifiant ne sera jamais celui du joueur. L'original ne demandait rien.
             SurroundArcs.spawnAt(SurroundArcs.THIN, points, block.getId(), RANDOM);
         }
+    }
+
+    /**
+     * Le portage, cote client : le bloc suit le regard tout de suite, sans le detour du reseau.
+     *
+     * <p>Sans cela, le bloc n'avance que la ou le SERVEUR le met — il le porte de son cote, avec
+     * le regard qu'il connait, et n'envoie sa position que tous les deux ticks. Immobile, cela ne
+     * se voit pas : le point de portage ne bouge pas, donc les deux versions du bloc se
+     * rejoignent. Mais des qu'on tourne la tete, le point de portage balaie un arc, le serveur
+     * prend son virage un tick en retard, et le bloc traine derriere le curseur — c'est ce que le
+     * joueur a decrit : « ca ne fait ce mouvement de ralenti que lorsque je tourne la tete ».
+     *
+     * <p>L'original portait le bloc des DEUX cotes : son contexte faisait `updateMoveTo` a chaque
+     * tick chez le client comme chez le serveur, et chacun avancait sa copie de 0,2 bloc. Le port
+     * fait la meme chose ici : la copie cliente avance vers le point de portage lu sur le regard
+     * du joueur, tout de suite. Le serveur reste le maitre — ses positions arrivent tous les deux
+     * ticks et recadrent la copie —, mais le mouvement ne l'attend plus.
+     */
+    public static void tickHeld(net.minecraft.client.player.LocalPlayer player,
+                                cn.academy.ability.Skill skill) {
+        if (skill != cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP) return;
+
+        EntityMagManipBlock block = carried(player);
+        if (block == null) return;
+
+        Vec3 target = MagManipVisuals.carryTarget(player.getEyePosition(1f),
+                player.getViewVector(1f));
+        Vec3 velocity = MagManipVisuals.carryVelocity(block.position(), target);
+        block.setDeltaMovement(velocity);
+        block.move(net.minecraft.world.entity.MoverType.SELF, velocity);
+    }
+
+    /** Le bloc que le joueur porte : le sien, et le plus proche de ses yeux. */
+    private static EntityMagManipBlock carried(net.minecraft.world.entity.player.Player player) {
+        if (Minecraft.getInstance().level == null) return null;
+
+        EntityMagManipBlock best = null;
+        double bestDist = 36.0;
+        for (Entity entity : Minecraft.getInstance().level.entitiesForRendering()) {
+            if (!(entity instanceof EntityMagManipBlock block)) continue;
+            if (block.getOwner() != player) continue;
+            double dist = block.distanceToSqr(player);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = block;
+            }
+        }
+        return best;
     }
 }

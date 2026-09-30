@@ -19,27 +19,33 @@ class SurroundArcsTest {
 
     @Test
     void lesTroisGabaritsSontCeuxDeLoriginal() {
-        // L'original en semait quatre, six et cinq arcs de 1,5 a 2, 3 a 4 et 3,5 a 4,5 blocs.
-        // Ces portees avaient ete rallongees un moment ; le joueur a demande de les remettre.
+        // L'original en semait quatre, six et cinq arcs de 1,5 a 2, 3 a 4 et 3,5 a 4,5 blocs,
+        // mais il les DESSINAIT a 0,3 : ces bornes-ci sont donc celles qu'il voyait.
         assertEquals(4, SurroundArcs.THIN.count(), "le fin seme quatre arcs");
         assertEquals(6, SurroundArcs.NORMAL.count(), "le moyen en seme six");
         assertEquals(5, SurroundArcs.BOLD.count(), "le gras en seme cinq");
 
-        assertEquals(1.5, SurroundArcs.THIN.minLength(), 1e-6);
-        assertEquals(2.0, SurroundArcs.THIN.maxLength(), 1e-6);
-        assertEquals(3.0, SurroundArcs.NORMAL.minLength(), 1e-6);
-        assertEquals(4.0, SurroundArcs.NORMAL.maxLength(), 1e-6);
-        assertEquals(3.5, SurroundArcs.BOLD.minLength(), 1e-6);
-        assertEquals(4.5, SurroundArcs.BOLD.maxLength(), 1e-6);
+        assertEquals(0.45, SurroundArcs.THIN.minLength(), 1e-6);
+        assertEquals(0.6, SurroundArcs.THIN.maxLength(), 1e-6);
+        assertEquals(0.9, SurroundArcs.NORMAL.minLength(), 1e-6);
+        assertEquals(1.2, SurroundArcs.NORMAL.maxLength(), 1e-6);
+        assertEquals(1.05, SurroundArcs.BOLD.minLength(), 1e-6);
+        assertEquals(1.35, SurroundArcs.BOLD.maxLength(), 1e-6);
     }
 
     @Test
     void lesMotifsDEntourageSontCeuxDeLoriginal() {
         // Sa fabrique partait des memes valeurs par defaut que les cinq motifs de la genese
-        // d'arc — retrecissement du trait 0,7, opacite 0,9 — et n'en changeait que cinq.
-        assertPattern(ArcPattern.SURROUND_THIN, 0.2, 0.8, 0.7);
-        assertPattern(ArcPattern.SURROUND_NORMAL, 0.3, 0.8, 0.7);
-        assertPattern(ArcPattern.SURROUND_BOLD, 0.35, 1.2, 0.45);
+        // d'arc — retrecissement du trait 0,7, opacite 0,9 — et n'en changeait que cinq. Les
+        // trois d'entourage sont ici a l'echelle de son dessin, 0,3 — voir ArcPattern :
+        // 0,2 de large et 0,8 de depassement pour 1,75 de long deviennent 0,06 et 0,24.
+        assertPattern(ArcPattern.SURROUND_THIN, 0.06, 0.24, 0.7);
+        assertPattern(ArcPattern.SURROUND_NORMAL, 0.09, 0.24, 0.7);
+        assertPattern(ArcPattern.SURROUND_BOLD, 0.105, 0.36, 0.45);
+
+        assertEquals(0.525, ArcPattern.SURROUND_THIN.length(), 1e-6);
+        assertEquals(1.05, ArcPattern.SURROUND_NORMAL.length(), 1e-6);
+        assertEquals(1.2, ArcPattern.SURROUND_BOLD.length(), 1e-6);
 
         assertTrue(ArcPattern.all().contains(ArcPattern.SURROUND_THIN)
                         && ArcPattern.all().contains(ArcPattern.SURROUND_BOLD),

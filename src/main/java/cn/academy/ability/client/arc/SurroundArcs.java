@@ -25,22 +25,24 @@ public final class SurroundArcs {
     /** Un gabarit : son motif, le nombre d'arcs vivants, et la longueur tiree de chacun. */
     public record Gabarit(ArcPattern pattern, int count, double minLength, double maxLength) {}
 
-    // LES TROIS PORTEES CI-DESSOUS SONT CELLES DE L'ORIGINAL.
+    // LES TROIS PORTEES CI-DESSOUS SONT CELLES DE L'ORIGINAL, ramenees a l'echelle de son
+    // dessin : son SubArcHandler reduisait chaque motif a 0,3, donc ses bornes de 1,5 a 2, de 3
+    // a 4 et de 3,5 a 4,5 blocs se voyaient 0,45 a 0,6, 0,9 a 1,2 et 1,05 a 1,35. Les motifs
+    // portent la meme mise a l'echelle — voir ArcPattern — et ces bornes-ci la suivent.
     //
-    // Elles ont ete rallongees un moment, a 2 - 6, 4 - 8 et 6 - 12, puis remises a l'original
-    // a la demande du joueur : un essaim de cinq blocs autour d'un bloc d'un metre, cela ne
-    // ressemblait plus a l'original. Et c'est la borne qui fait la taille, parce que l'essaim
-    // passe lengthFixed = faux : l'arc se dessine alors jusqu'au bout vise, donc de sa longueur
-    // tiree, et non de celle de son motif. Voir ClientArcs.spawn.
+    // C'est bien la borne qui fait la taille, parce que l'essaim passe lengthFixed = faux :
+    // ClientArcs pose alors clip = la distance entre les deux bouts, et l'arc se dessine
+    // jusque-la. Mais il ne dessine pas au-dela de SON motif, qui est genere a ArcPattern.length
+    // puis recadre : une borne plus grande que le motif ne fait rien de plus. Voir ArcMesh.
 
     /** Fin : quatre arcs, longs de 1,5 a 2 blocs. C'est le corps qui s'electrise. */
-    public static final Gabarit THIN = new Gabarit(ArcPattern.SURROUND_THIN, 4, 1.5, 2.0);
+    public static final Gabarit THIN = new Gabarit(ArcPattern.SURROUND_THIN, 4, 0.45, 0.6);
 
     /** Moyen : six arcs, longs de 3 a 4 blocs. */
-    public static final Gabarit NORMAL = new Gabarit(ArcPattern.SURROUND_NORMAL, 6, 3.0, 4.0);
+    public static final Gabarit NORMAL = new Gabarit(ArcPattern.SURROUND_NORMAL, 6, 0.9, 1.2);
 
     /** Gras : cinq arcs, longs de 3,5 a 4,5 blocs. Le claquement d'orage. */
-    public static final Gabarit BOLD = new Gabarit(ArcPattern.SURROUND_BOLD, 5, 3.5, 4.5);
+    public static final Gabarit BOLD = new Gabarit(ArcPattern.SURROUND_BOLD, 5, 1.05, 1.35);
 
     /**
      * L'orage du claquement : quatre arcs courts et minces, serres contre le corps.

@@ -64,20 +64,27 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     //   NORMAL  largeur 0,3  depassement 0,8  branches 0,7   retrecissement 0,9  3 passes
     //   BOLD    largeur 0,35 depassement 1,2  branches 0,45  retrecissement 0,9  3 passes
     //
-    // Leur longueur, elle, etait tiree entre deux bornes au moment ou le gabarit etait fabrique
-    // (1,5 a 2, 3 a 4, 3,5 a 4,5) : ces bornes vivent dans SurroundArcs, avec la portee des arcs.
+    // CES NOMBRES SONT CEUX DU MOTIF, PAS CEUX DE L'ECRAN. L'original les dessinait a 0,3 :
+    // son SubArcHandler faisait glScaled(0,3, 0,3, 0,3) avant de poser chaque arc, donc un
+    // motif de 1,5 a 2 blocs de long se voyait 0,45 a 0,6 — et ses offsets et sa largeur
+    // etaient reduits d'autant. Le port avait recopie les nombres du motif sans cette mise a
+    // l'echelle, et les arcs du bloc faisaient trois fois la taille de ceux du vrai mod — ce
+    // que le joueur a vu tout de suite : « ce n'est pas la taille, c'est l'echelle ».
+    //
+    // Les trois motifs d'entourage portent donc DEJA la mise a l'echelle, comme le micro et
+    // le fin du port, qui sont nés aux bonnes proportions.
 
     /** L'arc d'entourage fin, celui dont le corps s'entoure chez l'original. */
     public static final ArcPattern SURROUND_THIN =
-            new ArcPattern("surround_thin", 0.2, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 1.75, 0.5, 0.2, 0.2, 6L);
+            new ArcPattern("surround_thin", 0.06, 0.7, 0.9, 0.24, 0.7, 0.9, 3, 0.525, 0.5, 0.2, 0.2, 6L);
 
     /** L'arc d'entourage moyen : meme dessin, trait plus epais. */
     public static final ArcPattern SURROUND_NORMAL =
-            new ArcPattern("surround_normal", 0.3, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 3.5, 0.5, 0.2, 0.2, 7L);
+            new ArcPattern("surround_normal", 0.09, 0.7, 0.9, 0.24, 0.7, 0.9, 3, 1.05, 0.5, 0.2, 0.2, 7L);
 
     /** L'arc d'entourage gras, le plus branche et le plus large : l'eclair qui claque. */
     public static final ArcPattern SURROUND_BOLD =
-            new ArcPattern("surround_bold", 0.35, 0.7, 0.9, 1.2, 0.45, 0.9, 3, 4.0, 0.5, 0.2, 0.2, 8L);
+            new ArcPattern("surround_bold", 0.105, 0.7, 0.9, 0.36, 0.45, 0.9, 3, 1.2, 0.5, 0.2, 0.2, 8L);
 
     /**
      * L'arc d'entourage le plus fin, celui du port : la moitie de l'epaisseur du fin.
