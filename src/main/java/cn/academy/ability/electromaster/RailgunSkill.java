@@ -16,6 +16,16 @@ public class RailgunSkill extends Skill {
     private static final double RANGE = 30;
     private static final double KNOCKBACK = 2.5;
 
+    /** La longueur du rail, comme le rayon de l'original : quarante-cinq blocs. */
+    private static final double BEAM_LENGTH = 45.0;
+
+    /** Quinze arcs, comme ses {@code ARC_SIZE}, vivant le temps d'un tir. */
+    private static final int BEAM_ARCS = 15;
+    private static final int BEAM_ARC_TICKS = 15;
+
+    /** L'ecart lateral des arcs autour de l'axe, comme le sien (0,1 a 0,25). */
+    private static final double BEAM_WOBBLE = 0.25;
+
     public RailgunSkill() {
         super("railgun", 4);
     }
@@ -73,17 +83,70 @@ public class RailgunSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
-        Entity target = TargetingUtil.findEntityInSight(player, RANGE);
-        if (!(target instanceof LivingEntity living)) return;
-
-        // Le seul son de l'original qui se pose dans le monde plutot qu'au joueur : un
-        // tir de railgun s'entend de loin. Il part au moment du tir, donc ici.
+        // Le seul son de l'original qui se pose dans le monde plutot qu'au joueur : un tir de
+        // railgun s'entend de loin. Il part a CHAQUE tir — le port ne le jouait qu'en touchant,
+        // ce qui rendait muet le tir qui manque.
         cn.academy.sound.AcademySounds.playAt(player.level(), player.position(),
                 cn.academy.ModSounds.EM_RAILGUN, 0.5f, 1.0f);
+
+        shootBeam(player);
+
+        Entity target = TargetingUtil.findEntityInSight(player, RANGE);
+        if (!(target instanceof LivingEntity living)) return;
 
         living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
         Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
         living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
         living.hurtMarked = true;
+    }
+
+    /**
+     * Le rail : quinze arcs semes le long du tir, jusqu'a quarante-cinq blocs.
+     *
+     * <p>C'est ce que dessinait {@code EntityRailgunFX} : un rayon lumineux, et des arcs
+     * gresillant le long de son axe, un tous les un a deux blocs, avec un petit ecart lateral
+     * autour de la ligne. Le port n'a pas encore de rendu de rayon — il lui faudrait un trait
+     * qu'il n'a pas — mais les arcs, eux, se font avec le moteur d'eclairs qu'il a deja, et
+     * c'est eux qui donnent au tir son cote electrique.
+     */
+    private static void shootBeam(Player player) {
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f);
+        net.minecraft.util.RandomSource random = player.getRandom();
+
+        for (int i = 0; i < BEAM_ARCS; i++) {
+            double start = 1.0 + i * (BEAM_LENGTH - 1.0) / BEAM_ARCS;
+            double end = Math.min(BEAM_LENGTH, start + 1.5 + random.nextDouble() * 1.5);
+            // Les arcs ne sont pas SUR l'axe : ils gresillent autour, comme les siens. Un rail
+            // parfaitement droit ne ressemblerait a rien.
+            Vec3 from = wobble(eye.add(look.scale(start)), random);
+            Vec3 to = wobble(eye.add(look.scale(end)), random);
+            sendArc(player, cn.academy.ability.client.arc.ArcPattern.RAILGUN.name(), from, to,
+                    BEAM_ARC_TICKS);
+        }
+    }
+
+    /** Un point du rail, ecarte d'un rien de l'axe : la demi-borne laterale de l'original. */
+    private static Vec3 wobble(Vec3 point, net.minecraft.util.RandomSource random) {
+        return point.add(wobble(random), wobble(random), wobble(random));
+    }
+
+    /** Une composante de cet ecart, entre moins et plus {@code BEAM_WOBBLE}. */
+    private static double wobble(net.minecraft.util.RandomSource random) {
+        return (random.nextDouble() - 0.5) * BEAM_WOBBLE * 2.0;
+    }
+
+    /**
+     * Envoie un arc a tous ceux qui voient le tireur.
+     *
+     * <p>Le motif voyage par son nom, donc le serveur n'a rien a connaitre du rendu — c'est le
+     * message d'effet de l'original, celui qui fait qu'on voit le tir venir.
+     */
+    private static void sendArc(Player player, String pattern, Vec3 from, Vec3 to, int ticks) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
+                        .with(() -> player),
+                new cn.academy.ability.network.ArcEffectPacket(pattern, from, to, ticks, false,
+                        player.getId()));
     }
 }

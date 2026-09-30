@@ -115,6 +115,17 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
             new ArcPattern("surround_fine", 0.1, 0.7, 0.9, 0.18, 0.6, 0.9, 3, 0.35, 0.5, 0.2, 0.2, 10L);
 
     /**
+     * Le rail du railgun : les arcs que l'original semait le long de son rayon.
+     *
+     * <p>Ses nombres sont ceux de sa fabrique, recopies tels quels : 0,3 de large, 0,8 de
+     * depassement, 0,7 de branchement, 3 passes, et un retrecissement de 0,9 a chaque
+     * generation — c'est le seul motif qui retrecisse ses branches. Sa longueur, elle, etait
+     * tiree entre 2 et 3 blocs au moment de la fabriquer, d'ou les 2,5 d'ici.
+     */
+    public static final ArcPattern RAILGUN =
+            new ArcPattern("railgun", 0.3, 0.7, 0.9, 0.8, 0.7, 0.9, 3, 2.5, 0.5, 0.2, 0.2, 11L);
+
+    /**
      * Le nombre de variantes tirees par motif.
      *
      * <p>L'original en tirait vingt et changeait de variante toutes les quelques dixiemes
@@ -126,7 +137,8 @@ public record ArcPattern(String name, double width, double lengthShrink, double 
     /** Les motifs, dans l'ordre ou ils sont nommes : les cinq de l'original, puis l'entourage. */
     public static List<ArcPattern> all() {
         return List.of(WEAK, THIN_CONTINUOUS, CHARGING, STRONG, AOE,
-                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO, SURROUND_FINE);
+                SURROUND_THIN, SURROUND_NORMAL, SURROUND_BOLD, SURROUND_MICRO, SURROUND_FINE,
+                RAILGUN);
     }
 
     /** Le motif qui porte ce nom, ou l'arc faible si le nom est inconnu. */

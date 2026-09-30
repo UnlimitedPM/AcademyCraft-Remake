@@ -208,7 +208,8 @@ class ArcGeneratorTest {
             assertEquals(0.7, pattern.widthShrink(), 1e-9);
         }
         assertEquals(20, ArcPattern.VARIANTS);
-        assertEquals(10, ArcPattern.all().size(), "cinq motifs, plus les cinq de l'entourage");
+        assertEquals(11, ArcPattern.all().size(),
+                "cinq motifs, les cinq de l'entourage, et le rail du railgun");
 
         assertEquals(ArcPattern.STRONG, ArcPattern.byName("strong"));
         assertEquals(ArcPattern.WEAK, ArcPattern.byName("n'importe quoi"),
