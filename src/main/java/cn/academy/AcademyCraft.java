@@ -104,6 +104,14 @@ public class AcademyCraft {
             // La bille de silicium : la premiere entite du mod, et donc son premier rendu
             // d'entite. Sans cette ligne, l'objet se lancerait sans qu'on voie rien.
             event.registerEntityRenderer(ModEntities.SILBARN.get(), cn.academy.client.SilbarnRenderer::new);
+            // Le bloc de la manipulation magnetique n'a rien a dessiner ici : c'est le rendu du
+            // monde qui s'en charge, voir MagManipRenderer. Mais il lui faut QUAND MEME un rendu
+            // d'entite, meme vide, et ce n'est pas une precaution de style : le jeu lit le rendu
+            // de chaque entite visible pour savoir s'il faut la dessiner, et quand il n'en trouve
+            // pas, il plante. Vecu le 30/09 : attraper un bloc fermait le jeu sur
+            // « Cannot invoke EntityRenderer.shouldRender because "entityrenderer" is null ».
+            event.registerEntityRenderer(ModEntities.MAG_MANIP_BLOCK.get(),
+                    net.minecraft.client.renderer.entity.NoopRenderer::new);
         }
 
         @SubscribeEvent
