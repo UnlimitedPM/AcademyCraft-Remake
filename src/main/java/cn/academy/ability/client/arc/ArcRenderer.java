@@ -103,13 +103,21 @@ public class ArcRenderer {
     /** Dix cotes : assez pour que la section ronde se lise, et rien de plus a calculer. */
     private static final int BEAM_SIDES = 10;
 
-    /** Le coeur : 241, 240, 222 a 200 sur 255, rayon 0,09. */
+    /**
+     * Le coeur : 241, 240, 222, rayon 0,09 — les nombres de l'original.
+     *
+     * <p>Son opacite, elle, a ete baissee. L'original la tenait a 200 sur 255, mais son
+     * cylindre n'etait dessine qu'une fois par face vue ; ici, le tri des faces arriere etant
+     * desactive, le demi-cylindre qui nous tourne le dos se dessine AUSSI, par-dessus le
+     * premier. Le faisceau paraissait donc deux fois trop lumineux — ce que le joueur a vu.
+     * La retouche s'arrete la : c'est la meme geometrie, avec une opacite de moitie.
+     */
     private static final double CORE_RADIUS = 0.09;
-    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 200 / 255f };
+    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 110 / 255f };
 
-    /** Le halo : 236, 170, 93 a 60 sur 255, rayon 0,13. */
+    /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 40 pour la meme raison. */
     private static final double HALO_RADIUS = 0.13;
-    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 60 / 255f };
+    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 40 / 255f };
 
     /** Les temps de l'original, en ticks : entree en matiere 150 ms, retrecissement 800, effacement 1000. */
     private static final int BEAM_BLEND_IN = 3;
@@ -130,11 +138,17 @@ public class ArcRenderer {
      */
     private static final float BEAM_FLAT_V = 0.5f;
 
-    /** La largeur du ruban de lueur, comme le {@code glow.width} de l'original : 1,1. */
-    private static final double GLOW_WIDTH = 1.1;
-
-    /** Son opacite, le reste venant de l'alpha de sa texture. */
-    private static final float GLOW_ALPHA = 0.75f;
+    /**
+     * La largeur du ruban de lueur, et son opacite.
+     *
+     * <p>L'original annonce 1,1 — mais c'est un nombre de son repere, et un ruban de 1,1 bloc
+     * qui part de la MAIN du joueur occupe tout l'ecran : c'est le cone enorme que le joueur a
+     * vu. Sa lueur, sur la capture du vrai mod, fait a peine le double du coeur. Reste donc
+     * 0,45 de large, et une opacite tiree vers le bas : elle doit etre un halo, pas une
+     * surface — le joueur l'a dit, « elle n'est pas transparente ».
+     */
+    private static final double GLOW_WIDTH = 0.45;
+    private static final float GLOW_ALPHA = 0.28f;
 
     /** Un faisceau vivant : ses deux bouts, sa naissance, sa duree, et son tireur. */
     private record Beam(double[] from, double[] to, long birth, int life, int ownerId) {}
