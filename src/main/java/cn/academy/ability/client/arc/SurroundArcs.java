@@ -64,19 +64,16 @@ public final class SurroundArcs {
      * Le cote de la boite ou semer, pour qu'un arc ne sorte d'un cube que de la moitie de lui-meme.
      *
      * <p>Un arc d'entourage nait a un point de la boite et file dans une direction tiree : pose
-     * au bord, il en sort donc de toute sa longueur. L'original ne s'en souciait pas — ses arcs
-     * etaient tailles pour un corps, ou depasser se voit peu.
-     *
-     * <p>Le point de depart recule donc d'une longueur d'arc, et pas de deux : un arc peut
-     * encore depasser de la moitie de sa taille, ce qui se voit — le joueur a demande "un peu"
-     * de debordement — sans que l'eclair aille se planter dans le bloc d'a cote.
+     * au bord, il en sort donc de la MOITIE de sa longueur, puisqu'il est centre sur son point —
+     * voir {@link #spawnAt}, qui suit l'original. Le point de depart recule d'autant, et la
+     * boite reste ainsi dans ses murs.
      *
      * <p>Quand la boite est plus petite que cela — les gros gabarits dans un bloc — il ne reste
      * rien a retrecir, et la fonction rend zero : l'appelant garde alors son point au centre, et
      * laisse les arcs depasser, comme l'original.
      */
     public static double inset(double cubeSize, Gabarit gabarit) {
-        return Math.max(0.0, cubeSize - gabarit.maxLength());
+        return Math.max(0.0, cubeSize - gabarit.maxLength() / 2.0);
     }
 
     /**
@@ -104,14 +101,20 @@ public final class SurroundArcs {
      *
      * <p>La longueur de chaque arc est tiree dans les bornes du gabarit, et la direction sur la
      * sphere : c'est ce qui donne le gresillement, l'original ayant ses arcs tout faits.
+     *
+     * <p>Et l'arc est pose <b>centre</b> sur son point : c'est ce que faisait l'original, dont
+     * {@code SubArcHandler} reculait de {@code -longueur / 2} avant de dessiner. Le port le
+     * posait a partir du point et le laissait filer vers l'exterieur, donc son essaim
+     * s'etendait d'une longueur d'arc de plus que celui du vrai mod — c'est ce que le joueur a
+     * vu sur le bloc tenu : « peut-etre qu'ils sont legerement plus disperses ».
      */
     public static void spawnAt(Gabarit gabarit, List<Vec3> points, int ownerId,
                                RandomSource random) {
         for (Vec3 point : points) {
             double length = gabarit.minLength()
                     + random.nextDouble() * (gabarit.maxLength() - gabarit.minLength());
-            ArcRenderer.spawn(gabarit.pattern().name(), point,
-                    point.add(randomDirection(random).scale(length)),
+            Vec3 half = randomDirection(random).scale(length / 2.0);
+            ArcRenderer.spawn(gabarit.pattern().name(), point.subtract(half), point.add(half),
                     LIFE_TICKS, false, ownerId);
         }
     }

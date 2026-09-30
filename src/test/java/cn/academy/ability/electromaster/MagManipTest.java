@@ -104,11 +104,10 @@ class MagManipTest {
     }
 
     @Test
-    void leGresillementGardeQuatreArcsVivants() {
-        // L'original avait quatre arcs d'entourage vivants a la fois, et chacun vivait trente
-        // ticks : il en reensemencait donc un de temps en temps. Ici un arc ne vit que trois
-        // ticks, donc il faut en semer un tiers de plus qu'un par tick — et au HASARD, sinon
-        // les quatre s'allument ensemble, ce que le joueur a vu chez le port.
+    void leGresillementGardeDeuxArcsVivants() {
+        // L'original tenait quatre arcs vivants, mais chacun vivait trente ticks et scintillait :
+        // il n'en montrait jamais quatre. Ici un arc ne vit que trois ticks et reste visible,
+        // donc deux arcs vivants — un tiers de semis en moins, et quelques ticks sans rien.
         RandomSource random = RandomSource.create(7L);
         int sown = 0;
         Set<Integer> nombres = new HashSet<>();
@@ -118,13 +117,11 @@ class MagManipTest {
             sown += count;
         }
 
-        // Cent vies d'arc en trois cents ticks : quatre cents arcs, a la louche.
+        // Cent vies d'arc en trois cents ticks : deux cents arcs, a la louche.
         assertTrue(Math.abs(sown - 100 * MagManipVisuals.ARCS_ALIVE) < 50,
-                "quatre arcs par vie d'arc, pas " + sown + " sur trois cents ticks");
-        // Et les deux nombres sortent : un arc presque toujours, deux des fois.
-        assertEquals(Set.of(1, 2), nombres);
-        // Jamais zero : ca s'eteindrait un instant, et cela se verrait.
-        assertTrue(nombres.stream().allMatch(n -> n >= 1));
+                "deux arcs par vie d'arc, pas " + sown + " sur trois cents ticks");
+        // Et le tirage laisse des ticks sans rien : c'est ce qui fait le scintillement.
+        assertEquals(Set.of(0, 1), nombres);
     }
 
     @Test

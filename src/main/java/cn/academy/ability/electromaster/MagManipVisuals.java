@@ -87,22 +87,29 @@ public final class MagManipVisuals {
     /** La vie d'un arc d'entourage, en ticks — celle de {@code SurroundArcs}. */
     public static final int ARC_LIFE = 3;
 
-    /** Les arcs vivants a la fois : les quatre de l'original, un {@code ArcType.THIN}. */
-    public static final int ARCS_ALIVE = 4;
+    /**
+     * Les arcs vivants a la fois autour du bloc.
+     *
+     * <p>L'original en tenait quatre, mais chacun vivait jusqu'a trente ticks et scintillait —
+     * son essaim n'en montrait donc jamais quatre d'un coup. Ici un arc ne vit que trois ticks,
+     * et il est visible tout du long : le joueur a vu plus d'eclairs que dans le vrai mod. Deux
+     * arcs vivants, tires au hasard, en donnent le rythme.
+     */
+    public static final int ARCS_ALIVE = 2;
 
     private MagManipVisuals() {}
 
     /**
      * Combien d'arcs semer ce tick pour en garder {@link #ARCS_ALIVE} vivants.
      *
-     * <p>L'original avait quatre arcs vivants a la fois, mais chacun vivait jusqu'a trente ticks :
-     * il n'en reensemencait donc qu'un de temps en temps, au fil des morts. Un arc d'entourage ne
-     * vit ici que trois ticks — {@link #ARC_LIFE} —, donc il faut en semer quatre par vie d'arc,
-     * soit un tiers de plus qu'un par tick.
+     * <p>Un arc d'entourage ne vit ici que trois ticks — {@link #ARC_LIFE} —, donc deux arcs
+     * vivants demandent deux semis sur trois ticks : deux fois un arc, et une fois rien. C'est
+     * cet arret d'un tick, invisible parce que les arcs precedents couvrent encore, qui donne le
+     * gresillement plutot qu'une pluie continue.
      *
      * <p>Et c'est un TIRAGE, pas un tour de role : le premier essai semait deux arcs, puis un,
-     * puis un, et les quatre s'allumaient donc de concert — le joueur l'a vu, « dans le vrai mod
-     * ils n'apparaissent pas toujours en meme temps ». Ici chacun arrive quand il veut.
+     * puis un, et ils s'allumaient donc de concert — le joueur l'a vu, « dans le vrai mod ils
+     * n'apparaissent pas toujours en meme temps ». Ici chacun arrive quand il veut.
      */
     public static int arcsToSow(net.minecraft.util.RandomSource random) {
         int base = ARCS_ALIVE / ARC_LIFE;

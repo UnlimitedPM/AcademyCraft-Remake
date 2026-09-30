@@ -76,20 +76,19 @@ class SurroundArcsTest {
     }
 
     @Test
-    void lePointDeDepartReculeDEUneLongueurDArc() {
-        // Un arc nait dans la boite et file dans une direction tiree. Le point recule d'une
-        // longueur d'arc, pas de deux : l'eclair peut encore depasser de la moitie de lui-meme,
-        // ce que le joueur a demande a voir, sans aller dans le bloc d'a cote.
+    void lePointDeDepartReculeDUneDemiLongueurDArc() {
+        // Un arc est centre sur son point, comme chez l'original : pose au bord du cube, il en
+        // sort donc de la moitie de sa longueur, et c'est ce que le point recule.
         assertTrue(SurroundArcs.inset(1.0, MACHINE) >= 0.5,
                 "la boite de la machine reste large");
-        assertEquals(0.0, SurroundArcs.inset(1.0, SurroundArcs.BOLD), 1e-6,
-                "des arcs de 3,5 a 4,5 dans un cube de un : il ne reste rien a retrecir");
+        assertEquals(0.325, SurroundArcs.inset(1.0, SurroundArcs.BOLD), 1e-6,
+                "des arcs de 1,05 a 1,35 dans un cube de un : il reste de quoi retrecir");
         assertEquals(0.0, SurroundArcs.inset(0.5, SurroundArcs.BOLD), 1e-6,
                 "et un reste negatif vaut zero, jamais un recul");
 
-        // La promesse : demi-boite plus longueur d'arc, cela reste dans le cube, plus la moitie
-        // de l'arc.
-        assertTrue(SurroundArcs.inset(1.0, MACHINE) / 2.0 + MACHINE.maxLength()
+        // La promesse : demi-boite plus demi-longueur d'arc, cela reste dans le cube, plus la
+        // moitie de l'arc.
+        assertTrue(SurroundArcs.inset(1.0, MACHINE) / 2.0 + MACHINE.maxLength() / 2.0
                         <= 0.5 + MACHINE.maxLength() / 2.0,
                 "un arc ne depasse jamais de plus de la moitie de sa taille");
     }
