@@ -151,13 +151,13 @@ public class ArcRenderer {
     private static final float GLOW_ALPHA = 0.40f;
 
     /**
-     * De combien le rayon est plus haut que la main.
+     * De combien le rayon est pousse vers l'avant.
      *
-     * <p>Le joueur l'a rappele : dans l'original, le tir ne part pas de la main mais de la
-     * PIECE qu'on lance. Le rayon nait donc a la hauteur de cette piece, un peu au-dessus de la
-     * main — et c'est pour cela qu'il parait decale vers le haut dans la vue du tireur.
+     * <p>Le joueur l'a rappele : dans l'original, le tir part de la PIECE lancee, donc de la
+     * main mais un rien en avant. Le premier essai l'avait monte de 0,2 — c'etait pire : c'est
+     * une avancee, pas une hauteur. Les DEUX bouts avancent, donc le rayon reste dans l'axe.
      */
-    private static final double BEAM_LIFT = 0.2;
+    private static final double BEAM_FORWARD = 0.2;
 
     /** Le nombre d'anneaux de chaque bout arrondi, comme les quatre etapes de l'original. */
     private static final int CAP_STEPS = 3;
@@ -166,9 +166,6 @@ public class ArcRenderer {
     private record Beam(double[] from, double[] to, long birth, int life, int ownerId) {}
 
     private static final List<Beam> BEAMS = new ArrayList<>();
-
-    /** Le type de rendu du faisceau, construit une fois : il differe de celui des eclairs. */
-    private static RenderType beamType;
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -193,10 +190,33 @@ public class ArcRenderer {
     public static void spawnBeam(Vec3 from, Vec3 to, int lifeTicks, int ownerId) {
         Minecraft minecraft = Minecraft.getInstance();
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
-        BEAMS.add(new Beam(
+
+        // Le decalage de vue est applique MAINTENANT, une fois pour toutes, et le faisceau est
+        // fige dans le monde a cet instant. Il se recalculait a chaque image, donc il suivait le
+        // regard du joueur — ce qu'il a vu : « une fois lance, le railgun suit mon regard ».
+        // L'original figeait aussi le sien : son entite retenait l'orientation du tireur au
+        // moment du tir, et son rendu ne faisait plus que poser ce qu'elle avait retenu.
+        boolean own = minecraft.player != null && minecraft.player.getId() == ownerId;
+        boolean firstPerson = own && minecraft.options.getCameraType().isFirstPerson();
+        org.joml.Vector3f up = minecraft.gameRenderer.getMainCamera().getUpVector();
+        double[] above = { up.x, up.y, up.z };
+
+        double[][] fixed = ArcView.fix(
                 new double[] { from.x, from.y, from.z },
                 new double[] { to.x, to.y, to.z },
-                gameTime, Math.max(1, lifeTicks), ownerId));
+                above, firstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
+
+        // Et un rien en avant : le tir part de la piece lancee, juste devant la main.
+        double[] axis = normalize(fixed[1][0] - fixed[0][0], fixed[1][1] - fixed[0][1],
+                fixed[1][2] - fixed[0][2]);
+        if (axis != null) {
+            for (int i = 0; i < 3; i++) {
+                fixed[0][i] += axis[i] * BEAM_FORWARD;
+                fixed[1][i] += axis[i] * BEAM_FORWARD;
+            }
+        }
+
+        BEAMS.add(new Beam(fixed[0], fixed[1], gameTime, Math.max(1, lifeTicks), ownerId));
     }
 
     /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
@@ -240,6 +260,21 @@ public class ArcRenderer {
         double[] above = { aboveIsUp.x, aboveIsUp.y, aboveIsUp.z };
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
+
+        // Les faisceaux d'abord : ils sont deja figes dans le monde — voir spawnBeam — et ils
+        // s'ecrivent AVANT les arcs pour que ceux-ci passent par-dessus. Ils gardent le test de
+        // profondeur du monde : sans lui, le joueur voyait son propre tir a travers son corps et
+        // a travers les blocs, ce qu'il a signale.
+        if (!BEAMS.isEmpty()) {
+            VertexConsumer beams = buffers.getBuffer(arc(BEAM_TEXTURE));
+            long gameTime = Minecraft.getInstance().level == null
+                    ? 0 : Minecraft.getInstance().level.getGameTime();
+            for (Beam beam : BEAMS) {
+                drawBeam(beams, pose.last(), camera, above, beam, gameTime);
+            }
+            buffers.endBatch();
+        }
+
         VertexConsumer out = buffers.getBuffer(arc(TEXTURE));
 
         // Quel decalage de vue s'applique : celui de la vue interne, et seulement pour l'eclair
@@ -254,17 +289,6 @@ public class ArcRenderer {
             if (arc.visible()) {
                 draw(out, pose.last(), camera, above, arc,
                         firstPerson && arc.ownerId() == ownId);
-            }
-        }
-
-        // Et les faisceaux, dans leur propre bande : leur texture n'est pas celle des eclairs,
-        // et ils passent par-dessus eux — voir beamType.
-        if (!BEAMS.isEmpty()) {
-            VertexConsumer beams = buffers.getBuffer(beamType());
-            long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
-            for (Beam beam : BEAMS) {
-                drawBeam(beams, pose.last(), camera, above, beam, gameTime,
-                        firstPerson && beam.ownerId() == ownId);
             }
         }
         buffers.endBatch();
@@ -326,23 +350,13 @@ public class ArcRenderer {
      * l'original, ou le rayon diminuait avant de disparaitre.
      */
     private static void drawBeam(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
-                                 double[] above, Beam beam, long gameTime,
-                                 boolean ownFirstPerson) {
+                                 double[] above, Beam beam, long gameTime) {
         double age = gameTime - beam.birth();
         if (age < 0) return;
 
-        // Le decalage de vue, le meme que pour les eclairs : c'est LUI qui fait croire que le
-        // tir part de la main. Sans lui, un faisceau ne des yeux commence sur la camera, donc
-        // le joueur ne voit rien de sa propre attaque — ce qu'il a signale.
-        double[][] fixed = ArcView.fix(beam.from(), beam.to(), above,
-                ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
-        double[] from = fixed[0];
-        double[] to = fixed[1];
-
-        // Le rayon nait de la piece lancee, pas de la main : les DEUX bouts montent, donc il
-        // reste dans l'axe de la visee et parait seulement un peu plus haut.
-        from[1] += BEAM_LIFT;
-        to[1] += BEAM_LIFT;
+        // Les deux bouts sont DEJA decales a la main et figes : voir spawnBeam.
+        double[] from = beam.from();
+        double[] to = beam.to();
 
         double[] axis = normalize(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
         if (axis == null) return;
@@ -529,52 +543,6 @@ public class ArcRenderer {
     }
 
     /**
-     * Le type de rendu du faisceau : celui des eclairs, mais SANS test de profondeur.
-     *
-     * <p>C'est ce qui le met AU-DESSUS des arcs qui l'entourent. Le joueur l'a vu : les petits
-     * eclairs, qui sont des images tournees vers l'ecran, masquaient des morceaux du trait. Un
-     * halo de deux secondes et demie qui se voit a travers ce qu'il traverse etait deja le choix
-     * de l'original, qui dessinait son rayon apres ses arcs.
-     */
-    private static RenderType beamType() {
-        if (beamType == null) {
-            beamType = RenderType.create("academy_beam",
-                    DefaultVertexFormat.POSITION_COLOR_TEX,
-                    VertexFormat.Mode.QUADS,
-                    256,
-                    false,
-                    true,
-                    RenderType.CompositeState.builder()
-                            .setShaderState(new RenderStateShard.ShaderStateShard(
-                                    GameRenderer::getRendertypeBeaconBeamShader))
-                            .setTextureState(new RenderStateShard.TextureStateShard(
-                                    BEAM_TEXTURE, false, false))
-                            .setTransparencyState(blend())
-                            // La constante NO_DEPTH_TEST de vanilla est protegee, mais le
-                            // constructeur de son morceau ne l'est pas : on rebatit le meme,
-                            // avec 519, qui est GL_ALWAYS.
-                            .setDepthTestState(new RenderStateShard.DepthTestStateShard(
-                                    "academy_beam_always", 519))
-                            .setCullState(new RenderStateShard.CullStateShard(false))
-                            .createCompositeState(true));
-        }
-        return beamType;
-    }
-
-    /** Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA. */
-    private static RenderStateShard.TransparencyStateShard blend() {
-        return new RenderStateShard.TransparencyStateShard("academy_arc",
-                () -> {
-                    RenderSystem.enableBlend();
-                    RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
-                },
-                () -> {
-                    RenderSystem.disableBlend();
-                    RenderSystem.defaultBlendFunc();
-                });
-    }
-
-    /**
      * Le type de rendu des eclairs : une bande texturee sans eclairage, transparente, et sans
      * tri des faces arriere.
      *
@@ -594,7 +562,15 @@ public class ArcRenderer {
                                 GameRenderer::getRendertypeBeaconBeamShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
                         // Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA.
-                        .setTransparencyState(blend())
+                        .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_arc",
+                                () -> {
+                                    RenderSystem.enableBlend();
+                                    RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
+                                },
+                                () -> {
+                                    RenderSystem.disableBlend();
+                                    RenderSystem.defaultBlendFunc();
+                                }))
                         .setCullState(new RenderStateShard.CullStateShard(false))
                         .createCompositeState(true)));
     }
