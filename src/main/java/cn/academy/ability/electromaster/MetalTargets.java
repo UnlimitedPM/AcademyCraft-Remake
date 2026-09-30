@@ -46,6 +46,26 @@ public final class MetalTargets {
             BlockTags.EMERALD_ORES, BlockTags.GOLD_ORES, BlockTags.IRON_ORES,
             BlockTags.LAPIS_ORES, BlockTags.REDSTONE_ORES);
 
+    /**
+     * Les minerais qui ne disent pas leur nom.
+     *
+     * <p>Deux cas, et chacun a sa raison :
+     *
+     * <ul>
+     *   <li>{@code academy:constraint_metal} — le minerai de la maison, et l'original le
+     *       reconnaissait par sa <b>classe</b> : son {@code BlockGenericOre} descendait de
+     *       {@code BlockOre}, ce qui suffisait a son premier test. La 1.20.1 n'a plus de classe
+     *       de minerai du tout, donc le nom du bloc est la seule chose qui reste a lire — et
+     *       celui-ci ne dit pas « ore ».</li>
+     *   <li>{@code minecraft:ancient_debris} — les debris antiques, qui sont le minerai de la
+     *       netherite : pas le mot « ore » dans leur nom, et aucune etoile de minerai dans leurs
+     *       etiquettes non plus. L'original ne les connaissait pas, ils datent de la 1.16.</li>
+     * </ul>
+     */
+    private static final List<ResourceLocation> UNNAMED_ORES = List.of(
+            ResourceLocation.fromNamespaceAndPath("academy", "constraint_metal"),
+            ResourceLocation.withDefaultNamespace("ancient_debris"));
+
     private static Set<Block> normal = Set.of();
     private static Set<Block> weak = Set.of();
     private static Set<ResourceLocation> entities = Set.of();
@@ -104,10 +124,16 @@ public final class MetalTargets {
      * <code>deepslate_iron_ore</code>, <code>nether_quartz_ore</code> — et pour ceux des
      * autres mods, qui suivent la meme convention. Les etiquettes completes viennent en
      * secours, pour un minerai dont le nom ne dirait rien.
+     *
+     * <p>Et deux minerais lui echappent tout a fait, parce qu'ils ne disent rien : son propre
+     * minerai, que l'original tenait par sa classe, et les debris antiques. Voir
+     * {@link #UNNAMED_ORES}.
      */
     public static boolean isOreBlock(BlockState state) {
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
-        if (id != null && id.getPath().contains("ore")) return true;
+        if (id == null) return false;
+        if (UNNAMED_ORES.contains(id)) return true;
+        if (id.getPath().contains("ore")) return true;
         for (net.minecraft.tags.TagKey<Block> tag : ORE_TAGS) {
             if (state.is(tag)) return true;
         }

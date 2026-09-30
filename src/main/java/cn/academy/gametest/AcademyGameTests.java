@@ -4053,6 +4053,12 @@ public final class AcademyGameTests {
         assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
                         net.minecraft.world.level.block.Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState()),
                 "et un minerai des profondeurs aussi");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
+                        cn.academy.ModBlocks.CONSTRAINT_METAL_ORE.get().defaultBlockState()),
+                "le minerai de la maison ne dit pas ore dans son nom — l'original le tenait par sa classe");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
+                        net.minecraft.world.level.block.Blocks.ANCIENT_DEBRIS.defaultBlockState()),
+                "et les debris antiques sont le minerai de la netherite, sans le mot ore non plus");
         assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.isOreBlock(
                         net.minecraft.world.level.block.Blocks.STONE.defaultBlockState()),
                 "la pierre n'en est pas un");
