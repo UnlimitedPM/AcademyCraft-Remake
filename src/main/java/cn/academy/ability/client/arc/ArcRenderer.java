@@ -113,11 +113,11 @@ public class ArcRenderer {
      * La retouche s'arrete la : c'est la meme geometrie, avec une opacite de moitie.
      */
     private static final double CORE_RADIUS = 0.09;
-    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 110 / 255f };
+    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 150 / 255f };
 
-    /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 40 pour la meme raison. */
+    /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 50 pour la meme raison. */
     private static final double HALO_RADIUS = 0.13;
-    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 40 / 255f };
+    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 50 / 255f };
 
     /** Les temps de l'original, en ticks : entree en matiere 150 ms, retrecissement 800, effacement 1000. */
     private static final int BEAM_BLEND_IN = 3;
@@ -148,7 +148,19 @@ public class ArcRenderer {
      * surface — le joueur l'a dit, « elle n'est pas transparente ».
      */
     private static final double GLOW_WIDTH = 0.45;
-    private static final float GLOW_ALPHA = 0.28f;
+    private static final float GLOW_ALPHA = 0.40f;
+
+    /**
+     * De combien le rayon est plus haut que la main.
+     *
+     * <p>Le joueur l'a rappele : dans l'original, le tir ne part pas de la main mais de la
+     * PIECE qu'on lance. Le rayon nait donc a la hauteur de cette piece, un peu au-dessus de la
+     * main — et c'est pour cela qu'il parait decale vers le haut dans la vue du tireur.
+     */
+    private static final double BEAM_LIFT = 0.2;
+
+    /** Le nombre d'anneaux de chaque bout arrondi, comme les quatre etapes de l'original. */
+    private static final int CAP_STEPS = 3;
 
     /** Un faisceau vivant : ses deux bouts, sa naissance, sa duree, et son tireur. */
     private record Beam(double[] from, double[] to, long birth, int life, int ownerId) {}
@@ -327,6 +339,11 @@ public class ArcRenderer {
         double[] from = fixed[0];
         double[] to = fixed[1];
 
+        // Le rayon nait de la piece lancee, pas de la main : les DEUX bouts montent, donc il
+        // reste dans l'axe de la visee et parait seulement un peu plus haut.
+        from[1] += BEAM_LIFT;
+        to[1] += BEAM_LIFT;
+
         double[] axis = normalize(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
         if (axis == null) return;
 
@@ -340,9 +357,69 @@ public class ArcRenderer {
         if (alpha <= 0f) return;
 
         double shrink = shrink(age);
-        cylinder(out, pose, camera, from, to, u, v, CORE_RADIUS * shrink, CORE_COLOR, alpha);
-        cylinder(out, pose, camera, from, to, u, v, HALO_RADIUS * shrink, HALO_COLOR, alpha);
+        double core = CORE_RADIUS * shrink;
+        double halo = HALO_RADIUS * shrink;
+        cylinder(out, pose, camera, from, to, u, v, core, CORE_COLOR, alpha);
+        cylinder(out, pose, camera, from, to, u, v, halo, HALO_COLOR, alpha);
+        // Les deux bouts sont arrondis : c'est une boule tres allongee, pas un tuyau coupe.
+        caps(out, pose, camera, from, to, u, v, axis, core, CORE_COLOR, alpha);
+        caps(out, pose, camera, from, to, u, v, axis, halo, HALO_COLOR, alpha);
         glow(out, pose, camera, from, to, axis, alpha);
+    }
+
+    /** Les deux bouts arrondis d'un cylindre. */
+    private static void caps(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                             double[] from, double[] to, double[] u, double[] v, double[] axis,
+                             double radius, float[] color, float alpha) {
+        roundedEnd(out, pose, camera, from, u, v, axis, radius, color, alpha, 1.0);
+        roundedEnd(out, pose, camera, to, u, v, axis, radius, color, alpha, -1.0);
+    }
+
+    /**
+     * Un bout arrondi, construit comme la « tete » de l'original.
+     *
+     * <p>Sa tete suivait {@code y = racine(x)} : du rayon plein au point, en anneaux. C'est ce
+     * qui donne au tir son bout en ogive plutot qu'un disque plat — le joueur le decrit comme
+     * une boule tres allongee, et c'est exactement ca.
+     *
+     * <p>{@code way} vaut 1 pour le bout de depart et -1 pour celui d'arrivee : les deux
+     * s'etendent vers l'EXTERIEUR du rayon, donc il s'allonge d'un rayon de chaque cote.
+     */
+    private static void roundedEnd(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                                   double[] end, double[] u, double[] v, double[] axis,
+                                   double radius, float[] color, float alpha, double way) {
+        for (int step = 0; step < CAP_STEPS; step++) {
+            double t0 = step / (double) CAP_STEPS;
+            double t1 = (step + 1) / (double) CAP_STEPS;
+            double r0 = radius * Math.sqrt(1.0 - t0);
+            double r1 = radius * Math.sqrt(1.0 - t1);
+
+            double[] c0 = { end[0] - axis[0] * radius * t0 * way,
+                            end[1] - axis[1] * radius * t0 * way,
+                            end[2] - axis[2] * radius * t0 * way };
+            double[] c1 = { end[0] - axis[0] * radius * t1 * way,
+                            end[1] - axis[1] * radius * t1 * way,
+                            end[2] - axis[2] * radius * t1 * way };
+
+            for (int i = 0; i < BEAM_SIDES; i++) {
+                double a0 = Math.PI * 2 * i / BEAM_SIDES;
+                double a1 = Math.PI * 2 * (i + 1) / BEAM_SIDES;
+                double[] d0 = { u[0] * Math.cos(a0) + v[0] * Math.sin(a0),
+                                u[1] * Math.cos(a0) + v[1] * Math.sin(a0),
+                                u[2] * Math.cos(a0) + v[2] * Math.sin(a0) };
+                double[] d1 = { u[0] * Math.cos(a1) + v[0] * Math.sin(a1),
+                                u[1] * Math.cos(a1) + v[1] * Math.sin(a1),
+                                u[2] * Math.cos(a1) + v[2] * Math.sin(a1) };
+
+                float at0 = i / (float) BEAM_SIDES;
+                float at1 = (i + 1) / (float) BEAM_SIDES;
+
+                beamVertex(out, pose, camera, c0, d0, r0, at0, BEAM_FLAT_V, color, alpha);
+                beamVertex(out, pose, camera, c0, d1, r0, at1, BEAM_FLAT_V, color, alpha);
+                beamVertex(out, pose, camera, c1, d1, r1, at1, BEAM_FLAT_V, color, alpha);
+                beamVertex(out, pose, camera, c1, d0, r1, at0, BEAM_FLAT_V, color, alpha);
+            }
+        }
     }
 
     /**
