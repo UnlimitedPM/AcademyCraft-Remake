@@ -34,8 +34,7 @@ public class ThunderClapSkill extends Skill {
     /** Portee de la visee ou tombe la foudre, comme l'original. */
     private static final double RANGE = 40.0;
 
-    /** Trois arcs forts pour la foudre qui tombe, comme l'eclair du thunder bolt. */
-    private static final int STRIKE_ARCS = 3;
+    /** La duree d'un arc : celle du thunder bolt, pour que les deux se ressemblent. */
     private static final int STRIKE_ARC_TICKS = 20;
 
     public ThunderClapSkill() {
@@ -145,18 +144,6 @@ public class ThunderClapSkill extends Skill {
     public void onActivateCharged(Player player, AbilityData data, int chargeTicks) {
         Vec3 impact = TargetingUtil.findImpactPoint(player, RANGE);
 
-        // La foudre se voit TOMBER : trois arcs forts des yeux jusqu'au point d'impact.
-        //
-        // ECART ASSUME : l'original n'avait que sa foudre de vanilla, qui se dessine a
-        // l'interieur du plafond des qu'on est sous terre — le joueur a fait le tour de la
-        // question dans une grotte, ou son claquement ne montrait donc rien du tout. Ces arcs
-        // sont la foudre elle-meme, et ils se voient partout.
-        Vec3 eye = player.getEyePosition(1.0f);
-        for (int i = 0; i < STRIKE_ARCS; i++) {
-            sendArc(player, cn.academy.ability.client.arc.ArcPattern.STRONG.name(), eye, impact,
-                    STRIKE_ARC_TICKS);
-        }
-
         if (player.level() instanceof ServerLevel level) {
             // Foudre purement visuelle : l'original la posait en `effectOnly`, donc elle
             // ne met pas le feu et ne frappe pas d'elle-meme — les degats sont ceux de
@@ -179,8 +166,11 @@ public class ThunderClapSkill extends Skill {
                 player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         for (LivingEntity target : targets) {
             target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
-            // Un arc par victime : la foudre rebondit du point d'impact sur ce qu'elle prend,
-            // comme dans le thunder bolt.
+            // Un arc par victime, pose au POINT D'IMPACT : c'est la foudre qui rebondit sur ce
+            // qu'elle prend, comme dans le thunder bolt. L'original n'en avait pas, mais sa
+            // foudre de vanilla se dessine a l'interieur du plafond des qu'on est sous terre —
+            // le joueur a trouve une grotte ou il ne se passait rien a l'ecran. Aucun arc ne
+            // part du joueur : il n'en a jamais ete question.
             sendArc(player, cn.academy.ability.client.arc.ArcPattern.AOE.name(), impact,
                     target.position().add(0, target.getEyeHeight(), 0), STRIKE_ARC_TICKS);
         }

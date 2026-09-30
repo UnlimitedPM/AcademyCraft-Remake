@@ -839,22 +839,32 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return (float) (cn.academy.Config.overloadRecoverSpeed * raw);
     }
 
+    /**
+     * Reprend l'etat d'une autre donnee : c'est le clone de la mort.
+     *
+     * <p>L'original emmenait tout ce qui se garde dans sa reincarnation : le niveau de
+     * categorie, la reserve et le surcout, mais aussi les <b>competences apprises</b>, leur
+     * progression et l'avancement des niveaux. Le port copiait les premiers et oubliait les
+     * seconds, donc mourir effacait tout ce qu'on avait appris — le joueur l'a vu : « on garde
+     * le pouvoir qu'on a, mais on perd les competences qu'on avait apprises et leur
+     * progression ».
+     *
+     * <p>Le passage par la sauvegarde est volontaire : c'est elle qui dit exactement ce qui doit
+     * survivre a une deconnexion, donc ce qui doit survivre a une mort. Une liste recopiee a la
+     * main finirait par en oublier un — c'est justement ce qui vient d'arriver.
+     *
+     * <p>Ce qui n'est PAS persistant ne suit pas, et c'est voulu : les sources d'interference
+     * appartiennent a un monde et a des machines precises, et les brouilleurs encore en place
+     * les reposeront dans la dizaine de ticks qui suit.
+     */
     public void copyFrom(AbilityData other) {
-        categoryLevels.clear();
-        categoryLevels.putAll(other.categoryLevels);
-        controlPoint = other.controlPoint;
-        addMaxControlPoint = other.addMaxControlPoint;
-        activated = other.activated;
-        overload = other.overload;
-        addMaxOverload = other.addMaxOverload;
-        overloadFine = other.overloadFine;
-        untilOverloadRecover = other.untilOverloadRecover;
-        untilRecover = other.untilRecover;
-        // Les sources d'interference ne sont pas copiees : elles appartiennent a un
-        // monde et a des machines precises, et les brouilleurs encore en place les
-        // reposeront dans la dizaine de ticks qui suit.
+        deserializeNBT(other.serializeNBT());
+        // Les sources d'interference ne suivent pas — elles appartiennent a un monde et a des
+        // machines precises — donc le drapeau se RECALCULE au lieu d'etre recopie : sans cela,
+        // mourir en etant brouille laisserait le joueur brouille jusqu'a ce qu'une machine
+        // repose la sienne.
         interferenceSources.clear();
-        interfered = false;
+        refreshInterference();
     }
 
     // ------------------------------------------------------------------
