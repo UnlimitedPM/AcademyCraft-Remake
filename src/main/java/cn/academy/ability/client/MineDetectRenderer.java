@@ -56,6 +56,15 @@ public final class MineDetectRenderer {
     private static final float LOW = 0.05f;
     private static final float HIGH = 0.95f;
 
+    /**
+     * Le brouillard, repousse a l'infini le temps du dessin.
+     *
+     * <p>Il ne se remet pas : chaque passe du rendu du monde repose le sien avant de dessiner,
+     * et c'est la nôtre qui doit etre la derniere a parler. Voir l'appel, et l'original, qui
+     * faisait la meme chose avec {@code glDisable(GL_FOG)}.
+     */
+    private static final float FOG_AWAY = 1.0E9f;
+
     private MineDetectRenderer() {}
 
     @SubscribeEvent
@@ -74,6 +83,14 @@ public final class MineDetectRenderer {
         // Le rendu du monde est deja a l'origine du monde : c'est a nous de retirer la camera,
         // comme le fait le bouclier. Et le test de profondeur tombe : c'est le coeur de la
         // competence, voir le commentaire de la classe.
+        //
+        // LE BROUILLARD TOMBE AUSSI, et c'est l'original qui le dit : son rendu commencait par
+        // glDisable(GL_FOG) et le remettait a la fin. Sans ca, la cecite — qui n'est qu'un
+        // brouillard noir tres serre — repeignait les minerais eloignes en NOIR, et la portee
+        // de l'eclat se lisait a quelques blocs alors qu'elle vaut 0,65 fois la portee de la
+        // competence. Le repere du brouillard est simplement repousse a l'infini.
+        RenderSystem.setShaderFogStart(FOG_AWAY);
+        RenderSystem.setShaderFogEnd(FOG_AWAY);
         RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
         RenderSystem.setShaderTexture(0, MINEVIEW);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
