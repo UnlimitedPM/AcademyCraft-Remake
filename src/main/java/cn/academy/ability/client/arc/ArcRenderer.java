@@ -611,14 +611,17 @@ public class ArcRenderer {
     }
 
     /**
-     * Le type de rendu des eclairs : une bande texturee sans eclairage, transparente, et sans
-     * tri des faces arriere.
+     * Le type de rendu d'une image sans eclairage : texturee, transparente, et sans tri des faces
+     * arriere.
      *
      * <p>Les constantes de vanilla sont protegees, mais les constructeurs de ses morceaux ne
      * le sont pas : on rebatit donc le meme etat, avec ce qui compte ici — le programme de la
      * balise, qui ne connait ni normale ni lumiere.
+     *
+     * <p>C'est le materiau de l'original, son {@code SimpleMaterial(...).setIgnoreLight()} : les
+     * eclairs s'en servent, et la detection de minerais aussi pour ses cubes de minerai.
      */
-    private static RenderType arc(ResourceLocation texture) {
+    public static RenderType arc(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_arc",
                 DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,

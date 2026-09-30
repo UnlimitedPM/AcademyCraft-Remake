@@ -60,14 +60,20 @@ public final class MineDetectVisuals {
      *
      * Portage de {@code calcAlpha} : la base est a 0,3, et le minerai gagne jusqu'a 1 en
      * s'approchant — l'effacement valant 2,2 fois la portee, un minerai a mi-portee est deja
-     * presque plein. C'est ce qui fait qu'un minerai proche saute aux yeux et qu'un minerai a
-     * la limite se devine.
+     * presque efface. A 0,65 portee, la formule tombe sur zero : c'est la portee REELLE de
+     * l'eclat, plus courte que celle de son balayage.
+     *
+     * <p>ECART CORRIGE : le port bornait le FACTEUR d'effacement a zero avant de le melanger a
+     * la base, donc laissait les minerais lointains a 0,3 jusqu'au bout, alors que l'original
+     * les effacait tout a fait — son alpha negatif finissait borne a zero par la couleur LWJGL
+     * qui le recevait (voir {@code Colors.f2i}, qui ne borne rien lui-meme). C'est la borne
+     * FINALE qui est reprise ici, et c'est elle qui rend la portee lisible : on voit ce qu'on
+     * eclaire, pas tout ce qui a ete balaye.
      */
     public static float alpha(double distance, double range) {
         if (range <= 0) return BASE_ALPHA;
-        double fade = 1.0 - distance / range * FADE;
-        double clamped = Math.max(0.0, Math.min(1.0, fade));
-        return BASE_ALPHA + (float) clamped * (1f - BASE_ALPHA);
+        double fade = BASE_ALPHA + (1.0 - distance / range * FADE) * (1.0 - BASE_ALPHA);
+        return (float) Math.max(0.0, Math.min(1.0, fade));
     }
 
     /**

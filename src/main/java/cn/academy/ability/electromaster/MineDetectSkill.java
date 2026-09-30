@@ -41,9 +41,11 @@ import net.minecraftforge.network.PacketDistributor;
  * palier lu est celui de la 1.12.2 — rien, la pierre, le fer, le diamant — transpose des
  * etiquettes de la 1.20.1, et c'est le seul endroit du port qui s'en serve.
  *
- * <p>Non portes : le son de la competence, et l'onde qui part du joueur. Sa parente, elle,
- * est reposee : l'original la faisait descendre de {@code mag_manip} avec toute son
- * experience, ce que la categorie declare maintenant.
+ * <p>Le son de l'eclat est bien la : le paquet l'annonce, et c'est le client qui le joue — voir
+ * {@code MineDetectOverlay}. Le port n'a rien d'autre a porter : l'original n'avait ni onde ni
+ * entite visible, seulement ses cubes textures, et c'est le rendu qui les dessine (voir
+ * {@code MineDetectRenderer}). Sa parente, elle, est reposee : l'original la faisait descendre
+ * de {@code mag_manip} avec toute son experience, ce que la categorie declare maintenant.
  *
  * <p>Un detail de l'original, conserve tel quel : l'experience est versee <b>avant</b> que la
  * recharge ne soit lue, et la recharge depend de l'experience. Le premier eclat pose donc

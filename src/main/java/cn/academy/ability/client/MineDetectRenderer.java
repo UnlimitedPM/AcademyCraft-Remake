@@ -7,8 +7,8 @@ import cn.academy.AcademyCraft;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -21,9 +21,19 @@ import org.joml.Matrix4f;
  * Allume les minerais vus par la detection, portage du rendu de {@code HandlerRender}.
  *
  * <p>L'original avait une entite cliente, un maillage de boite texturee et un jeu de
- * transformations OpenGL : le port dessine six faces par minerai dans un cube de debogage,
- * sans texture, et coupe le test de profondeur — c'est ce qui fait voir <b>a travers la
- * pierre</b>, et c'est le seul interet de la competence.
+ * transformations OpenGL. Le port n'a ni entite ni maillage : il dessine six faces par minerai,
+ * et coupe le test de profondeur — c'est ce qui fait voir <b>a travers la pierre</b>, et c'est
+ * le seul interet de la competence.
+ *
+ * <p>C'est la texture qui fait tout le dessin, et elle vient de l'original : son
+ * {@code createBoxWithUV} collait l'image entiere sur chaque face de sa boite, avec un materiau
+ * qui <b>ignorait la lumiere</b> — d'ou ce cadre clair et ce corps brumeux, la meme image vue
+ * six fois. {@code mineview.png} est cette image, et le type de rendu de la balise est ce
+ * materiau : il multiplie la texture par la couleur du sommet sans jamais eclairer.
+ *
+ * <p>Un premier essai dessinait des cubes de debogage pleins, sans texture : le minerai se
+ * voyait, mais comme un bloc de couleur, sans le cadre qui le fait lire comme une chose
+ * <b>revelee</b> plutot que posee la.
  *
  * <p>La couleur vient du palier de pioche, la transparence de la distance : voir
  * {@link MineDetectVisuals}. Une centaine de cubes au maximum se dessinent par image, ce qui
@@ -31,6 +41,10 @@ import org.joml.Matrix4f;
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class MineDetectRenderer {
+
+    /** L'image de l'original : le cadre clair et le corps brumeux d'un minerai allume. */
+    private static final ResourceLocation MINEVIEW = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/effects/mineview.png");
 
     /** La boite d'un minerai : de cinq centimetres a quatre-vingt-quinze. */
     private static final float LOW = 0.05f;
@@ -52,7 +66,8 @@ public final class MineDetectRenderer {
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers =
                 Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = buffers.getBuffer(RenderType.debugFilledBox());
+        VertexConsumer consumer = buffers.getBuffer(
+                cn.academy.ability.client.arc.ArcRenderer.arc(MINEVIEW));
         Matrix4f matrix = pose.last().pose();
 
         // Le rendu du monde est deja place a l'origine du monde : c'est a nous de retirer la
@@ -88,20 +103,21 @@ public final class MineDetectRenderer {
         face(consumer, matrix, rgb, alpha, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1);
     }
 
-    /** Un quadrilatere, dans l'ordre de ses quatre coins. */
+    /** Un quadrilatere, dans l'ordre de ses quatre coins, avec l'image entiere dessus. */
     private static void face(VertexConsumer consumer, Matrix4f matrix, int[] rgb, float alpha,
                              float ax, float ay, float az, float bx, float by, float bz,
                              float cx, float cy, float cz, float dx, float dy, float dz) {
-        vertex(consumer, matrix, rgb, alpha, ax, ay, az);
-        vertex(consumer, matrix, rgb, alpha, bx, by, bz);
-        vertex(consumer, matrix, rgb, alpha, cx, cy, cz);
-        vertex(consumer, matrix, rgb, alpha, dx, dy, dz);
+        vertex(consumer, matrix, rgb, alpha, ax, ay, az, 0f, 0f);
+        vertex(consumer, matrix, rgb, alpha, bx, by, bz, 1f, 0f);
+        vertex(consumer, matrix, rgb, alpha, cx, cy, cz, 1f, 1f);
+        vertex(consumer, matrix, rgb, alpha, dx, dy, dz, 0f, 1f);
     }
 
     private static void vertex(VertexConsumer consumer, Matrix4f matrix, int[] rgb, float alpha,
-                               float x, float y, float z) {
+                               float x, float y, float z, float u, float v) {
         consumer.vertex(matrix, x, y, z)
                 .color(rgb[0] / 255f, rgb[1] / 255f, rgb[2] / 255f, alpha)
+                .uv(u, v)
                 .endVertex();
     }
 }

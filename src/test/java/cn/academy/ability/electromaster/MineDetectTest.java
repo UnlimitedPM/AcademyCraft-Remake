@@ -32,13 +32,16 @@ class MineDetectTest {
         double range = 20.0;
         // Sur le minerai : pleine. C'est le `0.3 + 0.7` de l'original.
         assertEquals(1.0f, MineDetectVisuals.alpha(0.0, range), 1.0e-6);
-        // A mi-portee : deja presque plein, l'effacement valant 2,2 fois la portee.
+        // A mi-portee : deja presque efface, l'effacement valant 2,2 fois la portee.
         assertTrue(MineDetectVisuals.alpha(9.0, range) > MineDetectVisuals.alpha(14.0, range),
                 "plus pres veut dire plus visible");
-        // Et loin : le plancher de 0,3, jamais moins.
-        assertEquals(MineDetectVisuals.BASE_ALPHA, MineDetectVisuals.alpha(20.0, range), 1.0e-6);
-        assertEquals(MineDetectVisuals.BASE_ALPHA, MineDetectVisuals.alpha(100.0, range), 1.0e-6,
-                "et il ne descend jamais plus bas");
+        // Et au-dela des deux tiers de la portee : plus rien du tout. C'est la borne FINALE de
+        // l'original, qui laissait son alpha passer sous zero et se faire ramener a zero par la
+        // couleur qui le recevait.
+        assertEquals(0.0f, MineDetectVisuals.alpha(13.0, range), 1.0e-6,
+                "a 0,65 portee, la formule tombe juste sur zero");
+        assertEquals(0.0f, MineDetectVisuals.alpha(range, range), 1.0e-6,
+                "et un minerai a la limite ne se dessine plus du tout");
     }
 
     @Test
