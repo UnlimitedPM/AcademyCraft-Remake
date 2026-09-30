@@ -30,10 +30,12 @@ import net.minecraftforge.fml.common.Mod;
  * l'entite — voir {@link MagManipVisuals} — donc deux blocs attrapes ne tournent pas au meme
  * rythme, sans qu'aucun tirage n'ait lieu a chaque image.
  *
- * <p>Le modele se pose <b>centre sur la position de l'entite</b>, qui est le centre du bloc : le
- * moteur dessine ses modeles de 0 a 1, il faut donc reculer d'un demi-bloc sur les TROIS axes.
- * L'original reculait des trois — {@code translate(-bp.x - 0.5, -bp.y - 0.5, -bp.z - 0.5)} — et
- * c'est un demi-bloc de trop vers le haut que le port avait oublie sur la hauteur.
+ * <p>Et il tourne sur son <b>centre</b>, ce qui tient a l'ORDRE des trois mouvements — celui de
+ * l'original : on se pose sur la position de l'entite, qui est le centre du bloc, on tourne, puis
+ * on recule d'un demi-bloc pour que le moteur, qui dessine ses modeles de 0 a 1, pose le bloc
+ * centre sur ce point. Dans l'autre ordre le bloc tournait autour de son COIN : son centre
+ * decrivait alors un petit cercle autour du curseur, et le joueur a vu le bloc pencher en bas a
+ * gauche de sa visee au lieu de rester dessus.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class MagManipRenderer {
@@ -56,12 +58,15 @@ public final class MagManipRenderer {
             if (!(entity instanceof EntityMagManipBlock block)) continue;
 
             pose.pushPose();
-            pose.translate(block.getX() - camera.x - 0.5, block.getY() - camera.y - 0.5,
-                    block.getZ() - camera.z - 0.5);
+            pose.translate(block.getX() - camera.x, block.getY() - camera.y,
+                    block.getZ() - camera.z);
             pose.mulPose(Axis.YP.rotationDegrees(
                     (float) MagManipVisuals.spinYaw(block.tickCount, block.getId())));
             pose.mulPose(Axis.XP.rotationDegrees(
                     (float) MagManipVisuals.spinPitch(block.tickCount, block.getId())));
+            // Le recul vient APRES la rotation : le bloc tourne ainsi sur son centre, au lieu de
+            // tourner autour de son coin et de partir de biais.
+            pose.translate(-0.5, -0.5, -0.5);
             client.getBlockRenderer().renderSingleBlock(block.getBlockState(), pose, buffers,
                     LevelRenderer.getLightColor(client.level, block.blockPosition()),
                     OverlayTexture.NO_OVERLAY);
