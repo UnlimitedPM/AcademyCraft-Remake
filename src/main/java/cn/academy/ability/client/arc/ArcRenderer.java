@@ -136,10 +136,13 @@ public class ArcRenderer {
     /** Son opacite, le reste venant de l'alpha de sa texture. */
     private static final float GLOW_ALPHA = 0.75f;
 
-    /** Un faisceau vivant : ses deux bouts, sa naissance et sa duree. */
-    private record Beam(double[] from, double[] to, long birth, int life) {}
+    /** Un faisceau vivant : ses deux bouts, sa naissance, sa duree, et son tireur. */
+    private record Beam(double[] from, double[] to, long birth, int life, int ownerId) {}
 
     private static final List<Beam> BEAMS = new ArrayList<>();
+
+    /** Le type de rendu du faisceau, construit une fois : il differe de celui des eclairs. */
+    private static RenderType beamType;
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -161,13 +164,13 @@ public class ArcRenderer {
      * <p>Appele par le paquet du railgun. Un faisceau n'a ni motif, ni proprietaire a suivre :
      * c'est un trait, pas un eclair.
      */
-    public static void spawnBeam(Vec3 from, Vec3 to, int lifeTicks) {
+    public static void spawnBeam(Vec3 from, Vec3 to, int lifeTicks, int ownerId) {
         Minecraft minecraft = Minecraft.getInstance();
         long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
         BEAMS.add(new Beam(
                 new double[] { from.x, from.y, from.z },
                 new double[] { to.x, to.y, to.z },
-                gameTime, Math.max(1, lifeTicks)));
+                gameTime, Math.max(1, lifeTicks), ownerId));
     }
 
     /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
@@ -228,12 +231,14 @@ public class ArcRenderer {
             }
         }
 
-        // Et les faisceaux, dans leur propre bande : leur texture n'est pas celle des eclairs.
+        // Et les faisceaux, dans leur propre bande : leur texture n'est pas celle des eclairs,
+        // et ils passent par-dessus eux — voir beamType.
         if (!BEAMS.isEmpty()) {
-            VertexConsumer beams = buffers.getBuffer(arc(BEAM_TEXTURE));
+            VertexConsumer beams = buffers.getBuffer(beamType());
             long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
             for (Beam beam : BEAMS) {
-                drawBeam(beams, pose.last(), camera, above, beam, gameTime);
+                drawBeam(beams, pose.last(), camera, above, beam, gameTime,
+                        firstPerson && beam.ownerId() == ownId);
             }
         }
         buffers.endBatch();
@@ -295,12 +300,19 @@ public class ArcRenderer {
      * l'original, ou le rayon diminuait avant de disparaitre.
      */
     private static void drawBeam(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
-                                 double[] above, Beam beam, long gameTime) {
+                                 double[] above, Beam beam, long gameTime,
+                                 boolean ownFirstPerson) {
         double age = gameTime - beam.birth();
         if (age < 0) return;
 
-        double[] from = beam.from();
-        double[] to = beam.to();
+        // Le decalage de vue, le meme que pour les eclairs : c'est LUI qui fait croire que le
+        // tir part de la main. Sans lui, un faisceau ne des yeux commence sur la camera, donc
+        // le joueur ne voit rien de sa propre attaque — ce qu'il a signale.
+        double[][] fixed = ArcView.fix(beam.from(), beam.to(), above,
+                ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
+        double[] from = fixed[0];
+        double[] to = fixed[1];
+
         double[] axis = normalize(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
         if (axis == null) return;
 
@@ -426,6 +438,52 @@ public class ArcRenderer {
     }
 
     /**
+     * Le type de rendu du faisceau : celui des eclairs, mais SANS test de profondeur.
+     *
+     * <p>C'est ce qui le met AU-DESSUS des arcs qui l'entourent. Le joueur l'a vu : les petits
+     * eclairs, qui sont des images tournees vers l'ecran, masquaient des morceaux du trait. Un
+     * halo de deux secondes et demie qui se voit a travers ce qu'il traverse etait deja le choix
+     * de l'original, qui dessinait son rayon apres ses arcs.
+     */
+    private static RenderType beamType() {
+        if (beamType == null) {
+            beamType = RenderType.create("academy_beam",
+                    DefaultVertexFormat.POSITION_COLOR_TEX,
+                    VertexFormat.Mode.QUADS,
+                    256,
+                    false,
+                    true,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(new RenderStateShard.ShaderStateShard(
+                                    GameRenderer::getRendertypeBeaconBeamShader))
+                            .setTextureState(new RenderStateShard.TextureStateShard(
+                                    BEAM_TEXTURE, false, false))
+                            .setTransparencyState(blend())
+                            // La constante NO_DEPTH_TEST de vanilla est protegee, mais le
+                            // constructeur de son morceau ne l'est pas : on rebatit le meme,
+                            // avec 519, qui est GL_ALWAYS.
+                            .setDepthTestState(new RenderStateShard.DepthTestStateShard(
+                                    "academy_beam_always", 519))
+                            .setCullState(new RenderStateShard.CullStateShard(false))
+                            .createCompositeState(true));
+        }
+        return beamType;
+    }
+
+    /** Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA. */
+    private static RenderStateShard.TransparencyStateShard blend() {
+        return new RenderStateShard.TransparencyStateShard("academy_arc",
+                () -> {
+                    RenderSystem.enableBlend();
+                    RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
+                },
+                () -> {
+                    RenderSystem.disableBlend();
+                    RenderSystem.defaultBlendFunc();
+                });
+    }
+
+    /**
      * Le type de rendu des eclairs : une bande texturee sans eclairage, transparente, et sans
      * tri des faces arriere.
      *
@@ -445,15 +503,7 @@ public class ArcRenderer {
                                 GameRenderer::getRendertypeBeaconBeamShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
                         // Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA.
-                        .setTransparencyState(new RenderStateShard.TransparencyStateShard("academy_arc",
-                                () -> {
-                                    RenderSystem.enableBlend();
-                                    RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
-                                },
-                                () -> {
-                                    RenderSystem.disableBlend();
-                                    RenderSystem.defaultBlendFunc();
-                                }))
+                        .setTransparencyState(blend())
                         .setCullState(new RenderStateShard.CullStateShard(false))
                         .createCompositeState(true)));
     }

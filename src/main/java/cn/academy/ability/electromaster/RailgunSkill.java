@@ -172,7 +172,7 @@ public class RailgunSkill extends Skill {
         cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
                 net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
                         .with(() -> player),
-                cn.academy.ability.network.ArcEffectPacket.beam(from, to, ticks));
+                cn.academy.ability.network.ArcEffectPacket.beam(from, to, ticks, player.getId()));
     }
 
     /**

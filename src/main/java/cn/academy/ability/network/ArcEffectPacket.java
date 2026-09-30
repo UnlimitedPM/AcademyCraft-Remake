@@ -53,8 +53,8 @@ public class ArcEffectPacket {
      * <p>Un drapeau plutot qu'un motif de plus : le serveur nomme ce qu'il connait — des motifs
      * purs — et n'a rien a savoir du cylindre, qui n'existe que chez le client.
      */
-    public static ArcEffectPacket beam(Vec3 from, Vec3 to, int lifeTicks) {
-        return new ArcEffectPacket("", from, to, lifeTicks, false, 0, true);
+    public static ArcEffectPacket beam(Vec3 from, Vec3 to, int lifeTicks, int ownerId) {
+        return new ArcEffectPacket("", from, to, lifeTicks, false, ownerId, true);
     }
 
     public static void encode(ArcEffectPacket msg, FriendlyByteBuf buf) {
@@ -82,7 +82,8 @@ public class ArcEffectPacket {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> {
             if (msg.beam) {
-                cn.academy.ability.client.arc.ArcRenderer.spawnBeam(msg.from, msg.to, msg.lifeTicks);
+                cn.academy.ability.client.arc.ArcRenderer.spawnBeam(
+                        msg.from, msg.to, msg.lifeTicks, msg.ownerId);
             } else {
                 cn.academy.ability.client.arc.ArcRenderer.spawn(
                         msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed, msg.ownerId);
