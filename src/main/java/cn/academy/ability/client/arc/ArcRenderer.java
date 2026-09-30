@@ -114,9 +114,13 @@ public class ArcRenderer {
      * <p>Son opacite est donc pleine, et celle du halo bien plus faible : le blanc se voit a
      * travers l'orange, qui le rechauffe. Le premier essai le laissait a 150 sur 255, donc sous
      * son halo — il ne s'y lisait pas.
+     *
+     * <p>Il est encore plus FIN et plus BLANC depuis : le joueur l'a demande petit et lumineux.
+     * L'original le teintait legerement chaud (241, 240, 222) ; ici c'est du blanc pur, et le
+     * rayon tombe de 0,09 a 0,06 — c'est un trait, pas un tuyau.
      */
-    private static final double CORE_RADIUS = 0.09;
-    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 255 / 255f };
+    private static final double CORE_RADIUS = 0.06;
+    private static final float[] CORE_COLOR = { 1f, 1f, 1f, 1f };
 
     /** Le halo : 236, 170, 93, rayon 0,13 — sa part a 60 sur 255 tombe a 50 pour la meme raison. */
     private static final double HALO_RADIUS = 0.13;
@@ -135,7 +139,7 @@ public class ArcRenderer {
      * mouvement ». C'etaient ses {@code widthWiggleRadius} de 0,3 et {@code maxWiggleSpeed} de
      * 0,8, mais l'amplitude a ete reduite de moitie : il l'a trouvee plus forte que la vraie.
      */
-    private static final double WIGGLE_RADIUS = 0.15;
+    private static final double WIGGLE_RADIUS = 0.08;
     private static final double WIGGLE_TICKS = 3.0;
 
     /**
@@ -498,7 +502,7 @@ public class ArcRenderer {
         return Math.max(0.0, left / BEAM_SHRINK);
     }
 
-    /** La pulsation rapide : plus ou moins quinze pour cent, une oscillation toutes les trois images. */
+    /** La pulsation rapide : plus ou moins huit pour cent, une oscillation toutes les trois images. */
     private static double wiggle(double age) {
         return 1.0 + WIGGLE_RADIUS * Math.sin(age * Math.PI * 2.0 / WIGGLE_TICKS);
     }
