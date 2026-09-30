@@ -135,16 +135,18 @@ public class ArcRenderer {
     private static final float[] INNER_COLOR = { 1f, 1f, 1f, 1f };
 
     /**
-     * Le halo : rayon 0,13 comme l'original, mais un orange BEAUCOUP plus dense que le sien.
+     * Le halo : 236, 170, 93, rayon 0,13, part 60 sur 255 — les nombres de l'original.
      *
-     * <p>L'original le posait a 60 sur 255, et le premier essai est descendu a 50 : a cette
-     * part, le halo ne teintait plus, il voilait. Le joueur a vu le resultat : « le rayon jaune
-     * du milieu est trop clair et pas assez orange » — un beige delave. Sa couleur descend donc
-     * vers un orange franc (236, 140, 45) et sa part monte a 150 sur 255 : le coeur blanc se lit
-     * encore a travers, mais c'est l'orange qui donne la teinte.
+     * <p>Un premier essai l'avait descendu a 50, puis un deuxieme monte a 150 avec un orange
+     * beaucoup plus dense (236, 140, 45). C'etait une erreur de diagnostic : le joueur trouvait
+     * « le rayon jaune du milieu trop clair, pas assez orange », mais ce n'etait pas le halo qui
+     * manquait — c'etait le RUBAN, dont les bandes orange disparaissaient sous le halo. Une fois
+     * le ruban remis a sa largeur (voir GLOW_WIDTH), le halo denature n'avait plus aucune raison
+     * d'etre, et le joueur l'a dit aussitot : « la couleur n'a plus rien a voir ». Il reprend
+     * donc la teinte et la part de l'original.
      */
     private static final double HALO_RADIUS = 0.13;
-    private static final float[] HALO_COLOR = { 236 / 255f, 140 / 255f, 45 / 255f, 150 / 255f };
+    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 60 / 255f };
 
     /** Les temps de l'original, en ticks : entree en matiere 150 ms, retrecissement 800, effacement 1000. */
     private static final int BEAM_BLEND_IN = 3;
