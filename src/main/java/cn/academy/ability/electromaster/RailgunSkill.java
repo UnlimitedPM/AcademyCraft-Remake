@@ -129,12 +129,11 @@ public class RailgunSkill extends Skill {
         Vec3 look = player.getViewVector(1.0f);
         net.minecraft.util.RandomSource random = player.getRandom();
 
-        // Le faisceau d'abord : le trait lumineux que tout le reste entoure. C'est le motif
-        // droit du moteur d'eclairs — voir ArcPattern.RAIL_BEAM.
+        // Le faisceau d'abord : le trait lumineux que tout le reste entoure. C'est un CYLINDRE,
+        // pas un ruban — voir ArcRenderer, ou les siens sont dessines.
         //
         // Il part des YEUX, comme dans l'original, et va jusqu'au bout de la portee du tir.
-        sendArc(player, cn.academy.ability.client.arc.ArcPattern.RAIL_BEAM.name(), eye,
-                eye.add(look.scale(BEAM_LENGTH)), BEAM_ARC_TICKS);
+        sendBeam(player, eye, eye.add(look.scale(BEAM_LENGTH)), BEAM_ARC_TICKS);
 
         for (int i = 0; i < BEAM_ARCS; i++) {
             double start = 1.0 + i * (BEAM_LENGTH - 1.0) / BEAM_ARCS;
@@ -161,6 +160,19 @@ public class RailgunSkill extends Skill {
     /** Une composante de cet ecart, entre moins et plus {@code BEAM_WOBBLE}. */
     private static double wobble(net.minecraft.util.RandomSource random) {
         return (random.nextDouble() - 0.5) * BEAM_WOBBLE * 2.0;
+    }
+
+    /**
+     * Envoie le faisceau lui-meme : un cylindre, que le client dessine.
+     *
+     * <p>Le drapeau du paquet dit « ceci est un faisceau », donc le serveur n'a rien a savoir
+     * de sa forme — voir {@code ArcEffectPacket.beam}.
+     */
+    private static void sendBeam(Player player, Vec3 from, Vec3 to, int ticks) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
+                        .with(() -> player),
+                cn.academy.ability.network.ArcEffectPacket.beam(from, to, ticks));
     }
 
     /**

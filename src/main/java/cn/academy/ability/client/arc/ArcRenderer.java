@@ -23,7 +23,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -82,6 +84,46 @@ public class ArcRenderer {
 
     private static final Random RANDOM = new Random();
 
+    // ------------------------------------------------------------------
+    // Les faisceaux
+    // ------------------------------------------------------------------
+    //
+    // Le railgun ne dessine pas un ruban mais un CYLINDRE, et c'est l'original qui le dit : son
+    // RendererRayComposite posait deux cylindres concentriques — un coeur clair et un halo
+    // orange — plus un ruban large face a l'ecran par-dessus. Un ruban plat, essaye d'abord, se
+    // voit toujours de face et ne tourne pas avec la vue ; un cylindre, si.
+    //
+    // Ils ne passent pas par ClientArcs : leur geometrie n'est pas un ruban de motif, et leur
+    // vie se lit en alpha et en largeur — voir drawBeam.
+
+    /** La texture du faisceau, celle de l'original. */
+    private static final ResourceLocation BEAM_TEXTURE = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/effects/railgun.png");
+
+    /** Dix cotes : assez pour que la section ronde se lise, et rien de plus a calculer. */
+    private static final int BEAM_SIDES = 10;
+
+    /** Le coeur : 241, 240, 222 a 200 sur 255, rayon 0,09. */
+    private static final double CORE_RADIUS = 0.09;
+    private static final float[] CORE_COLOR = { 241 / 255f, 240 / 255f, 222 / 255f, 200 / 255f };
+
+    /** Le halo : 236, 170, 93 a 60 sur 255, rayon 0,13. */
+    private static final double HALO_RADIUS = 0.13;
+    private static final float[] HALO_COLOR = { 236 / 255f, 170 / 255f, 93 / 255f, 60 / 255f };
+
+    /** Les temps de l'original, en ticks : entree en matiere 150 ms, retrecissement 800, effacement 1000. */
+    private static final int BEAM_BLEND_IN = 3;
+    private static final int BEAM_SHRINK = 16;
+    private static final int BEAM_FADE = 20;
+
+    /** La part de largeur qui reste une fois le faisceau retreci. */
+    private static final double BEAM_SHRUNK = 0.6;
+
+    /** Un faisceau vivant : ses deux bouts, sa naissance et sa duree. */
+    private record Beam(double[] from, double[] to, long birth, int life) {}
+
+    private static final List<Beam> BEAMS = new ArrayList<>();
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -93,6 +135,22 @@ public class ArcRenderer {
             return;
         }
         ClientArcs.tick(minecraft.level.getGameTime(), RANDOM);
+        BEAMS.removeIf(beam -> minecraft.level.getGameTime() - beam.birth() >= beam.life());
+    }
+
+    /**
+     * Pose un faisceau : deux bouts, une duree, et c'est tout.
+     *
+     * <p>Appele par le paquet du railgun. Un faisceau n'a ni motif, ni proprietaire a suivre :
+     * c'est un trait, pas un eclair.
+     */
+    public static void spawnBeam(Vec3 from, Vec3 to, int lifeTicks) {
+        Minecraft minecraft = Minecraft.getInstance();
+        long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
+        BEAMS.add(new Beam(
+                new double[] { from.x, from.y, from.z },
+                new double[] { to.x, to.y, to.z },
+                gameTime, Math.max(1, lifeTicks)));
     }
 
     /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
@@ -126,7 +184,7 @@ public class ArcRenderer {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
-        if (ClientArcs.live().isEmpty()) return;
+        if (ClientArcs.live().isEmpty() && BEAMS.isEmpty()) return;
 
         // Les sommets se posent relativement a la camera : c'est ce que fait la pose du
         // rendu du monde, et un eclair pose en coordonnees du monde partirait a la derive
@@ -150,6 +208,15 @@ public class ArcRenderer {
             if (arc.visible()) {
                 draw(out, pose.last(), camera, above, arc,
                         firstPerson && arc.ownerId() == ownId);
+            }
+        }
+
+        // Et les faisceaux, dans leur propre bande : leur texture n'est pas celle des eclairs.
+        if (!BEAMS.isEmpty()) {
+            VertexConsumer beams = buffers.getBuffer(arc(BEAM_TEXTURE));
+            long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
+            for (Beam beam : BEAMS) {
+                drawBeam(beams, pose.last(), camera, above, beam, gameTime);
             }
         }
         buffers.endBatch();
@@ -202,6 +269,114 @@ public class ArcRenderer {
                 .color(1f, 1f, 1f, (float) alpha)
                 .uv(u, v)
                 .endVertex();
+    }
+
+    /**
+     * Un faisceau : deux cylindres concentriques, le coeur puis le halo.
+     *
+     * <p>La largeur se retrecis un peu avant la fin et l'alpha suit : c'est l'animation de
+     * l'original, ou le rayon diminuait avant de disparaitre.
+     */
+    private static void drawBeam(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                                 double[] above, Beam beam, long gameTime) {
+        double age = gameTime - beam.birth();
+        if (age < 0) return;
+
+        double[] from = beam.from();
+        double[] to = beam.to();
+        double[] axis = normalize(to[0] - from[0], to[1] - from[1], to[2] - from[2]);
+        if (axis == null) return;
+
+        // Deux directions perpendiculaires a l'axe : le cylindre se construit dessus. La
+        // premiere vient du haut de la camera, donc la section ronde tourne avec la vue —
+        // c'est ce qu'un ruban plat ne sait pas faire.
+        double[] u = perpendicular(axis, above);
+        double[] v = cross(axis, u);
+
+        float alpha = fade(age, beam.life());
+        if (alpha <= 0f) return;
+
+        double shrink = shrink(age);
+        cylinder(out, pose, camera, from, to, u, v, CORE_RADIUS * shrink, CORE_COLOR, alpha);
+        cylinder(out, pose, camera, from, to, u, v, HALO_RADIUS * shrink, HALO_COLOR, alpha);
+    }
+
+    /** L'alpha du faisceau selon son age : entree en matiere, puis effacement. */
+    private static float fade(double age, int life) {
+        float alpha = 1f;
+        if (age < BEAM_BLEND_IN) alpha = (float) ((age + 1) / (double) BEAM_BLEND_IN);
+        double left = life - age;
+        if (left < BEAM_FADE) alpha *= (float) Math.max(0.0, left / BEAM_FADE);
+        return Math.max(0f, Math.min(1f, alpha));
+    }
+
+    /** Le retrecissement de la largeur : les 800 millisecondes de l'original. */
+    private static double shrink(double age) {
+        if (age >= BEAM_SHRINK) return BEAM_SHRUNK;
+        return 1.0 + (BEAM_SHRUNK - 1.0) * (age / BEAM_SHRINK);
+    }
+
+    /** Un cylindre : {@code BEAM_SIDES} quadrilateres entre les deux cercles. */
+    private static void cylinder(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                                 double[] from, double[] to, double[] u, double[] v,
+                                 double radius, float[] color, float alpha) {
+        for (int i = 0; i < BEAM_SIDES; i++) {
+            double a0 = Math.PI * 2 * i / BEAM_SIDES;
+            double a1 = Math.PI * 2 * (i + 1) / BEAM_SIDES;
+            double cos0 = Math.cos(a0);
+            double sin0 = Math.sin(a0);
+            double cos1 = Math.cos(a1);
+            double sin1 = Math.sin(a1);
+
+            double[] d0 = { u[0] * cos0 + v[0] * sin0, u[1] * cos0 + v[1] * sin0,
+                            u[2] * cos0 + v[2] * sin0 };
+            double[] d1 = { u[0] * cos1 + v[0] * sin1, u[1] * cos1 + v[1] * sin1,
+                            u[2] * cos1 + v[2] * sin1 };
+
+            float u0 = i / (float) BEAM_SIDES;
+            float u1 = (i + 1) / (float) BEAM_SIDES;
+
+            beamVertex(out, pose, camera, from, d0, radius, u0, 0f, color, alpha);
+            beamVertex(out, pose, camera, from, d1, radius, u1, 0f, color, alpha);
+            beamVertex(out, pose, camera, to, d1, radius, u1, 1f, color, alpha);
+            beamVertex(out, pose, camera, to, d0, radius, u0, 1f, color, alpha);
+        }
+    }
+
+    /** Un coin de faisceau : un bout, une direction de section, et son rayon. */
+    private static void beamVertex(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                                   double[] end, double[] direction, double radius,
+                                   float u, float v, float[] color, float alpha) {
+        double x = end[0] + direction[0] * radius;
+        double y = end[1] + direction[1] * radius;
+        double z = end[2] + direction[2] * radius;
+
+        out.vertex(pose.pose(), (float) (x - camera.x), (float) (y - camera.y), (float) (z - camera.z))
+                .color(color[0], color[1], color[2], color[3] * alpha)
+                .uv(u, v)
+                .endVertex();
+    }
+
+    /** Un vecteur normalise, ou {@code null} s'il n'a pas de longueur. */
+    private static double[] normalize(double x, double y, double z) {
+        double length = Math.sqrt(x * x + y * y + z * z);
+        if (length < 1.0E-4) return null;
+        return new double[] { x / length, y / length, z / length };
+    }
+
+    /** Une perpendiculaire a l'axe, tiree du haut de la camera ; l'autre vient du produit vectoriel. */
+    private static double[] perpendicular(double[] axis, double[] above) {
+        double[] side = cross(axis, above);
+        if (side == null) side = cross(axis, new double[] { 0, 1, 0 });
+        if (side == null) side = cross(axis, new double[] { 1, 0, 0 });
+        return side == null ? new double[] { 1, 0, 0 } : side;
+    }
+
+    /** Le produit vectoriel de deux vecteurs, normalise ; {@code null} s'ils sont paralleles. */
+    private static double[] cross(double[] a, double[] b) {
+        return normalize(a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0]);
     }
 
     /**

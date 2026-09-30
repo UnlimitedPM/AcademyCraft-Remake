@@ -29,15 +29,32 @@ public class ArcEffectPacket {
     private final int lifeTicks;
     private final boolean lengthFixed;
     private final int ownerId;
+    private final boolean beam;
 
     public ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed,
                            int ownerId) {
+        this(pattern, from, to, lifeTicks, lengthFixed, ownerId, false);
+    }
+
+    private ArcEffectPacket(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed,
+                            int ownerId, boolean beam) {
         this.pattern = pattern;
         this.from = from;
         this.to = to;
         this.lifeTicks = lifeTicks;
         this.lengthFixed = lengthFixed;
         this.ownerId = ownerId;
+        this.beam = beam;
+    }
+
+    /**
+     * Un faisceau plutot qu'un eclair : le railgun ne pose pas un ruban mais un cylindre.
+     *
+     * <p>Un drapeau plutot qu'un motif de plus : le serveur nomme ce qu'il connait — des motifs
+     * purs — et n'a rien a savoir du cylindre, qui n'existe que chez le client.
+     */
+    public static ArcEffectPacket beam(Vec3 from, Vec3 to, int lifeTicks) {
+        return new ArcEffectPacket("", from, to, lifeTicks, false, 0, true);
     }
 
     public static void encode(ArcEffectPacket msg, FriendlyByteBuf buf) {
@@ -47,20 +64,30 @@ public class ArcEffectPacket {
         buf.writeVarInt(msg.lifeTicks);
         buf.writeBoolean(msg.lengthFixed);
         buf.writeVarInt(msg.ownerId);
+        buf.writeBoolean(msg.beam);
     }
 
     public static ArcEffectPacket decode(FriendlyByteBuf buf) {
         String pattern = buf.readUtf();
         Vec3 from = readPoint(buf);
         Vec3 to = readPoint(buf);
-        return new ArcEffectPacket(pattern, from, to, buf.readVarInt(), buf.readBoolean(),
-                buf.readVarInt());
+        int lifeTicks = buf.readVarInt();
+        boolean lengthFixed = buf.readBoolean();
+        int ownerId = buf.readVarInt();
+        return new ArcEffectPacket(pattern, from, to, lifeTicks, lengthFixed, ownerId,
+                buf.readBoolean());
     }
 
     public static void handle(ArcEffectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.arc.ArcRenderer.spawn(
-                msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed, msg.ownerId));
+        ctx.enqueueWork(() -> {
+            if (msg.beam) {
+                cn.academy.ability.client.arc.ArcRenderer.spawnBeam(msg.from, msg.to, msg.lifeTicks);
+            } else {
+                cn.academy.ability.client.arc.ArcRenderer.spawn(
+                        msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed, msg.ownerId);
+            }
+        });
         ctx.setPacketHandled(true);
     }
 
