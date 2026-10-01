@@ -6,6 +6,7 @@ import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
 import cn.academy.ability.meltdowner.MeltdownerCategory;
+import cn.academy.ability.client.md.MineRayEffect;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
 import cn.academy.ability.network.ActivateSkillPacket.Phase;
@@ -118,6 +119,14 @@ public class AbilityClientEvents {
         // Les rayons du plasma et leurs etincelles : leur forme se lit en millisecondes et se
         // dessine a chaque image, mais c'est bien au tick qu'ils meurent et que les etincelles
         // avancent — voir MdRays et MdSparks.
+        //
+        // Quitter un monde les emporte : ils appartiennent au monde, pas au jeu — et un rayon
+        // TENU ne meurt jamais tout seul, lui. Voir MineRayEffect.
+        if (net.minecraft.client.Minecraft.getInstance().level == null) {
+            cn.academy.ability.client.md.MdRays.clear();
+            cn.academy.ability.client.md.MdSparks.clear();
+            MineRayEffect.end();
+        }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
         cn.academy.client.SilbarnFrags.tick();
@@ -232,6 +241,7 @@ public class AbilityClientEvents {
         ClientCharge.end();
         ThunderClapEffect.end();
         BodyIntensifyEffect.endCharge(false);
+        MineRayEffect.end(skillName);
         endDirections();
     }
 
@@ -341,6 +351,11 @@ public class AbilityClientEvents {
                     // sans cela il attend les positions du serveur, et traine derriere le regard
                     // des qu'on tourne la tete. Voir MagManipEffect.tickHeld.
                     MagManipEffect.tickHeld(player, skill);
+                    // Et le rayon minier, qui n'existe QUE pour son tireur : l'original posait son
+                    // entite chez le client de celui qui le tenait, et personne d'autre ne la
+                    // voyait. Le serveur, lui, creuse de son cote sans rien en dire. Voir
+                    // MineRayEffect.
+                    MineRayEffect.tick(player, skill);
                 }
             }
             // L'electricite des charges : l'orage s'amase autour de celui qui le prepare.
@@ -395,6 +410,9 @@ public class AbilityClientEvents {
         ClientCharge.end();
         ThunderClapEffect.end();
         MeltdownerCharge.end();
+        // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
+        // c'est ce que fait ce crochet.
+        MineRayEffect.end(skill.getName());
         BodyIntensifyEffect.endCharge(performed);
         endDirections();
         send(category, skill, Phase.RELEASE);

@@ -45,9 +45,9 @@ import org.joml.Vector3f;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class MdEffects {
 
-    /** L'image des etincelles : celle de l'original, tel quel. */
-    private static final ResourceLocation SPARK_TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/md_particle.png");
+    // Les deux images d'etincelle vivent dans `MdSparks`, avec les etincelles elles-memes : un
+    // rayon minier de la chance est le seul a cracher l'etoile, et c'est la sienne qu'il se donne
+    // au moment de naitre. Ici, on ne fait que trier.
 
     /** Dix cotes par tube : assez pour que la section ronde se lise, et rien de plus. */
     private static final int SIDES = 10;
@@ -60,10 +60,6 @@ public class MdEffects {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
 
         long now = Util.getMillis();
-        // Le tremblement des lueurs se fait par IMAGE, comme dans l'original : il ne se lit
-        // pas au tick.
-        MdRays.advanceFrame(now);
-        if (MdRays.live().isEmpty() && MdSparks.live().isEmpty()) return;
 
         Vec3 camera = event.getCamera().getPosition();
         Vector3f upVector = event.getCamera().getUpVector();
@@ -72,20 +68,47 @@ public class MdEffects {
         double[][] screen = { { leftVector.x, leftVector.y, leftVector.z },
                               { upVector.x, upVector.y, upVector.z } };
 
+        // Le rayon tenu se repose d'abord : un rayon minier suit le regard de son tireur, donc
+        // ses deux bouts ont bouge depuis la derniere image. L'optimisation de vue qui le recolle
+        // a la main se recalcule du meme coup — c'est le rendu de l'original, mot pour mot.
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player != null) {
+            MineRayEffect.frame(minecraft.player, event.getPartialTick(), above,
+                    minecraft.options.getCameraType().isFirstPerson());
+        }
+
+        // Le tremblement des lueurs se fait par IMAGE, comme dans l'original : il ne se lit
+        // pas au tick.
+        MdRays.advanceFrame(now);
+        if (MdRays.live().isEmpty() && MdSparks.live().isEmpty()) return;
+
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers =
-                Minecraft.getInstance().renderBuffers().bufferSource();
+                minecraft.renderBuffers().bufferSource();
 
         for (MdRays.LiveRay ray : MdRays.live()) {
             drawRay(buffers, pose.last(), camera, above, ray, now);
         }
-        if (!MdSparks.live().isEmpty()) {
-            VertexConsumer out = buffers.getBuffer(MdRenderType.of(SPARK_TEXTURE));
-            for (MdSparks.Spark spark : MdSparks.live()) {
-                drawSpark(out, pose.last(), camera, screen, spark, now);
-            }
-        }
+        drawSparks(buffers, pose.last(), camera, screen, now, MdSparks.PLAIN);
+        drawSparks(buffers, pose.last(), camera, screen, now, MdSparks.LUCK);
         buffers.endBatch();
+    }
+
+    /**
+     * Une fournee d'etincelles, celles qui partagent la meme image.
+     *
+     * <p>La bille de plasma pour presque tout, l'etoile de la chance pour le seul rayon minier de
+     * la chance : deux images, donc deux lots, et rien de melange — comme pour les tubes et les
+     * lueurs, qui ont chacun le leur.
+     */
+    private static void drawSparks(MultiBufferSource buffers, PoseStack.Pose pose, Vec3 camera,
+                                   double[][] screen, long now, ResourceLocation texture) {
+        VertexConsumer out = null;
+        for (MdSparks.Spark spark : MdSparks.live()) {
+            if (!texture.equals(spark.texture())) continue;
+            if (out == null) out = buffers.getBuffer(MdRenderType.of(texture));
+            drawSpark(out, pose, camera, screen, spark, now);
+        }
     }
 
     /**

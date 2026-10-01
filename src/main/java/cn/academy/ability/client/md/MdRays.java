@@ -47,7 +47,7 @@ public final class MdRays {
         private final double[] from;
         private final double[] to;
         private final long birthMs;
-        private final double length;
+        private double length;
 
         /** Le tremblement de la lueur, avance par le rendu, a chaque image. */
         private double glowWiggle;
@@ -57,7 +57,22 @@ public final class MdRays {
             this.from = from;
             this.to = to;
             this.birthMs = birthMs;
-            this.length = Math.sqrt(sqr(to[0] - from[0]) + sqr(to[1] - from[1]) + sqr(to[2] - from[2]));
+            this.length = distance(from, to);
+        }
+
+        /**
+         * Deplace les deux bouts.
+         *
+         * <p>Seul un rayon <b>tenu</b> bouge : c'est le regard de son tireur qui le tire, image
+         * apres image, alors qu'un rayon du meltdowner est fige des sa naissance — sa cible a ete
+         * touchee, elle ne se deplace plus.
+         */
+        void moveTo(double[] from, double[] to) {
+            for (int i = 0; i < 3; i++) {
+                this.from[i] = from[i];
+                this.to[i] = to[i];
+            }
+            this.length = distance(from, to);
         }
 
         public MdRayKind kind() {
@@ -157,6 +172,9 @@ public final class MdRays {
     private static final List<LiveRay> RAYS = new ArrayList<>();
     private static final Random RANDOM = new Random();
 
+    /** Le rayon tenu, s'il y en a un : un rayon minier suit le regard de son tireur. */
+    private static LiveRay held;
+
     /** L'instant de l'image precedente, pour le tremblement. */
     private static long lastFrameMs;
 
@@ -203,6 +221,43 @@ public final class MdRays {
         }
     }
 
+    /**
+     * Ouvre le rayon tenu, celui d'un rayon minier.
+     *
+     * <p>Un seul a la fois, comme chez l'original ou chaque contexte client portait <b>son</b>
+     * entite : en ouvrir un ferme le precedent, ce qui evite qu'un rayon survive a un changement
+     * de touche. Sa naissance — donc son temps de poussee — est celle de ce premier appel.
+     */
+    public static void hold(MdRayKind kind, Vec3 from, Vec3 to) {
+        hold(kind, from, to, Util.getMillis());
+    }
+
+    /** Le meme, a un instant donne — pour le test, qui deroule sa vie sans horloge. */
+    public static void hold(MdRayKind kind, Vec3 from, Vec3 to, long nowMs) {
+        releaseHeld();
+        held = new LiveRay(kind, new double[] { from.x, from.y, from.z },
+                new double[] { to.x, to.y, to.z }, nowMs);
+        RAYS.add(held);
+    }
+
+    /** Le rayon tenu suit le regard : ses deux bouts sont reposes a chaque image. */
+    public static void moveHeld(Vec3 from, Vec3 to) {
+        if (held == null) return;
+        held.moveTo(new double[] { from.x, from.y, from.z }, new double[] { to.x, to.y, to.z });
+    }
+
+    /** La touche est relachee, ou le serveur a termine le maintien : le rayon s'en va. */
+    public static void releaseHeld() {
+        if (held == null) return;
+        RAYS.remove(held);
+        held = null;
+    }
+
+    /** Le genre du rayon tenu, ou {@code null} s'il n'y en a pas. */
+    public static MdRayKind heldKind() {
+        return held == null ? null : held.kind();
+    }
+
     /** Un tick du client : les etincelles des rayons, puis les rayons morts s'en vont. */
     public static void tick() {
         tick(Util.getMillis());
@@ -246,7 +301,12 @@ public final class MdRays {
     /** Tout oublier : la deconnexion d'un monde n'est pas une fin de competence. */
     public static void clear() {
         RAYS.clear();
+        held = null;
         lastFrameMs = 0;
+    }
+
+    private static double distance(double[] from, double[] to) {
+        return Math.sqrt(sqr(to[0] - from[0]) + sqr(to[1] - from[1]) + sqr(to[2] - from[2]));
     }
 
     private static double sqr(double value) {

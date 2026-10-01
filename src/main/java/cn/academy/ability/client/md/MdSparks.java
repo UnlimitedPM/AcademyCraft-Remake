@@ -1,6 +1,8 @@
 package cn.academy.ability.client.md;
 
+import cn.academy.AcademyCraft;
 import net.minecraft.Util;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -51,6 +53,20 @@ public final class MdSparks {
     public static final double SIZE_MIN = 0.05;
     public static final double SIZE_MAX = 0.07;
 
+    /** L'image de la bille de plasma, celle de toutes les etincelles du plasma. */
+    public static final ResourceLocation PLAIN = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/effects/md_particle.png");
+
+    /**
+     * Et l'etoile de la chance, que l'original ne donnait qu'a un seul rayon.
+     *
+     * <p>{@code EntityMineRayLuck} remplacait la texture de ses propres etincelles par
+     * {@code md_particle_luck}, une etoile a quatre branches. C'est la seule entite de tout le
+     * plasma a le faire : les deux autres rayons miniers crachaient la bille ordinaire.
+     */
+    public static final ResourceLocation LUCK = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/effects/md_particle_luck.png");
+
     /** Une etincelle vivante. */
     public static final class Spark {
 
@@ -60,14 +76,19 @@ public final class MdSparks {
         private final int life;
         private final float startAlpha;
         private final float size;
+        private final double gravity;
+        private final ResourceLocation texture;
 
-        Spark(double[] pos, double[] vel, long birthMs, int life, float startAlpha, float size) {
+        Spark(double[] pos, double[] vel, long birthMs, int life, float startAlpha, float size,
+              double gravity, ResourceLocation texture) {
             this.pos = pos;
             this.vel = vel;
             this.birthMs = birthMs;
             this.life = life;
             this.startAlpha = startAlpha;
             this.size = size;
+            this.gravity = gravity;
+            this.texture = texture;
         }
 
         public double[] pos() {
@@ -76,6 +97,11 @@ public final class MdSparks {
 
         public float size() {
             return size;
+        }
+
+        /** L'image avec laquelle elle se dessine : la bille de plasma, ou l'etoile de la chance. */
+        public ResourceLocation texture() {
+            return texture;
         }
 
         /** Son age, en ticks. */
@@ -99,8 +125,12 @@ public final class MdSparks {
             return ageTicks(nowMs) >= life + FADE_TICKS;
         }
 
-        /** Un tick : elle avance de sa vitesse, sans gravite ni trainee. */
+        /** Un tick : elle avance de sa vitesse, sans trainee — mais pas toujours sans poids. */
         void advance() {
+            // Le poids, quand il y en a un : la {@code Rigidbody} de l'original, dont la gravite
+            // par defaut vaut zero et que seules les etincelles de BLOC reglaient a 0,01. Elles
+            // tombent donc lentement, pendant que celles du rayon continuent droit devant elles.
+            if (gravity > 0) vel[1] -= gravity;
             pos[0] += vel[0];
             pos[1] += vel[1];
             pos[2] += vel[2];
@@ -115,17 +145,34 @@ public final class MdSparks {
 
     /** Une etincelle, aux nombres de l'original. */
     public static void spawn(Vec3 pos, Vec3 vel) {
-        spawn(pos, vel, Util.getMillis(), RANDOM);
+        spawn(pos, vel, 0.0, MdSparks.PLAIN, Util.getMillis(), RANDOM);
+    }
+
+    /**
+     * La meme, avec un poids et une image.
+     *
+     * <p>Le poids est celui de la {@code Rigidbody} de l'original, en blocs par tick au carre :
+     * zero partout chez lui, 0,01 pour les trois etincelles du bloc mine — celles-la tombent.
+     */
+    public static void spawn(Vec3 pos, Vec3 vel, double gravity, ResourceLocation texture) {
+        spawn(pos, vel, gravity, texture, Util.getMillis(), RANDOM);
     }
 
     /** La meme, avec un hasard et un instant donnes — pour le test. */
     public static void spawn(Vec3 pos, Vec3 vel, long nowMs, Random random) {
+        spawn(pos, vel, 0.0, MdSparks.PLAIN, nowMs, random);
+    }
+
+    /** Toutes les memes, jusqu'au bout : c'est ici que vivent les nombres de l'original. */
+    public static void spawn(Vec3 pos, Vec3 vel, double gravity, ResourceLocation texture,
+                             long nowMs, Random random) {
         int life = LIFE_MIN_TICKS + random.nextInt(LIFE_MAX_TICKS - LIFE_MIN_TICKS);
         int alpha = ALPHA_MIN + random.nextInt(ALPHA_MAX - ALPHA_MIN);
         double size = SIZE_MIN + random.nextDouble() * (SIZE_MAX - SIZE_MIN);
 
         SPARKS.add(new Spark(new double[] { pos.x, pos.y, pos.z },
-                new double[] { vel.x, vel.y, vel.z }, nowMs, life, alpha / 255f, (float) size));
+                new double[] { vel.x, vel.y, vel.z }, nowMs, life, alpha / 255f, (float) size,
+                gravity, texture));
     }
 
     /** Un tick du client : les etincelles avancent, et les mortes s'en vont. */

@@ -99,7 +99,7 @@ public abstract class MineRaySkill extends Skill {
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         if (!data.consumeControlPoint(cpPerTick(data))) return false;
 
-        BlockPos target = aimedBlock(player);
+        BlockPos target = aimedBlock(player, range());
         if (target == null) {
             forgetTarget(data);
             return true;
@@ -107,15 +107,21 @@ public abstract class MineRaySkill extends Skill {
 
         BlockPos current = data.getHoldBlock(this);
         if (current == null || !current.equals(target)) {
-            // Nouveau bloc : on repart de sa durete entiere. Une durete negative (lit,
-            // eau) est inperçable, comme l'original qui la remplacait par l'infini.
-            float hardness = player.level().getBlockState(target).getDestroySpeed(player.level(), target);
-            if (hardness < 0f || !canHarvest(player.level().getBlockState(target))) {
+            // Nouveau bloc : on repart de sa durete entiere. Ce que le rayon ne peut pas percer du
+            // tout — l'obsidienne pour le rayon de base — n'est meme pas vise : le rayon l'ignore,
+            // et n'y met donc pas une seule etincelle.
+            BlockState state = player.level().getBlockState(target);
+            if (!canHarvest(state)) {
                 forgetTarget(data);
                 return true;
             }
+            // Une durete negative — la roche-mere, l'eau, la lave — ne se perce pas mais se mord :
+            // l'original la remplacait par l'infini, et son rayon la creusait donc sans fin, en
+            // crachant ses etincelles. Le port oubliait la cible, ce qui les eteignait la ; il la
+            // garde maintenant, avec l'infini de l'original.
+            float hardness = state.getDestroySpeed(player.level(), target);
             data.setHoldBlock(this, target);
-            data.setHoldProgress(this, hardness);
+            data.setHoldProgress(this, hardness < 0f ? Float.MAX_VALUE : hardness);
             return true;
         }
 
@@ -135,11 +141,18 @@ public abstract class MineRaySkill extends Skill {
         data.setHoldBlock(this, null);
     }
 
-    /** Le bloc que le rayon touche, ou {@code null} si le regard part dans le vide. */
+    /**
+     * Le bloc vise par un rayon, ou {@code null} si le regard part dans le vide.
+     *
+     * <p>Le trace est celui de l'original : un rayon de {@code range} blocs depuis les yeux, qui
+     * s'arrete sur les blocs <b>solides</b> — ceux qui ont une forme a heurter — et jamais sur
+     * l'eau. Les deux cotes s'en servent : le serveur pour savoir quoi creuser, le client pour
+     * savoir ou poser ses etincelles, et c'est le meme regard qui decide.
+     */
     @Nullable
-    private BlockPos aimedBlock(Player player) {
+    public static BlockPos aimedBlock(Player player, double range) {
         Vec3 eye = player.getEyePosition(1.0f);
-        Vec3 end = eye.add(player.getViewVector(1.0f).scale(range()));
+        Vec3 end = eye.add(player.getViewVector(1.0f).scale(range));
         BlockHitResult hit = player.level().clip(
                 new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         return hit.getType() == HitResult.Type.BLOCK ? hit.getBlockPos() : null;

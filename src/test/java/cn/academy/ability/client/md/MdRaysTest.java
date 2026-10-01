@@ -172,6 +172,7 @@ class MdRaysTest {
         assertTrue(MdRayKind.MELTDOWNER.viewOptimize());
         assertEquals(0.0, MdRayKind.MELTDOWNER.glowEndFix(), 1e-9, "sa lueur s'arrete a sa pointe");
 
-        assertEquals(5, MdRayKind.all().size(), "les cinq genres sont connus");
+        assertEquals(8, MdRayKind.all().size(),
+                "les cinq genres du tir, et les trois rayons miniers tenus");
     }
 }

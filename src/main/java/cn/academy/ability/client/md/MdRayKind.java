@@ -201,6 +201,86 @@ public record MdRayKind(String name,
             50, 200, 700, 300,
             0.8, "md.meltdowner", 0.5f, true, 0.0);
 
+    /**
+     * La vie d'un rayon <b>tenu</b> : les {@code 233333} ticks de l'original, soit trois heures.
+     *
+     * <p>Ce n'est pas une duree, c'est une absence de duree : un rayon minier ne s'eteint pas
+     * tout seul, c'est le client qui le tue quand la touche se relache. L'original lui donnait
+     * quand meme une vie, et la voici — au bout de trois heures de maintien ininterrompu, il
+     * s'efface pour de bon, comme chez l'original.
+     */
+    public static final int HELD_TICKS = 233333;
+
+    /**
+     * Le rayon minier de base, {@code EntityMineRayBasic} : le rayon tenu de la pierre.
+     *
+     * <p>C'est le petit rayon, au chiffre pres — memes textures, {@code mdray_small}, meme coeur
+     * de trois centimetres, meme gaine de quatre et demi, meme lueur de 0,3 bloc a 50 % — a trois
+     * choses pres. Il <b>vit</b> au lieu de clignoter : l'original lui donnait la vie de ses
+     * rayons tenus, {@link #HELD_TICKS}, et c'est le client qui le tuait a la fin du maintien. Il
+     * <b>ne crache donc pas tout seul</b> : ses etincelles ont leur propre rythme et leur propre
+     * vitesse, que {@code MineRayEffect} semme — d'ou ce {@code sparkRate} laisse a zero, qui ne
+     * veut pas dire « aucun » mais « pas par moi ». Et son <b>son</b> n'est pas le sien : c'est la
+     * boucle du maintien, {@code md.mine_loop}, que {@code HeldLoops} ouvre tant que la touche
+     * reste enfoncee, et que le genre rappelle ici pour qu'il n'y ait qu'un endroit ou la lire.
+     *
+     * <p>Il se dessine sur la main de son tireur — {@code viewOptimize} — et sa portee n'est pas
+     * celle de sa competence : quinze blocs de rayon pour dix blocs creuses. C'est l'original qui
+     * le voulait ainsi, et cela se voit quand on mine de loin.
+     */
+    public static final MdRayKind MINE_BASIC = new MdRayKind("mdray_mine_basic",
+            texture("mdray_small", "blend_in"), texture("mdray_small", "tile"),
+            texture("mdray_small", "blend_out"),
+            0.3, 0.5f,
+            0.03, new Tint(216, 248, 216, 230),
+            0.045, new Tint(106, 242, 106, 50),
+            HELD_TICKS, 200, 400, 300,
+            0.0, "md.mine_loop", 0.3f, true, 0.0);
+
+    /**
+     * Le rayon minier de l'expert, {@code EntityMineRayExpert} : le meme, une taille au-dessus.
+     *
+     * <p>Ses textures sont les siennes — {@code mdray_expert} — et son coeur est un peu plus large
+     * que celui du rayon de base : 4,5 cm contre 3, et 5,6 de gaine contre 4,5. Il a surtout une
+     * lueur de 0,5 bloc, dont le dessin de l'original rabaissait l'opacite a 50 % a chaque image :
+     * sa fabrique en annoncait 70, son {@code doRender} la ramenait a 50, et c'est 50 qu'on voit.
+     * Le coeur a de meme une opacite de 180 et non de 230, pour la meme raison.
+     *
+     * <p>Comme son cadet, il vit jusqu'au relachement, et ses etincelles sont celles de
+     * {@code MineRayEffect} — une sur trois par tick, elles, contre une sur deux pour le rayon de
+     * base.
+     */
+    public static final MdRayKind MINE_EXPERT = new MdRayKind("mdray_mine_expert",
+            texture("mdray_expert", "blend_in"), texture("mdray_expert", "tile"),
+            texture("mdray_expert", "blend_out"),
+            0.5, 0.5f,
+            0.045, new Tint(216, 248, 216, 180),
+            0.056, new Tint(106, 242, 106, 50),
+            HELD_TICKS, 200, 400, 300,
+            0.0, "md.mine_loop", 0.3f, true, 0.0);
+
+    /**
+     * Le rayon minier de la chance, {@code EntityMineRayLuck} : le rayon de l'expert, mais dore.
+     *
+     * <p>Il perce et il use exactement comme l'expert — memes nombres, memes quinze blocs — et
+     * c'est sa <b>couleur</b> qui le distingue : son coeur est presque blanc (241, 229, 247) et sa
+     * gaine violette (205, 166, 232), la ou les deux autres sont vertes. Sa lueur fait 0,45 bloc a
+     * 60 %, entre les deux autres.
+     *
+     * <p>Et ses etincelles ne sont pas les memes : l'original donnait a celles de son rayon la
+     * texture {@code md_particle_luck}, une etoile a quatre branches, la ou les deux autres
+     * crachent la bille de plasma ordinaire. C'est le seul rayon du port qui ait deux textures
+     * d'etincelle — et c'est {@code MineRayEffect} qui s'en souvient, pas le genre.
+     */
+    public static final MdRayKind MINE_LUCK = new MdRayKind("mdray_mine_luck",
+            texture("mdray_luck", "blend_in"), texture("mdray_luck", "tile"),
+            texture("mdray_luck", "blend_out"),
+            0.45, 0.6f,
+            0.04, new Tint(241, 229, 247, 230),
+            0.05, new Tint(205, 166, 232, 50),
+            HELD_TICKS, 200, 400, 300,
+            0.0, "md.mine_loop", 0.3f, true, 0.0);
+
     /** La duree du rayon, en millisecondes : cinquante par tick, comme l'original. */
     public long lifeMs() {
         return lifeTicks * 50L;
@@ -221,7 +301,8 @@ public record MdRayKind(String name,
 
     /** Les genres connus, dans l'ordre ou ils sont apparus. */
     public static java.util.List<MdRayKind> all() {
-        return java.util.List.of(SMALL, BARRAGE, BARRAGE_PRE_HIT, BARRAGE_PRE_MISS, MELTDOWNER);
+        return java.util.List.of(SMALL, BARRAGE, BARRAGE_PRE_HIT, BARRAGE_PRE_MISS, MELTDOWNER,
+                MINE_BASIC, MINE_EXPERT, MINE_LUCK);
     }
 
     private static ResourceLocation texture(String ray, String part) {
