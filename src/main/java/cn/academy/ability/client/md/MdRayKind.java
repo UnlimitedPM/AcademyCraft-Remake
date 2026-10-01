@@ -184,7 +184,7 @@ public record MdRayKind(String name,
      * Le faisceau du meltdowner, {@code EntityMDRay} : le tir charge de la categorie.
      *
      * <p>C'est le plus <b>gros</b> des rayons du plasma — un coeur de 17 cm et une gaine de 22, une
-     * lueur d'un bloc et demi a 80 % d'opacite — et celui qui vit le plus longtemps : cinquante
+     * lueur d'un bloc et demi a 90 % d'opacite — et celui qui vit le plus longtemps : cinquante
      * ticks, deux secondes et demie, dont les sept derniers dixiemes s'effacent. Il a ses propres
      * textures, {@code mdray}, et non celles du petit rayon.
      *
@@ -195,7 +195,7 @@ public record MdRayKind(String name,
      */
     public static final MdRayKind MELTDOWNER = new MdRayKind("mdray",
             texture("mdray", "blend_in"), texture("mdray", "tile"), texture("mdray", "blend_out"),
-            1.5, 0.8f,
+            1.5, 0.9f,
             0.17, new Tint(216, 248, 216, 230),
             0.22, new Tint(106, 242, 106, 50),
             50, 200, 700, 300,
