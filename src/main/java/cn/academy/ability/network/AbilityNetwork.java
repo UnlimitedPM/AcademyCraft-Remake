@@ -61,6 +61,11 @@ public class AbilityNetwork {
         // de la touche, il doit le fermer. Voir HoldOverPacket.
         CHANNEL.registerMessage(nextId++, HoldOverPacket.class,
                 HoldOverPacket::encode, HoldOverPacket::decode, HoldOverPacket::handle);
+        // Le depart du reacteur : son maintien a lui s'arrete au relachement, alors que celui
+        // du serveur vole quinze ticks encore. C'est ce qui ouvre le bouclier. Voir
+        // JetFlightPacket.
+        CHANNEL.registerMessage(nextId++, JetFlightPacket.class,
+                JetFlightPacket::encode, JetFlightPacket::decode, JetFlightPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

@@ -3,10 +3,14 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.JetFlightPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 /**
  * Reacteur, portage de {@code JetEngine} : viser un point a douze blocs, et s'y faire
@@ -144,6 +148,14 @@ public class JetEngineSkill extends Skill {
         // 0,004 pour le vol, comme l'original. L'experience d'usage d'une competence tenue
         // se verse depuis son effet : le paquet ne voit pas ce qui s'est passe.
         data.addSkillExp(this, 0.004f);
+
+        // Et le depart se dit au client : son maintien a lui s'arrete au relachement, alors
+        // que celui du serveur vole quinze ticks encore. Sans ce mot, le bouclier de diamant
+        // et la trainee ne s'ouvriraient jamais. Voir JetFlightPacket.
+        if (player instanceof ServerPlayer server) {
+            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+                    new JetFlightPacket(player.getId()));
+        }
         return true;
     }
 
