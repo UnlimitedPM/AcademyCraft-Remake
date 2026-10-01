@@ -3,7 +3,6 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
-import cn.academy.ability.client.md.MdBarrage;
 import cn.academy.ability.client.md.MdRayKind;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
@@ -158,10 +157,9 @@ public class RayBarrageSkill extends Skill {
             // c'est le son lourd qui se jouait.
             ball.burst();
             // Le trait s'arrete sur la bille, et vit assez longtemps pour accompagner la salve :
-            // c'est le `hit` de l'original. Il part de la MAIN et non de l'oeil, sinon il nait dans
-            // la camera et remplit l'ecran du tireur.
-            ray(player, MdRayKind.BARRAGE_PRE_HIT, MdBarrage.handOrigin(
-                    player.getEyePosition(1f), player.getViewVector(1f)), ball.position());
+            // c'est le `hit` de l'original. Il part des YEUX, comme chez lui — c'est chez le
+            // client qu'il se recolle a la main de son tireur, voir `MdRayView`.
+            ray(player, MdRayKind.BARRAGE_PRE_HIT, player.getEyePosition(1f), ball.position());
             // Et la gerbe part de la bille, dans l'axe du regard du tireur.
             ray(player, MdRayKind.BARRAGE, ball.position(),
                     ball.position().add(player.getViewVector(1f)));
@@ -174,8 +172,7 @@ public class RayBarrageSkill extends Skill {
         Vec3 impact = inSight instanceof LivingEntity living
                 ? living.getEyePosition()
                 : TargetingUtil.findImpactPoint(player, RANGE);
-        ray(player, MdRayKind.BARRAGE_PRE_MISS,
-                MdBarrage.handOrigin(player.getEyePosition(1f), player.getViewVector(1f)), impact);
+        ray(player, MdRayKind.BARRAGE_PRE_MISS, player.getEyePosition(1f), impact);
 
         if (inSight instanceof LivingEntity living) {
             living.invulnerableTime = 0;
@@ -196,11 +193,14 @@ public class RayBarrageSkill extends Skill {
      *
      * <p>Le son se joue <b>chez le serveur</b>, au meme endroit que celui des billes : c'est le
      * seul chemin qui marche, le client ne trouvant ses sons que dans son propre registre.
+     *
+     * <p>Le tireur voyage avec le rayon : c'est lui qui dit au client chez qui le rayon se
+     * recolle a la main, et chez qui il reste a l'oeil. Voir {@code MdRayView}.
      */
     private void ray(Player player, MdRayKind kind, Vec3 from, Vec3 to) {
         if (!(player instanceof ServerPlayer server)) return;
         AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
-                new MdRayPacket(kind.name(), from, to));
+                new MdRayPacket(kind.name(), from, to, player.getId()));
 
         SoundEvent sound = SoundLookup.event(kind.sound());
         if (sound != null) {

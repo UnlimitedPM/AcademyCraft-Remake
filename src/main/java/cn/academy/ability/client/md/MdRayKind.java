@@ -38,6 +38,20 @@ import net.minecraft.resources.ResourceLocation;
  * que sur un jeu en marche, et les nombres d'un rayon se relisent donc en test, sans lancer
  * Minecraft — c'est tout l'interet de les tenir ici. Le serveur le retrouve par ce nom au
  * moment de le jouer, par {@code SoundLookup}.
+ *
+ * <h2>Ou le rayon se pose</h2>
+ *
+ * <p>Le dernier drapeau, {@code viewOptimize}, est le {@code EntityRayBase.viewOptimize} de
+ * l'original. Il l'y posait a <b>vrai</b> pour tous ses rayons, et l'eteignait sur les trois
+ * qui ne partent pas du tireur : le rayon de la bombe a electrons, celui de la bombe a
+ * fragmentation ({@code SBNetDelegate}), et la salve elle-meme — tous les trois partent de la
+ * BILLE. Tout ce qui reste — le pre-rayon de la salve, et les trois rayons miniers — se
+ * dessinait donc sur la main de son tireur, par l'optimisation de vue que
+ * {@code RendererRayBaseGlow} appliquait a chaque image.
+ *
+ * <p>Le port tient ce drapeau ici parce que c'est {@code MdRayView} qui le lit, cote client :
+ * c'est lui qui recole a la main de son tireur un rayon marque vrai, et laisse les autres ou
+ * ils sont nes.
  */
 public record MdRayKind(String name,
                         ResourceLocation glowIn, ResourceLocation glowTile, ResourceLocation glowOut,
@@ -46,7 +60,8 @@ public record MdRayKind(String name,
                         double outerRadius, Tint outer,
                         int lifeTicks, long blendInMs, long blendOutMs, long shrinkMs,
                         double sparkRate,
-                        String sound, float soundVolume) {
+                        String sound, float soundVolume,
+                        boolean viewOptimize) {
 
     /** Une couleur telle que l'original la donnait : quatre nombres de 0 a 255. */
     public record Tint(int r, int g, int b, int a) {
@@ -90,7 +105,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             14, 200, 400, 500,
-            1.0, "md.ray_small", 0.8f);
+            1.0, "md.ray_small", 0.8f, false);
 
     /**
      * La salve de rayons, {@code EntityMdRayBarrage} : la gerbe qui part d'une bille de silicium.
@@ -113,7 +128,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             50, 100, 300, 500,
-            0.0, "md.ray_small", 0.5f);
+            0.0, "md.ray_small", 0.5f, false);
 
     /**
      * Le pre-rayon : le trait qui annonce la salve, avant qu'elle ne parte.
@@ -125,6 +140,11 @@ public record MdRayKind(String name,
      * <p>Il est un peu plus <b>gros</b> que le petit rayon — un coeur de 4,5 cm et une gaine de
      * 5,2, une lueur de 0,4 bloc — parce que c'est lui qu'on regarde : c'est le trait qui dit ou
      * l'on a tire.
+     *
+     * <p>Il nait aux <b>yeux</b> de son tireur — le {@code y0 + 1.6} de l'original — mais il se
+     * dessine sur sa main : c'est le drapeau {@code viewOptimize} de sa base, que
+     * {@code EntityBarrageRayPre} ne pensait pas a eteindre, et c'est {@code MdRayView} qui
+     * l'applique.
      */
     public static final MdRayKind BARRAGE_PRE_HIT = new MdRayKind("mdray_barrage_pre_hit",
             texture("mdray_small", "blend_in"), texture("mdray_small", "tile"),
@@ -133,7 +153,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 230),
             0.052, new Tint(106, 242, 106, 50),
             50, 200, 400, 500,
-            0.0, "md.ray_small", 0.8f);
+            0.0, "md.ray_small", 0.8f, true);
 
     /** Et le meme, quand rien n'a ete trouve : trente ticks d'eclair, et c'est tout. */
     public static final MdRayKind BARRAGE_PRE_MISS = new MdRayKind("mdray_barrage_pre_miss",
@@ -143,7 +163,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 230),
             0.052, new Tint(106, 242, 106, 50),
             30, 200, 400, 500,
-            0.0, "md.ray_small", 0.8f);
+            0.0, "md.ray_small", 0.8f, true);
 
     /** La duree du rayon, en millisecondes : cinquante par tick, comme l'original. */
     public long lifeMs() {

@@ -38,40 +38,7 @@ public final class MdBarrage {
     /** La longueur d'un trait : les quinze blocs par defaut de {@code EntityRayBase}. */
     public static final double RAY_LENGTH = 15.0;
 
-    // --- D'OU PART LE TRAIT ---
-
-    /**
-     * Le trait part de la main, et non de l'oeil.
-     *
-     * <p>L'original le faisait partir des yeux — {@code player.posY + player.eyeHeight} — et le
-     * joueur a vu tout de suite ce que cela donne : le rayon nait <b>dans la camera</b>, et il
-     * remplit l'ecran au moment du tir, au point qu'on ne voit plus que lui. Le port le decale
-     * donc vers la main droite, comme la plupart des tirs de ce genre : trois dixiemes de cote,
-     * trois dixiemes plus bas, un peu en avant.
-     *
-     * <p>C'est un ecart assume, et demande. Il ne change <b>rien</b> a ce que le tir touche : le
-     * point d'arrivee est toujours celui que le regard a trouve, seul le depart bouge.
-     */
-    public static final double HAND_SIDE = 0.3;
-    public static final double HAND_DROP = 0.3;
-    public static final double HAND_FORWARD = 0.4;
-
     private MdBarrage() {}
-
-    /**
-     * Le point d'ou le trait part : la main droite, telle qu'on la voit en premiere personne.
-     *
-     * <p>La droite se lit par le produit vectoriel du regard et de la verticale — pour un regard
-     * vers le sud, elle tombe a l'ouest, ce qui est bien la droite du joueur. Un regard pile a la
-     * verticale n'a pas de droite : le trait part alors de l'oeil, faute de mieux.
-     */
-    public static Vec3 handOrigin(Vec3 eye, Vec3 look) {
-        Vec3 right = look.cross(new Vec3(0, 1, 0));
-        Vec3 base = right.lengthSqr() < 1.0E-6
-                ? eye
-                : eye.add(right.normalize().scale(HAND_SIDE));
-        return base.add(0, -HAND_DROP, 0).add(look.scale(HAND_FORWARD));
-    }
 
     /** Combien de traits porte cette gerbe. Le tirage de l'original : {@code rangei(25, 30)}. */
     public static int subCount(Random random) {

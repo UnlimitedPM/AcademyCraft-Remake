@@ -330,9 +330,16 @@ public class EntityMdBall extends Entity {
      * laser, il n'y a aucun son ». Tous les autres sons du port passent par ce chemin.
      */
     public void flash(Vec3 from, Vec3 to) {
+        // Le rayon d'une bille ne se recolle a aucune main — c'est le drapeau de son genre qui le
+        // dit, voir `MdRayKind.viewOptimize` — mais il annonce quand meme son tireur : c'est
+        // l'identifiant que portent tous les paquets de ce genre, et le jour ou un rayon ne de la
+        // bille voudra se poser sur le tireur, il sera la.
+        Player shooter = spawner();
+        int ownerId = shooter == null ? -1 : shooter.getId();
+
         AbilityNetwork.CHANNEL.send(
                 PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> this),
-                new MdRayPacket(MdRayKind.SMALL.name(), from, to));
+                new MdRayPacket(MdRayKind.SMALL.name(), from, to, ownerId));
 
         SoundEvent sound = SoundLookup.event(MdRayKind.SMALL.sound());
         if (sound != null) {

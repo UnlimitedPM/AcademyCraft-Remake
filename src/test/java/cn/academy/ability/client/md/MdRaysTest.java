@@ -1,6 +1,7 @@
 package cn.academy.ability.client.md;
 
 import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -106,5 +107,22 @@ class MdRaysTest {
 
         assertEquals(0.9, ray.glowAlpha(BIRTH + 100), 1e-9,
                 "sans tremblement, la lueur vaut 0,9 fois l'opacite du rayon");
+    }
+
+    @Test
+    @DisplayName("seuls les rayons nes sur le tireur se recollent a sa main")
+    void seulsCeuxNesSurLeTireurSeRecollentALaMain() {
+        // Le `viewOptimize` de l'original — `EntityRayBase.viewOptimize`, vrai par defaut —
+        // n'etait eteint que sur les trois rayons nes sur une BILLE : ceux des deux bombes
+        // (`ElectronBomb` et `SBNetDelegate`) et la salve (`EntityMdRayBarrage`). Le pre-rayon de
+        // la salve, lui, part des yeux du tireur et se dessine sur sa main, comme l'eclair de
+        // l'electromaster. C'est ce que le joueur a demande, et c'est ce que `MdRayView` lit.
+        assertTrue(MdRayKind.BARRAGE_PRE_HIT.viewOptimize(),
+                "le pre-rayon se recolle a la main de son tireur");
+        assertTrue(MdRayKind.BARRAGE_PRE_MISS.viewOptimize(), "le meme, quand il n'a rien trouve");
+
+        assertFalse(MdRayKind.SMALL.viewOptimize(),
+                "le rayon d'une bille ne se recolle a aucune main : il nait sur la bille");
+        assertFalse(MdRayKind.BARRAGE.viewOptimize(), "la salve aussi part de la bille");
     }
 }

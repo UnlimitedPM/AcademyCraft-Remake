@@ -25,10 +25,10 @@ class MdRayPacketTest {
     }
 
     @Test
-    @DisplayName("le genre du rayon et ses deux bouts survivent au voyage")
+    @DisplayName("le genre du rayon, ses deux bouts et son tireur survivent au voyage")
     void leGenreEtLesBoutsSurvivent() {
         MdRayPacket lue = relire(new MdRayPacket("mdray_small", new Vec3(1.5, 64, -3),
-                new Vec3(9, 65.25, 12)));
+                new Vec3(9, 65.25, 12), 42));
 
         assertEquals("mdray_small", lue.kind());
         assertEquals(1.5, lue.from().x, 1e-9);
@@ -37,6 +37,15 @@ class MdRayPacketTest {
         assertEquals(9, lue.to().x, 1e-9);
         assertEquals(65.25, lue.to().y, 1e-9);
         assertEquals(12, lue.to().z, 1e-9);
+        assertEquals(42, lue.ownerId(),
+                "sans son tireur, le rayon se recollerait a la main du mauvais joueur");
+    }
+
+    @Test
+    @DisplayName("un rayon qui n'appartient a personne garde son tireur inconnu")
+    void unTireurInconnuSurvitAussi() {
+        assertEquals(-1, relire(new MdRayPacket("mdray_small", Vec3.ZERO, Vec3.ZERO, -1))
+                .ownerId(), "c'est le tireur que porte le rayon d'une bille");
     }
 
     @Test
@@ -44,6 +53,6 @@ class MdRayPacketTest {
     void unGenreInconnuNeCasseRien() {
         assertEquals(cn.academy.ability.client.md.MdRayKind.SMALL,
                 cn.academy.ability.client.md.MdRayKind.byName(relire(
-                        new MdRayPacket("mdray_qui_n_existe_pas", Vec3.ZERO, Vec3.ZERO)).kind()));
+                        new MdRayPacket("mdray_qui_n_existe_pas", Vec3.ZERO, Vec3.ZERO, -1)).kind()));
     }
 }
