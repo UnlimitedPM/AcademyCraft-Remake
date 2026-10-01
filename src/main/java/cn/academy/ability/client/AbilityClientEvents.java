@@ -279,11 +279,26 @@ public class AbilityClientEvents {
                 AbilityScreens.open(category, skill);
                 return;
             }
-            // L'aptitude eteinte, le serveur refusera l'activation : le client n'ouvre donc pas
-            // le maintien du tout. Avant, il l'ouvrait quand meme, et le tick suivant rejouait
-            // l'animation du pouvoir pour rien — c'est ce que le joueur a signale, sa touche V
-            // eteinte. Le PRESS part quand meme, pour que le serveur dise pourquoi il refuse.
-            if (!ClientAbilityData.get().isActivated()) {
+            // Le serveur refusera-t-il cette ouverture ? Le client ne l'ouvre alors pas du tout,
+            // et l'appui part quand meme pour que le serveur dise pourquoi il refuse. Il le dit
+            // mieux que le client ne saurait le deviner, et c'est le seul qui decide.
+            //
+            // Les trois refus qui se voient ici sont ceux de `ActivateSkillPacket` : l'aptitude
+            // eteinte, une recharge en cours, et la surcharge en descente. Le quatrieme — la
+            // reserve trop juste — est le prix d'ouverture, celui que `perform` exige. Le
+            // brouillage s'y ajoute.
+            //
+            // Le port ouvrait le maintien avant de demander, et le refermait au retour du
+            // serveur : le joueur voyait donc le debut du bouclier et entendait son son a chaque
+            // appui refuse, « quand on est en cooldown ou en overload, on peut toujours activer
+            // brievement le pouvoir, ce qui lance le son et affiche tres rapidement le debut du
+            // bouclier ».
+            //
+            // Ces nombres sont ceux du CLIENT, qui ne peut que sous-estimer ce que le joueur a :
+            // sa reserve et sa surcharge ne bougent que par son propre tick et par les envois du
+            // serveur, donc elles sont toujours au moins aussi bonnes que les vraies. Un refus lu
+            // ici est donc un refus certain, et une activation legitime ne peut pas etre empechee.
+            if (HoldRefusal.refusesStart(skill, ClientAbilityData.get())) {
                 send(category, skill, Phase.PRESS);
                 return;
             }

@@ -2,6 +2,7 @@ package cn.academy.ability;
 
 import cn.academy.AcademyCraft;
 import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.HoldOverPacket;
 import cn.academy.ability.network.SyncAbilityDataPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -185,7 +186,11 @@ public class AbilityEvents {
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
         // Et on le DIT au client, qui tient son propre temoin depuis l'appui : sans cela son
         // animation continuerait toute seule alors que le maintien est fini chez le serveur —
-        // voir HoldOverPacket. C'est la meme chose pour une fin de duree maximale et pour une
-        // reserve qui s'epuise, qui passent toutes par ici.
+        // le joueur l'a vu, « a la fin de la competence, si on ne relache pas le clic, le
+        // bouclier est toujours visible alors que la competence est finie ». C'est la meme
+        // chose pour une fin de duree maximale et pour une reserve qui s'epuise : les trois
+        // passent par ici. Voir HoldOverPacket.
+        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new HoldOverPacket(skill.getName()));
     }
 }
