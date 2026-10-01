@@ -42,6 +42,19 @@ public final class MeltdownerVisuals {
     /** La longueur du faisceau, en blocs : le {@code length} de l'original, trente. */
     public static final double BEAM_LENGTH = 30.0;
 
+    /**
+     * Le dezoom de la charge, en degres de champ de vision a son maximum.
+     *
+     * <p>L'original ne le donnait pas a son meltdowner : il ralentissait la marche de celui qui
+     * charge, et le champ de vision se tirait tout seul avec elle. Le port ne touche pas au
+     * deplacement — c'est deja comme cela qu'il a porte le dezoom de l'orage — donc la vue
+     * s'elargit directement.
+     *
+     * <p>La valeur est la moitie de celle de l'orage, a la demande du joueur : vingt degres, la
+     * ou l'orage en prend quarante.
+     */
+    public static final float FOV_DEGREES = 20f;
+
     // --- L'ESSAIM DE LA CHARGE ---
 
     /** Les bornes du tirage, avant le « zero compris » de l'original. */

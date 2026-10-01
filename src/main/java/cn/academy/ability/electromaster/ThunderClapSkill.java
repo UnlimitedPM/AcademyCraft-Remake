@@ -111,6 +111,18 @@ public class ThunderClapSkill extends Skill {
         return MAX_TICKS;
     }
 
+    /**
+     * Oui : l'orage tombe tout seul au bout de sa charge.
+     *
+     * <p>L'original le faisait depuis son tick serveur — {@code ticks >= MAX_TICKS} envoyait la
+     * fin du contexte, et la foudre tombait sans qu'on relache la touche. C'est la seule
+     * competence du mod dans ce cas, et c'est ce que dit {@link Skill#firesAtMaxCharge()}.
+     */
+    @Override
+    public boolean firesAtMaxCharge() {
+        return true;
+    }
+
     @Override
     public void onStart(Player player, AbilityData data) {
         // Le surcout de l'orage se paie a la CHARGE, et pas au claquement : c'est le

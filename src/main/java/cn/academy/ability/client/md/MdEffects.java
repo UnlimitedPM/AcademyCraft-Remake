@@ -132,7 +132,15 @@ public class MdEffects {
                                    MdRays.LiveRay ray, double[] from, double[] to, double[] axis,
                                    double width, float alpha, long now) {
         MdRayKind kind = ray.kind();
-        double half = kind.glowWidth() * width;
+
+        // Deux choses differentes, et c'est la que le port s'etait trompe : la LONGUEUR des
+        // morceaux d'entree et de sortie, et la LARGEUR du ruban. L'original leur donnait le meme
+        // nombre, parce qu'il le passait a un `drawBoard` qui le divisait par deux — le ruban fait
+        // donc la largeur annoncee, et non son double. Le port la passait telle quelle et la lueur
+        // de tous les rayons etait deux fois trop large : invisible sur les petits rayons, et tres
+        // visible sur le faisceau du meltdowner, dont la lueur d'un bloc et demi en faisait trois.
+        double span = kind.glowWidth() * width;
+        double half = span / 2;
 
         // L'original multipliait l'opacite de la lueur par celle du rayon, puis encore par la
         // sienne — d'ou le carre de l'opacite, et son tremblement entre 0,9 et 1.
@@ -143,8 +151,8 @@ public class MdEffects {
         // couvrir la bille de silicium entiere. Voir `MdRayKind.glowEndFix`.
         double[] tip = add(to, axis, kind.glowEndFix());
 
-        double[] in = add(from, axis, half);
-        double[] out = add(tip, axis, -half);
+        double[] in = add(from, axis, span);
+        double[] out = add(tip, axis, -span);
 
         board(buffers, pose, camera, kind.glowIn(), from, in, axis, half, glow);
         if (length(from, out) > 0) {

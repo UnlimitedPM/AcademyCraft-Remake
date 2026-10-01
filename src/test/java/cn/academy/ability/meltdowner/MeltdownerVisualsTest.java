@@ -83,6 +83,16 @@ class MeltdownerVisualsTest {
     }
 
     @Test
+    @DisplayName("le dezoom de la charge vaut la moitie de celui de l'orage")
+    void leDezoomVautLaMoitieDeCeluiDeLOrage() {
+        // L'orage en prend quarante degres a plein ; le meltdowner en prend vingt, a la demande
+        // du joueur. C'est un NOMBRE DE DEGRES ajoute au champ, donc il se voit quel que soit le
+        // reglage du joueur, et il grandit avec la charge — la seule chose qui reste ici est le
+        // maximum, la ou la charge s'arrete de monter.
+        assertEquals(20f, MeltdownerVisuals.FOV_DEGREES, 1e-6);
+    }
+
+    @Test
     @DisplayName("un grain tourne autour du joueur et monte")
     void unGrainTourneEtMonte() {
         var random = new Random(7);

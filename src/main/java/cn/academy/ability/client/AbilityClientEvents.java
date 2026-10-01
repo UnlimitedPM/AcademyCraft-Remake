@@ -351,7 +351,7 @@ public class AbilityClientEvents {
                     ThunderClapEffect.tick(player, skill, ClientCharge.getTicks());
                     // Et le plasma du meltdowner, qui tourne autour de celui qui le charge :
                     // l'essaim de l'original, aux memes nombres. Voir MeltdownerCharge.
-                    MeltdownerCharge.tick(player, skill);
+                    MeltdownerCharge.tick(player, skill, ClientCharge.getTicks());
                     // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
                     // la charge : voir BodyIntensifyEffect.
                     BodyIntensifyEffect.tickCharge(skill);
@@ -360,11 +360,17 @@ public class AbilityClientEvents {
                     // se relache. Le serveur ne peut pas s'en charger — c'est le client qui tient
                     // la touche — donc la charge se termine ici, par le meme chemin que le
                     // relachement.
+                    //
+                    // C'est la SEULE competence dans ce cas, et elle le dit elle-meme : le port
+                    // appliquait ce chemin a TOUTES les competences chargees, et le joueur a vu ce
+                    // que cela donne sur la premiere qu'il a essayee — « le laser part sans que
+                    // j'aie a relacher la touche ».
                     int max = skill.getMaxChargeTicks(ClientAbilityData.get());
-                    if (max > 0 && ClientCharge.getTicks() >= max) {
+                    if (max > 0 && ClientCharge.getTicks() >= max && skill.firesAtMaxCharge()) {
                         binding.charging = false;
                         ClientCharge.end();
                         ThunderClapEffect.end();
+                        MeltdownerCharge.end();
                         // Une charge qui va jusqu'a son plafond a passe le minimum : le renfort
                         // prend, et sa gerbe aussi.
                         BodyIntensifyEffect.endCharge(true);
@@ -388,24 +394,29 @@ public class AbilityClientEvents {
         binding.charging = false;
         ClientCharge.end();
         ThunderClapEffect.end();
+        MeltdownerCharge.end();
         BodyIntensifyEffect.endCharge(performed);
         endDirections();
         send(category, skill, Phase.RELEASE);
     }
 
     /**
-     * Le dezoom de la charge de l'orage : plus elle monte, plus la vue s'elargit.
+     * Le dezoom de la charge : plus elle monte, plus la vue s'elargit.
      *
-     * <p>C'est le retour visuel que l'original donnait, et qui manquait ici. Il l'obtenait en
-     * ralentissant la marche du joueur, dont le champ de vision se tire aussi — le port ne
-     * touche pas au deplacement, il elargit la vue directement.
+     * <p>C'est le retour visuel que l'original donnait a ses charges, et qui manquait ici. Il
+     * l'obtenait en ralentissant la marche du joueur, dont le champ de vision se tire aussi — le
+     * port ne touche pas au deplacement, il elargit la vue directement.
+     *
+     * <p>Deux competences s'en servent : l'orage, dont c'etait le seul retour, et le meltdowner,
+     * qui l'a recu a la demande du joueur et a la moitie de ses degres. Chacune dit la sienne, et
+     * celle d'une charge qui n'est pas la sienne vaut zero.
      *
      * <p>C'est un <b>nombre de degres</b> ajoute au champ du joueur, donc il se voit quel que soit
      * son reglage, et il grandit avec la charge.
      */
     @SubscribeEvent
     public static void onComputeFov(net.minecraftforge.client.event.ComputeFovModifierEvent event) {
-        float degrees = ThunderClapEffect.fovDegrees();
+        float degrees = ThunderClapEffect.fovDegrees() + MeltdownerCharge.fovDegrees();
         if (degrees <= 0f) return;
 
         // Le facteur attendu est un rapport au champ de BASE — celui du reglage, pas celui de

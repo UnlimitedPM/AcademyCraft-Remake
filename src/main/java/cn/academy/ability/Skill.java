@@ -397,6 +397,25 @@ public abstract class Skill {
     }
 
     /**
+     * Cette competence frappe-t-elle <b>toute seule</b> au bout de sa charge maximale ?
+     *
+     * <p>Une seule competence de l'original le faisait : l'orage. Son {@code MSG_TICK} envoyait
+     * sa fin des que {@code ticks >= MAX_TICKS}, donc la foudre tombait sans qu'on relache la
+     * touche. Toutes les autres attendaient le relachement — le meltdowner compris, dont la
+     * charge ne se terminait que par {@code MSG_KEYUP}, ou par la limite de securite de cent
+     * ticks.
+     *
+     * <p>Le port, lui, faisait frapper <b>toutes</b> les competences chargees a leur maximum, en
+     * une seule boucle ecrite pour l'orage. Le joueur a vu ce que cela donne sur la premiere
+     * qu'il a essayee : « le laser part sans que j'aie a relacher la touche ». Le drapeau dit
+     * donc qui a le droit de partir tout seul, et il ne repond vrai que la ou l'original le
+     * faisait.
+     */
+    public boolean firesAtMaxCharge() {
+        return false;
+    }
+
+    /**
      * Ouverture, avant le premier tick de charge.
      *
      * C'est le {@code MSG_MADEALIVE} de l'original, le meme pour les deux familles qui

@@ -36,6 +36,15 @@ public final class MeltdownerCharge {
      */
     private static final Random RANDOM = new Random();
 
+    /**
+     * Ou en est la charge, de 0 a 1 ; 0 quand rien ne charge.
+     *
+     * <p>Garde ici parce que le dezoom se lit a chaque IMAGE, depuis le calcul du champ de
+     * vision, et non au tick : le tick le repose, la vue le lit. C'est le meme montage que celui
+     * de l'orage, voir {@code ThunderClapEffect.progress}.
+     */
+    private static float progress;
+
     private MeltdownerCharge() {}
 
     /**
@@ -45,8 +54,18 @@ public final class MeltdownerCharge {
      * et la charge n'est qu'une source. Une autre charge que celle du meltdowner ne seme rien, et
      * c'est tout ce qu'il y a a dire : les charges qui s'arretent ne rappellent personne.
      */
-    public static void tick(Player player, Skill skill) {
-        if (skill != MeltdownerCategory.MELTDOWNER) return;
+    public static void tick(Player player, Skill skill, int chargeTicks) {
+        if (skill != MeltdownerCategory.MELTDOWNER) {
+            // Une autre charge : la vue reprend sa place tout de suite, sans attendre la fin de
+            // celle-ci. Les charges qui s'arretent ne rappellent personne.
+            progress = 0f;
+            return;
+        }
+
+        // Le dezoom suit la charge et s'arrete a son maximum : au-dela, le tir ne gagne plus rien,
+        // donc la vue non plus.
+        int max = Math.max(1, skill.getMaxChargeTicks(ClientAbilityData.get()));
+        progress = Math.min(1f, chargeTicks / (float) max);
 
         Random random = RANDOM;
         // L'original mesurait cette hauteur sur le joueur LOCAL : celui qui charge voit l'essaim a
@@ -65,5 +84,20 @@ public final class MeltdownerCharge {
                     new Vec3(player.getX() + offset.x, baseY + offset.y, player.getZ() + offset.z),
                     MeltdownerVisuals.swarmVelocity(random));
         }
+    }
+
+    /**
+     * Le dezoom de la charge, en degres a ajouter au champ de vision.
+     *
+     * <p>Il grandit avec la charge, comme celui de l'orage, et vaut zero quand rien ne charge —
+     * c'est ce que la vue lit a chaque image.
+     */
+    public static float fovDegrees() {
+        return MeltdownerVisuals.FOV_DEGREES * progress;
+    }
+
+    /** La charge s'arrete : la vue reprend sa place. */
+    public static void end() {
+        progress = 0f;
     }
 }

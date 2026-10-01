@@ -205,6 +205,23 @@ class PortedSkillsTest {
     }
 
     @Test
+    void uneSeuleCompetenceFracheTouteSeule() {
+        // L'original n'en avait qu'une : l'orage, dont le tick serveur envoyait sa fin des que
+        // `ticks >= MAX_TICKS` — la foudre tombait sans qu'on relache la touche. Toutes les autres
+        // attendaient le relachement, le meltdowner compris, dont la charge ne se terminait que
+        // par son MSG_KEYUP ou par sa limite de securite de cent ticks.
+        //
+        // Le port, lui, les faisait TOUTES frapper a leur charge maximale, en une seule boucle
+        // ecrite pour l'orage : le joueur a vu le meltdowner partir tout seul.
+        List<String> firing = new ArrayList<>();
+        for (Skill skill : allSkills()) {
+            if (skill.firesAtMaxCharge()) firing.add(fullName(skill));
+        }
+
+        assertEquals(List.of("electromaster.thunder_clap"), firing);
+    }
+
+    @Test
     void lesNiveauxSontCeuxDeLOriginal() {
         for (Skill skill : allSkills()) {
             Integer expected = EXPECTED_LEVELS.get(fullName(skill));
