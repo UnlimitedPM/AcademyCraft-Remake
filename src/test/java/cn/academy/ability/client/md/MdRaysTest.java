@@ -142,4 +142,33 @@ class MdRaysTest {
                 "les autres s'arretent a leur pointe, comme chez l'original");
         assertEquals(0.0, MdRayKind.BARRAGE.glowEndFix(), 1e-9);
     }
+
+    @Test
+    @DisplayName("le faisceau du meltdowner est le plus gros des rayons")
+    void leFaisceauDuMeltdownerEstLePlusGros() {
+        // Les nombres de MDRayRender : un coeur de 17 cm, une gaine de 22, une lueur d'un bloc et
+        // demi a 80 % d'opacite — cinq fois celle du petit rayon, et la plus opaque des cinq. Il a
+        // ses propres textures, `mdray`, et non celles du petit rayon.
+        assertEquals("mdray", MdRayKind.MELTDOWNER.name());
+        assertEquals(0.17, MdRayKind.MELTDOWNER.innerRadius(), 1e-6);
+        assertEquals(0.22, MdRayKind.MELTDOWNER.outerRadius(), 1e-6);
+        assertEquals(1.5, MdRayKind.MELTDOWNER.glowWidth(), 1e-6);
+        assertEquals(0.8, MdRayKind.MELTDOWNER.glowAlpha(), 1e-6);
+        assertEquals(MdRayKind.MELTDOWNER, MdRayKind.byName("mdray"));
+
+        // Sa vie : cinquante ticks, deux secondes et demie, dont les sept derniers dixiemes
+        // s'effacent — le plus long effacement des cinq genres.
+        assertEquals(50, MdRayKind.MELTDOWNER.lifeTicks());
+        assertEquals(2500, MdRayKind.MELTDOWNER.lifeMs());
+        assertEquals(200, MdRayKind.MELTDOWNER.blendInMs());
+        assertEquals(700, MdRayKind.MELTDOWNER.blendOutMs());
+
+        // Il crache une etincelle huit ticks sur dix, et il nait sur son tireur : c'est ce qui le
+        // fait se recoller a sa main, comme le pre-rayon de la salve.
+        assertEquals(0.8, MdRayKind.MELTDOWNER.sparkRate(), 1e-6);
+        assertTrue(MdRayKind.MELTDOWNER.viewOptimize());
+        assertEquals(0.0, MdRayKind.MELTDOWNER.glowEndFix(), 1e-9, "sa lueur s'arrete a sa pointe");
+
+        assertEquals(5, MdRayKind.all().size(), "les cinq genres sont connus");
+    }
 }

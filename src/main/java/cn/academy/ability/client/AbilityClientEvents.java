@@ -349,6 +349,9 @@ public class AbilityClientEvents {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
                     ThunderClapEffect.tick(player, skill, ClientCharge.getTicks());
+                    // Et le plasma du meltdowner, qui tourne autour de celui qui le charge :
+                    // l'essaim de l'original, aux memes nombres. Voir MeltdownerCharge.
+                    MeltdownerCharge.tick(player, skill);
                     // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
                     // la charge : voir BodyIntensifyEffect.
                     BodyIntensifyEffect.tickCharge(skill);

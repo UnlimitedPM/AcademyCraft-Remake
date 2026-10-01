@@ -3,9 +3,15 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.client.md.MdRayKind;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.MdRayPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 /** Active skill, port of original Meltdowner: sustained plasma beam, single-target hitscan damage. */
 public class MeltdownerSkill extends Skill {
@@ -147,9 +153,36 @@ public class MeltdownerSkill extends Skill {
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.MD_MELTDOWNER,
                 net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f);
 
+        beam(player);
+
         Entity target = TargetingUtil.findEntityInSight(player, RANGE);
         if (!(target instanceof LivingEntity living)) return;
 
         living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+    }
+
+    /**
+     * Le faisceau : ce que le tir devient une fois lache.
+     *
+     * <p>L'original le posait chez son lanceur seul, par son {@code MSG_PERFORM}. Le port
+     * l'annonce a tous ceux qui voient le tireur, comme celui de la salve : les degats du
+     * meltdowner ne tombent pas sur lui seulement, il serait etrange que les autres ne voient
+     * rien venir.
+     *
+     * <p>Le rayon voyage par le paquet des rayons du plasma, avec ses deux bouts et son tireur :
+     * c'est le client qui le recolle a la main de celui qui a tire — voir {@code MdRayView}. Ses
+     * deux points sont ceux de l'original, et ils ne prennent pas la meme origine : voir
+     * {@link MeltdownerVisuals}.
+     */
+    private void beam(Player player) {
+        if (!(player instanceof ServerPlayer server)) return;
+
+        Vec3 look = player.getViewVector(1f);
+        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
+                new MdRayPacket(MdRayKind.MELTDOWNER.name(),
+                        MeltdownerVisuals.beamFrom(player.getEyePosition(1f), look),
+                        MeltdownerVisuals.beamTo(player.position(), look,
+                                MeltdownerVisuals.BEAM_LENGTH),
+                        player.getId()));
     }
 }

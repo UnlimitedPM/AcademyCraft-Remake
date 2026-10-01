@@ -180,6 +180,27 @@ public record MdRayKind(String name,
             30, 200, 400, 500,
             0.0, "md.ray_small", 0.8f, true, 0.3);
 
+    /**
+     * Le faisceau du meltdowner, {@code EntityMDRay} : le tir charge de la categorie.
+     *
+     * <p>C'est le plus <b>gros</b> des rayons du plasma — un coeur de 17 cm et une gaine de 22, une
+     * lueur d'un bloc et demi a 80 % d'opacite — et celui qui vit le plus longtemps : cinquante
+     * ticks, deux secondes et demie, dont les sept derniers dixiemes s'effacent. Il a ses propres
+     * textures, {@code mdray}, et non celles du petit rayon.
+     *
+     * <p>Il nait sur son tireur : il se recolle donc a sa main, comme le pre-rayon de la salve et
+     * par le meme drapeau. Il crache une etincelle huit ticks sur dix, posee au hasard le long de
+     * lui-meme jusqu'a dix blocs. Quant a son son, c'est celui de la competence,
+     * {@code md.meltdowner} : c'est la competence qui le joue, au relachement, comme l'original.
+     */
+    public static final MdRayKind MELTDOWNER = new MdRayKind("mdray",
+            texture("mdray", "blend_in"), texture("mdray", "tile"), texture("mdray", "blend_out"),
+            1.5, 0.8f,
+            0.17, new Tint(216, 248, 216, 230),
+            0.22, new Tint(106, 242, 106, 50),
+            50, 200, 700, 300,
+            0.8, "md.meltdowner", 0.5f, true, 0.0);
+
     /** La duree du rayon, en millisecondes : cinquante par tick, comme l'original. */
     public long lifeMs() {
         return lifeTicks * 50L;
@@ -200,7 +221,7 @@ public record MdRayKind(String name,
 
     /** Les genres connus, dans l'ordre ou ils sont apparus. */
     public static java.util.List<MdRayKind> all() {
-        return java.util.List.of(SMALL, BARRAGE, BARRAGE_PRE_HIT, BARRAGE_PRE_MISS);
+        return java.util.List.of(SMALL, BARRAGE, BARRAGE_PRE_HIT, BARRAGE_PRE_MISS, MELTDOWNER);
     }
 
     private static ResourceLocation texture(String ray, String part) {

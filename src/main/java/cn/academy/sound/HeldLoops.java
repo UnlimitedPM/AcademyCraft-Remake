@@ -3,10 +3,11 @@ package cn.academy.sound;
 /**
  * Quelles competences tenues font une boucle sonore, et laquelle.
  *
- * <p>Portage des {@code FollowEntitySound(...).setLoop()} de l'original : sept
- * competences, toutes tenues, font tourner un son qui suit le joueur tant que la touche
- * reste enfoncee — le bouclier, l'intensification du corps, la traction, la manipulation
- * d'un bloc, le branchement d'une machine, les rayons miniers et les ailes de tempete.
+ * <p>Portage des {@code FollowEntitySound(...).setLoop()} de l'original : huit
+ * competences font tourner un son qui suit le joueur tant que leur effet dure — le
+ * bouclier, l'intensification du corps, la traction, la manipulation d'un bloc, le
+ * branchement d'une machine, les rayons miniers, les ailes de tempete, et la charge du
+ * meltdowner.
  *
  * <h2>Pourquoi une table de noms, et pas des competences</h2>
  *
@@ -66,6 +67,9 @@ public final class HeldLoops {
             case "mag_movement" -> new Loop("em.move_loop", 1.0f, null);
             case "mag_manip" -> new Loop("em.lf_loop", 1.0f, null);
             case "storm_wing" -> new Loop("vecmanip.storm_wing", 1.0f, null);
+            // Le meltdowner ne se tient pas, il se CHARGE : sa boucle est son son de charge, celui
+            // que l'original faisait suivre au joueur tant que la touche restait enfoncee.
+            case "meltdowner" -> new Loop("md.md_charge", 1.0f, null);
             case "charging" -> new Loop("em.charge_loop", QUIET, null);
             case "mine_ray_basic", "mine_ray_expert", "mine_ray_luck" ->
                 new Loop("md.mine_loop", QUIET, null);
@@ -76,6 +80,7 @@ public final class HeldLoops {
     /** Les competences qui font une boucle, pour le test et pour l'ecran. */
     public static java.util.List<String> loopingSkills() {
         return java.util.List.of("light_shield", "body_intensify", "mag_movement", "mag_manip",
-                "storm_wing", "charging", "mine_ray_basic", "mine_ray_expert", "mine_ray_luck");
+                "storm_wing", "meltdowner", "charging", "mine_ray_basic", "mine_ray_expert",
+                "mine_ray_luck");
     }
 }
