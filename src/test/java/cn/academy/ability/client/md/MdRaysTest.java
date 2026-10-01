@@ -147,17 +147,16 @@ class MdRaysTest {
     @DisplayName("le faisceau du meltdowner est le plus gros des rayons")
     void leFaisceauDuMeltdownerEstLePlusGros() {
         // Les nombres de MDRayRender : un coeur de 17 cm, une gaine de 22, une lueur d'un bloc et
-        // demi a 90 % d'opacite — cinq fois celle du petit rayon, et la plus opaque des cinq. Il a
+        // demi a 80 % d'opacite — cinq fois celle du petit rayon, et la plus opaque des cinq. Il a
         // ses propres textures, `mdray`, et non celles du petit rayon.
         //
-        // L'original en annoncait 80, et c'est ce que le port avait pose : le joueur l'a trouve
-        // « un peu trop fonce » — le ruban est blanc, donc son opacite EST sa luminosite sur le
-        // fond du monde — et c'est la seule chose qui a bouge.
+        // Le joueur l'a trouve « un peu trop fonce » et le port l'a monte a 90 : il n'a pas vu la
+        // difference, donc le chiffre de l'original est revenu — c'est celui-ci qui fait foi.
         assertEquals("mdray", MdRayKind.MELTDOWNER.name());
         assertEquals(0.17, MdRayKind.MELTDOWNER.innerRadius(), 1e-6);
         assertEquals(0.22, MdRayKind.MELTDOWNER.outerRadius(), 1e-6);
         assertEquals(1.5, MdRayKind.MELTDOWNER.glowWidth(), 1e-6);
-        assertEquals(0.9, MdRayKind.MELTDOWNER.glowAlpha(), 1e-6);
+        assertEquals(0.8, MdRayKind.MELTDOWNER.glowAlpha(), 1e-6);
         assertEquals(MdRayKind.MELTDOWNER, MdRayKind.byName("mdray"));
 
         // Sa vie : cinquante ticks, deux secondes et demie, dont les sept derniers dixiemes

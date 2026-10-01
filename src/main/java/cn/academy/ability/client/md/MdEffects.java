@@ -119,9 +119,15 @@ public class MdEffects {
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
         cylinder(tubes, pose, camera, from, to, u, v, outer, kind.outer(), alpha);
+        // Le bout de depart du GROS tube est arrondi lui aussi, et c'est l'original qui le faisait :
+        // son rendu de cylindre posait une tete a chaque bout, pour la gaine comme pour le coeur.
+        // Le port n'en avait donne qu'au coeur, donc la gaine s'ouvrait sur un tuyau coupe — ce que
+        // le joueur a vu : « le laser un peu plus gros n'a pas de boule au debut ».
+        head(tubes, pose, camera, from, u, v, axis, outer, kind.outer(), alpha);
         cylinder(tubes, pose, camera, from, to, u, v, inner, kind.inner(), alpha);
         // Le bout de depart est arrondi : la tete de l'original suivait une racine, ce qui
-        // fait une ogive plutot qu'un tuyau coupe.
+        // fait une ogive plutot qu'un tuyau coupe. Le coeur passe en dernier, donc il reste
+        // visible par-dessus la gaine.
         head(tubes, pose, camera, from, u, v, axis, inner, kind.inner(), alpha);
 
         glowBoards(buffers, pose, camera, ray, from, to, axis, width, alpha, now);
