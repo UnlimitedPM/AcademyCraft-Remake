@@ -21,6 +21,9 @@ public final class SilbarnVisuals {
      * bille en vol pour amorcer la salve de rayons demandait de la toucher au centimetre pres, et
      * le joueur a demande plus large. Le double, donc — et c'est d'autant plus utile que c'est
      * cette boite que le rayon de visee de la salve doit rencontrer.
+     *
+     * <p>Elle est <b>centree</b> sur la bille et non posee au-dessus d'elle : voir
+     * {@code EntitySilbarn.makeBoundingBox}. Sans cela, viser ce qu'on voit ratait le tir.
      */
     public static final float HIT_SIZE = 0.8f;
 

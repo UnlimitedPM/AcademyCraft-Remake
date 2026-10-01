@@ -14,6 +14,7 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -190,6 +191,26 @@ public class EntitySilbarn extends Projectile {
             motion = motion.add(0, -GRAVITY, 0);
         }
         this.setDeltaMovement(motion);
+    }
+
+    /**
+     * La boite de collision, <b>centree</b> sur la bille.
+     *
+     * <p>Par defaut, la boite d'une entite va de ses pieds a ses pieds plus sa hauteur, alors que
+     * son modele se dessine <b>centre sur sa position</b> : une bille de quatre-vingts centimetres
+     * portait donc sa boite quarante centimetres trop haut. Viser ce qu'on voyait ratait le tir —
+     * le joueur l'a decrit mot pour mot, et c'est un defaut que l'original avait aussi.
+     *
+     * <p>Le rendu, lui, ne bouge pas d'un pixel : c'est la boite qui descend. Une consequence
+     * heureuse : posee, la bille ne s'enfonce plus a moitie dans le sol, puisque c'est desormais
+     * son bas qui touche.
+     */
+    @Override
+    protected AABB makeBoundingBox() {
+        float half = SilbarnVisuals.HIT_SIZE / 2f;
+        Vec3 at = position();
+        return new AABB(at.x - half, at.y - half, at.z - half,
+                at.x + half, at.y + half, at.z + half);
     }
 
     /**

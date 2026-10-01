@@ -2629,7 +2629,11 @@ public final class AcademyGameTests {
         }
         assertTrue(helper, ball.isHit(), "elle doit finir par se poser");
         assertFalse(helper, ball.isPickable(), "une bille posee ne se vise plus");
-        assertTrue(helper, Math.abs(ball.getY() - (abs.getY() + 1.0)) < 0.01,
+        // Elle se pose sur le bloc, et non dedans : c'est son BAS qui touche, donc son centre
+        // s'arrete un demi-cote au-dessus. L'original, dont la boite montait de ses pieds alors
+        // que son modele etait centre, s'enfoncait a moitie dans la terre.
+        assertTrue(helper, Math.abs(ball.getY()
+                        - (abs.getY() + 1.0 + cn.academy.entity.SilbarnVisuals.HIT_SIZE / 2.0)) < 0.01,
                 "et elle doit s'etre posee sur le bloc, pas dedans : y=" + ball.getY());
 
         // Puis elle disparait dix ticks apres s'etre posee, comme l'original.
@@ -2688,14 +2692,24 @@ public final class AcademyGameTests {
     public static void laBilleEstPlusLargeAViserQueDansLeVraiMod(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 50);
+        // Trente centimetres a cote du trait : au-dela des vingt centimetres de demi-largeur de
+        // l'original, en deca des quarante du port.
+        final double AIM_OFFSET = 0.3;
 
         var player = ownPlayer(helper, "silbarn_aimer");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
 
         var ball = new cn.academy.entity.EntitySilbarn(level, player);
-        // A hauteur d'oeil, trois blocs devant, immobile : le rayon part de l'oeil, et la bille
-        // ne tombera pas avant ses cinquante ticks de flottement.
-        ball.setPos(abs.getX() + 0.5 + 0.3, player.getEyeY(), abs.getZ() + 0.5 + 3.0);
+        // Sur la trajectoire du REGARD, puis decalee lateralement de trente centimetres — la ou
+        // la boite de l'original (vingt centimetres de demi-largeur) l'aurait manquee, et ou
+        // celle du port l'attrape. Le decalage se mesure par rapport au regard et non a l'axe du
+        // monde : un faux joueur a un lacet qui derive de quelques degres, et un decalage pose en
+        // X se serait ajoute a cette derive (vecu : le rayon passait soixante centimetres a cote).
+        var eye = player.getEyePosition(1f);
+        var look = player.getViewVector(1f);
+        var side = look.cross(new net.minecraft.world.phys.Vec3(0, 1, 0)).normalize();
+        var at = eye.add(look.scale(3.0)).add(side.scale(AIM_OFFSET));
+        ball.setPos(at.x, at.y, at.z);
         ball.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         level.addFreshEntity(ball);
 
@@ -2704,11 +2718,25 @@ public final class AcademyGameTests {
         assertTrue(helper, ball.getBbWidth() > 0.4,
                 "plus large que les quarante centimetres de l'original, et c'est voulu");
 
+        // Et elle est CENTREE sur la bille, la ou le modele se dessine. Par defaut, la boite d'une
+        // entite monte de ses pieds : celle de l'original portait donc quarante centimetres trop
+        // haut, et viser ce qu'on voyait ratait le tir — exactement ce que le joueur a decrit.
+        var box = ball.getBoundingBox();
+        assertClose(helper, ball.getY(), box.getCenter().y,
+                "la boite est centree sur la bille, pas posee au-dessus");
+        assertClose(helper, ball.getY() - cn.academy.entity.SilbarnVisuals.HIT_SIZE / 2.0, box.minY,
+                "son bas est sous la bille");
+        assertClose(helper, ball.getY() + cn.academy.entity.SilbarnVisuals.HIT_SIZE / 2.0, box.maxY,
+                "et son haut au-dessus");
+
         // Le regard passe a trente centimetres du centre : dedans pour le port, dehors pour
         // l'original. C'est exactement la difference que le joueur est alle chercher.
         var found = cn.academy.ability.TargetingUtil.findEntityInSight(player,
                 cn.academy.ability.meltdowner.RayBarrageSkill.DISPLAY_RANGE);
-        assertValue(helper, ball, found, "le regard trouve la bille, meme visee a cote");
+        assertValue(helper, ball, found, "le regard trouve la bille, meme visee a cote"
+                + " (oeil " + player.getEyePosition(1f) + ", regard " + player.getViewVector(1f)
+                + ", bille " + ball.position() + ", boite " + ball.getBoundingBox()
+                + ", posee " + ball.isHit() + ")");
 
         ball.discard();
         helper.succeed();
@@ -4215,9 +4243,17 @@ public final class AcademyGameTests {
         // joueur, qui ne pourrait plus rien lancer du tout — « attendu 1, trouve 0 ». C'est aussi
         // pour cela que le comptage de la fin commence a dy 0 : sous la dalle, ce n'est plus le
         // couloir du test, c'est son plancher.
+        //
+        // Elle couvre toute la LARGEUR du couloir — trois blocs, comme le mur qui l'arrete — et
+        // non la seule colonne du milieu : un lancer qui derive de quatre centimetres pose son
+        // bloc sur la colonne voisine, et le test le comptait alors pour rien (vecu : « pose a
+        // (1.96, 42.13, 23.5) », un bloc a cote du mur).
         for (int dz = -2; dz <= 16; dz++) {
-            for (int dy = 0; dy <= 4; dy++) {
-                helper.setBlock(eyes.offset(0, dy, dz), net.minecraft.world.level.block.Blocks.AIR);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
             }
         }
 
@@ -4310,10 +4346,13 @@ public final class AcademyGameTests {
         int placed = 0;
         StringBuilder ou = new StringBuilder();
         for (int dz = -2; dz <= 16; dz++) {
-            for (int dy = 0; dy <= 4; dy++) {
-                if (helper.getBlockState(eyes.offset(0, dy, dz)).is(iron)) {
-                    placed++;
-                    ou.append(" (dy ").append(dy).append(", dz ").append(dz).append(")");
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    if (helper.getBlockState(eyes.offset(dx, dy, dz)).is(iron)) {
+                        placed++;
+                        ou.append(" (dx ").append(dx).append(", dy ").append(dy)
+                                .append(", dz ").append(dz).append(")");
+                    }
                 }
             }
         }
