@@ -335,12 +335,11 @@ public class AbilityClientEvents {
                 TeleportAim.begin(TeleporterCategory.PENETRATE_TELEPORT.maxDistance(ClientAbilityData.get()));
             }
             if (skill.isChargeable()) {
-                // Une charge sans maximum n'a rien a montrer : la barre serait pleine des le
-                // premier tick. L'original, lui, faisait plonger le regard du joueur pendant
-                // la charge — un retour visuel cote client que le port n'a pas encore de
-                // crochet pour reproduire. Le bouclier, lui, a son propre temoin.
-                int max = skill.getMaxChargeTicks(ClientAbilityData.get());
-                if (max > 0) ClientCharge.begin(skill.getName(), max);
+                // Le compteur s'ouvre MEME quand la charge n'a pas de maximum : son age sert a
+                // autre chose qu'a remplir une barre — la portee du fantome de teleportation
+                // grandit avec lui. Le port ne l'ouvrait que pour les charges bornees, donc ce
+                // fantome restait cloue a deux blocs et n'avancait jamais.
+                ClientCharge.begin(skill.getName(), skill.getMaxChargeTicks(ClientAbilityData.get()));
             } else if (skill.isHeld()) {
                 ClientCharge.beginSustained(skill.getName());
             }

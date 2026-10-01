@@ -19,13 +19,20 @@ public final class ClientCharge {
 
     private ClientCharge() {}
 
-    /** Ouvre une charge. {@code maxTicks} sert uniquement a calculer la proportion. */
+    /**
+     * Ouvre une charge. {@code maxTicks} sert uniquement a calculer la proportion.
+     *
+     * <p>Un maximum de zero ou moins dit que la charge n'en a pas : le compteur avance quand meme,
+     * parce que l'<b>age</b> d'une charge sert a autre chose qu'a remplir une barre. La portee du
+     * fantome de teleportation de la marque grandit avec lui, par exemple — et le port n'ouvrait
+     * le compteur que pour les charges bornees, donc ce fantome restait cloue a deux blocs.
+     */
     public static void begin(String skill, int maxTicks) {
         active = true;
         sustained = false;
         ticks = 0;
         ClientCharge.skill = skill;
-        ClientCharge.maxTicks = Math.max(1, maxTicks);
+        ClientCharge.maxTicks = Math.max(0, maxTicks);
     }
 
     /**
@@ -75,9 +82,9 @@ public final class ClientCharge {
         return sustained;
     }
 
-    /** Part de la charge maximale atteinte, entre 0 et 1. */
+    /** Part de la charge maximale atteinte, entre 0 et 1. Nulle si la charge n'a pas de maximum. */
     public static float getFraction() {
-        return active ? Math.min(1.0f, ticks / (float) maxTicks) : 0.0f;
+        return active && maxTicks > 0 ? Math.min(1.0f, ticks / (float) maxTicks) : 0.0f;
     }
 
     /**
