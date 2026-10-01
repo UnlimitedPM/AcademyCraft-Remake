@@ -89,6 +89,36 @@ class MdRaysTest {
     }
 
     @Test
+    @DisplayName("la largeur du rayon respire, comme celle du railgun")
+    void laLargeurDuRayonRespire() {
+        // L'original donnait a TOUS ses rayons une largeur qui bougeait — son `widthWiggleRadius`
+        // de 0,1, par une marche au hasard. Le port ne l'avait reprise nulle part, et le joueur
+        // l'a vu manquer sur ses rayons miniers : « l'amplitude qui donne l'animation du laser qui
+        // grandit et retrecit, comme pour le railgun ». C'est donc la respiration du railgun — une
+        // oscillation toutes les trois ticks — mais au CENTIEME, comme il l'a demande.
+        MdRays.LiveRay ray = rayon(MdRayKind.MINE_BASIC);
+
+        assertEquals(0.01, MdRays.WIDTH_WIGGLE_RADIUS, 1e-9);
+        assertEquals(3.0, MdRays.WIDTH_WIGGLE_TICKS, 1e-9);
+        assertEquals(1.0, ray.breath(BIRTH), 1e-9, "elle part de la largeur pleine");
+
+        // Un tour complet fait 150 ms : les deux extremes tombent donc dans la premiere seconde.
+        double max = 0;
+        double min = 2;
+        for (int ms = 0; ms < 150; ms++) {
+            double factor = ray.breath(BIRTH + ms);
+            max = Math.max(max, factor);
+            min = Math.min(min, factor);
+        }
+        assertEquals(1.01, max, 1e-3, "un centieme au-dessus");
+        assertEquals(0.99, min, 1e-3, "et un centieme en dessous");
+
+        // Elle s'ajoute a la chute de la fin de vie, qui garde sa courbe : c'est le dessin qui
+        // multiplie les deux, voir MdEffects.
+        assertEquals(1.0, ray.widthFactor(BIRTH + 100), 1e-9, "la chute, elle, ne bouge pas");
+    }
+
+    @Test
     void unRayonMeurtALaFinDeSaVie() {
         MdRays.LiveRay ray = rayon(MdRayKind.SMALL);
 

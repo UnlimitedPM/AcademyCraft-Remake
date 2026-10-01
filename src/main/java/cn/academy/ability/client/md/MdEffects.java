@@ -130,7 +130,7 @@ public class MdEffects {
         double[] to = { from[0] + axis[0] * drawn, from[1] + axis[1] * drawn,
                         from[2] + axis[2] * drawn };
 
-        double width = ray.widthFactor(now);
+        double width = ray.widthFactor(now) * ray.breath(now);
         float alpha = ray.alpha(now);
         if (alpha <= 0f || width <= 0.0) return;
 

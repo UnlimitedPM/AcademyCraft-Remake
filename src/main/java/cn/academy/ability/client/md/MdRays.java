@@ -30,6 +30,22 @@ public final class MdRays {
     public static final double GLOW_WIGGLE_RADIUS = 0.1;
     public static final double MAX_GLOW_WIGGLE_SPEED = 0.4;
 
+    /**
+     * La respiration de la largeur : un centieme, une oscillation toutes les trois ticks.
+     *
+     * <p>C'est l'animation du railgun, au chiffre pres — voir {@code ArcRenderer.wiggle}, qui
+     * suit la meme courbe — et c'est ce que le joueur a demande pour les trois rayons miniers :
+     * « l'amplitude qui donne l'animation du laser qui grandit et retrecit, comme pour le
+     * railgun ». L'original la donnait a TOUS ses rayons, par un {@code widthWiggleRadius} de 0,1
+     * et une marche au hasard ; le port ne l'avait reprise nulle part, et elle ne se voyait donc
+     * sur aucun. Elle est maintenant partout, au centieme : invisible sur les rayons d'un quart de
+     * seconde et sur le faisceau, bien lisible sur un rayon tenu, qui vit des minutes.
+     */
+    public static final double WIDTH_WIGGLE_RADIUS = 0.01;
+
+    /** Sa periode, en ticks : la meme que celle du railgun. */
+    public static final double WIDTH_WIGGLE_TICKS = 3.0;
+
     /** Les etincelles d'un rayon : quelque part entre son depart et dix blocs, au hasard. */
     public static final double SPARK_DISTANCE = 10;
     public static final double SPARK_SPEED = 0.015;
@@ -120,6 +136,21 @@ public final class MdRays {
             long age = ageMs(nowMs);
             long shrink = kind.lifeMs() - kind.shrinkMs();
             return age > shrink ? Math.max(0.0, 1.0 - (double) (age - shrink) / kind.shrinkMs()) : 1.0;
+        }
+
+        /**
+         * La respiration de la largeur : de 0,99 a 1,01, une oscillation toutes les trois ticks.
+         *
+         * <p>Elle se calcule sur l'AGE du rayon, et non sur le temps qui passe : elle ne depend
+         * donc pas de la cadence des images — c'est une courbe, et non une marche au hasard comme
+         * le tremblement de la lueur. C'est celle du railgun, dans {@code ArcRenderer}.
+         *
+         * <p>Elle se multiplie par {@link #widthFactor} plutot que de s'y fondre : la chute de la
+         * fin de vie reste ainsi la meme courbe, et la respiration la suit.
+         */
+        public double breath(long nowMs) {
+            return 1.0 + WIDTH_WIGGLE_RADIUS
+                    * Math.sin(ageMs(nowMs) / 50.0 * Math.PI * 2.0 / WIDTH_WIGGLE_TICKS);
         }
 
         /** L'opacite du rayon : pleine, puis effacee sur les derniers quatre dixiemes. */
