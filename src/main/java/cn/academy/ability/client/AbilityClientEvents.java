@@ -204,6 +204,35 @@ public class AbilityClientEvents {
         }
     }
 
+    /**
+     * Le serveur dit que ce maintien n'existe plus : le client ferme le sien.
+     *
+     * <p>Il est appele par {@code HoldOverPacket}, dans deux cas qui n'en font qu'un pour le
+     * joueur : le serveur a <b>refuse</b> l'ouverture (aptitude eteinte, brouillage, recharge,
+     * reserve trop juste, rien a viser) ou il a <b>termine</b> un maintien deja ouvert (sa reserve
+     * s'est videe, sa duree maximale est atteinte).
+     *
+     * <p>La touche est peut-etre encore enfoncee : c'est le serveur qui a fini, pas le joueur.
+     * On ferme donc exactement ce que le relachement fermerait — le temoin, l'orage, la gerbe du
+     * renfort, les directions du scintillement — mais <b>sans rien renvoyer</b> : le serveur a
+     * deja tout termine de son cote, et lui repondre relancerait un maintien pour rien. Le
+     * cablage de la touche retombe aussi, sans quoi le prochain relachement enverrait une
+     * demande de fin pour un maintien qui n'existe plus.
+     */
+    public static void onHoldOver(String skillName) {
+        if (skillName == null || !skillName.equals(ClientCharge.getSkill())) return;
+
+        for (Binding binding : BINDINGS) {
+            Skill skill = skillOf(binding);
+            if (skill != null && skillName.equals(skill.getName())) binding.charging = false;
+        }
+
+        ClientCharge.end();
+        ThunderClapEffect.end();
+        BodyIntensifyEffect.endCharge(false);
+        endDirections();
+    }
+
     @Nullable
     private static net.minecraft.client.player.LocalPlayer minecraftPlayer() {
         return net.minecraft.client.Minecraft.getInstance().player;

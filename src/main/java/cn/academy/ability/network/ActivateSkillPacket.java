@@ -98,13 +98,16 @@ public class ActivateSkillPacket {
             // Une competence tenue s'ouvre : son cout est paye maintenant, et elle vit
             // ensuite tant que la touche reste enfoncee.
             if (skill.isHeld()) {
-                beginHeld(player, data, skill);
+                if (!beginHeld(player, data, skill)) refuse(player, skill);
                 return;
             }
             // Une competence qui se charge n'est pas lancee maintenant : on ouvre une
             // charge et on attend le relachement.
             if (skill.isChargeable()) {
-                if (!canBegin(player, data, skill)) return;
+                if (!canBegin(player, data, skill)) {
+                    refuse(player, skill);
+                    return;
+                }
                 data.beginCharge(skill);
                 skill.onStart(player, data);
                 return;
@@ -143,20 +146,37 @@ public class ActivateSkillPacket {
      * Le cout d'ouverture est paye a l'appui, comme le {@code MSG_MADEALIVE} de
      * l'original : le bouclier charge sa reserve des qu'il apparait, puis s'entretient
      * par tick.
+     *
+     * @return vrai si le maintien est ouvert — voir {@link #refuse}
      */
-    private static void beginHeld(ServerPlayer player, AbilityData data, Skill skill) {
-        if (!canBegin(player, data, skill)) return;
+    private static boolean beginHeld(ServerPlayer player, AbilityData data, Skill skill) {
+        if (!canBegin(player, data, skill)) return false;
         // L'original refusait de s'ouvrir quand il n'y avait rien a viser, et refusait
         // donc sans rien facturer : le port verifie avant de payer, pas apres.
-        if (!skill.canStart(player, data)) return;
+        if (!skill.canStart(player, data)) return false;
         if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
             player.displayClientMessage(
                     Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
-            return;
+            return false;
         }
         data.beginCharge(skill);
         skill.onStart(player, data);
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+        return true;
+    }
+
+    /**
+     * Le maintien n'a pas pu s'ouvrir : le client, qui l'a deja ouvert chez lui, doit le savoir.
+     *
+     * <p>C'est le contrat de {@link HoldOverPacket} : le client montre un maintien des l'appui de
+     * la touche, sans attendre le serveur, et c'est ce message-ci qui le detrompe — sineon il
+     * animerait un pouvoir inexistant, ce que le joueur a vu : « quand on ne peut pas utiliser le
+     * pouvoir, quand on appuie sur la touche, il fait quand meme l'animation mais sans
+     * fonctionner ».
+     */
+    private static void refuse(ServerPlayer player, Skill skill) {
+        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                new HoldOverPacket(skill.getName()));
     }
 
     /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */

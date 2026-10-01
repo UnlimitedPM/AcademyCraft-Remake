@@ -6,10 +6,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -68,7 +65,15 @@ public class ShieldRenderer {
         // La direction de visee est deja interpolee : le bouclier suit donc la souris
         // sans a-coup, comme l'entite de l'original qui copiait le lacet de la tete.
         Vec3 look = player.getViewVector(partialTick);
-        Vec3 pos = player.position()
+        // Et la POSITION l'est aussi. L'original etait une entite, donc le moteur la dessinait
+        // entre son ancienne et sa nouvelle place : la lire sur `position()` — la place du
+        // dernier tick — fait avancer le disque par bonds d'un vingtieme de seconde pendant que
+        // le reste du monde glisse, et c'est ce que le joueur a vu : « l'animation de quand on
+        // se deplace est bizarre, comme les billes de tout a l'heure ». La bille avait le meme
+        // defaut, dans l'autre sens : elle etait dessinee interpolee alors que le serveur la
+        // collait a son porteur, et il a fallu la recoller. Ici, c'est l'inverse : tout ce qui
+        // bouge dans une image doit se lire a la meme image.
+        Vec3 pos = player.getPosition(partialTick)
                 .add(look.scale(ShieldVisuals.DISTANCE))
                 .add(0, ShieldVisuals.HEIGHT, 0);
         Vec3 camera = event.getCamera().getPosition();
@@ -87,7 +92,13 @@ public class ShieldRenderer {
         pose.scale(ShieldVisuals.scale(ticks), ShieldVisuals.scale(ticks), 1f);
 
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = buffers.getBuffer(RenderType.entityTranslucentEmissive(TEXTURE));
+        // Le type des effets du plasma, et pas celui des entites translucides : le second ECrit
+        // la profondeur, et le disque est a un bloc devant les yeux — donc devant tout ce qui se
+        // dessine apres lui, les nuages compris. Le joueur en a fait l'essai : « quand on regarde
+        // le ciel il devient sombre ». La regle est celle des images du plasma, apprise sur la
+        // bille : un effet translucide ne dispute pas la profondeur (voir MdRenderType).
+        VertexConsumer consumer = buffers.getBuffer(
+                cn.academy.ability.client.md.MdRenderType.of(TEXTURE));
         Matrix4f matrix = pose.last().pose();
         float alpha = ShieldVisuals.alpha(ticks);
         // Les deux faces : le rendu translucide de Minecraft ecarte les faces arriere,
@@ -120,9 +131,6 @@ public class ShieldRenderer {
         consumer.vertex(matrix, x, y, 0f)
                 .color(1f, 1f, 1f, alpha)
                 .uv(u, v)
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(LightTexture.FULL_BRIGHT)
-                .normal(0f, 0f, 1f)
                 .endVertex();
     }
 }

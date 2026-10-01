@@ -57,6 +57,10 @@ public class AbilityNetwork {
         // Voir MdMissilePacket.
         CHANNEL.registerMessage(nextId++, MdMissilePacket.class,
                 MdMissilePacket::encode, MdMissilePacket::decode, MdMissilePacket::handle);
+        // Et la fin d'un maintien, refusee ou terminee : le client tenait le sien depuis l'appui
+        // de la touche, il doit le fermer. Voir HoldOverPacket.
+        CHANNEL.registerMessage(nextId++, HoldOverPacket.class,
+                HoldOverPacket::encode, HoldOverPacket::decode, HoldOverPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

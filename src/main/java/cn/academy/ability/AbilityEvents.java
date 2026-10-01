@@ -183,5 +183,9 @@ public class AbilityEvents {
         data.endCharge(skill);
         data.setCooldown(skill, cooldown);
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+        // Et on le DIT au client, qui tient son propre temoin depuis l'appui : sans cela son
+        // animation continuerait toute seule alors que le maintien est fini chez le serveur —
+        // voir HoldOverPacket. C'est la meme chose pour une fin de duree maximale et pour une
+        // reserve qui s'epuise, qui passent toutes par ici.
     }
 }
