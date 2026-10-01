@@ -52,6 +52,20 @@ import net.minecraft.resources.ResourceLocation;
  * <p>Le port tient ce drapeau ici parce que c'est {@code MdRayView} qui le lit, cote client :
  * c'est lui qui recole a la main de son tireur un rayon marque vrai, et laisse les autres ou
  * ils sont nes.
+ *
+ * <h2>La lueur peut depasser la pointe</h2>
+ *
+ * <p>Le dernier nombre, {@code glowEndFix}, est le {@code endFix} de {@code RendererRayGlow} de
+ * l'original : de combien de blocs sa lueur — le « bandeau » qui tourne avec la camera, et non
+ * les deux tubes — depassait la pointe du rayon. Il valait zero partout, sauf sur le railgun, qui
+ * s'en servait pour aligner sa lueur sur ses cylindres : {@code 0,3}.
+ *
+ * <p>C'est cette valeur que reprend le pre-rayon de la salve, a la demande du joueur : son
+ * bandeau s'arretait net au milieu de la bille de silicium, qui fait 0,6 de large. La lueur est
+ * posee bout a bout entre le depart et la pointe, et c'est son dernier morceau qui avance
+ * maintenant de ces trois dixiemes — elle couvre donc la bille entiere au lieu de s'eteindre en
+ * son milieu. Les autres rayons gardent zero : ils s'arretent a leur pointe, comme chez
+ * l'original.
  */
 public record MdRayKind(String name,
                         ResourceLocation glowIn, ResourceLocation glowTile, ResourceLocation glowOut,
@@ -61,7 +75,8 @@ public record MdRayKind(String name,
                         int lifeTicks, long blendInMs, long blendOutMs, long shrinkMs,
                         double sparkRate,
                         String sound, float soundVolume,
-                        boolean viewOptimize) {
+                        boolean viewOptimize,
+                        double glowEndFix) {
 
     /** Une couleur telle que l'original la donnait : quatre nombres de 0 a 255. */
     public record Tint(int r, int g, int b, int a) {
@@ -105,7 +120,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             14, 200, 400, 500,
-            1.0, "md.ray_small", 0.8f, false);
+            1.0, "md.ray_small", 0.8f, false, 0.0);
 
     /**
      * La salve de rayons, {@code EntityMdRayBarrage} : la gerbe qui part d'une bille de silicium.
@@ -128,7 +143,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             50, 100, 300, 500,
-            0.0, "md.ray_small", 0.5f, false);
+            0.0, "md.ray_small", 0.5f, false, 0.0);
 
     /**
      * Le pre-rayon : le trait qui annonce la salve, avant qu'elle ne parte.
@@ -153,7 +168,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 230),
             0.052, new Tint(106, 242, 106, 50),
             50, 200, 400, 500,
-            0.0, "md.ray_small", 0.8f, true);
+            0.0, "md.ray_small", 0.8f, true, 0.3);
 
     /** Et le meme, quand rien n'a ete trouve : trente ticks d'eclair, et c'est tout. */
     public static final MdRayKind BARRAGE_PRE_MISS = new MdRayKind("mdray_barrage_pre_miss",
@@ -163,7 +178,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 230),
             0.052, new Tint(106, 242, 106, 50),
             30, 200, 400, 500,
-            0.0, "md.ray_small", 0.8f, true);
+            0.0, "md.ray_small", 0.8f, true, 0.3);
 
     /** La duree du rayon, en millisecondes : cinquante par tick, comme l'original. */
     public long lifeMs() {

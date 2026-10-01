@@ -138,14 +138,19 @@ public class MdEffects {
         // sienne — d'ou le carre de l'opacite, et son tremblement entre 0,9 et 1.
         float glow = (float) (kind.glowAlpha() * alpha * ray.glowAlpha(now));
 
+        // Le bout de la lueur n'est pas toujours la pointe du rayon : son dernier morceau peut la
+        // depasser — c'est l'`endFix` de l'original, que le pre-rayon de la salve reprend pour
+        // couvrir la bille de silicium entiere. Voir `MdRayKind.glowEndFix`.
+        double[] tip = add(to, axis, kind.glowEndFix());
+
         double[] in = add(from, axis, half);
-        double[] out = add(to, axis, -half);
+        double[] out = add(tip, axis, -half);
 
         board(buffers, pose, camera, kind.glowIn(), from, in, axis, half, glow);
         if (length(from, out) > 0) {
             board(buffers, pose, camera, kind.glowTile(), in, out, axis, half, glow);
         }
-        board(buffers, pose, camera, kind.glowOut(), out, to, axis, half, glow);
+        board(buffers, pose, camera, kind.glowOut(), out, tip, axis, half, glow);
     }
 
     /** Un morceau de lueur : un ruban qui tourne avec la camera. */

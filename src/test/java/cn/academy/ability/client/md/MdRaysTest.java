@@ -125,4 +125,21 @@ class MdRaysTest {
                 "le rayon d'une bille ne se recolle a aucune main : il nait sur la bille");
         assertFalse(MdRayKind.BARRAGE.viewOptimize(), "la salve aussi part de la bille");
     }
+
+    @Test
+    @DisplayName("la lueur du pre-rayon depasse sa pointe")
+    void laLueurDuPreRayonDepasseSaPointe() {
+        // C'est le `endFix` de `RendererRayGlow` de l'original : de combien de blocs sa lueur —
+        // le bandeau, pas les tubes — depassait la pointe du rayon. Il valait zero partout, sauf
+        // sur le railgun, a qui il servait a aligner sa lueur sur ses cylindres, et c'est cette
+        // valeur que le pre-rayon reprend : son bandeau s'arretait net au milieu de la bille de
+        // silicium, qui fait 0,6 de large, et trois dixiemes le menent donc jusqu'a sa surface.
+        assertEquals(0.3, MdRayKind.BARRAGE_PRE_HIT.glowEndFix(), 1e-9,
+                "la moitie de la bille, la valeur du railgun");
+        assertEquals(0.3, MdRayKind.BARRAGE_PRE_MISS.glowEndFix(), 1e-9);
+
+        assertEquals(0.0, MdRayKind.SMALL.glowEndFix(), 1e-9,
+                "les autres s'arretent a leur pointe, comme chez l'original");
+        assertEquals(0.0, MdRayKind.BARRAGE.glowEndFix(), 1e-9);
+    }
 }
