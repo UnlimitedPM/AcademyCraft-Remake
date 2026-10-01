@@ -67,23 +67,21 @@ class MdRayViewTest {
     }
 
     @Test
-    @DisplayName("le rayon vise toujours la meme chose")
-    void leRayonViseToujoursLaMemeChose() {
-        // Le decalage porte sur les DEUX bouts, exactement comme l'original decalait son dessin
-        // entier : la direction et la longueur ne changent donc pas, et ce que le rayon touche
-        // non plus. Seul l'endroit d'ou on le voit partir a bouge.
+    @DisplayName("la pointe du rayon reste sur ce qu'il vise")
+    void laPointeDuRayonResteSurCeQuilVise() {
+        // Le rendu des rayons de l'original ne decalait que le DEPART — « Don't fix end to get
+        // accurate pointing direction » — et c'est ce que le joueur a demande : le pre-rayon
+        // finit sur la bille de silicium, et la gerbe part de la bille elle-meme. Avec la pointe
+        // decalee avec le depart, les deux ne se rejoignaient plus.
         double[][] own = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, true, ABOVE);
         double[][] other = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, false, ABOVE);
 
-        for (int axis = 0; axis < 3; axis++) {
-            assertEquals(TARGET[axis] - EYE[axis], own[1][axis] - own[0][axis], EPSILON,
-                    "la vue interne ne change pas la visee");
-            assertEquals(TARGET[axis] - EYE[axis], other[1][axis] - other[0][axis], EPSILON,
-                    "et la vue externe non plus");
-        }
+        assertArrayEquals(TARGET, own[1], EPSILON, "la pointe ne bouge pas d'un millimetre");
+        assertArrayEquals(TARGET, other[1], EPSILON, "et pas davantage vu de l'exterieur");
 
-        assertEquals(15.0, Math.sqrt(sqr(own[1][0] - own[0][0]) + sqr(own[1][1] - own[0][1])
-                + sqr(own[1][2] - own[0][2])), 1e-9, "le rayon fait toujours quinze blocs");
+        // La direction, elle, change d'un rien — le depart a bouge, la pointe est restee. C'est
+        // le prix de la pointe juste, et celui de l'original.
+        assertTrue(own[0][1] != EYE[1], "mais le depart, lui, a bien glisse");
     }
 
     @Test
@@ -96,9 +94,5 @@ class MdRayViewTest {
 
         assertTrue(other[0][1] < own[0][1], "la vue externe pose le rayon plus bas");
         assertFalse(java.util.Arrays.equals(own[0], other[0]));
-    }
-
-    private static double sqr(double value) {
-        return value * value;
     }
 }

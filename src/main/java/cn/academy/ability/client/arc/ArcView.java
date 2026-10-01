@@ -42,6 +42,9 @@ public final class ArcView {
      * L'eclair, decale dans son propre repere : le long de l'arc, dans sa hauteur, puis sur son
      * cote. Les deux bouts glissent du meme vecteur — direction et longueur inchangees.
      *
+     * <p>C'est le decalage des ECLAIRS, que l'original appliquait en translatant son dessin
+     * entier. Un rayon ne s'en sert pas : voir {@link #fixStart}.
+     *
      * <p>Le repere vient de {@link ArcFrame}, ou il est deja verifie : un eclair de longueur
      * nulle n'en a pas, et reste alors ou il est.
      */
@@ -49,15 +52,54 @@ public final class ArcView {
         ArcFrame frame = ArcFrame.between(from, to, above);
         if (frame == null) return new double[][] { from, to };
 
+        double[] delta = delta(frame, offset);
         double[] fixedFrom = new double[3];
         double[] fixedTo = new double[3];
         for (int i = 0; i < 3; i++) {
-            double delta = frame.axis()[i] * offset[0]
-                    + frame.up()[i] * offset[1]
-                    + frame.side()[i] * offset[2];
-            fixedFrom[i] = from[i] + delta;
-            fixedTo[i] = to[i] + delta;
+            fixedFrom[i] = from[i] + delta[i];
+            fixedTo[i] = to[i] + delta[i];
         }
         return new double[][] { fixedFrom, fixedTo };
+    }
+
+    /**
+     * Le meme decalage, mais sur le SEUL bout de depart : le rayon part de la main et arrive
+     * toujours la ou il visait.
+     *
+     * <p>C'est ce que faisait le rendu des RAYONS de l'original — {@code RendererRayBaseGlow} et
+     * {@code RendererRayBaseSimple} — et son commentaire dit pourquoi : « Don't fix end to get
+     * accurate pointing direction ». Un rayon n'est pas un eclair : sa pointe est un point du
+     * monde qu'on a vise, et la deplacer avec le depart la detachait de ce qu'elle touche.
+     *
+     * <p>La ou cela se voit, c'est sur la salve de rayons : son pre-rayon finit sur la bille de
+     * silicium, et les vingt-cinq a trente traits qui partent juste apres partent de la bille
+     * elle-meme. Avec les deux bouts decales, la pointe du pre-rayon se posait a une trentaine de
+     * centimetres du point de depart de la gerbe, et le joueur l'a vu tout de suite.
+     *
+     * <p>L'echange est celui de l'original : la direction du rayon change d'un rien, puisque son
+     * depart a bouge et que sa pointe est restee. C'est le prix de la pointe juste.
+     */
+    public static double[][] fixStart(double[] from, double[] to, double[] above,
+                                      double[] offset) {
+        ArcFrame frame = ArcFrame.between(from, to, above);
+        if (frame == null) return new double[][] { from, to };
+
+        double[] delta = delta(frame, offset);
+        double[] fixedFrom = new double[3];
+        for (int i = 0; i < 3; i++) {
+            fixedFrom[i] = from[i] + delta[i];
+        }
+        return new double[][] { fixedFrom, to };
+    }
+
+    /** Le decalage dans le monde : le long de l'axe, puis la hauteur, puis le cote. */
+    private static double[] delta(ArcFrame frame, double[] offset) {
+        double[] delta = new double[3];
+        for (int i = 0; i < 3; i++) {
+            delta[i] = frame.axis()[i] * offset[0]
+                    + frame.up()[i] * offset[1]
+                    + frame.side()[i] * offset[2];
+        }
+        return delta;
     }
 }

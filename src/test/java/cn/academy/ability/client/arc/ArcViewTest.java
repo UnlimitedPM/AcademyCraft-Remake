@@ -93,5 +93,32 @@ class ArcViewTest {
         assertEquals(FROM[0], fixed[0][0], 1e-9);
         assertEquals(FROM[1], fixed[0][1], 1e-9);
         assertEquals(FROM[2], fixed[0][2], 1e-9);
+
+        // Le rayon non plus, et pour la meme raison.
+        double[][] start = ArcView.fixStart(FROM, FROM.clone(), ABOVE, ArcView.THIRD_PERSON);
+        assertEquals(FROM[0], start[0][0], 1e-9);
+        assertEquals(FROM[1], start[0][1], 1e-9);
+        assertEquals(FROM[2], start[0][2], 1e-9);
+    }
+
+    @Test
+    @DisplayName("un rayon ne bouge que par son depart : sa pointe reste ou elle visait")
+    void unRayonNeBougeQueParSonDepart() {
+        // C'est le rendu des RAYONS de l'original, et son commentaire est explicite — une ligne
+        // laissee muette juste sous le decalage du depart : « Don't fix end to get accurate
+        // pointing direction ». Deplacer aussi la pointe faisait rater au rayon ce qu'il visait,
+        // et sur la salve, elle detachait le pre-rayon de la bille d'ou partent les vingt-cinq a
+        // trente traits suivants.
+        double[] to = north(FROM);
+        double[][] fixed = ArcView.fixStart(FROM, to, ABOVE, ArcView.FIRST_PERSON);
+
+        // Le depart glisse des memes nombres que l'eclair, dans le meme repere.
+        assertEquals(FROM[0] + ArcView.FIRST_PERSON[2], fixed[0][0], 1e-9, "du cote de la main");
+        assertEquals(FROM[1] + ArcView.FIRST_PERSON[1], fixed[0][1], 1e-9, "sous les yeux");
+        assertEquals(FROM[2] - ArcView.FIRST_PERSON[0], fixed[0][2], 1e-9, "et en avant");
+
+        for (int i = 0; i < 3; i++) {
+            assertEquals(to[i], fixed[1][i], 1e-9, "la pointe ne bouge pas d'un millimetre");
+        }
     }
 }

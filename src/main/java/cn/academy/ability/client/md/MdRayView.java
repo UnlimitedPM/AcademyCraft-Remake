@@ -27,6 +27,12 @@ import org.joml.Vector3f;
  * pour le rayon de son propre tireur, celui de la main pour tout le reste. La condition est
  * aussi celle de l'original, « thirdPersonView == 0 && clientPlayer == entity.getPlayer() ».
  *
+ * <p>Un rayon, en revanche, ne glisse pas entierement : seul son <b>depart</b> se recolle a la
+ * main. C'est encore l'original, dont le rendu ecrivait « Don't fix end to get accurate pointing
+ * direction » — deplacer aussi la pointe faisait rater ce que le rayon visait. La difference se
+ * voit sur la salve : son pre-rayon finit sur la bille de silicium, et la gerbe part de la bille
+ * elle-meme ; avec la pointe decalee, les deux ne se rejoignaient plus.
+ *
  * <p>Le decalage est applique <b>a la naissance</b>, une fois pour toutes, comme le faisceau du
  * railgun — et non a chaque image comme les eclairs. La difference se voit a une chose : passer
  * en vue externe pendant les deux secondes et demie d'un rayon ne le fait pas glisser de la tete
@@ -63,18 +69,17 @@ public final class MdRayView {
     }
 
     /**
-     * Ou le rayon se dessine : ses deux bouts, et rien d'autre.
+     * Ou le rayon se dessine : son depart, et sa pointe.
      *
      * <p>Un rayon qui n'est pas marque {@code viewOptimize} — ceux qui naissent sur une bille —
-     * est rendu tel quel. Les autres passent par {@link ArcView}, qui decale les DEUX bouts du
-     * meme vecteur : la direction et la longueur du rayon ne changent donc pas, et ce qu'il
-     * touche non plus. Le bout d'arrivee n'est decale que parce que l'original decalait le
-     * dessin entier.
+     * est rendu tel quel. Les autres passent par {@link ArcView#fixStart}, qui ne bouge que le
+     * depart : la pointe reste sur ce qui a ete vise, et c'est ce qui la garde sur la bille d'ou
+     * la gerbe part juste apres.
      */
     static double[][] place(MdRayKind kind, double[] from, double[] to, boolean ownFirstPerson,
                             double[] above) {
         if (!kind.viewOptimize()) return new double[][] { from, to };
-        return ArcView.fix(from, to, above,
+        return ArcView.fixStart(from, to, above,
                 ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
     }
 }
