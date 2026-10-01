@@ -2692,19 +2692,19 @@ public final class AcademyGameTests {
     public static void laBilleEstPlusLargeAViserQueDansLeVraiMod(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 50);
-        // Trente centimetres a cote du trait : au-dela des vingt centimetres de demi-largeur de
-        // l'original, en deca des quarante du port.
-        final double AIM_OFFSET = 0.3;
+        // Vingt-cinq centimetres a cote du trait : au-dela des vingt centimetres de demi-largeur
+        // de l'original, en deca des trente du port.
+        final double AIM_OFFSET = 0.25;
 
         var player = ownPlayer(helper, "silbarn_aimer");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
 
         var ball = new cn.academy.entity.EntitySilbarn(level, player);
-        // Sur la trajectoire du REGARD, puis decalee lateralement de trente centimetres — la ou
-        // la boite de l'original (vingt centimetres de demi-largeur) l'aurait manquee, et ou
-        // celle du port l'attrape. Le decalage se mesure par rapport au regard et non a l'axe du
-        // monde : un faux joueur a un lacet qui derive de quelques degres, et un decalage pose en
-        // X se serait ajoute a cette derive (vecu : le rayon passait soixante centimetres a cote).
+        // Sur la trajectoire du REGARD, puis decalee lateralement — la ou la boite de l'original
+        // (vingt centimetres de demi-largeur) l'aurait manquee, et ou celle du port l'attrape. Le
+        // decalage se mesure par rapport au regard et non a l'axe du monde : un faux joueur a un
+        // lacet qui derive de quelques degres, et un decalage pose en X se serait ajoute a cette
+        // derive (vecu : le rayon passait soixante centimetres a cote).
         var eye = player.getEyePosition(1f);
         var look = player.getViewVector(1f);
         var side = look.cross(new net.minecraft.world.phys.Vec3(0, 1, 0)).normalize();

@@ -170,8 +170,37 @@ public final class MdRays {
 
     /** Le meme, a un instant donne — pour le test, qui deroule sa vie sans horloge. */
     public static void spawn(MdRayKind kind, Vec3 from, Vec3 to, long nowMs) {
+        if (kind.isBarrage()) {
+            spawnBarrage(from, to, nowMs);
+            return;
+        }
         RAYS.add(new LiveRay(kind, new double[] { from.x, from.y, from.z },
                 new double[] { to.x, to.y, to.z }, nowMs));
+    }
+
+    /**
+     * La salve : une gerbe de traits, tires au hasard autour de la direction visee.
+     *
+     * <p>C'est une seule chose pour le serveur — un paquet, un point de depart, une direction —
+     * et vingt-cinq a trente rayons pour le client, comme l'original dont l'entite portait ses
+     * sous-rayons et se dessinait une fois par sous-rayon. Les decalages sont tires ici et jamais
+     * ailleurs : c'est ce qui permet au serveur de n'envoyer qu'un mot.
+     */
+    private static void spawnBarrage(Vec3 from, Vec3 to, long nowMs) {
+        Vec3 axis = to.subtract(from);
+        if (axis.lengthSqr() < 1.0E-6) return;
+        Vec3 look = axis.normalize();
+
+        double spread = MdBarrage.spread(RANDOM);
+        int count = MdBarrage.subCount(RANDOM);
+        for (int i = 0; i < count; i++) {
+            Vec3 direction = MdBarrage.direction(look,
+                    MdBarrage.yawOffset(spread, RANDOM), MdBarrage.pitchOffset(spread, RANDOM));
+            Vec3 end = from.add(direction.scale(MdBarrage.RAY_LENGTH));
+            RAYS.add(new LiveRay(MdRayKind.BARRAGE,
+                    new double[] { from.x, from.y, from.z },
+                    new double[] { end.x, end.y, end.z }, nowMs));
+        }
     }
 
     /** Un tick du client : les etincelles des rayons, puis les rayons morts s'en vont. */

@@ -19,13 +19,16 @@ public final class SilbarnVisuals {
      * <p><b>ECART ASSUME, demande du joueur.</b> L'original faisait quarante centimetres
      * ({@code setSize(.4f, .4f)}), et c'est peu pour une barre qu'on jette a la main : viser une
      * bille en vol pour amorcer la salve de rayons demandait de la toucher au centimetre pres, et
-     * le joueur a demande plus large. Le double, donc — et c'est d'autant plus utile que c'est
+     * le joueur a demande plus large. Soixante, donc — et c'est d'autant plus utile que c'est
      * cette boite que le rayon de visee de la salve doit rencontrer.
+     *
+     * <p>Le joueur l'a d'abord voulue a quatre-vingts, puis revenu a soixante : c'est le reglage
+     * qu'il faut pour que la bille se vise <b>a l'oeil</b> sans qu'on la touche en visant a cote.
      *
      * <p>Elle est <b>centree</b> sur la bille et non posee au-dessus d'elle : voir
      * {@code EntitySilbarn.makeBoundingBox}. Sans cela, viser ce qu'on voit ratait le tir.
      */
-    public static final float HIT_SIZE = 0.8f;
+    public static final float HIT_SIZE = 0.6f;
 
     /**
      * Vitesse de rotation en vol : trente degres par seconde.

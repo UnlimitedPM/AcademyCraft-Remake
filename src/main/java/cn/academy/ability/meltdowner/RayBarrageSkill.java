@@ -3,12 +3,20 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.client.md.MdRayKind;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.MdRayPacket;
 import cn.academy.entity.EntitySilbarn;
+import cn.academy.sound.SoundLookup;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 /**
  * Salve de rayons, portage de {@code RayBarrage} : deux competences en une, selon ce que le
@@ -148,16 +156,52 @@ public class RayBarrageSkill extends Skill {
             // `burst` et non `markHit` : l'original se postait elle-meme en collision, donc
             // c'est le son lourd qui se jouait.
             ball.burst();
+            // Le trait s'arrete sur la bille, et vit assez longtemps pour accompagner la salve :
+            // c'est le `hit` de l'original.
+            ray(player, MdRayKind.BARRAGE_PRE_HIT, player.getEyePosition(1f), ball.position());
+            // Et la gerbe part de la bille, dans l'axe du regard du tireur.
+            ray(player, MdRayKind.BARRAGE, ball.position(),
+                    ball.position().add(player.getViewVector(1f)));
             barrage(player, data);
             return;
         }
 
-        // Sans bille, il ne reste qu'un tir simple, sur ce que le regard a trouve.
+        // Sans bille, il ne reste qu'un tir simple, sur ce que le regard a trouve. Le trait
+        // s'arrete la ou il a frappe — sur les yeux de la creature, ou sur le bloc devant.
+        Vec3 impact = inSight instanceof LivingEntity living
+                ? living.getEyePosition()
+                : TargetingUtil.findImpactPoint(player, RANGE);
+        ray(player, MdRayKind.BARRAGE_PRE_MISS, player.getEyePosition(1f), impact);
+
         if (inSight instanceof LivingEntity living) {
             living.invulnerableTime = 0;
             living.hurt(player.damageSources().indirectMagic(player, player),
                     scaled(plainDamage(data)));
             RadiationMarks.mark(living, data);
+        }
+    }
+
+    /**
+     * Le rayon s'annonce : le paquet pour ceux qui voient le tireur, et le son.
+     *
+     * <p>C'est le {@code MSG_EFFECT_PRERAY} de l'original, et ses deux rayons ensembles — l'un
+     * qui finit sur la bille, l'autre qui en part — y passent tous les deux. L'original les
+     * envoyait a son lanceur seul ; le port les envoie a tous ceux qui voient le tireur, comme le
+     * rayon de ses billes de plasma : les degats de la salve tombent sur tout le monde, il serait
+     * etrange que les autres ne voient rien venir.
+     *
+     * <p>Le son se joue <b>chez le serveur</b>, au meme endroit que celui des billes : c'est le
+     * seul chemin qui marche, le client ne trouvant ses sons que dans son propre registre.
+     */
+    private void ray(Player player, MdRayKind kind, Vec3 from, Vec3 to) {
+        if (!(player instanceof ServerPlayer server)) return;
+        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
+                new MdRayPacket(kind.name(), from, to));
+
+        SoundEvent sound = SoundLookup.event(kind.sound());
+        if (sound != null) {
+            player.level().playSound(null, from.x, from.y, from.z, sound, SoundSource.AMBIENT,
+                    kind.soundVolume(), 1f);
         }
     }
 

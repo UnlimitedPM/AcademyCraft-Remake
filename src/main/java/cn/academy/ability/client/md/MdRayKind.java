@@ -92,9 +92,67 @@ public record MdRayKind(String name,
             14, 200, 400, 500,
             1.0, "md.ray_small", 0.8f);
 
+    /**
+     * La salve de rayons, {@code EntityMdRayBarrage} : la gerbe qui part d'une bille de silicium.
+     *
+     * <p>Ses nombres sont ceux du petit rayon — c'est le meme dessin, {@code SmallMdRayRender} — a
+     * une chose pres : elle vit <b>cinquante</b> ticks et non quatorze. Deux secondes et demie de
+     * rayons qui s'agitent autour de la bille, c'est ce qui fait la salve ; l'eclair d'un quart de
+     * seconde du petit rayon ne se lirait pas.
+     *
+     * <p>Elle <b>ne crache pas</b> d'etincelles : celles du petit rayon venaient de son entite,
+     * et la salve descend d'une autre — ses 25 a 30 rayons se suffisent.
+     *
+     * <p>Elle ne se dessine pas toute seule pour autant : {@code MdRays} en fait une gerbe, voir
+     * {@code MdBarrage}.
+     */
+    public static final MdRayKind BARRAGE = new MdRayKind("mdray_barrage",
+            texture("mdray_small", "blend_in"), texture("mdray_small", "tile"),
+            texture("mdray_small", "blend_out"),
+            0.3, 0.5f,
+            0.03, new Tint(216, 248, 216, 230),
+            0.045, new Tint(106, 242, 106, 50),
+            50, 100, 300, 500,
+            0.0, "md.ray_small", 0.5f);
+
+    /**
+     * Le pre-rayon : le trait qui annonce la salve, avant qu'elle ne parte.
+     *
+     * <p>L'original en avait un seul, dont la vie dependait de ce qu'il avait trouve —
+     * {@code life = hit ? 50 : 30} — d'ou ces deux genres. Le premier accompagne la salve, le
+     * second n'est qu'un eclair de visee.
+     *
+     * <p>Il est un peu plus <b>gros</b> que le petit rayon — un coeur de 4,5 cm et une gaine de
+     * 5,2, une lueur de 0,4 bloc — parce que c'est lui qu'on regarde : c'est le trait qui dit ou
+     * l'on a tire.
+     */
+    public static final MdRayKind BARRAGE_PRE_HIT = new MdRayKind("mdray_barrage_pre_hit",
+            texture("mdray_small", "blend_in"), texture("mdray_small", "tile"),
+            texture("mdray_small", "blend_out"),
+            0.4, 0.5f,
+            0.045, new Tint(216, 248, 216, 230),
+            0.052, new Tint(106, 242, 106, 50),
+            50, 200, 400, 500,
+            0.0, "md.ray_small", 0.8f);
+
+    /** Et le meme, quand rien n'a ete trouve : trente ticks d'eclair, et c'est tout. */
+    public static final MdRayKind BARRAGE_PRE_MISS = new MdRayKind("mdray_barrage_pre_miss",
+            texture("mdray_small", "blend_in"), texture("mdray_small", "tile"),
+            texture("mdray_small", "blend_out"),
+            0.4, 0.5f,
+            0.045, new Tint(216, 248, 216, 230),
+            0.052, new Tint(106, 242, 106, 50),
+            30, 200, 400, 500,
+            0.0, "md.ray_small", 0.8f);
+
     /** La duree du rayon, en millisecondes : cinquante par tick, comme l'original. */
     public long lifeMs() {
         return lifeTicks * 50L;
+    }
+
+    /** Est-ce la salve, celle qui doit devenir une gerbe ? */
+    public boolean isBarrage() {
+        return this == BARRAGE;
     }
 
     /** Le genre qui porte ce nom, ou le petit rayon si le nom est inconnu. */
@@ -107,7 +165,7 @@ public record MdRayKind(String name,
 
     /** Les genres connus, dans l'ordre ou ils sont apparus. */
     public static java.util.List<MdRayKind> all() {
-        return java.util.List.of(SMALL);
+        return java.util.List.of(SMALL, BARRAGE, BARRAGE_PRE_HIT, BARRAGE_PRE_MISS);
     }
 
     private static ResourceLocation texture(String ray, String part) {

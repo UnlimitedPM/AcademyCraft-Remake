@@ -21,11 +21,11 @@ class SilbarnVisualsTest {
     @Test
     @DisplayName("la boite est plus large que celle de l'original, et c'est voulu")
     void laBoiteEstPlusLarge() {
-        // L'original : setSize(.4f, .4f). Le port l'a doublee — c'est un ecart assume, et ce
+        // L'original : setSize(.4f, .4f). Le port fait plus large — c'est un ecart assume, et ce
         // test est la pour que personne ne la « corrige » vers quarante centimetres.
         assertTrue(SilbarnVisuals.HIT_SIZE > 0.4f,
                 "la boite du port doit rester plus large que celle du vrai mod");
-        assertEquals(0.8f, SilbarnVisuals.HIT_SIZE, 1e-4f);
+        assertEquals(0.6f, SilbarnVisuals.HIT_SIZE, 1e-4f);
     }
 
     @Test
