@@ -153,6 +153,23 @@ public class EntityMdBall extends Entity {
         return ball;
     }
 
+    /**
+     * Le rayon autour duquel une bille se tient : elle nait a 1,3 bloc au plus de son porteur.
+     */
+    public static final double NEAR_RADIUS = 4.0;
+
+    /**
+     * Les billes de ce porteur, en l'air.
+     *
+     * <p>Les billes sont de vraies entites, et leur propre porteur dit a qui elles sont : c'est
+     * ce qui remplace la liste que l'original gardait dans son contexte d'activation, et ce qui
+     * fait qu'une bille disparue entre-temps ne tire simplement pas.
+     */
+    public static java.util.List<EntityMdBall> near(Player owner) {
+        return owner.level().getEntitiesOfClass(EntityMdBall.class,
+                owner.getBoundingBox().inflate(NEAR_RADIUS), ball -> ball.spawner() == owner);
+    }
+
     @Override
     protected void defineSynchedData() {
         entityData.define(DATA_SPAWNER, 0);
@@ -254,7 +271,7 @@ public class EntityMdBall extends Entity {
      *                              autres — c'est le {@code hurtResistantTime = -1} de l'original
      */
     public void shoot(Player owner, Vec3 dest, float attack, boolean ignoreInvulnerability) {
-        Vec3 from = new Vec3(getX(), getY() + owner.getEyeHeight(), getZ());
+        Vec3 from = muzzle();
         Vec3 to = dest;
 
         // Le moindre mur entre la bille et ce point arrete le tir : c'est ce que faisait le
@@ -267,18 +284,44 @@ public class EntityMdBall extends Entity {
         Entity target = TargetingUtil.findEntityAlong(owner, from, to,
                 e -> !(e instanceof EntityMdBall));
 
-        if (target != null) {
-            if (ignoreInvulnerability) target.invulnerableTime = 0;
-            target.hurt(owner.damageSources().indirectMagic(owner, owner), attack);
-            RadiationMarks.mark(target, owner.getCapability(AbilityCapability.ABILITY_DATA)
-                    .orElse(null));
-        }
+        if (target != null) strike(owner, target, attack, ignoreInvulnerability);
 
-        announce(from, to);
+        flash(from, to);
     }
 
     /**
-     * Le rayon part chez ceux qui voient la bille, et il s'annonce.
+     * La gueule de la bille : la ou elle <b>se dessine</b>, et donc la ou son rayon part.
+     *
+     * <p>C'est sa position logique remontee de la hauteur de rendu — le {@code + 1,6} que
+     * l'original ajoutait au dessin. Le rayon qui partirait de la position logique sortirait
+     * jusqu'a 1,2 bloc sous les pieds du porteur, pendant que la bille se dessine a hauteur
+     * d'yeux : c'est exactement le decalage que le joueur a vu sur la bombe a electrons, et
+     * qui a amene a dessiner la bille la ou le rayon part.
+     */
+    public Vec3 muzzle() {
+        return new Vec3(getX(), getY() + MdBallVisuals.RENDER_HEIGHT, getZ());
+    }
+
+    /**
+     * Le coup d'une bille sur ce qu'elle a trouve : les degats, et la marque du passif.
+     *
+     * <p>Seule la bombe a electrons et la bombe a fragmentation passent par le lancer de rayon ;
+     * le missile electronique, lui, frappe la cible qu'il s'est choisie et se contente d'un
+     * rayon <b>visuel</b> vers elle — c'etait deja ce que faisait l'original, qui ne lancait
+     * aucun rayon pour decider de ce qu'il touchait.
+     */
+    public void strike(Player owner, Entity target, float attack, boolean ignoreInvulnerability) {
+        if (ignoreInvulnerability) target.invulnerableTime = 0;
+        target.hurt(owner.damageSources().indirectMagic(owner, owner), attack);
+        RadiationMarks.mark(target, owner.getCapability(AbilityCapability.ABILITY_DATA)
+                .orElse(null));
+    }
+
+    /**
+     * Le rayon s'annonce : le paquet pour ceux qui voient la bille, et le son.
+     *
+     * <p>C'est le {@code spawnEntity} du rayon de l'original — sa naissance etait l'effet, et
+     * c'est pour cela que le son se joue au meme moment.
      *
      * <p>Le son se joue <b>chez le serveur</b>, et c'est le seul chemin qui marche : le port
      * avait essaye un evenement fabrique a la main chez le client, qui ne s'y resout pas — le
@@ -286,7 +329,7 @@ public class EntityMdBall extends Entity {
      * passe par le registre n'y est pas. Le joueur l'a signale aussitot : « quand on lance un
      * laser, il n'y a aucun son ». Tous les autres sons du port passent par ce chemin.
      */
-    private void announce(Vec3 from, Vec3 to) {
+    public void flash(Vec3 from, Vec3 to) {
         AbilityNetwork.CHANNEL.send(
                 PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> this),
                 new MdRayPacket(MdRayKind.SMALL.name(), from, to));

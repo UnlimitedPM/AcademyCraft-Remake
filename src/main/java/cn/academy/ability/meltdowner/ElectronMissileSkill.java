@@ -2,10 +2,18 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.MdMissilePacket;
+import cn.academy.entity.EntityMdBall;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
+
+import java.util.List;
 
 /**
  * Electron Missile : la derniere competence du meltdowner, portage de {@code ElectronMissile}.
@@ -16,10 +24,18 @@ import net.minecraft.world.phys.AABB;
  * blocs. C'est une arme d'attrition : le surcout d'ouverture est epingle (il ne redescend pas
  * pendant le maintien), l'entretien se paie en CP par tick, et chaque tir se paie en plus.
  *
- * <p>Les billes de l'original etaient des entites visibles, dessinees par un shader ; le port
- * n'a pas d'effets de ce genre, il les <b>compte</b> donc dans l'etat du maintien (voir
- * {@code AbilityData.Hold}). Le joueur ne les voit pas tourner autour de lui, mais il les sent
- * partir : le tir est refusé quand il n'en reste aucune.
+ * <p>Les billes de l'original etaient des entites visibles, dessinees par un shader ; le port se
+ * contentait de les <b>compter</b> dans l'etat du maintien, donc le joueur ne les voyait pas
+ * tourner autour de lui. Ce sont maintenant les memes billes que celles de la bombe a electrons,
+ * en version <b>silencieuse</b> (voir {@link EntityMdBall#silent}) : elles flottent, elles
+ * suivent le porteur, et c'est la competence qui les envoie — jamais elles-memes. L'anneau de
+ * plasma qui monte autour du lanceur, lui, est annonce par {@code MdMissilePacket}.
+ *
+ * <p>A la difference des deux bombes, le missile ne <b>lance</b> aucun rayon : l'original
+ * choisissait sa cible a la portee et la frappait directement, et le rayon n'etait qu'un
+ * <b>dessin</b> entre la bille et les yeux de la victime. C'est pourquoi ce tir passe par
+ * {@link EntityMdBall#strike} et {@link EntityMdBall#flash}, et non par
+ * {@link EntityMdBall#shoot}.
  *
  * <p>Une coquille de l'original est corrigee : sa recharge etait calculee par
  * {@code clampi(700, 400, exp)}, qui borne une valeur entre deux bornes donnees a l'envers et
@@ -36,6 +52,16 @@ public class ElectronMissileSkill extends Skill {
     public static final int ATTACK_PERIOD = 8;
     /** Le surcout d'ouverture, epingle pendant tout le maintien. */
     public static final float OPEN_OVERLOAD = 200f;
+
+    /**
+     * La duree de vie d'une bille posee : tout le maintien possible, plus son tick.
+     *
+     * <p>L'original ne donnait aucune duree aux siennes : elles vivaient jusqu'a ce que le
+     * contexte les tue en partant. Le port les tue de meme (voir {@link #onHoldEnd}), et cette
+     * vie n'est qu'un filet — une bille qui survivrait a son maintien disparaitrait d'elle-meme
+     * au bout de dix secondes.
+     */
+    public static final int BALL_LIFE_TICKS = 201;
 
     public ElectronMissileSkill() {
         super("electron_missile", 5);
@@ -116,7 +142,6 @@ public class ElectronMissileSkill extends Skill {
         // Le surcout d'ouverture est epingle : sans cela, tenir le missile rembourserait son
         // propre prix au bout de quelques secondes, et l'arme serait gratuite.
         data.setHeldOverload(this, data.getOverload());
-        data.setHoldBalls(this, 0);
     }
 
     /**
@@ -124,31 +149,76 @@ public class ElectronMissileSkill extends Skill {
      *
      * <p>L'ordre est celui de l'original : il payait son entretien d'abord et s'arretait la si
      * la reserve ne suivait plus, posait sa bille tous les dix ticks, et tirait tous les huit.
+     * L'anneau de plasma s'annonce ensuite, a chaque tick, comme le faisait son
+     * {@code MSG_EFFECT_UPDATE}.
      */
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int ticks) {
         if (!data.consumeControlPoint(upkeep(data))) return false;
 
-        int balls = data.getHoldBalls(this);
-        if (ticks % SPAWN_PERIOD == 0 && balls < MAX_BALLS) {
-            data.setHoldBalls(this, balls + 1);
-            balls++;
+        List<EntityMdBall> balls = EntityMdBall.near(player);
+        if (ticks % SPAWN_PERIOD == 0 && balls.size() < MAX_BALLS) {
+            player.level().addFreshEntity(
+                    EntityMdBall.silent(player.level(), player, BALL_LIFE_TICKS));
         }
 
-        if (ticks != 0 && ticks % ATTACK_PERIOD == 0 && balls > 0) {
+        if (ticks != 0 && ticks % ATTACK_PERIOD == 0 && !balls.isEmpty()) {
             LivingEntity target = closest(player, range(data));
             if (target != null && data.perform(shotCost(data), shotOverload(data))) {
-                target.invulnerableTime = 0;
-                target.hurt(player.damageSources().indirectMagic(player, player),
-                        scaled(damage(data)));
-                // Comme les autres tirs du meltdowner, celui-ci marque sa cible : c'est par la
-                // que l'original le faisait passer (MDDamageHelper.attack).
-                RadiationMarks.mark(target, data);
-                data.setHoldBalls(this, balls - 1);
-                data.addSkillExp(this, 0.001f);
+                launch(player, balls, target, data);
             }
         }
+
+        announce(player);
         return true;
+    }
+
+    /**
+     * Un tir : une bille tiree au hasard, et le rayon qui l'annonce.
+     *
+     * <p>L'original prenait son indice au hasard entre un et le nombre de billes, ce qui revient
+     * a tirer une bille au sort : c'est ce qui fait qu'un maintien long ne vide pas ses billes
+     * dans l'ordre ou elles sont venues. La cible, elle, est deja choisie — le missile frappe
+     * donc <b>directement</b>, sans lancer de rayon, et le rayon qui part de la bille vers ses
+     * yeux n'est qu'un dessin.
+     */
+    private void launch(Player player, List<EntityMdBall> balls, LivingEntity target,
+                        AbilityData data) {
+        EntityMdBall ball = balls.get(player.getRandom().nextInt(balls.size()));
+        Vec3 eyes = new Vec3(target.getX(), target.getY() + target.getEyeHeight(), target.getZ());
+
+        ball.strike(player, target, scaled(damage(data)), true);
+        ball.flash(ball.muzzle(), eyes);
+        ball.discard();
+
+        data.addSkillExp(this, 0.001f);
+    }
+
+    /**
+     * La fin du maintien : les billes qui restent sont retirees du monde.
+     *
+     * <p>C'est le {@code s_onEnd} de l'original, qui tuait tout ce qui restait dans sa liste —
+     * aucune bille ne survit au missile qui l'a posee.
+     */
+    @Override
+    public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
+        for (EntityMdBall ball : EntityMdBall.near(player)) {
+            ball.discard();
+        }
+    }
+
+    /**
+     * L'anneau de plasma du maintien, au lanceur seul.
+     *
+     * <p>C'est le {@code sendToClient(MSG_EFFECT_UPDATE)} de l'original : un message sans
+     * contenu, envoye a celui qui tient la competence et a personne d'autre. Les autres joueurs
+     * voient les billes, mais pas la fumee du lanceur.
+     */
+    private static void announce(Player player) {
+        if (player instanceof ServerPlayer server) {
+            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+                    new MdMissilePacket(player.getId()));
+        }
     }
 
     /**

@@ -28,7 +28,6 @@ public class MeltdownerCategory extends Category {
         setColorStyle(126, 255, 132, 80);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatMeltdowner.
-        // (electron_missile, absent du port, se rangera apres le rayon chanceux.)
         addSkill(ELECTRON_BOMB);
         addSkill(RADIATION_INTENSIFY);
         addSkill(SCATTER_BOMB);

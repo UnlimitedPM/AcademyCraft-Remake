@@ -53,6 +53,10 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
+        // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
+        // Voir MdMissilePacket.
+        CHANNEL.registerMessage(nextId++, MdMissilePacket.class,
+                MdMissilePacket::encode, MdMissilePacket::decode, MdMissilePacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

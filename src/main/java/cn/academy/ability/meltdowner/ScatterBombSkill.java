@@ -220,7 +220,7 @@ public class ScatterBombSkill extends Skill {
      */
     @Override
     public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
-        List<cn.academy.entity.EntityMdBall> balls = orbs(player);
+        List<cn.academy.entity.EntityMdBall> balls = cn.academy.entity.EntityMdBall.near(player);
         if (balls.isEmpty()) return;
 
         float exp = data.getSkillExp(this);
@@ -247,20 +247,6 @@ public class ScatterBombSkill extends Skill {
         }
 
         data.addSkillExp(this, 0.001f * balls.size());
-    }
-
-    /**
-     * Les billes de ce joueur, en l'air.
-     *
-     * <p>Le port n'a rien a tenir a cote : les billes sont de vraies entites, et leurs propres
-     * porteurs disent a qui elles sont. C'est ce qui remplace la liste que l'original gardait
-     * dans son contexte d'activation — et ce qui fait qu'une bille qui a disparu entre-temps ne
-     * tire simplement pas.
-     */
-    private static List<cn.academy.entity.EntityMdBall> orbs(Player player) {
-        return player.level().getEntitiesOfClass(cn.academy.entity.EntityMdBall.class,
-                player.getBoundingBox().inflate(AUTO_RANGE + 1),
-                ball -> ball.spawner() == player);
     }
 
     /** Les adversaires assez proches pour que les billes les prennent en chasse. */

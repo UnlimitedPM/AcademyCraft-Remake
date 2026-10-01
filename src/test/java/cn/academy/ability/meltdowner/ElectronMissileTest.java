@@ -68,4 +68,17 @@ class ElectronMissileTest {
         // Et il ne peut pas en accumuler plus de cinq.
         assertEquals(5, ElectronMissileSkill.MAX_BALLS);
     }
+
+    @Test
+    @DisplayName("les billes posees vivent tout le maintien possible")
+    void lesBillesViventToutLeMaintien() {
+        // L'original ne donnait aucune duree aux siennes et les tuait en partant : la duree du
+        // port n'est qu'un filet, et il doit couvrir le maintien le plus long — deux cents ticks
+        // a pleine experience — plus le tick ou la competence pourrait les tuer.
+        assertTrue(ElectronMissileSkill.BALL_LIFE_TICKS > MISSILE.getMaxHoldTicks(dataAt(1f)),
+                "une bille doit survivre au plus long des maintiens : "
+                        + ElectronMissileSkill.BALL_LIFE_TICKS + " pour "
+                        + MISSILE.getMaxHoldTicks(dataAt(1f)) + " ticks de maintien");
+        assertEquals(200, MISSILE.getMaxHoldTicks(dataAt(1f)), "le plus long des maintiens");
+    }
 }

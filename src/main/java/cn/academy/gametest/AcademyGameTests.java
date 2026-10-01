@@ -5507,6 +5507,10 @@ public final class AcademyGameTests {
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,
      * et la seule qui rende l'attaque deterministe : la premiere bille tombe au tick 0, le premier
      * tir au tick 8, sur une cible posee a trois blocs.
+     *
+     * <p>Les billes sont de <b>vraies entites</b>, celles de la bombe a electrons : le missile ne
+     * les comptait avant que dans l'etat du maintien, donc le joueur ne voyait rien tourner autour
+     * de lui. C'est ce que la premiere assertion fige.
      */
     @GameTest(template = "empty")
     public static void leMissileAElectronsTireSesBilles(GameTestHelper helper) {
@@ -5531,13 +5535,16 @@ public final class AcademyGameTests {
 
         data.beginCharge(skill);
         skill.onStart(player, data);
-        for (int tick = 0; tick <= 8; tick++) {
+        assertTrue(helper, skill.onHoldTick(player, data, 0), "le maintien doit tenir");
+        assertValue(helper, 1, ballsOf(helper, player).size(),
+                "le missile pose une vraie bille de plasma, comme la bombe a electrons");
+        for (int tick = 1; tick <= 8; tick++) {
             assertTrue(helper, skill.onHoldTick(player, data, tick), "le maintien doit tenir");
         }
 
         assertTrue(helper, zombie.getHealth() < before,
                 "le missile doit avoir frappe : " + zombie.getHealth() + " contre " + before);
-        assertClose(helper, 0d, data.getHoldBalls(skill), "la bille envoyee est consommee");
+        assertValue(helper, 0, ballsOf(helper, player).size(), "la bille envoyee est consommee");
         assertClose(helper, 0.001d, data.getSkillExp(skill), "et le tir verse son experience");
 
         zombie.discard();
