@@ -155,6 +155,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         private float progress;
 
         /**
+         * La distance visee d'un saut traversant, en blocs.
+         *
+         * <p>C'est le seul maintien du port qui se <b>regle</b> : le saut traversant se vise a la
+         * molette, et ce nombre est le reglage. Il vit ici parce que c'est le client qui a la
+         * molette et le serveur qui fait le saut : le premier le lui envoie cran par cran, et le
+         * second le lit au relachement. Voir {@code TeleportDistancePacket}.
+         */
+        private float distance;
+
+        /**
          * Les blocs pris par ce maintien, dans l'ordre de prise.
          *
          * <p>C'est la « lignee » de {@code mag_movement} : l'ensemble dit quels blocs ont
@@ -1305,6 +1315,23 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public void setHoldProgress(Skill skill, float progress) {
         Hold hold = holdOf(skill);
         if (hold != null) hold.progress = progress;
+    }
+
+    /**
+     * La distance visee d'un saut traversant, posee par le client au cran de molette.
+     *
+     * <p>Voir {@code Hold.distance} : le client a la molette, le serveur a le monde, et c'est le
+     * serveur qui fait le saut — il lui faut donc ce nombre.
+     */
+    public void setHoldDistance(Skill skill, float distance) {
+        Hold hold = holdOf(skill);
+        if (hold != null) hold.distance = distance;
+    }
+
+    /** La distance visee d'un saut traversant, en blocs. */
+    public float getHoldDistance(Skill skill) {
+        Hold hold = holds.get(skill);
+        return hold == null ? 0f : hold.distance;
     }
 
     public float getHoldProgress(Skill skill) {

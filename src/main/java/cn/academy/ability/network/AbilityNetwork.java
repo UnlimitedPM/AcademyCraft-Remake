@@ -23,6 +23,11 @@ public class AbilityNetwork {
                 ActivateSkillPacket::encode, ActivateSkillPacket::decode, ActivateSkillPacket::handle);
         CHANNEL.registerMessage(nextId++, FlashingPacket.class,
                 FlashingPacket::encode, FlashingPacket::decode, FlashingPacket::handle);
+        // La distance du saut traversant : le client a la molette, le serveur a le monde, et
+        // c'est lui qui saute — il lui faut donc ce nombre. Voir TeleportDistancePacket.
+        CHANNEL.registerMessage(nextId++, TeleportDistancePacket.class,
+                TeleportDistancePacket::encode, TeleportDistancePacket::decode,
+                TeleportDistancePacket::handle);
         CHANNEL.registerMessage(nextId++, LocationTeleportPacket.class,
                 LocationTeleportPacket::encode, LocationTeleportPacket::decode, LocationTeleportPacket::handle);
         CHANNEL.registerMessage(nextId++, ToggleAbilityPacket.class,

@@ -62,6 +62,10 @@ public final class TpMarkRenderer {
 
     private static final ResourceLocation[] TEXTURES = frames();
 
+    /** Le fantome, et sa teinte quand on ne peut pas atterrir la ou il se tient. */
+    private static final float[] WHITE = { 1f, 1f, 1f };
+    private static final float[] UNAVAILABLE = { 1f, 0.2f, 0.2f };
+
     /** Le modele du fantome, construit a la premiere image et garde ensuite. */
     private static HumanoidModel<LivingEntity> model;
 
@@ -125,11 +129,20 @@ public final class TpMarkRenderer {
 
         pose.pushPose();
         pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
-        // Le fantome regarde ou son tireur regarde : c'est le rendu standard d'une entite, a cent
-        // quatre-vingts degres moins le lacet. On le voit donc de dos quand on vise devant soi,
-        // comme une silhouette qui montre la direction du saut.
-        pose.mulPose(Axis.YP.rotationDegrees(180f - TeleportMark.yaw()));
-        model().renderToBuffer(pose, out, 0, 0, 1f, 1f, 1f, 1f);
+        // Deux rotations, et dans cet ordre : le fantome se tourne comme son tireur, PUIS il est
+        // retourne sens dessus dessous. C'est le `glRotated(-yaw)` suivi du `glScaled(-1,-1,1)` de
+        // l'original, et les DEUX sont necessaires. Le modele d'un joueur est decrit la tete en
+        // bas : c'est le rendu de toute entite vivante qui le retourne, par le meme
+        // `scale(-1, -1, 1)` — voir `LivingEntityRenderer` — donc sans ce retournement le fantome
+        // se tient sur la tete, et son origine se retrouve aux pieds au lieu du cou.
+        //
+        // Le lacet est celui de l'original, `-yaw` et non `180 - yaw` : le fantome regarde son
+        // tireur, qui est toujours derriere lui. Il se retourne donc vers celui qui le regarde.
+        pose.mulPose(Axis.YP.rotationDegrees(-TeleportMark.yaw()));
+        pose.mulPose(Axis.ZP.rotationDegrees(180f));
+
+        float[] tint = TeleportMark.available() ? WHITE : UNAVAILABLE;
+        model().renderToBuffer(pose, out, 0, 0, tint[0], tint[1], tint[2], 1f);
         pose.popPose();
     }
 

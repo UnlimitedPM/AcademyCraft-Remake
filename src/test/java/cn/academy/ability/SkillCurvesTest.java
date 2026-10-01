@@ -165,7 +165,7 @@ class SkillCurvesTest {
         assertBounds("portee de arc_gen", 6f, 15f, arcRange, arcGen);
 
         var penetrate = cn.academy.ability.teleporter.TeleporterCategory.PENETRATE_TELEPORT;
-        Curve penetrateRange = data -> (float) penetrate.range(data);
+        Curve penetrateRange = data -> (float) penetrate.maxDistance(data);
         assertBounds("portee de penetrate_teleport", 10f, 35f, penetrateRange, penetrate);
 
         var shift = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
@@ -495,6 +495,9 @@ class SkillCurvesTest {
     void leReacteurEtLeCanonContinuentApresLeRelachement() {
         var jet = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
         var cannon = cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON;
+        // Le saut traversant, lui, DEPLACE son joueur au relachement : il le lit donc, et c'est
+        // ce que le fantome montrait avant. Voir PenetrateTeleportTest pour ce qu'il doit faire.
+        var penetrate = cn.academy.ability.teleporter.TeleporterCategory.PENETRATE_TELEPORT;
 
         for (var category : java.util.List.of(
                 cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE,
@@ -502,7 +505,7 @@ class SkillCurvesTest {
                 cn.academy.ability.teleporter.TeleporterCategory.INSTANCE,
                 cn.academy.ability.vecmanip.VecmanipCategory.INSTANCE)) {
             for (Skill skill : category.getSkills()) {
-                if (!skill.isHeld() || skill == jet || skill == cannon) continue;
+                if (!skill.isHeld() || skill == jet || skill == cannon || skill == penetrate) continue;
                 // Le relachement termine le maintien de toutes les autres, et le joueur
                 // n'est meme pas lu.
                 assertFalse(skill.onRelease(null, new AbilityData(), 20),

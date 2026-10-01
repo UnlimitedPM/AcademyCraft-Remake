@@ -445,8 +445,9 @@ class PortedSkillsTest {
             Map.entry("meltdowner.meltdowner", 0.0024f),
             // un tir, avec ou sans bille
             Map.entry("meltdowner.ray_barrage", 0.005f),
-            // 0,00014 par bloc, pour un saut d'une dizaine de blocs
-            Map.entry("teleporter.penetrate_teleport", 0.00014f * 10f),
+            // rien au paquet : c'est le saut qui paie, au bloc parcouru, et lui seul connait la
+            // distance (voir PenetrateTeleportSkill.earnsExpOnEffect)
+            Map.entry("teleporter.penetrate_teleport", 0f),
             // 0,0006 pour un lancer dans le vide ; 0,003 quand l'objet frappe, verse par
             // l'effet lui-meme
             Map.entry("teleporter.threatening_teleport", 0.0006f),

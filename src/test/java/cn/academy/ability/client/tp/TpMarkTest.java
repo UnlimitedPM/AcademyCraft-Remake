@@ -101,15 +101,17 @@ class TpMarkTest {
         // relachement qui faisait partir le saut : sans touche, il n'y a pas de destination, donc
         // pas de fantome. Le joueur, lui, n'est jamais touche par ce cas — c'est ce que verifie ce
         // test en passant un joueur nul.
-        assertNull(TeleportMark.destination(null, TeleporterCategory.FLASHING, 0, 0),
+        assertNull(TeleportMark.seat(null, TeleporterCategory.FLASHING, 0, 0),
                 "la touche de direction n'est pas enfoncee");
 
         // Et une competence qui n'a pas de marque n'en allume aucune, quelle que soit la visee :
         // c'est ce qui eteint le fantome quand le joueur change de touche sans relacher.
-        assertNull(TeleportMark.destination(null, TeleporterCategory.SHIFT_TELEPORT, 0, 0));
-        assertNull(TeleportMark.destination(null, TeleporterCategory.SHIFT_TELEPORT, 0, 3));
-        assertNull(TeleportMark.destination(null, TeleporterCategory.PENETRATE_TELEPORT, 0, 3));
-        assertNull(TeleportMark.destination(null, TeleporterCategory.LOCATION_TELEPORT, 0, 3));
+        assertNull(TeleportMark.seat(null, TeleporterCategory.SHIFT_TELEPORT, 0, 0));
+        assertNull(TeleportMark.seat(null, TeleporterCategory.SHIFT_TELEPORT, 0, 3));
+        // Le saut traversant non plus, tant qu'aucune visee n'est ouverte : c'est son etat qui
+        // decide, et non la touche. Voir TeleportAim.
+        assertNull(TeleportMark.seat(null, TeleporterCategory.PENETRATE_TELEPORT, 0, 3));
+        assertNull(TeleportMark.seat(null, TeleporterCategory.LOCATION_TELEPORT, 0, 3));
     }
 
     @Test
