@@ -3,6 +3,7 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.client.md.MdBarrage;
 import cn.academy.ability.client.md.MdRayKind;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
@@ -157,8 +158,10 @@ public class RayBarrageSkill extends Skill {
             // c'est le son lourd qui se jouait.
             ball.burst();
             // Le trait s'arrete sur la bille, et vit assez longtemps pour accompagner la salve :
-            // c'est le `hit` de l'original.
-            ray(player, MdRayKind.BARRAGE_PRE_HIT, player.getEyePosition(1f), ball.position());
+            // c'est le `hit` de l'original. Il part de la MAIN et non de l'oeil, sinon il nait dans
+            // la camera et remplit l'ecran du tireur.
+            ray(player, MdRayKind.BARRAGE_PRE_HIT, MdBarrage.handOrigin(
+                    player.getEyePosition(1f), player.getViewVector(1f)), ball.position());
             // Et la gerbe part de la bille, dans l'axe du regard du tireur.
             ray(player, MdRayKind.BARRAGE, ball.position(),
                     ball.position().add(player.getViewVector(1f)));
@@ -171,7 +174,8 @@ public class RayBarrageSkill extends Skill {
         Vec3 impact = inSight instanceof LivingEntity living
                 ? living.getEyePosition()
                 : TargetingUtil.findImpactPoint(player, RANGE);
-        ray(player, MdRayKind.BARRAGE_PRE_MISS, player.getEyePosition(1f), impact);
+        ray(player, MdRayKind.BARRAGE_PRE_MISS,
+                MdBarrage.handOrigin(player.getEyePosition(1f), player.getViewVector(1f)), impact);
 
         if (inSight instanceof LivingEntity living) {
             living.invulnerableTime = 0;

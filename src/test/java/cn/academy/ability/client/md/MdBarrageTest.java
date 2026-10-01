@@ -101,4 +101,34 @@ class MdBarrageTest {
         Vec3 up = MdBarrage.direction(look, 0, 90);
         assertTrue(up.y > 0.99, "un tangage pur fait monter : " + up);
     }
+
+    @Test
+    @DisplayName("le trait part de la main, pas de l'oeil")
+    void leTraitPartDeLaMain() {
+        Vec3 eye = new Vec3(10, 70, 20);
+        Vec3 look = new Vec3(0, 0, 1);
+        Vec3 hand = MdBarrage.handOrigin(eye, look);
+
+        // Plus bas que les yeux, plus a droite, et un peu en avant : c'est la main telle qu'on la
+        // voit en premiere personne. Un rayon qui nait DANS la camera remplit l'ecran, ce que le
+        // joueur a vu tout de suite.
+        assertTrue(hand.y < eye.y, "la main est sous les yeux : " + hand);
+        assertTrue(hand.z > eye.z, "et devant : " + hand);
+        assertTrue(Math.abs(hand.x - eye.x) > 0.2, "et sur le cote : " + hand);
+
+        // Le cote est celui de la DROITE du joueur : tourner le regard le fait changer de signe.
+        Vec3 mirrored = MdBarrage.handOrigin(eye, new Vec3(0, 0, -1));
+        assertEquals(-(hand.x - eye.x), mirrored.x - eye.x, 1e-9,
+                "la droite d'un regard est la gauche du regard oppose");
+
+        // Un regard pile a la verticale n'a pas de droite : pas de decalage lateral du tout. Le
+        // trait se contente alors d'avancer le long du regard — donc vers le haut, et la « chute »
+        // de la main ne suffit plus a le faire descendre. C'est voulu : il vaut mieux un depart
+        // un peu haut qu'un depart tire d'un produit vectoriel nul, qui partirait n'importe ou.
+        Vec3 vertical = MdBarrage.handOrigin(eye, new Vec3(0, 1, 0));
+        assertEquals(eye.x, vertical.x, 1e-9, "pas de cote quand il n'y en a pas");
+        assertEquals(eye.z, vertical.z, 1e-9, "pas de cote quand il n'y en a pas");
+        assertEquals(eye.y + MdBarrage.HAND_FORWARD - MdBarrage.HAND_DROP, vertical.y, 1e-9,
+                "il ne reste que l'avance le long du regard");
+    }
 }
