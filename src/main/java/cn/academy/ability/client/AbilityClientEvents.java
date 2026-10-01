@@ -7,6 +7,7 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
 import cn.academy.ability.meltdowner.MeltdownerCategory;
 import cn.academy.ability.client.md.MineRayEffect;
+import cn.academy.ability.client.tp.TeleportMark;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
 import cn.academy.ability.network.ActivateSkillPacket.Phase;
@@ -126,9 +127,14 @@ public class AbilityClientEvents {
             cn.academy.ability.client.md.MdRays.clear();
             cn.academy.ability.client.md.MdSparks.clear();
             MineRayEffect.end();
+            TeleportMark.end();
+            cn.academy.ability.client.tp.TpParticles.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
+        // Les etincelles de la teleportation vieillissent au meme rythme, et leur marque se
+        // repose au tick suivant — voir TeleportMark et TpParticles.
+        cn.academy.ability.client.tp.TpParticles.tick();
         cn.academy.client.SilbarnFrags.tick();
         // Et le gresillement du bouclier de lumiere : son disque se dessine a chaque image, mais
         // son essaim se seme au tick, chez son porteur seul — voir ShieldSparks.
@@ -242,6 +248,7 @@ public class AbilityClientEvents {
         ThunderClapEffect.end();
         BodyIntensifyEffect.endCharge(false);
         MineRayEffect.end(skillName);
+        TeleportMark.end();
         endDirections();
     }
 
@@ -356,6 +363,9 @@ public class AbilityClientEvents {
                     // voyait. Le serveur, lui, creuse de son cote sans rien en dire. Voir
                     // MineRayEffect.
                     MineRayEffect.tick(player, skill);
+                    // Et la marque de teleportation, qui n'existe que chez son tireur elle aussi, et
+                    // qui ne s'allume que sur la touche de direction visee : voir TeleportMark.
+                    TeleportMark.tick(player, skill, 0, aimed);
                 }
             }
             // L'electricite des charges : l'orage s'amase autour de celui qui le prepare.
@@ -370,6 +380,9 @@ public class AbilityClientEvents {
                     // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
                     // la charge : voir BodyIntensifyEffect.
                     BodyIntensifyEffect.tickCharge(skill);
+                    // Et le fantome de la teleportation au marqueur, dont la portee grandit avec la
+                    // charge : il se pose des le premier tick, lui aussi. Voir TeleportMark.
+                    TeleportMark.tick(player, skill, ClientCharge.getTicks(), 0);
                     // L'orage tombe TOUT SEUL au bout de sa charge maximale : l'original
                     // terminait sa charge a MAX_TICKS pour frapper, sans attendre que la touche
                     // se relache. Le serveur ne peut pas s'en charger — c'est le client qui tient
@@ -413,6 +426,8 @@ public class AbilityClientEvents {
         // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
         // c'est ce que fait ce crochet.
         MineRayEffect.end(skill.getName());
+        // Le fantome de la teleportation s'en va au meme moment — sa competence est finie.
+        TeleportMark.end();
         BodyIntensifyEffect.endCharge(performed);
         endDirections();
         send(category, skill, Phase.RELEASE);
