@@ -120,6 +120,10 @@ public class AbilityClientEvents {
         // avancent — voir MdRays et MdSparks.
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
+        // Et la fumee du plasma sur les cibles marquees par la radiation : c'est tout ce que le
+        // passif montre, et le serveur l'annonce a ceux qui les voient — voir
+        // RadiationMarksEffect.
+        cn.academy.ability.client.md.RadiationMarksEffect.tick();
 
         for (Binding binding : BINDINGS) {
             tick(binding);

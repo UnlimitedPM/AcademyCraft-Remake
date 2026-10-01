@@ -2,8 +2,11 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.RadiationMarkPacket;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.network.PacketDistributor;
 
 /**
  * Les marques de radiation : portage de {@code MDDamageHelper}.
@@ -41,8 +44,29 @@ public final class RadiationMarks {
         if (rad == null || !data.isSkillLearned(rad)) return;
 
         int ticks = Math.max(RadiationIntensifySkill.MARK_TICKS, ticksLeft(target));
-        target.getPersistentData().putInt(MARK_TICK, ticks);
+        setTicks(target, ticks);
         target.getPersistentData().putFloat(MARK_RATE, rad.rate(data));
+
+        // Et la marque s'annonce a ceux qui voient la cible : c'est le message {@code sync} de
+        // l'original, et c'est lui qui fait fumer le plasma chez les voisins du tireur. Sans ce
+        // paquet, la fumee ne se verrait que chez celui qui a tire — le seul interet du passif a
+        // l'ecran serait perdu pour tout le monde.
+        if (!target.level().isClientSide) {
+            AbilityNetwork.CHANNEL.send(
+                    PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target),
+                    new RadiationMarkPacket(target.getId(), ticks));
+        }
+    }
+
+    /**
+     * Pose la duree de la marque, telle quelle.
+     *
+     * <p>Deux appelants : le serveur qui la pose, et le client qui vient de l'apprendre par le
+     * paquet de la marque. Les deux ecrivent la <b>meme</b> cle, celle de l'original, si bien que
+     * tout ce qui lit la marque — {@link #isMarked}, {@link #ticksLeft} — marche des deux cotes.
+     */
+    public static void setTicks(Entity target, int ticks) {
+        if (target != null) target.getPersistentData().putInt(MARK_TICK, ticks);
     }
 
     /** La marque avance d'un tick. Sans marque, elle ne fait rien du tout. */

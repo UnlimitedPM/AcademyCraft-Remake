@@ -48,6 +48,11 @@ public class AbilityNetwork {
         // eclairs, et c'est lui qui porte le son a jouer. Voir MdRayPacket.
         CHANNEL.registerMessage(nextId++, MdRayPacket.class,
                 MdRayPacket::encode, MdRayPacket::decode, MdRayPacket::handle);
+        // La marque de radiation : c'est elle qui fait fumer le plasma autour d'une cible, chez
+        // tous ceux qui la voient. Voir RadiationMarkPacket.
+        CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
+                RadiationMarkPacket::encode, RadiationMarkPacket::decode,
+                RadiationMarkPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,
