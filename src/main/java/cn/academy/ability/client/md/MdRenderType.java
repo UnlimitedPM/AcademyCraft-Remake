@@ -22,6 +22,22 @@ import java.util.Map;
  * transparents, donc epaissit le trait), et surtout <b>aucune lumiere</b> : le programme de la
  * balise de phare n'en connait pas, et c'est ce qu'il faut a une etincelle qui emet la sienne.
  *
+ * <h2>Et une quatrieme, que le joueur a fait ajouter</h2>
+ *
+ * <p>Les effets du plasma <b>n'ecrivent pas la profondeur</b>. C'est encore l'original qui le
+ * dit — son entite de bille posait {@code glDepthMask(false)} avant de dessiner ses deux
+ * carres — et ce n'est pas une precaution de style. La bille, par exemple, est faite de deux
+ * images <b>coplanaires</b>, posees exactement au meme endroit : le halo de 0,7 bloc et le
+ * coeur de 0,5. Si elles ecrivent la profondeur, elles se la disputent au micron pres, et
+ * selon l'arrondi du fragment c'est l'une ou l'autre qui passe : des morceaux du coeur
+ * disparaissent, et l'image parait coupee en deux. Le joueur l'a decrit mot pour mot :
+ * « pendant que la bille se forme, parfois on a l'impression que l'image se fait couper en 2
+ * [...] peut-etre parce que 2 images s'affichent en meme temps et que quand il y en a une qui
+ * passe devant l'autre ca fait ca ». C'etait exactement ca.
+ *
+ * <p>Le <b>test</b> de profondeur, lui, reste : un rayon ne traverse toujours pas une montagne,
+ * et une bille reste cachee derriere un mur.
+ *
  * <p>Les images du meltdowner sont toutes dans le meme cas, donc un seul cache suffit.
  */
 public final class MdRenderType {
@@ -57,6 +73,7 @@ public final class MdRenderType {
                             .setShaderState(new RenderStateShard.ShaderStateShard(
                                     GameRenderer::getPositionColorShader))
                             .setTransparencyState(blending())
+                            .setWriteMaskState(noDepthWrite())
                             .setCullState(new RenderStateShard.CullStateShard(false))
                             .createCompositeState(true));
         }
@@ -71,8 +88,19 @@ public final class MdRenderType {
                                 GameRenderer::getRendertypeBeaconBeamShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
                         .setTransparencyState(blending())
+                        .setWriteMaskState(noDepthWrite())
                         .setCullState(new RenderStateShard.CullStateShard(false))
                         .createCompositeState(true));
+    }
+
+    /**
+     * La couleur s'ecrit, la profondeur non — le {@code glDepthMask(false)} de l'original.
+     *
+     * <p>Voir le commentaire de la classe : c'est ce qui empeche le halo et le coeur de la
+     * bille, coplanaires, de se couper l'un l'autre.
+     */
+    private static RenderStateShard.WriteMaskStateShard noDepthWrite() {
+        return new RenderStateShard.WriteMaskStateShard(true, false);
     }
 
     /** Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA. */
