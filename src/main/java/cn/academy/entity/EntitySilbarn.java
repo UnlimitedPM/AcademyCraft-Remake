@@ -1,12 +1,14 @@
 package cn.academy.entity;
 
 import cn.academy.ModEntities;
+import cn.academy.ModSounds;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
@@ -69,8 +71,40 @@ public class EntitySilbarn extends Projectile {
     /** Ticks depuis le contact, ou -1 tant qu'elle n'a rien touche. */
     private int sinceHit = -1;
 
+    /**
+     * L'axe autour duquel elle tourne en vol.
+     *
+     * <p>Tire au hasard, comme l'original, et <b>non synchronise</b> : il ne sert qu'au rendu,
+     * qui vit chez le client, et chaque client tire le sien. C'est ce que faisait l'original —
+     * deux billees vues de deux joueurs ne tournent donc pas forcement sur le meme axe, et
+     * personne ne peut le voir.
+     */
+    private Vec3 axis = new Vec3(0, 1, 0);
+
+    /** Eclats deja poses par ce client : le passage a « posee » ne se joue qu'une fois. */
+    private boolean fragsDone;
+
     public EntitySilbarn(EntityType<? extends EntitySilbarn> type, Level level) {
         super(type, level);
+        // L'axe se tire ici, et pas dans l'initialiseur de champ : le hasard de l'entite n'est
+        // pose qu'au constructeur, et un initialiseur s'execute avant lui.
+        this.axis = new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1,
+                random.nextDouble() * 2 - 1);
+    }
+
+    /** L'axe de sa rotation en vol. Jamais nul : un axe de longueur nulle ne tourne rien. */
+    public Vec3 spinAxis() {
+        return axis.lengthSqr() < 1.0E-6 ? new Vec3(0, 1, 0) : axis;
+    }
+
+    /** Ce client a-t-il deja pose ses eclats a l'impact ? */
+    public boolean fragsDone() {
+        return fragsDone;
+    }
+
+    /** A marquer une fois les eclats poses. */
+    public void markFragsDone() {
+        this.fragsDone = true;
     }
 
     /** La bille telle que l'objet la lance : au niveau des yeux, dans l'axe du regard. */
@@ -100,14 +134,36 @@ public class EntitySilbarn extends Projectile {
     /**
      * Pose la bille : elle est desormais au contact.
      *
-     * Deux appelants, comme dans l'original : le contact avec un bloc, et la salve de
+     * <p>Deux appelants, comme dans l'original : le contact avec un bloc, et la salve de
      * rayons, qui fait exploser la bille qu'elle a trouvee en la postant au meme etat. Dans
-     * les deux cas la bille cesse d'etre visable et disparait dix ticks plus tard.
+     * les deux cas la bille cesse d'etre visable et disparait dix ticks plus tard — et l'un
+     * des deux joue un autre son, d'ou la distinction.
      */
     public void markHit() {
+        hit(false);
+    }
+
+    /**
+     * La salve de rayons la fait eclater.
+     *
+     * <p>Meme pose que le contact, mais l'autre son : celui de l'original quand une bille en
+     * touche une autre — et la salve se poste justement elle-meme en collision avec la sienne.
+     */
+    public void burst() {
+        hit(true);
+    }
+
+    private void hit(boolean heavy) {
         if (isHit()) return;
         this.entityData.set(DATA_HIT, true);
         this.sinceHit = 0;
+        // Le son appartient au serveur — les deux billes de l'original s'entendaient de partout
+        // — et se tait chez le client, qui le recevra du monde. Volume et hauteur de l'original.
+        if (!level().isClientSide) {
+            level().playSound(null, getX(), getY(), getZ(),
+                    (heavy ? ModSounds.ENTITY_SILBARN_HEAVY : ModSounds.ENTITY_SILBARN_LIGHT).get(),
+                    SoundSource.NEUTRAL, 0.5f, 1.0f);
+        }
     }
 
     @Override

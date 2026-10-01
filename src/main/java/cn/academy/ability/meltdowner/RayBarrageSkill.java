@@ -145,7 +145,9 @@ public class RayBarrageSkill extends Skill {
 
         if (inSight instanceof EntitySilbarn ball && !ball.isHit()) {
             // La bille explose, et c'est elle qui sert de point de depart a la salve.
-            ball.markHit();
+            // `burst` et non `markHit` : l'original se postait elle-meme en collision, donc
+            // c'est le son lourd qui se jouait.
+            ball.burst();
             barrage(player, data);
             return;
         }

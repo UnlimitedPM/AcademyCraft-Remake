@@ -2671,6 +2671,48 @@ public final class AcademyGameTests {
         player.getAbilities().instabuild = false;
         helper.succeed();
     }
+
+    /**
+     * La boite de la bille, et la visee qu'elle sert.
+     *
+     * <p>C'est ce que le joueur a demande : viser une bille pour amorcer la salve de rayons
+     * demandait de la toucher au centimetre pres, et ce n'etait pas jouable. Le port double donc
+     * sa boite de collision — un ecart assume, et le seul du mod qui rende une chose plus facile
+     * qu'a l'original.
+     *
+     * <p>Ce test la mesure, puis verifie que le rayon de visee la trouve <b>vraiment</b> : la
+     * bille est posee a trente centimetres du trait, la ou la boite de l'original — vingt
+     * centimetres de demi-largeur — l'aurait manquee.
+     */
+    @GameTest(template = "empty")
+    public static void laBilleEstPlusLargeAViserQueDansLeVraiMod(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 50);
+
+        var player = ownPlayer(helper, "silbarn_aimer");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var ball = new cn.academy.entity.EntitySilbarn(level, player);
+        // A hauteur d'oeil, trois blocs devant, immobile : le rayon part de l'oeil, et la bille
+        // ne tombera pas avant ses cinquante ticks de flottement.
+        ball.setPos(abs.getX() + 0.5 + 0.3, player.getEyeY(), abs.getZ() + 0.5 + 3.0);
+        ball.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        level.addFreshEntity(ball);
+
+        assertClose(helper, cn.academy.entity.SilbarnVisuals.HIT_SIZE, ball.getBbWidth(),
+                "la boite du port");
+        assertTrue(helper, ball.getBbWidth() > 0.4,
+                "plus large que les quarante centimetres de l'original, et c'est voulu");
+
+        // Le regard passe a trente centimetres du centre : dedans pour le port, dehors pour
+        // l'original. C'est exactement la difference que le joueur est alle chercher.
+        var found = cn.academy.ability.TargetingUtil.findEntityInSight(player,
+                cn.academy.ability.meltdowner.RayBarrageSkill.DISPLAY_RANGE);
+        assertValue(helper, ball, found, "le regard trouve la bille, meme visee a cote");
+
+        ball.discard();
+        helper.succeed();
+    }
     /**
      * Les deux visages de la salve de rayons.
      *

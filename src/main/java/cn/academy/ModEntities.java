@@ -27,14 +27,19 @@ public class ModEntities {
     /**
      * La bille de silicium (le « silbarn »), portage de {@code EntitySilbarn}.
      *
-     * Quarante centimetres de cote, comme l'original, suivie sur soixante-quatre blocs et
-     * rafraichie tous les dix ticks — la portee et la cadence d'une boule de neige, qui est
-     * exactement le meme genre d'objet : petit, lance a la main, et sans equipage.
+     * <p>Suivie sur quatre-vingts blocs et rafraichie tous les dix ticks — la portee et la
+     * cadence d'une boule de neige, qui est exactement le meme genre d'objet : petit, lance a la
+     * main, et sans equipage.
+     *
+     * <p>Son cote, lui, est plus large que celui de l'original : voir
+     * {@link cn.academy.entity.SilbarnVisuals#HIT_SIZE}. C'est un ecart demande par le joueur, et
+     * qui sert deux fois — la viser pour lancer la salve, et la toucher en vol.
      */
     public static final RegistryObject<EntityType<EntitySilbarn>> SILBARN =
             ENTITIES.register("silbarn", () -> EntityType.Builder
                     .<EntitySilbarn>of(EntitySilbarn::new, MobCategory.MISC)
-                    .sized(0.4f, 0.4f)
+                    .sized(cn.academy.entity.SilbarnVisuals.HIT_SIZE,
+                            cn.academy.entity.SilbarnVisuals.HIT_SIZE)
                     .clientTrackingRange(4)
                     .updateInterval(10)
                     .build("silbarn"));

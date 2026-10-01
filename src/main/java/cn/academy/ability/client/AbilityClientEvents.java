@@ -120,6 +120,7 @@ public class AbilityClientEvents {
         // avancent — voir MdRays et MdSparks.
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
+        cn.academy.client.SilbarnFrags.tick();
         // Et le gresillement du bouclier de lumiere : son disque se dessine a chaque image, mais
         // son essaim se seme au tick, chez son porteur seul — voir ShieldSparks.
         ShieldSparks.tick();
