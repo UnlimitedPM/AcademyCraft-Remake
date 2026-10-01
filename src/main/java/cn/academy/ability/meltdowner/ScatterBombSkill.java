@@ -3,7 +3,6 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
@@ -34,12 +33,13 @@ import java.util.List;
  *
  * <h2>Les billes</h2>
  *
- * L'original en faisait de vraies entites ({@code EntityMdBall}), qui flottaient autour
- * du joueur et le suivaient. Le port n'a pas d'entite : il retient la <b>position du
- * joueur</b> au moment ou chaque bille est posee, et les rayons partent de la. L'ecart est
- * d'au plus un bloc et quelque sur une portee de quinze, et il n'en reste rien de visible
- * — les billes de l'original n'etaient elles-memes que des particules. Un test fige le
- * calendrier de pose, pour que ce soit bien une bille toutes les dix ticks.
+ * L'original en faisait de <b>vraies entites</b> ({@code EntityMdBall}), qui flottaient autour
+ * du joueur et le suivaient. Le port, lui, ne retenait que la <b>position du joueur</b> au
+ * moment ou chaque bille etait posee, et les rayons partaient de la : rien de visible, alors
+ * que la bille de plasma est justement ce que le joueur voit pendant les quatre secondes de la
+ * ponte. Ce sont donc les billes de la bombe a electrons, en <b>version silencieuse</b> —
+ * elles ne tirent pas d'elles-memes, et c'est la salve qui tire pour elles :
+ * {@code EntityMdBall.silent} pour les poser, {@code shoot} pour les lacher.
  */
 public class ScatterBombSkill extends Skill {
 
@@ -202,7 +202,11 @@ public class ScatterBombSkill extends Skill {
             return true;
         }
         if (spawnsBallAt(heldTicks)) {
-            data.addHoldPoint(this, player.getEyePosition(1f));
+            // Une vraie bille de plasma, posee autour du joueur : elle flotte, elle le suit, et
+            // elle attend la salve. Sa duree couvre tout le maintien possible — dix secondes —
+            // puisque rien d'autre ne la fait disparaitre avant le relachement.
+            player.level().addFreshEntity(
+                    cn.academy.entity.EntityMdBall.silent(player.level(), player, BACKFIRE_TICK));
         }
         return data.consumeControlPoint(cpPerTick(data));
     }
@@ -216,14 +220,14 @@ public class ScatterBombSkill extends Skill {
      */
     @Override
     public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
-        List<Vec3> balls = data.getHoldPoints(this);
+        List<cn.academy.entity.EntityMdBall> balls = orbs(player);
         if (balls.isEmpty()) return;
 
         float exp = data.getSkillExp(this);
         int auto = autoTargetCount(exp, balls.size());
         List<LivingEntity> candidates = auto > 0 ? nearbyTargets(player) : List.of();
 
-        for (Vec3 from : balls) {
+        for (cn.academy.entity.EntityMdBall ball : balls) {
             Vec3 dest = null;
             if (auto > 0 && !candidates.isEmpty()) {
                 LivingEntity target = candidates.get(player.getRandom().nextInt(candidates.size()));
@@ -234,19 +238,29 @@ public class ScatterBombSkill extends Skill {
                 dest = sprayDestination(player);
             }
 
-            Entity hit = TargetingUtil.findEntityAlong(player, from, dest);
-            if (hit instanceof LivingEntity living) {
-                // `hurtResistantTime = -1` de l'original : une bille touche meme une cible
-                // qui vient d'etre frappee, sans quoi une salve de sept billes n'en
-                // porterait qu'une ou deux.
-                living.invulnerableTime = 0;
-                living.hurt(player.damageSources().indirectMagic(player, player),
-                        scaled(ballDamage(data)));
-                RadiationMarks.mark(living, data);
-            }
+            // C'est la bille qui tire : son rayon part d'elle, frappe la premiere cible qu'il
+            // rencontre, la marque au nom du passif, et s'annonce a ceux qui la voient. Sept
+            // billes partent dans le meme tick, donc la cible ne doit pas pouvoir se proteger
+            // derriere son invulnerabilite — voir le dernier argument.
+            ball.shoot(player, dest, scaled(ballDamage(data)), true);
+            ball.discard();
         }
 
         data.addSkillExp(this, 0.001f * balls.size());
+    }
+
+    /**
+     * Les billes de ce joueur, en l'air.
+     *
+     * <p>Le port n'a rien a tenir a cote : les billes sont de vraies entites, et leurs propres
+     * porteurs disent a qui elles sont. C'est ce qui remplace la liste que l'original gardait
+     * dans son contexte d'activation — et ce qui fait qu'une bille qui a disparu entre-temps ne
+     * tire simplement pas.
+     */
+    private static List<cn.academy.entity.EntityMdBall> orbs(Player player) {
+        return player.level().getEntitiesOfClass(cn.academy.entity.EntityMdBall.class,
+                player.getBoundingBox().inflate(AUTO_RANGE + 1),
+                ball -> ball.spawner() == player);
     }
 
     /** Les adversaires assez proches pour que les billes les prennent en chasse. */

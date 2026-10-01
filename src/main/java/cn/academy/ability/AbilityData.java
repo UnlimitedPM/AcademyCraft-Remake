@@ -155,16 +155,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         private float progress;
 
         /**
-         * Reperes poses par le maintien, dans l'ordre.
-         *
-         * La bombe a fragmentation y range ses billes : elle en pose une toutes les dix
-         * ticks, et elles ne partent qu'a la fin du maintien. L'original les gardait dans
-         * son contexte d'activation ; le port les range avec le maintien, et elles
-         * disparaissent avec lui.
-         */
-        private final List<net.minecraft.world.phys.Vec3> points = new ArrayList<>();
-
-        /**
          * Les blocs pris par ce maintien, dans l'ordre de prise.
          *
          * <p>C'est la « lignee » de {@code mag_movement} : l'ensemble dit quels blocs ont
@@ -1330,24 +1320,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public float getHoldProgress(Skill skill) {
         Hold hold = holds.get(skill);
         return hold == null ? 0f : hold.progress;
-    }
-
-    /**
-     * Pose un repere de plus, dans l'ordre.
-     *
-     * C'est ce qui permet a un maintien d'accumuler quelque chose tick apres tick sans
-     * que le paquet d'activation ait a s'en meler : la bombe a fragmentation pose une
-     * bille a chaque dizaine de ticks, et les relit toutes a la fin.
-     */
-    public void addHoldPoint(Skill skill, net.minecraft.world.phys.Vec3 point) {
-        Hold hold = holdOf(skill);
-        if (hold != null) hold.points.add(point);
-    }
-
-    /** Les reperes poses par ce maintien, en copie : l'appelant peut les parcourir. */
-    public List<net.minecraft.world.phys.Vec3> getHoldPoints(Skill skill) {
-        Hold hold = holds.get(skill);
-        return hold == null ? List.of() : List.copyOf(hold.points);
     }
 
     /** Les billes accumulees par ce maintien ; 0 s'il n'en a pas. */

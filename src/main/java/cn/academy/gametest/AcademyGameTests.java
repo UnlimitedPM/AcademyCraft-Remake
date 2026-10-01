@@ -2482,6 +2482,13 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /** Les billes de plasma d'un joueur, en l'air — celles de sa propre bombe, et rien d'autre. */
+    private static java.util.List<cn.academy.entity.EntityMdBall> ballsOf(
+            GameTestHelper helper, net.minecraft.world.entity.player.Player player) {
+        return helper.getLevel().getEntitiesOfClass(cn.academy.entity.EntityMdBall.class,
+                player.getBoundingBox().inflate(4), ball -> ball.spawner() == player);
+    }
+
     /**
      * La salve de la bombe a fragmentation.
      *
@@ -2494,7 +2501,7 @@ public final class AcademyGameTests {
     public static void lesBillesDeLaBombeTouchentCeQuellesVisent(GameTestHelper helper) {
         var skill = cn.academy.ability.meltdowner.MeltdownerCategory.SCATTER_BOMB;
         ServerLevel level = helper.getLevel();
-        BlockPos rel = new BlockPos(3, 1, 3);
+        BlockPos rel = new BlockPos(6, 3, 6);
         BlockPos abs = aboveTestArea(helper, rel, 80);
 
         var player = ownPlayer(helper, "scatter_bomber");
@@ -2502,12 +2509,27 @@ public final class AcademyGameTests {
 
         // Le couloir est nettoye avant de poser la cible, jamais apres : une bete laissee la
         // par une execution ratee prendrait la salve a la place de la notre.
-        clearCorridor(helper, abs, 8);
+        clearCorridor(helper, abs, 16);
 
-        // Une vache a deux blocs devant, dans l'axe du regard.
+        // Et il se creuse vraiment : quatre-vingts blocs plus haut, on est dans la pierre, et
+        // le rayon de chaque bille y serait arrete — c'est le lancer de rayon de l'original,
+        // blocks et entites, celui que le port a garde. La boite est large de onze blocs parce
+        // qu'une bille se tient jusqu'a 1,3 bloc de cote et 1,2 bloc plus bas que son porteur,
+        // et haute de sept pour laisser passer la ligne jusqu'aux yeux de la vache. Les
+        // positions sont <b>relatives a la structure</b> : c'est ce que veut le harnais.
+        for (int dz = -4; dz <= 16; dz++) {
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dy = -3; dy <= 3; dy++) {
+                    helper.setBlock(rel.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        // Une vache trois blocs devant, dans l'axe du regard.
         var cow = new net.minecraft.world.entity.animal.Cow(
                 net.minecraft.world.entity.EntityType.COW, level);
-        cow.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 2.5, 0f, 0f);
+        cow.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 3.5, 0f, 0f);
         level.addFreshEntity(cow);
 
         var data = new cn.academy.ability.AbilityData();
@@ -2522,15 +2544,40 @@ public final class AcademyGameTests {
         for (int tick = 1; tick <= 80; tick++) {
             skill.onHoldTick(player, data, tick);
         }
-        assertValue(helper, 7, data.getHoldPoints(skill).size(), "sept billes posees en quatre secondes");
+        assertValue(helper, 7, ballsOf(helper, player).size(), "sept billes posees en quatre secondes");
 
         float before = cow.getHealth();
+
+        // Avant la salve : la ligne de la bille vers la vache. Elle se verifie a part, comme
+        // pour la bombe a electrons — un echec ne dirait pas, sinon, si c'est le tir ou la
+        // ligne qui est en faute.
+        var ahead = ballsOf(helper, player).get(0);
+        var gunFrom = new net.minecraft.world.phys.Vec3(
+                ahead.getX(), ahead.getY() + player.getEyeHeight(), ahead.getZ());
+        var gunTo = new net.minecraft.world.phys.Vec3(
+                cow.getX(), cow.getY() + cow.getEyeHeight(), cow.getZ());
+        var wall = level.clip(new net.minecraft.world.level.ClipContext(gunFrom, gunTo,
+                net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        assertFalse(helper, wall.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK,
+                "aucun mur sur la ligne de la bille : " + wall.getLocation() + " dans "
+                        + level.getBlockState(net.minecraft.core.BlockPos.containing(
+                                wall.getLocation())));
+        var seen = cn.academy.ability.TargetingUtil.findEntityAlong(player, gunFrom, gunTo,
+                e -> !(e instanceof cn.academy.entity.EntityMdBall));
+        assertTrue(helper, seen == cow, "la vache est dans la ligne de la bille : vu "
+                + (seen == null ? "rien" : seen.getName().getString())
+                + " depuis " + gunFrom + " vers " + gunTo);
+
         // Fin du maintien : les billes partent.
         skill.onHoldEnd(player, data, 80);
 
         assertTrue(helper, cow.getHealth() < before,
-                "une vache a deux blocs doit encaisser la salve entiere");
+                "une vache a trois blocs doit encaisser la salve entiere : " + cow.getHealth()
+                        + " contre " + before);
         assertTrue(helper, data.getSkillExp(skill) > 0.9f, "et la salve rapporte son experience");
+        assertValue(helper, 0, ballsOf(helper, player).size(),
+                "et les billes ont toutes disparu en partant");
 
         cow.discard();
         player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
