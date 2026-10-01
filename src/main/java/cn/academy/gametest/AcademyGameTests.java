@@ -2501,7 +2501,7 @@ public final class AcademyGameTests {
     public static void lesBillesDeLaBombeTouchentCeQuellesVisent(GameTestHelper helper) {
         var skill = cn.academy.ability.meltdowner.MeltdownerCategory.SCATTER_BOMB;
         ServerLevel level = helper.getLevel();
-        BlockPos rel = new BlockPos(6, 3, 6);
+        BlockPos rel = new BlockPos(6, 3, 2);
         BlockPos abs = aboveTestArea(helper, rel, 80);
 
         var player = ownPlayer(helper, "scatter_bomber");
@@ -2511,17 +2511,17 @@ public final class AcademyGameTests {
         // par une execution ratee prendrait la salve a la place de la notre.
         clearCorridor(helper, abs, 16);
 
-        // Et il se creuse vraiment : quatre-vingts blocs plus haut, on est dans la pierre, et
-        // le rayon de chaque bille y serait arrete — c'est le lancer de rayon de l'original,
-        // blocks et entites, celui que le port a garde. La boite est large de onze blocs parce
-        // qu'une bille se tient jusqu'a 1,3 bloc de cote et 1,2 bloc plus bas que son porteur,
-        // et haute de sept pour laisser passer la ligne jusqu'aux yeux de la vache. Les
-        // positions sont <b>relatives a la structure</b> : c'est ce que veut le harnais.
-        for (int dz = -4; dz <= 16; dz++) {
-            for (int dx = -5; dx <= 5; dx++) {
+        // Et il se debarrasse de ce qui traine : le monde des tests est PARTAGE, et un voisin
+        // qui deborde de sa cellule y laisse des fois de la pierre — c'est ce qui a fait tomber
+        // ce test une fois, sur un mur apparu dans son couloir. La boite est large de sept blocs
+        // parce qu'une bille se tient jusqu'a 1,3 bloc de cote et 1,2 bloc plus bas que son
+        // porteur, et longue de neuf pour couvrir la ligne jusqu'aux yeux de la vache. Elle
+        // s'ecrit en ABSOLU, sur le niveau : c'est la seule ecriture dont on sache ou elle tombe.
+        for (int dz = -2; dz <= 6; dz++) {
+            for (int dx = -3; dx <= 3; dx++) {
                 for (int dy = -3; dy <= 3; dy++) {
-                    helper.setBlock(rel.offset(dx, dy, dz),
-                            net.minecraft.world.level.block.Blocks.AIR);
+                    level.setBlockAndUpdate(abs.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
                 }
             }
         }
@@ -2552,8 +2552,9 @@ public final class AcademyGameTests {
         // pour la bombe a electrons — un echec ne dirait pas, sinon, si c'est le tir ou la
         // ligne qui est en faute.
         var ahead = ballsOf(helper, player).get(0);
-        var gunFrom = new net.minecraft.world.phys.Vec3(
-                ahead.getX(), ahead.getY() + player.getEyeHeight(), ahead.getZ());
+        var gunFrom = new net.minecraft.world.phys.Vec3(ahead.getX(),
+                ahead.getY() + cn.academy.ability.meltdowner.MdBallVisuals.RENDER_HEIGHT,
+                ahead.getZ());
         var gunTo = new net.minecraft.world.phys.Vec3(
                 cow.getX(), cow.getY() + cow.getEyeHeight(), cow.getZ());
         var wall = level.clip(new net.minecraft.world.level.ClipContext(gunFrom, gunTo,
@@ -2562,7 +2563,8 @@ public final class AcademyGameTests {
         assertFalse(helper, wall.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK,
                 "aucun mur sur la ligne de la bille : " + wall.getLocation() + " dans "
                         + level.getBlockState(net.minecraft.core.BlockPos.containing(
-                                wall.getLocation())));
+                                wall.getLocation()))
+                        + " ; de " + gunFrom + " vers " + gunTo + " ; bille " + ahead.position());
         var seen = cn.academy.ability.TargetingUtil.findEntityAlong(player, gunFrom, gunTo,
                 e -> !(e instanceof cn.academy.entity.EntityMdBall));
         assertTrue(helper, seen == cow, "la vache est dans la ligne de la bille : vu "

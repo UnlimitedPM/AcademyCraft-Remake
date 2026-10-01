@@ -120,6 +120,9 @@ public class AbilityClientEvents {
         // avancent — voir MdRays et MdSparks.
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
+        // Et le gresillement du bouclier de lumiere : son disque se dessine a chaque image, mais
+        // son essaim se seme au tick, chez son porteur seul — voir ShieldSparks.
+        ShieldSparks.tick();
         // Et la fumee du plasma sur les cibles marquees par la radiation : c'est tout ce que le
         // passif montre, et le serveur l'annonce a ceux qui les voient — voir
         // RadiationMarksEffect.

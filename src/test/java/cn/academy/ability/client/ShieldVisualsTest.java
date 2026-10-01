@@ -66,4 +66,52 @@ class ShieldVisualsTest {
         // une charge de light_shield n'est pas un bouclier.
         assertFalse(ShieldVisuals.showsShield("light_shield", false));
     }
+
+    @Test
+    void lEssaimNaitTroisTicksSurDix() {
+        // L'original tirait nextFloat() < 0,3 : trois ticks sur dix portent une etincelle.
+        assertEquals(0.3f, ShieldVisuals.SPARK_CHANCE, 0.0001f);
+        assertTrue(ShieldVisuals.sparksThisTick(0f));
+        assertTrue(ShieldVisuals.sparksThisTick(0.2999f));
+        assertFalse(ShieldVisuals.sparksThisTick(0.3f), "la borne est exclue");
+        assertFalse(ShieldVisuals.sparksThisTick(0.9f));
+    }
+
+    @Test
+    void lEssaimNaitSurLeDisque() {
+        // Un bloc devant les yeux — le lookingPos(player, 1) de l'original — dans un cube de
+        // 0,5 bloc de cote : c'est le disque lui-meme, qui fait 1,8 bloc.
+        assertEquals(1.0, ShieldVisuals.SPARK_FORWARD, 0.0001);
+        assertEquals(0.5, ShieldVisuals.SPARK_JITTER, 0.0001);
+
+        java.util.Random random = new java.util.Random(1);
+        net.minecraft.world.phys.Vec3 eyes = new net.minecraft.world.phys.Vec3(10, 65, 10);
+        net.minecraft.world.phys.Vec3 look = new net.minecraft.world.phys.Vec3(0, 0, 1);
+        net.minecraft.world.phys.Vec3 centre = eyes.add(look);
+
+        for (int i = 0; i < 200; i++) {
+            net.minecraft.world.phys.Vec3 born = ShieldVisuals.sparkBorn(eyes, look, random);
+            assertTrue(Math.abs(born.x - centre.x) <= ShieldVisuals.SPARK_JITTER + 1e-9
+                            && Math.abs(born.y - centre.y) <= ShieldVisuals.SPARK_JITTER + 1e-9
+                            && Math.abs(born.z - centre.z) <= ShieldVisuals.SPARK_JITTER + 1e-9,
+                    "etincelle hors du cube : " + born);
+            assertTrue(born.distanceTo(centre) > 0.0, "et les trois axes sont tires separement");
+        }
+    }
+
+    @Test
+    void lEssaimGresille() {
+        // Sa derive est la seule du meltdowner a pouvoir descendre : un centimetre en bas,
+        // cinq en haut, et deux centimetres au plus de cote.
+        java.util.Random random = new java.util.Random(2);
+        for (int i = 0; i < 200; i++) {
+            net.minecraft.world.phys.Vec3 drift = ShieldVisuals.sparkDrift(random);
+            assertTrue(drift.y >= ShieldVisuals.SPARK_RISE_MIN - 1e-9
+                            && drift.y <= ShieldVisuals.SPARK_RISE_MAX + 1e-9,
+                    "hauteur hors bornes : " + drift.y);
+            assertTrue(Math.abs(drift.x) <= ShieldVisuals.SPARK_DRIFT_XZ + 1e-9
+                            && Math.abs(drift.z) <= ShieldVisuals.SPARK_DRIFT_XZ + 1e-9,
+                    "derive trop large : " + drift);
+        }
+    }
 }
