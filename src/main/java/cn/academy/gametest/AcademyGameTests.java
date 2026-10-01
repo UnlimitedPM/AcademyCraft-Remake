@@ -4164,6 +4164,20 @@ public final class AcademyGameTests {
                 }
             }
         }
+        // Et la colonne que ce test <b>compte</b> a la fin, qui descend plus bas que le couloir :
+        // un lancer qui finit mal laisse son bloc de fer un cran plus bas, la ou le nettoyage
+        // large ci-dessus ne va pas. Deux executions ratees en ont laisse deux, et la troisieme
+        // les a comptes : « attendu 1, trouve 2 ».
+        //
+        // Elle s'arrete a la dalle, et pas un cran sous elle : l'effacer ferait tomber le faux
+        // joueur, qui ne pourrait plus rien lancer du tout — « attendu 1, trouve 0 ». C'est aussi
+        // pour cela que le comptage de la fin commence a dy 0 : sous la dalle, ce n'est plus le
+        // couloir du test, c'est son plancher.
+        for (int dz = -2; dz <= 16; dz++) {
+            for (int dy = 0; dy <= 4; dy++) {
+                helper.setBlock(eyes.offset(0, dy, dz), net.minecraft.world.level.block.Blocks.AIR);
+            }
+        }
 
         // Rien a tenir : les mains vides, et le regard remonte un couloir deja nettoye — neuf
         // blocs d'air, soit la portee exacte des dix pas de la sonde.
@@ -4244,8 +4258,9 @@ public final class AcademyGameTests {
         for (int i = 0; i < 60 && block.isAlive(); i++) {
             block.tick();
         }
+        var pose = block.position();
         assertFalse(helper, block.isAlive(), "le bloc s'est pose et l'entite a disparu — position "
-                + block.position() + ", vitesse " + block.getDeltaMovement()
+                + pose + ", vitesse " + block.getDeltaMovement()
                 + ", mur a z " + (abs.getZ() + 6));
         assertValue(helper, 0, helper.getLevel().getEntitiesOfClass(
                         cn.academy.entity.EntityMagManipBlock.class, box).size(),
@@ -4253,7 +4268,7 @@ public final class AcademyGameTests {
         int placed = 0;
         StringBuilder ou = new StringBuilder();
         for (int dz = -2; dz <= 16; dz++) {
-            for (int dy = -2; dy <= 4; dy++) {
+            for (int dy = 0; dy <= 4; dy++) {
                 if (helper.getBlockState(eyes.offset(0, dy, dz)).is(iron)) {
                     placed++;
                     ou.append(" (dy ").append(dy).append(", dz ").append(dz).append(")");
@@ -4263,7 +4278,8 @@ public final class AcademyGameTests {
         // Le mur est a dz 6 : le bloc doit s'arreter AVANT lui, pas le traverser. Sa vitesse a
         // double — voir MagManipVisuals.STEPS — donc c'est cette avance double que le rayon de
         // pose doit couvrir, et le test verifie ici qu'aucun mur d'un bloc n'est saute.
-        assertValue(helper, 1, placed, "et on le retrouve pose dans le couloir" + ou);
+        assertValue(helper, 1, placed, "et on le retrouve pose dans le couloir" + ou
+                + " — pose a " + pose);
         assertTrue(helper, ou.toString().contains("dz 5") || ou.toString().contains("dz 6"),
                 "et il s'arrete au mur, pas derriere : " + ou);
 
@@ -5551,6 +5567,98 @@ public final class AcademyGameTests {
 
         zombie.discard();
         data.endCharge(skill);
+        helper.succeed();
+    }
+
+    /**
+     * Le vol du reacteur, vu du serveur : la trajectoire posee, et l'elan qui en sort.
+     *
+     * <p>C'est ce que le joueur a signale : le vol paraissait lent, il s'arretait net sur sa cible,
+     * et il repartait a zero au lieu de garder un peu de vitesse. La cause etait un teleport a
+     * chaque tick — un paquet de position ne s'interpole pas, donc la copie cliente sautait, et la
+     * quantite de mouvement posee mourait dans le teleport. C'est le piege que le deplacement
+     * magnetique connaissait deja.
+     *
+     * <p>Ce que ce test fige est le contrat du serveur : il <b>pose</b> la position sur la
+     * trajectoire et la vitesse avec elle, tick apres tick, et il ne les efface pas au dernier. Le
+     * quinzieme tick doit encore porter la vitesse du vol : c'est elle qui fait depasser la cible,
+     * et c'est elle que le porteur garde en sortant.
+     */
+    @GameTest(template = "empty")
+    public static void leVolDuReacteurGardeSaVitesse(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
+        ServerLevel level = helper.getLevel();
+        // Une altitude a lui, et libre : les autres tests se sont deja partage quarante, quatre-
+        // vingts, cent a trois cent soixante-dix — sans compter celles qu'ils portent dans une
+        // variable, voir les « int height ». Ce test creuse dans la pierre, donc viser la hauteur
+        // d'un voisin reviendrait a lui effacer son decor en pleine execution. Cent quatre-vingt-
+        // dix blocs plus haut, on est encore dans le monde : au-dela de trois cent vingt, les
+        // ecritures ne vont plus nulle part et ne le disent pas.
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 190);
+
+        // Cent quatre-vingt-dix blocs plus haut, on est dans la pierre : la chambre et son couloir
+        // sont creuses a la main, sinon la visee du relachement s'arrete au premier bloc et la
+        // cible se confond avec le depart. Le monde des tests est sauvegarde, donc on nettoie
+        // aussi ce qu'une execution ratee y a laisse.
+        for (int dz = -3; dz <= 15; dz++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dy = -2; dy <= 3; dy++) {
+                    level.setBlockAndUpdate(abs.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "jet_engineer");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+
+        // Le relachement epingle la trajectoire — celle-la meme que le client recevra.
+        assertTrue(helper, skill.onRelease(player, data, 10), "le relachement lance le vol");
+        net.minecraft.world.phys.Vec3 start = data.getHoldOrigin(skill);
+        net.minecraft.world.phys.Vec3 target = data.getHoldPoint(skill);
+        assertTrue(helper, start != null && target != null, "les deux bouts sont poses");
+        assertTrue(helper, target.distanceTo(start) > 8.0,
+                "la visee part dans l'air, pas dans la pierre : " + target.distanceTo(start));
+
+        double flown = target.distanceTo(start);
+        net.minecraft.world.phys.Vec3 velocity =
+                cn.academy.ability.meltdowner.JetEngineSkill.flightVelocity(start, target);
+
+        // La chute est posee a la main : sans cela, l'effacer ne prouverait rien.
+        player.fallDistance = 4.5f;
+
+        // Premier tick : le porteur est sur la trajectoire, et la vitesse est posee.
+        assertTrue(helper, skill.onHoldTick(player, data, 11), "le vol demarre");
+        assertClose(helper, velocity.length(), player.position().distanceTo(start),
+                "le porteur est pose sur la trajectoire");
+        assertClose(helper, velocity.length(), player.getDeltaMovement().length(),
+                "la quantite de mouvement du vol est posee");
+        assertClose(helper, 0.0, player.fallDistance, "et la chute est effacee");
+
+        int last = 10 + cn.academy.ability.meltdowner.JetEngineSkill.LIFETIME;
+        for (int tick = 12; tick <= last; tick++) {
+            assertTrue(helper, skill.onHoldTick(player, data, tick), "le vol tient au tick " + tick);
+        }
+
+        // Le dernier tick : la vitesse est toujours la, et le vol a bel et bien depasse sa cible
+        // de presque toute la distance visee — c'est ce qui en fait un deplacement et non une
+        // teleportation.
+        assertClose(helper, velocity.length(), player.getDeltaMovement().length(),
+                "la quantite de mouvement tient jusqu'au dernier tick");
+        assertClose(helper, 15.0 / 8.0 * flown, player.position().distanceTo(start),
+                "et le vol depasse sa cible de presque la distance visee");
+
+        // Un tick de plus : le maintien se termine, et rien n'efface l'elan.
+        assertFalse(helper, skill.onHoldTick(player, data, last + 1),
+                "le vol se termine au-dela de sa vie");
+        assertClose(helper, velocity.length(), player.getDeltaMovement().length(),
+                "le porteur garde son elan en sortant");
+
         helper.succeed();
     }
 

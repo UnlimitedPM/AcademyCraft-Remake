@@ -28,12 +28,20 @@ import java.util.Random;
  *
  * <p>Le depart ne se voit pas chez le client : son maintien a lui s'arrete au relachement, alors
  * que celui du serveur continue quinze ticks encore. C'est le paquet {@code JetFlightPacket} qui
- * le lui dit, et il ouvre alors ce que l'original ouvrait dans son {@code MSG_TRIGGER} : le
- * bouclier de diamant autour du porteur, et dix etincelles de plasma par tick.
+ * le lui dit, avec les deux bouts de la trajectoire, et il ouvre alors ce que l'original ouvrait
+ * dans son {@code MSG_TRIGGER} : le bouclier de diamant autour du porteur, et dix etincelles de
+ * plasma par tick.
  *
- * <p>Le deplacement, lui, ne vient pas d'ici : le serveur teleporte son porteur a chaque tick, et
- * la copie cliente suit. L'original faisait l'inverse — il deplacait son client et laissait le
- * serveur compter les degats — mais la 1.20.1 refuse les mouvements qu'elle n'a pas autorises.
+ * <p>Le deplacement, lui, se fait <b>ici</b> : le client pose sa position sur la trajectoire a
+ * chaque tick, exactement comme le {@code setPosition} de l'original, et le serveur pose la meme.
+ * Les deux cotes doivent tomber d'accord au bloc pres — c'est pourquoi la trajectoire voyage dans
+ * le paquet plutot que d'etre recalculee de chaque cote.
+ *
+ * <p>Le serveur, de son cote, teleportait son porteur vingt fois par seconde. Un paquet de
+ * position ne s'interpole pas : la copie cliente sautait donc a chaque tick, et la vitesse posee
+ * mourait dans le teleport — le vol paraissait lent, et s'arretait net sur sa cible au lieu de la
+ * depasser. C'est le meme piege que le deplacement magnetique, et il se resout de la meme facon,
+ * en posant la position et la quantite de mouvement des deux cotes.
  */
 @OnlyIn(Dist.CLIENT)
 public final class JetEngineEffect {
@@ -46,6 +54,15 @@ public final class JetEngineEffect {
 
     /** Le premier tick du vol, ou -1 : c'est le paquet du serveur qui l'ouvre. */
     private static int flightTick = -1;
+
+    /**
+     * Les deux bouts de la trajectoire, tels que le serveur les a poses.
+     *
+     * <p>C'est le serveur qui les decide — son relachement les epingle — et le client s'en sert
+     * tels quels : les deux doivent poser <b>exactement</b> la meme position a chaque tick.
+     */
+    private static Vec3 flightStart;
+    private static Vec3 flightTarget;
 
     private static final Random RANDOM = new Random();
 
@@ -89,7 +106,18 @@ public final class JetEngineEffect {
         }
 
         LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null) return;
+        if (player == null || flightStart == null || flightTarget == null) return;
+
+        // La position est POSEE, jamais parcourue : c'est le `setPosition(lerp(...))` de
+        // l'original, et c'est ce qui donne au vol toute sa vitesse. Laisse a sa propre
+        // physique, un porteur au sol perdrait la moitie de son elan a la friction, et le
+        // reacteur ne ressemblerait plus a ce qu'il est.
+        Vec3 at = JetEngineSkill.pathPosition(flightStart, flightTarget, flightTick);
+        player.setPos(at.x, at.y, at.z);
+        // La quantite de mouvement est reposee a chaque tick, et rien ne l'efface a la fin :
+        // c'est elle qui fait depasser la cible, et qui porte encore apres le quinzieme tick.
+        player.setDeltaMovement(JetEngineSkill.flightVelocity(flightStart, flightTarget));
+        player.fallDistance = 0f;
 
         Vec3 pos = player.position();
         for (int i = 0; i < JetEngineVisuals.TRAIL_PER_TICK; i++) {
@@ -103,11 +131,14 @@ public final class JetEngineEffect {
      * <p>Seul le porteur le voit : c'est a lui que le paquet est envoye, comme l'original
      * n'ouvrait son bouclier que dans son propre client.
      */
-    public static void startFlight(int playerId) {
+    public static void startFlight(int playerId, Vec3 start, Vec3 target) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null || player.getId() != playerId) return;
 
+        flightStart = start;
+        flightTarget = target;
         flightTick = 0;
+        player.stopRiding();
         // Le vol commence : la marque de visee a fini son office.
         markAt = null;
         markTicks = 0;

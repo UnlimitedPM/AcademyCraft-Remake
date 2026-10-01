@@ -149,12 +149,15 @@ public class JetEngineSkill extends Skill {
         // se verse depuis son effet : le paquet ne voit pas ce qui s'est passe.
         data.addSkillExp(this, 0.004f);
 
-        // Et le depart se dit au client : son maintien a lui s'arrete au relachement, alors
-        // que celui du serveur vole quinze ticks encore. Sans ce mot, le bouclier de diamant
-        // et la trainee ne s'ouvriraient jamais. Voir JetFlightPacket.
+        // Et le depart se dit au client, avec sa trajectoire : son maintien a lui s'arrete au
+        // relachement, alors que celui du serveur vole quinze ticks encore. Sans ce mot, le
+        // bouclier de diamant et la trainee ne s'ouvriraient jamais — et c'est aussi lui qui
+        // permet au client de poser exactement la meme trajectoire, et donc de voler sans
+        // attendre que le serveur le tire. Voir JetFlightPacket.
         if (player instanceof ServerPlayer server) {
             AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
-                    new JetFlightPacket(player.getId()));
+                    new JetFlightPacket(player.getId(),
+                            data.getHoldOrigin(this), data.getHoldPoint(this)));
         }
         return true;
     }
@@ -178,24 +181,40 @@ public class JetEngineSkill extends Skill {
         return true;
     }
 
-    /** Un tick de vol : se deplacer, et percuter ce qui se trouve sur le trajet. */
+    /**
+     * Un tick de vol : se deplacer, et percuter ce qui se trouve sur le trajet.
+     *
+     * <p>La position est <b>posee</b> sur la trajectoire, comme le client la pose de son cote, et
+     * la quantite de mouvement avec elle. L'original ne faisait que la seconde moitie —
+     * {@code setPosition} chez son client, {@code motion} avec — mais son serveur n'avait rien a
+     * dire : le client etait maitre de sa position. Ici les deux la posent, donc ils tombent
+     * d'accord sans que personne n'ait a corriger personne.
+     *
+     * <p>Le {@code teleportTo} d'avant est ce qui rendait le vol mou et saccade. Un paquet de
+     * position ne s'interpole pas : la copie cliente sautait a chaque tick, et la vitesse posee
+     * etait effacee par le teleport — le porteur s'arretait net sur sa cible au lieu de la
+     * depasser, et gardait zero elan en sortant.
+     */
     private void fly(Player player, AbilityData data, int flightTick) {
         Vec3 start = data.getHoldOrigin(this);
         Vec3 target = data.getHoldPoint(this);
         if (start == null || target == null) return;
 
-        Vec3 previous = player.position();
+        // Le rayon part de la position du tick precedent, comme le `lastTickPos` de l'original.
+        Vec3 previous = new Vec3(player.xo, player.yo, player.zo);
         Vec3 next = pathPosition(start, target, flightTick);
 
         // L'original faisait descendre son porteur de sa monture au premier tick de vol.
         if (player.isPassenger()) player.stopRiding();
 
-        player.teleportTo(next.x, next.y, next.z);
+        player.setPos(next.x, next.y, next.z);
         player.setDeltaMovement(flightVelocity(start, target));
+        // Le client doit accepter cette vitesse : sans elle il ne la verrait pas, et le porteur
+        // repartirait a zero. C'est ce que fait le deplacement magnetique, pour la meme raison.
+        player.hurtMarked = true;
         // La chute est remise a zero a chaque tick : on ne se blesse pas en arrivant.
         player.fallDistance = 0f;
 
-        // Le rayon part de la position precedente, comme le `lastTickPos` de l'original.
         Entity hit = TargetingUtil.findEntityAlong(player, previous, next,
                 e -> e instanceof LivingEntity);
         if (hit instanceof LivingEntity living) {
