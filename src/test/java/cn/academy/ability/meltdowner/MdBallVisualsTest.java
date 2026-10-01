@@ -121,4 +121,24 @@ class MdBallVisualsTest {
         assertTrue(MdBallVisuals.RENDER_HEIGHT + MdBallVisuals.SUB_Y_MAX < 2,
                 "et la plus haute reste sous le sommet du corps");
     }
+
+    @Test
+    void laBilleSeReposeExactementSurSonPorteur() {
+        // Le client interpole les positions sur trois ticks : dessinee a la sienne, la bille
+        // retarde sur son porteur et le rattrape par bonds quand il marche. Le decalage du
+        // rendu annule ce retard, et il ne depend que de ce retard — pas de l'ecart lui-meme.
+        Vec3 spawner = new Vec3(10, 64, 10);
+        Vec3 sub = new Vec3(0.5, -0.3, 0.2);
+        Vec3 late = new Vec3(9.2, 64.4, 9.6);
+
+        Vec3 offset = MdBallVisuals.snapOffset(spawner, sub, late);
+        Vec3 drawn = late.add(offset);
+        assertEquals(spawner.x + sub.x, drawn.x, 1e-9);
+        assertEquals(spawner.y + sub.y, drawn.y, 1e-9);
+        assertEquals(spawner.z + sub.z, drawn.z, 1e-9);
+
+        // Une bille deja a sa place ne bouge pas d'un millimetre.
+        Vec3 none = MdBallVisuals.snapOffset(spawner, sub, spawner.add(sub));
+        assertEquals(0, none.length(), 1e-9);
+    }
 }

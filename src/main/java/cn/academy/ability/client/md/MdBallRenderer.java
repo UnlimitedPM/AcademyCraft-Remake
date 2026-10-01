@@ -52,8 +52,11 @@ public class MdBallRenderer extends EntityRenderer<EntityMdBall> {
         if (alpha <= 0f) return;
 
         pose.pushPose();
-        // La bille se dessine a hauteur d'yeux, quelle que soit sa position logique : c'est le
-        // decalage de l'original, et c'est ce qui la fait coincider avec le depart de son rayon.
+        // La bille se dessine la ou son porteur est, image comprise : voir
+        // {@link MdBallVisuals#snapOffset}, qui rattrape l'interpolation du reseau.
+        snapToSpawner(entity, partialTick, pose);
+        // Puis a hauteur d'yeux, quelle que soit sa position logique : c'est le decalage de
+        // l'original, et c'est ce qui la fait coincider avec le depart de son rayon.
         pose.translate(0.0, MdBallVisuals.RENDER_HEIGHT, 0.0);
         // Le balancement : la bille vibre autour de sa place au lieu d'y etre posee.
         pose.translate(MdBallVisuals.wobbleX(age), MdBallVisuals.wobbleY(age),
@@ -86,6 +89,21 @@ public class MdBallRenderer extends EntityRenderer<EntityMdBall> {
         pose.popPose();
 
         super.render(entity, yaw, partialTick, pose, buffers, light);
+    }
+
+    /**
+     * Repose la pose sur la place exacte de la bille : porteur, image comprise, plus son ecart.
+     *
+     * <p>Sans cela, la bille se dessine a la position que le client a interpolee — trois ticks
+     * de retard sur son porteur — et elle tremble donc des que le joueur marche.
+     */
+    private static void snapToSpawner(EntityMdBall ball, float partialTick, PoseStack pose) {
+        net.minecraft.world.entity.player.Player spawner = ball.spawner();
+        if (spawner == null) return;
+
+        net.minecraft.world.phys.Vec3 offset = MdBallVisuals.snapOffset(
+                spawner.getPosition(partialTick), ball.sub(), ball.getPosition(partialTick));
+        pose.translate(offset.x, offset.y, offset.z);
     }
 
     /** Un carre face a la camera, centre sur l'origine de la pose. */

@@ -196,6 +196,25 @@ public final class MdBallVisuals {
         return from + random.nextDouble() * (to - from);
     }
 
+    /**
+     * De combien deplacer le rendu pour que la bille soit <b>exactement</b> sur son porteur.
+     *
+     * <p>Le client ne connait pas la position que le serveur vient de donner a la bille : il
+     * interpole celle qu'il a recue sur <b>trois</b> ticks. Dessinee a sa propre position, la
+     * bille retarde donc sur son porteur et le rattrape par bonds des que celui-ci bouge — le
+     * joueur l'a vu tout de suite : « quand on se deplace, l'animation du deplacement des
+     * billes est un peu bizarre, c'est pas fluide, c'est pas instantane ». Le rendu repose donc
+     * la bille la ou le serveur la tient : porteur, image comprise, plus son ecart — un ecart
+     * fige depuis la naissance, donc rien ne bouge sous le dessin.
+     *
+     * @param spawnerPos le porteur, a l'image qu'on dessine
+     * @param sub        l'ecart de la bille, celui qu'elle garde toute sa vie
+     * @param drawnPos   la position que le moteur va utiliser pour la bille
+     */
+    public static Vec3 snapOffset(Vec3 spawnerPos, Vec3 sub, Vec3 drawnPos) {
+        return spawnerPos.add(sub).subtract(drawnPos);
+    }
+
     private static double lerp(double from, double to, double factor) {
         return from + (to - from) * factor;
     }
