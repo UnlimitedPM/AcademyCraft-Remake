@@ -69,6 +69,12 @@ public final class TeleportMark {
     public static final double SPARK_SPEED = 0.03;
     public static final double SPARK_RISE = 0.05;
 
+    /** La teinte d'une marque sans rien a signaler : le blanc de l'original. */
+    public static final int COLOR_NORMAL = 0xFFFFFFFF;
+
+    /** Et celle d'une marque qui signale une cible ou un obstacle : son rouge. */
+    public static final int COLOR_THREATENING = 0xFFFF3333;
+
     private static final RandomSource RANDOM = RandomSource.create();
 
     /** La ou la marque se tient, ou {@code null} s'il n'y en a pas. */
@@ -78,8 +84,11 @@ public final class TeleportMark {
     /** L'orientation du tireur, relue au tick comme l'original recopiait sa rotation. */
     private static float yaw;
 
-    /** Peut-on atterrir la ou le fantome se tient ? Faux le teint en rouge. */
-    private static boolean available = true;
+    /** La couleur de la marque : le fantome en est teinte, la boite en est dessinee. */
+    private static int color = COLOR_NORMAL;
+
+    /** Et sa forme : le fantome du joueur, ou une boite aux dimensions demandees. */
+    private static Shape shape = Shape.GHOST;
 
     /** Son age, en ticks : il ne sert qu'au defilement de ses images. */
     private static int ageTicks;
@@ -103,7 +112,8 @@ public final class TeleportMark {
         // Une marque qui nait : son age repart de zero, donc son animation aussi.
         if (position == null) ageTicks = 0;
         position = seat.position();
-        available = seat.available();
+        color = seat.color();
+        shape = seat.shape();
         yaw = player.getYRot();
         sowSpark();
         ageTicks++;
@@ -113,7 +123,8 @@ public final class TeleportMark {
     public static void end() {
         position = null;
         ageTicks = 0;
-        available = true;
+        color = COLOR_NORMAL;
+        shape = Shape.GHOST;
     }
 
     /** Ou la marque se tient, ou {@code null}. Lu par le rendu, qui n'a rien d'autre a savoir. */
@@ -127,9 +138,14 @@ public final class TeleportMark {
         return yaw;
     }
 
-    /** Peut-on atterrir a cet endroit ? */
-    public static boolean available() {
-        return available;
+    /** La couleur de la marque, ARGB. */
+    public static int color() {
+        return color;
+    }
+
+    /** Sa forme : le fantome du joueur, ou une boite a ses dimensions. */
+    public static Shape shape() {
+        return shape;
     }
 
     /** L'age de la marque, en ticks. */
@@ -137,8 +153,34 @@ public final class TeleportMark {
         return ageTicks;
     }
 
-    /** Ou la marque se pose, et si l'on peut y atterrir. */
-    public record Seat(Vec3 position, boolean available) {
+    /**
+     * La forme de la marque.
+     *
+     * <p>Deux formes dans l'original, et deux seulement. Le <b>fantome</b> du joueur, pour les
+     * quatre competences qui teleportent le corps : lui seul a une silhouette, et le modele la lui
+     * donne — d'ou une taille nulle ici. Et la <b>boite</b> de son {@code EntityMarker}, pour les
+     * deux competences qui visent autre chose : la ou l'objet tombera, et la creature a qui il
+     * arrachera les chairs. Ses dimensions sont alors celles que la competence demande — un bloc
+     * pour du vide, la boite de la creature pour elle.
+     */
+    public record Shape(double width, double height) {
+
+        /** Le fantome du joueur : c'est le modele qui lui donne sa taille, pas la marque. */
+        public static final Shape GHOST = new Shape(0.0, 0.0);
+
+        /** Une boite cubique, comme le {@code marker.width = marker.height} de l'original. */
+        public static Shape box(double size) {
+            return new Shape(size, size);
+        }
+
+        /** Vrai quand c'est une boite : le rendu sait alors quoi dessiner. */
+        public boolean isBox() {
+            return width > 0.0 && height > 0.0;
+        }
+    }
+
+    /** Ou la marque se pose, de quelle couleur, et sous quelle forme. */
+    public record Seat(Vec3 position, int color, Shape shape) {
     }
 
     /**
@@ -154,27 +196,28 @@ public final class TeleportMark {
     static Seat seat(Player player, Skill skill, int chargeTicks, int aimed) {
         if (skill == TeleporterCategory.MARK_TELEPORT) {
             return new Seat(TeleporterCategory.MARK_TELEPORT.destination(player,
-                    ClientAbilityData.get(), chargeTicks), true);
+                    ClientAbilityData.get(), chargeTicks), COLOR_NORMAL, Shape.GHOST);
         }
         if (skill == TeleporterCategory.FLASHING && aimed != 0) {
             return new Seat(TeleporterCategory.FLASHING.destination(player, ClientAbilityData.get(),
-                    aimed), true);
+                    aimed), COLOR_NORMAL, Shape.GHOST);
         }
         // Le saut court vise pendant tout son maintien, comme les deux precedents : le fantome se
         // pose la ou le saut deposerait son joueur, et c'est la meme fonction qui l'y deposera.
         if (skill == TeleporterCategory.SHIFT_TELEPORT) {
             return new Seat(TeleporterCategory.SHIFT_TELEPORT.destination(player,
-                    ClientAbilityData.get()), true);
+                    ClientAbilityData.get()), COLOR_NORMAL, Shape.GHOST);
         }
-        // Le lancer d'objet montre ou il tombera, et rougit quand ce sera sur quelqu'un. Le
-        // drapeau veut donc dire ici « rien a frapper » : c'est le meme rendu — un fantome rouge
-        // quand quelque chose cloche — et l'original s'en servait pareil, avec sa teinte
-        // « threating » des qu'une creature se trouvait sous le geste.
+        // Le lancer d'objet, lui, ne montre pas un fantome mais une BOITE, comme le marqueur de
+        // l'original : un cube d'un demi-bloc, gris tant qu'il n'y a rien devant, rouge des
+        // qu'une creature se trouve sous le geste. C'est la couleur qui porte l'information, et
+        // non plus un drapeau : l'original avait ses deux teintes a lui.
         if (skill == TeleporterCategory.THREATENING_TELEPORT) {
+            boolean threatens = TeleporterCategory.THREATENING_TELEPORT.threatens(player,
+                    ClientAbilityData.get());
             return new Seat(TeleporterCategory.THREATENING_TELEPORT.dropPosition(player,
                     ClientAbilityData.get()),
-                    !TeleporterCategory.THREATENING_TELEPORT.threatens(player,
-                            ClientAbilityData.get()));
+                    threatens ? 0xBAB2232A : 0xBABABABA, Shape.box(0.5));
         }
         if (skill == TeleporterCategory.PENETRATE_TELEPORT && TeleportAim.active()) {
             PenetrateTeleportSkill.Destination destination =
@@ -183,7 +226,7 @@ public final class TeleportMark {
             // Le fantome se tient a hauteur d'YEUX de sa destination, comme l'original : la
             // destination est un point aux pieds, et le modele d'un joueur a son origine au cou.
             return new Seat(destination.position().add(0, player.getEyeHeight(), 0),
-                    destination.available());
+                    destination.available() ? COLOR_NORMAL : COLOR_THREATENING, Shape.GHOST);
         }
         return null;
     }

@@ -117,6 +117,40 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("la marque a deux formes, et deux seulement : le fantome et la boite")
+    void laMarqueADeuxFormes() {
+        // Le fantome : le modele du joueur lui donne sa silhouette, donc la marque n'a aucune
+        // dimension propre. C'est la forme des quatre competences qui teleportent le corps.
+        assertFalse(TeleportMark.Shape.GHOST.isBox(),
+                "un fantome n'est pas une boite, sinon le rendu dessinerait un cube autour de lui");
+
+        // La boite : le marqueur de l'original, pour les deux competences qui visent autre chose.
+        // Elle est cubique chez lui — `marker.width = marker.height` — donc une seule taille.
+        TeleportMark.Shape demi = TeleportMark.Shape.box(0.5);
+        assertTrue(demi.isBox(), "un demi-bloc est une boite");
+        assertEquals(0.5, demi.width(), 1e-9);
+        assertEquals(0.5, demi.height(), 1e-9);
+
+        TeleportMark.Shape bloc = TeleportMark.Shape.box(1.0);
+        assertEquals(1.0, bloc.width(), 1e-9);
+        assertEquals(1.0, bloc.height(), 1e-9);
+
+        // Et une boite de dimension nulle ne serait pas dessinable : c'est le fantome.
+        assertFalse(new TeleportMark.Shape(0.0, 0.0).isBox());
+        assertFalse(new TeleportMark.Shape(0.5, 0.0).isBox(), "une boite plate n'en est pas une");
+    }
+
+    @Test
+    @DisplayName("les deux teintes de l'original sont distinguees")
+    void lesDeuxTeintesDeLOriginal() {
+        // Le blanc des marques sans rien a signaler, et le rouge de celles qui signalent une cible
+        // ou un obstacle. Le lancer d'objet, lui, a ses deux gris et rouges a lui — ils sont dans
+        // `seat`, avec les dimensions de sa boite.
+        assertEquals(0xFFFFFFFF, TeleportMark.COLOR_NORMAL);
+        assertEquals(0xFFFF3333, TeleportMark.COLOR_THREATENING);
+    }
+
+    @Test
     @DisplayName("le fantome s'efface quand la competence s'arrete")
     void leFantomeSEffaceQuandLaCompetenceSArrete() {
         // Rien a dessiner au depart : le rendu ne fait rien tant que la marque n'existe pas.

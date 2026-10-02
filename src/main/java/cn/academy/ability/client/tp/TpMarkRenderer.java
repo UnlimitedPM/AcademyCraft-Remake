@@ -62,10 +62,6 @@ public final class TpMarkRenderer {
 
     private static final ResourceLocation[] TEXTURES = frames();
 
-    /** Le fantome, et sa teinte quand on ne peut pas atterrir la ou il se tient. */
-    private static final float[] WHITE = { 1f, 1f, 1f };
-    private static final float[] UNAVAILABLE = { 1f, 0.2f, 0.2f };
-
     /** Le modele du fantome, construit a la premiere image et garde ensuite. */
     private static HumanoidModel<LivingEntity> model;
 
@@ -124,6 +120,13 @@ public final class TpMarkRenderer {
 
     /** Le fantome : le joueur debout, tourne comme son tireur, sans ecriture de profondeur. */
     private static void drawMark(MultiBufferSource buffers, PoseStack pose, Vec3 camera, Vec3 at) {
+        // Deux formes, et deux seulement : le fantome de joueur des quatre competences qui
+        // teleportent le corps, et la boite de l'original pour celles qui visent autre chose.
+        if (TeleportMark.shape().isBox()) {
+            drawBox(buffers, pose, camera, at);
+            return;
+        }
+
         VertexConsumer out = buffers.getBuffer(
                 TpRenderType.mark(TEXTURES[frame(TeleportMark.ageTicks())]));
 
@@ -141,8 +144,39 @@ public final class TpMarkRenderer {
         pose.mulPose(Axis.YP.rotationDegrees(-TeleportMark.yaw()));
         pose.mulPose(Axis.ZP.rotationDegrees(180f));
 
-        float[] tint = TeleportMark.available() ? WHITE : UNAVAILABLE;
+        // La teinte vient de la marque elle-meme, et non d'un drapeau : chaque competence a sa
+        // couleur, celles de l'original — le gris du vide, le rouge de la cible.
+        int rgb = TeleportMark.color();
+        float[] tint = { ((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f,
+                (rgb & 0xFF) / 255f };
         model().renderToBuffer(pose, out, 0, 0, tint[0], tint[1], tint[2], 1f);
+        pose.popPose();
+    }
+
+    /**
+     * La boite : le marqueur de l'original, pour les deux competences qui visent autre chose.
+     *
+     * <p>Un contour, pose sur le centre de la marque — c'est ce que dessinait son
+     * {@code EntityMarker}, et ses dimensions sont celles que la competence demande : un
+     * demi-bloc pour le lancer d'objet, un bloc entier pour la chair, la boite de la creature
+     * quand il y en a une.
+     */
+    private static void drawBox(MultiBufferSource buffers, PoseStack pose, Vec3 camera, Vec3 at) {
+        TeleportMark.Shape shape = TeleportMark.shape();
+        int rgb = TeleportMark.color();
+        float red = ((rgb >> 16) & 0xFF) / 255f;
+        float green = ((rgb >> 8) & 0xFF) / 255f;
+        float blue = (rgb & 0xFF) / 255f;
+        float alpha = ((rgb >>> 24) & 0xFF) / 255f;
+        double half = shape.width() / 2.0;
+        double halfHeight = shape.height() / 2.0;
+
+        pose.pushPose();
+        pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
+        net.minecraft.client.renderer.LevelRenderer.renderLineBox(pose,
+                buffers.getBuffer(net.minecraft.client.renderer.RenderType.lines()),
+                new net.minecraft.world.phys.AABB(-half, -halfHeight, -half, half, halfHeight, half),
+                red, green, blue, alpha);
         pose.popPose();
     }
 
