@@ -71,7 +71,7 @@ public final class TpMarkRenderer {
      * blocs : celle-ci fait trois a quatre pixels a quatre blocs de distance, la ou l'on regarde
      * une marque.
      */
-    public static final double STROKE = 0.03;
+    public static final double STROKE = 0.02;
 
     private static final ResourceLocation[] TEXTURES = frames();
 
@@ -90,7 +90,9 @@ public final class TpMarkRenderer {
         MultiBufferSource.BufferSource buffers =
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
-        Vec3 mark = TeleportMark.position();
+        // La position d'image, et non celle du tick : une creature visee bouge a chaque image, et
+        // la marque qui la suit doit bouger avec elle. Voir TeleportMark.interpolated.
+        Vec3 mark = TeleportMark.interpolated(event.getPartialTick());
         if (mark != null) {
             drawMark(buffers, pose, camera, mark);
         }
@@ -236,12 +238,19 @@ public final class TpMarkRenderer {
             if (side.lengthSqr() < 1.0E-7) side = dir.cross(new Vec3(1, 0, 0));
         }
         Vec3 half = side.normalize().scale(STROKE / 2.0);
-        Vec3 to = from.add(offset);
 
-        vertex(out, pose, from.subtract(half), red, green, blue, alpha);
+        // Les deux bouts debordent d'une demi-epaisseur. Sans ce debordement, trois rubans qui se
+        // rejoignent a un coin laissent un trou a cet endroit : chacun est decale de SA
+        // perpendiculaire, donc leurs extremites ne se recouvrent pas exactement, et le coin parait
+        // vide. En debordant, les trois se croisent et le coin est bouche.
+        Vec3 cap = dir.scale(STROKE / 2.0);
+        Vec3 from2 = from.subtract(cap);
+        Vec3 to = from.add(offset).add(cap);
+
+        vertex(out, pose, from2.subtract(half), red, green, blue, alpha);
         vertex(out, pose, to.subtract(half), red, green, blue, alpha);
         vertex(out, pose, to.add(half), red, green, blue, alpha);
-        vertex(out, pose, from.add(half), red, green, blue, alpha);
+        vertex(out, pose, from2.add(half), red, green, blue, alpha);
     }
 
     /** Un sommet de ruban : une position et une couleur, rien d'autre. */

@@ -195,6 +195,19 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("une marque finie ne se dessine nulle part, a aucun instant de l'image")
+    void uneMarqueFinieNeSeDessinePas() {
+        // Le rendu demande la position a l'instant de l'image, et pas a celui du tick, pour suivre
+        // une creature qui bouge : c'est cette seconde porte qu'il faut fermer aussi, sinon un
+        // fantome resterait plante la ou la competence s'est arretee.
+        TeleportMark.end();
+        assertNull(TeleportMark.position());
+        assertNull(TeleportMark.interpolated(0.0));
+        assertNull(TeleportMark.interpolated(0.5));
+        assertNull(TeleportMark.interpolated(1.0));
+    }
+
+    @Test
     @DisplayName("le fantome s'efface quand la competence s'arrete")
     void leFantomeSEffaceQuandLaCompetenceSArrete() {
         // Rien a dessiner au depart : le rendu ne fait rien tant que la marque n'existe pas.

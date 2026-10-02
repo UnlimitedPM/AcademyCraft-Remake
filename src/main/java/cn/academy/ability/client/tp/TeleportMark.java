@@ -121,6 +121,10 @@ public final class TeleportMark {
     @Nullable
     private static Vec3 position;
 
+    /** Et ou elle se tenait au tick precedent : le rendu interpole entre les deux. */
+    @Nullable
+    private static Vec3 previous;
+
     /** L'orientation du tireur, relue au tick comme l'original recopiait sa rotation. */
     private static float yaw;
 
@@ -149,8 +153,10 @@ public final class TeleportMark {
             return;
         }
 
-        // Une marque qui nait : son age repart de zero, donc son animation aussi.
+        // Une marque qui nait : son age repart de zero, donc son animation aussi — et elle n'a pas
+        // de position precedente, sans quoi le rendu la ferait glisser depuis la derniere.
         if (position == null) ageTicks = 0;
+        previous = position != null ? position : seat.position();
         position = seat.position();
         color = seat.color();
         shape = seat.shape();
@@ -162,6 +168,7 @@ public final class TeleportMark {
     /** La competence est finie : le fantome s'en va. */
     public static void end() {
         position = null;
+        previous = null;
         ageTicks = 0;
         color = COLOR_NORMAL;
         shape = Shape.GHOST;
@@ -171,6 +178,22 @@ public final class TeleportMark {
     @Nullable
     public static Vec3 position() {
         return position;
+    }
+
+    /**
+     * Ou dessiner la marque, a l'instant de l'image et non a celui du tick.
+     *
+     * <p>La marque est reposee vingt fois par seconde — c'est le rythme du tick — alors qu'une
+     * creature visee, elle, se deplace a chaque image de l'ecran. La dessiner telle quelle la faisait
+     * donc avancer par saccades d'un vingtieme de seconde : c'est ce qui se voyait des qu'une
+     * creature bougeait, la boite sautant d'un point au suivant au lieu de la suivre. Le rendu
+     * interpole entre les deux derniers ticks, exactement comme le jeu le fait pour les entites
+     * elles-memes.
+     */
+    @Nullable
+    public static Vec3 interpolated(double partialTick) {
+        if (position == null) return null;
+        return previous == null ? position : previous.lerp(position, partialTick);
     }
 
     /** L'orientation du tireur, en degres. */
