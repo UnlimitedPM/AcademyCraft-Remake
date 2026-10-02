@@ -112,9 +112,6 @@ public final class TeleportMark {
     /** Celle de la chair quand elle ne trouve personne : un bloc entier. */
     public static final double FLESH_BOX = 1.0;
 
-    /** Et le grossissement qu'elle applique a la creature qu'elle trouve : un cinquieme. */
-    public static final double FLESH_SCALE = 1.2;
-
     private static final RandomSource RANDOM = RandomSource.create();
 
     /** La ou la marque se tient, ou {@code null} s'il n'y en a pas. */
@@ -291,16 +288,21 @@ public final class TeleportMark {
             return new Seat(TeleporterCategory.THREATENING_TELEPORT.dropPosition(player,
                     ClientAbilityData.get()), COLOR_VOID, Shape.box(VOID_BOX));
         }
-        // La chair, elle, a ses deux gris et son rouge a elle, et sa boite lui ressemble : un bloc
-        // entier dans le vide, et la creature grossie d'un cinquieme quand il y en a une —
-        // l'original l'agrandissait pour qu'elle deborde de la silhouette.
+        // La chair, elle, a ses deux gris et son rouge a elle, et sa boite a la taille de la
+        // creature qu'elle trouve — la sienne, sans grossissement : ses pieds pour plancher, son
+        // sommet pour plafond, exactement comme celle du lancer d'objet.
+        //
+        // Dans le vide, elle se pose la ou le REGARD butte, comme le lancer d'objet, et non au
+        // bout de la ligne des pieds. L'original prenait la position du joueur — ses pieds — et
+        // cette ligne-la passe sous le sol des qu'on baisse les yeux : la boite s'y enfoncait au
+        // lieu de rester sous le curseur.
         if (skill == TeleporterCategory.FLESH_RIPPING) {
             Entity found = TeleporterCategory.FLESH_RIPPING.aimed(player, ClientAbilityData.get());
             if (found instanceof LivingEntity living) {
-                return new Seat(living.position(), COLOR_FLESH_HIT, Shape.box(
-                        living.getBbWidth() * FLESH_SCALE, living.getBbHeight() * FLESH_SCALE));
+                return new Seat(living.position(), COLOR_FLESH_HIT,
+                        Shape.box(living.getBbWidth(), living.getBbHeight()));
             }
-            return new Seat(TargetingUtil.fallbackPoint(player,
+            return new Seat(TargetingUtil.findImpactPoint(player,
                     TeleporterCategory.FLESH_RIPPING.range(ClientAbilityData.get())),
                     COLOR_FLESH_IDLE, Shape.box(FLESH_BOX));
         }

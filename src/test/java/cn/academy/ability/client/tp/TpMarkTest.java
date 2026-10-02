@@ -180,18 +180,17 @@ class TpMarkTest {
     @DisplayName("les boites ont les tailles de l'original")
     void lesTaillesDesBoites() {
         // Un demi-bloc pour le lancer d'objet dans le vide, un bloc entier pour la chair qui ne
-        // trouve personne, et un cinquieme de plus que la creature pour celle qu'elle trouve.
+        // trouve personne.
         assertEquals(0.5, TeleportMark.VOID_BOX, 1e-9);
         assertEquals(1.0, TeleportMark.FLESH_BOX, 1e-9);
-        assertEquals(1.2, TeleportMark.FLESH_SCALE, 1e-9);
 
-        // Une creature visee donne donc une boite plus grande que son propre gabarit, et elle est
-        // batie sur SES dimensions : c'est la largeur et la hauteur de la bete, pas un cube.
-        TeleportMark.Shape bete = TeleportMark.Shape.box(0.6 * TeleportMark.FLESH_SCALE,
-                1.95 * TeleportMark.FLESH_SCALE);
+        // Et une creature visee donne une boite batie sur SES dimensions : sa largeur et sa
+        // hauteur, pas un cube — et sans grossissement, celle du lancer d'objet venant deja de
+        // couvrir la bete en entier.
+        TeleportMark.Shape bete = TeleportMark.Shape.box(0.6, 1.95);
         assertTrue(bete.isBox());
-        assertEquals(0.72, bete.width(), 1e-9);
-        assertEquals(2.34, bete.height(), 1e-9);
+        assertEquals(0.6, bete.width(), 1e-9);
+        assertEquals(1.95, bete.height(), 1e-9);
     }
 
     @Test
