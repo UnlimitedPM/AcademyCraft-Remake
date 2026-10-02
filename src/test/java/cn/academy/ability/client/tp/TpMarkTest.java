@@ -195,6 +195,34 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("l'epaisseur d'un trait suit la distance : c'est une largeur d'ecran")
+    void lEpaisseurSuitLaDistance() {
+        // Un trait de l'original etait une ligne de GL, large de trois pixels quelle que soit la
+        // distance — le monde grandit et rapetisse autour d'elle. Rendue en blocs, cette constance
+        // veut dire une epaisseur PROPORTIONNELLE a la distance, et c'est cet invariant qui tient
+        // l'aspect du trait : l'epaisseur divisee par la distance ne bouge pas.
+        for (double distance = 2.0; distance <= 32.0; distance *= 2.0) {
+            assertEquals(TpMarkRenderer.STROKE / TpMarkRenderer.STROKE_REFERENCE,
+                    TpMarkRenderer.strokeAt(distance) / distance, 1e-9,
+                    "a " + distance + " blocs, la largeur d'ecran ne change pas");
+        }
+
+        // Donc elle grandit avec la distance, et pas l'inverse : c'est le trait de pres qui est
+        // fin, et celui de loin qui est gros — en blocs, parce qu'a l'ecran les deux font pareil.
+        assertTrue(TpMarkRenderer.strokeAt(2.0) < TpMarkRenderer.strokeAt(8.0));
+        assertTrue(TpMarkRenderer.strokeAt(8.0) < TpMarkRenderer.strokeAt(16.0));
+
+        // La reference est la distance ou l'epaisseur vaut STROKE, donc celle ou elle fait les trois
+        // pixels de l'original.
+        assertEquals(TpMarkRenderer.STROKE,
+                TpMarkRenderer.strokeAt(TpMarkRenderer.STROKE_REFERENCE), 1e-9);
+
+        // Et il y a un plancher : une marque qui se tient dans la camera ne donne pas un trait de
+        // largeur nulle, qui disparaitrait.
+        assertEquals(TpMarkRenderer.strokeAt(1.0), TpMarkRenderer.strokeAt(0.0), 1e-9);
+    }
+
+    @Test
     @DisplayName("une marque finie ne se dessine nulle part, a aucun instant de l'image")
     void uneMarqueFinieNeSeDessinePas() {
         // Le rendu demande la position a l'instant de l'image, et pas a celui du tick, pour suivre

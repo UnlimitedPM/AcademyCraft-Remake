@@ -64,14 +64,35 @@ public final class TpMarkRenderer {
     public static final double DASH = 0.2;
 
     /**
-     * L'epaisseur d'un trait, en blocs.
+     * L'epaisseur d'un trait, en blocs — et a une distance donnee, pas a toutes.
      *
-     * <p>L'original dessinait ses traits en {@code glLineWidth(3f)}, donc trois pixels quelle que
-     * soit la distance. La 1.20.1 ne sait plus regler cette largeur, donc l'epaisseur se donne en
-     * blocs : celle-ci fait trois a quatre pixels a quatre blocs de distance, la ou l'on regarde
-     * une marque.
+     * <p>L'original dessinait ses traits en {@code glLineWidth(3f)}, qui est une largeur
+     * <b>d'ecran</b> : une ligne de GL fait trois pixels de loin comme de pres, et c'est le monde
+     * qui grandit ou rapetisse autour d'elle. La 1.20.1 ne sait plus regler cette largeur, donc
+     * l'epaisseur se donne en blocs — mais la garder <b>fixe</b> en blocs donne exactement
+     * l'inverse : un trait enorme quand on vise ses pieds, filandreux quand on vise l'horizon.
+     * C'est {@link #strokeAt} qui rend la chose : l'epaisseur grandit avec la distance, donc le
+     * trait garde la meme largeur sur l'ecran.
+     *
+     * <p>La valeur ci-dessous est celle mesuree a {@link #STROKE_REFERENCE} blocs, ou elle fait
+     * trois a quatre pixels : c'est la ou l'on regarde une marque, et c'est le trois de l'original.
      */
     public static final double STROKE = 0.02;
+
+    /** La distance a laquelle {@link #STROKE} est mesure : ailleurs, l'epaisseur suit la distance. */
+    public static final double STROKE_REFERENCE = 4.0;
+
+    /**
+     * L'epaisseur d'un trait a cette distance de la camera, en blocs.
+     *
+     * <p>Fonction pure, donc verifiable : c'est une largeur d'ecran rendue en blocs, donc elle est
+     * <b>proportionnelle</b> a la distance — l'epaisseur divisee par la distance est la meme de
+     * pres comme de loin, et c'est cette constance-la qui se voit. Le plancher de un bloc evite le
+     * trait de largeur nulle quand la marque se tient dans la camera.
+     */
+    public static double strokeAt(double distance) {
+        return STROKE * Math.max(distance, 1.0) / STROKE_REFERENCE;
+    }
 
     private static final ResourceLocation[] TEXTURES = frames();
 
@@ -224,10 +245,17 @@ public final class TpMarkRenderer {
      * section carree : a l'oeil, ce n'est plus un trait mais un cadre en barres. Le ruban, lui, se
      * retourne vers celui qui regarde et reste plat, donc se lit comme la ligne epaisse de
      * l'original, de n'importe ou.
+     *
+     * <p>Sa largeur, elle, suit la distance : voir {@link #strokeAt}. Un ruban de largeur fixe en
+     * blocs donne un trait gros de pres et fin de loin, ce qui est le contraire de ce que faisait
+     * la ligne de l'original.
      */
     private static void stroke(VertexConsumer out, PoseStack pose, Vec3 from, Vec3 offset,
                                float red, float green, float blue, float alpha) {
         Vec3 dir = offset.normalize();
+        // L'epaisseur de ce trait-ci, a sa distance : la camera est a l'origine du repere, donc la
+        // longueur de `from` est deja cette distance.
+        double thickness = strokeAt(from.length());
         // La camera est a l'origine du repere, donc `from` est deja le vecteur qui va d'elle au
         // trait, et le produit vectoriel donne la perpendiculaire qui fait face a l'ecran.
         Vec3 side = dir.cross(from);
@@ -237,13 +265,13 @@ public final class TpMarkRenderer {
             side = dir.cross(new Vec3(0, 1, 0));
             if (side.lengthSqr() < 1.0E-7) side = dir.cross(new Vec3(1, 0, 0));
         }
-        Vec3 half = side.normalize().scale(STROKE / 2.0);
+        Vec3 half = side.normalize().scale(thickness / 2.0);
 
         // Les deux bouts debordent d'une demi-epaisseur. Sans ce debordement, trois rubans qui se
         // rejoignent a un coin laissent un trou a cet endroit : chacun est decale de SA
         // perpendiculaire, donc leurs extremites ne se recouvrent pas exactement, et le coin parait
         // vide. En debordant, les trois se croisent et le coin est bouche.
-        Vec3 cap = dir.scale(STROKE / 2.0);
+        Vec3 cap = dir.scale(thickness / 2.0);
         Vec3 from2 = from.subtract(cap);
         Vec3 to = from.add(offset).add(cap);
 
