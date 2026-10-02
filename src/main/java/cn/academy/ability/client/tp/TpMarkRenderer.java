@@ -15,6 +15,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -22,6 +23,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
@@ -60,11 +62,17 @@ public final class TpMarkRenderer {
     /** Le temps de chacune, en ticks : l'original en passait une toutes les deux ticks et demie. */
     public static final double FRAME_TICKS = 2.5;
 
+    /** La longueur d'un trait de coin, en fraction de la largeur de la boite : l'original, 0,2. */
+    public static final double DASH = 0.2;
+
+    /** Le flottement de la boite : un vingtieme de bloc, en blocs et en millisecondes. */
+    public static final double BOB = 0.05;
+    public static final double BOB_PERIOD = 400.0;
+
     private static final ResourceLocation[] TEXTURES = frames();
 
     /** Le modele du fantome, construit a la premiere image et garde ensuite. */
     private static HumanoidModel<LivingEntity> model;
-
     private TpMarkRenderer() {
     }
 
@@ -156,28 +164,71 @@ public final class TpMarkRenderer {
     /**
      * La boite : le marqueur de l'original, pour les deux competences qui visent autre chose.
      *
-     * <p>Un contour, pose sur le centre de la marque — c'est ce que dessinait son
-     * {@code EntityMarker}, et ses dimensions sont celles que la competence demande : un
-     * demi-bloc pour le lancer d'objet, un bloc entier pour la chair, la boite de la creature
-     * quand il y en a une.
+     * <p>C'est un <b>coin</b> et non un contour : a chacun des huit coins de la boite, l'original
+     * tirait trois petits traits vers l'interieur — un par axe — et rien ne reliait deux coins
+     * entre eux. D'ou ces trous sur ses aretes, qui la font ressembler a un cadre en pointilles
+     * plutot qu'a une cage, et qu'un simple contour ne rendrait pas.
+     *
+     * <p>Elle est posee <b>sur</b> la marque et non centree dessus : sa base est a la position, sa
+     * hauteur monte au-dessus. C'est ce qui fait qu'une creature visee est couverte en entier —
+     * ses pieds sur le sol, et sa boite jusqu'au sommet de sa tete.
      */
     private static void drawBox(MultiBufferSource buffers, PoseStack pose, Vec3 camera, Vec3 at) {
         TeleportMark.Shape shape = TeleportMark.shape();
-        int rgb = TeleportMark.color();
-        float red = ((rgb >> 16) & 0xFF) / 255f;
-        float green = ((rgb >> 8) & 0xFF) / 255f;
-        float blue = (rgb & 0xFF) / 255f;
-        float alpha = ((rgb >>> 24) & 0xFF) / 255f;
-        double half = shape.width() / 2.0;
-        double halfHeight = shape.height() / 2.0;
+        int argb = TeleportMark.color();
+        float red = ((argb >> 16) & 0xFF) / 255f;
+        float green = ((argb >> 8) & 0xFF) / 255f;
+        float blue = (argb & 0xFF) / 255f;
+        float alpha = ((argb >>> 24) & 0xFF) / 255f;
+
+        double width = shape.width();
+        double height = shape.height();
+        double half = width / 2.0;
+        double dash = DASH * width;
+        // Et elle flotte, d'un vingtieme de bloc : l'original la faisait respirer d'un aller-retour
+        // toutes les deux secondes et demie.
+        double lift = BOB * Math.sin(Util.getMillis() / BOB_PERIOD);
 
         pose.pushPose();
-        pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
-        net.minecraft.client.renderer.LevelRenderer.renderLineBox(pose,
-                buffers.getBuffer(net.minecraft.client.renderer.RenderType.lines()),
-                new net.minecraft.world.phys.AABB(-half, -halfHeight, -half, half, halfHeight, half),
-                red, green, blue, alpha);
+        pose.translate(at.x - camera.x, at.y - camera.y + lift, at.z - camera.z);
+        VertexConsumer out = buffers.getBuffer(RenderType.lines());
+        Matrix4f matrix = pose.last().pose();
+
+        for (int ix = 0; ix <= 1; ix++) {
+            for (int iy = 0; iy <= 1; iy++) {
+                for (int iz = 0; iz <= 1; iz++) {
+                    double x = ix * width - half;
+                    double y = iy * height;
+                    double z = iz * width - half;
+                    double dx = (ix == 0 ? dash : -dash);
+                    double dy = (iy == 0 ? dash : -dash);
+                    double dz = (iz == 0 ? dash : -dash);
+                    segment(out, matrix, x, y, z, dx, 0, 0, red, green, blue, alpha);
+                    segment(out, matrix, x, y, z, 0, dy, 0, red, green, blue, alpha);
+                    segment(out, matrix, x, y, z, 0, 0, dz, red, green, blue, alpha);
+                }
+            }
+        }
         pose.popPose();
+    }
+
+    /**
+     * Un trait, dans le repere de la pose : deux sommets de la meme couleur, aux deux bouts.
+     *
+     * <p>La normale suit le trait. Elle ne sert pas a grand-chose pour une ligne, mais le format
+     * de sommet l'exige, et c'est la direction qui a le plus de sens.
+     */
+    private static void segment(VertexConsumer out, Matrix4f matrix, double x, double y, double z,
+                                double dx, double dy, double dz,
+                                float red, float green, float blue, float alpha) {
+        float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+        float nx = (float) (dx / length);
+        float ny = (float) (dy / length);
+        float nz = (float) (dz / length);
+        out.vertex(matrix, (float) x, (float) y, (float) z)
+                .color(red, green, blue, alpha).normal(nx, ny, nz).endVertex();
+        out.vertex(matrix, (float) (x + dx), (float) (y + dy), (float) (z + dz))
+                .color(red, green, blue, alpha).normal(nx, ny, nz).endVertex();
     }
 
     /** Une etincelle : un carre qui regarde la camera, comme celles du plasma. */

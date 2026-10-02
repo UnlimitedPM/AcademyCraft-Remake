@@ -10,6 +10,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import javax.annotation.Nullable;
 
 /**
  * Competence chargee, portage de ThreateningTeleport : le joueur lance l'objet qu'il
@@ -126,10 +127,22 @@ public class ThreateningTeleportSkill extends Skill {
      * appelant la meme fonction. Derriere, l'objet suit exactement le meme chemin.
      */
     public Vec3 dropPosition(Player player, AbilityData data) {
-        Entity target = TargetingUtil.findEntityInSight(player, range(data));
+        Entity target = aimed(player, data);
         return target != null
                 ? target.position().add(0, target.getEyeHeight(), 0)
                 : TargetingUtil.findImpactPoint(player, range(data));
+    }
+
+    /**
+     * Ce que le geste trouve devant lui, ou {@code null} s'il n'y a rien.
+     *
+     * <p>Publique pour la meme raison que {@link #dropPosition} : la marque du client a besoin de
+     * la creature elle-meme, et pas seulement de savoir qu'il y en a une — c'est sa <b>taille</b> qui
+     * donne la sienne a la boite, et ses <b>pieds</b> qui la portent.
+     */
+    @Nullable
+    public Entity aimed(Player player, AbilityData data) {
+        return TargetingUtil.findEntityInSight(player, range(data));
     }
 
     /**
@@ -140,7 +153,7 @@ public class ThreateningTeleportSkill extends Skill {
      * geste. Le port en fait le drapeau du fantome, qui rougit pour la meme raison.
      */
     public boolean threatens(Player player, AbilityData data) {
-        return TargetingUtil.findEntityInSight(player, range(data)) instanceof LivingEntity;
+        return aimed(player, data) instanceof LivingEntity;
     }
 
     @Override
@@ -148,7 +161,7 @@ public class ThreateningTeleportSkill extends Skill {
         ItemStack stack = player.getMainHandItem();
         if (stack.isEmpty()) return;
 
-        Entity target = TargetingUtil.findEntityInSight(player, range(data));
+        Entity target = aimed(player, data);
         Vec3 impact = target != null
                 ? target.position().add(0, target.getEyeHeight(), 0)
                 : TargetingUtil.findImpactPoint(player, range(data));

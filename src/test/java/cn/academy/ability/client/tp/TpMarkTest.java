@@ -9,6 +9,7 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -144,10 +145,37 @@ class TpMarkTest {
     @DisplayName("les deux teintes de l'original sont distinguees")
     void lesDeuxTeintesDeLOriginal() {
         // Le blanc des marques sans rien a signaler, et le rouge de celles qui signalent une cible
-        // ou un obstacle. Le lancer d'objet, lui, a ses deux gris et rouges a lui — ils sont dans
-        // `seat`, avec les dimensions de sa boite.
+        // ou un obstacle — celles-la portent un fantome.
         assertEquals(0xFFFFFFFF, TeleportMark.COLOR_NORMAL);
         assertEquals(0xFFFF3333, TeleportMark.COLOR_THREATENING);
+
+        // Les boites ont les leurs, prises a l'original.
+        assertEquals(0xBABABABA, TeleportMark.COLOR_VOID, "le gris du lancer d'objet");
+        assertEquals(0xBAB2232A, TeleportMark.COLOR_HIT_ORANGE, "son ORANGE quand il vise");
+        assertEquals(0x4A4A4AA0, TeleportMark.COLOR_FLESH_IDLE, "le gris eteint de la chair");
+        assertEquals(0xB91919B4, TeleportMark.COLOR_FLESH_HIT, "le rouge de la chair");
+
+        // Le lancer d'objet n'est donc jamais rouge, et la chair jamais orange : ce sont deux
+        // competences, deux paires de teintes, et l'orange n'est pas un rouge plus pale.
+        assertNotEquals(TeleportMark.COLOR_HIT_ORANGE, TeleportMark.COLOR_FLESH_HIT);
+    }
+
+    @Test
+    @DisplayName("les boites ont les tailles de l'original")
+    void lesTaillesDesBoites() {
+        // Un demi-bloc pour le lancer d'objet dans le vide, un bloc entier pour la chair qui ne
+        // trouve personne, et un cinquieme de plus que la creature pour celle qu'elle trouve.
+        assertEquals(0.5, TeleportMark.VOID_BOX, 1e-9);
+        assertEquals(1.0, TeleportMark.FLESH_BOX, 1e-9);
+        assertEquals(1.2, TeleportMark.FLESH_SCALE, 1e-9);
+
+        // Une creature visee donne donc une boite plus grande que son propre gabarit, et elle est
+        // batie sur SES dimensions : c'est la largeur et la hauteur de la bete, pas un cube.
+        TeleportMark.Shape bete = TeleportMark.Shape.box(0.6 * TeleportMark.FLESH_SCALE,
+                1.95 * TeleportMark.FLESH_SCALE);
+        assertTrue(bete.isBox());
+        assertEquals(0.72, bete.width(), 1e-9);
+        assertEquals(2.34, bete.height(), 1e-9);
     }
 
     @Test

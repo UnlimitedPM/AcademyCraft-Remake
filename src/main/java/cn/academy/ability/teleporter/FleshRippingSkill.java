@@ -7,6 +7,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import javax.annotation.Nullable;
 import net.minecraft.world.entity.player.Player;
 
 /**
@@ -85,6 +86,18 @@ public class FleshRippingSkill extends Skill {
         return true;
     }
 
+    /**
+     * Ce que la visee trouve devant elle, ou {@code null} s'il n'y a rien.
+     *
+     * <p>Publique parce que la marque du client en a besoin : l'original lisait sa cible depuis
+     * son contexte client a chaque tick, et c'est la creature elle-meme — sa taille, ses pieds —
+     * qui donne sa boite a la marque, pas seulement le fait qu'il y en ait une.
+     */
+    @Nullable
+    public Entity aimed(Player player, AbilityData data) {
+        return TargetingUtil.findEntityInSight(player, range(data));
+    }
+
     @Override
     public boolean isChargeable() {
         return true;
@@ -109,7 +122,7 @@ public class FleshRippingSkill extends Skill {
 
     @Override
     public void onActivateCharged(Player player, AbilityData data, int chargeTicks) {
-        Entity found = TargetingUtil.findEntityInSight(player, range(data));
+        Entity found = aimed(player, data);
         if (!(found instanceof LivingEntity target)) return;
 
         // Paiement force, comme consumeWithForce : le tick de visee a deja verifie que la

@@ -1,10 +1,13 @@
 package cn.academy.ability.client.tp;
 
 import cn.academy.ability.Skill;
+import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.ability.teleporter.PenetrateTeleportSkill;
 import cn.academy.ability.teleporter.TeleporterCategory;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -72,8 +75,32 @@ public final class TeleportMark {
     /** La teinte d'une marque sans rien a signaler : le blanc de l'original. */
     public static final int COLOR_NORMAL = 0xFFFFFFFF;
 
-    /** Et celle d'une marque qui signale une cible ou un obstacle : son rouge. */
+    /** Et celle d'un fantome qui signale un obstacle : son rouge. */
     public static final int COLOR_THREATENING = 0xFFFF3333;
+
+    /** Le gris du vide, pour la boite du lancer d'objet : l'original, 0xba sur les quatre canaux. */
+    public static final int COLOR_VOID = 0xBABABABA;
+
+    /**
+     * Et son orange des qu'une creature est visee.
+     *
+     * <p>C'est bien un orange, et non le rouge de la chair : les deux competences ont chacune
+     * leurs teintes, et celle-ci est la sienne.
+     */
+    public static final int COLOR_HIT_ORANGE = 0xBAB2232A;
+
+    /** Le gris eteint de la chair qui ne trouve rien, et son rouge quand elle trouve. */
+    public static final int COLOR_FLESH_IDLE = 0x4A4A4AA0;
+    public static final int COLOR_FLESH_HIT = 0xB91919B4;
+
+    /** La boite du lancer d'objet dans le vide : un demi-bloc, comme son marqueur. */
+    public static final double VOID_BOX = 0.5;
+
+    /** Celle de la chair quand elle ne trouve personne : un bloc entier. */
+    public static final double FLESH_BOX = 1.0;
+
+    /** Et le grossissement qu'elle applique a la creature qu'elle trouve : un cinquieme. */
+    public static final double FLESH_SCALE = 1.2;
 
     private static final RandomSource RANDOM = RandomSource.create();
 
@@ -173,6 +200,11 @@ public final class TeleportMark {
             return new Shape(size, size);
         }
 
+        /** Ou aux deux dimensions de la creature visee : sa largeur et sa hauteur. */
+        public static Shape box(double width, double height) {
+            return new Shape(width, height);
+        }
+
         /** Vrai quand c'est une boite : le rendu sait alors quoi dessiner. */
         public boolean isBox() {
             return width > 0.0 && height > 0.0;
@@ -208,16 +240,33 @@ public final class TeleportMark {
             return new Seat(TeleporterCategory.SHIFT_TELEPORT.destination(player,
                     ClientAbilityData.get()), COLOR_NORMAL, Shape.GHOST);
         }
-        // Le lancer d'objet, lui, ne montre pas un fantome mais une BOITE, comme le marqueur de
-        // l'original : un cube d'un demi-bloc, gris tant qu'il n'y a rien devant, rouge des
-        // qu'une creature se trouve sous le geste. C'est la couleur qui porte l'information, et
-        // non plus un drapeau : l'original avait ses deux teintes a lui.
+        // Le lancer d'objet, lui, ne montre pas un fantome mais la BOITE de l'original. Elle a la
+        // taille de ce qu'elle designe — un demi-bloc dans le vide, la creature ENTIERE quand il y
+        // en a une : ses pieds pour plancher, sa taille pour plafond, et non sa tete. Sa teinte le
+        // dit aussi : gris quand rien n'est vise, ORANGE des qu'une creature se trouve sous le
+        // geste. Le rouge est a la chair, pas a lui.
         if (skill == TeleporterCategory.THREATENING_TELEPORT) {
-            boolean threatens = TeleporterCategory.THREATENING_TELEPORT.threatens(player,
+            Entity found = TeleporterCategory.THREATENING_TELEPORT.aimed(player,
                     ClientAbilityData.get());
+            if (found instanceof LivingEntity living) {
+                return new Seat(living.position(), COLOR_HIT_ORANGE,
+                        Shape.box(living.getBbWidth(), living.getBbHeight()));
+            }
             return new Seat(TeleporterCategory.THREATENING_TELEPORT.dropPosition(player,
-                    ClientAbilityData.get()),
-                    threatens ? 0xBAB2232A : 0xBABABABA, Shape.box(0.5));
+                    ClientAbilityData.get()), COLOR_VOID, Shape.box(VOID_BOX));
+        }
+        // La chair, elle, a ses deux gris et son rouge a elle, et sa boite lui ressemble : un bloc
+        // entier dans le vide, et la creature grossie d'un cinquieme quand il y en a une —
+        // l'original l'agrandissait pour qu'elle deborde de la silhouette.
+        if (skill == TeleporterCategory.FLESH_RIPPING) {
+            Entity found = TeleporterCategory.FLESH_RIPPING.aimed(player, ClientAbilityData.get());
+            if (found instanceof LivingEntity living) {
+                return new Seat(living.position(), COLOR_FLESH_HIT, Shape.box(
+                        living.getBbWidth() * FLESH_SCALE, living.getBbHeight() * FLESH_SCALE));
+            }
+            return new Seat(TargetingUtil.fallbackPoint(player,
+                    TeleporterCategory.FLESH_RIPPING.range(ClientAbilityData.get())),
+                    COLOR_FLESH_IDLE, Shape.box(FLESH_BOX));
         }
         if (skill == TeleporterCategory.PENETRATE_TELEPORT && TeleportAim.active()) {
             PenetrateTeleportSkill.Destination destination =
