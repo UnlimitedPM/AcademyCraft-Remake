@@ -66,6 +66,28 @@ public class ShiftTeleportSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
+        Vec3 destination = destination(player, data);
+        player.teleportTo(destination.x, destination.y, destination.z);
+        player.fallDistance = 0;
+        // L'original le jouait au dernier moment, et seulement si sa ligne avait trouve
+        // quelqu'un : le port, qui ne fait pas ce coup au passage, le joue toujours.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
+        TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
+    }
+
+    /**
+     * Ou le saut deposerait son joueur, sans le deplacer.
+     *
+     * <p>Calculee a part pour la meme raison que chez les trois autres competences a marque : le
+     * fantome du client doit se poser <b>la ou le joueur arrivera</b>, et il ne peut le savoir
+     * qu'en appelant la meme fonction. Une seule geometrie, donc, et la marque ne peut pas mentir
+     * sur l'endroit ou l'on atterrit.
+     *
+     * <p>Trois cas, ceux de l'original : rien devant, et l'on va jusqu'au bout de la portee ;
+     * le sol, et l'on se pose dessus ; un mur ou un plafond, et l'on s'arrete juste avant, a
+     * hauteur d'yeux pour un plafond, a la hauteur actuelle pour un mur.
+     */
+    public Vec3 destination(Player player, AbilityData data) {
         Level level = player.level();
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
@@ -74,39 +96,23 @@ public class ShiftTeleportSkill extends Skill {
 
         HitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
 
-        double destX, destY, destZ;
         if (hit.getType() == HitResult.Type.MISS) {
-            // Nothing in range: only then do we use the full distance.
-            destX = end.x;
-            destY = end.y - eyeHeight;
-            destZ = end.z;
-        } else {
-            Vec3 hitLoc = hit.getLocation();
-            Direction face = ((BlockHitResult) hit).getDirection();
-            if (face == Direction.UP) {
-                // Looking at the ground: land exactly on top of the block that was aimed at.
-                destX = hitLoc.x;
-                destY = hitLoc.y;
-                destZ = hitLoc.z;
-            } else if (face == Direction.DOWN) {
-                Vec3 backed = hitLoc.subtract(look.scale(0.5));
-                destX = backed.x;
-                destY = backed.y - eyeHeight;
-                destZ = backed.z;
-            } else {
-                // Wall: stop just short of it, keep current height.
-                Vec3 backed = hitLoc.subtract(look.scale(0.5));
-                destX = backed.x;
-                destY = player.getY();
-                destZ = backed.z;
-            }
+            // Rien devant, sur toute la portee : on prend la distance entiere.
+            return new Vec3(end.x, end.y - eyeHeight, end.z);
         }
 
-        player.teleportTo(destX, destY, destZ);
-        player.fallDistance = 0;
-        // L'original le jouait au dernier moment, et seulement si sa ligne avait trouve
-        // quelqu'un : le port, qui ne fait pas ce coup au passage, le joue toujours.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
-        TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
+        Vec3 hitLoc = hit.getLocation();
+        Direction face = ((BlockHitResult) hit).getDirection();
+        if (face == Direction.UP) {
+            // On vise le sol : on se pose exactement sur le bloc vise.
+            return hitLoc;
+        }
+        Vec3 backed = hitLoc.subtract(look.scale(0.5));
+        if (face == Direction.DOWN) {
+            // On vise un plafond : on recule d'un demi-bloc et l'on garde la hauteur d'yeux.
+            return new Vec3(backed.x, backed.y - eyeHeight, backed.z);
+        }
+        // Un mur : on s'arrete juste avant, sans changer de hauteur.
+        return new Vec3(backed.x, player.getY(), backed.z);
     }
 }
