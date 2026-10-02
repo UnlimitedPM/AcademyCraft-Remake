@@ -160,6 +160,12 @@ public final class TeleportMark {
             return new Seat(TeleporterCategory.FLASHING.destination(player, ClientAbilityData.get(),
                     aimed), true);
         }
+        // Le saut court vise pendant tout son maintien, comme les deux precedents : le fantome se
+        // pose la ou le saut deposerait son joueur, et c'est la meme fonction qui l'y deposera.
+        if (skill == TeleporterCategory.SHIFT_TELEPORT) {
+            return new Seat(TeleporterCategory.SHIFT_TELEPORT.destination(player,
+                    ClientAbilityData.get()), true);
+        }
         if (skill == TeleporterCategory.PENETRATE_TELEPORT && TeleportAim.active()) {
             PenetrateTeleportSkill.Destination destination =
                     TeleporterCategory.PENETRATE_TELEPORT.destination(player,

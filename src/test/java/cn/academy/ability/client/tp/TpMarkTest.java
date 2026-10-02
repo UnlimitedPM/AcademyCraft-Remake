@@ -106,8 +106,10 @@ class TpMarkTest {
 
         // Et une competence qui n'a pas de marque n'en allume aucune, quelle que soit la visee :
         // c'est ce qui eteint le fantome quand le joueur change de touche sans relacher.
-        assertNull(TeleportMark.seat(null, TeleporterCategory.SHIFT_TELEPORT, 0, 0));
-        assertNull(TeleportMark.seat(null, TeleporterCategory.SHIFT_TELEPORT, 0, 3));
+        //
+        // Le saut court n'est plus de celles-la : il se tient, comme dans l'original, et montre
+        // donc son point d'arrivee pendant tout le maintien — mais sa destination se calcule avec
+        // le monde et le joueur, donc ce cas-la ne se relit pas ici, sans un vrai joueur.
         // Le saut traversant non plus, tant qu'aucune visee n'est ouverte : c'est son etat qui
         // decide, et non la touche. Voir TeleportAim.
         assertNull(TeleportMark.seat(null, TeleporterCategory.PENETRATE_TELEPORT, 0, 3));

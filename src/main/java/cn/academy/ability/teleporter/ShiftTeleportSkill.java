@@ -52,20 +52,47 @@ public class ShiftTeleportSkill extends Skill {
         return lerp(CP_COST_MIN_EXP, CP_COST_MAX_EXP, data.getSkillExp(this));
     }
 
-    /** Le cout au depart, pour qui n'a pas d'experience a donner. */
-    @Override
-    public float getCpCost() {
-        return CP_COST_MIN_EXP;
-    }
-
     /** Surcout repris de l'original : de 40 a 30 selon l'experience. */
     @Override
     public float getOverloadCost(AbilityData data) {
         return lerp(40f, 30f, data.getSkillExp(this));
     }
 
+    /**
+     * La competence se <b>tient</b>, comme dans l'original : on vise tant que la touche est
+     * enfoncee, et le saut part au relachement.
+     *
+     * <p>Le port la faisait partir a l'appui, et le fantome de la marque n'avait donc aucun
+     * moment ou se montrer — c'est ce qui lui manquait pour avoir une animation. Chez l'original
+     * son contexte vivait pendant tout le maintien : il y posait un marqueur sur le point
+     * d'arrivee, et un sur chacune des creatures que le passage blesserait.
+     */
     @Override
-    public void onActivate(Player player, AbilityData data) {
+    public boolean isHeld() {
+        return true;
+    }
+
+    /**
+     * Tenir ne coute rien : c'est le saut qui se paie, au relachement.
+     *
+     * <p>L'original consommait dans son message d'execution, donc au relachement lui aussi. Le
+     * prix du saut reste {@link #getCpCost(AbilityData)} et {@link #getOverloadCost(AbilityData)}.
+     */
+    @Override
+    public float getCpCost() {
+        return 0f;
+    }
+
+    /**
+     * Le relachement : le saut part, et il se paie la.
+     *
+     * <p>Refuse, il ne se passe rien du tout — pas de saut, pas de recharge, et rien n'est
+     * depense : c'est le {@code consume()} de l'original, qui gardait tout ou ne payait rien.
+     */
+    @Override
+    public boolean onRelease(Player player, AbilityData data, int heldTicks) {
+        if (!data.perform(getCpCost(data), getOverloadCost(data))) return false;
+
         Vec3 destination = destination(player, data);
         player.teleportTo(destination.x, destination.y, destination.z);
         player.fallDistance = 0;
@@ -73,6 +100,9 @@ public class ShiftTeleportSkill extends Skill {
         // quelqu'un : le port, qui ne fait pas ce coup au passage, le joue toujours.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
         TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
+
+        // Le maintien se ferme ici : la recharge se pose ensuite par la fin ordinaire.
+        return false;
     }
 
     /**
