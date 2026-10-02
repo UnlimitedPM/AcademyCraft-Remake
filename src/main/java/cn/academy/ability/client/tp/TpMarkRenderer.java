@@ -14,16 +14,17 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 /**
@@ -65,9 +66,15 @@ public final class TpMarkRenderer {
     /** La longueur d'un trait de coin, en fraction de la largeur de la boite : l'original, 0,2. */
     public static final double DASH = 0.2;
 
-    /** Le flottement de la boite : un vingtieme de bloc, en blocs et en millisecondes. */
-    public static final double BOB = 0.05;
-    public static final double BOB_PERIOD = 400.0;
+    /**
+     * L'epaisseur d'un trait, en blocs.
+     *
+     * <p>L'original dessinait ses traits en {@code glLineWidth(3f)}, donc trois pixels quelle que
+     * soit la distance. La 1.20.1 ne sait plus regler cette largeur, et un trait de ligne y fait un
+     * pixel : c'est cette epaisseur-la qu'on rend en blocs, celle qui donne trois pixels a quatre
+     * blocs de distance, la ou l'on regarde une marque.
+     */
+    public static final double STROKE = 0.025;
 
     private static final ResourceLocation[] TEXTURES = frames();
 
@@ -185,14 +192,10 @@ public final class TpMarkRenderer {
         double height = shape.height();
         double half = width / 2.0;
         double dash = DASH * width;
-        // Et elle flotte, d'un vingtieme de bloc : l'original la faisait respirer d'un aller-retour
-        // toutes les deux secondes et demie.
-        double lift = BOB * Math.sin(Util.getMillis() / BOB_PERIOD);
 
         pose.pushPose();
-        pose.translate(at.x - camera.x, at.y - camera.y + lift, at.z - camera.z);
+        pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
         VertexConsumer out = buffers.getBuffer(RenderType.lines());
-        Matrix4f matrix = pose.last().pose();
 
         for (int ix = 0; ix <= 1; ix++) {
             for (int iy = 0; iy <= 1; iy++) {
@@ -203,9 +206,9 @@ public final class TpMarkRenderer {
                     double dx = (ix == 0 ? dash : -dash);
                     double dy = (iy == 0 ? dash : -dash);
                     double dz = (iz == 0 ? dash : -dash);
-                    segment(out, matrix, x, y, z, dx, 0, 0, red, green, blue, alpha);
-                    segment(out, matrix, x, y, z, 0, dy, 0, red, green, blue, alpha);
-                    segment(out, matrix, x, y, z, 0, 0, dz, red, green, blue, alpha);
+                    segment(out, pose, x, y, z, dx, 0, 0, red, green, blue, alpha);
+                    segment(out, pose, x, y, z, 0, dy, 0, red, green, blue, alpha);
+                    segment(out, pose, x, y, z, 0, 0, dz, red, green, blue, alpha);
                 }
             }
         }
@@ -213,22 +216,22 @@ public final class TpMarkRenderer {
     }
 
     /**
-     * Un trait, dans le repere de la pose : deux sommets de la meme couleur, aux deux bouts.
+     * Un trait, dans le repere de la pose.
      *
-     * <p>La normale suit le trait. Elle ne sert pas a grand-chose pour une ligne, mais le format
-     * de sommet l'exige, et c'est la direction qui a le plus de sens.
+     * <p>Ce n'est pas une ligne mais un <b>barreau</b> : un petit parallelepipede de quelques
+     * centimetres de cote. L'original dessinait ses traits a {@code glLineWidth(3f)}, donc epais ;
+     * la 1.20.1 ne sait plus regler l'epaisseur d'une ligne — un trait de ligne y fait un pixel, et
+     * rien d'autre — donc un vrai trait de ligne serait trois fois trop fin. Le barreau, lui, a une
+     * epaisseur en blocs, qui rend la meme chose a distance de jeu.
      */
-    private static void segment(VertexConsumer out, Matrix4f matrix, double x, double y, double z,
+    private static void segment(VertexConsumer out, PoseStack pose, double x, double y, double z,
                                 double dx, double dy, double dz,
                                 float red, float green, float blue, float alpha) {
-        float length = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        float nx = (float) (dx / length);
-        float ny = (float) (dy / length);
-        float nz = (float) (dz / length);
-        out.vertex(matrix, (float) x, (float) y, (float) z)
-                .color(red, green, blue, alpha).normal(nx, ny, nz).endVertex();
-        out.vertex(matrix, (float) (x + dx), (float) (y + dy), (float) (z + dz))
-                .color(red, green, blue, alpha).normal(nx, ny, nz).endVertex();
+        double t = STROKE / 2.0;
+        LevelRenderer.renderLineBox(pose, out, new AABB(
+                Math.min(x, x + dx) - t, Math.min(y, y + dy) - t, Math.min(z, z + dz) - t,
+                Math.max(x, x + dx) + t, Math.max(y, y + dy) + t, Math.max(z, z + dz) + t),
+                red, green, blue, alpha);
     }
 
     /** Une etincelle : un carre qui regarde la camera, comme celles du plasma. */

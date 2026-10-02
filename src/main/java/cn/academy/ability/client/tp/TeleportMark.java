@@ -82,16 +82,21 @@ public final class TeleportMark {
     public static final int COLOR_VOID = 0xBABABABA;
 
     /**
-     * Et son orange des qu'une creature est visee.
+     * Et son ORANGE des qu'une creature est visee.
      *
      * <p>C'est bien un orange, et non le rouge de la chair : les deux competences ont chacune
      * leurs teintes, et celle-ci est la sienne.
+     *
+     * <p>Attention a l'ordre des canaux : l'original ecrit {@code new Color(0xba, 0xb2, 0x23,
+     * 0x2a)}, qui est du <b>RGBA</b> — rouge, vert, bleu, alpha — alors qu'un entier Java se lit
+     * ARGB. Les recopier tels quels donnerait un rouge (0xba de rouge, 0x23 de vert), et c'est
+     * exactement l'erreur qui a ete faite ici : l'orange du lancer d'objet s'affichait rouge.
      */
-    public static final int COLOR_HIT_ORANGE = 0xBAB2232A;
+    public static final int COLOR_HIT_ORANGE = 0x2ABAB223;
 
     /** Le gris eteint de la chair qui ne trouve rien, et son rouge quand elle trouve. */
-    public static final int COLOR_FLESH_IDLE = 0x4A4A4AA0;
-    public static final int COLOR_FLESH_HIT = 0xB91919B4;
+    public static final int COLOR_FLESH_IDLE = 0xA04A4A4A;
+    public static final int COLOR_FLESH_HIT = 0xB4B91919;
 
     /** La boite du lancer d'objet dans le vide : un demi-bloc, comme son marqueur. */
     public static final double VOID_BOX = 0.5;

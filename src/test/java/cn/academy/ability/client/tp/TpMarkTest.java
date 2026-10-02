@@ -149,15 +149,23 @@ class TpMarkTest {
         assertEquals(0xFFFFFFFF, TeleportMark.COLOR_NORMAL);
         assertEquals(0xFFFF3333, TeleportMark.COLOR_THREATENING);
 
-        // Les boites ont les leurs, prises a l'original.
+        // Les boites ont les leurs, prises a l'original — et dans son ordre de canaux, qui est du
+        // RGBA : le rouge du lancer d'objet vient de 0xba, son vert de 0xb2, son bleu de 0x23.
         assertEquals(0xBABABABA, TeleportMark.COLOR_VOID, "le gris du lancer d'objet");
-        assertEquals(0xBAB2232A, TeleportMark.COLOR_HIT_ORANGE, "son ORANGE quand il vise");
-        assertEquals(0x4A4A4AA0, TeleportMark.COLOR_FLESH_IDLE, "le gris eteint de la chair");
-        assertEquals(0xB91919B4, TeleportMark.COLOR_FLESH_HIT, "le rouge de la chair");
+        assertEquals(0x2ABAB223, TeleportMark.COLOR_HIT_ORANGE, "son ORANGE quand il vise");
+        assertEquals(0xA04A4A4A, TeleportMark.COLOR_FLESH_IDLE, "le gris eteint de la chair");
+        assertEquals(0xB4B91919, TeleportMark.COLOR_FLESH_HIT, "le rouge de la chair");
 
-        // Le lancer d'objet n'est donc jamais rouge, et la chair jamais orange : ce sont deux
-        // competences, deux paires de teintes, et l'orange n'est pas un rouge plus pale.
+        // Ce qui separe les deux, c'est le canal vert : presque aussi fort que le rouge pour
+        // l'orange (0xb2 contre 0xba), et six fois plus faible pour le rouge de la chair (0x19
+        // contre 0xb9). Une inversion de canaux, elle, fait tomber cet ecart.
         assertNotEquals(TeleportMark.COLOR_HIT_ORANGE, TeleportMark.COLOR_FLESH_HIT);
+        assertTrue(((TeleportMark.COLOR_HIT_ORANGE >> 8) & 0xFF)
+                > 0.9 * ((TeleportMark.COLOR_HIT_ORANGE >> 16) & 0xFF),
+                "l'orange a le vert presque au niveau du rouge");
+        assertTrue(2 * ((TeleportMark.COLOR_FLESH_HIT >> 8) & 0xFF)
+                < ((TeleportMark.COLOR_FLESH_HIT >> 16) & 0xFF),
+                "le rouge de la chair a le vert tres bas");
     }
 
     @Test
