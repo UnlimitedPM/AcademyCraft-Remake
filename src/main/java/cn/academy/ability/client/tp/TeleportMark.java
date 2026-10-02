@@ -166,6 +166,16 @@ public final class TeleportMark {
             return new Seat(TeleporterCategory.SHIFT_TELEPORT.destination(player,
                     ClientAbilityData.get()), true);
         }
+        // Le lancer d'objet montre ou il tombera, et rougit quand ce sera sur quelqu'un. Le
+        // drapeau veut donc dire ici « rien a frapper » : c'est le meme rendu — un fantome rouge
+        // quand quelque chose cloche — et l'original s'en servait pareil, avec sa teinte
+        // « threating » des qu'une creature se trouvait sous le geste.
+        if (skill == TeleporterCategory.THREATENING_TELEPORT) {
+            return new Seat(TeleporterCategory.THREATENING_TELEPORT.dropPosition(player,
+                    ClientAbilityData.get()),
+                    !TeleporterCategory.THREATENING_TELEPORT.threatens(player,
+                            ClientAbilityData.get()));
+        }
         if (skill == TeleporterCategory.PENETRATE_TELEPORT && TeleportAim.active()) {
             PenetrateTeleportSkill.Destination destination =
                     TeleporterCategory.PENETRATE_TELEPORT.destination(player,

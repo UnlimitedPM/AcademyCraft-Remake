@@ -118,6 +118,31 @@ public class ThreateningTeleportSkill extends Skill {
         return !player.getMainHandItem().isEmpty();
     }
 
+    /**
+     * Ou l'objet lance tomberait : sur les yeux d'une creature, ou la ou le regard butte.
+     *
+     * <p>Calculee a part pour la meme raison que chez les trois autres competences a marque : le
+     * fantome du client doit se poser sur ce que le geste atteindra, et il ne peut le savoir qu'en
+     * appelant la meme fonction. Derriere, l'objet suit exactement le meme chemin.
+     */
+    public Vec3 dropPosition(Player player, AbilityData data) {
+        Entity target = TargetingUtil.findEntityInSight(player, range(data));
+        return target != null
+                ? target.position().add(0, target.getEyeHeight(), 0)
+                : TargetingUtil.findImpactPoint(player, range(data));
+    }
+
+    /**
+     * Y a-t-il quelqu'un a frapper, la ou l'objet tomberait ?
+     *
+     * <p>C'est ce que l'original lisait pour choisir la couleur de son marqueur : sa teinte
+     * ordinaire pour le vide, et sa teinte « threating » des qu'une creature se trouvait sous le
+     * geste. Le port en fait le drapeau du fantome, qui rougit pour la meme raison.
+     */
+    public boolean threatens(Player player, AbilityData data) {
+        return TargetingUtil.findEntityInSight(player, range(data)) instanceof LivingEntity;
+    }
+
     @Override
     public void onActivateCharged(Player player, AbilityData data, int chargeTicks) {
         ItemStack stack = player.getMainHandItem();
