@@ -40,6 +40,9 @@ public final class TpRenderType {
     /** Et un seul pour les etincelles, qui n'ont qu'une image. */
     private static final Map<ResourceLocation, RenderType> PARTICLES = new HashMap<>();
 
+    /** Et un seul pour la boite, dont les traits n'ont pas d'image du tout. */
+    private static RenderType BOX;
+
     private TpRenderType() {
     }
 
@@ -63,6 +66,36 @@ public final class TpRenderType {
      */
     public static RenderType particle(ResourceLocation texture) {
         return PARTICLES.computeIfAbsent(texture, TpRenderType::createParticle);
+    }
+
+    /**
+     * Le type de la <b>boite</b> : des rubans de couleur, sans image.
+     *
+     * <p>Le fantome et les etincelles sont des quads textures ; les traits de la boite, eux, n'ont
+     * qu'une couleur a montrer. C'est ce que dessine le programme {@code position_color}, celui des
+     * aplats — le meme genre de choix que le {@code ShaderNotex} de l'original, qui dessinait sa
+     * boite sans texture et sans eclairage.
+     *
+     * <p>Le test de profondeur, lui, reste allume : la boite marque un endroit du monde, elle n'a
+     * pas a se voir au travers des murs comme le fantome.
+     */
+    public static RenderType box() {
+        if (BOX == null) {
+            BOX = createBox();
+        }
+        return BOX;
+    }
+
+    private static RenderType createBox() {
+        return RenderType.create("academy_tp_box", DefaultVertexFormat.POSITION_COLOR,
+                VertexFormat.Mode.QUADS, 256, false, true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getPositionColorShader))
+                        .setTransparencyState(blending())
+                        .setWriteMaskState(noDepthWrite())
+                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .createCompositeState(true));
     }
 
     private static RenderType createMark(ResourceLocation texture) {

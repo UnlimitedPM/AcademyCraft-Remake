@@ -150,11 +150,19 @@ class TpMarkTest {
         assertEquals(0xFFFF3333, TeleportMark.COLOR_THREATENING);
 
         // Les boites ont les leurs, prises a l'original — et dans son ordre de canaux, qui est du
-        // RGBA : le rouge du lancer d'objet vient de 0xba, son vert de 0xb2, son bleu de 0x23.
-        assertEquals(0xBABABABA, TeleportMark.COLOR_VOID, "le gris du lancer d'objet");
-        assertEquals(0x2ABAB223, TeleportMark.COLOR_HIT_ORANGE, "son ORANGE quand il vise");
-        assertEquals(0xA04A4A4A, TeleportMark.COLOR_FLESH_IDLE, "le gris eteint de la chair");
-        assertEquals(0xB4B91919, TeleportMark.COLOR_FLESH_HIT, "le rouge de la chair");
+        // RGBA : le rouge du lancer d'objet vient de 0xba, son vert de 0xb2, son bleu de 0x23. Le
+        // quatrieme octet, son alpha, n'est pas repris : son rendu ne le lisait pas, donc la boite
+        // sortait pleine, et c'est ce que l'on veut ici aussi.
+        assertEquals(0xFFBABABA, TeleportMark.COLOR_VOID, "le gris du lancer d'objet");
+        assertEquals(0xFFBAB223, TeleportMark.COLOR_HIT_ORANGE, "son ORANGE quand il vise");
+        assertEquals(0xFF4A4A4A, TeleportMark.COLOR_FLESH_IDLE, "le gris eteint de la chair");
+        assertEquals(0xFFB91919, TeleportMark.COLOR_FLESH_HIT, "le rouge de la chair");
+
+        // Et les quatre sont opaques : le quatrieme octet est plein.
+        for (int color : new int[] { TeleportMark.COLOR_VOID, TeleportMark.COLOR_HIT_ORANGE,
+                TeleportMark.COLOR_FLESH_IDLE, TeleportMark.COLOR_FLESH_HIT }) {
+            assertEquals(0xFF, color >>> 24, "une boite se voit pleine");
+        }
 
         // Ce qui separe les deux, c'est le canal vert : presque aussi fort que le rouge pour
         // l'orange (0xb2 contre 0xba), et six fois plus faible pour le rouge de la chair (0x19

@@ -78,8 +78,16 @@ public final class TeleportMark {
     /** Et celle d'un fantome qui signale un obstacle : son rouge. */
     public static final int COLOR_THREATENING = 0xFFFF3333;
 
-    /** Le gris du vide, pour la boite du lancer d'objet : l'original, 0xba sur les quatre canaux. */
-    public static final int COLOR_VOID = 0xBABABABA;
+    /**
+     * Le gris du vide, pour la boite du lancer d'objet : l'original, 0xba dans les trois canaux.
+     *
+     * <p>Opaches, tous les quatre : l'original ecrivait bien une transparence dans sa
+     * {@code Color} — 0xba ici, 0x2a pour l'orange, 0xa0 et 0xb4 pour la chair — mais son rendu
+     * l'ignorait. Son marqueur etait dessine sans melange, donc son alpha n'etait jamais lu et la
+     * boite sortait pleine. La garder translucide, c'est ce qui faisait paraitre la notre delavee ;
+     * l'alpha d'origine reste note ici, mais il ne se voit pas.
+     */
+    public static final int COLOR_VOID = 0xFFBABABA;
 
     /**
      * Et son ORANGE des qu'une creature est visee.
@@ -92,11 +100,11 @@ public final class TeleportMark {
      * ARGB. Les recopier tels quels donnerait un rouge (0xba de rouge, 0x23 de vert), et c'est
      * exactement l'erreur qui a ete faite ici : l'orange du lancer d'objet s'affichait rouge.
      */
-    public static final int COLOR_HIT_ORANGE = 0x2ABAB223;
+    public static final int COLOR_HIT_ORANGE = 0xFFBAB223;
 
     /** Le gris eteint de la chair qui ne trouve rien, et son rouge quand elle trouve. */
-    public static final int COLOR_FLESH_IDLE = 0xA04A4A4A;
-    public static final int COLOR_FLESH_HIT = 0xB4B91919;
+    public static final int COLOR_FLESH_IDLE = 0xFF4A4A4A;
+    public static final int COLOR_FLESH_HIT = 0xFFB91919;
 
     /** La boite du lancer d'objet dans le vide : un demi-bloc, comme son marqueur. */
     public static final double VOID_BOX = 0.5;

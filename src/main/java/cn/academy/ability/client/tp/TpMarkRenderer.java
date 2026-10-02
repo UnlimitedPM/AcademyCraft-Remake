@@ -14,12 +14,9 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -70,11 +67,11 @@ public final class TpMarkRenderer {
      * L'epaisseur d'un trait, en blocs.
      *
      * <p>L'original dessinait ses traits en {@code glLineWidth(3f)}, donc trois pixels quelle que
-     * soit la distance. La 1.20.1 ne sait plus regler cette largeur, et un trait de ligne y fait un
-     * pixel : c'est cette epaisseur-la qu'on rend en blocs, celle qui donne trois pixels a quatre
-     * blocs de distance, la ou l'on regarde une marque.
+     * soit la distance. La 1.20.1 ne sait plus regler cette largeur, donc l'epaisseur se donne en
+     * blocs : celle-ci fait trois a quatre pixels a quatre blocs de distance, la ou l'on regarde
+     * une marque.
      */
-    public static final double STROKE = 0.025;
+    public static final double STROKE = 0.03;
 
     private static final ResourceLocation[] TEXTURES = frames();
 
@@ -193,45 +190,65 @@ public final class TpMarkRenderer {
         double half = width / 2.0;
         double dash = DASH * width;
 
-        pose.pushPose();
-        pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
-        VertexConsumer out = buffers.getBuffer(RenderType.lines());
+        // Tout se calcule par rapport a la camera : c'est le repere dans lequel la pose ecrit, et
+        // celui ou un ruban sait de quel cote se tourner — la camera y est a l'origine.
+        Vec3 base = at.subtract(camera);
+        VertexConsumer out = buffers.getBuffer(TpRenderType.box());
 
         for (int ix = 0; ix <= 1; ix++) {
             for (int iy = 0; iy <= 1; iy++) {
                 for (int iz = 0; iz <= 1; iz++) {
-                    double x = ix * width - half;
-                    double y = iy * height;
-                    double z = iz * width - half;
+                    Vec3 corner = base.add(ix * width - half, iy * height, iz * width - half);
                     double dx = (ix == 0 ? dash : -dash);
                     double dy = (iy == 0 ? dash : -dash);
                     double dz = (iz == 0 ? dash : -dash);
-                    segment(out, pose, x, y, z, dx, 0, 0, red, green, blue, alpha);
-                    segment(out, pose, x, y, z, 0, dy, 0, red, green, blue, alpha);
-                    segment(out, pose, x, y, z, 0, 0, dz, red, green, blue, alpha);
+                    stroke(out, pose, corner, new Vec3(dx, 0, 0), red, green, blue, alpha);
+                    stroke(out, pose, corner, new Vec3(0, dy, 0), red, green, blue, alpha);
+                    stroke(out, pose, corner, new Vec3(0, 0, dz), red, green, blue, alpha);
                 }
             }
         }
-        pose.popPose();
     }
 
     /**
-     * Un trait, dans le repere de la pose.
+     * Un trait, dans le repere de la camera.
      *
-     * <p>Ce n'est pas une ligne mais un <b>barreau</b> : un petit parallelepipede de quelques
-     * centimetres de cote. L'original dessinait ses traits a {@code glLineWidth(3f)}, donc epais ;
-     * la 1.20.1 ne sait plus regler l'epaisseur d'une ligne — un trait de ligne y fait un pixel, et
-     * rien d'autre — donc un vrai trait de ligne serait trois fois trop fin. Le barreau, lui, a une
-     * epaisseur en blocs, qui rend la meme chose a distance de jeu.
+     * <p>Ce n'est pas une ligne mais un <b>ruban</b> : un rectangle plat, tourne vers la camera, et
+     * epais de quelques centimetres. L'original tirait ses traits en {@code glLineWidth(3f)}, donc
+     * epais ; la 1.20.1 ne sait plus regler l'epaisseur d'une ligne — un trait de ligne y fait un
+     * pixel, et rien d'autre — et un ruban est la seule facon d'avoir un trait large.
+     *
+     * <p>Il ne faut pas le confondre avec un petit parallelepipede, qui donnerait un <b>tube</b> a
+     * section carree : a l'oeil, ce n'est plus un trait mais un cadre en barres. Le ruban, lui, se
+     * retourne vers celui qui regarde et reste plat, donc se lit comme la ligne epaisse de
+     * l'original, de n'importe ou.
      */
-    private static void segment(VertexConsumer out, PoseStack pose, double x, double y, double z,
-                                double dx, double dy, double dz,
-                                float red, float green, float blue, float alpha) {
-        double t = STROKE / 2.0;
-        LevelRenderer.renderLineBox(pose, out, new AABB(
-                Math.min(x, x + dx) - t, Math.min(y, y + dy) - t, Math.min(z, z + dz) - t,
-                Math.max(x, x + dx) + t, Math.max(y, y + dy) + t, Math.max(z, z + dz) + t),
-                red, green, blue, alpha);
+    private static void stroke(VertexConsumer out, PoseStack pose, Vec3 from, Vec3 offset,
+                               float red, float green, float blue, float alpha) {
+        Vec3 dir = offset.normalize();
+        // La camera est a l'origine du repere, donc `from` est deja le vecteur qui va d'elle au
+        // trait, et le produit vectoriel donne la perpendiculaire qui fait face a l'ecran.
+        Vec3 side = dir.cross(from);
+        if (side.lengthSqr() < 1.0E-7) {
+            // On regarde le trait dans son axe : il n'a plus de largeur a montrer, et n'importe
+            // quelle perpendiculaire fera l'affaire, puisqu'il est de profil.
+            side = dir.cross(new Vec3(0, 1, 0));
+            if (side.lengthSqr() < 1.0E-7) side = dir.cross(new Vec3(1, 0, 0));
+        }
+        Vec3 half = side.normalize().scale(STROKE / 2.0);
+        Vec3 to = from.add(offset);
+
+        vertex(out, pose, from.subtract(half), red, green, blue, alpha);
+        vertex(out, pose, to.subtract(half), red, green, blue, alpha);
+        vertex(out, pose, to.add(half), red, green, blue, alpha);
+        vertex(out, pose, from.add(half), red, green, blue, alpha);
+    }
+
+    /** Un sommet de ruban : une position et une couleur, rien d'autre. */
+    private static void vertex(VertexConsumer out, PoseStack pose, Vec3 at,
+                               float red, float green, float blue, float alpha) {
+        out.vertex(pose.last().pose(), (float) at.x, (float) at.y, (float) at.z)
+                .color(red, green, blue, alpha).endVertex();
     }
 
     /** Une etincelle : un carre qui regarde la camera, comme celles du plasma. */
