@@ -94,6 +94,21 @@ public final class TpMarkRenderer {
         return STROKE * Math.max(distance, 1.0) / STROKE_REFERENCE;
     }
 
+    /**
+     * De combien le modele remonte pour que ses pieds touchent la marque.
+     *
+     * <p>Le modele d'un joueur a son origine a la <b>nuque</b>, et ses jambes pendent un bloc et
+     * demi en dessous d'elle : c'est pourquoi le rendu d'une entite vivante le remonte d'un bloc
+     * et demi apres l'avoir retourne — le {@code poseStack.translate(0, -1.501, 0)} de
+     * {@code LivingEntityRenderer.render}, que le port n'appliquait pas.
+     *
+     * <p>Sans lui, le fantome <b>pend</b> sous la marque : sa tete est au point vise et son corps
+     * passe en dessous, donc sous le curseur et dans le sol des qu'on regarde par terre. Le signe
+     * est celui de la 1.20.1 — negatif apres le retournement — parce que le repere l'est aussi :
+     * c'est la ligne de {@code LivingEntityRenderer}, recopiee telle quelle.
+     */
+    public static final double GHOST_LIFT = 1.501;
+
     private static final ResourceLocation[] TEXTURES = frames();
 
     /** Le modele du fantome, construit a la premiere image et garde ensuite. */
@@ -178,6 +193,10 @@ public final class TpMarkRenderer {
         // tireur, qui est toujours derriere lui. Il se retourne donc vers celui qui le regarde.
         pose.mulPose(Axis.YP.rotationDegrees(-TeleportMark.yaw()));
         pose.mulPose(Axis.ZP.rotationDegrees(180f));
+        // Et il remonte d'un bloc et demi, pour que ses pieds touchent la marque au lieu d'y pendre
+        // par la nuque. C'est le decalage du rendu d'une entite vivante, celui qu'oubliait ce port
+        // et qui mettait le fantome sous le curseur : voir GHOST_LIFT.
+        pose.translate(0, -GHOST_LIFT, 0);
 
         // La teinte vient de la marque elle-meme, et non d'un drapeau : chaque competence a sa
         // couleur, celles de l'original — le gris du vide, le rouge de la cible.

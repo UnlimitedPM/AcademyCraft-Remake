@@ -310,9 +310,11 @@ public final class TeleportMark {
             PenetrateTeleportSkill.Destination destination =
                     TeleporterCategory.PENETRATE_TELEPORT.destination(player,
                             ClientAbilityData.get(), TeleportAim.distance());
-            // Le fantome se tient a hauteur d'YEUX de sa destination, comme l'original : la
-            // destination est un point aux pieds, et le modele d'un joueur a son origine au cou.
-            return new Seat(destination.position().add(0, player.getEyeHeight(), 0),
+            // Le fantome se pose sur la destination elle-meme : c'est un point aux pieds, et le
+            // rendu sait desormais qu'il doit y poser les siens — voir TpMarkRenderer.GHOST_LIFT.
+            // L'original ajoutait une hauteur d'yeux ici, ce qui n'etait qu'un rattrapage du meme
+            // decalage, fait a moitie : son scintillement, lui, s'en passait.
+            return new Seat(destination.position(),
                     destination.available() ? COLOR_NORMAL : COLOR_THREATENING, Shape.GHOST);
         }
         return null;
