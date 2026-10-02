@@ -131,6 +131,14 @@ public final class TeleportMark {
     /** Et sa forme : le fantome du joueur, ou une boite aux dimensions demandees. */
     private static Shape shape = Shape.GHOST;
 
+    /**
+     * En deca de cette distance, la marque glisse d'un tick a l'autre ; au-dela, elle saute.
+     *
+     * <p>Trois blocs : c'est plus que ce qu'une creature qui marche ou qu'un regard qui balaie
+     * parcourt en un tick, et bien moins que ce qu'un changement de point fait.
+     */
+    public static final double SMOOTH_DISTANCE = 3.0;
+
     /** Son age, en ticks : il ne sert qu'au defilement de ses images. */
     private static int ageTicks;
 
@@ -153,8 +161,9 @@ public final class TeleportMark {
         // Une marque qui nait : son age repart de zero, donc son animation aussi — et elle n'a pas
         // de position precedente, sans quoi le rendu la ferait glisser depuis la derniere.
         if (position == null) ageTicks = 0;
-        previous = position != null ? position : seat.position();
-        position = seat.position();
+        Vec3 next = seat.position();
+        previous = follow(position, next);
+        position = next;
         color = seat.color();
         shape = seat.shape();
         yaw = player.getYRot();
@@ -175,6 +184,22 @@ public final class TeleportMark {
     @Nullable
     public static Vec3 position() {
         return position;
+    }
+
+    /**
+     * D'ou part l'interpolation de l'image : le point precedent, ou le nouveau s'il est trop loin.
+     *
+     * <p>Le rendu glisse entre les deux derniers ticks de la marque — c'est ce qui fait suivre une
+     * creature qui marche sans saccades. Mais un <b>saut</b> n'est pas un deplacement : le regard
+     * qui accroche un autre bloc, le saut qui sort de la matiere, la competence qui change de cas —
+     * autant de pas de plusieurs blocs qui ne sont pas un chemin. Les interpoler faisait traverser
+     * au fantome tout ce qu'il y a entre les deux, et se voyait en jeu comme un bond sans raison.
+     *
+     * <p>Fonction pure, donc verifiable : en deca de {@link #SMOOTH_DISTANCE} on glisse, au-dela on
+     * se pose.
+     */
+    public static Vec3 follow(@Nullable Vec3 from, Vec3 to) {
+        return from != null && from.distanceTo(to) <= SMOOTH_DISTANCE ? from : to;
     }
 
     /**

@@ -222,6 +222,32 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("la marque glisse quand elle se deplace, et se pose quand elle saute")
+    void laMarqueGlisseOuSePose() {
+        Vec3 from = new Vec3(10, 64, -5);
+
+        // Sans point precedent, il n'y a rien a interpoler : la marque se pose. C'est le cas d'une
+        // marque qui nait, et sans lui elle glisserait depuis la position de la precedente.
+        Vec3 birth = new Vec3(30, 70, 20);
+        assertEquals(birth, TeleportMark.follow(null, birth));
+
+        // Un deplacement d'un tick — une creature qui marche, un regard qui balaie — se glisse.
+        Vec3 walking = from.add(0.3, 0, 0.4);
+        assertEquals(from, TeleportMark.follow(from, walking));
+
+        // Et un saut ne se glisse pas : on se pose dessus. Autrement le fantome traverserait tout
+        // ce qu'il y a entre les deux points, ce qui se voit comme un bond sans raison.
+        Vec3 far = from.add(20, 0, 0);
+        assertEquals(far, TeleportMark.follow(from, far));
+        assertEquals(from.add(0, 0, 20), TeleportMark.follow(from, from.add(0, 0, 20)));
+
+        // La limite elle-meme, des deux cotes : trois blocs glissent, trois et un chouia se pose.
+        Vec3 edge = from.add(TeleportMark.SMOOTH_DISTANCE, 0, 0);
+        assertEquals(from, TeleportMark.follow(from, edge));
+        assertEquals(edge.add(0.01, 0, 0), TeleportMark.follow(from, edge.add(0.01, 0, 0)));
+    }
+
+    @Test
     @DisplayName("une marque finie ne se dessine nulle part, a aucun instant de l'image")
     void uneMarqueFinieNeSeDessinePas() {
         // Le rendu demande la position a l'instant de l'image, et pas a celui du tick, pour suivre
