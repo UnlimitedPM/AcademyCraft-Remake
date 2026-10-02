@@ -133,6 +133,10 @@ public class AbilityClientEvents {
             TeleportMark.end();
             TeleportAim.end();
             cn.academy.ability.client.tp.TpParticles.clear();
+            // Le sang de la chair arrachee appartient au monde lui aussi : il ne vit que dix
+            // ticks, mais un monde quitte entre-temps en garderait les taches a l'ecran pour
+            // rien. Voir BloodSplashes.
+            cn.academy.ability.client.tp.BloodSplashes.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();

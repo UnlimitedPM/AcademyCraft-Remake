@@ -135,6 +135,9 @@ public class FleshRippingSkill extends Skill {
         // Le son du coup, pose sur la cible dans l'original — mais il n'y a qu'un joueur
         // pour l'entendre, donc le port le lui donne directement.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_GUTS, 0.6f);
+        // Et la gerbe part avec lui : le serveur seul sait qui a ete touche, donc c'est lui qui
+        // l'annonce a ceux qui voient la bete. Voir BloodSplashPacket et BloodSplashes.
+        cn.academy.ability.network.BloodSplashPacket.send(target);
 
         if (player.getRandom().nextFloat() < DISGUST_CHANCE) {
             // 100 ticks, soit cinq secondes : joli geste, vilaine sensation.

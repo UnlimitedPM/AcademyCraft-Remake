@@ -58,11 +58,13 @@ public final class TpRenderType {
     }
 
     /**
-     * Le type des <b>etincelles</b> : celles-la ne traversent rien.
+     * Le type des <b>etincelles</b> — et du <b>sang</b>, qui se dessine de la meme facon.
      *
-     * <p>L'original ne leur avait pas donne le meme regime que la marque, et c'est juste : le
-     * fantome indique un endroit a travers le mur qu'on s'apprete a franchir, mais ses etincelles
-     * sont de la fumee, et de la fumee qui passe les murs se lit comme un defaut.
+     * <p>Un carre d'image pose dans le plan de l'ecran, sans ecriture de profondeur mais avec son
+     * test : ces deux-la ne traversent rien. L'original ne leur avait pas donne le meme regime
+     * qu'a la marque, et c'est juste : le fantome indique un endroit a travers le mur qu'on
+     * s'apprete a franchir, mais une etincelle est de la fumee, et du sang qui passe les murs se
+     * lit comme un defaut.
      */
     public static RenderType particle(ResourceLocation texture) {
         return PARTICLES.computeIfAbsent(texture, TpRenderType::createParticle);

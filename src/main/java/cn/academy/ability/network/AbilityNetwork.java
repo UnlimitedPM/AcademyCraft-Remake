@@ -58,6 +58,11 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
+        // Et le sang de la chair arrachee : le serveur seul sait qui a ete touche, donc c'est lui
+        // qui seme la gerbe autour de la victime. Voir BloodSplashPacket.
+        CHANNEL.registerMessage(nextId++, BloodSplashPacket.class,
+                BloodSplashPacket::encode, BloodSplashPacket::decode,
+                BloodSplashPacket::handle);
         // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
         // Voir MdMissilePacket.
         CHANNEL.registerMessage(nextId++, MdMissilePacket.class,
