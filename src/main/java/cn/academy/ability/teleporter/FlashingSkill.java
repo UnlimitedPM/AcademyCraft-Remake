@@ -24,8 +24,8 @@ import net.minecraft.world.phys.Vec3;
  * n'a pas ce rendu, donc ces quatre touches sont a la fois la visee et le declencheur.
  *
  * <p>Les touches de deplacement ne sont <b>pas</b> detournees : on marche normalement tout
- * en visant, et sauter ne fait que deplacer d'un coup. C'est ce que faisait l'original, qui
- * ajoutait ses ecouteurs par-dessus ceux du jeu.
+ * en visant, et sauter ne fait que deplacer d'un coup, sans laisser d'elan derriere lui.
+ * C'est ce que faisait l'original, qui ajoutait ses ecouteurs par-dessus ceux du jeu.
  *
  * <h2>Ce que coute un saut</h2>
  *
@@ -37,10 +37,17 @@ import net.minecraft.world.phys.Vec3;
  * <h2>Ou l'on arrive</h2>
  *
  * Le saut part des <b>yeux</b>, dans la direction de la touche, incline par le regard :
- * regarder en l'air fait monter, regarder au sol fait descendre. Le trajet s'arrete sur le
- * premier corps vivant ou la premiere face de bloc, et l'atterrissage se pose alors sur
- * cette face ({@link LandingSite}) : on ressort devant le mur, sous le plafond, ou dessus,
- * jamais dedans.
+ * regarder en l'air fait monter, regarder au sol fait descendre — mais <b>devant et
+ * derriere</b> seulement. De cote on reste a sa hauteur : l'original tournait un vecteur
+ * (0, 0, +-1) autour de l'axe Z, et cette rotation-la ne peut pas le faire monter ni
+ * descendre. Viser ses pieds ne fait donc pas plonger un saut a gauche ou a droite.
+ *
+ * <p>Le trajet s'arrete sur le premier corps vivant ou la premiere face de bloc, et
+ * l'atterrissage se pose alors sur cette face ({@link LandingSite}) : on ressort devant le
+ * mur, sous le plafond, ou dessus, jamais dedans. Et l'on arrive <b>net</b> : la vitesse est
+ * remise a zero au moment du saut, comme le faisait le passage de l'original par
+ * {@code setPositionAndUpdate}. Sans cela l'elan de la marche survit au saut et l'on
+ * continue d'avancer apres etre arrive — on se deplace en plus de s'etre teleporte.
  */
 public class FlashingSkill extends Skill {
 
@@ -160,8 +167,12 @@ public class FlashingSkill extends Skill {
 
         Vec3 destination = destination(player, data, action);
 
-        // L'original descendaient son porteur de sa monture : on ne se teleporte pas avec.
+        // L'original descendait son porteur de sa monture : on ne se teleporte pas avec.
         if (player.isPassenger()) player.stopRiding();
+        // L'elan ne suit pas, et il est remis a zero *avant* de partir pour que la position
+        // envoyee au client porte deja un mouvement nul. L'original l'obtenait autrement :
+        // son `setPositionAndUpdate` traversait Netty, qui vidait la vitesse des deux cotes.
+        player.setDeltaMovement(Vec3.ZERO);
         player.teleportTo(destination.x, destination.y, destination.z);
         player.fallDistance = 0.0f;
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_FLASHING, 1.0f);
@@ -179,8 +190,11 @@ public class FlashingSkill extends Skill {
      *
      * Portage des deux rotations de l'original ({@code rotateAroundZ} puis {@code rotateYaw}
      * sur un vecteur unitaire) : le resultat est un vecteur horizontal dont le lacet suit le
-     * regard, et qui s'incline du tangage. Fonction pure, donc verifiable : les quatre
-     * directions, et leur miroir quand le joueur se retourne.
+     * regard, et qui s'incline du tangage — <b>sauf de cote</b>. Les deux directions de cote
+     * partent d'un vecteur (0, 0, +-1) : une rotation autour de Z ne peut ni le monter ni le
+     * descendre, donc elles restent a plat, et c'est exactement ce que faisait l'original.
+     * Fonction pure, donc verifiable : les quatre directions, leur miroir quand le joueur se
+     * retourne, et le fait que le regard ne les incline pas toutes.
      */
     public static Vec3 dashDirection(Vec3 look, double pitchDegrees, int direction) {
         Vec3 flat = new Vec3(look.x, 0, look.z);
@@ -198,7 +212,10 @@ public class FlashingSkill extends Skill {
             default -> flat;
         };
 
-        double pitch = Math.toRadians(pitchDegrees);
+        // Devant et derriere, le saut suit le regard ; de cote, il reste a plat. Voir le
+        // commentaire de la methode : c'est la geometrie meme de l'original.
+        boolean sideways = direction == LEFT || direction == RIGHT;
+        double pitch = sideways ? 0.0 : Math.toRadians(pitchDegrees);
         return side.scale(Math.cos(pitch)).add(0, -Math.sin(pitch), 0);
     }
 

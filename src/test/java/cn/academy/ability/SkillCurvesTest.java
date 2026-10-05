@@ -655,6 +655,20 @@ class SkillCurvesTest {
                 .dashDirection(south, 45, cn.academy.ability.teleporter.FlashingSkill.FORWARD);
         assertEquals(-Math.sin(Math.toRadians(45)), down.y, 0.0001);
 
+        // De cote, en revanche, le regard ne fait rien du tout : l'original tournait un
+        // vecteur (0, 0, +-1) autour de l'axe Z, une rotation qui ne peut ni le monter ni le
+        // descendre. Viser ses pieds laisse donc le saut lateral a la meme hauteur, et non
+        // plongeant — c'est ce que le joueur voyait en jeu.
+        assertEquals(new Vec3(1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(south, 89, cn.academy.ability.teleporter.FlashingSkill.LEFT)));
+        assertEquals(new Vec3(-1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(south, 89, cn.academy.ability.teleporter.FlashingSkill.RIGHT)));
+        assertEquals(new Vec3(0, 0, -1),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(east, -89, cn.academy.ability.teleporter.FlashingSkill.LEFT)));
+
         // Regard pile a la verticale : il n'y a plus d'horizon, et le nord prend le relais.
         assertEquals(new Vec3(0, -1, 0),
                 round(cn.academy.ability.teleporter.FlashingSkill
