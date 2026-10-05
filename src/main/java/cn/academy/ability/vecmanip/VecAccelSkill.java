@@ -44,7 +44,19 @@ public class VecAccelSkill extends Skill {
      * soit moins que les 2,2 que le port appliquait sans charge.
      */
     public double speed(AbilityData data) {
-        double prog = lerp(0.4f, 1f, (float) Math.min(1.0, data.getChargeTicks(this) / (double) MAX_CHARGE));
+        return speedAt(data.getChargeTicks(this));
+    }
+
+    /**
+     * La meme vitesse, lue sur un nombre de ticks de charge.
+     *
+     * <p>Le CLIENT ne connait que ce nombre-la : la charge d'une competence n'est pas
+     * synchronisee, c'est son propre compteur qui la suit ({@code ClientCharge}). La parabole de
+     * visee s'en sert donc, et le serveur garde {@link #speed(AbilityData)} — les deux passent par
+     * ici, donc elles ne peuvent pas diverger.
+     */
+    public static double speedAt(int chargeTicks) {
+        double prog = 0.4 + Math.min(1.0, chargeTicks / (double) MAX_CHARGE) * 0.6;
         return Math.sin(prog) * MAX_VELOCITY;
     }
 

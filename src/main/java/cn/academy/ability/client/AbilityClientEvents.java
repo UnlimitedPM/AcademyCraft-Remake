@@ -176,6 +176,7 @@ public class AbilityClientEvents {
             // Et les deux tornades de vecmanip, qui appartiennent au monde comme le reste.
             cn.academy.ability.client.vm.VecmanipTornados.clear();
             cn.academy.ability.client.vm.VecWaves.clear();
+            cn.academy.ability.client.vm.VecAccelPreview.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
@@ -472,6 +473,11 @@ public class AbilityClientEvents {
                     // Et le plasma du meltdowner, qui tourne autour de celui qui le charge :
                     // l'essaim de l'original, aux memes nombres. Voir MeltdownerCharge.
                     MeltdownerCharge.tick(player, skill, ClientCharge.getTicks());
+                    // Et la parabole de visee de l'acceleration de vecteur : elle part de la main
+                    // droite, suit le regard baisse de dix degres, et s'allonge avec la charge.
+                    // Voir VecAccelPreview.
+                    cn.academy.ability.client.vm.VecAccelPreview.tickHeld(player, skill,
+                            ClientCharge.getTicks());
                     // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
                     // la charge : voir BodyIntensifyEffect.
                     BodyIntensifyEffect.tickCharge(skill);
@@ -524,6 +530,8 @@ public class AbilityClientEvents {
         // Et les tornades de vecmanip, qui s'effacent au lieu de disparaitre d'un coup : les
         // ailes en quinze ticks, la colonne du canon en trente. Voir VecmanipTornados.
         cn.academy.ability.client.vm.VecmanipTornados.end(skill);
+        // La parabole de visee s'en va au relachement, que le saut ait lieu ou non.
+        cn.academy.ability.client.vm.VecAccelPreview.end(skill);
         // Le fantome de la teleportation s'en va au meme moment — sa competence est finie — et la
         // visee du saut traversant avec lui : la molette ne regle plus rien.
         TeleportMark.end();
