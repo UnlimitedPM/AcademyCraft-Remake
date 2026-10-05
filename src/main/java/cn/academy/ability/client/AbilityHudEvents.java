@@ -19,5 +19,10 @@ public class AbilityHudEvents {
                 new cn.academy.client.hud.BackgroundMask());
 
         event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "academy_cp", new AbilityHudOverlay());
+
+        // Et les ondulations du champ de vecmanip, posees au-dessus du reticule : l'original les
+        // dessinait a cette etape-la. Voir WaveRipples et RippleOverlay.
+        event.registerAbove(VanillaGuiOverlay.CROSSHAIR.id(), "academy_vm_ripples",
+                new cn.academy.ability.client.vm.RippleOverlay());
     }
 }
