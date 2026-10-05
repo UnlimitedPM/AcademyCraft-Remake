@@ -233,6 +233,9 @@ public class LocationTeleportSkill extends Skill {
             player.teleportTo(dest.x(), dest.y(), dest.z());
         }
         player.fallDistance = 0.0f;
+        // Et la chute qui suit l'arrivee n'est pas comptee : c'est ce que laisse chaque
+        // teleportation derriere elle. Voir AbilityData.suspendGravity.
+        data.suspendGravity(AbilityData.GRAVITY_SUSPENSION);
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
 
         data.addSkillExp(this, expFor(distance));

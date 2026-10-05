@@ -66,15 +66,6 @@ public class FlashingSkill extends Skill {
     /** Distance maximale, a l'experience maximale. */
     public static final double MAX_DISTANCE = 18.0;
 
-    /**
-     * Duree de la suspension de gravite apres un saut, en ticks.
-     *
-     * Portage du {@code GravityCancellor} de l'original : deux secondes pendant lesquelles
-     * la chute est presque annulee, ce qui rend le saut utilisable en l'air — sans quoi on
-     * ne ferait que tomber un peu plus loin.
-     */
-    public static final int GRAVITY_SUSPENSION = 40;
-
     public FlashingSkill() {
         super("flashing", 5);
     }
@@ -182,8 +173,9 @@ public class FlashingSkill extends Skill {
 
         // 0,002 par saut, comme l'original.
         data.addSkillExp(this, 0.002f);
-        // Et deux secondes de chute presque annulee, le temps de se rattraper.
-        data.suspendGravity(GRAVITY_SUSPENSION);
+        // Et deux secondes de chute annulee, le temps de se rattraper : c'est ce que laisse
+        // chaque teleportation derriere elle. Voir AbilityData.suspendGravity.
+        data.suspendGravity(AbilityData.GRAVITY_SUSPENSION);
         // Une teleportation de plus pour le theoreme de repli, qui la compte.
         TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
     }

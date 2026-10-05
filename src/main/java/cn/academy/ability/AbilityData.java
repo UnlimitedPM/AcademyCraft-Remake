@@ -782,12 +782,25 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private int gravitySuspension;
 
     /**
-     * Annule presque la chute pendant quelques ticks.
+     * Duree d'une suspension de chute, en ticks.
      *
-     * <p>Portage du {@code GravityCancellor} de l'original, qu'il fallait relancer apres
-     * chaque saut du scintillement : sans lui, un saut en l'air ne ferait que tomber un peu
-     * plus loin. L'effet appartient a l'original au client ; le port le tient cote serveur,
-     * ou la position fait autorite.
+     * <p>Deux secondes, la duree du {@code GravityCancellor} de l'original. C'est le delai que
+     * chaque teleportation laisse derriere elle : le temps de se rattraper, et surtout celui
+     * pendant lequel la chute n'est pas comptee.
+     */
+    public static final int GRAVITY_SUSPENSION = 40;
+
+    /**
+     * Annule la chute pendant quelques ticks.
+     *
+     * <p>Portage du {@code GravityCancellor} de l'original, que le scintillement relancait
+     * apres chaque saut — et que les quatre teleportations qui deplacent le joueur appellent
+     * maintenant, parce que c'est ce qui rend une arrivee en l'air gratuite.
+     *
+     * <p>Deux choses a la fois, et c'est la seconde qui compte : la chute est ralentie (voir
+     * {@code AbilityEvents}), et surtout elle n'est <b>plus comptee</b>. Sans cela, arriver en
+     * l'air ferait payer la hauteur qu'on vient de mettre derriere soi, ce que le joueur a vu :
+     * « je prends des degats de chute dans toutes les circonstances ».
      */
     public void suspendGravity(int ticks) {
         gravitySuspension = Math.max(gravitySuspension, ticks);

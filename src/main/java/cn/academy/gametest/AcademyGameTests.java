@@ -2918,6 +2918,69 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Une chute se paie, sauf juste apres une teleportation.
+     *
+     * <p>C'est le partage que le joueur a demande : sans pouvoir, la hauteur se paie ; avec,
+     * l'arrivee est gratuite le temps de se rattraper. Les quatre teleportations qui deplacent
+     * le joueur posent cette suspension, et c'est elle qui remet la chute a zero a chaque tick
+     * — le scintillement en avait une, les trois autres l'ont rejointe.
+     *
+     * <p>Le tick passe par l'evenement du jeu, comme le vrai : c'est le seul chemin qui voit la
+     * regle, puisqu'elle s'applique dans un crochet de tick de joueur.
+     */
+    @GameTest(template = "empty")
+    public static void uneTeleportationEffaceLaChuteQuiSuit(GameTestHelper helper) {
+        var player = ownPlayer(helper, "faller_apres_saut");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+
+        // Sans pouvoir, la chute reste due : c'est la regle de depart, et celle a garder.
+        player.fallDistance = 5f;
+        tickerLeJoueur(player);
+        assertClose(helper, 5f, player.fallDistance, "sans pouvoir, la chute se paie");
+
+        // Une teleportation laisse deux secondes derriere elle, et la chute n'est plus comptee
+        // tant qu'elles durent.
+        data.suspendGravity(cn.academy.ability.AbilityData.GRAVITY_SUSPENSION);
+        player.fallDistance = 5f;
+        tickerLeJoueur(player);
+        assertClose(helper, 0f, player.fallDistance, "apres un saut, la chute est effacee");
+
+        // Et la chute elle-meme est refusee a la source : on la provoque pour de vrai, par le
+        // chemin du jeu. `causeFallDamage` poste l'evenement de chute que le port ecoute, et
+        // rend faux quand la chute n'a pas ete payee — c'est la preuve que le crochet sert a
+        // quelque chose, et non qu'il repond quand on l'appelle.
+        assertFalse(helper, player.causeFallDamage(20f, 1f, player.damageSources().fall()),
+                "une chute suspendue ne se paie pas");
+
+        // Une suspension plus courte ne raccourcit pas celle qui court : c'est un plancher,
+        // comme le max de l'original.
+        data.suspendGravity(5);
+        assertClose(helper, cn.academy.ability.AbilityData.GRAVITY_SUSPENSION - 1,
+                data.getGravitySuspension(), "une suspension courte ne coupe pas la longue");
+
+        // Et elle dure ce qu'elle dit : une fois epuisee, la chute se repaie.
+        for (int i = 0; i < cn.academy.ability.AbilityData.GRAVITY_SUSPENSION - 1; i++) {
+            tickerLeJoueur(player);
+        }
+        assertClose(helper, 0, data.getGravitySuspension(), "la suspension s'epuise");
+        player.fallDistance = 5f;
+        tickerLeJoueur(player);
+        assertClose(helper, 5f, player.fallDistance, "et la chute se repaie apres");
+        assertTrue(helper, player.causeFallDamage(20f, 1f, player.damageSources().fall()),
+                "la chute se repaie une fois la suspension finie");
+
+        helper.succeed();
+    }
+
+    /** Un tick de joueur, comme le jeu le fait : c'est la que la chute est effacee. */
+    private static void tickerLeJoueur(net.minecraft.world.entity.player.Player player) {
+        cn.academy.ability.AbilityEvents.onPlayerTick(
+                new net.minecraftforge.event.TickEvent.PlayerTickEvent(
+                        net.minecraftforge.event.TickEvent.Phase.END, player));
+    }
+
+    /**
      * La teleportation a la marque, et ceux qu'elle emmene.
      *
      * C'est la seule competence du port qui deplace un <b>groupe</b>, et c'est ce qui se lit

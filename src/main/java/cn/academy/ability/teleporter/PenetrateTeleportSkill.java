@@ -161,6 +161,9 @@ public class PenetrateTeleportSkill extends Skill {
         player.teleportTo(destination.position().x, destination.position().y,
                 destination.position().z);
         player.fallDistance = 0;
+        // Et la chute qui suit l'arrivee n'est pas comptee : c'est ce que laisse chaque
+        // teleportation derriere elle. Voir AbilityData.suspendGravity.
+        data.suspendGravity(AbilityData.GRAVITY_SUSPENSION);
         // Le son part au relachement dans l'original, juste avant le saut : c'est le meme instant.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
 

@@ -12,6 +12,7 @@ import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -63,13 +64,19 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
-            // Le scintillement laisse une chute presque annulee derriere lui : c'est le
+            // Une teleportation laisse une chute annulee derriere elle : c'est le
             // GravityCancellor de l'original, deux secondes pendant lesquelles la gravite
             // (0,08 par tick) est compensee a 0,072.
+            //
+            // La compensation ne se voit qu'a moitie, et il faut le dire : le client est maitre
+            // de son propre mouvement, donc la vitesse posee ici lui est reprise au tick
+            // suivant. Ce qui protege vraiment, c'est la remise a zero de la chute — le degat
+            // de chute se decide ici, et c'est ici qu'on le refuse.
             if (data.getGravitySuspension() > 0) {
                 if (!player.getAbilities().flying && !player.onGround()) {
                     player.setDeltaMovement(player.getDeltaMovement().add(0, 0.072, 0));
                 }
+                player.fallDistance = 0.0f;
                 data.tickGravitySuspension();
             }
             // Les competences tenues vivent tant que la touche reste enfoncee.
@@ -116,6 +123,23 @@ public class AbilityEvents {
     @SubscribeEvent
     public static void onLivingTick(net.minecraftforge.event.entity.living.LivingEvent.LivingTickEvent event) {
         cn.academy.ability.meltdowner.RadiationMarks.tick(event.getEntity());
+    }
+
+    /**
+     * La chute qui suit une teleportation ne se paie pas.
+     *
+     * <p>C'est la seconde moitie de la suspension de chute, et celle qui la rend vraie : la
+     * remise a zero de {@code fallDistance} a chaque tick (voir {@link #onPlayerTick}) ne
+     * suffirait pas seule, parce qu'une chute a vitesse maximale descend de presque quatre
+     * blocs en un seul tick et franchirait le seuil avant qu'on ait pu la remettre a zero.
+     * Ici la chute est refusee a la source, et il n'en reste rien du tout.
+     */
+    @SubscribeEvent
+    public static void onFall(LivingFallEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            if (data.getGravitySuspension() > 0) event.setCanceled(true);
+        });
     }
 
     @SubscribeEvent
