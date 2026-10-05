@@ -9,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
@@ -373,8 +372,11 @@ public final class TpMarkRenderer {
      * <p>Ce sont les nombres de {@code ModelBiped} : la tete de huit pixels de cote en haut, le
      * corps de huit sur douze, les bras de quatre sur douze poses aux epaules, les jambes de
      * quatre sur douze posees sous le corps. Les sept parties sont celles que l'original rendait
-     * une a une, la casquette comprise — c'est son {@code SimpleModelBiped}, et elle est vide ici
-     * comme la plupart du temps la-bas.
+     * une a une, la casquette comprise — c'est son {@code SimpleModelBiped}, et elle est <b>vide</b>
+     * ici comme elle l'etait la-bas.
+     *
+     * <p>Vide, et pas seulement posee : ses cubes porteraient la meme image que la tete, donc une
+     * tete dessinee <b>deux fois</b>, plus opaque que le reste du fantome.
      */
     private static ModelPart biped() {
         MeshDefinition mesh = new MeshDefinition();
@@ -382,9 +384,7 @@ public final class TpMarkRenderer {
 
         root.addOrReplaceChild("head", CubeListBuilder.create()
                 .texOffs(0, 0).addBox(-4f, -8f, -4f, 8, 8, 8), PartPose.ZERO);
-        root.addOrReplaceChild("hat", CubeListBuilder.create()
-                .texOffs(32, 0).addBox(-4f, -8f, -4f, 8, 8, 8, new CubeDeformation(0.5f)),
-                PartPose.ZERO);
+        root.addOrReplaceChild("hat", CubeListBuilder.create(), PartPose.ZERO);
         root.addOrReplaceChild("body", CubeListBuilder.create()
                 .texOffs(16, 16).addBox(-4f, 0f, -2f, 8, 12, 4), PartPose.ZERO);
         root.addOrReplaceChild("right_arm", CubeListBuilder.create()
