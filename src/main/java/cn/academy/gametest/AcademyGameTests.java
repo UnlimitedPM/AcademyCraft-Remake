@@ -2926,6 +2926,11 @@ public final class AcademyGameTests {
      * soi-meme — « si je m'envole trop haut et que je me laisse tomber, je meurs quand meme ».
      * Les quatre teleportations qui deplacent le joueur la posent.
      *
+     * <p>Le piege, et c'est ce que la troisieme version corrige : une teleportation vous pose
+     * souvent <b>au sol</b>, donc le drapeau etait consomme dans la foulee et plus rien ne
+     * protegeait (« je prends des degats de chute peu importe ce que je fais »). Le sol touche
+     * compte donc seulement <b>apres avoir quitte le sol</b>.
+     *
      * <p>Le test passe par une VRAIE chute, `causeFallDamage`, et non par le crochet appele a
      * la main : c'est le seul moyen de prouver que le jeu poste bien cet evenement, ce qui a
      * deja fait defaut une fois, sur les touches.
@@ -2949,8 +2954,17 @@ public final class AcademyGameTests {
         assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
                 "une chute de trente blocs est gratuite apres un saut");
 
-        // Et elle tient tant qu'aucun bloc n'est touche : cent ticks en l'air n'y changent
-        // rien, c'est toute la difference avec une duree fixe.
+        // Arriver AU SOL ne la consomme pas : le sol touche EST l'arrivee, et c'est ce qui
+        // faisait qu'aucun saut ne protegeait plus rien.
+        player.setOnGround(true);
+        for (int i = 0; i < 5; i++) tickerLeJoueur(player);
+        assertTrue(helper, data.isProtectedFromFall(),
+                "une arrivee au sol ne consomme pas la protection");
+
+        // Elle attend donc le premier bloc touche APRES avoir quitte le sol, et tant qu'on est
+        // en l'air elle tient : cent ticks n'y changent rien, c'est toute la difference avec
+        // une duree fixe.
+        player.setOnGround(false);
         for (int i = 0; i < 100; i++) tickerLeJoueur(player);
         assertTrue(helper, data.isProtectedFromFall(), "cent ticks en l'air ne l'usent pas");
 

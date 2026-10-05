@@ -782,6 +782,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private boolean fallProtected;
 
     /**
+     * Vrai quand le joueur a quitte le sol depuis sa teleportation.
+     *
+     * <p>Sans lui, une teleportation qui vous pose par terre s'annulerait dans la foulee : le
+     * sol touche EST l'arrivee, et la protection ne servirait donc a rien — ce que le joueur a
+     * vu tout de suite, « je prends des degats de chute peu importe ce que je fais ». C'est
+     * donc le premier bloc touche <b>apres avoir quitte le sol</b> qui la leve.
+     */
+    private boolean fallAirborne;
+
+    /**
      * Protege de la chute jusqu'a ce que le joueur touche un bloc.
      *
      * <p>Portage du {@code GravityCancellor} de l'original, etendu a ce que le joueur a
@@ -791,24 +801,35 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * tuer soi-meme, ce que le joueur a vu : « si je m'envole trop haut et que je me laisse
      * tomber, je meurs quand meme ».
      *
-     * <p>Elle tombe au premier bloc touche, et l'atterrissage lui-meme est encore protege :
-     * la protection n'est levee qu'apres le deplacement du tick, donc c'est la chute
-     * <b>suivante</b> qui se paie. Voir {@code AbilityEvents}.
+     * <p>Elle attend d'avoir quitte le sol pour compter quoi que ce soit (voir
+     * {@link #fallAirborne}), et l'atterrissage lui-meme est encore protege : la levee n'a lieu
+     * qu'apres le deplacement du tick, donc c'est la chute <b>suivante</b> qui se paie.
      *
      * <p>Elle ne couvre pas une chute qui n'a pas commence par une teleportation : voler avec
      * les ailes de tempete puis couper le moteur reste une chute a payer.
      */
     public void protectFromFall() {
         fallProtected = true;
+        fallAirborne = false;
     }
 
     public boolean isProtectedFromFall() {
         return fallProtected;
     }
 
+    public boolean hasLeftGroundSinceTeleport() {
+        return fallAirborne;
+    }
+
+    /** Le joueur a quitte le sol : la protection attend maintenant un atterrissage. */
+    public void markAirborne() {
+        fallAirborne = true;
+    }
+
     /** Le joueur a touche un bloc : la protection d'une teleportation prend fin. */
     public void endFallProtection() {
         fallProtected = false;
+        fallAirborne = false;
     }
 
     /**

@@ -64,11 +64,19 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
-            // Une teleportation protege de la chute jusqu'a ce que le joueur touche un bloc :
-            // c'est le GravityCancellor de l'original, dont la duree est devenue une arrivee.
-            // Le controle est fait a la fin du tick de joueur, donc l'atterrissage lui-meme a
-            // deja ete refuse (voir onFall) : c'est la chute SUIVANTE qui se paie.
-            if (data.isProtectedFromFall() && player.onGround()) data.endFallProtection();
+            // Une teleportation protege de la chute jusqu'a ce que le joueur touche un bloc,
+            // mais pas sur l'arrivee elle-meme : un saut qui vous pose par terre ne doit pas
+            // s'annuler dans la foulee. C'est donc le premier bloc touche APRES avoir quitte le
+            // sol qui la leve. Le controle est fait a la fin du tick de joueur, donc
+            // l'atterrissage lui-meme a deja ete refuse (voir onFall) : c'est la chute SUIVANTE
+            // qui se paie. Voir AbilityData.protectFromFall.
+            if (data.isProtectedFromFall()) {
+                if (!player.onGround()) {
+                    data.markAirborne();
+                } else if (data.hasLeftGroundSinceTeleport()) {
+                    data.endFallProtection();
+                }
+            }
             // Les competences tenues vivent tant que la touche reste enfoncee.
             tickSustained(player, data);
             // La reserve ne remonte que si elle est entamee : au ras bord il n'y a rien a
