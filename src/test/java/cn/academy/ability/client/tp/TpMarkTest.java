@@ -6,6 +6,7 @@ import org.joml.Vector3f;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -246,6 +247,66 @@ class TpMarkTest {
         // ecart de calcul a un ecart de dessin sans le vouloir.
         assertTrue(TpMarkRenderer.GHOST_NUDGE > 0.0 && TpMarkRenderer.GHOST_NUDGE < 0.05,
                 "le fantome se decale, il ne part pas");
+    }
+
+    @Test
+    @DisplayName("la boite d'une creature se retrouve par son identifiant, pas par son rang")
+    void lesBoitesSeRetrouventParIdentifiant() {
+        // La liste des creatures du geste change a chaque tick — l'une entre, l'autre sort. Si les
+        // boites se reconnaissaient a leur rang, la sortie d'une seule ferait glisser toutes les
+        // suivantes depuis la place de celle qui est partie.
+        Vec3 first = new Vec3(1, 64, 2);
+        List<TeleportMark.Satellite> was = List.of(
+                new TeleportMark.Satellite(7, first, first, TeleportMark.Shape.box(0.6, 1.8)),
+                new TeleportMark.Satellite(9, new Vec3(5, 64, 5), new Vec3(5, 64, 5),
+                        TeleportMark.Shape.box(0.6, 1.8)));
+
+        assertEquals(first, TeleportMark.originOf(was, 7), "sa creature etait la, a cette place");
+        assertNull(TeleportMark.originOf(was, 11),
+                "et une creature qui n'y etait pas n'a pas d'origine");
+    }
+
+    @Test
+    @DisplayName("une creature qui reste glisse, une qui arrive se pose")
+    void lesBoitesGlissentOuSePosent() {
+        TeleportMark.Shape box = TeleportMark.Shape.box(0.6, 1.8);
+        Vec3 before = new Vec3(10, 64, 10);
+        List<TeleportMark.Satellite> was =
+                List.of(new TeleportMark.Satellite(3, before, before, box));
+
+        // Elle etait deja dans le geste : sa boite glisse depuis l'endroit ou elle se tenait.
+        Vec3 moved = new Vec3(10.2, 64, 10);
+        List<TeleportMark.Satellite> kept = TeleportMark.carried(was,
+                List.of(new TeleportMark.Satellite(3, moved, moved, box)));
+        assertEquals(before, kept.get(0).previous(), "elle glisse depuis hier");
+        assertEquals(moved, kept.get(0).position(), "et se dessine la ou elle est");
+
+        // Elle vient d'y entrer : elle n'a pas d'origine, donc elle se pose sur place.
+        List<TeleportMark.Satellite> fresh = TeleportMark.carried(was,
+                List.of(new TeleportMark.Satellite(4, moved, moved, box)));
+        assertEquals(moved, fresh.get(0).previous(),
+                "une nouvelle se pose, elle ne vient de nulle part");
+
+        // Et un saut n'est pas un deplacement : au-dela de SMOOTH_DISTANCE, elle se pose aussi.
+        Vec3 far = new Vec3(20, 70, 10);
+        List<TeleportMark.Satellite> jumped = TeleportMark.carried(was,
+                List.of(new TeleportMark.Satellite(3, far, far, box)));
+        assertEquals(far, jumped.get(0).previous(), "un saut ne se glisse pas");
+    }
+
+    @Test
+    @DisplayName("les boites du depose au loin sont rouges, et elles traversent la pierre")
+    void leRougeDesCreaturesTraversees() {
+        // Le rouge de l'original : {@code new Color(235, 81, 81, 180)}, lu comme un ARGB.
+        assertEquals(0xFFEB5151, TeleportMark.COLOR_CROSSED);
+
+        // Les boites de ce pouvoir se voient au travers des murs — l'original leur donnait un
+        // {@code ignoreDepth} qu'il refusait au lancer d'objet et a la chair. C'est le marqueur de
+        // la competence qui porte ce drapeau, celui de sa case visee comme celui de ses victimes.
+        assertFalse(new TeleportMark.Seat(Vec3.ZERO, TeleportMark.COLOR_NORMAL,
+                TeleportMark.Shape.GHOST).throughWalls(), "une marque ordinaire ne traverse rien");
+        assertTrue(new TeleportMark.Seat(Vec3.ZERO, TeleportMark.COLOR_SHIFT_BOX,
+                TeleportMark.Shape.box(0.5), true).throughWalls(), "et celle du depose au loin, si");
     }
 
     @Test

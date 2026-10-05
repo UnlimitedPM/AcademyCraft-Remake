@@ -17,6 +17,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * La marque de teleportation : le fantome qui montre ou l'on va atterrir.
  *
@@ -42,6 +45,18 @@ import javax.annotation.Nullable;
  * <p>Le saut traversant, lui, se pose a <b>hauteur d'yeux</b> de sa destination, et il sait si
  * l'on peut y atterrir : dans un mur, le fantome devient rouge et le saut sera refuse. C'est
  * l'original, qui lisait son {@code dest.available} a chaque tick.
+ *
+ * <h2>Et les creatures qu'on frapperait</h2>
+ *
+ * <p>Le depose au loin ne teleporte personne : il pose un bloc au loin et frappe <b>tout ce qu'il
+ * croise</b> en chemin. Sa marque n'est donc pas seule — il y a la boite de la case visee, et une
+ * boite rouge sur <b>chaque creature</b> que le geste traverserait. C'est le seul marqueur du port
+ * qui reponde a « qui » et non a « ou », et l'original le montrait pendant toute la visee : on
+ * voyait ses victimes avant de frapper.
+ *
+ * <p>Ces boites-la ne se dessinent pas comme les autres : elles aussi se voient <b>au travers des
+ * murs</b> — un geste qui traverse la pierre frappe derriere elle —, et elles suivent leur creature
+ * d'une image a l'autre. Voir {@link #crossed} et {@link #carried}.
  *
  * <h2>Son age</h2>
  *
@@ -126,6 +141,14 @@ public final class TeleportMark {
      */
     public static final int COLOR_SHIFT_BOX = 0xFF8B8B8B;
 
+    /**
+     * Le rouge d'une creature que le geste traverserait : l'original, {@code (235, 81, 81)}.
+     *
+     * <p>C'est le seul marqueur du port qui ne dise pas « ou » mais « <b>qui</b> » : le depose au
+     * loin frappe ce qu'il croise, et ces boites-la montrent ses victimes avant le coup.
+     */
+    public static final int COLOR_CROSSED = 0xFFEB5151;
+
     private static final RandomSource RANDOM = RandomSource.create();
 
     /** La ou la marque se tient, ou {@code null} s'il n'y en a pas. */
@@ -144,6 +167,15 @@ public final class TeleportMark {
 
     /** Et sa forme : le fantome du joueur, ou une boite aux dimensions demandees. */
     private static Shape shape = Shape.GHOST;
+
+    /**
+     * Et si elle se voit <b>au travers des murs</b>.
+     *
+     * <p>Le fantome, lui, les traverse toujours — c'est l'objet de son dessin. Les boites, non :
+     * celles du lancer d'objet et de la chair se cachent derriere la pierre comme des points du
+     * monde, et celles du depose au loin la traversent, comme le voulait l'original.
+     */
+    private static boolean throughWalls;
 
     /** Si la marque se tient sur la ligne des pieds : voir {@link #onLine} et {@link #interpolated}. */
     private static boolean line;
@@ -165,6 +197,9 @@ public final class TeleportMark {
 
     /** Son age, en ticks : il ne sert qu'au defilement de ses images. */
     private static int ageTicks;
+
+    /** Les creatures que le geste en cours traverserait, avec la boite qui suit chacune. */
+    private static List<Satellite> satellites = List.of();
 
     private TeleportMark() {
     }
@@ -203,7 +238,11 @@ public final class TeleportMark {
         line = nextLine;
         color = seat.color();
         shape = seat.shape();
+        throughWalls = seat.throughWalls();
         yaw = player.getYRot();
+        // Et les creatures que le geste traverserait : elles se rattachent a celles du tick d'avant
+        // par leur identifiant, pour que leurs boites glissent au lieu de sauter. Voir carried.
+        satellites = carried(satellites, victims(player, skill));
         sowSpark();
         ageTicks++;
     }
@@ -218,6 +257,8 @@ public final class TeleportMark {
         ageTicks = 0;
         color = COLOR_NORMAL;
         shape = Shape.GHOST;
+        throughWalls = false;
+        satellites = List.of();
     }
 
     /** Ou la marque se tient, ou {@code null}. Lu par le rendu, qui n'a rien d'autre a savoir. */
@@ -317,6 +358,11 @@ public final class TeleportMark {
         return shape;
     }
 
+    /** Si la marque se voit au travers des murs : vrai pour le fantome, et pour ces boites-la. */
+    public static boolean throughWalls() {
+        return throughWalls;
+    }
+
     /** L'age de la marque, en ticks. */
     public static int ageTicks() {
         return ageTicks;
@@ -353,8 +399,35 @@ public final class TeleportMark {
         }
     }
 
-    /** Ou la marque se pose, de quelle couleur, et sous quelle forme. */
-    public record Seat(Vec3 position, int color, Shape shape) {
+    /**
+     * Ou la marque se pose, de quelle couleur, sous quelle forme — et si elle traverse la pierre.
+     *
+     * <p>Le traversement est au rendez-vous et non dans l'appelant : il vient du <b>marqueur de
+     * l'original</b>, qui portait son propre {@code ignoreDepth}. Ses trois marqueurs du depose au
+     * loin l'avaient — la case visee comme chaque creature traversee —, ceux du lancer d'objet et
+     * de la chair non.
+     */
+    public record Seat(Vec3 position, int color, Shape shape, boolean throughWalls) {
+
+        /** La marque d'une competence : posee dans le monde, et cachee par ce qui la precede. */
+        public Seat(Vec3 position, int color, Shape shape) {
+            this(position, color, shape, false);
+        }
+    }
+
+    /**
+     * Une creature que le geste traverserait, et la boite qui la suit.
+     *
+     * <p>Chacune se reconnait a l'<b>identifiant de sa creature</b> plutot qu'a son rang dans la
+     * liste : c'est ce qui lui permet de retrouver sa position du tick d'avant quand la liste
+     * change. Sans cela, une creature qui entre dans le geste ou en sort ferait glisser la boite de
+     * toutes celles qui la suivent depuis la sienne. Voir {@link #originOf}.
+     */
+    public record Satellite(int id, Vec3 position, Vec3 previous, Shape shape) {
+    }
+
+    /** Une boite de creature a l'instant de l'image : sa place, sa taille, et son rouge. */
+    public record Crossed(Vec3 at, Shape shape, int color) {
     }
 
     /**
@@ -380,11 +453,16 @@ public final class TeleportMark {
         // visee, et sa marque est donc une BOITE — celle de l'original, un bloc et deux dixiemes de
         // cote, posee A PLAT sur la case pour se lire comme elle : sa base a la hauteur du sol de
         // la case, son centre au milieu d'elle.
+        //
+        // Et elle traverse la pierre : l'original donnait a ce marqueur-la un {@code ignoreDepth}
+        // qu'il refusait aux deux autres boites. La case visee se tient souvent derriere le bloc
+        // qu'on regarde, et elle serait alors exactement la ou on ne la verrait pas.
         if (skill == TeleporterCategory.SHIFT_TELEPORT) {
             ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT.target(player,
                     ClientAbilityData.get());
             return new Seat(new Vec3(target.cell().getX() + 0.5, target.cell().getY(),
-                    target.cell().getZ() + 0.5), COLOR_SHIFT_BOX, Shape.box(SHIFT_BOX, SHIFT_BOX));
+                    target.cell().getZ() + 0.5), COLOR_SHIFT_BOX, Shape.box(SHIFT_BOX, SHIFT_BOX),
+                    true);
         }
         // Le lancer d'objet, lui, ne montre pas un fantome mais la BOITE de l'original. Elle a la
         // taille de ce qu'elle designe — un demi-bloc dans le vide, la creature ENTIERE quand il y
@@ -431,6 +509,78 @@ public final class TeleportMark {
                     destination.available() ? COLOR_NORMAL : COLOR_THREATENING, Shape.GHOST);
         }
         return null;
+    }
+
+    /**
+     * D'ou part la boite d'une creature a l'image suivante : sa position du tick d'avant, ou
+     * {@code null} quand elle vient d'apparaitre.
+     *
+     * <p>Fonction pure, donc verifiable : une recherche par identifiant, et rien d'autre.
+     */
+    @Nullable
+    public static Vec3 originOf(List<Satellite> was, int id) {
+        for (Satellite satellite : was) {
+            if (satellite.id() == id) return satellite.position();
+        }
+        return null;
+    }
+
+    /**
+     * Les boites des creatures, une fois rattachees a celles du tick d'avant.
+     *
+     * <p>Fonction pure : chacune prend pour origine sa position precedente si sa creature etait deja
+     * dans le geste — donc elle glisse —, et la sienne si elle vient d'y entrer — donc elle se pose
+     * sur place. Le saut de {@link #follow} s'applique comme pour la marque.
+     */
+    public static List<Satellite> carried(List<Satellite> was, List<Satellite> now) {
+        List<Satellite> next = new ArrayList<>(now.size());
+        for (Satellite satellite : now) {
+            Vec3 before = originOf(was, satellite.id());
+            next.add(new Satellite(satellite.id(), satellite.position(),
+                    follow(before, satellite.position()), satellite.shape()));
+        }
+        return next;
+    }
+
+    /**
+     * Les creatures que la competence en cours traverserait, avec leur boite.
+     *
+     * <p>Le depose au loin est la <b>seule</b> dans ce cas : c'est le geste qui frappe ce qu'il
+     * croise, et l'original montrait chacune de ses victimes pendant la visee — une boite rouge par
+     * creature, refaite tous les trois ticks, le temps que lui coutaient ses entites. Le port les
+     * recalcule a chaque tick : c'est la meme chose sans les entites, et un peu plus vif.
+     *
+     * <p>La ligne se demande a la <b>competence elle-meme</b>, comme la marque : celle qui se
+     * dessine est celle qui frappera, donc les boites ne peuvent pas mentir sur qui va le prendre.
+     */
+    private static List<Satellite> victims(Player player, Skill skill) {
+        if (skill != TeleporterCategory.SHIFT_TELEPORT) return List.of();
+
+        ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT.target(player,
+                ClientAbilityData.get());
+        List<Satellite> boxes = new ArrayList<>();
+        for (LivingEntity living : ShiftTeleportSkill.line(player.level(), player, target.cell())) {
+            boxes.add(new Satellite(living.getId(), living.position(), living.position(),
+                    Shape.box(living.getBbWidth(), living.getBbHeight())));
+        }
+        return boxes;
+    }
+
+    /**
+     * Les boites des creatures a l'instant de l'image, et non a celui du tick.
+     *
+     * <p>Elles glissent comme la marque, entre leur position du tick d'avant et celle d'aujourd'hui :
+     * c'est ce qui les fait suivre une creature qui marche sans la voir avancer par saccades de
+     * vingtieme de seconde.
+     */
+    public static List<Crossed> crossed(double partialTick) {
+        if (satellites.isEmpty()) return List.of();
+        List<Crossed> boxes = new ArrayList<>(satellites.size());
+        for (Satellite satellite : satellites) {
+            boxes.add(new Crossed(satellite.previous().lerp(satellite.position(), partialTick),
+                    satellite.shape(), COLOR_CROSSED));
+        }
+        return boxes;
     }
 
     /** Les etincelles que la marque semme autour d'elle, une fois par tick sur deux et demie. */

@@ -30,6 +30,8 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Vector3f;
 
+import java.util.List;
+
 /**
  * Dessine les effets de la teleportation : le fantome de la marque, et ses etincelles.
  *
@@ -169,6 +171,11 @@ public final class TpMarkRenderer {
                     mark.distanceTo(camera), mark));
         }
 
+        // Et les creatures que le geste traverserait : une boite rouge sur chacune, comme
+        // l'original. Elles se voient au travers de la pierre, sans quoi on ne saurait pas qui l'on
+        // va frapper avant de frapper — c'est tout l'intérêt de les montrer.
+        drawBoxThroughWalls(pose, camera, TeleportMark.crossed(event.getPartialTick()));
+
         if (!TpParticles.live().isEmpty()) {
             Vector3f left = event.getCamera().getLeftVector();
             Vector3f up = event.getCamera().getUpVector();
@@ -243,7 +250,14 @@ public final class TpMarkRenderer {
         // Deux formes, et deux seulement : le fantome de joueur des quatre competences qui
         // teleportent le corps, et la boite de l'original pour celles qui visent autre chose.
         if (TeleportMark.shape().isBox()) {
-            drawBox(buffers, pose, camera, at);
+            // Une boite cachee par ce qui la precede — sauf celle du depose au loin, qui marque un
+            // endroit a travers la pierre comme le fantome : voir TeleportMark.Seat.
+            if (TeleportMark.throughWalls()) {
+                drawBoxThroughWalls(pose, camera, List.of(new TeleportMark.Crossed(at,
+                        TeleportMark.shape(), TeleportMark.color())));
+            } else {
+                drawBox(buffers, pose, camera, at);
+            }
             return;
         }
 
@@ -300,7 +314,56 @@ public final class TpMarkRenderer {
     }
 
     /**
-     * La boite : le marqueur de l'original, pour les deux competences qui visent autre chose.
+     * Une boite posee dans le monde, cachee par ce qui la precede.
+     *
+     * <p>Elle passe par son <b>type de rendu</b>, qui garde le test de profondeur : c'est une mesure
+     * posee sur un point du monde, et le lancer d'objet comme la chair la veulent derriere la
+     * pierre. Celles qui la traversent — la case du depose au loin, et chaque creature qu'il
+     * frapperait — prennent l'autre chemin : voir {@link #drawBoxThroughWalls}.
+     */
+    private static void drawBox(MultiBufferSource buffers, PoseStack pose, Vec3 camera, Vec3 at) {
+        writeBox(buffers.getBuffer(TpRenderType.box()), pose, at.subtract(camera),
+                TeleportMark.shape(), TeleportMark.color());
+    }
+
+    /**
+     * Des boites posees <b>a travers les murs</b>, dessinees tout de suite.
+     *
+     * <p>C'est le meme etat a la main que le fantome — melange, deux faces, profondeur ouverte —,
+     * mais des sommets de <b>couleur</b> : le programme des aplats, celui du {@code ShaderNotex} de
+     * l'original, qui n'a pas d'image a lire. Et c'est la meme lecon : un type de rendu <b>range</b>
+     * rebat son propre etat au moment du vidage, donc ce qui doit traverser la pierre se dessine
+     * ici, sans intermediaire. Voir {@code MineDetectRenderer}, qui a paye cette lecon avant nous.
+     *
+     * <p>L'original donnait ce regime a ses marqueurs du depose au loin — la case visee comme chaque
+     * creature traversee —, et le refusait a ceux du lancer d'objet et de la chair.
+     */
+    private static void drawBoxThroughWalls(PoseStack pose, Vec3 camera,
+                                           List<TeleportMark.Crossed> boxes) {
+        if (boxes.isEmpty()) return;
+
+        RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.disableDepthTest();
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buffer = tesselator.getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        for (TeleportMark.Crossed box : boxes) {
+            writeBox(buffer, pose, box.at().subtract(camera), box.shape(), box.color());
+        }
+        BufferUploader.drawWithShader(buffer.end());
+
+        RenderSystem.enableDepthTest();
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
+    /**
+     * La geometrie d'une boite : le marqueur de l'original.
      *
      * <p>C'est un <b>coin</b> et non un contour : a chacun des huit coins de la boite, l'original
      * tirait trois petits traits vers l'interieur — un par axe — et rien ne reliait deux coins
@@ -310,10 +373,12 @@ public final class TpMarkRenderer {
      * <p>Elle est posee <b>sur</b> la marque et non centree dessus : sa base est a la position, sa
      * hauteur monte au-dessus. C'est ce qui fait qu'une creature visee est couverte en entier —
      * ses pieds sur le sol, et sa boite jusqu'au sommet de sa tete.
+     *
+     * <p>Le point de depart est <b>deja</b> retire de la camera : c'est le repere dans lequel la pose
+     * ecrit, et celui ou un ruban sait de quel cote se tourner — la camera y est a l'origine.
      */
-    private static void drawBox(MultiBufferSource buffers, PoseStack pose, Vec3 camera, Vec3 at) {
-        TeleportMark.Shape shape = TeleportMark.shape();
-        int argb = TeleportMark.color();
+    private static void writeBox(VertexConsumer out, PoseStack pose, Vec3 base,
+                                 TeleportMark.Shape shape, int argb) {
         float red = ((argb >> 16) & 0xFF) / 255f;
         float green = ((argb >> 8) & 0xFF) / 255f;
         float blue = (argb & 0xFF) / 255f;
@@ -323,11 +388,6 @@ public final class TpMarkRenderer {
         double height = shape.height();
         double half = width / 2.0;
         double dash = DASH * width;
-
-        // Tout se calcule par rapport a la camera : c'est le repere dans lequel la pose ecrit, et
-        // celui ou un ruban sait de quel cote se tourner — la camera y est a l'origine.
-        Vec3 base = at.subtract(camera);
-        VertexConsumer out = buffers.getBuffer(TpRenderType.box());
 
         for (int ix = 0; ix <= 1; ix++) {
             for (int iy = 0; iy <= 1; iy++) {
