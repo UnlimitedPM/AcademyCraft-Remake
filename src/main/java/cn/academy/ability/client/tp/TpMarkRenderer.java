@@ -336,12 +336,33 @@ public final class TpMarkRenderer {
                 .endVertex();
     }
 
-    /** Le modele du fantome, construit une fois. */
+    /**
+     * Le modele du fantome, construit une fois.
+     *
+     * <p>C'est un joueur <b>adulte</b>, et c'est tout l'objet de la petite classe ci-dessous : le
+     * rendu d'un modele a age regarde son drapeau {@code young}, et quand il est vrai il le dessine
+     * a <b>moitie taille</b> — tete comprise, et remonte d'un bloc et demi pour que ses pieds
+     * tombent juste. C'est le rendu des bebes de Minecraft.
+     *
+     * <p>Ce drapeau vaut <b>vrai</b> par defaut, et rien ne le baisse pour un modele fait a la
+     * main comme celui-ci : le fantome sortait donc grand comme un enfant, et ses pieds ne
+     * tombaient pas sur la marque. Vu en jeu : « on dirait un enfant », et un fantome qui ne se
+     * tient pas tout a fait la ou l'on arrive.
+     */
     private static HumanoidModel<LivingEntity> model() {
         if (model == null) {
-            model = new HumanoidModel<>(biped());
+            model = new Adult(biped());
         }
         return model;
+    }
+
+    /** Un joueur debout, jamais un bebe : voir {@link #model()}. */
+    private static final class Adult extends HumanoidModel<LivingEntity> {
+
+        Adult(ModelPart root) {
+            super(root);
+            young = false;
+        }
     }
 
     /**
