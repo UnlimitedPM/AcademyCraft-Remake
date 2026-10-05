@@ -27,10 +27,15 @@ class BillboardTest {
                         "un coin en bas lit le bas de l'image");
             }
 
-            if (Billboard.along(corner) < 0) {
-                assertEquals(0f, Billboard.u(corner), 1e-6, "un coin a gauche lit la gauche");
+            // Et en largeur, c'est `along` qui dit le bord de l'ECRAN : il va vers la gauche de la
+            // camera, donc positif veut dire a gauche — et c'est ce bord qui lit le bord gauche de
+            // l'image. Le croire a l'envers retourne le glyphe, sans rien casser d'autre.
+            if (Billboard.along(corner) > 0) {
+                assertEquals(0f, Billboard.u(corner), 1e-6,
+                        "un coin a gauche de l'ecran lit la gauche de l'image");
             } else {
-                assertEquals(1f, Billboard.u(corner), 1e-6, "un coin a droite lit la droite");
+                assertEquals(1f, Billboard.u(corner), 1e-6,
+                        "un coin a droite lit la droite de l'image");
             }
         }
     }
