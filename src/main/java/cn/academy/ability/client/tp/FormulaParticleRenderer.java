@@ -73,15 +73,19 @@ public final class FormulaParticleRenderer {
      * <p>Ses deux directions sont celles de l'ecran — la gauche et le haut de la camera — donc il se
      * presente toujours de face, quel que soit l'angle. C'est ce que faisait le {@code RenderIcon} de
      * l'original, et c'est aussi ce que font ses etincelles et son sang.
+     *
+     * <p>Ses coins viennent de {@link Billboard}, et non d'un calcul local : c'est la seule facon de
+     * ne pas se tromper de sens. Un glyphe a l'envers ne se voit qu'a l'oeil — rien, dans les quatre
+     * portes, ne regarde un rendu.
      */
     private static void drawGlyph(VertexConsumer out, PoseStack.Pose pose, Vec3 camera, Vec3 at,
                                   double size, Vector3f left, Vector3f up, float alpha) {
         double half = size / 2.0;
 
-        glyphVertex(out, pose, camera, at, left, up, half, -half, 0f, 0f, alpha);
-        glyphVertex(out, pose, camera, at, left, up, half, half, 0f, 1f, alpha);
-        glyphVertex(out, pose, camera, at, left, up, -half, half, 1f, 1f, alpha);
-        glyphVertex(out, pose, camera, at, left, up, -half, -half, 1f, 0f, alpha);
+        for (int corner = 0; corner < Billboard.corners(); corner++) {
+            glyphVertex(out, pose, camera, at, left, up, Billboard.along(corner) * half,
+                    Billboard.high(corner) * half, Billboard.u(corner), Billboard.v(corner), alpha);
+        }
     }
 
     private static void glyphVertex(VertexConsumer out, PoseStack.Pose pose, Vec3 camera, Vec3 at,

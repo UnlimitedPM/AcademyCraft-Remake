@@ -459,7 +459,13 @@ public final class TpMarkRenderer {
                 .color(red, green, blue, alpha).endVertex();
     }
 
-    /** Une etincelle : un carre qui regarde la camera, comme celles du plasma. */
+    /**
+     * Une etincelle : un carre qui regarde la camera, comme celles du plasma.
+     *
+     * <p>Ses coins viennent de {@link Billboard}, qui porte le sens de l'image : v vaut zero en haut,
+     * comme partout dans Minecraft. Les etincelles y sont insensibles, leur image etant symetrique,
+     * mais les fragments de formule ont montre ce que coute un carre dessine a l'envers.
+     */
     private static void drawSpark(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
                                   double[][] screen, TpParticles.Spark spark, long now) {
         float alpha = spark.alpha(now);
@@ -470,10 +476,10 @@ public final class TpMarkRenderer {
         double[] left = screen[0];
         double[] up = screen[1];
 
-        sparkVertex(out, pose, camera, pos, left, up, half, -half, 0f, 0f, alpha);
-        sparkVertex(out, pose, camera, pos, left, up, half, half, 0f, 1f, alpha);
-        sparkVertex(out, pose, camera, pos, left, up, -half, half, 1f, 1f, alpha);
-        sparkVertex(out, pose, camera, pos, left, up, -half, -half, 1f, 0f, alpha);
+        for (int corner = 0; corner < Billboard.corners(); corner++) {
+            sparkVertex(out, pose, camera, pos, left, up, Billboard.along(corner) * half,
+                    Billboard.high(corner) * half, Billboard.u(corner), Billboard.v(corner), alpha);
+        }
     }
 
     private static void sparkVertex(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,

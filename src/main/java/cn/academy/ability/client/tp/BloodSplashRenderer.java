@@ -80,6 +80,9 @@ public final class BloodSplashRenderer {
      * elle se presente toujours de face, quel que soit l'angle. C'est ce que faisait le
      * {@code RenderIcon} de l'original, et c'est aussi ce que font ses etincelles : le carre est
      * pose dans le plan de l'ecran, a la position de la tache.
+     *
+     * <p>Ses coins viennent de {@link Billboard} : c'est lui qui porte le sens de l'image, et le
+     * sang a paye la lecon avec les fragments de formule, qui se dessinaient a l'envers.
      */
     private static void drawSplash(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
                                    BloodSplashes.Splash splash, Vector3f left, Vector3f up,
@@ -87,10 +90,11 @@ public final class BloodSplashRenderer {
         Vec3 at = splash.position();
         double half = splash.size() / 2.0;
 
-        splashVertex(out, pose, camera, at, left, up, half, -half, 0f, 0f, red, green, blue, alpha);
-        splashVertex(out, pose, camera, at, left, up, half, half, 0f, 1f, red, green, blue, alpha);
-        splashVertex(out, pose, camera, at, left, up, -half, half, 1f, 1f, red, green, blue, alpha);
-        splashVertex(out, pose, camera, at, left, up, -half, -half, 1f, 0f, red, green, blue, alpha);
+        for (int corner = 0; corner < Billboard.corners(); corner++) {
+            splashVertex(out, pose, camera, at, left, up, Billboard.along(corner) * half,
+                    Billboard.high(corner) * half, Billboard.u(corner), Billboard.v(corner),
+                    red, green, blue, alpha);
+        }
     }
 
     private static void splashVertex(VertexConsumer out, PoseStack.Pose pose, Vec3 camera, Vec3 at,
