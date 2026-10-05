@@ -249,26 +249,36 @@ class TpMarkTest {
     }
 
     @Test
-    @DisplayName("une marque est sur le regard, ou a cote")
-    void uneMarqueEstSurLeRegardOuACote() {
-        Vec3 eye = new Vec3(0, 65, 0);
+    @DisplayName("une marque est sur la ligne des pieds, ou a cote")
+    void uneMarqueEstSurLaLigneOuACote() {
+        Vec3 feet = new Vec3(0, 65, 0);
         Vec3 look = new Vec3(0, 0, 1);
 
-        // Le bout du regard, et le bloc qu'il touche : la meme ligne, donc sur le regard.
-        assertTrue(TeleportMark.onGaze(eye, look, eye.add(0, 0, 28)),
+        // Le bout du regard tel que le fantome le prend — une hauteur d'yeux sous les yeux — et le
+        // bloc qu'un regard horizontal touche : la meme ligne, celle des pieds.
+        assertTrue(TeleportMark.onLine(feet, look, feet.add(0, 0, 28)),
                 "le bout du regard y est");
-        assertTrue(TeleportMark.onGaze(eye, look, eye.add(0, 0, 6)),
+        assertTrue(TeleportMark.onLine(feet, look, feet.add(0, 0, 6)),
                 "et un point de la meme ligne aussi");
-        assertTrue(TeleportMark.onGaze(eye, look, eye.add(0.04, 0, 6)),
+        assertTrue(TeleportMark.onLine(feet, look, feet.add(0.04, 0, 6)),
                 "au millimetre pres, la ligne reste la ligne");
+
+        // Et la distance se lit le long de cette ligne : c'est elle que le rendu interpole.
+        assertEquals(6.0, TeleportMark.alongLine(feet, look, feet.add(0, 0, 6)), 1e-9);
+        assertEquals(6.0, TeleportMark.alongLine(feet, look, feet.add(0.04, 0, 6)), 1e-9,
+                "un ecart lateral ne change pas la distance");
 
         // Mais pas le decalage de soixante centimetres d'une face de mur, ni une creature visee,
         // ni un point derriere l'epaule : ceux-la se dessinent comme des points du monde.
-        assertFalse(TeleportMark.onGaze(eye, look, eye.add(0.6, 0, 6)),
+        assertFalse(TeleportMark.onLine(feet, look, feet.add(0.6, 0, 6)),
                 "soixante centimetres sur le cote, c'est a cote");
-        assertFalse(TeleportMark.onGaze(eye, look, eye.add(0, 0, -6)),
+        // Le point du regard a hauteur d'YEUX, lui non plus : c'est une hauteur d'yeux trop haut,
+        // et c'est justement pour cela que la marque du vide se prend aux pieds.
+        assertFalse(TeleportMark.onLine(feet, look, feet.add(0, 1.62, 6)),
+                "la ligne des yeux n'est pas celle des pieds");
+        assertFalse(TeleportMark.onLine(feet, look, feet.add(0, 0, -6)),
                 "et derriere l'epaule, il n'y a pas de regard");
-        assertFalse(TeleportMark.onGaze(eye, look, eye), "ni dans l'oeil lui-meme");
+        assertFalse(TeleportMark.onLine(feet, look, feet), "ni dans les pieds eux-memes");
     }
 
     @Test
