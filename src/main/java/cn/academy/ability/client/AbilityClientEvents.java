@@ -17,6 +17,7 @@ import cn.academy.ability.network.FlashingPacket;
 import cn.academy.ability.teleporter.PenetrateTeleportSkill;
 import cn.academy.ability.teleporter.TeleporterCategory;
 import cn.academy.ability.vecmanip.VecmanipCategory;
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
@@ -288,6 +289,15 @@ public class AbilityClientEvents {
     /** L'etat des quatre touches au tick precedent, pour guetter les relachements. */
     private static final boolean[] directionHeld = new boolean[4];
 
+    /**
+     * Vrai quand une competence a pris les touches de deplacement, et les a donc relachees.
+     *
+     * <p>Sans ce drapeau, la remise en etat se ferait a chaque fin de maintien, meme quand
+     * personne n'a touche aux touches : on rendrait alors l'etat du clavier la ou le jeu avait
+     * le sien, ce qui n'est pas la meme chose pour une direction liee a la souris.
+     */
+    private static boolean directionsTaken;
+
     private static void tick(Binding binding) {
         Skill skill = skillOf(binding);
         if (skill == null) return;
@@ -526,16 +536,23 @@ public class AbilityClientEvents {
     /**
      * Les quatre directions du scintillement, dans l'ordre de l'original.
      *
-     * <p>Les touches du jeu ne sont pas detournees : on marche normalement en visant, et
-     * c'est seulement le relachement qui fait partir le saut — exactement comme l'original,
-     * qui ajoutait ses ecouteurs par-dessus ceux du jeu. La touche enfoncee ne fait que
-     * <b>viser</b> : l'original affichait un anneau a l'endroit de l'arrivee, et le port, qui
-     * n'a pas ce rendu, garde le meme geste.
+     * <p>La competence <b>prend</b> les touches de deplacement : tant qu'on la tient, W, A, S
+     * et D ne font plus avancer — elles visent, et le relachement fait partir le saut. C'est
+     * la meme idee que le clic sur une touche d'aptitude, qui n'attaque plus quand une
+     * competence occupe le bouton : un pouvoir prend le pas sur l'action de base de la touche
+     * dont il se sert. L'original se contentait d'ecouter par-dessus le jeu et laissait
+     * marcher ; c'est le joueur qui a demande la difference.
+     *
+     * <p>Pour ne pas se marcher sur les pieds, l'etat des touches se lit sur le clavier
+     * <b>physique</b> et non sur la touche du jeu : c'est justement celle-ci qu'on relache a
+     * chaque tick, et elle ne dit donc plus la verite. La touche interrogee est celle des
+     * reglages, ce qui vaut pour un joueur qui a deplace ses commandes ; une direction liee a
+     * la souris n'est pas prise, faute de pouvoir la lire au clavier, et reste au jeu.
      */
     private static void tickDirections(Category category, Skill skill) {
         KeyMapping[] keys = movementKeys();
         for (int i = 0; i < keys.length; i++) {
-            boolean down = keys[i].isDown();
+            boolean down = pressed(keys[i]);
             if (down && !directionHeld[i]) {
                 aimed = i + 1;
             } else if (!down && directionHeld[i] && aimed == i + 1) {
@@ -544,13 +561,53 @@ public class AbilityClientEvents {
                 aimed = 0;
             }
             directionHeld[i] = down;
+            // Et la touche est relachee dans la foulee : cedee a chaque tick, elle ne fait plus
+            // avancer d'un pouce. Le jeu la relira au tick suivant et la trouvera eteinte —
+            // c'est la lecture du clavier, juste au-dessus, qui garde la visee vivante.
+            if (takes(keys[i])) {
+                keys[i].setDown(false);
+                directionsTaken = true;
+            }
         }
     }
 
-    /** Oublie la visee en cours : le maintien est fini, ou une autre touche a pris la main. */
+    /**
+     * L'etat d'une touche de deplacement, lu sur le clavier.
+     *
+     * <p>Le jeu tient cet etat dans la touche elle-meme, mais une competence qui prend les
+     * directions vient de l'eteindre : la lire la-bas reviendrait a demander a une touche
+     * qu'on vient de relacher si elle est enfoncee. On interroge donc le clavier directement,
+     * avec la touche des reglages. Une liaison a la souris n'a pas d'equivalent ici et garde
+     * l'etat du jeu.
+     */
+    private static boolean pressed(KeyMapping key) {
+        InputConstants.Key bound = key.getKey();
+        if (bound.getType() != InputConstants.Type.KEYSYM) return key.isDown();
+        return InputConstants.isKeyDown(
+                net.minecraft.client.Minecraft.getInstance().getWindow().getWindow(),
+                bound.getValue());
+    }
+
+    /** Vrai si cette direction se lit au clavier, et peut donc etre prise au jeu. */
+    private static boolean takes(KeyMapping key) {
+        return key.getKey().getType() == InputConstants.Type.KEYSYM;
+    }
+
+    /**
+     * Oublie la visee en cours : le maintien est fini, ou une autre touche a pris la main.
+     *
+     * <p>Les touches prises sont rendues au jeu dans l'etat ou elles sont vraiment, sans quoi
+     * un joueur qui tenait une direction quand la competence s'est refermee verrait sa marche
+     * attendre qu'il relache puis rappuie.
+     */
     private static void endDirections() {
         aimed = 0;
         java.util.Arrays.fill(directionHeld, false);
+        if (!directionsTaken) return;
+        directionsTaken = false;
+        for (KeyMapping key : movementKeys()) {
+            if (takes(key)) key.setDown(pressed(key));
+        }
     }
 
     /**

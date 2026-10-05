@@ -23,9 +23,12 @@ import net.minecraft.world.phys.Vec3;
  * relachant. L'original affichait un anneau a l'endroit ou l'on allait atterrir ; le port
  * n'a pas ce rendu, donc ces quatre touches sont a la fois la visee et le declencheur.
  *
- * <p>Les touches de deplacement ne sont <b>pas</b> detournees : on marche normalement tout
- * en visant, et sauter ne fait que deplacer d'un coup, sans laisser d'elan derriere lui.
- * C'est ce que faisait l'original, qui ajoutait ses ecouteurs par-dessus ceux du jeu.
+ * <p>Et ces quatre touches, la competence les <b>prend</b> : tant qu'on la tient, elles
+ * visent et font partir le saut, mais elles ne font plus marcher. C'est la meme regle que le
+ * clic sur une touche d'aptitude, qui n'attaque plus quand une competence occupe le bouton —
+ * un pouvoir prend le pas sur l'action de base de la touche dont il se sert. L'original se
+ * contentait d'ecouter par-dessus le jeu et laissait marcher ; c'est le joueur qui a demande
+ * la difference.
  *
  * <h2>Ce que coute un saut</h2>
  *
