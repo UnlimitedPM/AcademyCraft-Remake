@@ -438,6 +438,24 @@ public abstract class Skill {
     }
 
     /**
+     * La competence a-t-elle, dans sa main, ce qu'il lui faut pour s'ouvrir ?
+     *
+     * <p>C'est l'{@code isHandValid} de l'original, et c'est <b>la seule</b> question qu'une
+     * {@link #canStart} puisse poser au joueur sans regarder le monde. Le client s'en sert pour
+     * refuser tout de suite un appui que le serveur refusera — voir {@code HoldRefusal} —, et il ne
+     * peut pas se tromper : une main est une main, il la voit comme le serveur.
+     *
+     * <p>C'est justement pourquoi elle est posee <b>a part</b> de {@code canStart} : certaines
+     * competences y regardent le monde, et le monde du client est en retard d'un tick — un refus lu
+     * la-bas serait peut-etre faux, ce qui est bien pire qu'un scintillement.
+     *
+     * <p>Par defaut, la competence ne demande rien : elle s'ouvre les mains vides.
+     */
+    public boolean isHandValid(Player player) {
+        return true;
+    }
+
+    /**
      * Un tick de charge, tant que la touche reste enfoncee.
      *
      * Retourner {@code false} abandonne la charge : rien n'est lance, rien n'est

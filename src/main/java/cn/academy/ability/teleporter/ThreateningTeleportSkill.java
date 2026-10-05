@@ -116,6 +116,17 @@ public class ThreateningTeleportSkill extends Skill {
 
     @Override
     public boolean canStart(Player player, AbilityData data) {
+        return isHandValid(player);
+    }
+
+    /**
+     * Il faut quelque chose en main : c'est l'objet qui part.
+     *
+     * <p>Dite a part de {@link #canStart} pour que le client la lise tout seul : c'est ce qui
+     * l'empeche d'ouvrir un maintien que le serveur refusera. Voir {@code Skill#isHandValid}.
+     */
+    @Override
+    public boolean isHandValid(Player player) {
         return !player.getMainHandItem().isEmpty();
     }
 

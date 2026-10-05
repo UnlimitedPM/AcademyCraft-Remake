@@ -22,6 +22,11 @@ import cn.academy.ability.Skill;
  * La surcharge en elle-meme n'en est pas un — {@code AbilityData#perform} l'encaisse sans broncher
  * — donc elle ne l'est pas ici non plus.
  *
+ * <p>Et ce que la main doit tenir, qui est le seul refus que le client lise sur le <b>joueur</b>
+ * lui-meme plutot que sur ses nombres : le depose au loin veut un bloc, le lancer d'objet veut
+ * quelque chose. Une main est une main — le client la voit comme le serveur — donc celui-la, il ne
+ * peut pas se tromper en le lisant. Voir {@code Skill#isHandValid}.
+ *
  * <p>Le client ne peut que <b>sous-estimer</b> ce que le joueur a : sa reserve et sa surcharge ne
  * bougent que par son propre tick et par les envois du serveur, donc elles sont toujours au moins
  * aussi bonnes que les vraies. Un refus lu ici est donc un refus certain, et une activation
@@ -37,13 +42,17 @@ public final class HoldRefusal {
     /**
      * Vrai si l'appui n'ouvrira rien : le serveur refusera.
      *
-     * @param data les nombres du client, tels qu'il les connait — voir {@code ClientAbilityData}
+     * @param data   les nombres du client, tels qu'il les connait — voir {@code ClientAbilityData}
+     * @param handOk ce que la competence demande a sa main, lu par l'appelant sur le joueur du
+     *               client : voir {@code Skill#isHandValid}. Vrai quand elle a ce qu'il lui faut, ou
+     *               quand elle ne demande rien.
      */
-    public static boolean refusesStart(Skill skill, AbilityData data) {
+    public static boolean refusesStart(Skill skill, AbilityData data, boolean handOk) {
         if (!data.isActivated()) return true;
         if (data.isInterfered()) return true;
         if (data.getCooldown(skill) > 0) return true;
         if (data.isOverloadRecovering()) return true;
-        return data.getControlPoint() < skill.getCpCost(data);
+        if (data.getControlPoint() < skill.getCpCost(data)) return true;
+        return !handOk;
     }
 }

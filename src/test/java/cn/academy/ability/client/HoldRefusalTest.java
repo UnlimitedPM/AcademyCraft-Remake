@@ -34,8 +34,23 @@ class HoldRefusalTest {
     @Test
     @DisplayName("un joueur pret n'est pas refuse")
     void unJoueurPretPasse() {
-        assertFalse(HoldRefusal.refusesStart(SHIELD, ready()),
+        assertFalse(HoldRefusal.refusesStart(SHIELD, ready(), true),
                 "rien ne doit empecher une activation legitime");
+    }
+
+    @Test
+    @DisplayName("une main qui n'a pas ce qu'il faut refuse")
+    void laMainQuiNaRienRefuse() {
+        // C'est le seul refus que le client lise sur le JOUEUR lui-meme, et non sur ses nombres :
+        // le depose au loin veut un bloc, le lancer d'objet veut quelque chose. Une main est une
+        // main — le client la voit comme le serveur — donc celui-la ne peut pas etre lu a tort.
+        // Sans lui, l'appui les mains vides ouvrait le maintien pour rien, et le joueur en voyait
+        // le debut scintiller avant que le serveur ne le referme.
+        assertTrue(HoldRefusal.refusesStart(SHIELD, ready(), false),
+                "une competence qui demande une main ne s'ouvre pas sans elle");
+
+        // Et quand elle ne demande rien, la main n'a pas voix au chapitre.
+        assertFalse(HoldRefusal.refusesStart(SHIELD, ready(), true));
     }
 
     @Test
@@ -43,7 +58,7 @@ class HoldRefusalTest {
     void lAptitudeEteinteRefuse() {
         AbilityData data = ready();
         data.setActivated(false);
-        assertTrue(HoldRefusal.refusesStart(SHIELD, data));
+        assertTrue(HoldRefusal.refusesStart(SHIELD, data, true));
     }
 
     @Test
@@ -51,7 +66,7 @@ class HoldRefusalTest {
     void laRechargeRefuse() {
         AbilityData data = ready();
         data.setCooldown(SHIELD, 40);
-        assertTrue(HoldRefusal.refusesStart(SHIELD, data));
+        assertTrue(HoldRefusal.refusesStart(SHIELD, data, true));
     }
 
     @Test
@@ -67,7 +82,7 @@ class HoldRefusalTest {
         assertTrue(data.perform(0f, data.getMaxOverload()), "le surcout se paie");
 
         assertTrue(data.isOverloadRecovering(), "le maximum franchi met le joueur en surcharge");
-        assertTrue(HoldRefusal.refusesStart(SHIELD, data));
+        assertTrue(HoldRefusal.refusesStart(SHIELD, data, true));
     }
 
     @Test
@@ -85,12 +100,12 @@ class HoldRefusalTest {
         assertTrue(cost > 0f, "le prix doit etre positif pour que le test dise quelque chose : " + cost);
 
         data.setControlPoint(cost - 1f);
-        assertTrue(HoldRefusal.refusesStart(bolt, data),
+        assertTrue(HoldRefusal.refusesStart(bolt, data, true),
                 "un point de moins que le prix doit suffire a refuser : " + cost);
 
         // Et au prix exact, l'ouverture passe : c'est la meme frontiere que le serveur, dont le
         // `perform` refuse sur un strictement-plus-petit.
         data.setControlPoint(cost);
-        assertFalse(HoldRefusal.refusesStart(bolt, data));
+        assertFalse(HoldRefusal.refusesStart(bolt, data, true));
     }
 }

@@ -144,6 +144,18 @@ public class ShiftTeleportSkill extends Skill {
      */
     @Override
     public boolean canStart(Player player, AbilityData data) {
+        return isHandValid(player);
+    }
+
+    /**
+     * Et c'est tout ce qu'elle demande : un bloc, et rien d'autre.
+     *
+     * <p>Dite <b>a part</b> de {@link #canStart} pour que le client puisse la lire tout seul, sans
+     * risque : c'est ce qui l'empeche d'ouvrir un maintien que le serveur refusera, et d'en laisser
+     * voir le debut pour rien. Voir {@code Skill#isHandValid}.
+     */
+    @Override
+    public boolean isHandValid(Player player) {
         return blockOf(player) != null;
     }
 

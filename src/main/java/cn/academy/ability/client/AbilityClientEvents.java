@@ -266,6 +266,22 @@ public class AbilityClientEvents {
         return net.minecraft.client.Minecraft.getInstance().player;
     }
 
+    /**
+     * La main du joueur a-t-elle ce que la competence demande ?
+     *
+     * <p>C'est le seul refus d'ouverture que le client lise sur le <b>joueur</b> lui-meme plutot
+     * que sur ses nombres — le depose au loin veut un bloc, le lancer d'objet veut quelque chose —,
+     * et il ne peut pas se tromper : une main est une main, il la voit comme le serveur. Sans lui,
+     * un appui les mains vides ouvrait le maintien pour rien, et le joueur en voyait le debut
+     * scintiller avant que le serveur ne le referme. Voir {@code Skill#isHandValid}.
+     *
+     * <p>Un joueur qu'on ne connait pas laisse passer : le client ne refuse que ce dont il est sur.
+     */
+    private static boolean handOk(Skill skill) {
+        var player = minecraftPlayer();
+        return player == null || skill.isHandValid(player);
+    }
+
     /** La direction visee par le clavier, ou 0 : le scintillement saute au relachement. */
     private static int aimed;
 
@@ -326,7 +342,11 @@ public class AbilityClientEvents {
             // sa reserve et sa surcharge ne bougent que par son propre tick et par les envois du
             // serveur, donc elles sont toujours au moins aussi bonnes que les vraies. Un refus lu
             // ici est donc un refus certain, et une activation legitime ne peut pas etre empechee.
-            if (HoldRefusal.refusesStart(skill, ClientAbilityData.get())) {
+            // Et ce que la main doit tenir : c'est le seul refus que le client lise sur le joueur
+            // lui-meme, et il ne peut pas s'y tromper — une main est une main. Sans lui, un appui
+            // les mains vides ouvrait le maintien pour rien, et le joueur en voyait le debut
+            // scintiller avant que le serveur ne le referme. Voir Skill#isHandValid.
+            if (HoldRefusal.refusesStart(skill, ClientAbilityData.get(), handOk(skill))) {
                 send(category, skill, Phase.PRESS);
                 return;
             }
