@@ -17,10 +17,11 @@ import cn.academy.ability.network.FlashingPacket;
 import cn.academy.ability.teleporter.PenetrateTeleportSkill;
 import cn.academy.ability.teleporter.TeleporterCategory;
 import cn.academy.ability.vecmanip.VecmanipCategory;
-import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.player.Input;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
+import net.minecraftforge.client.event.MovementInputUpdateEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -101,6 +102,36 @@ public class AbilityClientEvents {
             if (binding.key.getKey().equals(base.getKey())) return skillOf(binding);
         }
         return null;
+    }
+
+    /**
+     * Les touches de deplacement, quand une competence les prend.
+     *
+     * <p>C'est ici, et nulle part ailleurs, que la marche se refuse : le jeu vient de lire son
+     * clavier et de remplir cet objet, et il va s'en servir a l'instant pour deplacer le joueur.
+     * Mettre ses quatre directions a zero juste avant lui prend donc les touches pour de bon,
+     * sans jamais toucher aux touches elles-memes.
+     *
+     * <p>C'est ce qu'il faut faire plutot que de relacher la touche du jeu : le systeme repete
+     * une touche tenue une trentaine de fois par seconde, apres le delai de repetition — une
+     * demi-seconde a peine —, et le jeu empile ces repetitions comme des appuis. Une touche
+     * relachee de force se rallume donc toute seule, et le joueur se remettait a marcher au bout
+     * d'une demi-seconde : c'est ce qu'il a vu. Ici la touche reste celle du jeu — l'original la
+     * lit pour viser — et seule la marche est refusee. Voir {@link #tickDirections}.
+     */
+    @SubscribeEvent
+    public static void onMovementInput(MovementInputUpdateEvent event) {
+        if (!directionsTaken) return;
+        var player = minecraftPlayer();
+        if (player == null || event.getEntity() != player) return;
+
+        Input input = event.getInput();
+        input.up = false;
+        input.down = false;
+        input.left = false;
+        input.right = false;
+        input.forwardImpulse = 0f;
+        input.leftImpulse = 0f;
     }
 
     @SubscribeEvent
@@ -290,11 +321,11 @@ public class AbilityClientEvents {
     private static final boolean[] directionHeld = new boolean[4];
 
     /**
-     * Vrai quand une competence a pris les touches de deplacement, et les a donc relachees.
+     * Vrai tant qu'une competence tient les touches de deplacement.
      *
-     * <p>Sans ce drapeau, la remise en etat se ferait a chaque fin de maintien, meme quand
-     * personne n'a touche aux touches : on rendrait alors l'etat du clavier la ou le jeu avait
-     * le sien, ce qui n'est pas la meme chose pour une direction liee a la souris.
+     * <p>Leve par {@link #tickDirections} a chaque tick du maintien, baisse par
+     * {@link #endDirections} : c'est ce drapeau, et lui seul, que lit le refus de la marche —
+     * il n'a pas besoin de savoir de quelle competence il s'agit. Voir {@link #onMovementInput}.
      */
     private static boolean directionsTaken;
 
@@ -543,16 +574,14 @@ public class AbilityClientEvents {
      * dont il se sert. L'original se contentait d'ecouter par-dessus le jeu et laissait
      * marcher ; c'est le joueur qui a demande la difference.
      *
-     * <p>Pour ne pas se marcher sur les pieds, l'etat des touches se lit sur le clavier
-     * <b>physique</b> et non sur la touche du jeu : c'est justement celle-ci qu'on relache a
-     * chaque tick, et elle ne dit donc plus la verite. La touche interrogee est celle des
-     * reglages, ce qui vaut pour un joueur qui a deplace ses commandes ; une direction liee a
-     * la souris n'est pas prise, faute de pouvoir la lire au clavier, et reste au jeu.
+     * <p>La visee, elle, se lit sur la touche du jeu, sans detour : c'est cette touche qui dit
+     * les appuis et les relachements, et rien ne vient plus la contredire. La marche est refusee
+     * plus loin, une fois le clavier lu — voir {@link #onMovementInput}.
      */
     private static void tickDirections(Category category, Skill skill) {
         KeyMapping[] keys = movementKeys();
         for (int i = 0; i < keys.length; i++) {
-            boolean down = pressed(keys[i]);
+            boolean down = keys[i].isDown();
             if (down && !directionHeld[i]) {
                 aimed = i + 1;
             } else if (!down && directionHeld[i] && aimed == i + 1) {
@@ -561,53 +590,20 @@ public class AbilityClientEvents {
                 aimed = 0;
             }
             directionHeld[i] = down;
-            // Et la touche est relachee dans la foulee : cedee a chaque tick, elle ne fait plus
-            // avancer d'un pouce. Le jeu la relira au tick suivant et la trouvera eteinte —
-            // c'est la lecture du clavier, juste au-dessus, qui garde la visee vivante.
-            if (takes(keys[i])) {
-                keys[i].setDown(false);
-                directionsTaken = true;
-            }
         }
+        // Et la competence prend les touches pour de bon : c'est ce drapeau que lira le refus de
+        // la marche, au prochain tick du joueur.
+        directionsTaken = true;
     }
 
     /**
-     * L'etat d'une touche de deplacement, lu sur le clavier.
-     *
-     * <p>Le jeu tient cet etat dans la touche elle-meme, mais une competence qui prend les
-     * directions vient de l'eteindre : la lire la-bas reviendrait a demander a une touche
-     * qu'on vient de relacher si elle est enfoncee. On interroge donc le clavier directement,
-     * avec la touche des reglages. Une liaison a la souris n'a pas d'equivalent ici et garde
-     * l'etat du jeu.
-     */
-    private static boolean pressed(KeyMapping key) {
-        InputConstants.Key bound = key.getKey();
-        if (bound.getType() != InputConstants.Type.KEYSYM) return key.isDown();
-        return InputConstants.isKeyDown(
-                net.minecraft.client.Minecraft.getInstance().getWindow().getWindow(),
-                bound.getValue());
-    }
-
-    /** Vrai si cette direction se lit au clavier, et peut donc etre prise au jeu. */
-    private static boolean takes(KeyMapping key) {
-        return key.getKey().getType() == InputConstants.Type.KEYSYM;
-    }
-
-    /**
-     * Oublie la visee en cours : le maintien est fini, ou une autre touche a pris la main.
-     *
-     * <p>Les touches prises sont rendues au jeu dans l'etat ou elles sont vraiment, sans quoi
-     * un joueur qui tenait une direction quand la competence s'est refermee verrait sa marche
-     * attendre qu'il relache puis rappuie.
+     * Oublie la visee en cours, et rend les touches : le maintien est fini, ou une autre touche
+     * a pris la main.
      */
     private static void endDirections() {
         aimed = 0;
         java.util.Arrays.fill(directionHeld, false);
-        if (!directionsTaken) return;
         directionsTaken = false;
-        for (KeyMapping key : movementKeys()) {
-            if (takes(key)) key.setDown(pressed(key));
-        }
     }
 
     /**
