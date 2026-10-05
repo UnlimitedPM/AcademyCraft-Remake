@@ -85,6 +85,11 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, BloodSprayPacket.class,
                 BloodSprayPacket::encode, BloodSprayPacket::decode,
                 BloodSprayPacket::handle);
+        // Et les bouffees de fumee du choc au sol : le serveur dit ou, le client allume la bouffee.
+        // Voir SmokePuffPacket et Smokes.
+        CHANNEL.registerMessage(nextId++, SmokePuffPacket.class,
+                SmokePuffPacket::encode, SmokePuffPacket::decode,
+                SmokePuffPacket::handle);
         // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
         // Voir MdMissilePacket.
         CHANNEL.registerMessage(nextId++, MdMissilePacket.class,

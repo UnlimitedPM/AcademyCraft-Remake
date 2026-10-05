@@ -178,6 +178,7 @@ public class AbilityClientEvents {
             cn.academy.ability.client.vm.VecWaves.clear();
             cn.academy.ability.client.vm.VecAccelPreview.clear();
         cn.academy.ability.client.vm.WingDust.clear();
+        cn.academy.ability.client.vm.Smokes.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
@@ -191,6 +192,8 @@ public class AbilityClientEvents {
         // Et la poussiere des ailes de tempete, qui tourne et s'efface toute seule : elle n'est pas
         // une tornade, et elle vit plus longtemps qu'elles. Voir WingDust.
         cn.academy.ability.client.vm.WingDust.tick();
+        // Et les bouffees de fumee du choc au sol, qui vivent quatre secondes : voir Smokes.
+        cn.academy.ability.client.vm.Smokes.tick();
         // Et les ondes de choc de vecmanip, qui appartiennent au monde : quinze ticks, et elles
         // s'en vont. Voir VecWaves.
         cn.academy.ability.client.vm.VecWaves.tick();

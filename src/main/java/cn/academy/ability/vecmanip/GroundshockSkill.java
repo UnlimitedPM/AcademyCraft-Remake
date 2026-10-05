@@ -66,9 +66,17 @@ import net.minecraft.world.phys.Vec3;
  *     competences du port qui se posent la meme question.</li>
  * </ul>
  *
- * <p>Non porte : le regard du joueur que l'original faisait plonger pendant la charge
- * (un retour visuel cote client, sans crochet pour le reproduire ici), et les particules
- * de poussiere envoyees au client pour chaque bloc affecte.
+ * <h2>Ce qui se voit</h2>
+ *
+ * <p>L'original envoyait au client la liste de ses blocs <b>ecrases</b> (son
+ * {@code dejavu_blocks}), et le client y semait deux choses : quatre a sept eclats du bloc, et
+ * — une fois sur deux — une <b>bouffee de fumee de deux blocs</b>, son {@code SmokeEffect}.
+ * Le port suit les deux : les eclats naissent sur place dans {@code breakAt} (voir son
+ * commentaire), et la fumee dans {@code smoke}, sur les seules cellules de la marche — voir
+ * {@code cn.academy.ability.client.vm.Smokes} pour son dessin.
+ *
+ * <p>Non porte : le regard du joueur que l'original faisait plonger pendant la charge (un
+ * retour visuel cote client, sans crochet pour le reproduire ici).
  */
 public class GroundshockSkill extends Skill {
 
@@ -320,6 +328,9 @@ public class GroundshockSkill extends Skill {
         /** Les pas qui restent : l'original avait un compteur local, ici le meme. */
         private int iterations;
 
+        /** Une bouffee de fumee sur la moitie des cellules ecrasees : la chance de l'original. */
+        private static final float SMOKE_CHANCE = 0.5f;
+
         Shock(ServerLevel level, Player player, AbilityData data, GroundshockSkill skill) {
             this.level = level;
             this.player = player;
@@ -370,6 +381,7 @@ public class GroundshockSkill extends Skill {
             if (random.nextDouble() < LATERAL_CHANCES[index]
                     && !level.getBlockState(cell).isAir() && seen.add(cell)) {
                 energy -= flatten(cell);
+                smoke(cell);
                 if (random.nextDouble() < GROUND_BREAK_PROB) {
                     breakAt(row, false);
                 }
@@ -380,6 +392,26 @@ public class GroundshockSkill extends Skill {
             // onde qui avance ne laisse pas de mur derriere elle.
             for (int up = 1; up <= COLUMN_HEIGHT; up++) {
                 breakAt(row.above(up), false);
+            }
+        }
+
+        /**
+         * La fumee du choc, sur une cellule que la marche vient d'ecraser.
+         *
+         * <p>Portage de {@code SmokeEffect} : une bouffee de deux blocs posee au-dessus du bloc,
+         * qui monte doucement et s'efface en une seconde et demie. Le serveur ne dit que
+         * l'endroit, le client tire le reste — voir {@link cn.academy.ability.client.vm.Smokes} et
+         * {@code SmokePuffPacket}.
+         *
+         * <p>Elle se pose <b>ici</b>, sur les cellules de la marche, et non dans
+         * {@link #breakAt} : l'original ne fumait que sur sa liste de blocs ecrases (son
+         * {@code dejavu_blocks}), quand le port fumait sur tout ce qu'il touchait — les trois
+         * colonnes au-dessus du marcheur et la passe finale comprises, soit plusieurs fois trop.
+         */
+        private void smoke(BlockPos cell) {
+            if (random.nextFloat() < SMOKE_CHANCE) {
+                cn.academy.ability.network.SmokePuffPacket.send(player, new Vec3(
+                        cell.getX() + 0.5, cell.getY() + 1.0, cell.getZ() + 0.5));
             }
         }
 
@@ -420,9 +452,8 @@ public class GroundshockSkill extends Skill {
             if (state.isAir()) return;
 
             // Les eclats du bloc frappe : l'original les faisait naitre cote client, a partir de
-            // la liste des blocs que le serveur lui envoyait — quatre a huit eclats par bloc, et
-            // une bouffee de fumee une fois sur deux. On les fait naitre ici, sur place : c'est le
-            // meme effet, sans le detour par le reseau.
+            // la liste des blocs que le serveur lui envoyait — quatre a sept eclats par bloc. On
+            // les fait naitre ici, sur place : c'est le meme effet, sans le detour par le reseau.
             //
             // Ils partent AVANT le test de resistance, et c'est voulu : un bloc trop dur pour le
             // coup ne casse pas, mais il encaisse quand meme, et le joueur doit le voir. C'est le
@@ -431,18 +462,7 @@ public class GroundshockSkill extends Skill {
                     new net.minecraft.core.particles.BlockParticleOption(
                             net.minecraft.core.particles.ParticleTypes.BLOCK, state),
                     pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
-                    4 + random.nextInt(5), 0.5, 0.4, 0.5, 0.2);
-
-            // Et la fumee : l'original en posait une sur la moitie des blocs casses, une grosse
-            // bouffee de deux blocs posee au-dessus du bloc. Le port seme deux poussieres de fumee
-            // de vanilla au meme endroit, avec la meme chance : le nuage y est, la grosseur non —
-            // une bouffee de cette taille-la demande un effet a lui, que le port n'a pas encore.
-            // Voir SmokeEffect dans l'original.
-            if (random.nextBoolean()) {
-                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
-                        pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5,
-                        2, 0.3, 0.15, 0.3, 0.02);
-            }
+                    4 + random.nextInt(4), 0.5, 0.4, 0.5, 0.2);
 
             float hardness = state.getDestroySpeed(level, pos);
             if (hardness < 0f || energy < hardness) return;
