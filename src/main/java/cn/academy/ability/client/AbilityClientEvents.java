@@ -175,6 +175,7 @@ public class AbilityClientEvents {
             cn.academy.ability.client.tp.FormulaParticles.clear();
             // Et les deux tornades de vecmanip, qui appartiennent au monde comme le reste.
             cn.academy.ability.client.vm.VecmanipTornados.clear();
+            cn.academy.ability.client.vm.VecWaves.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
@@ -185,6 +186,9 @@ public class AbilityClientEvents {
         // qui est mort s'en va — c'est aussi ce qui rattrape un maintien interrompu. Voir
         // VecmanipTornados.
         cn.academy.ability.client.vm.VecmanipTornados.tick();
+        // Et les ondes de choc de vecmanip, qui appartiennent au monde : quinze ticks, et elles
+        // s'en vont. Voir VecWaves.
+        cn.academy.ability.client.vm.VecWaves.tick();
         cn.academy.client.SilbarnFrags.tick();
         // Et le gresillement du bouclier de lumiere : son disque se dessine a chaque image, mais
         // son essaim se seme au tick, chez son porteur seul — voir ShieldSparks.

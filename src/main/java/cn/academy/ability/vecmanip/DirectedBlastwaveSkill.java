@@ -17,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.RandomSource;
 
 /**
  * L'onde de choc dirigee, portage de {@code DirectedBlastwave} : le joueur frappe dans le
@@ -171,6 +172,14 @@ public class DirectedBlastwaveSkill extends Skill {
         return effective ? EXP_EFFECTIVE : EXP_EMPTY;
     }
 
+    /** Le hasard des effets : l'original secouait son onde de quelques degres. */
+    private static final RandomSource RANDOM = RandomSource.create();
+
+    /** Un ecart au hasard, en degres, autour du regard. */
+    private static float jitter(int degrees) {
+        return RANDOM.nextFloat() * 2 * degrees - degrees;
+    }
+
     // ------------------------------------------------------------------
     // Le coup
     // ------------------------------------------------------------------
@@ -271,6 +280,15 @@ public class DirectedBlastwaveSkill extends Skill {
         // competences de vecmanip qui se fait entendre dans le monde plutot qu'au joueur.
         cn.academy.sound.AcademySounds.playAt(level, point,
                 cn.academy.ModSounds.VECMANIP_DIRECTED_BLAST, 0.5f, 1.0f);
+
+        // Et l'onde elle-meme : deux ou trois anneaux qui s'ouvrent a sept dixiemes du chemin
+        // entre la tete et le point vise, legerement de travers. C'est le geste de l'original,
+        // qui tirait ces trois nombres au sort a chaque coup. Voir VecWaves.
+        Vec3 head = player.getEyePosition(1f);
+        cn.academy.ability.network.VecWavePacket.send(player,
+                head.add(point.subtract(head).scale(0.7)),
+                player.getYHeadRot() + jitter(20), player.getXRot() + jitter(10),
+                2 + level.random.nextInt(2), 1);
 
         // D'abord les corps : tous ceux du cube, vivants ou non.
         AABB box = new AABB(point.x - BLAST_RANGE, point.y - BLAST_RANGE, point.z - BLAST_RANGE,

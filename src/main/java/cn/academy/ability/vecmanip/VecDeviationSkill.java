@@ -215,6 +215,11 @@ public class VecDeviationSkill extends Skill {
             cn.academy.sound.AcademySounds.playAt(level, entity.position(),
                     cn.academy.ModSounds.VECMANIP_VEC_DEVIATION, 0.5f, 1.0f);
 
+            // Et l'onde de l'arret : une seule, et petite, posee sur la tete de ce qui vient
+            // d'etre fige — l'original en posait une ici meme. Voir VecWaves.
+            cn.academy.ability.network.VecWavePacket.send(player, entity.getEyePosition(),
+                    player.getYRot(), player.getXRot(), 1, 0.6);
+
             data.addSkillExp(this, EXP_PER_DIFFICULTY * affect.difficulty());
         }
         return true;

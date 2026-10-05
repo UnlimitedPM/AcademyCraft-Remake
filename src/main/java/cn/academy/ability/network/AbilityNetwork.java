@@ -58,6 +58,11 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
+        // Et l'onde de choc de vecmanip : trois competences en posent une, et aucune ne se voit
+        // sans ce message. Voir VecWavePacket et VecWaves.
+        CHANNEL.registerMessage(nextId++, VecWavePacket.class,
+                VecWavePacket::encode, VecWavePacket::decode,
+                VecWavePacket::handle);
         // Et la trainee du depose au loin : le serveur seul sait que le geste a eu lieu, et c'est
         // la seule chose qu'il donne a voir — il ne deplace personne, il pose un bloc au loin.
         // Voir ShiftTeleportPacket et ShiftTrail.

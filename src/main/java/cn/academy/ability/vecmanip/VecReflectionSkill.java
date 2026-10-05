@@ -244,6 +244,11 @@ public class VecReflectionSkill extends Skill {
             cn.academy.sound.AcademySounds.playAt(level, entity.position(),
                     cn.academy.ModSounds.VECMANIP_VEC_REFLECTION, 0.5f, 1.0f);
 
+            // Et l'onde du renvoi : deux anneaux, plus grands que ceux de la deviation, sur la
+            // tete de ce qui vient de repartir. Voir VecWaves.
+            cn.academy.ability.network.VecWavePacket.send(player, entity.getEyePosition(),
+                    player.getYHeadRot(), player.getXRot(), 2, 1.1);
+
             data.addSkillExp(this, EXP_PER_DIFFICULTY * affect.difficulty());
         }
         return true;
@@ -317,6 +322,15 @@ public class VecReflectionSkill extends Skill {
             if (attacker instanceof LivingEntity living && living != player) {
                 living.hurt(player.damageSources().indirectMagic(player, player),
                         scaled(reflected));
+                // Et l'onde du renvoi, devant le joueur et du cote de l'attaquant : l'original
+                // posait la sienne a un demi-bloc de sa tete, dans cette direction-la. Voir
+                // VecWaves.
+                Vec3 head = player.getEyePosition(1f);
+                Vec3 toward = living.getEyePosition().subtract(head);
+                Vec3 at = player.position().add(0, 0.4 + player.getRandom().nextDouble() * 0.9, 0)
+                        .add(toward.lengthSqr() > 1e-6 ? toward.normalize().scale(0.5) : Vec3.ZERO);
+                cn.academy.ability.network.VecWavePacket.send(player, at,
+                        player.getYHeadRot(), player.getXRot(), 2, 1.1);
             }
         } finally {
             reflecting = false;
