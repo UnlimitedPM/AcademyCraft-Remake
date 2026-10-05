@@ -4,6 +4,7 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.ability.teleporter.PenetrateTeleportSkill;
+import cn.academy.ability.teleporter.ShiftTeleportSkill;
 import cn.academy.ability.teleporter.TeleporterCategory;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -112,6 +113,18 @@ public final class TeleportMark {
 
     /** Celle de la chair quand elle ne trouve personne : un bloc entier. */
     public static final double FLESH_BOX = 1.0;
+
+    /** La boite du depose au loin : un bloc et deux dixiemes de cote, comme l'original. */
+    public static final double SHIFT_BOX = 1.2;
+
+    /**
+     * Et son gris.
+     *
+     * <p>L'original ecrit {@code new Color(139, 139, 139, 180)}, qui est du <b>RGBA</b> — trois
+     * canaux egaux, donc pas d'inversion a faire ici —, et son alpha se perd comme celui des trois
+     * autres boites : voir COLOR_HIT_ORANGE.
+     */
+    public static final int COLOR_SHIFT_BOX = 0xFF8B8B8B;
 
     private static final RandomSource RANDOM = RandomSource.create();
 
@@ -313,11 +326,11 @@ public final class TeleportMark {
      * La forme de la marque.
      *
      * <p>Deux formes dans l'original, et deux seulement. Le <b>fantome</b> du joueur, pour les
-     * quatre competences qui teleportent le corps : lui seul a une silhouette, et le modele la lui
-     * donne — d'ou une taille nulle ici. Et la <b>boite</b> de son {@code EntityMarker}, pour les
-     * deux competences qui visent autre chose : la ou l'objet tombera, et la creature a qui il
-     * arrachera les chairs. Ses dimensions sont alors celles que la competence demande — un bloc
-     * pour du vide, la boite de la creature pour elle.
+     * competences qui teleportent le corps : lui seul a une silhouette, et le modele la lui donne —
+     * d'ou une taille nulle ici. Et la <b>boite</b> de son {@code EntityMarker}, pour celles qui
+     * visent autre chose : la ou l'objet tombera, la creature a qui il arrachera les chairs, et la
+     * case ou le depose au loin posera son bloc. Ses dimensions sont alors celles que la competence
+     * demande — un bloc pour du vide, la boite de la creature pour elle, une case pour un bloc.
      */
     public record Shape(double width, double height) {
 
@@ -347,11 +360,11 @@ public final class TeleportMark {
     /**
      * Ou la competence en cours emmenerait son joueur, ou {@code null} s'il n'y a pas de marque.
      *
-     * <p>Les trois competences a marque n'en veulent pas au meme moment : la teleportation au
-     * marqueur en montre une pendant toute sa charge — sa portee grandit avec elle — le
-     * scintillement seulement tant qu'une touche de direction est enfoncee ({@code aimed}, zero
-     * quand il n'y en a pas), et le saut traversant tant que sa touche se tient, a la distance que
-     * la molette lui a donnee.
+     * <p>Les competences a marque n'en veulent pas au meme moment : la teleportation au marqueur en
+     * montre une pendant toute sa charge — sa portee grandit avec elle —, le scintillement seulement
+     * tant qu'une touche de direction est enfoncee ({@code aimed}, zero quand il n'y en a pas), le
+     * saut traversant tant que sa touche se tient, a la distance que la molette lui a donnee, et le
+     * depose au loin tant qu'il tient un bloc en main.
      */
     @Nullable
     static Seat seat(Player player, Skill skill, int chargeTicks, int aimed) {
@@ -363,11 +376,15 @@ public final class TeleportMark {
             return new Seat(TeleporterCategory.FLASHING.destination(player, ClientAbilityData.get(),
                     aimed), COLOR_NORMAL, Shape.GHOST);
         }
-        // Le saut court vise pendant tout son maintien, comme les deux precedents : le fantome se
-        // pose la ou le saut deposerait son joueur, et c'est la meme fonction qui l'y deposera.
+        // Le depose au loin ne fait pas voyager son joueur : il pose le bloc qu'il tient sur la case
+        // visee, et sa marque est donc une BOITE — celle de l'original, un bloc et deux dixiemes de
+        // cote, posee A PLAT sur la case pour se lire comme elle : sa base a la hauteur du sol de
+        // la case, son centre au milieu d'elle.
         if (skill == TeleporterCategory.SHIFT_TELEPORT) {
-            return new Seat(TeleporterCategory.SHIFT_TELEPORT.destination(player,
-                    ClientAbilityData.get()), COLOR_NORMAL, Shape.GHOST);
+            ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT.target(player,
+                    ClientAbilityData.get());
+            return new Seat(new Vec3(target.cell().getX() + 0.5, target.cell().getY(),
+                    target.cell().getZ() + 0.5), COLOR_SHIFT_BOX, Shape.box(SHIFT_BOX, SHIFT_BOX));
         }
         // Le lancer d'objet, lui, ne montre pas un fantome mais la BOITE de l'original. Elle a la
         // taille de ce qu'elle designe — un demi-bloc dans le vide, la creature ENTIERE quand il y

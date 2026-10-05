@@ -90,6 +90,11 @@ class SkillCurvesTest {
                 "degats de meltdowner au depart");
         assertEquals(60f, meltdowner.damage(atExperience(meltdowner, 1f, 40)), 0.0001f,
                 "degats de meltdowner au maximum");
+
+        // Le depose au loin ne blesse pas ce qu'il vise mais ce qu'il traverse : c'est la ligne
+        // entre lui et la case ou le bloc se pose.
+        var shift = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
+        assertBounds("degats de shift_tp", 15f, 35f, shift::damage, shift);
     }
 
     @Test
@@ -495,9 +500,12 @@ class SkillCurvesTest {
     void leReacteurEtLeCanonContinuentApresLeRelachement() {
         var jet = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
         var cannon = cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON;
-        // Le saut traversant, lui, DEPLACE son joueur au relachement : il le lit donc, et c'est
-        // ce que le fantome montrait avant. Voir PenetrateTeleportTest pour ce qu'il doit faire.
+        // Le saut traversant et le depose au loin, eux, LISENT leur joueur au relachement : l'un le
+        // deplace, l'autre lui prend le bloc qu'il tient. Ce sont les deux seules competences
+        // tenues du port dans ce cas, et c'est pour cela qu'elles sont ecartees ici — voir
+        // PenetrateTeleportTest et ShiftTeleportSkillTest pour ce qu'elles doivent faire.
         var penetrate = cn.academy.ability.teleporter.TeleporterCategory.PENETRATE_TELEPORT;
+        var shift = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
 
         for (var category : java.util.List.of(
                 cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE,
@@ -505,7 +513,10 @@ class SkillCurvesTest {
                 cn.academy.ability.teleporter.TeleporterCategory.INSTANCE,
                 cn.academy.ability.vecmanip.VecmanipCategory.INSTANCE)) {
             for (Skill skill : category.getSkills()) {
-                if (!skill.isHeld() || skill == jet || skill == cannon || skill == penetrate) continue;
+                if (!skill.isHeld() || skill == jet || skill == cannon || skill == penetrate
+                        || skill == shift) {
+                    continue;
+                }
                 // Le relachement termine le maintien de toutes les autres, et le joueur
                 // n'est meme pas lu.
                 assertFalse(skill.onRelease(null, new AbilityData(), 20),

@@ -2,34 +2,78 @@ package cn.academy.ability.teleporter;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/** Active skill, port of original ShiftTeleport: blinks toward where the player looks, stopping at any obstacle. */
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Le depose au loin, portage de {@code ShiftTeleport} : on tient un <b>bloc</b>, on le pose la ou
+ * l'on regarde — jusqu'a trente-cinq blocs — et <b>tout ce qui se trouve sur la ligne</b> prend le
+ * coup au passage.
+ *
+ * <h2>Ce n'est pas une teleportation de son joueur</h2>
+ *
+ * <p>Le port en avait fait un saut court : le joueur se deplacait jusqu'a l'endroit vise, avec un
+ * fantome pour le montrer. L'original ne deplace personne — son {@code s_execute} pose un bloc et
+ * frappe, et rien d'autre. Son nom dit le geste : on <b>deplace</b> le bloc, pas le bonhomme. Le
+ * joueur a vu la difference : « le shift teleport n'a aucun rapport avec le vrai pouvoir ».
+ *
+ * <h2>Il faut un bloc en main</h2>
+ *
+ * <p>C'est ce bloc qui part, et c'est la seule condition d'ouverture : {@link #canStart} refuse la
+ * competence quand la main est vide, comme l'{@code isHandValid} de l'original. Le geste en coute
+ * <b>un</b> — l'objet pose est retire de la pile — sauf en creatif, ou le monde est un brouillon.
+ *
+ * <p>Et quand l'endroit refuse le bloc, l'objet <b>tombe</b> au point touche, comme chez
+ * l'original : le geste ne se perd pas, il change de main.
+ *
+ * <h2>Et la ligne</h2>
+ *
+ * <p>{@link #line} prend toutes les creatures dont la boite croise le segment qui va des pieds du
+ * joueur a la case visee — donc celles d'un peu partout, y compris derriere un mur : c'est le
+ * cote « epieu » du geste, et c'est {@link TeleportCrits} qui frappe, comme le lancer d'objet.
+ */
 public class ShiftTeleportSkill extends Skill {
 
-    /** Le prix du depose : 260 a 320 CP, comme l'original, et il monte avec l'experience. */
+    /** Le prix du geste : 260 a 320 CP, comme l'original, et il monte avec l'experience. */
     private static final float CP_COST_MIN_EXP = 260f;
     private static final float CP_COST_MAX_EXP = 320f;
+
+    /** Ce qu'une creature traversee encaisse : de 15 a 35, comme l'original. */
+    private static final float DAMAGE_MIN = 15f;
+    private static final float DAMAGE_MAX = 35f;
+
+    /** L'experience par creature traverse, plus la part de base : les deux de l'original. */
+    public static final float EXP_PER_TARGET = 0.002f;
 
     public ShiftTeleportSkill() {
         super("shift_tp", 4);
     }
 
-    /**
-     * Portee reprise de l'original : de 25 a 35 blocs selon l'experience.
-     *
-     * L'original blessait en plus les creatures traversees (15 a 35 degats) ; le port
-     * ne fait que deplacer le joueur, donc cette part n'a pas ete portee. Le cout en
-     * CP reste celui du port.
-     */
+    /** La portee du geste : de 25 a 35 blocs selon l'experience, comme l'original. */
     public double maxRange(AbilityData data) {
         return lerp(25f, 35f, data.getSkillExp(this));
+    }
+
+    /** Ce qu'une creature traversee encaisse : de 15 a 35 selon l'experience. */
+    public float damage(AbilityData data) {
+        return lerp(DAMAGE_MIN, DAMAGE_MAX, data.getSkillExp(this));
     }
 
     /** Recharge reprise de l'original : de 100 a 60 ticks, soit 5 a 3 secondes. */
@@ -39,12 +83,19 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     /**
-     * L'original versait 0,002 par entite traversee, plus 0,002. Le port ne compte pas
-     * les entites traversees : c'est donc le montant de base qui est verse.
+     * L'experience vient du geste, qui seul connait le nombre de creatures traversees.
+     *
+     * <p>L'original versait {@code (1 + n) * 0,002} : la part de base, plus une par creature. Le
+     * port versait la seule part de base, faute de compter — voir {@link #onRelease}.
      */
     @Override
     public float getExpGain(AbilityData data) {
-        return 0.002f;
+        return 0f;
+    }
+
+    @Override
+    public boolean earnsExpOnEffect() {
+        return true;
     }
 
     @Override
@@ -60,12 +111,10 @@ public class ShiftTeleportSkill extends Skill {
 
     /**
      * La competence se <b>tient</b>, comme dans l'original : on vise tant que la touche est
-     * enfoncee, et le saut part au relachement.
+     * enfoncee, et le geste part au relachement.
      *
-     * <p>Le port la faisait partir a l'appui, et le fantome de la marque n'avait donc aucun
-     * moment ou se montrer — c'est ce qui lui manquait pour avoir une animation. Chez l'original
-     * son contexte vivait pendant tout le maintien : il y posait un marqueur sur le point
-     * d'arrivee, et un sur chacune des creatures que le passage blesserait.
+     * <p>C'est aussi pourquoi la marque a le temps de se montrer : chez l'original, le contexte
+     * vivait pendant tout le maintien et y posait sa boite sur la case visee.
      */
     @Override
     public boolean isHeld() {
@@ -73,10 +122,10 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     /**
-     * Tenir ne coute rien : c'est le saut qui se paie, au relachement.
+     * Tenir ne coute rien : c'est le geste qui se paie, au relachement.
      *
-     * <p>L'original consommait dans son message d'execution, donc au relachement lui aussi. Le
-     * prix du saut reste {@link #getCpCost(AbilityData)} et {@link #getOverloadCost(AbilityData)}.
+     * <p>L'original consommait dans son message d'execution, donc au relachement lui aussi. Le prix
+     * du geste reste {@link #getCpCost(AbilityData)} et {@link #getOverloadCost(AbilityData)}.
      */
     @Override
     public float getCpCost() {
@@ -84,65 +133,162 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     /**
-     * Le relachement : le saut part, et il se paie la.
+     * Il faut un <b>bloc en main</b> : c'est lui qui part.
      *
-     * <p>Refuse, il ne se passe rien du tout — pas de saut, pas de recharge, et rien n'est
-     * depense : c'est le {@code consume()} de l'original, qui gardait tout ou ne payait rien.
+     * <p>Le refus se lit a l'appui, et la competence ne s'ouvre pas — c'est l'{@code isHandValid}
+     * de l'original, qu'il testait a l'ouverture <b>et</b> au relachement. Le port n'a besoin que
+     * du premier : une pile qui se vide en tenant la touche ne vide pas la competence, elle la
+     * laisse simplement partir sans rien poser — voir {@link #onRelease}.
+     */
+    @Override
+    public boolean canStart(Player player, AbilityData data) {
+        return blockOf(player) != null;
+    }
+
+    /** Le bloc que la main tient, ou {@code null} si ce n'est pas un bloc. */
+    @Nullable
+    public static BlockItem blockOf(Player player) {
+        return player.getMainHandItem().getItem() instanceof BlockItem item ? item : null;
+    }
+
+    /**
+     * Le relachement : le bloc part, et la ligne encaisse.
+     *
+     * <p>Refuse, il ne se passe rien du tout — rien n'est pose, rien n'est depense : c'est le
+     * {@code consume()} de l'original, qui gardait tout ou ne payait rien.
+     *
+     * <p>La pose passe par {@link BlockItem#place}, qui fait tout le travail de l'original : l'etat
+     * de la face visee, le controle de place, le bruit du bloc, et le retrait de l'objet de la
+     * pile — sauf en creatif. Quand l'endroit refuse, le meme objet tombe au point touche.
+     *
+     * <p>Le controle de l'original qui verifiait qu'on avait le droit de <b>casser</b> le bloc vise
+     * n'a pas d'equivalent dans le port : il n'y a pas de reglage de ce genre a lire.
      */
     @Override
     public boolean onRelease(Player player, AbilityData data, int heldTicks) {
+        ItemStack stack = player.getMainHandItem();
+        BlockItem item = blockOf(player);
+        if (item == null) return false;
         if (!data.perform(getCpCost(data), getOverloadCost(data))) return false;
 
-        Vec3 destination = destination(player, data);
-        player.teleportTo(destination.x, destination.y, destination.z);
-        player.fallDistance = 0;
-        // L'original le jouait au dernier moment, et seulement si sa ligne avait trouve
-        // quelqu'un : le port, qui ne fait pas ce coup au passage, le joue toujours.
+        Target target = target(player, data);
+        BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack,
+                new BlockHitResult(target.point(), target.face(), target.block(), false));
+        if (!item.place(context).consumesAction()) {
+            ItemStack drop = stack.copy();
+            drop.setCount(1);
+            player.level().addFreshEntity(new ItemEntity(player.level(), target.point().x,
+                    target.point().y, target.point().z, drop));
+            if (!player.getAbilities().instabuild) stack.shrink(1);
+        }
+
+        // Et la ligne encaisse, dans l'ordre ou elle se presente : le geste est un coup d'epieu
+        // qui part des pieds et va jusqu'a la case visee.
+        List<LivingEntity> hit = line(player.level(), player, target.cell());
+        for (LivingEntity living : hit) {
+            TeleportCrits.strike(player, data, living, damage(data));
+        }
+
+        // Le son part toujours, comme chez l'original : il annonce le geste, pas ses victimes.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
-        TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
+        // 0,002 par creature traversee, plus la part de base : l'original, au chiffre pres.
+        data.addSkillExp(this, (1 + hit.size()) * EXP_PER_TARGET);
 
         // Le maintien se ferme ici : la recharge se pose ensuite par la fin ordinaire.
         return false;
     }
 
     /**
-     * Ou le saut deposerait son joueur, sans le deplacer.
+     * Ou le bloc tomberait : la case visee, et le point touche.
      *
-     * <p>Calculee a part pour la meme raison que chez les trois autres competences a marque : le
-     * fantome du client doit se poser <b>la ou le joueur arrivera</b>, et il ne peut le savoir
-     * qu'en appelant la meme fonction. Une seule geometrie, donc, et la marque ne peut pas mentir
-     * sur l'endroit ou l'on atterrit.
+     * <p>Portage de {@code getTraceDest} et de {@code getTracePosition}, qui etaient la meme chose
+     * dite deux fois — l'un en coordonnees de bloc, l'autre en point. La case visee est celle qui
+     * <b>suit la face touchee</b> : c'est la que le bloc se poserait, et c'est ce que la marque
+     * montre. Quand le regard ne butte sur rien, elle se prend au bout de la portee, dans l'air.
      *
-     * <p>Trois cas, ceux de l'original : rien devant, et l'on va jusqu'au bout de la portee ;
-     * le sol, et l'on se pose dessus ; un mur ou un plafond, et l'on s'arrete juste avant, a
-     * hauteur d'yeux pour un plafond, a la hauteur actuelle pour un mur.
+     * <p>Elle est toujours <b>libre</b> : le rayon s'arrete au premier bloc, donc la case qui suit
+     * la face touchee est forcement vide — sinon le rayon l'aurait touchee avant lui.
      */
-    public Vec3 destination(Player player, AbilityData data) {
-        Level level = player.level();
-        Vec3 eye = player.getEyePosition(1.0f);
-        Vec3 look = player.getViewVector(1.0f);
+    public Target target(Player player, AbilityData data) {
+        Vec3 eye = player.getEyePosition(1f);
+        Vec3 look = player.getViewVector(1f);
         Vec3 end = eye.add(look.scale(maxRange(data)));
-        double eyeHeight = player.getEyeHeight();
+        BlockHitResult hit = player.level().clip(new ClipContext(eye, end,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
+    }
 
-        HitResult hit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+    /**
+     * La case visee par une face touchee : celle qui la suit, et le point touche qui la suit aussi.
+     *
+     * <p>Fonction pure, donc verifiable : c'est de la geometrie, et rien d'autre.
+     */
+    public static Target fromHit(BlockHitResult hit) {
+        Direction face = hit.getDirection();
+        BlockPos block = hit.getBlockPos();
+        Vec3 point = hit.getLocation().add(face.getStepX(), face.getStepY(), face.getStepZ());
+        return new Target(block.relative(face), point, face, block);
+    }
 
-        if (hit.getType() == HitResult.Type.MISS) {
-            // Rien devant, sur toute la portee : on prend la distance entiere.
-            return new Vec3(end.x, end.y - eyeHeight, end.z);
-        }
+    /**
+     * Et celle d'un regard qui ne butte sur rien : elle se prend au bout de la portee.
+     *
+     * <p>Fonction pure, donc verifiable. La face est <b>celle du dessous</b>, comme chez l'original :
+     * un bloc qui se pose dans le vide s'y accroche par en dessous, et le rayon est parti vers le
+     * bas du monde.
+     */
+    public static Target fromMiss(Vec3 end) {
+        BlockPos cell = BlockPos.containing(end);
+        return new Target(cell, end, Direction.DOWN, cell);
+    }
 
-        Vec3 hitLoc = hit.getLocation();
-        Direction face = ((BlockHitResult) hit).getDirection();
-        if (face == Direction.UP) {
-            // On vise le sol : on se pose exactement sur le bloc vise.
-            return hitLoc;
+    /**
+     * Les creatures que le geste traverse : celles dont la boite croise le segment qui va des pieds
+     * du joueur au <b>centre</b> de la case visee.
+     *
+     * <p>C'est le {@code getTargetsInLine} de l'original : un volume pour demander au monde ses
+     * creatures — celui du segment, exactement —, puis un croisement de boite pour chacune, qui
+     * ecarte celles qui ne sont que <b>a cote</b> de la ligne. L'auteur du geste en est retire.
+     *
+     * <p>Le segment part des pieds, comme chez l'original, et non des yeux : c'est le corps entier
+     * qui passe, et c'est lui qui frappe.
+     */
+    public static List<LivingEntity> line(Level level, Player player, BlockPos cell) {
+        Vec3 from = player.position();
+        Vec3 to = Vec3.atCenterOf(cell);
+        AABB area = new AABB(
+                Math.min(from.x, to.x), Math.min(from.y, to.y), Math.min(from.z, to.z),
+                Math.max(from.x, to.x), Math.max(from.y, to.y), Math.max(from.z, to.z));
+
+        List<LivingEntity> hit = new ArrayList<>();
+        for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class, area,
+                e -> e != player && !e.isSpectator())) {
+            if (crosses(living.getBoundingBox(), from, to)) hit.add(living);
         }
-        Vec3 backed = hitLoc.subtract(look.scale(0.5));
-        if (face == Direction.DOWN) {
-            // On vise un plafond : on recule d'un demi-bloc et l'on garde la hauteur d'yeux.
-            return new Vec3(backed.x, backed.y - eyeHeight, backed.z);
-        }
-        // Un mur : on s'arrete juste avant, sans changer de hauteur.
-        return new Vec3(backed.x, player.getY(), backed.z);
+        return hit;
+    }
+
+    /**
+     * Vrai si le segment entre dans cette boite.
+     *
+     * <p>Fonction pure, donc verifiable : c'est le {@code VecUtils.checkLineBox} de l'original, mot
+     * pour mot — un croisement de segment et de boite, sans monde ni entite.
+     *
+     * <p>Le cas de la boite qui <b>contient</b> le depart est traite a part, et ce n'est pas une
+     * precaution : le croisement de Minecraft est un rayon qui vient de l'exterieur, et il rend
+     * « rien » quand la source est <b>dans</b> la boite. Une creature collee a son auteur — elle le
+     * touche — ne serait alors pas frappee, alors que l'original la comptait.
+     */
+    public static boolean crosses(AABB box, Vec3 from, Vec3 to) {
+        return box.contains(from) || box.clip(from, to).isPresent();
+    }
+
+    /**
+     * L'endroit vise, en deux pieces : la <b>case</b> du bloc, et le <b>point touche</b>.
+     *
+     * <p>Les deux servent, et a des choses differentes : la case est ce que la marque dessine et ce
+     * que la ligne vise, le point est la ou le bloc se pose — ou tombe.
+     */
+    public record Target(BlockPos cell, Vec3 point, Direction face, BlockPos block) {
     }
 }
