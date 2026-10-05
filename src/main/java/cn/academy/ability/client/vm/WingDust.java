@@ -1,7 +1,5 @@
 package cn.academy.ability.client.vm;
 
-import cn.academy.AcademyCraft;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
@@ -31,11 +29,12 @@ import java.util.Random;
  * telle quelle — une poussiere de <b>terre</b>, mise a la moitie de sa taille — mais lui retirait
  * presque tout son poids. Des grains qui tombent ne tournent pas.
  *
- * <h2>Ce que le port remplace</h2>
+ * <h2>Ce que le port dessine</h2>
  *
- * <p>La poussiere de bloc de vanilla n'est pas dessinable telle quelle, et le port n'a pas de
- * texture de bloc dans ses effets : le grain est donc un rond de lueur, teinte de la couleur de la
- * terre. La forme change, pas le mouvement — et c'est le mouvement que le joueur regarde.
+ * <p>Des <b>carres noirs</b>. C'est ce que le joueur voyait dans le vrai mod : la poussiere de bloc
+ * de l'original ne resolvait pas son image, et une particule sans image se dessine en carre plein,
+ * noir. Le port ne cherche donc pas a faire plus joli que l'original — il dessine le carre, sans
+ * texture du tout. Meme cote, meme taille, meme vie, meme mouvement.
  */
 @OnlyIn(Dist.CLIENT)
 public final class WingDust {
@@ -67,20 +66,15 @@ public final class WingDust {
     public static final int FADE_IN_TICKS = 3;
 
     /**
-     * Leur opacite au plus fort, et la teinte de la terre.
+     * Leur opacite au plus fort, et leur encre.
      *
-     * <p>L'original les prenait opaques — c'etait une poussiere de bloc, et non un rond de lueur —
-     * donc le port demande un peu plus que la moitie pour que la poussiere se voie autant que la
-     * sienne.
+     * <p>L'original les prenait <b>opaques</b> — une poussiere de bloc ne s'efface pas — et le port
+     * les prend noires et pleines, comme les carres qu'il dessine.
      */
-    public static final float ALPHA = 0.5f;
-    public static final float RED = 0.45f;
-    public static final float GREEN = 0.34f;
-    public static final float BLUE = 0.24f;
-
-    /** L'image du grain : un rond de lueur, faute de poussiere de bloc. */
-    public static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/glow_circle.png");
+    public static final float ALPHA = 1.0f;
+    public static final float RED = 0f;
+    public static final float GREEN = 0f;
+    public static final float BLUE = 0f;
 
     /** Un grain vivant : ou il est, ou il va, et son age. */
     public static final class Grain {
