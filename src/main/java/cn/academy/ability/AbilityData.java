@@ -778,41 +778,37 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         }
     }
 
-    /** Ticks restants de chute annulee, ou 0. */
-    private int gravitySuspension;
+    /** Vrai tant qu'une teleportation protege encore de la chute. */
+    private boolean fallProtected;
 
     /**
-     * Duree d'une suspension de chute, en ticks.
+     * Protege de la chute jusqu'a ce que le joueur touche un bloc.
      *
-     * <p>Deux secondes, la duree du {@code GravityCancellor} de l'original. C'est le delai que
-     * chaque teleportation laisse derriere elle : le temps de se rattraper, et surtout celui
-     * pendant lequel la chute n'est pas comptee.
+     * <p>Portage du {@code GravityCancellor} de l'original, etendu a ce que le joueur a
+     * demande : sa duree n'est pas une duree, c'est une <b>arrivee</b>. Tant qu'un saut n'a pas
+     * rendu les pieds sur quelque chose, la hauteur parcourue n'est pas comptee — sans quoi
+     * s'envoler de trente blocs avec le scintillement puis se laisser tomber reviendrait a se
+     * tuer soi-meme, ce que le joueur a vu : « si je m'envole trop haut et que je me laisse
+     * tomber, je meurs quand meme ».
+     *
+     * <p>Elle tombe au premier bloc touche, et l'atterrissage lui-meme est encore protege :
+     * la protection n'est levee qu'apres le deplacement du tick, donc c'est la chute
+     * <b>suivante</b> qui se paie. Voir {@code AbilityEvents}.
+     *
+     * <p>Elle ne couvre pas une chute qui n'a pas commence par une teleportation : voler avec
+     * les ailes de tempete puis couper le moteur reste une chute a payer.
      */
-    public static final int GRAVITY_SUSPENSION = 40;
-
-    /**
-     * Annule la chute pendant quelques ticks.
-     *
-     * <p>Portage du {@code GravityCancellor} de l'original, que le scintillement relancait
-     * apres chaque saut — et que les quatre teleportations qui deplacent le joueur appellent
-     * maintenant, parce que c'est ce qui rend une arrivee en l'air gratuite.
-     *
-     * <p>Deux choses a la fois, et c'est la seconde qui compte : la chute est ralentie (voir
-     * {@code AbilityEvents}), et surtout elle n'est <b>plus comptee</b>. Sans cela, arriver en
-     * l'air ferait payer la hauteur qu'on vient de mettre derriere soi, ce que le joueur a vu :
-     * « je prends des degats de chute dans toutes les circonstances ».
-     */
-    public void suspendGravity(int ticks) {
-        gravitySuspension = Math.max(gravitySuspension, ticks);
+    public void protectFromFall() {
+        fallProtected = true;
     }
 
-    public int getGravitySuspension() {
-        return gravitySuspension;
+    public boolean isProtectedFromFall() {
+        return fallProtected;
     }
 
-    /** Fait avancer la suspension de chute d'un tick. */
-    public void tickGravitySuspension() {
-        if (gravitySuspension > 0) gravitySuspension--;
+    /** Le joueur a touche un bloc : la protection d'une teleportation prend fin. */
+    public void endFallProtection() {
+        fallProtected = false;
     }
 
     /**

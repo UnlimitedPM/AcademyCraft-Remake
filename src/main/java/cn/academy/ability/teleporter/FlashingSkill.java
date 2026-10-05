@@ -173,9 +173,9 @@ public class FlashingSkill extends Skill {
 
         // 0,002 par saut, comme l'original.
         data.addSkillExp(this, 0.002f);
-        // Et deux secondes de chute annulee, le temps de se rattraper : c'est ce que laisse
-        // chaque teleportation derriere elle. Voir AbilityData.suspendGravity.
-        data.suspendGravity(AbilityData.GRAVITY_SUSPENSION);
+        // Et la chute qui suit n'est pas comptee, jusqu'au premier bloc touche : voir
+        // AbilityData.protectFromFall.
+        data.protectFromFall();
         // Une teleportation de plus pour le theoreme de repli, qui la compte.
         TeleporterCategory.DIM_FOLDING_THEOREM.onTeleported(data);
     }

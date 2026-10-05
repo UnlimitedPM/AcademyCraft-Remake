@@ -115,9 +115,9 @@ public class MarkTeleportSkill extends Skill {
         }
         player.teleportTo(destination.x, destination.y, destination.z);
         player.fallDistance = 0.0f;
-        // Et la chute qui suit l'arrivee n'est pas comptee : c'est ce que laisse chaque
-        // teleportation derriere elle. Voir AbilityData.suspendGravity.
-        data.suspendGravity(AbilityData.GRAVITY_SUSPENSION);
+        // Et la chute qui suit n'est pas comptee, jusqu'au premier bloc touche : voir
+        // AbilityData.protectFromFall.
+        data.protectFromFall();
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
 
         // 0,00018 par bloc, comme l'original : c'est la distance qui compte, pas le geste.

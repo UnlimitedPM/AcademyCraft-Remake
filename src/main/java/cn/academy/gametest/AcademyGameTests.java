@@ -2918,62 +2918,59 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Une chute se paie, sauf juste apres une teleportation.
+     * Une chute se paie, sauf entre une teleportation et le premier bloc touche.
      *
-     * <p>C'est le partage que le joueur a demande : sans pouvoir, la hauteur se paie ; avec,
-     * l'arrivee est gratuite le temps de se rattraper. Les quatre teleportations qui deplacent
-     * le joueur posent cette suspension, et c'est elle qui remet la chute a zero a chaque tick
-     * — le scintillement en avait une, les trois autres l'ont rejointe.
+     * <p>C'est le partage que le joueur a demande, dans sa deuxieme version : la protection ne
+     * dure pas un temps fixe, mais jusqu'a ce que les pieds touchent quelque chose. Sans cela,
+     * s'envoler de trente blocs avec le scintillement puis se laisser tomber revenait a se tuer
+     * soi-meme — « si je m'envole trop haut et que je me laisse tomber, je meurs quand meme ».
+     * Les quatre teleportations qui deplacent le joueur la posent.
      *
-     * <p>Le tick passe par l'evenement du jeu, comme le vrai : c'est le seul chemin qui voit la
-     * regle, puisqu'elle s'applique dans un crochet de tick de joueur.
+     * <p>Le test passe par une VRAIE chute, `causeFallDamage`, et non par le crochet appele a
+     * la main : c'est le seul moyen de prouver que le jeu poste bien cet evenement, ce qui a
+     * deja fait defaut une fois, sur les touches.
      */
     @GameTest(template = "empty")
-    public static void uneTeleportationEffaceLaChuteQuiSuit(GameTestHelper helper) {
+    public static void uneTeleportationProtegeJusquAuPremierBloc(GameTestHelper helper) {
         var player = ownPlayer(helper, "faller_apres_saut");
         var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .resolve().orElseThrow();
 
-        // Sans pouvoir, la chute reste due : c'est la regle de depart, et celle a garder.
-        player.fallDistance = 5f;
+        // Sans pouvoir, la chute reste due : c'est la regle de depart, et celle a garder. La
+        // distance reste courte, parce que celle-ci blesse pour de bon.
+        player.setOnGround(false);
+        assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
+                "sans pouvoir, la chute se paie");
+
+        // Une teleportation protege — et pas seulement d'une chute courte : c'est justement la
+        // chute de trente blocs qui posait probleme.
+        data.protectFromFall();
+        assertTrue(helper, data.isProtectedFromFall(), "la protection est posee");
+        assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
+                "une chute de trente blocs est gratuite apres un saut");
+
+        // Et elle tient tant qu'aucun bloc n'est touche : cent ticks en l'air n'y changent
+        // rien, c'est toute la difference avec une duree fixe.
+        for (int i = 0; i < 100; i++) tickerLeJoueur(player);
+        assertTrue(helper, data.isProtectedFromFall(), "cent ticks en l'air ne l'usent pas");
+
+        // L'atterrissage lui-meme est encore gratuit : la protection ne tombe qu'apres.
+        assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
+                "l'atterrissage est encore protege");
+        player.setOnGround(true);
         tickerLeJoueur(player);
-        assertClose(helper, 5f, player.fallDistance, "sans pouvoir, la chute se paie");
+        assertFalse(helper, data.isProtectedFromFall(), "le premier bloc touche la leve");
 
-        // Une teleportation laisse deux secondes derriere elle, et la chute n'est plus comptee
-        // tant qu'elles durent.
-        data.suspendGravity(cn.academy.ability.AbilityData.GRAVITY_SUSPENSION);
-        player.fallDistance = 5f;
-        tickerLeJoueur(player);
-        assertClose(helper, 0f, player.fallDistance, "apres un saut, la chute est effacee");
+        // Et la chute suivante se paie, elle.
+        player.setOnGround(false);
+        assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
+                "la chute se repaie apres l'atterrissage");
 
-        // Et la chute elle-meme est refusee a la source : on la provoque pour de vrai, par le
-        // chemin du jeu. `causeFallDamage` poste l'evenement de chute que le port ecoute, et
-        // rend faux quand la chute n'a pas ete payee — c'est la preuve que le crochet sert a
-        // quelque chose, et non qu'il repond quand on l'appelle.
-        assertFalse(helper, player.causeFallDamage(20f, 1f, player.damageSources().fall()),
-                "une chute suspendue ne se paie pas");
-
-        // Une suspension plus courte ne raccourcit pas celle qui court : c'est un plancher,
-        // comme le max de l'original.
-        data.suspendGravity(5);
-        assertClose(helper, cn.academy.ability.AbilityData.GRAVITY_SUSPENSION - 1,
-                data.getGravitySuspension(), "une suspension courte ne coupe pas la longue");
-
-        // Et elle dure ce qu'elle dit : une fois epuisee, la chute se repaie.
-        for (int i = 0; i < cn.academy.ability.AbilityData.GRAVITY_SUSPENSION - 1; i++) {
-            tickerLeJoueur(player);
-        }
-        assertClose(helper, 0, data.getGravitySuspension(), "la suspension s'epuise");
-        player.fallDistance = 5f;
-        tickerLeJoueur(player);
-        assertClose(helper, 5f, player.fallDistance, "et la chute se repaie apres");
-        assertTrue(helper, player.causeFallDamage(20f, 1f, player.damageSources().fall()),
-                "la chute se repaie une fois la suspension finie");
-
+        player.setOnGround(true);
         helper.succeed();
     }
 
-    /** Un tick de joueur, comme le jeu le fait : c'est la que la chute est effacee. */
+    /** Un tick de joueur, comme le jeu le fait : c'est la que la protection se leve. */
     private static void tickerLeJoueur(net.minecraft.world.entity.player.Player player) {
         cn.academy.ability.AbilityEvents.onPlayerTick(
                 new net.minecraftforge.event.TickEvent.PlayerTickEvent(

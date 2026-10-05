@@ -64,21 +64,11 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
-            // Une teleportation laisse une chute annulee derriere elle : c'est le
-            // GravityCancellor de l'original, deux secondes pendant lesquelles la gravite
-            // (0,08 par tick) est compensee a 0,072.
-            //
-            // La compensation ne se voit qu'a moitie, et il faut le dire : le client est maitre
-            // de son propre mouvement, donc la vitesse posee ici lui est reprise au tick
-            // suivant. Ce qui protege vraiment, c'est la remise a zero de la chute — le degat
-            // de chute se decide ici, et c'est ici qu'on le refuse.
-            if (data.getGravitySuspension() > 0) {
-                if (!player.getAbilities().flying && !player.onGround()) {
-                    player.setDeltaMovement(player.getDeltaMovement().add(0, 0.072, 0));
-                }
-                player.fallDistance = 0.0f;
-                data.tickGravitySuspension();
-            }
+            // Une teleportation protege de la chute jusqu'a ce que le joueur touche un bloc :
+            // c'est le GravityCancellor de l'original, dont la duree est devenue une arrivee.
+            // Le controle est fait a la fin du tick de joueur, donc l'atterrissage lui-meme a
+            // deja ete refuse (voir onFall) : c'est la chute SUIVANTE qui se paie.
+            if (data.isProtectedFromFall() && player.onGround()) data.endFallProtection();
             // Les competences tenues vivent tant que la touche reste enfoncee.
             tickSustained(player, data);
             // La reserve ne remonte que si elle est entamee : au ras bord il n'y a rien a
@@ -128,17 +118,20 @@ public class AbilityEvents {
     /**
      * La chute qui suit une teleportation ne se paie pas.
      *
-     * <p>C'est la seconde moitie de la suspension de chute, et celle qui la rend vraie : la
-     * remise a zero de {@code fallDistance} a chaque tick (voir {@link #onPlayerTick}) ne
-     * suffirait pas seule, parce qu'une chute a vitesse maximale descend de presque quatre
-     * blocs en un seul tick et franchirait le seuil avant qu'on ait pu la remettre a zero.
-     * Ici la chute est refusee a la source, et il n'en reste rien du tout.
+     * <p>C'est le refus lui-meme, et il dure tant que le joueur n'a pas touche un bloc (voir
+     * {@code AbilityData.protectFromFall}) : une chute d'un seul tick passant le seuil serait
+     * payee avant qu'on ait pu l'effacer, et une chute de trente blocs doit rester gratuite.
+     *
+     * <p>Le refus passe par l'evenement des degats, avec la source {@code FALL} : c'est celui
+     * que le jeu poste vraiment pour une chute — verifie au bytecode, {@code LivingEntity} le
+     * poste une fois — et c'est deja par lui que la theorie du repli dimensionnel annulait
+     * celle de tout le monde.
      */
     @SubscribeEvent
     public static void onFall(LivingFallEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            if (data.getGravitySuspension() > 0) event.setCanceled(true);
+            if (data.isProtectedFromFall()) event.setCanceled(true);
         });
     }
 
