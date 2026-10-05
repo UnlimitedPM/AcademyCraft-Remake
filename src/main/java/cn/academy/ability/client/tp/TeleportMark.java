@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -131,6 +132,9 @@ public final class TeleportMark {
     /** Et sa forme : le fantome du joueur, ou une boite aux dimensions demandees. */
     private static Shape shape = Shape.GHOST;
 
+    /** Si la marque se tient sur le regard : voir {@link #onGaze} et {@link #interpolated}. */
+    private static boolean gaze;
+
     /**
      * En deca de cette distance, la marque glisse d'un tick a l'autre ; au-dela, elle saute.
      *
@@ -164,6 +168,7 @@ public final class TeleportMark {
         Vec3 next = seat.position();
         previous = follow(position, next);
         position = next;
+        gaze = onGaze(player.getEyePosition(1.0f), player.getViewVector(1.0f), next);
         color = seat.color();
         shape = seat.shape();
         yaw = player.getYRot();
@@ -175,6 +180,7 @@ public final class TeleportMark {
     public static void end() {
         position = null;
         previous = null;
+        gaze = false;
         ageTicks = 0;
         color = COLOR_NORMAL;
         shape = Shape.GHOST;
@@ -202,20 +208,54 @@ public final class TeleportMark {
         return from != null && from.distanceTo(to) <= SMOOTH_DISTANCE ? from : to;
     }
 
+    /** L'ecart lateral tolere pour dire qu'une marque se tient sur le regard, en blocs. */
+    public static final double ON_GAZE = 0.05;
+
+    /**
+     * Vrai si la marque se tient sur le regard, au bout de sa ligne.
+     *
+     * <p>Toutes les marques ne s'y tiennent pas : celles qu'on pose sur la face d'un mur sont
+     * decalees de soixante centimetres sur le cote, et celles qu'on pose sur une creature se
+     * tiennent sur elle. Celles-la se dessinent comme des points du monde, et s'interpolent comme
+     * tels. Mais celles qui sont <b>au bout du regard</b> — le vide qu'on vise, le bloc qu'on
+     * touche du regard — sont sur la ligne meme du curseur, et c'est cette ligne-la qui doit les
+     * tenir.
+     *
+     * <p>Fonction pure, donc verifiable : on mesure la distance du point a la droite du regard.
+     */
+    public static boolean onGaze(Vec3 eye, Vec3 look, Vec3 at) {
+        Vec3 to = at.subtract(eye);
+        double along = to.dot(look);
+        if (along <= 0) return false;
+        return to.subtract(look.scale(along)).length() <= ON_GAZE;
+    }
+
     /**
      * Ou dessiner la marque, a l'instant de l'image et non a celui du tick.
      *
      * <p>La marque est reposee vingt fois par seconde — c'est le rythme du tick — alors qu'une
      * creature visee, elle, se deplace a chaque image de l'ecran. La dessiner telle quelle la faisait
      * donc avancer par saccades d'un vingtieme de seconde : c'est ce qui se voyait des qu'une
-     * creature bougeait, la boite sautant d'un point au suivant au lieu de la suivre. Le rendu
-     * interpole entre les deux derniers ticks, exactement comme le jeu le fait pour les entites
-     * elles-memes.
+     * creature bougeait, la boite sautant d'un point au suivant au lieu de la suivre.
+     *
+     * <p>Mais sur le regard, la direction vient de la <b>camera</b> : c'est elle qui porte le
+     * curseur, et la seule a connaitre l'orientation de l'image. Interpoler deux points pris sur
+     * deux regards differents en donne la <b>corde</b>, et la marque sort de la visee d'un cote —
+     * d'autant plus qu'elle est loin : un peu plus d'un dixieme de bloc a dix blocs, pres d'un
+     * demi-bloc au bout d'une portee de trente.
      */
     @Nullable
-    public static Vec3 interpolated(double partialTick) {
+    public static Vec3 interpolated(double partialTick, Vec3 camera, Vector3f look) {
         if (position == null) return null;
-        return previous == null ? position : previous.lerp(position, partialTick);
+        if (previous == null) return position;
+        if (!gaze) return previous.lerp(position, partialTick);
+
+        // La ligne du regard, avec la distance de la marque — elle seule qui bouge d'un tick a
+        // l'autre, et lentement : la portee grandit avec la charge, ou le point vise se deplace.
+        double from = previous.distanceTo(camera);
+        double to = position.distanceTo(camera);
+        double distance = from + (to - from) * partialTick;
+        return camera.add(look.x() * distance, look.y() * distance, look.z() * distance);
     }
 
     /** L'orientation du tireur, en degres. */

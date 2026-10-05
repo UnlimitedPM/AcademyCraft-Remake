@@ -2,6 +2,7 @@ package cn.academy.ability.client.tp;
 
 import cn.academy.ability.teleporter.TeleporterCategory;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -248,6 +249,29 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("une marque est sur le regard, ou a cote")
+    void uneMarqueEstSurLeRegardOuACote() {
+        Vec3 eye = new Vec3(0, 65, 0);
+        Vec3 look = new Vec3(0, 0, 1);
+
+        // Le bout du regard, et le bloc qu'il touche : la meme ligne, donc sur le regard.
+        assertTrue(TeleportMark.onGaze(eye, look, eye.add(0, 0, 28)),
+                "le bout du regard y est");
+        assertTrue(TeleportMark.onGaze(eye, look, eye.add(0, 0, 6)),
+                "et un point de la meme ligne aussi");
+        assertTrue(TeleportMark.onGaze(eye, look, eye.add(0.04, 0, 6)),
+                "au millimetre pres, la ligne reste la ligne");
+
+        // Mais pas le decalage de soixante centimetres d'une face de mur, ni une creature visee,
+        // ni un point derriere l'epaule : ceux-la se dessinent comme des points du monde.
+        assertFalse(TeleportMark.onGaze(eye, look, eye.add(0.6, 0, 6)),
+                "soixante centimetres sur le cote, c'est a cote");
+        assertFalse(TeleportMark.onGaze(eye, look, eye.add(0, 0, -6)),
+                "et derriere l'epaule, il n'y a pas de regard");
+        assertFalse(TeleportMark.onGaze(eye, look, eye), "ni dans l'oeil lui-meme");
+    }
+
+    @Test
     @DisplayName("une marque finie ne se dessine nulle part, a aucun instant de l'image")
     void uneMarqueFinieNeSeDessinePas() {
         // Le rendu demande la position a l'instant de l'image, et pas a celui du tick, pour suivre
@@ -255,9 +279,9 @@ class TpMarkTest {
         // fantome resterait plante la ou la competence s'est arretee.
         TeleportMark.end();
         assertNull(TeleportMark.position());
-        assertNull(TeleportMark.interpolated(0.0));
-        assertNull(TeleportMark.interpolated(0.5));
-        assertNull(TeleportMark.interpolated(1.0));
+        assertNull(TeleportMark.interpolated(0.0, Vec3.ZERO, new Vector3f(0, 0, 1)));
+        assertNull(TeleportMark.interpolated(0.5, Vec3.ZERO, new Vector3f(0, 0, 1)));
+        assertNull(TeleportMark.interpolated(1.0, Vec3.ZERO, new Vector3f(0, 0, 1)));
     }
 
     @Test

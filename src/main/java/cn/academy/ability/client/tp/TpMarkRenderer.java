@@ -127,8 +127,10 @@ public final class TpMarkRenderer {
                 Minecraft.getInstance().renderBuffers().bufferSource();
 
         // La position d'image, et non celle du tick : une creature visee bouge a chaque image, et
-        // la marque qui la suit doit bouger avec elle. Voir TeleportMark.interpolated.
-        Vec3 mark = TeleportMark.interpolated(event.getPartialTick());
+        // la marque qui la suit doit bouger avec elle. Et sur le regard, c'est la direction de la
+        // camera qui compte — c'est elle qui porte le curseur. Voir TeleportMark.interpolated.
+        Vec3 mark = TeleportMark.interpolated(event.getPartialTick(), camera,
+                event.getCamera().getLookVector());
         if (mark != null) {
             drawMark(buffers, pose, camera, mark);
         }
