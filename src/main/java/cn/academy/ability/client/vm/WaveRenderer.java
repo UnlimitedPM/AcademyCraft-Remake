@@ -14,6 +14,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -40,6 +41,7 @@ import java.util.List;
  * cecite d'une detection en cours repeindrait l'onde en noir.
  */
 @OnlyIn(Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class WaveRenderer {
 
     /** L'image de l'original, telle quelle : un disque de lueur doux. */

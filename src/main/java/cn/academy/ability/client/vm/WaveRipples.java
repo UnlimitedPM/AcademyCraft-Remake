@@ -164,4 +164,30 @@ public final class WaveRipples {
     public static long now() {
         return Util.getMillis();
     }
+
+    /**
+     * La place REELLE d'une ondulation a l'ecran, en large.
+     *
+     * <p>L'original avait oublie un <b>facteur deux</b> dans son nuanceur : il mappait ses carres
+     * avec {@code pos / screenSize - 0.5} au lieu de {@code * 2 - 1}. Une ondulation nee a
+     * {@code x} s'affichait donc au quart de l'ecran plus {@code x / 2}, et grande de la moitie de
+     * sa taille : ses ronds tenaient dans la <b>moitie centrale</b> de l'ecran.
+     *
+     * <p>Le joueur l'a confirme sans le savoir : le port dessinait ses ronds a leur taille
+     * annoncee, et il les a trouves « trop grands ». Le facteur deux est donc de la partie, comme
+     * dans l'original.
+     */
+    public static double drawnX(Ripple ripple, double width) {
+        return width / 4 + ripple.x() / 2;
+    }
+
+    /** Et la meme chose en hauteur. */
+    public static double drawnY(Ripple ripple, double height) {
+        return height / 4 + ripple.y() / 2;
+    }
+
+    /** Sa taille dessinee : la moitie de la taille annoncee, facteur deux compris. */
+    public static double drawnSize(Ripple ripple) {
+        return ripple.drawSize() / 2;
+    }
 }

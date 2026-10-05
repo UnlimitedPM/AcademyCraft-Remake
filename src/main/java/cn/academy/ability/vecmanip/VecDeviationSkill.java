@@ -155,7 +155,19 @@ public class VecDeviationSkill extends Skill {
         return true;
     }
 
-    /** Aucune duree : elle tient tant que la reserve suit, ou jusqu'au relachement. */
+    /**
+     * Et elle se <b>bascule</b> : un appui l'ouvre, un second la ferme.
+     *
+     * <p>C'est l'original, dont le gestionnaire d'activation terminait le contexte deja ouvert
+     * ({@code KeyDelegates.contextActivate} et {@code ActivateHandlers.terminatesContext}). Le port
+     * la tenait jusqu'au relachement, et le joueur a demande la difference.
+     */
+    @Override
+    public boolean isToggle() {
+        return true;
+    }
+
+    /** Aucune duree : elle tient tant que la reserve suit, ou jusqu'au second appui. */
     @Override
     public int getMaxHoldTicks(AbilityData data) {
         return 0;

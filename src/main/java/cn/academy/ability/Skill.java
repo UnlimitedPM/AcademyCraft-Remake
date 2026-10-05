@@ -503,6 +503,24 @@ public abstract class Skill {
         return false;
     }
 
+    /**
+     * Cette competence s'ACTIVE et se DESACTIVE-t-elle, plutot que de se tenir ?
+     *
+     * <p>Un appui l'ouvre, un second la ferme : son maintien est un <b>etat</b>, et il ne doit rien
+     * a la touche. C'est la quatrieme famille de l'original, et elle n'existe que par ce qu'il
+     * faisait de ses touches : son gestionnaire d'activation <b>terminait</b> le contexte ouvert,
+     * la ou les autres attendaient le relachement.
+     *
+     * <p>Trois competences de vecmanip sont dans ce cas — la deviation, le renvoi et les ailes de
+     * tempete —, et le joueur a demande la meme chose que chez l'original : « il faut juste
+     * appuyer une fois pour activer / desactiver et c'est tout ».
+     *
+     * <p>Elle suppose {@link #isHeld()} : c'est le meme maintien, ouverte et fermee autrement.
+     */
+    public boolean isToggle() {
+        return false;
+    }
+
     /** Duree maximale du maintien ; 0 = illimite, borne par les ressources. */
     public int getMaxHoldTicks(AbilityData data) {
         return 0;

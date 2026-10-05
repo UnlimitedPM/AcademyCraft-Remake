@@ -296,11 +296,19 @@ public class AbilityClientEvents {
 
         for (Binding binding : BINDINGS) {
             Skill skill = skillOf(binding);
-            if (skill != null && skillName.equals(skill.getName())) binding.charging = false;
+            if (skill == null || !skillName.equals(skill.getName())) continue;
+
+            binding.charging = false;
+            // Les deux effets de vecmanip appartiennent a leur maintien comme les autres : un
+            // maintien que le serveur termine doit les emporter, sans quoi des ailes resteraient
+            // plantees dans le decor. Voir VecmanipTornados.
+            cn.academy.ability.client.vm.VecmanipTornados.end(skill);
+            cn.academy.ability.client.vm.VecAccelPreview.end(skill);
         }
 
         ClientCharge.end();
         ThunderClapEffect.end();
+        MeltdownerCharge.end();
         BodyIntensifyEffect.endCharge(false);
         MineRayEffect.end(skillName);
         TeleportMark.end();
@@ -379,6 +387,15 @@ public class AbilityClientEvents {
                 AbilityScreens.open(category, skill);
                 return;
             }
+            // Une competence A BASCULE se ferme au second appui : son maintien est un etat, pas
+            // une touche tenue. Le client ferme donc ses propres effets tout de suite — le
+            // serveur fera de meme de son cote —, et l'appui part quand meme pour le lui dire.
+            // C'est l'original : son gestionnaire d'activation terminait le contexte ouvert.
+            if (skill.isToggle() && skill.getName().equals(ClientCharge.getSkill())) {
+                closeHeld(binding, skill, false);
+                send(category, skill, Phase.PRESS);
+                return;
+            }
             // Le serveur refusera-t-il cette ouverture ? Le client ne l'ouvre alors pas du tout,
             // et l'appui part quand meme pour que le serveur dise pourquoi il refuse. Il le dit
             // mieux que le client ne saurait le deviner, et c'est le seul qui decide.
@@ -426,7 +443,11 @@ public class AbilityClientEvents {
         }
 
         if (!binding.charging) return;
-        if (binding.key.isDown()) {
+        // Une competence a bascule vit SANS la touche : son etat est dans son maintien, pas dans le
+        // clavier. Ses effets continuent donc de suivre son porteur jusqu'a ce qu'un second appui
+        // la ferme — c'est ainsi que les ailes de tempete s'ouvrent et se ferment, et que les deux
+        // veilles tiennent.
+        if (binding.key.isDown() || skill.isToggle()) {
             ClientCharge.tick();
             // Le scintillement vise avec les touches de deplacement pendant tout son
             // maintien : c'est la seule competence qui ecoute autre chose que sa touche.
@@ -496,14 +517,9 @@ public class AbilityClientEvents {
                     // j'aie a relacher la touche ».
                     int max = skill.getMaxChargeTicks(ClientAbilityData.get());
                     if (max > 0 && ClientCharge.getTicks() >= max && skill.firesAtMaxCharge()) {
-                        binding.charging = false;
-                        ClientCharge.end();
-                        ThunderClapEffect.end();
-                        MeltdownerCharge.end();
                         // Une charge qui va jusqu'a son plafond a passe le minimum : le renfort
                         // prend, et sa gerbe aussi.
-                        BodyIntensifyEffect.endCharge(true);
-                        endDirections();
+                        closeHeld(binding, skill, true);
                         send(category, skill, Phase.RELEASE);
                         return;
                     }
@@ -518,8 +534,25 @@ public class AbilityClientEvents {
         // Ce que le client doit savoir du temps tenu se lit MAINTENANT : une charge trop courte
         // ne declenche rien du tout chez le serveur (voir ActivateSkillPacket), et le renfort
         // n'aura donc pas de gerbe. C'est le meme minimum, relu ici.
+        //
+        // SAUF une competence a bascule : sa touche ne la commande pas, et un second appui la
+        // fermera. Ses effets continuent de vivre jusque-la — voir la fermeture, plus bas.
+        if (skill.isToggle()) return;
+
         boolean performed = skill.isChargeable()
                 && ClientCharge.getTicks() >= skill.getMinChargeTicks(ClientAbilityData.get());
+        closeHeld(binding, skill, performed);
+        send(category, skill, Phase.RELEASE);
+    }
+
+    /**
+     * Fermer un maintien chez le client : tout ce qui vivait avec lui s'en va.
+     *
+     * <p>Deux chemins y menent, et c'est le meme geste : le <b>relachement</b> d'une competence
+     * tenue, et le <b>second appui</b> d'une competence a bascule. Seul l'envoi qui suit differe —
+     * un relachement pour l'une, un appui pour l'autre.
+     */
+    private static void closeHeld(Binding binding, Skill skill, boolean performed) {
         binding.charging = false;
         ClientCharge.end();
         ThunderClapEffect.end();
@@ -530,7 +563,7 @@ public class AbilityClientEvents {
         // Et les tornades de vecmanip, qui s'effacent au lieu de disparaitre d'un coup : les
         // ailes en quinze ticks, la colonne du canon en trente. Voir VecmanipTornados.
         cn.academy.ability.client.vm.VecmanipTornados.end(skill);
-        // La parabole de visee s'en va au relachement, que le saut ait lieu ou non.
+        // La parabole de visee s'en va, que le saut ait lieu ou non.
         cn.academy.ability.client.vm.VecAccelPreview.end(skill);
         // Le fantome de la teleportation s'en va au meme moment — sa competence est finie — et la
         // visee du saut traversant avec lui : la molette ne regle plus rien.
@@ -538,7 +571,6 @@ public class AbilityClientEvents {
         TeleportAim.end();
         BodyIntensifyEffect.endCharge(performed);
         endDirections();
-        send(category, skill, Phase.RELEASE);
     }
 
     /**
@@ -617,8 +649,15 @@ public class AbilityClientEvents {
             if (down && !directionHeld[i]) {
                 aimed = i + 1;
             } else if (!down && directionHeld[i] && aimed == i + 1) {
-                AbilityNetwork.CHANNEL.sendToServer(new FlashingPacket(
-                        category.getCategoryId(), skill.getId(), i + 1));
+                // Seul le scintillement part au relachement d'une direction : ses sauts se
+                // commandent comme cela. Les ailes de tempete lisent les memes touches pour se
+                // diriger, mais c'est le tick de leur maintien qui mene leur vol — sans ce
+                // garde-fou, marcher avec les ailes ouvertes enverrait un paquet pour chaque
+                // touche relachee.
+                if (skill instanceof cn.academy.ability.teleporter.FlashingSkill) {
+                    AbilityNetwork.CHANNEL.sendToServer(new FlashingPacket(
+                            category.getCategoryId(), skill.getId(), i + 1));
+                }
                 aimed = 0;
             }
             directionHeld[i] = down;

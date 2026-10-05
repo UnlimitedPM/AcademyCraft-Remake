@@ -110,6 +110,37 @@ class WaveRipplesTest {
     }
 
     @Test
+    @DisplayName("les ronds se dessinent au quart de l'ecran, et moitie moins grands")
+    void lesRondsSeDessinentAuQuartDeLEcran() {
+        // L'original avait oublie un facteur deux dans son nuanceur : ses ronds tenaient dans la
+        // moitie centrale de l'ecran, et moitie moins grands que leur taille annoncee. Le joueur
+        // l'a confirme en trouvant ceux du port « trop grands ».
+        List<WaveRipples.Ripple> ripples = new ArrayList<>();
+        RandomSource random = RandomSource.create(6);
+        WaveRipples.Settings dense = new WaveRipples.Settings(0.2, 100, 20);
+
+        for (int i = 0; i < 60; i++) {
+            WaveRipples.advance(ripples, 0.05, dense, 1920, 1080, random);
+        }
+        assertTrue(ripples.size() > 5, "il y a de quoi regarder : " + ripples.size());
+
+        for (WaveRipples.Ripple ripple : ripples) {
+            double x = WaveRipples.drawnX(ripple, 1920);
+            double y = WaveRipples.drawnY(ripple, 1080);
+
+            assertTrue(x >= 480 && x <= 1440, "en large, entre le quart et les trois quarts : " + x);
+            assertTrue(y >= 270 && y <= 810, "en hauteur aussi : " + y);
+            assertEquals(ripple.drawSize() / 2, WaveRipples.drawnSize(ripple), 1e-9,
+                    "et moitie moins grand que sa taille");
+        }
+
+        assertEquals(480, WaveRipples.drawnX(ripple(0, 2), 1920), 1e-9,
+                "un rond ne a zero tombe au quart de l'ecran");
+        assertEquals(1440, WaveRipples.drawnX(new WaveRipples.Ripple(1920, 0, 2, 100, 0), 1920),
+                1e-9, "et un rond ne a la largeur, aux trois quarts");
+    }
+
+    @Test
     @DisplayName("les deux veilles ont leurs trois nombres")
     void lesDeuxVeillesOntLeursNombres() {
         WaveRipples.Settings deviation = WaveRipples.forSkill("vec_deviation");

@@ -55,12 +55,12 @@ public class RippleOverlay implements IGuiOverlay {
             float alpha = (float) (settings.alpha() * ripple.alpha());
             if (alpha <= 0f) continue;
 
-            double size = ripple.drawSize();
+            double size = WaveRipples.drawnSize(ripple);
             int side = (int) Math.round(size);
             RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
             graphics.blit(GLOW,
-                    (int) Math.round(ripple.x() - size / 2),
-                    (int) Math.round(ripple.y() - size / 2),
+                    (int) Math.round(WaveRipples.drawnX(ripple, screenWidth) - size / 2),
+                    (int) Math.round(WaveRipples.drawnY(ripple, screenHeight) - size / 2),
                     side, side, 0f, 0f, TEXTURE, TEXTURE, TEXTURE, TEXTURE);
         }
 

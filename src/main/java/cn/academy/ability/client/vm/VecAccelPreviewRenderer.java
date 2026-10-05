@@ -17,6 +17,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.List;
  * suit le regard en continu, au lieu de sauter d'un tick a l'autre.
  */
 @OnlyIn(Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class VecAccelPreviewRenderer {
 
     /** L'image de l'original, telle quelle : une ligne de lueur douce. */

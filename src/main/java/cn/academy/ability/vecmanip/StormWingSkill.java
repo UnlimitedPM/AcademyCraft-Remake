@@ -266,7 +266,18 @@ public class StormWingSkill extends Skill {
         return true;
     }
 
-    /** Aucune duree : les ailes tiennent tant que la reserve suit. */
+    /**
+     * Et les ailes se <b>basculent</b> : un appui les ouvre, un second les referme.
+     *
+     * <p>C'est l'original mot pour mot — son gestionnaire de touche terminait le contexte ouvert
+     * quand les ailes l'etaient deja —, et le port les tenait jusqu'au relachement.
+     */
+    @Override
+    public boolean isToggle() {
+        return true;
+    }
+
+    /** Aucune duree : les ailes tiennent tant que la reserve suit, ou jusqu'au second appui. */
     @Override
     public int getMaxHoldTicks(AbilityData data) {
         return 0;

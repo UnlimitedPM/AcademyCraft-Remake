@@ -176,7 +176,16 @@ public class VecReflectionSkill extends Skill {
         return true;
     }
 
-    /** Aucune duree : elle tient tant que la reserve suit, ou jusqu'au relachement. */
+    /**
+     * Et elle se <b>bascule</b>, comme sa soeur inverse : l'original terminait le contexte deja
+     * ouvert sur un second appui.
+     */
+    @Override
+    public boolean isToggle() {
+        return true;
+    }
+
+    /** Aucune duree : elle tient tant que la reserve suit, ou jusqu'au second appui. */
     @Override
     public int getMaxHoldTicks(AbilityData data) {
         return 0;

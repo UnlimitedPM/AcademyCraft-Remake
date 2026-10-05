@@ -15,6 +15,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 import java.util.List;
@@ -41,6 +42,7 @@ import java.util.List;
  * s'ils ecrivaient la profondeur ils se decouperaient les uns les autres au hasard.
  */
 @OnlyIn(Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class TornadoRenderer {
 
     /** L'image de l'original, telle quelle : un anneau qui se repete autour du cercle. */

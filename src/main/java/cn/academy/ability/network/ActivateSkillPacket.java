@@ -88,6 +88,15 @@ public class ActivateSkillPacket {
         }
 
         if (phase == Phase.PRESS) {
+            // Une competence A BASCULE se ferme sur un second appui : son maintien est un ETAT, et
+            // elle est la seule a repondre a un appui alors qu'elle est deja ouverte. C'est
+            // l'original — son gestionnaire d'activation terminait le contexte vivant —, et c'est
+            // teste AVANT les refus : fermer ne se refuse pas.
+            if (skill.isToggle() && data.isCharging(skill)) {
+                AbilityEvents.endHeld(player, data, skill);
+                return;
+            }
+
             // Une competence deja tenue ne se rouvre pas. L'original n'avait qu'un
             // contexte d'activation a la fois, et un second appui sur une competence
             // ouverte remettrait son compteur a zero — ce qui, pour un effet qui se
@@ -115,6 +124,11 @@ public class ActivateSkillPacket {
             activate(player, data, skill);
             return;
         }
+
+        // Relachement : une competence A BASCULE ne s'arrete PAS ici. Sa touche ne la commande
+        // pas : elle attend son second appui, et le client le sait aussi — ses effets continuent
+        // donc de vivre entre-temps.
+        if (skill.isToggle()) return;
 
         // Relachement : il n'y a quelque chose a faire que si une charge etait ouverte.
         if (!data.isCharging(skill)) return;
