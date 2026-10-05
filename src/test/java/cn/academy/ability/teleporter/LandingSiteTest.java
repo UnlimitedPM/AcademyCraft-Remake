@@ -60,6 +60,30 @@ class LandingSiteTest {
     }
 
     @Test
+    void lesPiedsSontUneHauteurDYeuxSousLaTete() {
+        Vec3 impact = point(10.5, 64.5, 10.0);
+        double eyes = 1.62;
+
+        // Sur le dessus du bloc : on se tient a dix-huit centimetres de la surface, pas a un
+        // bloc et demi au-dessus d'elle. C'est la difference entre un fantome plante dans le
+        // sol et un fantome en l'air, plus loin que le bloc qu'on vise.
+        Vec3 top = LandingSite.onFeet(Direction.UP, impact, BLOCK, pos -> false, eyes);
+        assertEquals(10.5, top.x, 0.0001);
+        assertEquals(64.68, top.y, 0.0001);
+        assertEquals(10.0, top.z, 0.0001);
+
+        // Devant un mur, on se tient a huit centimetres du sol du bloc, la tete degagee.
+        Vec3 north = LandingSite.onFeet(Direction.NORTH, impact, BLOCK, pos -> false, eyes);
+        assertEquals(9.4, north.z, 0.0001);
+        assertEquals(64.08, north.y, 0.0001);
+
+        // Et le retrait est exactement la hauteur d'yeux : c'est tout ce que fait cette porte.
+        Vec3 head = LandingSite.onBlockFace(Direction.UP, impact, BLOCK, pos -> false);
+        assertEquals(head.y - eyes, LandingSite.onFeet(Direction.UP, impact, BLOCK, pos -> false, eyes).y,
+                1e-9);
+    }
+
+    @Test
     void uneTeteDansLePassageFaitRedescendre() {
         Vec3 impact = point(10.5, 64.5, 10.0);
 

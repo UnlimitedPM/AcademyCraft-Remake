@@ -87,4 +87,19 @@ public final class LandingSite {
 
         return new Vec3(x, y, z);
     }
+
+    /**
+     * Le meme point, mais <b>aux pieds</b> : celui ou l'on se tient.
+     *
+     * <p>{@link #onBlockFace} situe la <b>tete</b> — ses hauteurs sont celles d'un joueur debout,
+     * un bloc et huit dixiemes au-dessus d'un plancher — parce que c'est ainsi que l'original les
+     * lisait. Mais ce point sert a deux choses : poser le joueur, et poser la marque qui montre ou
+     * il arrivera. La marque, elle, marque un <b>endroit ou l'on se tient</b>, donc ses pieds :
+     * sans ce retrait d'une hauteur d'yeux, le fantome se tenait un bloc et demi au-dessus du bloc
+     * vise — en l'air, plus loin que lui — et le joueur tombait de cette hauteur en arrivant.
+     */
+    public static Vec3 onFeet(Direction face, Vec3 point, BlockPos pos,
+                              Predicate<BlockPos> occupied, double eyeHeight) {
+        return onBlockFace(face, point, pos, occupied).subtract(0, eyeHeight, 0);
+    }
 }

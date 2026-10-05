@@ -156,8 +156,11 @@ public class MarkTeleportSkill extends Skill {
             return target.position().add(0, target.getEyeHeight(), 0);
         }
         if (blockHit.getType() == HitResult.Type.BLOCK) {
-            return LandingSite.onBlockFace(blockHit.getDirection(), blockHit.getLocation(),
-                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos));
+            // Aux pieds, et non a hauteur de tete : c'est ce point que la marque montre, et c'est
+            // celui-la que le saut doit donner. Voir LandingSite.onFeet.
+            return LandingSite.onFeet(blockHit.getDirection(), blockHit.getLocation(),
+                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos),
+                    player.getEyeHeight());
         }
         return end;
     }

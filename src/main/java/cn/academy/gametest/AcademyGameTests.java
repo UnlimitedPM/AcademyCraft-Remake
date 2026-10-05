@@ -2871,8 +2871,8 @@ public final class AcademyGameTests {
         assertTrue(helper, Math.abs(onWall.z - (wall.getZ() - 0.6)) < 0.01,
                 "soixante centimetres devant la face nord : z=" + onWall.z
                         + " pour un mur a " + wall.getZ());
-        assertTrue(helper, Math.abs(onWall.y - (wall.getY() + 1.7)) < 0.01,
-                "et a hauteur de tete du bloc vise : y=" + onWall.y);
+        assertTrue(helper, Math.abs(onWall.y - (wall.getY() + 0.08)) < 0.01,
+                "et les pieds au ras du sol du bloc vise : y=" + onWall.y);
 
         // --- Le saut, lui, part bien de la ou le joueur regarde : en se retournant, la meme
         // direction vise l'autre bout.

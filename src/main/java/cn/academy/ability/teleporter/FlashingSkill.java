@@ -230,8 +230,11 @@ public class FlashingSkill extends Skill {
             return target.position().add(0, target.getEyeHeight(), 0);
         }
         if (blockHit.getType() == HitResult.Type.BLOCK) {
-            return LandingSite.onBlockFace(blockHit.getDirection(), blockHit.getLocation(),
-                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos));
+            // Aux pieds, et non a hauteur de tete : le scintillement se pose la ou l'on se tient,
+            // comme la teleportation au marqueur. Voir LandingSite.onFeet.
+            return LandingSite.onFeet(blockHit.getDirection(), blockHit.getLocation(),
+                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos),
+                    player.getEyeHeight());
         }
         return end;
     }
