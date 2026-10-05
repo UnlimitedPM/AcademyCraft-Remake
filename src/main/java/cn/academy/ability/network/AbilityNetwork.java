@@ -58,6 +58,12 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
+        // Et la trainee du depose au loin : le serveur seul sait que le geste a eu lieu, et c'est
+        // la seule chose qu'il donne a voir — il ne deplace personne, il pose un bloc au loin.
+        // Voir ShiftTeleportPacket et ShiftTrail.
+        CHANNEL.registerMessage(nextId++, ShiftTeleportPacket.class,
+                ShiftTeleportPacket::encode, ShiftTeleportPacket::decode,
+                ShiftTeleportPacket::handle);
         // Et la gerbe de formule du coup critique : le serveur seul sait qui a ete frappe, et
         // c'est la seule chose que les deux passives du teleporteur montrent. Voir
         // TeleportCritPacket et FormulaParticles.

@@ -3095,6 +3095,118 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le depose au loin : son bloc part, et ce qu'il croise encaisse.
+     *
+     * <p>La competence ne deplace personne — elle <b>pose</b> un bloc au loin, et frappe la ligne —
+     * donc la trainee de particules est tout son spectacle, et l'envoi qui la declenche ne se lit
+     * nulle part ailleurs : un paquet casse ne ferait tomber aucun test sans celui-ci. Voir
+     * ShiftTeleportPacket et ShiftTrail.
+     *
+     * <p>Il fige aussi les deux branches du geste, et c'est ce qui le rend utile : quand la ligne
+     * trouve quelqu'un, le bloc ne se plante pas, il <b>tombe</b> au point touche. C'est un choix
+     * du port, la ou l'original enfoncait son bloc dans la creature qu'il venait de frapper.
+     *
+     * <p>La bete est un zombie, et pas une vache : le geste fait quinze points au minimum, et un
+     * animal qui en a dix ne laisserait rien a chiffrer.
+     */
+    @GameTest(template = "empty")
+    public static void leDeposeAuLoinFrappeSaCompagnie(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        var cobble = net.minecraft.world.level.block.Blocks.COBBLESTONE;
+        var air = net.minecraft.world.level.block.Blocks.AIR;
+        ServerLevel level = helper.getLevel();
+
+        // Une altitude qui n'appartient qu'a ce test, et rien d'autre : ni bete laissee par une
+        // execution ratee — le nettoyage passe AVANT que la notre n'existe —, ni bloc voisin.
+        int height = 130;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        clearCorridor(helper, abs, 12);
+
+        // Le couloir : de l'air, et un mur de pierre taillee a huit blocs. C'est LUI qui arrete le
+        // regard, donc qui fixe la case visee — et il est d'une autre matiere que le bloc porte,
+        // sans quoi la pose et le remplacement se confondraient.
+        for (int dz = 0; dz <= 12; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 5; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz), air);
+                }
+            }
+        }
+        for (int dz = 8; dz <= 9; dz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 3; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz), cobble);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "deposeur");
+        // Le regard se pose sur le mur, et non sur un lacet ecrit a la main : un faux joueur garde
+        // quatre degres de travers sur son lacet, ce qui suffit a deplacer le rayon d'un bloc a
+        // huit blocs de distance — vecu, la case visee tombait sur la colonne voisine. Voir
+        // lookAt, qui est la facon dont les autres tests visent un point precis.
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        lookAt(player, helper.absolutePos(eyes.offset(0, 0, 8)));
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(stone));
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+        double reserveBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
+
+        // La bete dans la ligne, a quatre blocs — assez loin du mur pour que ce soit bien elle que
+        // le segment croise, et pas la case visee.
+        var zombie = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        zombie.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 4.5, 0f, 0f);
+        level.addFreshEntity(zombie);
+        float healthBefore = zombie.getHealth();
+
+        assertTrue(helper, skill.canStart(player, data), "un bloc en main : le geste s'ouvre");
+        assertFalse(helper, skill.onRelease(player, data, 5), "et le relachement le termine");
+
+        // Le bloc a quitte la main dans tous les cas : le geste a bien eu lieu, et il est paye.
+        assertTrue(helper, player.getMainHandItem().isEmpty(), "le bloc a quitte la main");
+        assertTrue(helper, helper.getBlockState(eyes.offset(0, 0, 7)).isAir(),
+                "et il n'est pas pose, parce que le geste a touche quelqu'un : "
+                        + helper.getBlockState(eyes.offset(0, 0, 7)));
+        var fallen = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                new net.minecraft.world.phys.AABB(abs.getX() - 1, abs.getY() - 1, abs.getZ(),
+                        abs.getX() + 2, abs.getY() + 4, abs.getZ() + 12));
+        assertValue(helper, 1, fallen.size(), "il est tombe au point touche");
+        assertTrue(helper, fallen.get(0).getItem().is(stone.asItem()),
+                "et c'est bien le bloc qui etait en main");
+        fallen.forEach(item -> item.discard());
+
+        // Le coup : quinze points, l'experience minimale — et les deux passives du teleporteur ne
+        // sont pas apprises, donc aucun critique ne peut s'en meler.
+        assertTrue(helper, healthBefore - zombie.getHealth() >= 15f,
+                "la bete de la ligne encaisse le geste : " + zombie.getHealth() + " contre "
+                        + healthBefore + ", a " + zombie.position());
+        assertTrue(helper, zombie.isAlive(), "un zombie de vingt points y survit");
+
+        // Et le prix, avec l'experience qui compte ce que le geste a traverse.
+        assertTrue(helper, data.getControlPoint() <= reserveBefore - 250,
+                "260 CP sur la reserve de depart : " + data.getControlPoint());
+        assertTrue(helper, data.getOverload() >= overloadBefore + 39,
+                "et 40 de surcout : " + data.getOverload());
+        assertTrue(helper, data.getSkillExp(skill) >= 0.0039f,
+                "0,002 par creature traversee, plus la part de base : " + data.getSkillExp(skill));
+
+        assertTrue(helper, helper.getBlockState(eyes.offset(0, 0, 8)).is(cobble),
+                "le mur qui a arrete le regard est toujours la");
+
+        zombie.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le choc dirige : ce qu'un poing ferme fait a ce qu'il trouve, et ce qu'il coute.
      *
      * Le JUnit fige les courbes et la poussee a partir des deux points de visee ; ce qui ne

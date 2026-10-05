@@ -50,6 +50,14 @@ import java.util.List;
  * <p>{@link #line} prend toutes les creatures dont la boite croise le segment qui va des pieds du
  * joueur a la case visee — donc celles d'un peu partout, y compris derriere un mur : c'est le
  * cote « epieu » du geste, et c'est {@link TeleportCrits} qui frappe, comme le lancer d'objet.
+ *
+ * <h2>Et sa trainee</h2>
+ *
+ * <p>C'est la seule chose que le geste donne a voir, puisqu'il ne deplace personne : l'original
+ * semait des etincelles de teleportation le long du trajet, de ses pieds jusqu'a la case visee.
+ * Le port l'avait oubliee ; elle part maintenant de {@link #onRelease}, par un
+ * {@code ShiftTeleportPacket} qui ne porte que les deux bouts — c'est le client qui seme, comme
+ * pour les rayons du meltdowner. Voir {@code ShiftTrail}.
  */
 public class ShiftTeleportSkill extends Skill {
 
@@ -205,6 +213,13 @@ public class ShiftTeleportSkill extends Skill {
         for (LivingEntity living : hit) {
             TeleportCrits.strike(player, data, living, damage(data));
         }
+
+        // La trainee du geste, du corps du lanceur jusqu'a la case visee : c'est la seule chose
+        // qu'un geste qui ne deplace personne donne a voir. Elle part d'ICI, apres le paiement —
+        // l'original l'envoyait avant de payer, donc un geste refuse par la reserve laissait
+        // quand meme sa trace. Voir ShiftTeleportPacket et ShiftTrail.
+        cn.academy.ability.network.ShiftTeleportPacket.send(player, player.position(),
+                target.cell());
 
         // Le son part toujours, comme chez l'original : il annonce le geste, pas ses victimes.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
