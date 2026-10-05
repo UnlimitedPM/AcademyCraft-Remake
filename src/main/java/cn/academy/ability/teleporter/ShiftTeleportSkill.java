@@ -41,7 +41,9 @@ import java.util.List;
  * <b>un</b> — l'objet pose est retire de la pile — sauf en creatif, ou le monde est un brouillon.
  *
  * <p>Et quand l'endroit refuse le bloc, l'objet <b>tombe</b> au point touche, comme chez
- * l'original : le geste ne se perd pas, il change de main.
+ * l'original : le geste ne se perd pas, il change de main. Il tombe aussi quand le geste
+ * <b>touche quelqu'un</b> — la seule chose que le port ajoute a l'original, qui plantait son bloc
+ * jusque dans la creature qu'il venait de frapper. Voir {@link #onRelease}.
  *
  * <h2>Et la ligne</h2>
  *
@@ -161,6 +163,12 @@ public class ShiftTeleportSkill extends Skill {
      * de la face visee, le controle de place, le bruit du bloc, et le retrait de l'objet de la
      * pile — sauf en creatif. Quand l'endroit refuse, le meme objet tombe au point touche.
      *
+     * <p>Et quand le geste <b>touche quelqu'un</b>, le bloc ne se plante pas davantage : il tombe au
+     * point touche, la aussi. L'original, lui, le posait — sa verification ne regardait que le
+     * terrain, jamais les creatures, et il enfoncait donc son bloc dans celle qu'il venait de
+     * frapper. C'est un choix du port, demande par le joueur, et il va dans le sens du geste : un
+     * coup d'epieu qui touche n'est pas un pieu qu'on enfonce.
+     *
      * <p>Le controle de l'original qui verifiait qu'on avait le droit de <b>casser</b> le bloc vise
      * n'a pas d'equivalent dans le port : il n'y a pas de reglage de ce genre a lire.
      */
@@ -172,19 +180,16 @@ public class ShiftTeleportSkill extends Skill {
         if (!data.perform(getCpCost(data), getOverloadCost(data))) return false;
 
         Target target = target(player, data);
-        BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack,
-                new BlockHitResult(target.point(), target.face(), target.block(), false));
-        if (!item.place(context).consumesAction()) {
-            ItemStack drop = stack.copy();
-            drop.setCount(1);
-            player.level().addFreshEntity(new ItemEntity(player.level(), target.point().x,
-                    target.point().y, target.point().z, drop));
-            if (!player.getAbilities().instabuild) stack.shrink(1);
-        }
-
-        // Et la ligne encaisse, dans l'ordre ou elle se presente : le geste est un coup d'epieu
-        // qui part des pieds et va jusqu'a la case visee.
+        // Les creatures que le geste croise, dans l'ordre ou elles se presentent : c'est un coup
+        // d'epieu qui part des pieds et va jusqu'a la case visee. La question se pose AVANT la pose,
+        // parce que c'est elle qui la decide.
         List<LivingEntity> hit = line(player.level(), player, target.cell());
+
+        // Le geste qui touche quelqu'un ne se plante pas dans le sol : le bloc tombe au point
+        // touche, comme quand l'endroit le refuse.
+        boolean planted = hit.isEmpty() && place(player, item, stack, target);
+        if (!planted) drop(player, stack, target);
+
         for (LivingEntity living : hit) {
             TeleportCrits.strike(player, data, living, damage(data));
         }
@@ -196,6 +201,28 @@ public class ShiftTeleportSkill extends Skill {
 
         // Le maintien se ferme ici : la recharge se pose ensuite par la fin ordinaire.
         return false;
+    }
+
+    /**
+     * Pose le bloc sur la case visee, et dit si l'endroit l'a accepte.
+     *
+     * <p>{@link BlockItem#place} fait tout le travail de l'original : l'etat de la face visee, le
+     * controle de place, le bruit du bloc, et le retrait de l'objet de la pile — sauf en creatif,
+     * ou il ne coute rien.
+     */
+    private static boolean place(Player player, BlockItem item, ItemStack stack, Target target) {
+        BlockPlaceContext context = new BlockPlaceContext(player, InteractionHand.MAIN_HAND, stack,
+                new BlockHitResult(target.point(), target.face(), target.block(), false));
+        return item.place(context).consumesAction();
+    }
+
+    /** Fait tomber l'objet au point touche, ou il en coute un — sauf en creatif. */
+    private static void drop(Player player, ItemStack stack, Target target) {
+        ItemStack thrown = stack.copy();
+        thrown.setCount(1);
+        player.level().addFreshEntity(new ItemEntity(player.level(), target.point().x,
+                target.point().y, target.point().z, thrown));
+        if (!player.getAbilities().instabuild) stack.shrink(1);
     }
 
     /**
