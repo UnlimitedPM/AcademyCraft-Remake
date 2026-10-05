@@ -58,6 +58,12 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
+        // Et la gerbe de formule du coup critique : le serveur seul sait qui a ete frappe, et
+        // c'est la seule chose que les deux passives du teleporteur montrent. Voir
+        // TeleportCritPacket et FormulaParticles.
+        CHANNEL.registerMessage(nextId++, TeleportCritPacket.class,
+                TeleportCritPacket::encode, TeleportCritPacket::decode,
+                TeleportCritPacket::handle);
         // Et le sang de la chair arrachee : le serveur seul sait qui a ete touche, donc c'est lui
         // qui seme la gerbe autour de la victime. Voir BloodSplashPacket.
         CHANNEL.registerMessage(nextId++, BloodSplashPacket.class,

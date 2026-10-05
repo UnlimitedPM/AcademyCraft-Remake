@@ -169,6 +169,10 @@ public class AbilityClientEvents {
             // ticks, mais un monde quitte entre-temps en garderait les taches a l'ecran pour
             // rien. Voir BloodSplashes.
             cn.academy.ability.client.tp.BloodSplashes.clear();
+            // Et les fragments de formule du coup critique, qui appartiennent au monde eux aussi :
+            // ils ne vivent qu'un peu plus d'une seconde, mais un monde quitte entre-temps les
+            // garderait a l'ecran pour rien. Voir FormulaParticles.
+            cn.academy.ability.client.tp.FormulaParticles.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();

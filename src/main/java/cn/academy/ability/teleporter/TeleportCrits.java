@@ -111,6 +111,10 @@ public final class TeleportCrits {
             // sans quoi il ne verrait qu'une victime qui tombe plus vite.
             player.displayClientMessage(Component.translatable("ac.ability.teleporter.crithit",
                     String.format(Locale.ROOT, "%.1f", RATES[tier])), false);
+            // Et la gerbe de formule autour de la victime : c'est tout ce que les deux passives
+            // du teleporteur donnent a voir, et l'original la semait a chaque critique. Voir
+            // TeleportCritPacket et FormulaParticles.
+            cn.academy.ability.network.TeleportCritPacket.send(target);
         }
 
         target.hurt(player.damageSources().indirectMagic(player, player), damage(base, tier));
