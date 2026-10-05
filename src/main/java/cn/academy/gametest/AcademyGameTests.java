@@ -2927,9 +2927,10 @@ public final class AcademyGameTests {
      * Les quatre teleportations qui deplacent le joueur la posent.
      *
      * <p>Le piege, et c'est ce que la troisieme version corrige : une teleportation vous pose
-     * souvent <b>au sol</b>, donc le drapeau etait consomme dans la foulee et plus rien ne
-     * protegeait (« je prends des degats de chute peu importe ce que je fais »). Le sol touche
-     * compte donc seulement <b>apres avoir quitte le sol</b>.
+     * souvent <b>au sol</b>, mais elle ne remet pas {@code onGround} a jour — donc juste apres
+     * elle, cet etat porte encore celui d'avant, et la protection disparaissait au tick
+     * suivant. Le sol se lit donc sur {@code fallDistance}, que vanilla remet a zero en touchant
+     * un bloc : c'est cette remise a zero-la qui consomme la protection, et rien d'autre.
      *
      * <p>Le test passe par une VRAIE chute, `causeFallDamage`, et non par le crochet appele a
      * la main : c'est le seul moyen de prouver que le jeu poste bien cet evenement, ce qui a
@@ -2943,40 +2944,44 @@ public final class AcademyGameTests {
 
         // Sans pouvoir, la chute reste due : c'est la regle de depart, et celle a garder. La
         // distance reste courte, parce que celle-ci blesse pour de bon.
-        player.setOnGround(false);
+        player.fallDistance = 4f;
         assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
                 "sans pouvoir, la chute se paie");
 
+        // Ce que fait une teleportation : elle pose la protection, remet la chute a zero, et
+        // laisse onGround tel quel — c'est ce dernier point qui trompait tout le monde.
+        player.setOnGround(false);
+        player.fallDistance = 0f;
+        data.protectFromFall();
+        tickerLeJoueur(player);
+        assertTrue(helper, data.isProtectedFromFall(), "la protection tient juste apres le saut");
+
+        // Et le sol annonce au tick suivant ne la consomme pas.
+        player.setOnGround(true);
+        tickerLeJoueur(player);
+        assertTrue(helper, data.isProtectedFromFall(),
+                "le sol annonce apres l'arrivee ne consomme pas la protection");
+
         // Une teleportation protege — et pas seulement d'une chute courte : c'est justement la
         // chute de trente blocs qui posait probleme.
-        data.protectFromFall();
-        assertTrue(helper, data.isProtectedFromFall(), "la protection est posee");
         assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
                 "une chute de trente blocs est gratuite apres un saut");
 
-        // Arriver AU SOL ne la consomme pas : le sol touche EST l'arrivee, et c'est ce qui
-        // faisait qu'aucun saut ne protegeait plus rien.
-        player.setOnGround(true);
-        for (int i = 0; i < 5; i++) tickerLeJoueur(player);
-        assertTrue(helper, data.isProtectedFromFall(),
-                "une arrivee au sol ne consomme pas la protection");
-
-        // Elle attend donc le premier bloc touche APRES avoir quitte le sol, et tant qu'on est
-        // en l'air elle tient : cent ticks n'y changent rien, c'est toute la difference avec
-        // une duree fixe.
-        player.setOnGround(false);
+        // Elle attend qu'il TOMBE pour compter un atterrissage, et tant qu'il tombe elle tient :
+        // cent ticks n'y changent rien, c'est toute la difference avec une duree fixe.
+        player.fallDistance = 3f;
         for (int i = 0; i < 100; i++) tickerLeJoueur(player);
-        assertTrue(helper, data.isProtectedFromFall(), "cent ticks en l'air ne l'usent pas");
+        assertTrue(helper, data.isProtectedFromFall(), "cent ticks de chute ne l'usent pas");
 
-        // L'atterrissage lui-meme est encore gratuit : la protection ne tombe qu'apres.
+        // L'atterrissage lui-meme est encore gratuit : vanilla remet la chute a zero en
+        // touchant le bloc, et c'est cette remise a zero qui consomme la protection.
         assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
                 "l'atterrissage est encore protege");
-        player.setOnGround(true);
+        player.fallDistance = 0f;
         tickerLeJoueur(player);
         assertFalse(helper, data.isProtectedFromFall(), "le premier bloc touche la leve");
 
         // Et la chute suivante se paie, elle.
-        player.setOnGround(false);
         assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
                 "la chute se repaie apres l'atterrissage");
 
