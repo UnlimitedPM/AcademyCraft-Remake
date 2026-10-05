@@ -6,9 +6,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +38,6 @@ import java.util.Random;
  * terre. La forme change, pas le mouvement — et c'est le mouvement que le joueur regarde.
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class WingDust {
 
     /** Douze grains par tick, comme l'original. */
@@ -70,8 +66,14 @@ public final class WingDust {
     /** Et trois ticks pour apparaitre, sans quoi ils surgiraient d'un coup. */
     public static final int FADE_IN_TICKS = 3;
 
-    /** Leur opacite au plus fort, et la teinte de la terre. */
-    public static final float ALPHA = 0.35f;
+    /**
+     * Leur opacite au plus fort, et la teinte de la terre.
+     *
+     * <p>L'original les prenait opaques — c'etait une poussiere de bloc, et non un rond de lueur —
+     * donc le port demande un peu plus que la moitie pour que la poussiere se voie autant que la
+     * sienne.
+     */
+    public static final float ALPHA = 0.5f;
     public static final float RED = 0.45f;
     public static final float GREEN = 0.34f;
     public static final float BLUE = 0.24f;
@@ -183,8 +185,14 @@ public final class WingDust {
         }
     }
 
-    /** Un tick : les grains avancent, et ceux qui ont fini s'en vont. */
-    private static void tick() {
+    /**
+     * Un tick : les grains avancent, et ceux qui ont fini s'en vont.
+     *
+     * <p>L'appel vient de l'horloge du client, avec les autres effets de vecmanip : les grains ne
+     * sont pas les ailes, et ils leur survivent — c'est ce que faisait l'original, dont le semeur
+     * s'arretait avec son contexte et dont les grains, eux, continuaient.
+     */
+    public static void tick() {
         for (int i = LIVE.size() - 1; i >= 0; i--) {
             Grain grain = LIVE.get(i);
             if (grain.dead()) {
@@ -192,21 +200,6 @@ public final class WingDust {
             } else {
                 grain.advance();
             }
-        }
-    }
-
-    /**
-     * Un tick d'horloge : les grains avancent, meme apres la fin du vol.
-     *
-     * <p>C'est une horloge a part, et il en faut une : les grains ne sont pas les ailes. Quand le
-     * maintien se ferme, plus rien n'est seme, mais ceux qui tournent finissent leur vie — c'est ce
-     * que faisait l'original, dont le semeur s'arretait avec son contexte et dont les grains, eux,
-     * continuaient.
-     */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            tick();
         }
     }
 }

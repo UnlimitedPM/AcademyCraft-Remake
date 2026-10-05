@@ -129,13 +129,14 @@ public final class VecmanipTornados {
             wings.alpha = ticks <= chargeTime
                     ? TornadoVisuals.wingsChargeAlpha(ticks, chargeTime)
                     : TornadoVisuals.WINGS_ALPHA;
-            return;
-        }
-
-        // Et la poussiere des ailes : douze grains par tick, tant que le maintien est ouvert. Elle
-        // leur survit — un grain vit sa vie jusqu'au bout, comme chez l'original. Voir WingDust.
-        if (skill == VecmanipCategory.STORM_WING) {
+            // Et la poussiere : douze grains par tick, tant que le maintien est ouvert. Elle leur
+            // survit — un grain vit sa vie jusqu'au bout, comme chez l'original. Voir WingDust.
+            //
+            // Elle est semee ICI, et non apres le retour plus bas : la branche des ailes sort de
+            // la methode, et le port avait pose le semeur juste derriere — il ne semait donc
+            // jamais rien.
             WingDust.spawn(player);
+            return;
         }
 
         if (skill == VecmanipCategory.PLASMA_CANNON) {

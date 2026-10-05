@@ -188,6 +188,9 @@ public class AbilityClientEvents {
         // qui est mort s'en va — c'est aussi ce qui rattrape un maintien interrompu. Voir
         // VecmanipTornados.
         cn.academy.ability.client.vm.VecmanipTornados.tick();
+        // Et la poussiere des ailes de tempete, qui tourne et s'efface toute seule : elle n'est pas
+        // une tornade, et elle vit plus longtemps qu'elles. Voir WingDust.
+        cn.academy.ability.client.vm.WingDust.tick();
         // Et les ondes de choc de vecmanip, qui appartiennent au monde : quinze ticks, et elles
         // s'en vont. Voir VecWaves.
         cn.academy.ability.client.vm.VecWaves.tick();

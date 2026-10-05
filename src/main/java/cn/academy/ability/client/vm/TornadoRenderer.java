@@ -61,7 +61,12 @@ public final class TornadoRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
 
         List<VecmanipTornados.Live> live = VecmanipTornados.live();
-        if (live.isEmpty()) return;
+        if (live.isEmpty()) {
+            // Plus d'ailes, mais peut-etre encore des grains : ils finissent leur vie tout seuls,
+            // comme chez l'original, dont le semeur s'arretait avec le contexte. Voir WingDust.
+            drawDustAlone(event);
+            return;
+        }
 
         Vec3 camera = event.getCamera().getPosition();
         Matrix4f base = event.getPoseStack().last().pose();
@@ -126,6 +131,23 @@ public final class TornadoRenderer {
         // Et la poussiere des ailes par-dessus : elle n'a pas la meme image, donc elle a son propre
         // passage. Voir WingDust.
         drawDust(event, base, camera);
+
+        RenderSystem.depthMask(true);
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
+    /** La poussiere seule, quand les ailes sont finies : elle pose son etat elle-meme. */
+    private static void drawDustAlone(RenderLevelStageEvent event) {
+        if (WingDust.live().isEmpty()) return;
+
+        RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.depthMask(false);
+
+        drawDust(event, event.getPoseStack().last().pose(), event.getCamera().getPosition());
 
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
