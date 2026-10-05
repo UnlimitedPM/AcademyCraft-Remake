@@ -100,6 +100,11 @@ class FormulaParticlesTest {
             assertTrue(glyph.size() >= FormulaParticles.SIZE_MIN
                             && glyph.size() <= FormulaParticles.SIZE_MAX,
                     "sa taille est tiree dans les bornes : " + glyph.size());
+            // Et ces bornes sont GRANDES : la taille de l'original est en blocs, pas en dixiemes
+            // de bloc. Le port les avait comprises comme celles de la particule de teleportation
+            // (0,1 a 0,2) et les fragments etaient invisibles a l'ecran.
+            assertTrue(glyph.size() >= 1.0,
+                    "un fragment fait au moins un bloc, sinon on ne le voit pas : " + glyph.size());
             assertTrue(glyph.frame() >= 0 && glyph.frame() < FormulaParticles.TEXTURES,
                     "il porte une des dix images de formule : " + glyph.frame());
             assertTrue(glyph.startAlpha() >= FormulaParticles.ALPHA_MIN / 255f - 1e-6

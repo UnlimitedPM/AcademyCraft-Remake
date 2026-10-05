@@ -28,8 +28,8 @@ import java.util.List;
  *
  * <p>Comme toutes les particules de l'original : ils <b>apparaissent</b> en deux ticks, se
  * <b>tiennent</b> dix a quatorze ticks, puis s'effacent en vingt autres. Leur opacite est tiree entre
- * 152 et 255 sur 255, donc du plus pale au plus franc, et leur taille entre dix et dix-sept
- * centimetres : la meme echelle que les etincelles de la teleportation.
+ * 152 et 255 sur 255, donc du plus pale au plus franc, et leur taille entre <b>un et un virgule sept
+ * bloc</b> — des glyphes qu'on voit de loin, dix fois la particule de teleportation.
  *
  * <p>L'age se lit en millisecondes, comme celui du sang : rien n'a besoin d'etre ticke, une particule
  * sait se placer et s'effacer toute seule a partir de sa naissance.
@@ -45,9 +45,16 @@ public final class FormulaParticles {
     public static final int HOLD_MAX_TICKS = 15;
     public static final int FADE_TICKS = 20;
 
-    /** Sa taille, en blocs : de dix a dix-sept centimetres. */
-    public static final double SIZE_MIN = 0.10;
-    public static final double SIZE_MAX = 0.17;
+    /**
+     * Sa taille, en blocs : de un a un virgule sept.
+     *
+     * <p>C'est la taille de l'original telle quelle, et elle est <b>grande</b> : la particule de
+     * teleportation, elle, vaut 0,1 a 0,2 — dix fois moins. Les fragments de formule sont donc des
+     * glyphes qu'on voit de loin, pas des etincelles. Le port les avait d'abord compris comme des
+     * etincelles et les dessinait a un dixieme de leur taille : le joueur ne les voyait pas.
+     */
+    public static final double SIZE_MIN = 1.0;
+    public static final double SIZE_MAX = 1.7;
 
     /** Son opacite, sur 255 : de 152 a 255, comme l'original. */
     public static final int ALPHA_MIN = 152;
