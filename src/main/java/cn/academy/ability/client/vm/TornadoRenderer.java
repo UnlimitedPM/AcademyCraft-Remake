@@ -67,6 +67,9 @@ public final class TornadoRenderer {
         Matrix4f base = event.getPoseStack().last().pose();
         float partialTick = event.getPartialTick();
         double seconds = Util.getMillis() / 1000.0;
+        // La lumiere des anneaux est celle de l'oeil : c'est ainsi que l'ombre suit le regard. Voir
+        // shade.
+        Vector3f lamp = event.getCamera().getLookVector();
 
         RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
         RenderSystem.setShaderTexture(0, RING);
@@ -114,7 +117,7 @@ public final class TornadoRenderer {
                         .translate((float) part.tx(), (float) part.ty(), (float) part.tz())
                         .rotateY((float) Math.toRadians(part.rotateY()))
                         .rotateZ((float) Math.toRadians(part.rotateZ()));
-                drawTornado(buffer, matrix, part.tornado(), seconds, alpha);
+                drawTornado(buffer, matrix, part.tornado(), seconds, alpha, lamp);
             }
         }
 
@@ -127,7 +130,8 @@ public final class TornadoRenderer {
 
     /** Une tornade entiere : ses anneaux, du pied au sommet. */
     private static void drawTornado(BufferBuilder buffer, Matrix4f matrix,
-                                    TornadoVisuals.Tornado tornado, double seconds, float alpha) {
+                                    TornadoVisuals.Tornado tornado, double seconds, float alpha,
+                                    Vector3f lamp) {
         double t = TornadoVisuals.time(seconds, tornado.timeOffset());
         double uStep = 1.0 / TornadoVisuals.SEGMENTS;
 
@@ -150,7 +154,7 @@ public final class TornadoRenderer {
                 double u1 = u0 + uStep;
 
                 // L'original posait UNE normale par quad : glNormal3d(x0, y0, 0). Voir shade.
-                float shade = shade(matrix, x0, y0);
+                float shade = shade(matrix, x0, y0, lamp);
 
                 vertex(buffer, matrix, alpha, shade, x0 + dx, y0, z0 + dz, (float) u0, 0f);
                 vertex(buffer, matrix, alpha, shade, x0 + dx, y1, z0 + dz, (float) u0, 1f);
@@ -160,35 +164,27 @@ public final class TornadoRenderer {
         }
     }
 
-    /**
-     * La lumiere du monde, celle qui donne leur relief aux anneaux.
-     *
-     * <p>L'original ne l'allumait pas lui-meme : ses anneaux portent une normale —
-     * {@code glNormal3d(x0, y0, 0)} — et son pipeline eclairait avec. Le port dessine en etat
-     * manuel, sans aucune lumiere, donc ses quatre ailes sortaient uniformement claires : celle du
-     * bas, que l'original voyait a l'ombre, brillait autant que celle du haut. C'est le reproche du
-     * joueur — « il n'y a pas d'ombre sur les 2 ailes du bas ».
-     */
-    private static final Vector3f LAMP = new Vector3f(0.35f, 1f, 0.25f).normalize();
-
     /** Le plancher d'ombre : une face detournee n'est jamais noire, la lueur se voit encore. */
     private static final float SHADE_MIN = 0.55f;
-    private static final float SHADE_MAX = 1.0f;
+    static final float SHADE_MAX = 1.0f;
 
     /**
-     * L'ombre d'un anneau : la normale de l'original, telle quelle, eclairee.
+     * L'ombre d'un anneau : la normale de l'original, telle quelle, eclairee par l'oeil.
      *
      * <p>Cette normale est bizarre, et c'est la sienne : le rayon du cercle a gauche, la hauteur de
      * l'anneau au milieu, et rien a droite — {@code (x0, y0, 0)}. Elle n'a donc pas grand-chose a
      * voir avec la vraie normale du ruban, mais elle suffit a son office : le long de l'axe elle
      * fait glisser la lumiere, et comme chaque aile est inclinee de son cote, les quatre en
-     * prennent une differente. Une aile qui regarde vers le bas prend l'ombre, comme il faut.
+     * prennent une differente. Une aile qui regarde vers le bas prend l'ombre, comme il faut — et
+     * cette ombre suit le regard, parce que la lumiere est celle de l'oeil.
      */
-    static float shade(Matrix4f matrix, double x0, double y0) {
+    static float shade(Matrix4f matrix, double x0, double y0, Vector3f look) {
         Vector3f normal = matrix.transformDirection(new Vector3f((float) x0, (float) y0, 0f));
         float length = normal.length();
         if (length < 1e-6f) return SHADE_MAX;
-        float lambert = Math.max(0f, normal.div(length).dot(LAMP));
+        // La direction qui va de la surface vers la lumiere : l'oeil est derriere, donc l'oppose
+        // du regard.
+        float lambert = Math.max(0f, normal.div(length).dot(new Vector3f(look).negate()));
         return SHADE_MIN + (SHADE_MAX - SHADE_MIN) * lambert;
     }
 

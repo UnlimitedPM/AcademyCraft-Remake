@@ -353,7 +353,10 @@ public final class AimCommands {
                     return 1;
                 }
                 data.setControlPoint(data.getMaxControlPoint());
-                data.setOverload(0f);
+                // Et le surcout s'efface avec son VERROU : le remettre a zero sans rouvrir le verrou
+                // laissait le joueur bloque en surcharge pour toujours, la recuperation sortant des
+                // que la valeur est nulle. Voir AbilityData.clearOverload.
+                data.clearOverload();
                 sync(player, data);
                 send(source, "ac.command.successful");
             }

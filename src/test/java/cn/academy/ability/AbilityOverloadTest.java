@@ -80,6 +80,25 @@ class AbilityOverloadTest {
     }
 
     @Test
+    void effacerLeSurcoutRouvreLeVerrou() {
+        // Le bug que le joueur a trouve : /aim fullcp remettait le surcout a zero sans rouvrir le
+        // verrou. La recuperation sort des que la valeur est nulle, donc le verrou restait ferme
+        // pour toujours et le joueur etait bloque en surcharge jusqu'a la fin de la partie.
+        AbilityData data = atLevel(1);
+        data.perform(0f, 500f);
+        assertTrue(data.isOverloadRecovering(), "la reserve pleine ferme le verrou");
+
+        data.clearOverload();
+
+        assertEquals(0f, data.getOverload(), 0.0001f, "le surcout est efface");
+        assertFalse(data.isOverloadRecovering(), "et le verrou s'ouvre");
+        assertFalse(data.isOverloaded(), "le temoin s'eteint");
+        assertEquals(0, data.getUntilOverloadRecover(), "sans delai qui traine");
+        data.tickOverload();
+        assertFalse(data.isOverloadRecovering(), "et la recuperation ne le referme pas");
+    }
+
+    @Test
     void activerDepenseLesDeuxRessources() {
         AbilityData data = atLevel(1);
         float cp = data.getControlPoint();

@@ -608,9 +608,30 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      *
      * Portage de {@code CPData.setOverload} : l'original s'en servait pour remettre le
      * surcout epingle d'un maintien apres que la recuperation l'a fait baisser.
+     *
+     * <p>Attention : ce poseur ne touche que la <b>valeur</b>. Le verrou, lui, ne retombe que par
+     * la recuperation — donc pour effacer le surcout d'un coup, c'est {@link #clearOverload}.
      */
     public void setOverload(float value) {
         overload = Math.max(0f, Math.min(getMaxOverload(), value));
+        markDirty();
+    }
+
+    /**
+     * Efface le surcout ET son verrou, comme si le joueur n'en avait jamais eu.
+     *
+     * <p>C'est ce qui manquait a {@code /aim fullcp} : il remettait la valeur a zero sans rouvrir le
+     * verrou, et la recuperation sort des que la valeur est nulle ({@link #tickOverload}). Le verrou
+     * restait donc ferme pour toujours, et le joueur, surcharge jusqu'a la fin de la partie, sans
+     * aucun moyen d'en sortir — c'est le bug qu'il a trouve, « si on fait la commande pendant qu'on
+     * etait en surcharge, le jeu oublie de nous retirer de l'etat ».
+     *
+     * <p>Le delai de recuperation part avec : le temoin de surcharge ne doit pas trainer apres elle.
+     */
+    public void clearOverload() {
+        overload = 0f;
+        overloadFine = true;
+        untilOverloadRecover = 0;
         markDirty();
     }
 
