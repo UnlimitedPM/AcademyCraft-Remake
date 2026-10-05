@@ -108,6 +108,32 @@ public final class TpMarkRenderer {
      */
     public static final double GHOST_LIFT = 1.501;
 
+    /**
+     * Le petit coup de pouce vers la gauche du fantome, en blocs par bloc de distance.
+     *
+     * <p>La marque tombe <b>pile</b> sur l'axe du curseur, et ce n'est pas une impression :
+     * mesure faite en jeu au pixel, le fantome se tient a 959,5 quand le centre de l'ecran est a
+     * 960, et sa silhouette — tete de huit pixels, epaules de dix-huit, torse de huit — est
+     * symetrique. Ce n'est donc pas un calcul qui est faux, c'est une lecture : l'oeil, lui, le
+     * voit un peu a droite. Ce nombre ne corrige donc rien, il <b>suit l'oeil</b> — et il vaut
+     * zero pour retrouver la marque exacte, au pixel.
+     *
+     * <p>Comme l'epaisseur des traits, il est donne <b>par bloc de distance</b>, donc il grandit
+     * avec elle : c'est un ecart <b>d'ecran</b>, et le garder fixe en blocs ferait partir le
+     * fantome de pres d'un cote pendant que celui de loin resterait au milieu.
+     */
+    public static final double GHOST_NUDGE = 0.01;
+
+    /**
+     * De combien le fantome se decale vers la gauche a cette distance, en blocs.
+     *
+     * <p>Fonction pure, donc verifiable : proportionnelle a la distance, avec le meme plancher de
+     * un bloc que {@link #strokeAt} — une marque posee dans la camera ne part pas a l'infini.
+     */
+    public static double nudgeAt(double distance) {
+        return GHOST_NUDGE * Math.max(distance, 1.0);
+    }
+
     private static final ResourceLocation[] TEXTURES = frames();
 
     /** Le modele du fantome, construit a la premiere image et garde ensuite. */
@@ -131,7 +157,9 @@ public final class TpMarkRenderer {
         Vec3 mark = TeleportMark.interpolated(event.getPartialTick(), camera,
                 event.getCamera().getLookVector());
         if (mark != null) {
-            drawMark(buffers, pose, camera, mark);
+            // Et legerement a gauche, pour l'oeil : voir GHOST_NUDGE. La boite n'y touche pas.
+            drawMark(buffers, pose, camera, nudged(event.getCamera().getLeftVector(),
+                    mark.distanceTo(camera), mark));
         }
 
         if (!TpParticles.live().isEmpty()) {
@@ -167,6 +195,22 @@ public final class TpMarkRenderer {
                     "textures/effects/tp_mark/" + i + ".png");
         }
         return frames;
+    }
+
+    /**
+     * La marque decalee vers la gauche de ce qu'il faut pour que l'oeil la lise au centre.
+     *
+     * <p>La boite, elle, ne bouge pas : c'est une <b>mesure</b>, et ses coins doivent tomber sur
+     * ceux du bloc ou de la creature qu'elle designe. Le fantome, lui, est une silhouette, et
+     * c'est sa lecture qu'on ajuste — voir {@link #GHOST_NUDGE}.
+     *
+     * <p>Le cote est celui de la camera : on se decale le long de son vecteur gauche, donc vers la
+     * gauche de l'ecran, de quelque cote que le tireur regarde.
+     */
+    private static Vec3 nudged(Vector3f left, double distance, Vec3 at) {
+        if (TeleportMark.shape().isBox()) return at;
+        double nudge = nudgeAt(distance);
+        return at.add(left.x() * nudge, left.y() * nudge, left.z() * nudge);
     }
 
     /** Le fantome : le joueur debout, tourne comme son tireur, sans ecriture de profondeur. */

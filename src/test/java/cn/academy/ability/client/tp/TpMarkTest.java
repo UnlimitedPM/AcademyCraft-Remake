@@ -223,6 +223,32 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("le coup de pouce du fantome est un ecart d'ecran, pas un ecart du monde")
+    void leCoupDePouceSuitLaDistance() {
+        // Le fantome tombe pile sur l'axe du curseur — c'est mesure, au pixel — mais l'oeil le lit
+        // un peu a droite, et le port suit l'oeil. Ce decalage est donc, comme l'epaisseur des
+        // traits, une largeur d'ecran rendue en blocs : proportionnelle a la distance, rien d'autre.
+        for (double distance = 2.0; distance <= 32.0; distance *= 2.0) {
+            assertEquals(TpMarkRenderer.GHOST_NUDGE,
+                    TpMarkRenderer.nudgeAt(distance) / distance, 1e-9,
+                    "a " + distance + " blocs, l'ecart d'ecran ne change pas");
+        }
+
+        // Donc il grandit avec la distance : de loin, il faut partir plus loin du monde pour rester
+        // au meme endroit a l'ecran. C'est l'inverse d'un decalage du monde, qu'on verrait enorme
+        // de pres et invisible de loin.
+        assertTrue(TpMarkRenderer.nudgeAt(2.0) < TpMarkRenderer.nudgeAt(16.0));
+
+        // Et il ne s'annule pas dans la camera, comme l'epaisseur.
+        assertEquals(TpMarkRenderer.nudgeAt(1.0), TpMarkRenderer.nudgeAt(0.0), 1e-9);
+
+        // C'est un coup de pouce : s'il devenait gros, ce serait le signe qu'on a glisse d'un
+        // ecart de calcul a un ecart de dessin sans le vouloir.
+        assertTrue(TpMarkRenderer.GHOST_NUDGE > 0.0 && TpMarkRenderer.GHOST_NUDGE < 0.05,
+                "le fantome se decale, il ne part pas");
+    }
+
+    @Test
     @DisplayName("la marque glisse quand elle se deplace, et se pose quand elle saute")
     void laMarqueGlisseOuSePose() {
         Vec3 from = new Vec3(10, 64, -5);
