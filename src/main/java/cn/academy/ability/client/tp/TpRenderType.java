@@ -14,47 +14,34 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Le type de rendu de la marque de teleportation : un fantome qui se voit <b>a travers les murs</b>.
+ * Les types de rendu des effets de la teleportation : les etincelles, le sang, et la boite.
  *
- * <p>L'original le disait en trois lignes de GL : il eteignait le test de profondeur
- * ({@code glDisable(GL_DEPTH_TEST)}), le tri des faces arriere et l'eclairage, et il activait le
- * melange. C'est bien un choix et non un oubli : la marque indique ou l'on va <b>atterrir</b>, et
- * elle serait inutile si le mur qu'on s'apprete a traverser la cachait. Le joueur voit donc son
- * propre fantome au travers de la pierre, et c'est ce qui rend la competence lisible.
+ * <p>Le <b>fantome</b> n'est pas ici, et c'est volontaire : il se dessine tout de suite, avec son
+ * etat pose a la main, parce qu'un type de rendu <b>range</b> rebat son propre etat de profondeur
+ * au moment du vidage — voir {@code TpMarkRenderer.drawMark}, et le rendu de la detection de
+ * minerais, qui a paye cette lecon avant lui.
  *
- * <p>L'eclairage est celui des rayons du plasma — le programme de la balise de phare, qui ne
- * connait ni la lumiere du monde ni celle des faces. L'original avait fait de meme avec son
- * {@code ShaderSimple} et son {@code glDisable(GL_LIGHTING)} : la marque est un aplat pale, pas
- * un personnage ombre.
+ * <p>Les trois qui restent se voient a travers leur type, et leur profondeur, elle, doit rester
+ * <b>fermee</b> : une etincelle est de la fumee, du sang qui traverse les murs se lit comme un
+ * defaut, et la boite designe un endroit du monde.
  *
- * <p>Les sommets du fantome, eux, sont ceux d'une <b>entite</b> : un modele ecrit la position, la
- * couleur, l'image, la superposition, la lumiere et la normale. Le programme de la balise n'en lit
- * que les trois premiers, ce qui est exactement ce qu'on lui demande. Les etincelles, elles, sont
- * des carres — donc des sommets d'image ordinaires.
+ * <p>L'eclairage des deux premiers est celui des rayons du plasma — le programme de la balise de
+ * phare, qui ne connait ni la lumiere du monde ni celle des faces. L'original avait fait de meme
+ * avec son {@code ShaderSimple} et son {@code glDisable(GL_LIGHTING)} : ce sont des aplats pales,
+ * pas des personnages ombres.
+ *
+ * <p>Les sommets des etincelles et du sang sont ceux d'une <b>image</b> — position, couleur, image
+ * —, parce que ce sont des carres ; ceux de la boite n'ont qu'une couleur a montrer.
  */
 public final class TpRenderType {
 
-    /** Un type par image : la marque en a sept, et les construire a chaque image allouerait. */
-    private static final Map<ResourceLocation, RenderType> MARKS = new HashMap<>();
-
-    /** Et un seul pour les etincelles, qui n'ont qu'une image. */
+    /** Un seul type pour les etincelles, qui n'ont qu'une image — et le sang se dessine pareil. */
     private static final Map<ResourceLocation, RenderType> PARTICLES = new HashMap<>();
 
     /** Et un seul pour la boite, dont les traits n'ont pas d'image du tout. */
     private static RenderType BOX;
 
     private TpRenderType() {
-    }
-
-    /**
-     * Le type du <b>fantome</b> : il se voit au travers des murs.
-     *
-     * <p>Les sommets sont ceux d'une <b>entite</b> — position, couleur, image, superposition,
-     * lumiere et normale — parce que c'est ce qu'ecrit un modele. Le programme de la balise n'en
-     * lit que les trois premiers, ce qui est exactement ce qu'on lui demande.
-     */
-    public static RenderType mark(ResourceLocation texture) {
-        return MARKS.computeIfAbsent(texture, TpRenderType::createMark);
     }
 
     /**
@@ -100,22 +87,6 @@ public final class TpRenderType {
                         .createCompositeState(true));
     }
 
-    private static RenderType createMark(ResourceLocation texture) {
-        return RenderType.create("academy_tp_mark", DefaultVertexFormat.NEW_ENTITY,
-                VertexFormat.Mode.QUADS, 256, false, true,
-                RenderType.CompositeState.builder()
-                        .setShaderState(new RenderStateShard.ShaderStateShard(
-                                GameRenderer::getRendertypeBeaconBeamShader))
-                        .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
-                        .setTransparencyState(blending())
-                        .setWriteMaskState(noDepthWrite())
-                        .setDepthTestState(noDepthTest())
-                        .setCullState(new RenderStateShard.CullStateShard(false))
-                        .setLightmapState(new RenderStateShard.LightmapStateShard(false))
-                        .setOverlayState(new RenderStateShard.OverlayStateShard(false))
-                        .createCompositeState(true));
-    }
-
     private static RenderType createParticle(ResourceLocation texture) {
         return RenderType.create("academy_tp_particle", DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS, 256, false, true,
@@ -134,20 +105,9 @@ public final class TpRenderType {
         return new RenderStateShard.WriteMaskStateShard(true, false);
     }
 
-    /**
-     * Le test de profondeur, eteint : le {@code glDisable(GL_DEPTH_TEST)} de l'original.
-     *
-     * <p>{@code 519} est le numero GL de {@code GL_ALWAYS} — le test passe toujours, ce qui revient
-     * a ne pas le faire, mais laisse la profondeur telle qu'elle est : le fantome ne se coupe pas
-     * lui-meme, et le monde non plus.
-     */
-    private static RenderStateShard.DepthTestStateShard noDepthTest() {
-        return new RenderStateShard.DepthTestStateShard("academy_tp_always", 519);
-    }
-
     /** Le melange de l'original, mot pour mot : SRC_ALPHA / ONE_MINUS_SRC_ALPHA. */
     private static RenderStateShard.TransparencyStateShard blending() {
-        return new RenderStateShard.TransparencyStateShard("academy_tp_mark",
+        return new RenderStateShard.TransparencyStateShard("academy_tp_blend",
                 () -> {
                     RenderSystem.enableBlend();
                     RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);

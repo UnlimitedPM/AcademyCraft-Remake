@@ -1,8 +1,14 @@
 package cn.academy.ability.client.tp;
 
 import cn.academy.AcademyCraft;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -13,6 +19,7 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
@@ -122,7 +129,7 @@ public final class TpMarkRenderer {
      * avec elle : c'est un ecart <b>d'ecran</b>, et le garder fixe en blocs ferait partir le
      * fantome de pres d'un cote pendant que celui de loin resterait au milieu.
      */
-    public static final double GHOST_NUDGE = 0.01;
+    public static final double GHOST_NUDGE = 0.004;
 
     /**
      * De combien le fantome se decale vers la gauche a cette distance, en blocs.
@@ -213,7 +220,25 @@ public final class TpMarkRenderer {
         return at.add(left.x() * nudge, left.y() * nudge, left.z() * nudge);
     }
 
-    /** Le fantome : le joueur debout, tourne comme son tireur, sans ecriture de profondeur. */
+    /**
+     * Le fantome : le joueur debout, tourne comme son tireur, et vu <b>a travers les murs</b>.
+     *
+     * <p>C'est le seul dessin du port qui ne passe pas par un type de rendu, et la raison est celle
+     * du rendu de la detection de minerais — voir {@code MineDetectRenderer} : un type de rendu
+     * <b>range</b> porte son propre etat de profondeur, et c'est <b>lui</b> qui le rebatit au moment
+     * du vidage. Un test de profondeur qu'on croit eteint se rallume donc a cet instant-la, et le
+     * fantome se dessinait bel et bien — mais teste contre la pierre qui l'entoure : dans le vide on
+     * le voyait, derriere un mur non.
+     *
+     * <p>Il se dessine donc <b>tout de suite</b>, avec l'etat pose a la main, comme l'original le
+     * faisait avec ses appels OpenGL directs : son {@code glDisable(GL_DEPTH_TEST)} valait jusqu'a
+     * la fin de son dessin, et rien ne venait le defaire.
+     *
+     * <p>Ce n'est pas un detail de confort. La marque indique ou l'on va <b>atterrir</b>, et le saut
+     * traversant la pose de l'autre cote du mur : testee contre la pierre, elle disparait exactement
+     * quand on a besoin d'elle. Le brouillard, lui, reste celui de la passe — l'original ne
+     * l'eteignait pas non plus, donc le fantome s'efface au loin comme le reste.
+     */
     private static void drawMark(MultiBufferSource buffers, PoseStack pose, Vec3 camera, Vec3 at) {
         // Deux formes, et deux seulement : le fantome de joueur des quatre competences qui
         // teleportent le corps, et la boite de l'original pour celles qui visent autre chose.
@@ -222,8 +247,22 @@ public final class TpMarkRenderer {
             return;
         }
 
-        VertexConsumer out = buffers.getBuffer(
-                TpRenderType.mark(TEXTURES[frame(TeleportMark.ageTicks())]));
+        // L'etat du fantome, pose a la main et pour de bon : l'aplat pale de l'original — le
+        // programme de la balise, qui n'eclaire ni ne connait la lumiere des faces —, son melange,
+        // ses deux faces, et surtout la profondeur ouverte. Les sommets, eux, sont ceux d'une
+        // <b>entite</b> — position, couleur, image, superposition, lumiere et normale —, parce que
+        // c'est ce qu'ecrit un modele ; le programme de la balise n'en lit que les trois premiers.
+        RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
+        RenderSystem.setShaderTexture(0, TEXTURES[frame(TeleportMark.ageTicks())]);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.disableDepthTest();
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buffer = tesselator.getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
 
         pose.pushPose();
         pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
@@ -248,8 +287,16 @@ public final class TpMarkRenderer {
         int rgb = TeleportMark.color();
         float[] tint = { ((rgb >> 16) & 0xFF) / 255f, ((rgb >> 8) & 0xFF) / 255f,
                 (rgb & 0xFF) / 255f };
-        model().renderToBuffer(pose, out, 0, 0, tint[0], tint[1], tint[2], 1f);
+        model().renderToBuffer(pose, buffer, 0, 0, tint[0], tint[1], tint[2], 1f);
         pose.popPose();
+
+        BufferUploader.drawWithShader(buffer.end());
+
+        // Et l'etat du monde est rendu tel qu'on l'a trouve : c'est la passe suivante qui compte
+        // dessus, elle n'a pas a heriter de nos reglages.
+        RenderSystem.enableDepthTest();
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
     }
 
     /**
