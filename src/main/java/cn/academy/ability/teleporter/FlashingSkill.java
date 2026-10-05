@@ -236,7 +236,9 @@ public class FlashingSkill extends Skill {
                     blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos),
                     player.getEyeHeight());
         }
-        return end;
+        // Dans le vide, comme la teleportation au marqueur : le bout du regard, une hauteur d'yeux
+        // sous lui, pour que les yeux du joueur arrivent la ou il regardait.
+        return end.subtract(0, player.getEyeHeight(), 0);
     }
 
     /** Le saut tel que le paquet l'appelle : une direction, et rien d'autre. */

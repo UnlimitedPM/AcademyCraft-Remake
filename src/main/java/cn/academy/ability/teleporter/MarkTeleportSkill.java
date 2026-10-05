@@ -162,7 +162,11 @@ public class MarkTeleportSkill extends Skill {
                     blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos),
                     player.getEyeHeight());
         }
-        return end;
+        // Rien devant : on s'arrete au bout du regard, mais <b>aux pieds</b> — une hauteur d'yeux
+        // sous ce bout. C'est ce qui met les yeux du joueur, une fois arrive, exactement la ou le
+        // regard pointait : le fantome se tient alors centre sur le curseur, au lieu de flotter
+        // au-dessus de lui de toute sa hauteur.
+        return end.subtract(0, player.getEyeHeight(), 0);
     }
 
     @Nullable
