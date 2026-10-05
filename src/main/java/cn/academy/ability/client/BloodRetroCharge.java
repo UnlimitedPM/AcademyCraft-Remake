@@ -28,23 +28,30 @@ public final class BloodRetroCharge {
     /** L'avancement de la charge, de zero a un. */
     private static float progress;
 
+    /**
+     * La duree de reference du dezoom, en ticks.
+     *
+     * <p>Le retour de sang ne declare <b>aucun</b> maximum de charge : sa touche peut partir a tout
+     * moment — voir {@code BloodRetrogradeSkill.getMaxChargeTicks}, qui rend zero. L'original la
+     * terminait tout seul au bout de trente ticks, et c'est donc trente ticks qui donnent l'echelle
+     * du dezoom. La competence, elle, ne dit rien.
+     */
+    public static final int CHARGE_TICKS = 30;
+
     private BloodRetroCharge() {
     }
 
     /**
      * Avancer d'un tick de maintien.
      *
-     * <p>La competence dit elle-meme la duree de sa charge — c'est le temps qu'il faut tenir pour
-     * l'envoyer au maximum — et c'est donc l'echelle de ce dezoom. Une charge qui n'est pas la
-     * sienne remet le dezoom a zero.
+     * <p>Une charge qui n'est pas la sienne remet le dezoom a zero.
      */
     public static void tick(Player player, Skill skill, int chargeTicks) {
         if (skill != VecmanipCategory.BLOOD_RETROGRADE) {
             progress = 0f;
             return;
         }
-        int max = skill.getMaxChargeTicks(ClientAbilityData.get());
-        progress = max <= 0 ? 0f : Math.min(1f, chargeTicks / (float) max);
+        progress = Math.min(1f, chargeTicks / (float) CHARGE_TICKS);
     }
 
     /** Les degres a ajouter a la vue ; zero quand aucune charge n'est en cours. */

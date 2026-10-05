@@ -445,7 +445,6 @@ public class GroundshockSkill extends Skill {
             }
 
             level.removeBlock(pos, false);
-            level.playSound(null, pos, SoundEvents.ANVIL_DESTROY, SoundSource.AMBIENT, 0.5f, 1f);
         }
 
         /** Ceux qui se trouvent dans le rang, une seule fois chacun. */

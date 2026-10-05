@@ -60,11 +60,14 @@ public final class VecAccelPreviewRenderer {
         float partialTick = event.getPartialTick();
         float pitch = Mth.lerp(partialTick, player.xRotO, player.getXRot());
         float yaw = Mth.lerp(partialTick, player.yRotO, player.getYRot());
-        Vec3 feet = player.getPosition(partialTick);
+        Vec3 eyes = player.getEyePosition(partialTick);
         Vec3 look = Vec3.directionFromRotation(pitch, yaw);
+        // La verticale de l'ECRAN, comme les eclairs et les rayons : c'est elle qui porte la hauteur
+        // du decalage, donc la main se replace correctement meme en regardant le ciel.
+        org.joml.Vector3f up = event.getCamera().getUpVector();
 
         List<Vec3> points = VecAccelPreview.points(
-                VecAccelPreview.handFrom(feet, look),
+                VecAccelPreview.handFrom(eyes, look, new Vec3(up.x, up.y, up.z)),
                 VecAccelPreview.initialSpeed(pitch, yaw, live.speed()));
         Vec3 camera = event.getCamera().getPosition();
         Matrix4f base = event.getPoseStack().last().pose();

@@ -1,6 +1,7 @@
 package cn.academy.ability.client.vm;
 
 import cn.academy.ability.Skill;
+import cn.academy.ability.client.arc.ArcView;
 import cn.academy.ability.vecmanip.VecAccelSkill;
 import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.world.entity.player.Player;
@@ -42,20 +43,6 @@ public final class VecAccelPreview {
     public static final double DRAG = 0.98;
     public static final double GRAVITY = 1.9;
 
-    /**
-     * Le decalage lateral du depart, vers la droite du porteur.
-     *
-     * <p>L'original en donnait huit centimetres — son propre {@code -0.08}, applique au regard
-     * tourne d'un quart de tour. Le joueur trouve la parabole du port un peu trop a droite de son
-     * ecran par rapport au vrai mod : le decalage est donc reduit de moitie, et c'est le seul
-     * nombre que cette correction touche.
-     */
-    public static final double HAND_SIDE = -0.04;
-
-    /** Le reste du depart : 1,56 de haut — la main, pas les yeux — et douze centimetres en arriere. */
-    public static final double HAND_HEIGHT = 1.56;
-    public static final double HAND_BACK = -0.12;
-
     /** L'inclinaison du lancer : dix degres sous le regard. */
     public static final float LAUNCH_PITCH = -10;
 
@@ -64,13 +51,30 @@ public final class VecAccelPreview {
     public static final double ALPHA_START = 0.7;
     public static final double ALPHA_STEP = 0.03;
 
-    /** La ou part la parabole : la main du porteur, dans son repere. */
-    public static Vec3 handFrom(Vec3 feet, Vec3 look) {
-        Vec3 flat = new Vec3(look.x, 0, look.z);
-        // Un regard tout droit vers le ciel n'a pas de droite : on retombe alors sur le nord, comme
-        // l'original qui normalisait un vecteur nul.
-        Vec3 side = flat.lengthSqr() < 1e-9 ? new Vec3(0, 0, 1) : new Vec3(flat.z, 0, -flat.x).normalize();
-        return feet.add(side.scale(HAND_SIDE)).add(0, HAND_HEIGHT, 0).add(look.scale(HAND_BACK));
+    /**
+     * La ou part la parabole : la main du porteur, comme celle des eclairs.
+     *
+     * <p>Le port la calculait dans le monde — huit centimetres sur le cote, 1,56 de haut — et
+     * c'etait faux : cette main-la ne tombe pas la ou l'oeil voit la sienne, donc la parabole
+     * semblait partir a cote. Les eclairs et les rayons du plasma se recollent a la main par
+     * {@link ArcView#fixStart}, avec les nombres de l'original, et la parabole fait desormais
+     * pareil : elle part des yeux, puis glisse dans le repere du tir de {@code FIRST_PERSON}.
+     *
+     * <p>Le repere est celui de la <b>visee</b> — le long du regard, sa hauteur, son cote — et
+     * c'est ce qui rend l'illusion stable : lever les yeux au ciel ne fait pas glisser la main.
+     * Une visee sans repere — tout droit vers le zénith — rend les yeux tels quels.
+     *
+     * @param eyes la position des yeux du porteur
+     * @param look sa visee
+     * @param up la verticale de l'ecran, celle de la camera
+     */
+    public static Vec3 handFrom(Vec3 eyes, Vec3 look, Vec3 up) {
+        double[][] fixed = ArcView.fixStart(
+                new double[] { eyes.x, eyes.y, eyes.z },
+                new double[] { eyes.x + look.x, eyes.y + look.y, eyes.z + look.z },
+                new double[] { up.x, up.y, up.z },
+                ArcView.FIRST_PERSON);
+        return new Vec3(fixed[0][0], fixed[0][1], fixed[0][2]);
     }
 
     /** La vitesse de lancement : le regard baisse de dix degres, a la vitesse de la charge. */

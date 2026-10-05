@@ -23,30 +23,35 @@ class VecAccelPreviewTest {
     private static final Vec3 FEET = new Vec3(0.5, 64, 0.5);
     private static final Vec3 LOOK = new Vec3(0, 0, 1);
 
-    @Test
-    @DisplayName("elle part de la main droite, sous les yeux")
-    void ellePartDeLaMain() {
-        Vec3 hand = VecAccelPreview.handFrom(FEET, LOOK);
+    /** La verticale de l'ecran, celle de la camera. */
+    private static final Vec3 UP = new Vec3(0, 1, 0);
 
-        assertEquals(1.56, hand.y - FEET.y, 1e-9,
-                "a 1,56 de haut — la main, pas les yeux");
-        // Le regard vers +Z : sa droite est -X (a droite du sud, il y a l'ouest), et le port
-        // applique quatre centimetres de ce cote-la — la moitie de l'original, a la demande du
-        // joueur, qui trouvait la parabole trop a droite de son ecran.
-        assertEquals(-0.04, hand.x - FEET.x, 1e-9, "quatre centimetres a droite");
-        assertEquals(-0.12, hand.z - FEET.z, 1e-9, "et douze en arriere du regard");
+    @Test
+    @DisplayName("elle part de la main, comme les eclairs")
+    void ellePartDeLaMain() {
+        // Les yeux d'un porteur regardant vers +Z, ses pieds 1,62 plus bas.
+        Vec3 eyes = FEET.add(0, 1.62, 0);
+        Vec3 hand = VecAccelPreview.handFrom(eyes, LOOK, UP);
+
+        // Le decalage des eclairs, chiffre par chiffre : un peu en arriere du depart, un quart de
+        // bloc plus bas, et vingt centimetres sur le cote. Le cote lui-meme n'est pas verifie — il
+        // vient de la visee, et le signe appartient a ArcView.fixStart, deja teste.
+        assertEquals(-0.05, hand.z - eyes.z, 1e-9, "cinq centimetres en arriere du depart");
+        assertEquals(-0.25, hand.y - eyes.y, 1e-9, "et un quart de bloc plus bas");
+        assertEquals(0.2, Math.abs(hand.x - eyes.x), 1e-9, "vingt centimetres sur le cote");
     }
 
     @Test
     @DisplayName("un regard vertical ne casse pas le depart")
     void unRegardVerticalNeCasseRien() {
-        Vec3 hand = VecAccelPreview.handFrom(FEET, new Vec3(0, 1, 0));
+        Vec3 eyes = FEET.add(0, 1.62, 0);
+        // Visee et verticale confondues : il n'y a plus de repere d'ecran. Le repere s'en choisit
+        // alors un autre — une perpendiculaire stable — et le decalage reste celui des eclairs :
+        // un tiers de bloc, pas davantage. C'est le repli de ArcFrame.
+        Vec3 hand = VecAccelPreview.handFrom(eyes, UP, UP);
 
-        // Le recul du depart suit le regard, donc un regard vers le ciel fait descendre la main
-        // de douze centimetres. C'est l'original, et ca ne casse rien.
-        assertEquals(1.44, hand.y - FEET.y, 1e-9, "la hauteur tient, au recul pres");
-        assertTrue(Double.isFinite(hand.x) && Double.isFinite(hand.z),
-                "et le depart reste un point : " + hand);
+        assertEquals(Math.sqrt(0.05 * 0.05 + 0.25 * 0.25 + 0.2 * 0.2), hand.distanceTo(eyes), 1e-9,
+                "un tiers de bloc a peine : " + hand);
     }
 
     @Test

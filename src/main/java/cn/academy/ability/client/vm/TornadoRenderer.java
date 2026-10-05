@@ -85,13 +85,16 @@ public final class TornadoRenderer {
             // interpolees : au tick, elles resteraient une image en arriere et traineraient
             // derriere le joueur des qu'il tourne la tete. La colonne du canon, elle, est posee
             // une fois pour toutes.
+            //
+            // L'orientation est celle du CORPS — les ailes tiennent au dos — et la hauteur celle
+            // des epaules : voir VecmanipTornados.
             var follower = tornado.following();
             Vec3 position = follower == null
                     ? tornado.position()
                     : follower.getPosition(partialTick)
                             .add(0, TornadoVisuals.SHOULDERS, 0);
             float yaw = follower == null ? tornado.yaw()
-                    : Mth.lerp(partialTick, follower.yRotO, follower.getYRot());
+                    : Mth.lerp(partialTick, follower.yBodyRotO, follower.yBodyRot);
             float pitch = follower == null ? tornado.pitch()
                     : Mth.lerp(partialTick, follower.xRotO, follower.getXRot());
 

@@ -118,7 +118,11 @@ public final class VecmanipTornados {
             wings.fadeTick = 0;
             wings.following = player;
             wings.position = player.position().add(0, TornadoVisuals.SHOULDERS, 0);
-            wings.yaw = player.getYRot();
+            // L'orientation du CORPS, et non celle de la tete : les ailes tiennent au dos, donc
+            // elles tournent avec le personnage. Le port suivait la visee, et le joueur a vu ce
+            // que cela donne — regarder tout droit avec le corps en travers fait trainer les
+            // ailes, comme si elles ne suivaient pas.
+            wings.yaw = player.yBodyRot;
             wings.pitch = player.getXRot();
             // Le chargeur de l'original ne comptait pas de la meme facon que celui du port, mais
             // la montree se lit sur le meme nombre : les ticks du maintien en cours.
