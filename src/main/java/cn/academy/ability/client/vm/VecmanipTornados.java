@@ -49,6 +49,7 @@ public final class VecmanipTornados {
         private Vec3 position;
         private float yaw;
         private float pitch;
+        private Player following;
         private double alpha;
         private boolean dying;
         private int fadeTick;
@@ -75,6 +76,17 @@ public final class VecmanipTornados {
 
         public float pitch() {
             return pitch;
+        }
+
+        /**
+         * Le porteur que cette tornade suit, ou rien si elle est posee.
+         *
+         * <p>Les ailes suivent leur porteur, et le rendu les relit a chaque image avec les
+         * valeurs <b>interpolees</b> : sans cela, elles resteraient au tick precedent et
+         * traineraient derriere le joueur des qu'il tourne la tete.
+         */
+        public Player following() {
+            return following;
         }
 
         /** Son opacite, avant le facteur de dessin : voir {@code TornadoVisuals.DRAW_ALPHA}. */
@@ -104,7 +116,8 @@ public final class VecmanipTornados {
             }
             wings.dying = false;
             wings.fadeTick = 0;
-            wings.position = player.position();
+            wings.following = player;
+            wings.position = player.position().add(0, TornadoVisuals.SHOULDERS, 0);
             wings.yaw = player.getYRot();
             wings.pitch = player.getXRot();
             // Le chargeur de l'original ne comptait pas de la meme facon que celui du port, mais
@@ -116,18 +129,16 @@ public final class VecmanipTornados {
         }
 
         if (skill == VecmanipCategory.PLASMA_CANNON) {
-            float chargeTime = VecmanipCategory.PLASMA_CANNON.chargeTime(ClientAbilityData.get());
-            if (ticks <= chargeTime) {
-                if (cannon == null) {
-                    cannon = new Live(TornadoVisuals.cannon(RANDOM),
-                            ground(player, player.position()
-                                    .add(0, PlasmaCannonSkill.START_HEIGHT, 0)),
-                            0, 0);
-                }
-                cannon.alpha = TornadoVisuals.cannonRiseAlpha(cannon.age);
-            } else {
-                end(skill);
+            // La colonne vit tant que le maintien est ouvert, et pas un tick de moins : elle
+            // s'efface au relachement, quand la boule part. La borner a la duree de charge la
+            // faisait disparaitre sous les yeux du joueur pendant qu'il chargeait encore.
+            if (cannon == null) {
+                cannon = new Live(TornadoVisuals.cannon(RANDOM),
+                        ground(player, player.position()
+                                .add(0, PlasmaCannonSkill.START_HEIGHT, 0)),
+                        0, 0);
             }
+            cannon.alpha = TornadoVisuals.cannonRiseAlpha(cannon.age);
         }
     }
 

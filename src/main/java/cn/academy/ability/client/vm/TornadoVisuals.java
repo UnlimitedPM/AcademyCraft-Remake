@@ -51,6 +51,14 @@ public final class TornadoVisuals {
     public static final double WINGS_PRE_Y = 0.2;
     public static final double WINGS_PRE_Z = -0.5;
 
+    /**
+     * La hauteur ou se posent les ailes : 1,6 bloc au-dessus des pieds, comme l'original.
+     *
+     * <p>C'est la hauteur d'epaules ou il posait son entite ({@code player.posY + 1.6}) — sans
+     * elle, les ailes pendent SOUS le joueur, ce que le joueur a vu tout de suite.
+     */
+    public static final double SHOULDERS = 1.6;
+
     /** L'ecartement des quatre fuseaux, sur l'axe du dos. */
     public static final double WINGS_FAN = 45;
 

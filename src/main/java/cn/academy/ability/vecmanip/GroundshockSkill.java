@@ -417,12 +417,25 @@ public class GroundshockSkill extends Skill {
 
             BlockState state = level.getBlockState(pos);
             if (state.is(Blocks.FARMLAND) || !state.getFluidState().isEmpty()) return;
+            if (state.isAir()) return;
+
+            // Les eclats du bloc frappe : l'original les faisait naitre cote client, a partir de
+            // la liste des blocs que le serveur lui envoyait — quatre a huit eclats par bloc, et
+            // une bouffee de fumee une fois sur deux. On les fait naitre ici, sur place : c'est le
+            // meme effet, sans le detour par le reseau.
+            //
+            // Ils partent AVANT le test de resistance, et c'est voulu : un bloc trop dur pour le
+            // coup ne casse pas, mais il encaisse quand meme, et le joueur doit le voir. C'est le
+            // reproche qu'il a fait — « quand je frappe des blocs, il n'y a pas les particules ».
+            level.sendParticles(
+                    new net.minecraft.core.particles.BlockParticleOption(
+                            net.minecraft.core.particles.ParticleTypes.BLOCK, state),
+                    pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
+                    4 + random.nextInt(5), 0.5, 0.4, 0.5, 0.2);
 
             float hardness = state.getDestroySpeed(level, pos);
             if (hardness < 0f || energy < hardness) return;
             energy -= hardness;
-
-            if (state.isAir()) return;
 
             if (drop && random.nextDouble() < dropRate) {
                 List<ItemStack> drops = Block.getDrops(state, level, pos, null, player, ItemStack.EMPTY);

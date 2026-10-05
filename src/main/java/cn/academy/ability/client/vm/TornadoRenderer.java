@@ -10,6 +10,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.Util;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -63,6 +64,7 @@ public final class TornadoRenderer {
 
         Vec3 camera = event.getCamera().getPosition();
         Matrix4f base = event.getPoseStack().last().pose();
+        float partialTick = event.getPartialTick();
         double seconds = Util.getMillis() / 1000.0;
 
         RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
@@ -79,12 +81,26 @@ public final class TornadoRenderer {
         for (VecmanipTornados.Live tornado : live) {
             float alpha = (float) (tornado.alpha() * TornadoVisuals.DRAW_ALPHA);
 
+            // Les ailes SUIVENT leur porteur, et se relisent donc a chaque image avec ses valeurs
+            // interpolees : au tick, elles resteraient une image en arriere et traineraient
+            // derriere le joueur des qu'il tourne la tete. La colonne du canon, elle, est posee
+            // une fois pour toutes.
+            var follower = tornado.following();
+            Vec3 position = follower == null
+                    ? tornado.position()
+                    : follower.getPosition(partialTick)
+                            .add(0, TornadoVisuals.SHOULDERS, 0);
+            float yaw = follower == null ? tornado.yaw()
+                    : Mth.lerp(partialTick, follower.yRotO, follower.getYRot());
+            float pitch = follower == null ? tornado.pitch()
+                    : Mth.lerp(partialTick, follower.xRotO, follower.getXRot());
+
             Matrix4f root = new Matrix4f(base)
-                    .translate((float) (tornado.position().x - camera.x),
-                            (float) (tornado.position().y - camera.y),
-                            (float) (tornado.position().z - camera.z))
-                    .rotateY((float) Math.toRadians(-tornado.yaw()))
-                    .rotateX((float) Math.toRadians(tornado.pitch() * 0.2))
+                    .translate((float) (position.x - camera.x),
+                            (float) (position.y - camera.y),
+                            (float) (position.z - camera.z))
+                    .rotateY((float) Math.toRadians(-yaw))
+                    .rotateX((float) Math.toRadians(pitch * 0.2))
                     .rotateX((float) Math.toRadians(tornado.layout().tiltX()))
                     .translate((float) tornado.layout().preX(), (float) tornado.layout().preY(),
                             (float) tornado.layout().preZ());

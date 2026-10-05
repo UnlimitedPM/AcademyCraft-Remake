@@ -494,6 +494,9 @@ public class AbilityClientEvents {
                     // Et le plasma du meltdowner, qui tourne autour de celui qui le charge :
                     // l'essaim de l'original, aux memes nombres. Voir MeltdownerCharge.
                     MeltdownerCharge.tick(player, skill, ClientCharge.getTicks());
+                    // Et le dezoom du retour de sang, qui previent que la touche est pleine :
+                    // voir BloodRetroCharge.
+                    BloodRetroCharge.tick(player, skill, ClientCharge.getTicks());
                     // Et la parabole de visee de l'acceleration de vecteur : elle part de la main
                     // droite, suit le regard baisse de dix degres, et s'allonge avec la charge.
                     // Voir VecAccelPreview.
@@ -557,6 +560,7 @@ public class AbilityClientEvents {
         ClientCharge.end();
         ThunderClapEffect.end();
         MeltdownerCharge.end();
+        BloodRetroCharge.end();
         // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
         // c'est ce que fait ce crochet.
         MineRayEffect.end(skill.getName());
@@ -584,12 +588,16 @@ public class AbilityClientEvents {
      * qui l'a recu a la demande du joueur et a la moitie de ses degres. Chacune dit la sienne, et
      * celle d'une charge qui n'est pas la sienne vaut zero.
      *
+     * <p>Troisieme depuis : le retour de sang, qui le doit a la meme demande — voir
+     * {@code BloodRetroCharge}.
+     *
      * <p>C'est un <b>nombre de degres</b> ajoute au champ du joueur, donc il se voit quel que soit
      * son reglage, et il grandit avec la charge.
      */
     @SubscribeEvent
     public static void onComputeFov(net.minecraftforge.client.event.ComputeFovModifierEvent event) {
-        float degrees = ThunderClapEffect.fovDegrees() + MeltdownerCharge.fovDegrees();
+        float degrees = ThunderClapEffect.fovDegrees() + MeltdownerCharge.fovDegrees()
+                + BloodRetroCharge.fovDegrees();
         if (degrees <= 0f) return;
 
         // Le facteur attendu est un rapport au champ de BASE — celui du reglage, pas celui de

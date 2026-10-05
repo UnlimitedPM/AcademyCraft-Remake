@@ -30,9 +30,10 @@ class VecAccelPreviewTest {
 
         assertEquals(1.56, hand.y - FEET.y, 1e-9,
                 "a 1,56 de haut — la main, pas les yeux");
-        // Le regard vers +Z : sa droite est -X (a droite du sud, il y a l'ouest), et l'original
-        // applique huit centimetres de ce cote-la.
-        assertEquals(-0.08, hand.x - FEET.x, 1e-9, "huit centimetres a droite");
+        // Le regard vers +Z : sa droite est -X (a droite du sud, il y a l'ouest), et le port
+        // applique quatre centimetres de ce cote-la — la moitie de l'original, a la demande du
+        // joueur, qui trouvait la parabole trop a droite de son ecran.
+        assertEquals(-0.04, hand.x - FEET.x, 1e-9, "quatre centimetres a droite");
         assertEquals(-0.12, hand.z - FEET.z, 1e-9, "et douze en arriere du regard");
     }
 

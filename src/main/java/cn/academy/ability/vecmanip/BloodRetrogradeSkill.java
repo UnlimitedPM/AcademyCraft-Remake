@@ -158,6 +158,10 @@ public class BloodRetrogradeSkill extends Skill {
         if (!data.perform(consumption(data), overload(data))) return;
 
         target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        // Et le sang qui gicle de la plaie : l'original posait une eclaboussure sur la cible
+        // frappee, et le port ne le faisait pas — c'est le meme retour que la teleporteuse, qui
+        // passe par le meme paquet. Voir BloodSplashes.
+        cn.academy.ability.network.BloodSplashPacket.send(target);
         // Le son du coup, entendu du seul joueur qui l'a porte : c'est le
         // `playClient(player, "vecmanip.blood_retro", AMBIENT, 1.0f)` de l'original.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_BLOOD_RETRO, 1f);

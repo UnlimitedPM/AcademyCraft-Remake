@@ -42,8 +42,17 @@ public final class VecAccelPreview {
     public static final double DRAG = 0.98;
     public static final double GRAVITY = 1.9;
 
-    /** Le depart se prend a la main : huit centimetres de cote, 1,56 de haut, douze en arriere. */
-    public static final double HAND_SIDE = -0.08;
+    /**
+     * Le decalage lateral du depart, vers la droite du porteur.
+     *
+     * <p>L'original en donnait huit centimetres — son propre {@code -0.08}, applique au regard
+     * tourne d'un quart de tour. Le joueur trouve la parabole du port un peu trop a droite de son
+     * ecran par rapport au vrai mod : le decalage est donc reduit de moitie, et c'est le seul
+     * nombre que cette correction touche.
+     */
+    public static final double HAND_SIDE = -0.04;
+
+    /** Le reste du depart : 1,56 de haut — la main, pas les yeux — et douze centimetres en arriere. */
     public static final double HAND_HEIGHT = 1.56;
     public static final double HAND_BACK = -0.12;
 
