@@ -175,8 +175,8 @@ public final class TornadoRenderer {
         buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
         for (WingDust.Grain grain : WingDust.live()) {
-            Vec3 centre = grain.pos();
-            float alpha = grain.alpha();
+            Vec3 centre = grain.at(event.getPartialTick());
+            float alpha = grain.alpha(event.getPartialTick());
             Vec3 a = across.scale(WingDust.SIZE / 2);
             Vec3 b = upright.scale(WingDust.SIZE / 2);
             dustVertex(buffer, base, camera, centre.subtract(a).subtract(b), alpha);

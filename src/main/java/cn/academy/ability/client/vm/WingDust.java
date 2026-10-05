@@ -79,33 +79,53 @@ public final class WingDust {
     /** Un grain vivant : ou il est, ou il va, et son age. */
     public static final class Grain {
 
+        private final double[] prev;
         private final double[] pos;
         private final double[] vel;
         private final int life;
         private int age;
 
         Grain(double[] pos, double[] vel, int life) {
+            this.prev = pos.clone();
             this.pos = pos;
             this.vel = vel;
             this.life = life;
         }
 
-        public Vec3 pos() {
-            return new Vec3(pos[0], pos[1], pos[2]);
+        /**
+         * Ou il est, vu par une image.
+         *
+         * <p>Le grain avance au <b>tick</b> et le rendu se fait a chaque <b>image</b> : sans cette
+         * interpolation, il sauterait vingt fois par seconde, et cela se voit tout de suite — c'est
+         * le reproche du joueur. Le montage est celui des tornades et des ailes, qui relisent leur
+         * porteur de la meme facon.
+         */
+        public Vec3 at(float partialTick) {
+            return new Vec3(
+                    prev[0] + (pos[0] - prev[0]) * partialTick,
+                    prev[1] + (pos[1] - prev[1]) * partialTick,
+                    prev[2] + (pos[2] - prev[2]) * partialTick);
+        }
+
+        /** Son age vu par une image : le tick en cours, plus la part d'image. */
+        private double ageAt(float partialTick) {
+            return age + partialTick;
         }
 
         /**
-         * Son opacite : elle monte en trois ticks, se tient pendant sa vie, puis s'efface.
+         * Son opacite a cette image-la : elle monte, se tient, puis s'efface.
          *
-         * <p>C'est la vie entiere du grain qui se lit ici, et non un compte a rebours separe : le
-         * rendu n'a donc rien a tenir, et l'effacement commence apres la vie, comme chez l'original.
+         * <p>C'est la vie entiere du grain qui se lit ici, et elle se lit <b>en continu</b> : une
+         * apparition qui sauterait de tiers en tiers de seconde se verrait autant que le
+         * deplacement.
          */
-        public float alpha() {
-            if (age < FADE_IN_TICKS) {
-                return ALPHA * age / (float) FADE_IN_TICKS;
+        public float alpha(float partialTick) {
+            double now = ageAt(partialTick);
+            if (now < FADE_IN_TICKS) {
+                return (float) (ALPHA * now / FADE_IN_TICKS);
             }
-            if (age > life) {
-                return ALPHA * Math.max(0f, 1f - (age - life) / (float) FADE_TICKS);
+            if (now > life) {
+                return (float) (ALPHA * Math.max(0, 1 - (now - life) / FADE_TICKS));
             }
             return ALPHA;
         }
@@ -117,6 +137,7 @@ public final class WingDust {
 
         /** Un tick : il avance de sa vitesse, et tombe d'un rien. */
         void advance() {
+            System.arraycopy(pos, 0, prev, 0, 3);
             pos[0] += vel[0];
             pos[1] += vel[1];
             pos[2] += vel[2];

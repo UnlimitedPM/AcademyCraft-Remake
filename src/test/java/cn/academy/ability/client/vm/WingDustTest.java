@@ -45,20 +45,36 @@ class WingDustTest {
     }
 
     @Test
+    void unGrainSEInterpoleEntreDeuxTicks() {
+        // Le grain avance au tick et se dessine a chaque image : c'est cette interpolation qui le
+        // fait glisser au lieu de sauter vingt fois par seconde.
+        WingDust.Grain grain = new WingDust.Grain(new double[] { 0, 0, 0 },
+                new double[] { 0.4, 0, 0 }, 20);
+        grain.advance();
+
+        assertEquals(0.0, grain.at(0f).x, 1e-9, "l'image du tick le montre d'ou il vient");
+        assertEquals(0.4, grain.at(1f).x, 1e-9, "et celle du tick suivant, la ou il est");
+        assertEquals(0.2, grain.at(0.5f).x, 1e-9, "donc il glisse, et ne saute pas");
+    }
+
+    @Test
     void unGrainApparaitPuisSEfface() {
         WingDust.Grain grain = new WingDust.Grain(new double[] { 0, 0, 0 }, new double[] { 0, 0, 0 }, 20);
 
-        assertEquals(0f, grain.alpha(), 1e-6f, "il nait transparent");
+        assertEquals(0f, grain.alpha(0f), 1e-6f, "il nait transparent");
+        // Et son apparition est continue, elle aussi : a mi-tick, il est a mi-opacite.
+        assertEquals(WingDust.ALPHA / 2, grain.alpha(WingDust.FADE_IN_TICKS / 2f), 1e-6f,
+                "et il monte sans sauter");
         for (int i = 0; i < WingDust.FADE_IN_TICKS; i++) {
             grain.advance();
         }
-        assertEquals(WingDust.ALPHA, grain.alpha(), 1e-6f, "il est plein au bout de l'apparition");
+        assertEquals(WingDust.ALPHA, grain.alpha(0f), 1e-6f, "il est plein au bout de l'apparition");
         assertFalse(grain.dead(), "et il vit encore");
 
         for (int i = 0; i < 25; i++) {
             grain.advance();
         }
-        assertTrue(grain.alpha() < WingDust.ALPHA, "puis il s'efface");
+        assertTrue(grain.alpha(0f) < WingDust.ALPHA, "puis il s'efface");
         assertTrue(grain.dead(), "et s'en va pour de bon a la fin de l'effacement");
     }
 }
