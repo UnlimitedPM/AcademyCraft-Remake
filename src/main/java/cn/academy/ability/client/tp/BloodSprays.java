@@ -1,18 +1,12 @@
 package cn.academy.ability.client.tp;
 
-import cn.academy.ability.Skill;
-import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -40,32 +34,19 @@ import java.util.List;
  * nommees {@code grnd}. Les deux familles sont apparues echangees dans les ressources de
  * l'original, et le port garde l'echange : ce sont ces images-la que le joueur a vues.
  *
- * <h2>Ce que le port fait autrement</h2>
+ * <h2>D'ou elles viennent</h2>
  *
- * <p>L'original tirait ses neuf directions depuis la <b>tete de sa victime</b>, que seul son
- * contexte client connaissait. Le port les tire des <b>yeux du tireur</b>, deux blocs plus loin :
- * la victime est juste devant, la gerbe s'ouvre sur cinq blocs, et le sol frappe est le meme. La
- * difference se voit si l'on frappe une cible collee a un mur, et elle est assumee — le port
- * n'interroge pas le serveur pour savoir qui a ete touche, et n'ajoute donc pas de paquet.
+ * <p>Du <b>serveur</b>, et c'est tout le point : lui seul sait qui a ete touche, donc lui seul sait
+ * s'il faut en semer. Le port les tirait chez le client, et le joueur a vu les deux defauts que
+ * cela donne — des taches quand rien n'est touche, et des taches semees depuis ses propres yeux au
+ * lieu de la tete de sa victime, donc trop loin, trop sur les murs. Le serveur les trace maintenant
+ * depuis la bonne tete, avec les nombres de l'original, et les envoie — voir BloodSprayPacket.
  *
  * <p>Les taches vivent une minute, ou jusqu'a ce que leur bloc disparaisse — l'original disait
  * vingt-quatre mille ticks, soit vingt minutes, ce qui revient au meme a l'echelle d'une partie
  * mais laissait des taches dans les sauvegardes longues.
  */
 public final class BloodSprays {
-
-    /** Les neuf directions de la gerbe, en degres sous le regard : celle de l'original. */
-    public static final int[] SPRAY_ANGLES = { 0, 30, 45, 60, 80, -30, -45, -60, -80 };
-
-    /** Le flou du lacet : vingt degres de chaque cote. */
-    public static final float YAW_JITTER = 20f;
-
-    /** La portee de chaque direction : cinq blocs, et un demi-bloc en arriere du depart. */
-    public static final double SPRAY_RANGE = 5.0;
-    public static final double SPRAY_BACK = 0.5;
-
-    /** Le nombre de taches par bloc rencontre : deux. */
-    public static final int SPRAYS_PER_HIT = 2;
 
     /** Une tache vit une minute. */
     public static final int LIFE_TICKS = 1200;
@@ -122,33 +103,6 @@ public final class BloodSprays {
     /** Tout effacer : le monde change, et rien de ce qui etait pose n'y est plus. */
     public static void clear() {
         LIVE.clear();
-    }
-
-    /**
-     * La gerbe du retour de sang : neuf directions depuis les yeux du tireur.
-     *
-     * <p>Chaque direction qui rencontre un bloc y pose deux taches, sur la face frappee. C'est un
-     * detail de {@link #sprayFor}, et rien d'autre : la classe ne s'ouvre que par la competence.
-     */
-    private static void spray(Player player) {
-        Level level = player.level();
-        Vec3 eyes = player.getEyePosition(1f);
-        float headYaw = player.getYHeadRot();
-
-        for (int angle : SPRAY_ANGLES) {
-            float yaw = headYaw + (RANDOM.nextFloat() * 2f - 1f) * YAW_JITTER;
-            Vec3 look = Vec3.directionFromRotation(angle, yaw);
-            Vec3 from = eyes.subtract(look.scale(SPRAY_BACK));
-            Vec3 to = eyes.add(look.scale(SPRAY_RANGE));
-
-            BlockHitResult hit = level.clip(new ClipContext(from, to,
-                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-            if (hit.getType() != HitResult.Type.BLOCK) continue;
-
-            for (int i = 0; i < SPRAYS_PER_HIT; i++) {
-                pose(level, hit.getBlockPos(), hit.getDirection());
-            }
-        }
     }
 
     /**
@@ -220,15 +174,16 @@ public final class BloodSprays {
     }
 
     /**
-     * La gerbe d'un coup porte, et rien du tout pour une autre competence.
+     * Pose les taches annoncees par le serveur : une par face, autant de fois qu'il l'a dit.
      *
-     * <p>C'est le chemin du client, au relachement de la touche : le meme instant que le coup du
-     * serveur. Le port ne demande rien au serveur — il tire ses directions dans son propre monde,
-     * qui est le meme.
+     * <p>C'est le serveur qui a trace la gerbe — lui seul sait qui a ete touche — et le client ne
+     * fait ici que ce qu'il ne peut pas faire sans lui : lire la forme des blocs frappes.
      */
-    public static void sprayFor(Skill skill) {
-        if (skill != VecmanipCategory.BLOOD_RETROGRADE) return;
-        Player player = Minecraft.getInstance().player;
-        if (player != null) spray(player);
+    public static void poseAll(java.util.List<BlockPos> positions, java.util.List<Direction> faces) {
+        Level level = Minecraft.getInstance().level;
+        if (level == null) return;
+        for (int i = 0; i < positions.size() && i < faces.size(); i++) {
+            pose(level, positions.get(i), faces.get(i));
+        }
     }
 }

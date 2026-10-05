@@ -80,6 +80,11 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, BloodSplashPacket.class,
                 BloodSplashPacket::encode, BloodSplashPacket::decode,
                 BloodSplashPacket::handle);
+        // Et les taches de sang au sol : le serveur seul sait QUI a ete touche, donc lui seul sait
+        // s'il faut en semer. Voir BloodSprayPacket et BloodSprays.
+        CHANNEL.registerMessage(nextId++, BloodSprayPacket.class,
+                BloodSprayPacket::encode, BloodSprayPacket::decode,
+                BloodSprayPacket::handle);
         // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
         // Voir MdMissilePacket.
         CHANNEL.registerMessage(nextId++, MdMissilePacket.class,

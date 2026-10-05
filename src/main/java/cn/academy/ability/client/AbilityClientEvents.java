@@ -572,10 +572,8 @@ public class AbilityClientEvents {
         // Le coup du choc au sol fait piquer la visee : l'original le posait a l'envoi, et
         // seulement si le coup avait porte — voir GroundshockCamera.
         if (performed) cn.academy.ability.client.vm.GroundshockCamera.slash(skill);
-        // Et la gerbe de sang du retour de sang, qui reste sur le sol ou elle tombe : ses neuf
-        // directions se tirent chez le client, au meme instant que le coup du serveur. Voir
-        // BloodSprays.
-        if (performed) cn.academy.ability.client.tp.BloodSprays.sprayFor(skill);
+        // La gerbe de sang, elle, ne se pose plus ici : c'est le serveur qui la trace — lui seul
+        // sait qui a ete touche — et un paquet la porte jusqu'ici. Voir BloodSprayPacket.
         // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
         // c'est ce que fait ce crochet.
         MineRayEffect.end(skill.getName());

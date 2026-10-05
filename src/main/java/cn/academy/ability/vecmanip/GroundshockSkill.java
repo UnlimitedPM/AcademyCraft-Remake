@@ -433,6 +433,17 @@ public class GroundshockSkill extends Skill {
                     pos.getX() + 0.5, pos.getY() + 0.9, pos.getZ() + 0.5,
                     4 + random.nextInt(5), 0.5, 0.4, 0.5, 0.2);
 
+            // Et la fumee : l'original en posait une sur la moitie des blocs casses, une grosse
+            // bouffee de deux blocs posee au-dessus du bloc. Le port seme deux poussieres de fumee
+            // de vanilla au meme endroit, avec la meme chance : le nuage y est, la grosseur non —
+            // une bouffee de cette taille-la demande un effet a lui, que le port n'a pas encore.
+            // Voir SmokeEffect dans l'original.
+            if (random.nextBoolean()) {
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE,
+                        pos.getX() + 0.5, pos.getY() + 1.05, pos.getZ() + 0.5,
+                        2, 0.3, 0.15, 0.3, 0.02);
+            }
+
             float hardness = state.getDestroySpeed(level, pos);
             if (hardness < 0f || energy < hardness) return;
             energy -= hardness;

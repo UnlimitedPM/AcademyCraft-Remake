@@ -48,6 +48,24 @@ public class BloodRetrogradeSkill extends Skill {
     /** 0,002 par contact porte. */
     public static final float EXP = 0.002f;
 
+    /** Les neuf directions de la gerbe, en degres de tangage : celles de l'original. */
+    public static final int[] SPRAY_ANGLES = { 0, 30, 45, 60, 80, -30, -45, -60, -80 };
+
+    /** Le flou du lacet : vingt degres de chaque cote. */
+    public static final float SPRAY_YAW_JITTER = 20f;
+
+    /** La portee de chaque direction : cinq blocs, et un demi-bloc en arriere du depart. */
+    public static final double SPRAY_RANGE = 5.0;
+    public static final double SPRAY_BACK = 0.5;
+
+    /** Le depart se prend a six dixiemes de la hauteur de la victime. */
+    public static final double SPRAY_HEAD = 0.6;
+
+    /** Et chaque bloc rencontre en prend deux. */
+    public static final int SPRAYS_PER_HIT = 2;
+
+    private static final java.util.Random RANDOM = new java.util.Random();
+
     public BloodRetrogradeSkill() {
         super("blood_retro", 4);
     }
@@ -157,7 +175,12 @@ public class BloodRetrogradeSkill extends Skill {
         if (target == null) return;
         if (!data.perform(consumption(data), overload(data))) return;
 
-        target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        // Le sang ne coule que si les chairs ont ete ouvertes : l'original semait ses taches sans
+        // regarder, et le joueur l'a vu — « parfois les monstres ne subissent aucun degat », et des
+        // taches apparaissaient quand meme. Une cible encore invulnerable, ou un coup refuse faute
+        // de reserve, n'ouvre rien, et ne doit donc rien tacher.
+        boolean wounded = target.hurt(player.damageSources().indirectMagic(player, player),
+                scaled(damage(data)));
         // Et le sang qui gicle de la plaie : l'original posait une eclaboussure sur la cible
         // frappee, et le port ne le faisait pas — c'est le meme retour que la teleporteuse, qui
         // passe par le meme paquet. Voir BloodSplashes.
@@ -165,7 +188,48 @@ public class BloodRetrogradeSkill extends Skill {
         // Le son du coup, entendu du seul joueur qui l'a porte : c'est le
         // `playClient(player, "vecmanip.blood_retro", AMBIENT, 1.0f)` de l'original.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_BLOOD_RETRO, 1f);
+        // Et les taches au sol : l'original les tirait de la TETE de sa victime, neuf directions de
+        // cinq blocs, deux par bloc rencontre. Le port les tire du meme endroit et avec les memes
+        // nombres, mais du SERVEUR : lui seul sait qui a ete touche, donc lui seul sait s'il y a
+        // lieu d'en semer. Le client les semait avant, et le joueur a vu ce que cela donne — des
+        // taches quand rien n'est touche, et trop de taches sur les murs.
+        if (wounded) spray(player, target);
         data.addSkillExp(this, EXP);
         data.setCooldown(this, cooldown(data));
+    }
+
+    /**
+     * Les eclaboussures du coup, autour de la victime.
+     *
+     * <p>Neuf directions depuis sa tete : droit devant, puis par paires a trente, quarante-cinq,
+     * soixante et quatre-vingts degres de tangage, avec un lacet flou de vingt degres. Chacune qui
+     * rencontre un bloc y pose deux taches, sur la face frappee — le client ne fait ensuite que les
+     * poser, il ne choisit rien.
+     */
+    private void spray(Player player, LivingEntity target) {
+        net.minecraft.world.level.Level level = player.level();
+        Vec3 head = target.position().add(0, target.getBbHeight() * SPRAY_HEAD, 0);
+        java.util.List<net.minecraft.core.BlockPos> positions = new java.util.ArrayList<>();
+        java.util.List<net.minecraft.core.Direction> faces = new java.util.ArrayList<>();
+
+        for (int angle : SPRAY_ANGLES) {
+            float yaw = target.getYHeadRot() + (RANDOM.nextFloat() * 2f - 1f) * SPRAY_YAW_JITTER;
+            Vec3 look = Vec3.directionFromRotation(angle, yaw);
+            Vec3 from = head.subtract(look.scale(SPRAY_BACK));
+            Vec3 to = head.add(look.scale(SPRAY_RANGE));
+
+            net.minecraft.world.phys.BlockHitResult hit = level.clip(
+                    new net.minecraft.world.level.ClipContext(from, to,
+                            net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                            net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+            if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) continue;
+
+            for (int i = 0; i < SPRAYS_PER_HIT; i++) {
+                positions.add(hit.getBlockPos());
+                faces.add(hit.getDirection());
+            }
+        }
+
+        cn.academy.ability.network.BloodSprayPacket.send(target, positions, faces);
     }
 }
