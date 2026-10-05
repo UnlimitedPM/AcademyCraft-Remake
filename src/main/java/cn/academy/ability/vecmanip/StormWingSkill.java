@@ -47,8 +47,12 @@ import net.minecraft.world.phys.Vec3;
  *
  * <h2>Ce que le vol coute, et ce qu'il casse</h2>
  *
- * Chaque tick d'ailes ouvertes verse 0,00005 d'experience et paie 40 a 25 CP (divises par 28)
- * et 10 a 7 de surcout ; quand l'une des deux reserve manque, le vol s'arrete. La charge, elle,
+ * Chaque tick d'ailes ouvertes verse 0,00005 d'experience et paie 40 a 25 CP et 10 a 7 de
+ * surcout ; quand l'une des deux reserve manque, le vol s'arrete. Ce sont les nombres de
+ * l'original, bruts : sa reserve va de 1800 a 8000 selon le niveau, et son surcout de 100 a 500,
+ * donc ils s'y lisent sans conversion — le detour par un plafond de 100 et un facteur 28 qui les
+ * rendait lisibles a ete retire avec le plafond (voir {@code AbilityData.BASE_MAX_CONTROL_POINT}).
+ * La charge, elle,
  * est gratuite. Le surcout d'ouverture est le <b>premier tick de vol</b>, paye a l'appui :
  * c'est un ecart assume, l'original ne facturant rien tant que les ailes ne s'etaient pas
  * ouvertes.
