@@ -177,8 +177,10 @@ public class AbilityClientEvents {
             cn.academy.ability.client.vm.VecmanipTornados.clear();
             cn.academy.ability.client.vm.VecWaves.clear();
             cn.academy.ability.client.vm.VecAccelPreview.clear();
-        cn.academy.ability.client.vm.WingDust.clear();
-        cn.academy.ability.client.vm.Smokes.clear();
+            cn.academy.ability.client.vm.WingDust.clear();
+            cn.academy.ability.client.vm.Smokes.clear();
+            // Et le poing de vecmanip, qui appartient au monde comme le reste : voir HandSwing.
+            cn.academy.ability.client.vm.HandSwing.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
@@ -444,6 +446,9 @@ public class AbilityClientEvents {
                 // grandit avec lui. Le port ne l'ouvrait que pour les charges bornees, donc ce
                 // fantome restait cloue a deux blocs et n'avancait jamais.
                 ClientCharge.begin(skill.getName(), skill.getMaxChargeTicks(ClientAbilityData.get()));
+                // Et le poing de vecmanip s'arme avec elle : deux competences le partagent, et
+                // elles seules se reconnaissent ici — voir HandSwing.
+                cn.academy.ability.client.vm.HandSwing.begin(skill);
             } else if (skill.isHeld()) {
                 ClientCharge.beginSustained(skill.getName());
             }
@@ -575,6 +580,10 @@ public class AbilityClientEvents {
         // Le coup du choc au sol fait piquer la visee : l'original le posait a l'envoi, et
         // seulement si le coup avait porte — voir GroundshockCamera.
         if (performed) cn.academy.ability.client.vm.GroundshockCamera.slash(skill);
+        // Et le poing de vecmanip : il s'arme avec sa charge, part au relachement, puis rentre
+        // tout seul. Les competences qui ne le partagent pas l'ignorent — voir HandSwing.
+        cn.academy.ability.client.vm.HandSwing.end(skill);
+        if (performed) cn.academy.ability.client.vm.HandSwing.punch(skill);
         // La gerbe de sang, elle, ne se pose plus ici : c'est le serveur qui la trace — lui seul
         // sait qui a ete touche — et un paquet la porte jusqu'ici. Voir BloodSprayPacket.
         // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
