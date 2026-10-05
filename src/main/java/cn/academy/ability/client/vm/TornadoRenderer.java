@@ -1,0 +1,145 @@
+package cn.academy.ability.client.vm;
+
+import cn.academy.AcademyCraft;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.Util;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import org.joml.Matrix4f;
+
+import java.util.List;
+
+/**
+ * Le rendu des tornades de vecmanip, portage de {@code TornadoRenderer}.
+ *
+ * <p>Une tornade est une pile d'anneaux, et chaque anneau est un <b>ruban</b> : vingt quads poses
+ * cote a cote autour d'un cercle, dont l'image tourne avec le temps. Le port les ecrit d'un seul
+ * tampon, comme l'original faisait ses {@code GL_QUADS}.
+ *
+ * <h2>Le repere, et l'ordre des transformations</h2>
+ *
+ * <p>C'est le point delicat de ce portage, et il se recopie de l'original dans le meme ordre :
+ * la position du monde, puis le lacet du porteur, puis son tangage (reduit a un cinquieme pour
+ * les ailes, telles quelles pour rien d'autre), puis l'inclinaison de l'effet — soixante-dix
+ * degres pour les ailes, qui les couche vers l'arriere —, puis le recul, puis, par fuseau, son
+ * ecartement et ses deux rotations. Les memes nombres, dans le meme ordre, donnent la meme
+ * forme ; les intervertir donnerait des ailes tordues.
+ *
+ * <p>Et le dessin lui-meme suit les memes regles que les autres effets du port : <b>aucune
+ * lumiere</b> — une tornade de plasma emet la sienne —, aucune face cachee (un ruban n'a qu'une
+ * face), et <b>pas d'ecriture de profondeur</b> : les anneaux se croisent en permanence, et
+ * s'ils ecrivaient la profondeur ils se decouperaient les uns les autres au hasard.
+ */
+@OnlyIn(Dist.CLIENT)
+public final class TornadoRenderer {
+
+    /** L'image de l'original, telle quelle : un anneau qui se repete autour du cercle. */
+    private static final ResourceLocation RING = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/effects/tornado_ring.png");
+
+    private static final double TAU = Math.PI * 2;
+
+    private TornadoRenderer() {
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+
+        List<VecmanipTornados.Live> live = VecmanipTornados.live();
+        if (live.isEmpty()) return;
+
+        Vec3 camera = event.getCamera().getPosition();
+        Matrix4f base = event.getPoseStack().last().pose();
+        double seconds = Util.getMillis() / 1000.0;
+
+        RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
+        RenderSystem.setShaderTexture(0, RING);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.depthMask(false);
+
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buffer = tesselator.getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
+
+        for (VecmanipTornados.Live tornado : live) {
+            float alpha = (float) (tornado.alpha() * TornadoVisuals.DRAW_ALPHA);
+
+            Matrix4f root = new Matrix4f(base)
+                    .translate((float) (tornado.position().x - camera.x),
+                            (float) (tornado.position().y - camera.y),
+                            (float) (tornado.position().z - camera.z))
+                    .rotateY((float) Math.toRadians(-tornado.yaw()))
+                    .rotateX((float) Math.toRadians(tornado.pitch() * 0.2))
+                    .rotateX((float) Math.toRadians(tornado.layout().tiltX()))
+                    .translate((float) tornado.layout().preX(), (float) tornado.layout().preY(),
+                            (float) tornado.layout().preZ());
+
+            for (TornadoVisuals.Part part : tornado.layout().parts()) {
+                Matrix4f matrix = new Matrix4f(root)
+                        .translate((float) part.tx(), (float) part.ty(), (float) part.tz())
+                        .rotateY((float) Math.toRadians(part.rotateY()))
+                        .rotateZ((float) Math.toRadians(part.rotateZ()));
+                drawTornado(buffer, matrix, part.tornado(), seconds, alpha);
+            }
+        }
+
+        BufferUploader.drawWithShader(buffer.end());
+
+        RenderSystem.depthMask(true);
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+    }
+
+    /** Une tornade entiere : ses anneaux, du pied au sommet. */
+    private static void drawTornado(BufferBuilder buffer, Matrix4f matrix,
+                                    TornadoVisuals.Tornado tornado, double seconds, float alpha) {
+        double t = TornadoVisuals.time(seconds, tornado.timeOffset());
+        double uStep = 1.0 / TornadoVisuals.SEGMENTS;
+
+        for (TornadoVisuals.Ring ring : tornado.rings()) {
+            double ny = ring.y() / tornado.height();
+            double[] wobble = TornadoVisuals.wobble(ny, t);
+            double dx = wobble[0] * tornado.size() * tornado.scale();
+            double dz = wobble[1] * tornado.size() * tornado.scale();
+            double radius = TornadoVisuals.radius(ny, t) * tornado.size() * ring.sizeScale();
+            double rotation = TornadoVisuals.spin(ny, t) + ring.phase();
+            double y0 = ring.y() + ring.width() / 2;
+            double y1 = ring.y() - ring.width() / 2;
+
+            for (int i = 0; i < TornadoVisuals.SEGMENTS; i++) {
+                double a0 = i * TAU / TornadoVisuals.SEGMENTS;
+                double a1 = (i + 1) * TAU / TornadoVisuals.SEGMENTS;
+                double x0 = Math.sin(a0) * radius, z0 = Math.cos(a0) * radius;
+                double x1 = Math.sin(a1) * radius, z1 = Math.cos(a1) * radius;
+                float u0 = (float) (uStep * i - rotation);
+                float u1 = u0 + (float) uStep;
+
+                vertex(buffer, matrix, alpha, x0 + dx, y0, z0 + dz, u0, 0f);
+                vertex(buffer, matrix, alpha, x0 + dx, y1, z0 + dz, u0, 1f);
+                vertex(buffer, matrix, alpha, x1 + dx, y1, z1 + dz, u1, 1f);
+                vertex(buffer, matrix, alpha, x1 + dx, y0, z1 + dz, u1, 0f);
+            }
+        }
+    }
+
+    private static void vertex(BufferBuilder buffer, Matrix4f matrix, float alpha,
+                               double x, double y, double z, float u, float v) {
+        buffer.vertex(matrix, (float) x, (float) y, (float) z)
+                .color(1f, 1f, 1f, alpha)
+                .uv(u, v)
+                .endVertex();
+    }
+}

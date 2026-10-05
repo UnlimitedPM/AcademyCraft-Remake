@@ -173,12 +173,18 @@ public class AbilityClientEvents {
             // ils ne vivent qu'un peu plus d'une seconde, mais un monde quitte entre-temps les
             // garderait a l'ecran pour rien. Voir FormulaParticles.
             cn.academy.ability.client.tp.FormulaParticles.clear();
+            // Et les deux tornades de vecmanip, qui appartiennent au monde comme le reste.
+            cn.academy.ability.client.vm.VecmanipTornados.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
         // Les etincelles de la teleportation vieillissent au meme rythme, et leur marque se
         // repose au tick suivant — voir TeleportMark et TpParticles.
         cn.academy.ability.client.tp.TpParticles.tick();
+        // Les deux tornades de vecmanip avancent au meme rythme : ce qui s'efface s'efface, et ce
+        // qui est mort s'en va — c'est aussi ce qui rattrape un maintien interrompu. Voir
+        // VecmanipTornados.
+        cn.academy.ability.client.vm.VecmanipTornados.tick();
         cn.academy.client.SilbarnFrags.tick();
         // Et le gresillement du bouclier de lumiere : son disque se dessine a chaque image, mais
         // son essaim se seme au tick, chez son porteur seul — voir ShieldSparks.
@@ -444,7 +450,14 @@ public class AbilityClientEvents {
                     MineRayEffect.tick(player, skill);
                     // Et la marque de teleportation, qui n'existe que chez son tireur elle aussi, et
                     // qui ne s'allume que sur la touche de direction visee : voir TeleportMark.
-                    TeleportMark.tick(player, skill, 0, aimed);                }
+                    TeleportMark.tick(player, skill, 0, aimed);
+                    // Et les deux tornades de vecmanip : les ailes de tempete, qui montent avec
+                    // leur charge, et la colonne que le canon a plasma dresse au sol pendant la
+                    // sienne. Le client sait tout ce qu'il leur faut — quelle competence il tient,
+                    // depuis combien de ticks, et ou est son porteur. Voir VecmanipTornados.
+                    cn.academy.ability.client.vm.VecmanipTornados.tickHeld(player, skill,
+                            ClientCharge.getTicks());
+                }
             }
             // L'electricite des charges : l'orage s'amase autour de celui qui le prepare.
             // Comme les precedents, des images et rien d'autre — voir ThunderClapEffect.
@@ -504,6 +517,9 @@ public class AbilityClientEvents {
         // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
         // c'est ce que fait ce crochet.
         MineRayEffect.end(skill.getName());
+        // Et les tornades de vecmanip, qui s'effacent au lieu de disparaitre d'un coup : les
+        // ailes en quinze ticks, la colonne du canon en trente. Voir VecmanipTornados.
+        cn.academy.ability.client.vm.VecmanipTornados.end(skill);
         // Le fantome de la teleportation s'en va au meme moment — sa competence est finie — et la
         // visee du saut traversant avec lui : la molette ne regle plus rien.
         TeleportMark.end();
