@@ -177,6 +177,7 @@ public class AbilityClientEvents {
             cn.academy.ability.client.vm.VecmanipTornados.clear();
             cn.academy.ability.client.vm.VecWaves.clear();
             cn.academy.ability.client.vm.VecAccelPreview.clear();
+        cn.academy.ability.client.vm.WingDust.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();

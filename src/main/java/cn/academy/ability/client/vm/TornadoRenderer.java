@@ -123,9 +123,50 @@ public final class TornadoRenderer {
 
         BufferUploader.drawWithShader(buffer.end());
 
+        // Et la poussiere des ailes par-dessus : elle n'a pas la meme image, donc elle a son propre
+        // passage. Voir WingDust.
+        drawDust(event, base, camera);
+
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
+    }
+
+    /** Les grains des ailes : des ronds tournes vers l'oeil, teintes de terre. */
+    private static void drawDust(RenderLevelStageEvent event, Matrix4f base, Vec3 camera) {
+        if (WingDust.live().isEmpty()) return;
+
+        org.joml.Vector3f left = event.getCamera().getLeftVector();
+        org.joml.Vector3f up = event.getCamera().getUpVector();
+        Vec3 across = new Vec3(left.x, left.y, left.z);
+        Vec3 upright = new Vec3(up.x, up.y, up.z);
+
+        RenderSystem.setShaderTexture(0, WingDust.TEXTURE);
+        Tesselator tesselator = Tesselator.getInstance();
+        BufferBuilder buffer = tesselator.getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
+
+        for (WingDust.Grain grain : WingDust.live()) {
+            Vec3 centre = grain.pos();
+            float alpha = grain.alpha();
+            Vec3 a = across.scale(WingDust.SIZE / 2);
+            Vec3 b = upright.scale(WingDust.SIZE / 2);
+            dustVertex(buffer, base, camera, centre.subtract(a).subtract(b), 0f, 1f, alpha);
+            dustVertex(buffer, base, camera, centre.add(a).subtract(b), 1f, 1f, alpha);
+            dustVertex(buffer, base, camera, centre.add(a).add(b), 1f, 0f, alpha);
+            dustVertex(buffer, base, camera, centre.subtract(a).add(b), 0f, 0f, alpha);
+        }
+
+        BufferUploader.drawWithShader(buffer.end());
+    }
+
+    private static void dustVertex(BufferBuilder buffer, Matrix4f base, Vec3 camera, Vec3 at,
+                                   float u, float v, float alpha) {
+        buffer.vertex(base, (float) (at.x - camera.x), (float) (at.y - camera.y),
+                        (float) (at.z - camera.z))
+                .color(WingDust.RED, WingDust.GREEN, WingDust.BLUE, alpha)
+                .uv(u, v)
+                .endVertex();
     }
 
     /** Une tornade entiere : ses anneaux, du pied au sommet. */

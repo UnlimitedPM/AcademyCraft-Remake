@@ -132,6 +132,12 @@ public final class VecmanipTornados {
             return;
         }
 
+        // Et la poussiere des ailes : douze grains par tick, tant que le maintien est ouvert. Elle
+        // leur survit — un grain vit sa vie jusqu'au bout, comme chez l'original. Voir WingDust.
+        if (skill == VecmanipCategory.STORM_WING) {
+            WingDust.spawn(player);
+        }
+
         if (skill == VecmanipCategory.PLASMA_CANNON) {
             // La colonne vit tant que le maintien est ouvert, et pas un tick de moins : elle
             // s'efface au relachement, quand la boule part. La borner a la duree de charge la
