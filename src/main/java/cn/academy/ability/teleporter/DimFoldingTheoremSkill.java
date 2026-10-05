@@ -2,11 +2,20 @@ package cn.academy.ability.teleporter;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
-import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
-/** Passive skill, port of original DimFoldingTheorem: negates fall damage while learned. */
+/**
+ * La theorie du repli dimensionnel, passive du teleporteur.
+ *
+ * <p>Elle ne protege de <b>rien</b> : c'est un bonus de degats. L'original la laissait vide —
+ * c'est {@code TPSkillHelper} qui la remplissait — et s'en servait comme d'une reserve
+ * d'experience : son experience decide de la probabilite et de la force des coups critiques du
+ * teleporteur, et chaque critique la fait grandir. Voir {@link TeleportCrits}.
+ *
+ * <p>Elle a porte un temps une immunite aux degats de chute, et c'est une invention : les deux
+ * seules traces de {@code fallDistance} de l'original sont dans le scintillement et le saut
+ * traversant, qui l'effacent <b>au moment de la teleportation</b>. C'est d'ailleurs ce qu'on
+ * veut : apres un saut, aucune chute a payer ; sans saut, une chute se paie.
+ */
 public class DimFoldingTheoremSkill extends Skill {
 
     public DimFoldingTheoremSkill() {
@@ -26,14 +35,6 @@ public class DimFoldingTheoremSkill extends Skill {
     @Override
     public boolean canControl() {
         return false;
-    }
-
-    @Override
-    public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
-        if (event.getSource().is(DamageTypes.FALL)) {
-            return 0f;
-        }
-        return event.getAmount();
     }
 
     /**

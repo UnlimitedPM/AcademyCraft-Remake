@@ -2887,6 +2887,37 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Une chute se paie, meme la passive du teleporteur apprise.
+     *
+     * <p>La theorie du repli dimensionnel annulait autrefois les degats de chute tant qu'elle
+     * etait apprise, si bien que le teleporteur ne tombait jamais — meme sans avoir rien
+     * teleporte. Ce n'est pas ce que fait l'original : sa passive ne sert qu'aux coups
+     * critiques, et les seules remises a zero de la chute sont celles des teleportations
+     * elles-memes. Le joueur l'a vu ; ce test fige la regle.
+     *
+     * <p>Le chemin pris est celui du jeu : c'est l'evenement de Forge des degats que les
+     * passives apprennent, et non la methode d'une competence appelee a la main.
+     */
+    @GameTest(template = "empty")
+    public static void laChuteBlesseMemeLaTeleporteuse(GameTestHelper helper) {
+        var teleporter = cn.academy.ability.teleporter.TeleporterCategory.FLASHING.getCategory();
+        var player = ownPlayer(helper, "faller");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(teleporter, 5);
+        data.learnSkill(cn.academy.ability.teleporter.TeleporterCategory.DIM_FOLDING_THEOREM);
+
+        var event = new net.minecraftforge.event.entity.living.LivingHurtEvent(
+                player, player.damageSources().fall(), 6f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(event);
+
+        assertClose(helper, 6f, event.getAmount(),
+                "une chute se paie, meme la theorie du repli dimensionnel apprise");
+
+        helper.succeed();
+    }
+
+    /**
      * La teleportation a la marque, et ceux qu'elle emmene.
      *
      * C'est la seule competence du port qui deplace un <b>groupe</b>, et c'est ce qui se lit
