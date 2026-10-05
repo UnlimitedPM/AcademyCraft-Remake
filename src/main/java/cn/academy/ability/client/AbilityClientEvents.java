@@ -497,6 +497,10 @@ public class AbilityClientEvents {
                     // Et le dezoom du retour de sang, qui previent que la touche est pleine :
                     // voir BloodRetroCharge.
                     BloodRetroCharge.tick(player, skill, ClientCharge.getTicks());
+                    // Et la montee du choc au sol, dont la visee se leve pendant la charge : voir
+                    // GroundshockCamera.
+                    cn.academy.ability.client.vm.GroundshockCamera.charge(player, skill,
+                            ClientCharge.getTicks());
                     // Et la parabole de visee de l'acceleration de vecteur : elle part de la main
                     // droite, suit le regard baisse de dix degres, et s'allonge avec la charge.
                     // Voir VecAccelPreview.
@@ -561,6 +565,13 @@ public class AbilityClientEvents {
         ThunderClapEffect.end();
         MeltdownerCharge.end();
         BloodRetroCharge.end();
+        // Le coup du choc au sol fait piquer la visee : l'original le posait a l'envoi, et
+        // seulement si le coup avait porte — voir GroundshockCamera.
+        if (performed) cn.academy.ability.client.vm.GroundshockCamera.slash(skill);
+        // Et la gerbe de sang du retour de sang, qui reste sur le sol ou elle tombe : ses neuf
+        // directions se tirent chez le client, au meme instant que le coup du serveur. Voir
+        // BloodSprays.
+        if (performed) cn.academy.ability.client.tp.BloodSprays.sprayFor(skill);
         // Le rayon minier n'a pas de fin en douceur : l'original tuait son entite sur-le-champ, et
         // c'est ce que fait ce crochet.
         MineRayEffect.end(skill.getName());

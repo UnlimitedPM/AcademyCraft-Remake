@@ -46,6 +46,21 @@ public final class VecAccelPreview {
     /** L'inclinaison du lancer : dix degres sous le regard. */
     public static final float LAUNCH_PITCH = -10;
 
+    /**
+     * Le decalage du depart, dans le repere de la visee : le long du regard, sa hauteur, son cote.
+     *
+     * <p>Ce sont les nombres de l'original, convertis dans ce repere : sa main etait a douze
+     * centimetres en arriere du regard et six sous les yeux — 1,56 contre 1,62 — et huit sur le
+     * cote. Ce dernier est reduit de moitie, le joueur trouvant la courbe du vrai mod trop a droite
+     * de son ecran.
+     *
+     * <p>Le decalage des eclairs ({@code ArcView.FIRST_PERSON}) a d'abord ete repris tel quel :
+     * vingt-cinq centimetres sous l'oeil et vingt sur le cote, c'est ce qu'il faut a un eclair, mais
+     * cela sortait le depart de la visee — la parabole perdait sa partie proche, la plus vive, et
+     * semblait plus courte et plus pale qu'avant. Un instrument de visee se decale donc de peu.
+     */
+    public static final double[] HAND_OFFSET = { -0.12, -0.06, 0.04 };
+
     /** Le ruban : deux centimetres de haut, et une opacite qui decroit de trois centiemes par pas. */
     public static final double RIBBON_HALF = 0.02;
     public static final double ALPHA_START = 0.7;
@@ -58,11 +73,11 @@ public final class VecAccelPreview {
      * c'etait faux : cette main-la ne tombe pas la ou l'oeil voit la sienne, donc la parabole
      * semblait partir a cote. Les eclairs et les rayons du plasma se recollent a la main par
      * {@link ArcView#fixStart}, avec les nombres de l'original, et la parabole fait desormais
-     * pareil : elle part des yeux, puis glisse dans le repere du tir de {@code FIRST_PERSON}.
+     * pareil : elle part des yeux, puis glisse de {@link #HAND_OFFSET} dans le repere du tir.
      *
      * <p>Le repere est celui de la <b>visee</b> — le long du regard, sa hauteur, son cote — et
      * c'est ce qui rend l'illusion stable : lever les yeux au ciel ne fait pas glisser la main.
-     * Une visee sans repere — tout droit vers le zénith — rend les yeux tels quels.
+     * Une visee sans repere — tout droit vers le zénith — se replie sur une perpendiculaire stable.
      *
      * @param eyes la position des yeux du porteur
      * @param look sa visee
@@ -73,7 +88,7 @@ public final class VecAccelPreview {
                 new double[] { eyes.x, eyes.y, eyes.z },
                 new double[] { eyes.x + look.x, eyes.y + look.y, eyes.z + look.z },
                 new double[] { up.x, up.y, up.z },
-                ArcView.FIRST_PERSON);
+                HAND_OFFSET);
         return new Vec3(fixed[0][0], fixed[0][1], fixed[0][2]);
     }
 

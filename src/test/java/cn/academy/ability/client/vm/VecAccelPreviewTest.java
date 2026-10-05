@@ -33,12 +33,12 @@ class VecAccelPreviewTest {
         Vec3 eyes = FEET.add(0, 1.62, 0);
         Vec3 hand = VecAccelPreview.handFrom(eyes, LOOK, UP);
 
-        // Le decalage des eclairs, chiffre par chiffre : un peu en arriere du depart, un quart de
-        // bloc plus bas, et vingt centimetres sur le cote. Le cote lui-meme n'est pas verifie — il
-        // vient de la visee, et le signe appartient a ArcView.fixStart, deja teste.
-        assertEquals(-0.05, hand.z - eyes.z, 1e-9, "cinq centimetres en arriere du depart");
-        assertEquals(-0.25, hand.y - eyes.y, 1e-9, "et un quart de bloc plus bas");
-        assertEquals(0.2, Math.abs(hand.x - eyes.x), 1e-9, "vingt centimetres sur le cote");
+        // Le decalage des eclairs, ramene aux nombres de l'original : douze centimetres en arriere
+        // du depart, six sous les yeux (1,56 contre 1,62), et quatre sur le cote. Le cote lui-meme
+        // n'est pas verifie — il vient de la visee, et le signe appartient a ArcView.fixStart.
+        assertEquals(-0.12, hand.z - eyes.z, 1e-9, "douze centimetres en arriere du depart");
+        assertEquals(-0.06, hand.y - eyes.y, 1e-9, "et six sous les yeux");
+        assertEquals(0.04, Math.abs(hand.x - eyes.x), 1e-9, "quatre centimetres sur le cote");
     }
 
     @Test
@@ -46,12 +46,11 @@ class VecAccelPreviewTest {
     void unRegardVerticalNeCasseRien() {
         Vec3 eyes = FEET.add(0, 1.62, 0);
         // Visee et verticale confondues : il n'y a plus de repere d'ecran. Le repere s'en choisit
-        // alors un autre — une perpendiculaire stable — et le decalage reste celui des eclairs :
-        // un tiers de bloc, pas davantage. C'est le repli de ArcFrame.
+        // alors un autre — une perpendiculaire stable — et le decalage reste celui de la main :
+        // quatorze centimetres, pas davantage. C'est le repli de ArcFrame.
         Vec3 hand = VecAccelPreview.handFrom(eyes, UP, UP);
 
-        assertEquals(Math.sqrt(0.05 * 0.05 + 0.25 * 0.25 + 0.2 * 0.2), hand.distanceTo(eyes), 1e-9,
-                "un tiers de bloc a peine : " + hand);
+        assertEquals(0.14, hand.distanceTo(eyes), 1e-9, "quatorze centimetres a peine : " + hand);
     }
 
     @Test
