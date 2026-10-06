@@ -12,14 +12,15 @@ import java.util.List;
 /**
  * L'electricite du renfort sur l'ecran : le voile bleu, et les arcs qui y scintillent.
  *
- * <p>Portage de {@code CurrentChargingHUD}. Tant que le joueur tient la touche, l'original
- * couvrait l'ecran de son image {@code em_intensify_mask}, entree en matiere en une demi-seconde,
- * et faisait scintiller cinq ou six arcs d'ecran par-dessus. Au relachement, la gerbe remplacait
- * ceux-ci et le tout s'effacait en deux dixiemes de seconde.
+ * <p>Portage de {@code CurrentChargingHUD}. Tant que le joueur tient la touche, l'original posait
+ * un noir a 10 pour cent sur tout l'ecran, puis son image {@code em_intensify_mask} par-dessus,
+ * entree en matiere en une demi-seconde, et faisait scintiller cinq ou six arcs d'ecran sur le
+ * tout. Au relachement, la gerbe remplacait ceux-ci et l'ensemble s'effaçait en deux dixiemes de
+ * seconde.
  *
- * <p>Ce que le port ne reprend PAS : le noir a 10 pour cent que l'original posait sous son image.
- * Le joueur l'a vu tout de suite — « l'ecran noir n'est pas bon » — et il avait raison : le voile
- * de l'original est bleu, et c'est sa teinte qui doit passer, pas un fond sombre.
+ * <p>Le noir avait ete retire du port, parce qu'il « n'est pas bon » ; le joueur la redemande
+ * depuis, et c'est l'original qui tranche. Il vit dans {@code BodyIntensifyEffect.DIM}, avec sa
+ * courbe — voir {@code BodyIntensifyEffect.dimColor}.
  *
  * <p>Sa place est au-dessus de tout le reste : chez l'original c'etait une {@code AuxGui}, donc
  * dessinee apres le HUD.
@@ -45,10 +46,21 @@ public final class BodyIntensifyHud {
         RenderSystem.defaultBlendFunc();
 
         if (mask > 0f) {
+            // Le noir de l'original d'abord : SOUS son image, et lie a l'opacite du voile.
+            graphics.fill(0, 0, screenWidth, screenHeight, BodyIntensifyEffect.dimColor(mask));
+            // `fill` et `blit` se nettoient chacun de leur cote et coupent le melange en
+            // partant : il faut donc le rallumer entre les deux familles de dessin.
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
             RenderSystem.setShaderColor(1f, 1f, 1f, mask);
             // L'original etirait son image sur tout l'ecran : c'est ce qu'il faut, et rien
             // d'autre.
             graphics.blit(MASK, 0, 0, 0, 0, screenWidth, screenHeight, screenWidth, screenHeight);
+        }
+
+        if (!arcs.isEmpty()) {
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
         }
 
         float alpha = BodyIntensifyEffect.arcAlpha();

@@ -267,18 +267,25 @@ public class BodyIntensifySkill extends Skill {
     }
 
     /**
-     * Le renfort, pose tel que {@link #boostsFor} le decrit.
+     * Le renfort, pose tel que {@link #boostsFor} le decrit, et <b>sans ses particules</b>.
      *
      * <p>Tous ses effets durent {@link #durationTicks} — la famine comprise. C'est elle qui paie le
      * renfort, et c'est pour cela que la maitrise la fait disparaitre : la garder plus longtemps que
      * le benefice n'aurait pas de sens, et l'ancienne regle (1,25 fois le temps tenu) ne dit plus
      * rien depuis que la duree ne depend plus de la charge.
+     *
+     * <p>Le cinquieme argument de {@code MobEffectInstance} est celui des PARTICULES : faux, elles
+     * ne tournent plus autour du corps pendant les cinq a dix secondes du renfort, ce que le joueur
+     * a demande (« j'aimerais que les particules de potions ne soit pas visible »). L'original les
+     * laissait, faute d'y penser. Le SIXIEME est celui de l'icone, et il reste vrai : la forme a
+     * cinq arguments recopie le drapeau des particules dans celui de l'icone, donc s'en servir
+     * ferait disparaitre les deux — le joueur n'a demande que les particules.
      */
     private void applyBuffs(Player player, AbilityData data) {
         int ticks = durationTicks(data.getSkillExp(this));
         for (Boost boost : boostsFor(data.getSkillExp(this))) {
             player.addEffect(new MobEffectInstance(effectOf(boost.kind()), ticks,
-                    boost.level() - 1, false, true));
+                    boost.level() - 1, false, false, true));
         }
     }
 

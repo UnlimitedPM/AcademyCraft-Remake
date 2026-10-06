@@ -122,6 +122,28 @@ public final class BodyIntensifyEffect {
     private static final float CHARGE_ALPHA = 0.3f;
     private static final float BURST_ALPHA = 0.4f;
 
+    /**
+     * Le noir que l'original posait SOUS son voile bleu : dix pour cent, multiplies par l'opacite
+     * du voile, donc montes et retombes avec lui.
+     *
+     * <p>C'est lui qui assombrit vraiment l'ecran : le voile bleu, seul, ne se lit que sur ses
+     * bords. Il a ete retire une fois (« l'ecran noir n'est pas bon »), puis redemande par le
+     * joueur — « je vois bien les petites eclairs mais pas le rendu noir qu'il y avait avant » —
+     * et c'est l'original qui tranche, qui l'a toujours eu. Fige par un test, pour ne pas le perdre
+     * une troisieme fois.
+     */
+    public static final float DIM = 0.1f;
+
+    /**
+     * Le noir du voile, en couleur ARGB prete a peindre : dix pour cent lies a l'opacite du voile.
+     *
+     * <p>PURE, et bornee : une opacite hors de 0..1 donne la meme chose que son borne.
+     */
+    public static int dimColor(float maskAlpha) {
+        float clamped = Math.max(0f, Math.min(1f, maskAlpha));
+        return ((int) (DIM * clamped * 255f)) << 24;
+    }
+
     // --- L'ELECTRICITE DE LA CHARGE, SUR LE CORPS ---
 
     /** L'anneau de la charge : de 0,9 bloc au premier tick a 0,45 a pleine charge. */

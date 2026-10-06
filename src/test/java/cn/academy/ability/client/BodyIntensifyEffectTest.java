@@ -44,6 +44,28 @@ class BodyIntensifyEffectTest {
     }
 
     @Test
+    void leNoirDuVoileEstCeluiDeLoriginal() {
+        // Il a ete retire une fois, puis redemande : ce test est ce qui l'empeche de disparaitre
+        // une troisieme fois. C'est l'original qui tranche — son CurrentChargingHUD posait un noir
+        // a dix pour cent SOUS son image bleue, multiplie par l'opacite du voile.
+        assertEquals(0.1f, BodyIntensifyEffect.DIM, 1e-6, "dix pour cent, comme chez lui");
+
+        assertEquals(0, BodyIntensifyEffect.dimColor(0f), "rien du tout quand le voile est eteint");
+        assertEquals(0x19000000, BodyIntensifyEffect.dimColor(1f),
+                "25/255 a pleine opacite, soit un dixieme de noir");
+
+        // Et il suit le voile : c'est la meme courbe d'entree et de sortie.
+        assertTrue(BodyIntensifyEffect.dimColor(0.5f) < BodyIntensifyEffect.dimColor(1f),
+                "plus le voile monte, plus l'ecran s'assombrit");
+        assertTrue(BodyIntensifyEffect.dimColor(0.5f) > BodyIntensifyEffect.dimColor(0f),
+                "et il n'y a rien tant qu'il n'a pas commence");
+
+        // Bornee : une opacite hors de 0..1 ne fait ni plus noir, ni une couleur claire.
+        assertEquals(BodyIntensifyEffect.dimColor(1f), BodyIntensifyEffect.dimColor(9f));
+        assertEquals(0, BodyIntensifyEffect.dimColor(-1f));
+    }
+
+    @Test
     void lOndeDescendDesSeptHauteursDeLoriginal() {
         assertEquals(7, BodyIntensifyEffect.HEIGHTS.length);
         assertEquals(7, BodyIntensifyEffect.DELAYS.length);

@@ -4626,7 +4626,7 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
-    /** Un effet attendu, a son niveau et pour sa duree, pose sur un vivant. */
+    /** Un effet attendu, a son niveau et pour sa duree, pose sur un vivant — et sans particules. */
     private static void assertBoost(GameTestHelper helper,
                                     net.minecraft.world.entity.LivingEntity holder,
                                     net.minecraft.world.effect.MobEffect effect, int amplifier,
@@ -4635,6 +4635,11 @@ public final class AcademyGameTests {
         assertTrue(helper, instance != null, what + " : l'effet est absent");
         assertValue(helper, amplifier, instance.getAmplifier(), what + " (niveau)");
         assertValue(helper, duration, instance.getDuration(), what + " (duree)");
+        // Le drapeau des particules : le renfort ne les montre plus (demande du joueur), alors
+        // que l'icone, elle, reste. Les deux se verifient ici, faute de pouvoir le faire en
+        // JUnit — un effet de Minecraft est une entree de registre.
+        assertFalse(helper, instance.isVisible(), what + " : les particules ne se montrent pas");
+        assertTrue(helper, instance.showIcon(), what + " : mais l'icone reste");
     }
 
     /**
