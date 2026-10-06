@@ -100,21 +100,25 @@ class PlasmaBodyVisualsTest {
     }
 
     @Test
-    void unePetiteBouleSeVoitSansEtreInvisibleNiEnorme() {
+    void leHaloEstAssezLargePourQueLesBoulesSeFondent() {
         // Le rayon suit la RACINE de la taille, pas la taille : un facteur direct rendrait les
-        // petites boules invisibles (deux dixiemes de bloc) et les grosses enormes. L'original,
-        // lui, les voyait toutes les deux — ses petites comme des points denses.
-        double petite = PlasmaBodyVisuals.visibleRadius(PlasmaBodyVisuals.SMALL_SIZE_MIN, 1f);
-        double grosse = PlasmaBodyVisuals.visibleRadius(PlasmaBodyVisuals.BIG_SIZE_MAX, 1f);
+        // petites boules invisibles (deux dixiemes de bloc) et les grosses enormes.
+        double petite = PlasmaBodyVisuals.haloRadius(PlasmaBodyVisuals.SMALL_SIZE_MIN, 1f);
+        double grosse = PlasmaBodyVisuals.haloRadius(PlasmaBodyVisuals.BIG_SIZE_MAX, 1f);
 
-        assertTrue(petite > 0.5, "une petite boule fait plus d'un demi-bloc : " + petite);
-        assertTrue(grosse < 3.0, "et une grosse en fait moins de trois : " + grosse);
-        assertTrue(grosse / petite < 5, "les deux tiennent dans le meme champ : " + (grosse / petite));
+        assertEquals(Math.sqrt(PlasmaBodyVisuals.BIG_SIZE_MAX / PlasmaBodyVisuals.VISIBILITY),
+                grosse, 1e-9, "une grosse se voit a plus de trois blocs, une fois nouee");
+        assertTrue(grosse > 3.0, "et c'est bien plus de trois : " + grosse);
+        assertTrue(grosse / petite > 3.0, "quand la petite en fait moins d'un : " + petite);
 
-        // Et a la naissance il n'y a rien : le rayon suit la croissance du corps.
-        assertEquals(0.0, PlasmaBodyVisuals.visibleRadius(1.0, 0f), 1e-9, "rien a la naissance");
-        assertEquals(grosse, PlasmaBodyVisuals.visibleRadius(PlasmaBodyVisuals.BIG_SIZE_MAX, 1f),
-                1e-9, "et sa taille pleine une fois le corps noue");
+        // A la naissance il n'y a rien : le rayon suit la croissance du corps.
+        assertEquals(0.0, PlasmaBodyVisuals.haloRadius(1.0, 0f), 1e-9, "rien a la naissance");
+
+        // ET C'EST LE POINT : a mi-charge, deux grosses boules ecartees de trois blocs et demi se
+        // recouvrent encore. Avec un halo de moitie — ce que le port avait — elles laissaient un
+        // trou entre elles, et le joueur y a lu « quinze petites boules » au lieu d'un corps.
+        double mid = PlasmaBodyVisuals.haloRadius(1.2, 0.45f);
+        assertTrue(2 * mid > 3.5, "elles se fondent a mi-charge aussi : " + (2 * mid));
     }
 
     @Test
@@ -135,25 +139,43 @@ class PlasmaBodyVisualsTest {
     }
 
     @Test
-    void lesBoulesSontToutesRoseEtLeBleuEstAuCentre() {
-        // Le joueur l'a dit devant une capture du vrai mod : AUCUNE boule n'y est bleue. La ou le
-        // nuanceur bleuissait, c'est le centre du VOLUME — la ou les boules s'entassent — et le port
-        // les peignait une a une : il en sortait quatre grosses boules bleues qui n'existent pas.
-        float[] ball = PlasmaBodyVisuals.ballColor();
-        assertEquals(0.98f, ball[0], 1e-6f, "une boule prend le rose des bords, en rouge");
-        assertEquals(0.51f, ball[1], 1e-6f, "en vert");
-        assertEquals(0.92f, ball[2], 1e-6f, "en bleu");
+    void chaqueBouleEstRoseAvecUnCoeurBleu() {
+        // Les deux bouts du nuanceur, tels quels : rose (0,98 / 0,51 / 0,92) et bleu (0,43 / 0,74 / 1).
+        float[] rose = PlasmaBodyVisuals.ballColor();
+        assertEquals(0.98f, rose[0], 1e-6f, "une boule prend le rose, en rouge");
+        assertEquals(0.51f, rose[1], 1e-6f, "en vert");
+        assertEquals(0.92f, rose[2], 1e-6f, "en bleu");
 
-        float[] core = PlasmaBodyVisuals.coreColor();
-        assertEquals(0.43f, core[0], 1e-6f, "et le coeur prend le bleu, en rouge");
-        assertEquals(0.74f, core[1], 1e-6f, "en vert");
-        assertEquals(1.0f, core[2], 1e-6f, "en bleu");
+        float[] bleu = PlasmaBodyVisuals.coreColor();
+        assertEquals(0.43f, bleu[0], 1e-6f, "et son coeur prend le bleu, en rouge");
+        assertEquals(0.74f, bleu[1], 1e-6f, "en vert");
+        assertEquals(1.0f, bleu[2], 1e-6f, "en bleu");
 
-        // Le coeur grandit avec le corps, comme les boules.
-        assertEquals(PlasmaBodyVisuals.CORE_RADIUS, PlasmaBodyVisuals.coreRadius(1f), 1e-9,
+        // Le coeur tient dans le halo, et DANS LE MEME RAPPORT pour toutes les boules : c'est le
+        // rapport des deux seuils de densite, donc il ne depend ni de la taille ni de l'instant. Le
+        // joueur l'a reclame en une phrase : « leur centre est rose, donc pas comme le vrai ».
+        double expected = Math.sqrt(PlasmaBodyVisuals.VISIBILITY / PlasmaBodyVisuals.CORE_DENSITY);
+        for (double size : new double[] { 0.1, 0.3, 1.0, 1.5 }) {
+            double halo = PlasmaBodyVisuals.haloRadius(size, 0.7f);
+            double core = PlasmaBodyVisuals.coreRadius(size, 0.7f);
+            assertTrue(core < halo, "le coeur tient dans le halo : " + size);
+            assertEquals(expected, core / halo, 1e-9, "et dans le meme rapport : " + size);
+        }
+    }
+
+    @Test
+    void leCarreCompteLeBordMourantDeLImage() {
+        // L'image s'eteint avant son bord — son profil est un (1 - r) au carre, qui passe sous un
+        // dixieme d'opacite a 68 % du carre. Sans ce rattrapage, tout ce que le port dessine est
+        // d'un bon tiers plus petit que ce qu'il croit dessiner.
+        assertEquals(1.0 / PlasmaBodyVisuals.SPRITE_REACH, PlasmaBodyVisuals.quadRadius(1.0), 1e-9);
+        assertTrue(PlasmaBodyVisuals.quadRadius(1.0) > 1.4, "le carre depasse le rayon vu");
+
+        // Et le corps a son propre coeur bleu, la ou les densites s'additionnent.
+        assertEquals(PlasmaBodyVisuals.BODY_CORE_RADIUS, PlasmaBodyVisuals.bodyCoreRadius(1f), 1e-9,
                 "sa taille pleine une fois le corps noue");
-        assertEquals(0.0, PlasmaBodyVisuals.coreRadius(0f), 1e-9, "et rien a la naissance");
-        assertTrue(PlasmaBodyVisuals.coreRadius(0.8f) > PlasmaBodyVisuals.coreRadius(0.2f),
+        assertEquals(0.0, PlasmaBodyVisuals.bodyCoreRadius(0f), 1e-9, "et rien a la naissance");
+        assertTrue(PlasmaBodyVisuals.bodyCoreRadius(0.8f) > PlasmaBodyVisuals.bodyCoreRadius(0.2f),
                 "il grandit a mesure que la matiere se noue");
     }
 

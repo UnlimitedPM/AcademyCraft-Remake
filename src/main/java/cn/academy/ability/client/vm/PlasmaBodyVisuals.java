@@ -42,11 +42,17 @@ import java.util.List;
  * le tir part, c'est voulu — et redescend d'un coup quand elle meurt, en une seconde. Ces deux
  * nombres sont des <b>secondes</b>, comme chez l'original, dont l'horloge comptait en secondes.
  *
- * <p>Et les <b>couleurs</b> sont separees, ce qui ne s'invente pas : les boules prennent toutes le
- * <b>rose</b> des bords du nuanceur, et le <b>bleu</b> est un coeur pose a part, au centre. Chez
- * l'original, la ou le nuanceur bleuissait, c'est le centre du <b>volume</b> — la ou les boules
- * s'entassent et ou la densite monte — et aucune boule prise a part n'est bleue. Voir
- * {@link #CORE_RADIUS}, qui raconte comment le joueur l'a fait voir.
+ * <p>Et ses <b>couleurs</b> ne sont pas celles qu'on croit. Le nuanceur melangeait du rose au bleu
+ * <b>sur la densite</b>, donc le bleu entoure chaque <b>centre de boule</b> — l'endroit ou la
+ * densite est la plus forte — et non la boule entiere : chacune est un <b>halo rose avec un coeur
+ * bleu</b>, la meme recette que la bille du meltdowner du meme mod. Et la ou plusieurs boules
+ * s'entassent, leurs densites s'additionnent, donc le <b>centre du corps</b> entier bleuit sur une
+ * tache continue — d'ou une seconde piece, celle-la.
+ *
+ * <p>Trois fois le port s'est trompe la-dessus, et trois fois c'est le joueur qui l'a vu : des
+ * boules bleues (le bleu n'est pas une couleur de boule), un coeur rose (chaque boule en a un
+ * bleu), et enfin des boules trop petites pour se fondre, qui se comptaient une a une au lieu de
+ * faire une masse. Voir {@link #VISIBILITY} et {@link #CORE_DENSITY}, qui portent les deux seuils.
  *
  * <p>Tout est <b>pur</b> — ni Minecraft ni horloge — donc verifiable en JUnit.
  */
@@ -77,16 +83,40 @@ public final class PlasmaBodyVisuals {
     public static final double FADE_PER_SECOND = 1.0;
 
     /**
-     * L'echelle du rayon d'une boule.
+     * Le seuil de densite ou une boule s'efface — et c'est lui qui fixe son rayon.
      *
-     * <p>Le rayon visible d'une boule n'est <b>pas</b> proportionnel a sa taille : le nuanceur de
-     * l'original empilait des densites en {@code taille / distance carre}, donc une boule se voit
-     * jusqu'a la distance ou cette densite passe sous le seuil de l'oeil — c'est a dire jusqu'a
-     * <b>racine de sa taille</b>. Un facteur direct rendrait les petites boules invisibles (deux
-     * dixiemes de bloc) et les grosses enormes ; la racine les tient toutes les deux dans le champ,
-     * ce que l'original faisait : ses petites boules se voyaient comme des points denses.
+     * <p>Le nuanceur empilait des densites en {@code alpha * taille / distance carre}, sans aucun
+     * bord : une boule se voyait jusqu'a la distance ou cette densite passait sous ce qu'un oeil
+     * distingue du fond. D'ou un rayon en <b>racine de la taille</b> et non proportionnel a elle —
+     * un facteur direct rendrait les petites boules invisibles (deux dixiemes de bloc) et les
+     * grosses enormes.
+     *
+     * <p>Et ce rayon est <b>long</b> : a pleine opacite, une grosse boule se voit a plus de trois
+     * blocs. C'est ce qui fait qu'elles se <b>fondent</b> en une masse au lieu de se compter une a
+     * une ; le port avait un rayon de moitie, laissait des trous entre elles, et le joueur y a lu
+     * « quinze petites boules qui se deplacent » au lieu d'un corps.
      */
-    public static final double RADIUS_SCALE = 2.0;
+    public static final double VISIBILITY = 0.15;
+
+    /**
+     * Et le seuil ou elle <b>bleuit</b>.
+     *
+     * <p>Le nuanceur melangeait du rose au bleu sur la densite, donc la couleur bleue entourait
+     * chaque <b>centre de boule</b> — l'endroit ou la densite est la plus forte — et non la boule
+     * entiere. Chacune est donc un halo rose <b>avec un coeur bleu</b>, comme la bille du meltdowner
+     * du meme mod (une lueur, un coeur). Le joueur l'a dit en une phrase : « leur centre est rose,
+     * donc pas comme le vrai ».
+     */
+    public static final double CORE_DENSITY = 1.2;
+
+    /**
+     * La part <b>visible</b> d'un carre.
+     *
+     * <p>L'image s'eteint avant son bord — son profil est un {@code (1 - r) au carre}, qui passe
+     * sous un dixieme d'opacite a 68 % du carre. Le carre a dessiner est donc plus grand que le
+     * rayon qu'on veut voir, et c'est ce facteur qui les relie. Voir {@code scripts/make-plasma-ball.mjs}.
+     */
+    public static final double SPRITE_REACH = 0.68;
 
     /**
      * L'opacite d'une boule, en part de celle du corps.
@@ -129,9 +159,34 @@ public final class PlasmaBodyVisuals {
         return Math.sqrt(Math.min(1.0, Math.max(0.0, alpha)));
     }
 
-    /** Le rayon dessine d'une boule a cet instant : racine de sa taille, et croissance comprise. */
-    public static double visibleRadius(double size, float alpha) {
-        return RADIUS_SCALE * Math.sqrt(Math.max(0.0, size)) * growth(alpha);
+    /** Le rayon <b>vu</b> d'une boule : la ou la densite du nuanceur tombe sous le seuil. */
+    public static double haloRadius(double size, float alpha) {
+        return densityRadius(size, alpha, VISIBILITY);
+    }
+
+    /** Et le rayon de son <b>coeur bleu</b> : le meme calcul, au seuil du bleu. */
+    public static double coreRadius(double size, float alpha) {
+        return densityRadius(size, alpha, CORE_DENSITY);
+    }
+
+    /** Le rayon du coeur bleu du <b>corps entier</b>, ou les densites de toutes les boules s'ajoutent. */
+    public static double bodyCoreRadius(float alpha) {
+        return BODY_CORE_RADIUS * growth(alpha);
+    }
+
+    /**
+     * La moitie du carre a dessiner pour obtenir ce rayon vu.
+     *
+     * <p>L'image s'eteint avant son bord : sans ce rattrapage, tout ce que le port dessine est
+     * d'un bon tiers plus petit que ce qu'il croit dessiner. Voir {@link #SPRITE_REACH}.
+     */
+    public static double quadRadius(double visibleRadius) {
+        return visibleRadius / SPRITE_REACH;
+    }
+
+    /** La ou {@code alpha * taille / distance carre} tombe sous un seuil donne, en blocs. */
+    private static double densityRadius(double size, float alpha, double threshold) {
+        return Math.sqrt(Math.max(0.0, alpha) * Math.max(0.0, size) / threshold);
     }
 
     /**
@@ -149,19 +204,15 @@ public final class PlasmaBodyVisuals {
     public static final float CORE_BLUE = 1.0f;
 
     /**
-     * Le rayon du coeur bleu, une fois le corps noue.
+     * Le rayon du coeur bleu du corps entier, une fois noue.
      *
-     * <p>C'est une PIECE AJOUTEE, et elle vient du joueur : devant une capture du vrai mod, il a
-     * dit que <b>aucune boule n'y est bleue</b>. Il a raison — la ou le nuanceur bleuissait, c'est
-     * le centre du VOLUME, la ou les boules s'entassent et ou la densite monte. Aucune boule prise
-     * a part n'est bleue, et le port les peignait une a une : il en sortait quatre grosses boules
-     * bleues, qui n'existent pas.
-     *
-     * <p>Le port dessine donc la meme chose qu'elles, mais <b>a part</b> : toutes les boules au rose
-     * des bords, et un coeur bleu par-dessus, au centre et a cette taille-la — un peu moins de la
-     * moitie de ce que l'essaim occupe.
+     * <p>A cote des coeurs de chaque boule, il y a celui du <b>corps</b> : au centre, les densites
+     * de toutes les boules s'additionnent, et le nuanceur y passait au bleu sur une tache continue
+     * — c'est la tache bleue que le joueur voit au milieu de la masse. Un coeur par boule ne la
+     * refait pas : il laisse des points bleus separes la ou le vrai mod n'en fait qu'un. D'ou cette
+     * piece, qui n'est que la somme.
      */
-    public static final double CORE_RADIUS = 2.2;
+    public static final double BODY_CORE_RADIUS = 1.8;
 
     /** Un balancement tire : son amplitude, sa vitesse, et son retard de phase. */
     public record Trig(double amplitude, double speed, double phase) {
@@ -252,11 +303,6 @@ public final class PlasmaBodyVisuals {
     /** Et celle du coeur : le bleu, la ou la densite monte. */
     public static float[] coreColor() {
         return new float[] { CORE_RED, CORE_GREEN, CORE_BLUE };
-    }
-
-    /** Le rayon du coeur a cet instant : une part de sa taille, et la croissance du corps. */
-    public static double coreRadius(float alpha) {
-        return CORE_RADIUS * growth(alpha);
     }
 
     /** Un tirage uniforme, du plus petit au plus grand : le {@code rangef} de l'original. */

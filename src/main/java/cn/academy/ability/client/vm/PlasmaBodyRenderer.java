@@ -30,12 +30,14 @@ import org.joml.Matrix4f;
  * <b>couleurs</b> des boules — en melange ajoute, un rose et un bleu superposes font du blanc, et
  * le joueur n'a vu que ca.
  *
- * <p>Les boules sont toutes au <b>rose</b> des bords du nuanceur, et le <b>bleu</b> est pose a part,
- * en un seul coeur au centre. Chez l'original, la ou le nuanceur bleuissait, c'est le centre du
- * <b>volume</b> — la ou les boules s'entassent et ou la densite monte — et aucune boule prise a part
- * n'est bleue. Le port les peignait une a une, il en sortait donc quatre grosses boules bleues qui
- * n'existent pas : c'est le joueur qui l'a vu, sur une capture du vrai mod. Voir
- * {@code PlasmaBodyVisuals#CORE_RADIUS}.
+ * <p>Et chaque boule se dessine <b>deux fois</b> : un <b>halo rose</b>, puis son <b>coeur bleu</b>
+ * par-dessus — la densite du nuanceur est maximale au centre de chaque boule, donc chacune est rose
+ * autour et bleue dedans. Une troisieme piece ferme le tout : le coeur bleu du <b>corps</b>, la ou
+ * les densites de toutes les boules s'additionnent. Voir {@code PlasmaBodyVisuals#CORE_DENSITY}.
+ *
+ * <p>L'ordre est donc en <b>trois passes</b> — tous les halos, puis tous les coeurs de boule, puis
+ * celui du corps — et non boule par boule : autrement, le halo d'une boule cacherait le coeur de
+ * celle qu'elle recouvre.
  *
  * <p>Comme le reste des effets du port : aucune lumiere (un plasma emet la sienne), aucune face
  * cachee, et <b>pas d'ecriture de profondeur</b> — les boules se croisent en permanence, et si
@@ -97,18 +99,30 @@ public final class PlasmaBodyRenderer {
         float[] ballColor = PlasmaBodyVisuals.ballColor();
         float[] coreColor = PlasmaBodyVisuals.coreColor();
 
+        // Les halos roses d'abord, TOUS : le halo d'une boule ne doit pas effacer le coeur de celle
+        // qu'elle recouvre, donc les coeurs passent apres. Voir le commentaire de la classe.
         for (PlasmaBodyVisuals.Ball ball : PlasmaBodies.balls()) {
             Vec3 at = centre.add(PlasmaBodyVisuals.offset(ball, age));
-            // Son rayon suit la racine de sa taille, et il grandit avec le corps : voir
-            // PlasmaBodyVisuals#visibleRadius.
-            double half = PlasmaBodyVisuals.visibleRadius(ball.size(), alpha);
-            quad(buffer, base, camera, at, across.scale(half), upright.scale(half), ballColor, face);
+            double halo = PlasmaBodyVisuals.quadRadius(
+                    PlasmaBodyVisuals.haloRadius(ball.size(), alpha));
+            quad(buffer, base, camera, at, across.scale(halo), upright.scale(halo),
+                    ballColor, face);
         }
 
-        // Et le coeur bleu par-dessus, au centre du volume — la ou la densite monte. C'est la piece
-        // que le nuanceur calculait et que le port ajoute : voir PlasmaBodyVisuals#CORE_RADIUS.
-        double core = PlasmaBodyVisuals.coreRadius(alpha);
-        quad(buffer, base, camera, centre, across.scale(core), upright.scale(core),
+        // Puis le coeur bleu de chacune, a la meme place et plus petit : c'est la ou sa propre
+        // densite passe au bleu. Voir PlasmaBodyVisuals#coreRadius.
+        for (PlasmaBodyVisuals.Ball ball : PlasmaBodies.balls()) {
+            Vec3 at = centre.add(PlasmaBodyVisuals.offset(ball, age));
+            double core = PlasmaBodyVisuals.quadRadius(
+                    PlasmaBodyVisuals.coreRadius(ball.size(), alpha));
+            quad(buffer, base, camera, at, across.scale(core), upright.scale(core),
+                    coreColor, face);
+        }
+
+        // Et celui du corps entier, par-dessus : au centre, les densites de toutes les boules
+        // s'additionnent, et c'est la que le nuanceur faisait une tache bleue continue.
+        double body = PlasmaBodyVisuals.quadRadius(PlasmaBodyVisuals.bodyCoreRadius(alpha));
+        quad(buffer, base, camera, centre, across.scale(body), upright.scale(body),
                 coreColor, face);
 
         BufferUploader.drawWithShader(buffer.end());
