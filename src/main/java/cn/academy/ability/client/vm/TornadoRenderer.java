@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -38,10 +39,13 @@ import java.util.List;
  * ecartement et ses deux rotations. Les memes nombres, dans le meme ordre, donnent la meme
  * forme ; les intervertir donnerait des ailes tordues.
  *
- * <p>Et le dessin lui-meme suit les memes regles que les autres effets du port : <b>aucune
- * lumiere</b> — une tornade de plasma emet la sienne —, aucune face cachee (un ruban n'a qu'une
- * face), et <b>pas d'ecriture de profondeur</b> : les anneaux se croisent en permanence, et
- * s'ils ecrivaient la profondeur ils se decouperaient les uns les autres au hasard.
+ * <p>Et le dessin lui-meme suit les memes regles que les autres effets du port : <b>aucun
+ * eclairage de la scene</b> — une tornade de plasma emet la sienne —, aucune face cachee (un ruban
+ * n'a qu'une face), et <b>pas d'ecriture de profondeur</b> : les anneaux se croisent en permanence,
+ * et s'ils ecrivaient la profondeur ils se decouperaient les uns les autres au hasard.
+ *
+ * <p>Reste l'ombre, prise a la main : chaque quad porte la lumiere du <b>soleil</b> — sa direction
+ * dans le monde, et sa hauteur. Voir {@link #shade}.
  */
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -72,9 +76,8 @@ public final class TornadoRenderer {
         Matrix4f base = event.getPoseStack().last().pose();
         float partialTick = event.getPartialTick();
         double seconds = Util.getMillis() / 1000.0;
-        // La lumiere des anneaux est celle de l'oeil : c'est ainsi que l'ombre suit le regard. Voir
-        // shade.
-        Vector3f lamp = event.getCamera().getLookVector();
+        // La lumiere des anneaux est celle du monde : le soleil, et sa hauteur. Voir shade.
+        Sun sun = sunOf(Minecraft.getInstance().level, partialTick);
 
         RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
         RenderSystem.setShaderTexture(0, RING);
@@ -122,7 +125,7 @@ public final class TornadoRenderer {
                         .translate((float) part.tx(), (float) part.ty(), (float) part.tz())
                         .rotateY((float) Math.toRadians(part.rotateY()))
                         .rotateZ((float) Math.toRadians(part.rotateZ()));
-                drawTornado(buffer, matrix, part.tornado(), seconds, alpha, lamp);
+                drawTornado(buffer, matrix, part.tornado(), seconds, alpha, sun);
             }
         }
 
@@ -199,7 +202,7 @@ public final class TornadoRenderer {
     /** Une tornade entiere : ses anneaux, du pied au sommet. */
     private static void drawTornado(BufferBuilder buffer, Matrix4f matrix,
                                     TornadoVisuals.Tornado tornado, double seconds, float alpha,
-                                    Vector3f lamp) {
+                                    Sun sun) {
         double t = TornadoVisuals.time(seconds, tornado.timeOffset());
         double uStep = 1.0 / TornadoVisuals.SEGMENTS;
 
@@ -222,7 +225,7 @@ public final class TornadoRenderer {
                 double u1 = u0 + uStep;
 
                 // L'original posait UNE normale par quad : glNormal3d(x0, y0, 0). Voir shade.
-                float shade = shade(matrix, x0, y0, lamp);
+                float shade = shade(normal(matrix, x0, y0), sun);
 
                 vertex(buffer, matrix, alpha, shade, x0 + dx, y0, z0 + dz, (float) u0, 0f);
                 vertex(buffer, matrix, alpha, shade, x0 + dx, y1, z0 + dz, (float) u0, 1f);
@@ -232,28 +235,73 @@ public final class TornadoRenderer {
         }
     }
 
-    /** Le plancher d'ombre : une face detournee n'est jamais noire, la lueur se voit encore. */
-    private static final float SHADE_MIN = 0.55f;
+    /** Le plancher d'ombre : une face detournee du soleil n'est jamais noire, la lueur se voit encore. */
+    private static final float SHADE_MIN = 0.72f;
     static final float SHADE_MAX = 1.0f;
 
+    /** Ce que la nuit retire aux ailes : jamais eteintes, elles emettent leur propre lueur. */
+    public static final double NIGHT_MIN = 0.65;
+
     /**
-     * L'ombre d'un anneau : la normale de l'original, telle quelle, eclairee par l'oeil.
+     * Le soleil du monde : de quel cote il est, et combien il donne.
      *
-     * <p>Cette normale est bizarre, et c'est la sienne : le rayon du cercle a gauche, la hauteur de
-     * l'anneau au milieu, et rien a droite — {@code (x0, y0, 0)}. Elle n'a donc pas grand-chose a
-     * voir avec la vraie normale du ruban, mais elle suffit a son office : le long de l'axe elle
-     * fait glisser la lumiere, et comme chaque aile est inclinee de son cote, les quatre en
-     * prennent une differente. Une aile qui regarde vers le bas prend l'ombre, comme il faut — et
-     * cette ombre suit le regard, parce que la lumiere est celle de l'oeil.
+     * @param direction ou il se trouve, depuis le monde — un vecteur unitaire
+     * @param strength la lumiere qu'il donne, de {@link #NIGHT_MIN} la nuit a 1 en plein jour
      */
-    static float shade(Matrix4f matrix, double x0, double y0, Vector3f look) {
-        Vector3f normal = matrix.transformDirection(new Vector3f((float) x0, (float) y0, 0f));
+    public record Sun(Vec3 direction, double strength) {
+    }
+
+    /**
+     * Le soleil d'un angle donne : sa direction, et sa lumiere.
+     *
+     * <p>Sa direction est celle du ciel de la 1.20.1 : le ciel tourne autour de l'axe des X, donc
+     * le soleil se leve et se couche dans le plan <b>X/Y</b>, et l'angle vaut zero a midi. La
+     * direction se lit donc {@code (sin, cos, 0)}, et sa <b>hauteur</b> — la composante Y — est ce
+     * qui eteint les ailes la nuit : c'est elle qui dit si le soleil est au-dessus de l'horizon.
+     */
+    public static Sun sun(double angle) {
+        Vec3 direction = new Vec3(Math.sin(angle), Math.cos(angle), 0);
+        return new Sun(direction, NIGHT_MIN + (1 - NIGHT_MIN) * Mth.clamp(direction.y, 0, 1));
+    }
+
+    /** Le soleil du monde ou l'on est, a cet instant. */
+    private static Sun sunOf(net.minecraft.world.level.Level level, float partialTick) {
+        return sun(level.getTimeOfDay(partialTick) * Math.PI * 2);
+    }
+
+    /** La normale d'un quad : celle de l'original, {@code (x0, y0, 0)}, tournee avec le quad. */
+    static Vector3f normal(Matrix4f matrix, double x0, double y0) {
+        return matrix.transformDirection(new Vector3f((float) x0, (float) y0, 0f));
+    }
+
+    /**
+     * L'ombre d'un quad : la lumiere du monde, qui vient du <b>soleil</b>.
+     *
+     * <p>Cette normale est bizarre, et c'est celle de l'original : le rayon du cercle a gauche, la
+     * hauteur de l'anneau au milieu, et rien a droite — {@code (x0, y0, 0)}. Elle n'a donc pas
+     * grand-chose a voir avec la vraie normale du ruban, mais elle suffit a son office : le long de
+     * l'axe elle fait glisser la lumiere, et comme chaque aile est inclinee de son cote, les quatre
+     * en prennent une differente.
+     *
+     * <p>L'original, lui, laissait GL l'eclairer — c'est de la que vient cette normale —, et le
+     * port avait d'abord refait cette lumiere avec une lampe posee sur l'<b>oeil</b> : c'etait le
+     * seul moyen de retrouver une ombre qui bougeait. Le joueur a demande mieux — « il y a un effet
+     * d'eclairage dessus, mais il est un peu trop gros et bizarre [...] j'aimerais que ce soit un
+     * peu plus subtil, et que ca depende aussi du soleil en jeu / notre position par rapport au
+     * soleil » —, et c'est plus juste : la lampe est le soleil, sa direction et sa hauteur. Tourner
+     * sur soi-meme eclaircit et assombrit donc encore les ailes — elles tiennent au dos —, et le
+     * creux d'ombre est plus doux qu'avant : une face detournee garde 72 % de sa lumiere au lieu
+     * de 55.
+     */
+    static float shade(Vector3f normal, Sun sun) {
         float length = normal.length();
-        if (length < 1e-6f) return SHADE_MAX;
-        // La direction qui va de la surface vers la lumiere : l'oeil est derriere, donc l'oppose
-        // du regard.
-        float lambert = Math.max(0f, normal.div(length).dot(new Vector3f(look).negate()));
-        return SHADE_MIN + (SHADE_MAX - SHADE_MIN) * lambert;
+        if (length < 1e-6f) return SHADE_MAX * (float) sun.strength();
+
+        Vector3f toSun = new Vector3f((float) sun.direction().x, (float) sun.direction().y,
+                (float) sun.direction().z);
+        float lambert = Math.max(0f, normal.div(length).dot(toSun));
+        double lit = SHADE_MIN + (SHADE_MAX - SHADE_MIN) * lambert;
+        return (float) (lit * sun.strength());
     }
 
     private static void vertex(BufferBuilder buffer, Matrix4f matrix, float alpha, float shade,
