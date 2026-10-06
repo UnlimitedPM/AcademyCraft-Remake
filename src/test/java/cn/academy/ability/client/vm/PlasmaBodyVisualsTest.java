@@ -87,6 +87,37 @@ class PlasmaBodyVisualsTest {
     }
 
     @Test
+    void uneBouleGrossitEnNaitreEtRetrecitEnMourir() {
+        // La densite du nuanceur valait alpha * taille / distance carre : une boule se voit donc
+        // jusqu'a racine de alpha. Rien a la naissance, pleine taille une fois le corps noue — et
+        // c'est ce qui manquait : les boules apparaissaient a taille pleine, ce qui se lisait comme
+        // un allumage et non comme de la matiere qui se noue.
+        assertEquals(0.0, PlasmaBodyVisuals.growth(0f), 1e-9, "rien tant qu'il n'y a rien");
+        assertEquals(0.5, PlasmaBodyVisuals.growth(0.25f), 1e-9, "un quart d'opacite, moitie de rayon");
+        assertEquals(1.0, PlasmaBodyVisuals.growth(1f), 1e-9, "et pleine une fois nouee");
+        assertEquals(1.0, PlasmaBodyVisuals.growth(4f), 1e-9, "jamais plus que sa taille");
+        assertEquals(0.0, PlasmaBodyVisuals.growth(-2f), 1e-9, "et jamais negative");
+    }
+
+    @Test
+    void unePetiteBouleSeVoitSansEtreInvisibleNiEnorme() {
+        // Le rayon suit la RACINE de la taille, pas la taille : un facteur direct rendrait les
+        // petites boules invisibles (deux dixiemes de bloc) et les grosses enormes. L'original,
+        // lui, les voyait toutes les deux — ses petites comme des points denses.
+        double petite = PlasmaBodyVisuals.visibleRadius(PlasmaBodyVisuals.SMALL_SIZE_MIN, 1f);
+        double grosse = PlasmaBodyVisuals.visibleRadius(PlasmaBodyVisuals.BIG_SIZE_MAX, 1f);
+
+        assertTrue(petite > 0.5, "une petite boule fait plus d'un demi-bloc : " + petite);
+        assertTrue(grosse < 3.0, "et une grosse en fait moins de trois : " + grosse);
+        assertTrue(grosse / petite < 5, "les deux tiennent dans le meme champ : " + (grosse / petite));
+
+        // Et a la naissance il n'y a rien : le rayon suit la croissance du corps.
+        assertEquals(0.0, PlasmaBodyVisuals.visibleRadius(1.0, 0f), 1e-9, "rien a la naissance");
+        assertEquals(grosse, PlasmaBodyVisuals.visibleRadius(PlasmaBodyVisuals.BIG_SIZE_MAX, 1f),
+                1e-9, "et sa taille pleine une fois le corps noue");
+    }
+
+    @Test
     void laPeripheriePrendLeRoseEtLeCoeurLeBleu() {
         // Les deux bouts du nuanceur, tels quels : rose (0,98 / 0,51 / 0,92) et bleu (0,43 / 0,74 / 1).
         float[] pink = PlasmaBodyVisuals.color(PlasmaBodyVisuals.SMALL_SIZE_MIN);

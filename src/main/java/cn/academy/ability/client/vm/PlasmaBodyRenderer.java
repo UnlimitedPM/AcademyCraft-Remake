@@ -1,8 +1,6 @@
 package cn.academy.ability.client.vm;
 
 import cn.academy.AcademyCraft;
-import com.mojang.blaze3d.platform.GlStateManager.DestFactor;
-import com.mojang.blaze3d.platform.GlStateManager.SourceFactor;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -19,6 +17,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Le rendu du corps de plasma du canon, portage de {@code PlasmaBodyRenderer}.
  *
@@ -27,10 +28,14 @@ import org.joml.Matrix4f;
  * port fait l'inverse : il <b>dessine les boules</b>, une par une, chacune a sa place et de sa
  * couleur — voir {@code PlasmaBodyVisuals}, qui les porte toutes.
  *
- * <p>Le dessin <b>ajoute</b> sa lumiere ({@code SRC_ALPHA / ONE}) : c'est ainsi qu'une dizaine de
- * boules se fondent en un seul corps au lieu de s'empiler, et c'est la seule facon d'approcher un
- * volume qui s'eclaircissait la ou il s'epaississait. L'opacite d'une boule est donc basse — voir
- * {@code DRAW_ALPHA} — et c'est leur recouvrement qui fait le coeur.
+ * <p>Le dessin compose en <b>alpha normal</b> ({@code SRC_ALPHA / ONE_MINUS_SRC_ALPHA}), comme
+ * l'original : son nuanceur empilait ses vingt pas de la meme facon. C'est aussi ce qui garde les
+ * <b>couleurs</b> des boules — en melange ajoute, un rose et un bleu superposes font du blanc, et
+ * le joueur n'a vu que ca.
+ *
+ * <p>L'ordre de dessin va donc des <b>petites aux grosses</b> : les roses se posent en premier, et
+ * les bleues par-dessus, ce qui met le coeur bleu devant la peripherie rose. C'est la meme
+ * direction que le nuanceur, qui bleuissait la ou la densite montait.
  *
  * <p>Comme le reste des effets du port : aucune lumiere (un plasma emet la sienne), aucune face
  * cachee, et <b>pas d'ecriture de profondeur</b> — les boules se croisent en permanence, et si
@@ -41,14 +46,15 @@ import org.joml.Matrix4f;
 public final class PlasmaBodyRenderer {
 
     /**
-     * L'image d'une boule : un disque BLANC, pris a la bille de plasma du meltdowner.
+     * L'image d'une boule : un disque BLANC a bord doux, ecrit par {@code make-plasma-ball.mjs}.
      *
-     * <p>L'original n'en avait pas — son nuanceur calculait la forme — et le port a besoin d'un
-     * disque pour la dessiner. Blanc, parce qu'une couleur ne s'obtient qu'en teintant une image
-     * blanche : une image deja teintee ne peut pas devenir bleue puis rose.
+     * <p>L'original n'en avait pas — son nuanceur calculait la forme. Le port a donc besoin d'un
+     * disque, et il lui faut les deux proprietes que l'original obtenait par le calcul : <b>blanc</b>
+     * (une couleur ne s'obtient qu'en teintant, et une image deja teintee ne peut pas devenir bleue
+     * PUIS rose) et <b>doux</b> (un bord net se lit comme une pastille et non comme du plasma).
      */
     private static final ResourceLocation BALL = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/mdball/0.png");
+            AcademyCraft.MOD_ID, "textures/effects/plasma_ball.png");
 
     private PlasmaBodyRenderer() {
     }
@@ -58,8 +64,9 @@ public final class PlasmaBodyRenderer {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         if (PlasmaBodies.phase() == PlasmaBodies.Phase.NONE) return;
 
-        float alpha = PlasmaBodies.alpha() * PlasmaBodyVisuals.DRAW_ALPHA;
-        if (alpha <= 0f) return;
+        float alpha = PlasmaBodies.alpha();
+        float face = alpha * PlasmaBodyVisuals.DRAW_ALPHA;
+        if (face <= 0f) return;
 
         Vec3 camera = event.getCamera().getPosition();
         Matrix4f base = event.getPoseStack().last().pose();
@@ -78,7 +85,7 @@ public final class PlasmaBodyRenderer {
         RenderSystem.setShaderTexture(0, BALL);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
+        RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
         RenderSystem.depthMask(false);
 
@@ -86,19 +93,29 @@ public final class PlasmaBodyRenderer {
         BufferBuilder buffer = tesselator.getBuilder();
         buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
 
-        for (PlasmaBodyVisuals.Ball ball : PlasmaBodies.balls()) {
+        // Des petites aux grosses : le rose se pose le premier, le bleu passe devant. Voir le
+        // commentaire de la classe.
+        for (PlasmaBodyVisuals.Ball ball : sorted(PlasmaBodies.balls())) {
             Vec3 at = centre.add(PlasmaBodyVisuals.offset(ball, age));
             float[] rgb = PlasmaBodyVisuals.color(ball.size());
-            double radius = ball.size() * PlasmaBodyVisuals.DRAW_SCALE;
-            quad(buffer, base, camera, at, across.scale(radius), upright.scale(radius), rgb, alpha);
+            // Son rayon suit la racine de sa taille, et il grandit avec le corps : voir
+            // PlasmaBodyVisuals#visibleRadius.
+            double half = PlasmaBodyVisuals.visibleRadius(ball.size(), alpha);
+            quad(buffer, base, camera, at, across.scale(half), upright.scale(half), rgb, face);
         }
 
         BufferUploader.drawWithShader(buffer.end());
 
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
-        RenderSystem.defaultBlendFunc();
         RenderSystem.disableBlend();
+    }
+
+    /** L'essaim range des petites aux grosses, sans toucher a celui qui vit. */
+    private static List<PlasmaBodyVisuals.Ball> sorted(List<PlasmaBodyVisuals.Ball> balls) {
+        List<PlasmaBodyVisuals.Ball> out = new ArrayList<>(balls);
+        out.sort(java.util.Comparator.comparingDouble(PlasmaBodyVisuals.Ball::size));
+        return out;
     }
 
     /**

@@ -75,23 +75,43 @@ public final class PlasmaBodyVisuals {
     public static final double FADE_PER_SECOND = 1.0;
 
     /**
-     * Le rayon dessine d'une boule, en multiple de sa taille.
+     * L'echelle du rayon d'une boule.
      *
-     * <p>Le nuanceur de l'original n'avait pas de bord : sa densite decroissait en {@code 1/d}
-     * au carre, donc une boule se voyait jusqu'a deux a trois fois son rayon. C'est ce que ce
-     * facteur reprend — sans lui, les boules du port seraient des pastilles.
+     * <p>Le rayon visible d'une boule n'est <b>pas</b> proportionnel a sa taille : le nuanceur de
+     * l'original empilait des densites en {@code taille / distance carre}, donc une boule se voit
+     * jusqu'a la distance ou cette densite passe sous le seuil de l'oeil — c'est a dire jusqu'a
+     * <b>racine de sa taille</b>. Un facteur direct rendrait les petites boules invisibles (deux
+     * dixiemes de bloc) et les grosses enormes ; la racine les tient toutes les deux dans le champ,
+     * ce que l'original faisait : ses petites boules se voyaient comme des points denses.
      */
-    public static final double DRAW_SCALE = 2.2;
+    public static final double RADIUS_SCALE = 2.0;
 
     /**
      * L'opacite d'une boule, en part de celle du corps.
      *
-     * <p>Le dessin <b>ajoute</b> sa lumiere : c'est une approximation du volume de l'original, et
-     * elle demande un facteur. A pleine opacite, une dizaine de boules superposees saturent en blanc
-     * pur — le coeur bleu y perdrait sa couleur. A un quart, l'ecart entre le centre et la
-     * peripherie se lit encore, et les boules qui se chevauchent se fondent au lieu de s'empiler.
+     * <p>Le melange est <b>normal</b> — celui de l'original, qui composait son volume en alpha —
+     * donc les boules s'empilent au lieu de s'additionner. C'est ce qui garde leurs couleurs :
+     * en melange ajoute, un rose et un bleu superposes font du BLANC, et le joueur n'a vu que ca.
      */
-    public static final float DRAW_ALPHA = 0.25f;
+    public static final float DRAW_ALPHA = 0.35f;
+
+    /**
+     * La croissance d'une boule, en part de son rayon.
+     *
+     * <p>L'opacite du nuanceur multipliait sa densite : {@code alpha * taille / distance carre}.
+     * Une boule se voit donc jusqu'a la distance ou cette densite passe sous le seuil de l'oeil,
+     * c'est a dire jusqu'a {@code racine de alpha} — elle <b>grossit en naitre</b>, et elle
+     * <b>retrecit en mourir</b>. Sans cela, les boules du port apparaissent et disparaissent a
+     * taille pleine, ce qui se lit comme un allumage et non comme de la matiere qui se noue.
+     */
+    public static double growth(float alpha) {
+        return Math.sqrt(Math.min(1.0, Math.max(0.0, alpha)));
+    }
+
+    /** Le rayon dessine d'une boule a cet instant : racine de sa taille, et croissance comprise. */
+    public static double visibleRadius(double size, float alpha) {
+        return RADIUS_SCALE * Math.sqrt(Math.max(0.0, size)) * growth(alpha);
+    }
 
     /** Les deux bouts de la couleur du nuanceur : le rose des bords, le bleu du coeur. */
     public static final float EDGE_RED = 0.98f;
