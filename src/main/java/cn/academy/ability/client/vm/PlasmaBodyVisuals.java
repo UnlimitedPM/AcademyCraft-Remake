@@ -159,8 +159,13 @@ public final class PlasmaBodyVisuals {
      * <p>La valeur est haute parce qu'une boule seule ne fait PAS le corps : il faut trois ou
      * quatre recouvrements pour que le coeur devienne opaque, comme chez l'original, dont le
      * marcheur de rayon empilait vingt pas et atteignait le plein des les premieres couches.
+     *
+     * <p>Et elle a encore ete <b>montee</b>, de 0,6 a 0,85 : le joueur a trouve les boules trop
+     * transparentes — « dans le ciel on a du mal a les voir ». Un rose a six dixiemes sur un ciel
+     * clair se lave, et c'est justement le ciel qui est le fond le plus difficile. Le nombre est un
+     * compromis : plus haut, la masse perdrait ses recouvrements et se lirait comme un aplat.
      */
-    public static final float DRAW_ALPHA = 0.6f;
+    public static final float DRAW_ALPHA = 0.85f;
 
     /**
      * La couverture d'une boule a cette opacite de corps.

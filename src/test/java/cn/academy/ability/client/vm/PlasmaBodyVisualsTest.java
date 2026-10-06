@@ -148,6 +148,12 @@ class PlasmaBodyVisualsTest {
         assertEquals(PlasmaBodyVisuals.DRAW_ALPHA, PlasmaBodyVisuals.coverage(4f), 1e-6f, "bornee");
         assertEquals(PlasmaBodyVisuals.DRAW_ALPHA * 0.5f, PlasmaBodyVisuals.coverage(-1f), 1e-6f,
                 "et jamais sous la moitie");
+
+        // Et le plein est haut, parce que le fond le plus dur est le CIEL : le joueur y trouvait les
+        // boules trop transparentes, « dans le ciel on a du mal a les voir ». Un rose a six
+        // dixiemes sur un ciel clair se lave.
+        assertTrue(PlasmaBodyVisuals.coverage(1f) >= 0.8f,
+                "une boule nouee couvre au moins huit dixiemes : " + PlasmaBodyVisuals.coverage(1f));
     }
 
     @Test
