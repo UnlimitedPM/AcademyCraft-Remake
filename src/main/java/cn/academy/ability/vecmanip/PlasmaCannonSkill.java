@@ -24,9 +24,10 @@ import net.minecraft.world.phys.Vec3;
  *
  * <ul>
  * <li>la <b>charge</b> — 60 ticks au depart, 30 au maximum d'experience — se paie par tick,
- *     de 18 a 25 CP (divises par 28). Contrairement au bouclier et aux ailes, ce n'est pas
- *     l'experience qui raccourcit la charge pour rien : plus on sait faire, plus la boule
- *     monte vite et plus elle coute par tick ;</li>
+ *     de 18 a 25 CP (divises par 28) : plus on sait faire, plus la boule monte vite et plus
+ *     elle coute par tick. Et elle ne se paie que <b>jusqu'a ce qu'elle soit complete</b> :
+ *     une touche tenue plus longtemps ne coute plus rien, c'est l'original, qui ne payait que
+ *     ses {@code chargeTime} premiers ticks ;</li>
  * <li>le <b>tir</b>, au relachement, et seulement si la charge est complete — l'original
  *     mourait sans rien faire si la touche partait trop tot. Il verse 0,008 d'experience,
  *     pose la boule la ou le regard s'arrete, et ouvre une recharge de 1000 a 600 ticks
@@ -44,8 +45,11 @@ import net.minecraft.world.phys.Vec3;
  * qui fait qu'une cible encaisse les deux. L'explosion elle-meme est une vraie explosion de
  * 12 a 15 de puissance.
  *
- * <p>Le porteur n'est pas epargne, et c'est l'original : sa boule part de quinze blocs
- * au-dessus de sa tete, mais si elle explose a ses pieds, il meurt avec le reste.
+ * <p>Le porteur est <b>epargne</b>, et c'est un ecart assume : l'original le frappait comme le
+ * reste, donc tirer sur ses propres pieds etait un suicide — le joueur l'a vu et l'a demande.
+ * L'explosion, elle, l'epargnait deja toute seule (vanilla exclut la source de ce qu'elle
+ * frappe) ; c'est la <b>frappe directe</b> qui le tuait. Toutes les autres ondes de choc du port
+ * l'epargnent : les deux vagues de vecmanip, la salve et les billes du meltdowner, le choc au sol.
  *
  * <h2>Trois ecarts assumes, et une coquille</h2>
  *
@@ -218,13 +222,14 @@ public class PlasmaCannonSkill extends Skill {
     /**
      * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
      *
-     * <p>Il n'est payé que pendant la <b>charge</b> : une fois le tir parti, la boule vole et ne
-     * coute plus rien. Et le client ne s'y trompe pas sans rien savoir : sa charge se referme au
-     * relachement, donc il ne rejoue plus rien des que l'effet est en vol.
+     * <p>Il ne se paie que pendant la <b>charge</b>, et seulement jusqu'a ce qu'elle soit complete :
+     * une fois la boule prete, la touche peut rester enfoncee sans rien couter, et une fois le tir
+     * parti elle vole sans rien couter non plus. Le client ne s'y trompe pas sans rien savoir : sa
+     * charge se referme au relachement, donc il ne rejoue plus rien des que l'effet est en vol.
      */
     @Override
     public float getTickUpkeep(AbilityData data, int ticks) {
-        return chargeCost(data);
+        return ticks < chargeTicks(data) ? chargeCost(data) : 0f;
     }
 
     /** Ce que la boule charge a la surcharge, et qui reste epingle jusqu'a la fin. */
@@ -329,8 +334,14 @@ public class PlasmaCannonSkill extends Skill {
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         if (data.getHoldMark(this) < 0) {
-            // La charge : elle se paie par tick, et une reserve qui manque l'abandonne.
-            return data.consumeControlPoint(getTickUpkeep(data, heldTicks));
+            // La charge : elle se paie par tick, et une reserve qui manque l'abandonne. Ce n'est
+            // que pendant la charge, celle-ci : une fois la boule prete, l'original laissait la
+            // touche enfoncee sans rien facturer (son `s_tick` ne payait que les `chargeTime`
+            // premiers ticks), et le port, lui, vidait la reserve a l'infini — « quand je
+            // maintiens la touche pour charger l'attaque, elle me consomme des CP a l'infini tant
+            // que je maintiens, alors que normalement a un moment ca devrait s'arreter ».
+            float upkeep = getTickUpkeep(data, heldTicks);
+            return upkeep <= 0f || data.consumeControlPoint(upkeep);
         }
 
         if (!(player.level() instanceof ServerLevel level)) return true;
@@ -416,7 +427,10 @@ public class PlasmaCannonSkill extends Skill {
      *
      * <p>Ce qui vit a moins de dix blocs du point d'arrivee est frappe de 80 a 150 points,
      * immunites remises a zero juste apres pour que l'explosion qui suit ne soit pas absorbee.
-     * Le porteur n'est pas epargne : l'original frappait tout ce qu'il trouvait, lui compris.
+     * Le <b>porteur est epargne</b> : l'original le frappait comme le reste, donc tirer sur ses
+     * propres pieds etait un suicide — le joueur l'a vu et l'a demande. L'explosion, elle,
+     * l'epargnait deja toute seule (vanilla exclut la source de ce qu'elle frappe), et toutes les
+     * autres ondes de choc du port font comme maintenant celle-ci.
      *
      * <p>L'explosion, elle, est une vraie explosion, avec ses degats, son bruit et ses
      * particules : la permission de casser ne decide que des blocs, et c'est ce que l'original
@@ -426,6 +440,7 @@ public class PlasmaCannonSkill extends Skill {
         float damage = scaled(damage(data));
         for (Entity entity : level.getEntitiesOfClass(Entity.class,
                 new AABB(center, center).inflate(BLAST_RANGE))) {
+            if (entity == player) continue;
             entity.hurt(player.damageSources().indirectMagic(player, player), damage);
             if (entity instanceof LivingEntity living) {
                 living.invulnerableTime = 0;

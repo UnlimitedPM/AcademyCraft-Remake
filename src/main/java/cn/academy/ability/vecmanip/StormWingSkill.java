@@ -187,8 +187,7 @@ public class StormWingSkill extends Skill {
      *
      * <p>La charge elle-meme ne coute rien — l'original ne facturait que les ailes ouvertes —, donc
      * le client ne compte qu'a partir du tick ou elles s'ouvrent, celui que le serveur connait.
-     */
-    @Override
+     */    @Override
     public float getTickUpkeep(AbilityData data, int ticks) {
         return opened(data, ticks) ? consumption(data) : 0f;
     }

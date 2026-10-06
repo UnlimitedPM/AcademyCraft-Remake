@@ -4632,6 +4632,18 @@ public final class AcademyGameTests {
         assertTrue(helper, data.getControlPoint() < reserveBefore - 37f,
                 "et la charge se paie : " + data.getControlPoint());
 
+        // Une fois la charge COMPLETE, la touche peut rester enfoncee : la boule est prete, et la
+        // tenir ne coute plus rien. C'est l'original, qui ne payait que ses `chargeTime` premiers
+        // ticks ; le port, lui, vidait la reserve a l'infini — « quand je maintiens la touche pour
+        // charger l'attaque, elle me consomme des CP a l'infini tant que je maintiens ».
+        double reserveCharged = data.getControlPoint();
+        for (int tick = 60; tick < 80; tick++) {
+            assertTrue(helper, cannon.onHoldTick(player, data, tick),
+                    "la touche tient toujours au tick " + tick);
+        }
+        assertClose(helper, reserveCharged, data.getControlPoint(),
+                "et une charge complete ne coute plus rien");
+
         // Le relachement, sur une charge complete : la boule part, et l'experience est versee.
         assertTrue(helper, cannon.onRelease(player, data, 60),
                 "une charge complete fait partir la boule");
@@ -4646,7 +4658,10 @@ public final class AcademyGameTests {
                         && Math.abs(destination.x - (abs.getX() + 0.5)) < 1.5,
                 "la boule doit viser le mur : " + destination);
 
-        // Le vol : un bloc par tick, et il finit sur le mur.
+        // Le vol : un bloc par tick, et il finit sur le mur. La vie du porteur est relevee avant :
+        // la boule explose a quinze blocs de lui, mais elle peut aussi exploser a ses pieds, et le
+        // porteur doit y survivre — l'original le frappait, et tirer sur soi etait un suicide.
+        float healthBefore = player.getHealth();
         int flown = 0;
         boolean flying = true;
         while (flying && flown < 100) {
@@ -4657,6 +4672,8 @@ public final class AcademyGameTests {
         assertTrue(helper, flown > 5, "et elle vole vraiment : " + flown + " ticks");
         assertFalse(helper, zombie.isAlive(),
                 "ce qui se trouve a dix blocs de l'arrivee n'y survit pas");
+        assertClose(helper, healthBefore, player.getHealth(),
+                "et le porteur, lui, n'est pas touche par sa propre explosion");
 
         // La fin ordinaire, avec la recharge la plus longue du port.
         cn.academy.ability.AbilityEvents.endHeld(player, data, cannon);
