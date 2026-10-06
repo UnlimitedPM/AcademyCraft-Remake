@@ -35,10 +35,11 @@ public class ClientAbilityData {
      * tot ici que chez lui.
      *
      * @param holding un maintien ou une charge est ouvert (le surcout est alors epingle par le
-     *                serveur, et c'est le client qui rejoue l'entretien)
-     * @param upkeep  ce que cet entretien coute a ce tick : voir {@code Skill#getTickUpkeep}
+     *                serveur, et c'est le client qui rejoue la montee)
+     * @param upkeep  ce que cet entretien coute a ce tick en reserve : voir {@code Skill#getTickUpkeep}
+     * @param upkeepOverload ce qu'il ajoute au surcout : voir {@code Skill#getTickUpkeepOverload}
      */
-    public static void tick(boolean holding, float upkeep) {
+    public static void tick(boolean holding, float upkeep, float upkeepOverload) {
         // L'entretien d'un maintien se paie par tick, et c'est ici qu'il se rejoue : sans cela la
         // reserve du client ne descendait qu'a chaque synchronisation — tous les quatre ticks — et
         // le joueur voyait ses points partir une cinquantaine a la fois. « Je vois mes cp diminuer
@@ -47,8 +48,12 @@ public class ClientAbilityData {
         // competence elle-meme ({@code Skill#getTickUpkeep}) : c'est celui que le serveur paie, donc
         // les deux nombres ne divergent pas — et la synchronisation suivante reecrit la valeur vraie
         // de toute facon.
-        if (holding && upkeep > 0f) {
-            DATA.replayUpkeep(upkeep);
+        //
+        // Le surcout monte par le meme chemin, et pour la meme raison : les ailes de tempete en
+        // ajoutent a chaque tick de vol, et le joueur voyait sa barre monter « d'un certain nombre
+        // a chaque fois plutot que d'avoir un beau defilement comme pour les CP ».
+        if (holding && (upkeep > 0f || upkeepOverload > 0f)) {
+            DATA.replayUpkeep(upkeep, upkeepOverload);
         }
         if (DATA.getControlPoint() < DATA.getMaxControlPoint()) {
             DATA.tickRegen();

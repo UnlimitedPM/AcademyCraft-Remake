@@ -563,6 +563,26 @@ public abstract class Skill {
     }
 
     /**
+     * Ce que ce tick de maintien — ou de charge — ajoutera au <b>surcout</b>, comme {@link
+     * #getTickUpkeep} le dit pour la reserve.
+     *
+     * <p>Meme raison, et meme remede : les ailes de tempete ajoutent leur surcout a chaque tick de
+     * vol, et le serveur ne l'envoie que tous les quatre ticks — le joueur voyait donc sa barre
+     * monter « d'un certain nombre a chaque fois plutot que d'avoir un beau defilement comme pour
+     * les CP ». Ce qui monte au tick se rejoue au tick, et la synchronisation suivante reecrit la
+     * valeur vraie.
+     *
+     * <p>A ne pas confondre avec la <b>descente</b> du surcout : pendant un maintien, le serveur
+     * epingle la part qu'il a posee a l'ouverture et ne la fait pas redescendre — c'est le client
+     * qui rejoue la montee ({@code ClientAbilityData}), et personne ne rejoue la descente.
+     *
+     * <p>Defaut : rien, et une seule competence en a besoin ({@code storm_wing}).
+     */
+    public float getTickUpkeepOverload(AbilityData data, int ticks) {
+        return 0f;
+    }
+
+    /**
      * Le joueur a relache la touche : l'effet doit-il continuer tout seul ?
      *
      * <p>C'est le quatrieme cas de l'original, et il n'y en a qu'un : le {@code jet_engine}

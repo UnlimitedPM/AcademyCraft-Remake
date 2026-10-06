@@ -145,7 +145,7 @@ public class AbilityClientEvents {
         // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur —
         // et c'est aussi lui qui fait descendre la reserve, par paquets : voir
         // ClientAbilityData.tick.
-        ClientAbilityData.tick(ClientCharge.anyOpen(), upkeepPerTick());
+        ClientAbilityData.tick(ClientCharge.anyOpen(), upkeepPerTick(), upkeepOverloadPerTick());
         // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
         cn.academy.client.hud.NotificationHud.tick();
         // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
@@ -305,6 +305,25 @@ public class AbilityClientEvents {
             Skill skill = skillByName(name);
             if (skill != null) {
                 total += skill.getTickUpkeep(ClientAbilityData.get(), ClientCharge.getTicks(name));
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Et ce qu'ils ajouteront au surcout, somme : voir {@code Skill#getTickUpkeepOverload}.
+     *
+     * <p>Une seule competence en a besoin — les ailes de tempete en ajoutent a chaque tick de vol —
+     * mais c'est le meme remede que la reserve : sans lui, la deuxieme barre montait par paquets de
+     * quatre ticks, « d'un certain nombre a chaque fois plutot que d'avoir un beau defilement ».
+     */
+    private static float upkeepOverloadPerTick() {
+        float total = 0f;
+        for (String name : ClientCharge.openSkills()) {
+            Skill skill = skillByName(name);
+            if (skill != null) {
+                total += skill.getTickUpkeepOverload(ClientAbilityData.get(),
+                        ClientCharge.getTicks(name));
             }
         }
         return total;

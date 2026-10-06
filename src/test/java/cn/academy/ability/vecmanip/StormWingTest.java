@@ -59,7 +59,8 @@ class StormWingTest {
                 "avant, regard a l'ouest");
 
         // Le tangage, lui, ne concerne que l'avant et l'arriere : viser ses pieds envoie vers
-        // le bas, mais la gauche reste horizontale.
+        // le bas, mais la gauche reste horizontale. Le VOL, lui, n'en passe plus du tout — voir
+        // leVolEstAPlatEtLAltitudeSeuleEstVerticale.
         assertVec(new Vec3(0, -1, 0), StormWingSkill.worldSpace(0f, 90f, new Vec3(0, 0, 1)),
                 "avant, regard vers le bas");
         assertVec(new Vec3(1, 0, 0), StormWingSkill.worldSpace(0f, 90f, new Vec3(1, 0, 0)),
@@ -98,28 +99,43 @@ class StormWingTest {
     }
 
     /**
-     * La montee reste verticale, et le reste suit le regard.
+     * Le vol est <b>a plat</b>, et l'altitude ne se commande qu'a l'espace et a l'accroupissement.
      *
-     * <p>C'est la deuxieme demande du joueur : « appuyer sur espace pour monter ». Dans le repere
-     * du regard, regarder ses pieds et appuyer sur espace ferait <b>plonger</b> — le haut du regard
-     * est alors l'avant —, donc la montee et la descente se prennent dans le monde.
+     * <p>C'est la quatrieme demande du joueur, et elle annule la premiere moitie de la deuxieme :
+     * l'avant a suivi le regard (pique comprise), puis il ne l'a plus suivi du tout — « si je
+     * regarde vers le bas avec les ailes actives et que j'avance, que ca ne me fasse pas descendre
+     * du tout, pour aller vers le bas je veut appuyer sur shift ». Le regard ne donne donc plus que
+     * le CAP : son tangage ne peut meme plus entrer dans la direction, ce n'est plus un parametre.
+     *
+     * <p>La montee et la descente, elles, restent verticales dans le <b>monde</b> — et pas dans le
+     * repere du regard, ou regarder ses pieds et appuyer sur espace ferait plonger, le haut du regard
+     * etant alors l'avant.
      */
     @Test
-    void laMonteeResteVerticaleMemeEnRegardantSesPieds() {
-        // Le deplacement, lui, suit le regard : viser ses pieds fait piquer l'avant.
-        assertVec(new Vec3(0, -1, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(0, 0, 1)),
-                "l'avant suit le regard qui pique");
-        assertVec(new Vec3(1, 0, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(1, 0, 0)),
-                "et la gauche reste horizontale");
+    void leVolEstAPlatEtLAltitudeSeuleEstVerticale() {
+        // Le cap, et rien d'autre : l'avant suit le lacet.
+        assertVec(new Vec3(0, 0, 1), StormWingSkill.flightDirection(0f, new Vec3(0, 0, 1)),
+                "l'avant, sans regard particulier");
+        assertVec(new Vec3(-1, 0, 0), StormWingSkill.flightDirection(90f, new Vec3(0, 0, 1)),
+                "et il suit le lacet");
+        assertVec(new Vec3(1, 0, 0), StormWingSkill.flightDirection(0f, new Vec3(1, 0, 0)),
+                "la gauche reste horizontale");
+        assertVec(new Vec3(0, 0, -1), StormWingSkill.flightDirection(0f, new Vec3(0, 0, -1)),
+                "l'arriere aussi");
 
-        // Mais pas la montee : elle est verticale dans le monde, quel que soit le regard.
-        assertVec(new Vec3(0, 1, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(0, 1, 0)),
-                "espace monte, meme le nez dans le sol");
-        assertVec(new Vec3(0, 1, 0), StormWingSkill.flightDirection(0f, -60f, new Vec3(0, 1, 0)),
-                "et vers le ciel aussi");
-        assertVec(new Vec3(0, -1, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(0, -1, 0)),
-                "l'accroupissement, lui, descend");
-        assertVec(Vec3.ZERO, StormWingSkill.flightDirection(0f, 45f, Vec3.ZERO),
+        // L'altitude : espace monte, accroupissement descend, dans le monde.
+        assertVec(new Vec3(0, 1, 0), StormWingSkill.flightDirection(0f, new Vec3(0, 1, 0)),
+                "l'espace monte");
+        assertVec(new Vec3(0, -1, 0), StormWingSkill.flightDirection(0f, new Vec3(0, -1, 0)),
+                "et l'accroupissement descend");
+
+        // Et les deux se somment : avancer en montant, avancer en descendant. L'avance reste a
+        // plat dans les deux cas, c'est tout l'objet de la demande.
+        assertVec(new Vec3(0, 1, 1), StormWingSkill.flightDirection(0f, new Vec3(0, 1, 1)),
+                "avant et espace");
+        assertVec(new Vec3(0, -1, 1), StormWingSkill.flightDirection(0f, new Vec3(0, -1, 1)),
+                "avant et accroupissement");
+        assertVec(Vec3.ZERO, StormWingSkill.flightDirection(45f, Vec3.ZERO),
                 "et sans touche, on ne demande rien");
     }
 
@@ -224,13 +240,18 @@ class StormWingTest {
         assertTrue(WING.getTickUpkeep(half, flying) > 0f, "les ailes ouvertes se paient");
         assertEquals(WING.consumption(half), WING.getTickUpkeep(half, flying), 1.0e-6f,
                 "un tick de vol coute la courbe des CP, et rien d'autre");
+        // Et le surcout qu'il ajoute, celui que le client rejoue pour sa deuxieme barre.
+        assertEquals(WING.overload(half), WING.getTickUpkeepOverload(half, flying), 1.0e-6f,
+                "un tick de vol ajoute la courbe du surcout");
+        assertEquals(0f, WING.getTickUpkeepOverload(half, 0), 1.0e-6f,
+                "et la charge, elle, n'ajoute rien");
 
         // Et une visee de plusieurs directions ne pousse pas plus fort qu'une seule.
         double speed = WING.speed(half);
         Vec3[] wishes = {new Vec3(0, 0, 1), new Vec3(1, 0, 0), new Vec3(1, 0, 1),
                 new Vec3(1, 1, 1), new Vec3(0, 1, 0), new Vec3(-1, 0, 1)};
         for (Vec3 local : wishes) {
-            Vec3 pushed = StormWingSkill.flightDirection(0f, 0f, local).normalize().scale(speed);
+            Vec3 pushed = StormWingSkill.flightDirection(0f, local).normalize().scale(speed);
             assertEquals(speed, pushed.length(), 1.0e-6, "la meme poussee, pour " + local);
         }
     }

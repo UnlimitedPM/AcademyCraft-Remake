@@ -36,18 +36,19 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Les ailes ouvertes, chaque touche de deplacement tenue pousse le joueur dans cette
  * direction, <b>par pas de 0,16</b> au lieu d'une vitesse posee d'un coup : le depart est mou
- * et l'arrivee rapide. La direction est prise dans le repere du regard — avant et arriere
- * suivent le tangage, gauche et droite restent horizontaux, comme les quatre clefs de
- * l'original — et la vitesse va de 1,4 a 3,6 blocs par tick selon l'experience : sous 45 %
- * d'experience les ailes sont lentes (0,7), au-dela elles sont rapides (1,2), et les deux
- * grandissent jusqu'a 3 fois.
+ * et l'arrivee rapide. Le vol est <b>a plat</b> : le regard ne donne que le cap, et l'altitude
+ * ne se commande qu'a l'espace (monter) et a l'accroupissement (descendre) — regarder ses pieds
+ * en avancant ne fait donc pas piquer. La vitesse va de 1,4 a 3,6 blocs par tick selon
+ * l'experience : sous 45 % d'experience les ailes sont lentes (0,7), au-dela elles sont rapides
+ * (1,2), et les deux grandissent jusqu'a 3 fois.
  *
- * <p>Le joueur a demande trois choses a ce vol, et elles tiennent dans la direction : les quatre
+ * <p>Le joueur a demande quatre choses a ce vol, et elles tiennent dans la direction : les quatre
  * touches <b>se somment</b> — avant et droite donnent la diagonale, la ou l'original ne gardait
- * que la derniere touche pressee —, l'<b>espace fait monter</b> et l'accroupissement descend, et
- * la montee <b>reste verticale</b> au lieu de suivre le regard : regarder ses pieds et demander a
- * monter ferait plonger, sinon. La direction entiere est ensuite normalisee, donc une diagonale ou
- * une montee va exactement aussi vite qu'un cap franc.
+ * que la derniere touche pressee —, l'<b>espace fait monter</b> et l'accroupissement descend, la
+ * montee <b>reste verticale</b> au lieu de suivre le regard, et l'avance ne <b>pique plus</b> :
+ * « si je regarde vers le bas avec les ailes actives et que j'avance, que ca ne me fasse pas
+ * descendre du tout, pour aller vers le bas je veut appuyer sur shift ». La direction entiere est
+ * ensuite normalisee, donc une diagonale ou une montee va exactement aussi vite qu'un cap franc.
  *
  * <p>Sans touche tenue, les ailes <b>flottent</b> comme pendant la charge : c'est ainsi qu'on
  * se pose au milieu de l'air, et c'est encore l'original.
@@ -214,6 +215,19 @@ public class StormWingSkill extends Skill {
         return lerp(OVERLOAD_MIN_EXP, OVERLOAD_MAX_EXP, data.getSkillExp(this));
     }
 
+    /**
+     * Le surcout qu'un tick d'ailes ouvertes ajoute, et que le client rejoue : voir
+     * {@link Skill#getTickUpkeepOverload}.
+     *
+     * <p>C'est la seule competence du port dans ce cas : elle est aussi la seule a ajouter du
+     * surcout en vol. Sans ce chiffre, le client ne l'apprenait que par les synchronisations, et la
+     * barre montait « d'un certain nombre a chaque fois ».
+     */
+    @Override
+    public float getTickUpkeepOverload(AbilityData data, int ticks) {
+        return opened(data, ticks) ? overload(data) : 0f;
+    }
+
     /** Les ailes sont-elles encore maladroites ? */
     public boolean clumsy(AbilityData data) {
         return data.getSkillExp(this) < BEGINNER;
@@ -248,6 +262,10 @@ public class StormWingSkill extends Skill {
      * puis subit l'inclinaison <b>puis</b> le lacet, tous deux en sens inverse. L'avant et
      * l'arriere suivent donc le tangage — on vole ou l'on regarde — alors que la gauche et la
      * droite restent horizontales, l'axe des X ne tournant pas sous une inclinaison.
+     *
+     * <p>Le vol ne s'en sert plus qu'avec un <b>tangage nul</b> — voir {@link #flightDirection},
+     * qui explique pourquoi —, mais la fonction reste entiere : c'est celle de l'original, et son
+     * inclinaison est ce qui la rend vraie.
      */
     public static Vec3 worldSpace(float yawDegrees, float pitchDegrees, Vec3 local) {
         return local.xRot((float) Math.toRadians(-pitchDegrees))
@@ -275,22 +293,23 @@ public class StormWingSkill extends Skill {
     }
 
     /**
-     * La direction du vol, dans le monde : le deplacement suit le regard, la montee reste droite.
+     * La direction du vol, dans le monde : <b>a plat</b>, plus la montee et la descente.
      *
-     * <p>Le deplacement horizontal passe par {@link #worldSpace} — donc l'avant et l'arriere
-     * suivent le tangage, et la gauche et la droite restent horizontales, comme les quatre clefs de
-     * l'original.
+     * <p>Avancer suit le lacet du regard et <b>rien d'autre</b> : le tangage n'entre pas dans la
+     * direction. Le joueur a d'abord demande le contraire — l'avant suivait alors un regard qui
+     * pique —, puis l'a redemande autrement : « si je regarde vers le bas avec les ailes actives et
+     * que j'avance, que ca ne me fasse pas descendre du tout, pour aller vers le bas je veut
+     * appuyer sur shift ». Regarder ses pieds en vol ne pique donc plus, et l'altitude ne se
+     * commande qu'aux deux touches verticales, comme en vol creatif.
      *
-     * <p>La <b>montee et la descente</b>, elles, ne suivent pas le regard : elles sont verticales
-     * dans le <b>monde</b>. C'est ce que le joueur a demande — « appuyer sur espace pour monter » —,
-     * et c'est surtout ce qu'il faut : dans le repere du regard, regarder ses pieds et appuyer sur
-     * espace ferait <b>plonger</b>, puisque le haut du regard est alors l'avant.
+     * <p>La <b>montee et la descente</b> sont verticales dans le <b>monde</b> : espace monte,
+     * accroupissement descend, et le reste suit le cap. C'est le reperage de {@link #worldSpace} avec
+     * un tangage nul, et c'est la seule facon de ne pas se tromper : dans le repere du regard,
+     * regarder ses pieds et appuyer sur espace ferait <b>plonger</b>, puisque le haut du regard est
+     * alors l'avant.
      */
-    public static Vec3 flightDirection(float yawDegrees, float pitchDegrees, Vec3 local) {
-        Vec3 aimed = worldSpace(yawDegrees, pitchDegrees, new Vec3(local.x, 0, local.z));
-        // Le tangage de l'avant s'ajoute a la montee, il ne la remplace pas : viser ses pieds fait
-        // piquer, et l'espace continue de monter.
-        return new Vec3(aimed.x, aimed.y + local.y, aimed.z);
+    public static Vec3 flightDirection(float yawDegrees, Vec3 local) {
+        return worldSpace(yawDegrees, 0f, local);
     }
 
     /**
@@ -451,7 +470,7 @@ public class StormWingSkill extends Skill {
      * Un tick de vol, chez le joueur.
      *
      * <p>C'est le {@code l_tick} de l'original, et c'est le client qui pousse : la vitesse est
-     * posee a chaque tick, dans le repere du regard, par pas de 0,16. Sans touche tenue — ou
+     * posee a chaque tick, dans le repere du <b>cap</b>, par pas de 0,16. Sans touche tenue — ou
      * les ailes encore fermees — on flotte, ce qui permet de se poser en l'air.
      *
      * <p>{@code local} est ce que le joueur demande, dans son propre repere (voir
@@ -461,9 +480,7 @@ public class StormWingSkill extends Skill {
      */
     @Override
     public void onClientHoldTick(Player player, AbilityData data, int heldTicks, Vec3 local) {
-        Vec3 aim = opened(data, heldTicks)
-                ? flightDirection(player.getYRot(), player.getXRot(), local)
-                : Vec3.ZERO;
+        Vec3 aim = opened(data, heldTicks) ? flightDirection(player.getYRot(), local) : Vec3.ZERO;
         Vec3 motion = player.getDeltaMovement();
 
         if (aim.lengthSqr() == 0) {

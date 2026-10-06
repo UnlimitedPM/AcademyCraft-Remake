@@ -753,14 +753,19 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * remonter pendant que le serveur, lui, ne remonte pas : les deux nombres divergeraient d'un
      * demi-point par tick, et la synchronisation suivante les ferait se recroiser.
      *
+     * <p>Le surcout monte par le meme chemin ({@code addOverload}, comme chez le serveur) : c'est lui
+     * qui fait monter la deuxieme barre, et il monte au tick comme le reste.
+     *
      * <p>Rien n'est marque « a envoyer » et rien n'est sauvegarde : ce n'est pas une decision de jeu,
      * seulement un affichage qui suit le serveur d'un tick a l'autre. Le serveur reste seul juge.
      */
-    public void replayUpkeep(float cp) {
-        if (cp <= 0f) return;
-        controlPoint = Math.max(0f, controlPoint - cp);
-        growMaxControlPoint(cp);
-        untilRecover = cn.academy.Config.controlPointRecoverCooldown;
+    public void replayUpkeep(float cp, float overload) {
+        if (cp > 0f) {
+            controlPoint = Math.max(0f, controlPoint - cp);
+            growMaxControlPoint(cp);
+            untilRecover = cn.academy.Config.controlPointRecoverCooldown;
+        }
+        addOverload(overload);
     }
 
     /**
