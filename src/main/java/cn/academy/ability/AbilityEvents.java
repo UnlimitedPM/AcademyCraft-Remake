@@ -64,27 +64,16 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
-            // Un pouvoir protege de la chute jusqu'a ce que le joueur touche un bloc,
-            // mais pas sur l'arrivee elle-meme : un saut qui vous pose par terre ne doit pas
-            // s'annuler dans la foulee. On attend donc qu'il TOMBE avant de compter le bloc sur
-            // lequel il se pose.
-            //
-            // Le sol se lit sur fallDistance et NON sur onGround : un deplacement d'un coup ne
-            // remet pas onGround a jour, donc juste apres lui il porte encore l'etat d'avant —
-            // c'est ce qui faisait disparaitre la protection au tick suivant l'arrivee, et le
-            // joueur a vu le resultat : « je prends encore les degats de chutes la ». Vanilla
-            // remet fallDistance a zero en touchant un bloc : c'est exactement le signal qu'on
-            // veut.
-            //
-            // Le controle est fait a la fin du tick de joueur, donc l'atterrissage lui-meme a
-            // deja ete refuse (voir onFall) : c'est la chute SUIVANTE qui se paie.
-            if (data.isProtectedFromFall()) {
-                if (player.fallDistance > 0f) {
-                    data.markAirborne();
-                } else if (data.hasLeftGround()) {
-                    data.endFallProtection();
-                }
-            }
+            // Un pouvoir protege de la chute jusqu'a ce que le joueur se soit pose — et non
+            // jusqu'au premier bloc touche. Un atterrissage a cheval sur deux blocs, ou un
+            // glissement de quelques ticks, se payait sinon : le joueur a vu « parfois je prends
+            // quand meme des degats de chute [...] j'atteris entre plusieurs blocs et ca annule
+            // les degats d'un bloc mais pas l'autre ». Le sol se lit sur fallDistance et NON sur
+            // onGround : un deplacement d'un coup ne remet pas onGround a jour, donc juste apres
+            // lui il porte encore l'etat d'avant. Vanilla remet fallDistance a zero en touchant un
+            // bloc, et c'est ce signal qui ouvre la fenetre d'atterrissage — voir
+            // AbilityData.tickFallProtection et LANDING_GRACE_TICKS.
+            data.tickFallProtection(player.fallDistance > 0f);
             // Les competences tenues vivent tant que la touche reste enfoncee.
             tickSustained(player, data);
             // La reserve ne remonte que si elle est entamee : au ras bord il n'y a rien a

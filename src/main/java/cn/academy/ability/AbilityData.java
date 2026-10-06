@@ -808,12 +808,30 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * <p>Sans lui, un deplacement qui vous pose par terre s'annulerait dans la foulee : le sol
      * touche EST l'arrivee, et la protection ne servirait donc a rien — ce que le joueur a vu tout
      * de suite, « je prends des degats de chute peu importe ce que je fais ». C'est donc le premier
-     * bloc touche <b>apres avoir quitte le sol</b> qui la leve.
+     * bloc touche <b>apres avoir quitte le sol</b> qui ouvre la fenetre d'atterrissage.
      */
     private boolean fallAirborne;
 
+    /** Les ticks passes au sol depuis ce premier bloc touche. Voir {@link #LANDING_GRACE_TICKS}. */
+    private int landedTicks;
+
     /**
-     * Protege de la chute jusqu'a ce que le joueur touche un bloc.
+     * Le temps laisse a un atterrissage pour se poser : vingt ticks, une seconde.
+     *
+     * <p>Le premier bloc touche ne leve donc plus la protection sur-le-champ, et c'est une demande
+     * du joueur : « parfois je prends quand meme des degats de chute [...] je pense que c'est du au
+     * fait que parfois j'atteris entre plusieurs blocs et ca annule les degats d'un bloc mais pas
+     * l'autre ». Un atterrissage a cheval sur deux blocs, un glissement de quelques ticks, une
+     * pente : le premier contact etait gratuit, le second — une ou deux images plus tard — se
+     * payait. La protection couvre desormais l'atterrissage ET ce qui le suit.
+     *
+     * <p>Et elle repart de zero des que le joueur retombe : un glissement qui quitte son bloc est
+     * encore la meme chute, et elle reste gratuite.
+     */
+    public static final int LANDING_GRACE_TICKS = 20;
+
+    /**
+     * Protege de la chute jusqu'a ce que le joueur se soit pose.
      *
      * <p>Portage du {@code GravityCancellor} de l'original, etendu a ce que le joueur a
      * demande : sa duree n'est pas une duree, c'est une <b>arrivee</b>. Tant qu'un saut n'a pas
@@ -823,8 +841,9 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * tomber, je meurs quand meme ».
      *
      * <p>Elle attend d'avoir quitte le sol pour compter quoi que ce soit (voir
-     * {@link #fallAirborne}), et l'atterrissage lui-meme est encore protege : la levee n'a lieu
-     * qu'apres le deplacement du tick, donc c'est la chute <b>suivante</b> qui se paie.
+     * {@link #fallAirborne}), et l'atterrissage lui-meme est encore protege : la levee demande
+     * {@link #LANDING_GRACE_TICKS} ticks passes au sol, donc c'est la chute <b>suivante</b> qui se
+     * paie.
      *
      * <p>Qui l'appelle, aujourd'hui : les <b>quatre teleportations</b> qui deplacent le joueur,
      * puis l'<b>acceleration de vecteur</b> et les <b>ailes de tempete</b> — le joueur l'a demande
@@ -834,26 +853,38 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     public void protectFromFall() {
         fallProtected = true;
         fallAirborne = false;
+        landedTicks = 0;
     }
 
     public boolean isProtectedFromFall() {
         return fallProtected;
     }
 
-    /** Vrai si le joueur a quitte le sol : la protection attend alors un atterrissage. */
-    public boolean hasLeftGround() {
-        return fallAirborne;
-    }
-
-    /** Le joueur a quitte le sol : la protection attend maintenant un atterrissage. */
-    public void markAirborne() {
-        fallAirborne = true;
-    }
-
-    /** Le joueur a touche un bloc : la protection prend fin. */
-    public void endFallProtection() {
-        fallProtected = false;
-        fallAirborne = false;
+    /**
+     * Un tick de chute : la protection suit l'atterrissage.
+     *
+     * <p>Tant que le joueur tombe ({@code falling}), la protection tient et le compte des ticks au
+     * sol repart de zero ; une fois qu'il a touche quelque chose, il lui faut
+     * {@link #LANDING_GRACE_TICKS} ticks poses pour qu'elle se leve. Le sol se lit sur
+     * {@code fallDistance} et NON sur {@code onGround} : un deplacement d'un coup ne remet pas
+     * {@code onGround} a jour, donc juste apres lui il porte encore l'etat d'avant — c'est ce qui
+     * faisait disparaitre la protection au tick suivant l'arrivee, et le joueur a vu le resultat :
+     * « je prends encore les degats de chutes la ». Vanilla remet {@code fallDistance} a zero en
+     * touchant un bloc : c'est exactement le signal qu'on veut.
+     */
+    public void tickFallProtection(boolean falling) {
+        if (!fallProtected) return;
+        if (falling) {
+            fallAirborne = true;
+            landedTicks = 0;
+            return;
+        }
+        if (!fallAirborne) return;
+        if (++landedTicks >= LANDING_GRACE_TICKS) {
+            fallProtected = false;
+            fallAirborne = false;
+            landedTicks = 0;
+        }
     }
 
     /**

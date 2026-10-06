@@ -2918,7 +2918,7 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Une chute se paie, sauf entre une teleportation et le premier bloc touche.
+     * Une chute se paie, sauf entre une teleportation et l'atterrissage qui suit.
      *
      * <p>C'est le partage que le joueur a demande, dans sa deuxieme version : la protection ne
      * dure pas un temps fixe, mais jusqu'a ce que les pieds touchent quelque chose. Sans cela,
@@ -2930,14 +2930,20 @@ public final class AcademyGameTests {
      * souvent <b>au sol</b>, mais elle ne remet pas {@code onGround} a jour — donc juste apres
      * elle, cet etat porte encore celui d'avant, et la protection disparaissait au tick
      * suivant. Le sol se lit donc sur {@code fallDistance}, que vanilla remet a zero en touchant
-     * un bloc : c'est cette remise a zero-la qui consomme la protection, et rien d'autre.
+     * un bloc.
+     *
+     * <p>Et ce que la quatrieme corrige : ce premier bloc touche ne suffisait pas a lever la
+     * protection. Le joueur prenait encore des degats, rarement — « parfois j'atteris entre
+     * plusieurs blocs et ca annule les degats d'un bloc mais pas l'autre ». Il faut donc que le
+     * joueur soit <b>pose</b> : {@code AbilityData.LANDING_GRACE_TICKS} ticks au sol, et le
+     * compte repart de zero des qu'il glisse. Voir {@code AbilityData.tickFallProtection}.
      *
      * <p>Le test passe par une VRAIE chute, `causeFallDamage`, et non par le crochet appele a
      * la main : c'est le seul moyen de prouver que le jeu poste bien cet evenement, ce qui a
      * deja fait defaut une fois, sur les touches.
      */
     @GameTest(template = "empty")
-    public static void uneTeleportationProtegeJusquAuPremierBloc(GameTestHelper helper) {
+    public static void uneTeleportationProtegeJusquALAtterrissage(GameTestHelper helper) {
         var player = ownPlayer(helper, "faller_apres_saut");
         var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .resolve().orElseThrow();
@@ -2974,14 +2980,39 @@ public final class AcademyGameTests {
         assertTrue(helper, data.isProtectedFromFall(), "cent ticks de chute ne l'usent pas");
 
         // L'atterrissage lui-meme est encore gratuit : vanilla remet la chute a zero en
-        // touchant le bloc, et c'est cette remise a zero qui consomme la protection.
+        // touchant le bloc. Mais ce premier bloc touche ne leve plus la protection : elle attend
+        // que le joueur SOIT POSE, sinon un atterrissage a cheval sur deux blocs, ou un
+        // glissement de quelques ticks, se paie. Voir AbilityData.LANDING_GRACE_TICKS.
         assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
                 "l'atterrissage est encore protege");
         player.fallDistance = 0f;
         tickerLeJoueur(player);
-        assertFalse(helper, data.isProtectedFromFall(), "le premier bloc touche la leve");
+        assertTrue(helper, data.isProtectedFromFall(),
+                "le premier bloc touche ne la leve pas tout de suite");
+        assertFalse(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
+                "et le glissement qui suit l'atterrissage est gratuit");
 
-        // Et la chute suivante se paie, elle.
+        // La fenetre se compte AU SOL, et elle repart de zero tant que le joueur glisse. Le
+        // premier tick au sol a deja ete compte juste avant : ces deux boucles s'arretent donc a
+        // un tick de la fin.
+        for (int i = 0; i < cn.academy.ability.AbilityData.LANDING_GRACE_TICKS - 2; i++) {
+            tickerLeJoueur(player);
+        }
+        assertTrue(helper, data.isProtectedFromFall(), "au bout de la fenetre, elle tient encore");
+        player.fallDistance = 2f;
+        tickerLeJoueur(player);
+        player.fallDistance = 0f;
+        for (int i = 0; i < cn.academy.ability.AbilityData.LANDING_GRACE_TICKS - 2; i++) {
+            tickerLeJoueur(player);
+        }
+        assertTrue(helper, data.isProtectedFromFall(),
+                "un glissement qui repart la remet a zero");
+
+        // Et elle se leve seule, une fois le joueur pose : la chute suivante se paie.
+        for (int i = 0; i < 2; i++) {
+            tickerLeJoueur(player);
+        }
+        assertFalse(helper, data.isProtectedFromFall(), "le joueur pose, la fenetre se ferme");
         assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
                 "la chute se repaie apres l'atterrissage");
 
@@ -3029,7 +3060,12 @@ public final class AcademyGameTests {
                 "l'atterrissage apres une acceleration est gratuit");
         player.fallDistance = 0f;
         tickerLeJoueur(player);
-        assertFalse(helper, data.isProtectedFromFall(), "le premier bloc touche la leve");
+        assertTrue(helper, data.isProtectedFromFall(),
+                "et le premier bloc touche ne la leve pas tout de suite");
+        for (int i = 0; i < cn.academy.ability.AbilityData.LANDING_GRACE_TICKS; i++) {
+            tickerLeJoueur(player);
+        }
+        assertFalse(helper, data.isProtectedFromFall(), "pose une seconde, elle se leve");
         assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
                 "et la chute suivante se paie");
 

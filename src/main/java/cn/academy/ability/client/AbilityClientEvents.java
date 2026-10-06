@@ -185,6 +185,21 @@ public class AbilityClientEvents {
             // Et le corps de plasma du canon, pour la meme raison : voir PlasmaBodies.
             cn.academy.ability.client.vm.PlasmaBodies.clear();
         }
+
+        // LA PAUSE NE PILOTE RIEN.
+        //
+        // Echap n'arrete que le SERVEUR, en solo : Forge tire ce crochet avant meme de regarder la
+        // pause, et le client continuait donc de piloter les ailes de tempete — alors que le
+        // joueur, lui, n'etait plus deplace (le jeu saute `level.tickEntities`). Or le vol qui
+        // flotte AJOUTE sa portee a la vitesse du tick precedent (`StormWingSkill.hoverVelocity`,
+        // 0,078 par tick) : sans deplacement pour la consommer, ces additions s'empilaient, et au
+        // retour le joueur partait comme une fusee. Le joueur : « si je fais echappe pour mettre le
+        // jeu en pause, les ailes ne se mettent pas en pause et continuent de me donner une vitesse
+        // vers le haut qui s'accumule, donc quand je met mon jeu en pause juste apres je m'envole
+        // comme une fusee ». Pause ouverte, le client ne touche donc plus a rien : ni la charge,
+        // ni le vol, ni les effets. En MULTIJOUEUR la pause ne vaut rien (`Minecraft.isPaused`
+        // demande un serveur local non publie), donc rien ne change la-bas.
+        if (net.minecraft.client.Minecraft.getInstance().isPaused()) return;
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
         // Les etincelles de la teleportation vieillissent au meme rythme, et leur marque se
