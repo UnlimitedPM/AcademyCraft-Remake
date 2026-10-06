@@ -4191,15 +4191,22 @@ public final class AcademyGameTests {
         zombie.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
         level.addFreshEntity(zombie);
 
-        // Un coup de dix points donne par le zombie : il est absorbe EN ENTIER, et refuse avant
-        // meme d'etre porte — c'est le test anticipe de l'original, celui qui evite le recul et le
-        // rouge d'un coup qu'on ne prend pas. Voir Skill.onAttacked.
+        // A ZERO d'experience, le renvoi ne vaut que 60 % du coup : il ne le couvre donc pas, et
+        // le coup passe — amorti, mais porte. Le joueur a demande les deux, dans cet ordre : « on
+        // est juste cense ne pouvoir prendre litteralement aucun degats » puis « je prends bien
+        // aucun degats a 100 %, mais il ne faut pas que ce soit le cas quand le pouvoir est a 0 % ».
         double reserveBefore = data.getControlPoint();
-        var attack = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+        var bare = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(zombie), 10f);
-        cn.academy.ability.AbilityEvents.onLivingAttack(attack);
-        assertTrue(helper, attack.isCanceled(),
-                "10 points dont 6 repartent : le coup est annule avant d'etre porte");
+        cn.academy.ability.AbilityEvents.onLivingAttack(bare);
+        assertFalse(helper, bare.isCanceled(),
+                "a 0 % d'experience, un renvoi de 60 % n'annule pas un coup de dix points");
+
+        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().mobAttack(zombie), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
+        assertTrue(helper, Math.abs(4.0d - hurt.getAmount()) < 0.01d,
+                "10 points dont 60 % repartent : " + hurt.getAmount());
         assertTrue(helper, zombie.getHealth() < 15f && zombie.getHealth() > 13f,
                 "et l'attaquant encaisse les 6 points renvoyes : " + zombie.getHealth());
         assertClose(helper, 0.004d, data.getSkillExp(reflection),
@@ -4207,22 +4214,29 @@ public final class AcademyGameTests {
         assertTrue(helper, data.getControlPoint() < reserveBefore - 7f,
                 "et le coup se paie en reserve : " + data.getControlPoint());
 
-        // Ce qui reste a la reduction ordinaire, ce sont les miettes : un coup d'un point ne vaut
-        // que 0,6 de renvoi, donc il n'est pas absorbe, et le jeu en laisse 0,4.
-        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
-                player.damageSources().mobAttack(zombie), 1f);
-        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
-        assertTrue(helper, Math.abs(0.4d - hurt.getAmount()) < 0.01d,
-                "un point dont 60 % repartent : " + hurt.getAmount());
-        assertFalse(helper, hurt.isCanceled(), "et il en reste un peu");
-
-        // Au maximum la part renvoyee vaut 120 % : la moindre egratignure est donc absorbe elle
-        // aussi, et le porteur ne prend plus rien du tout.
+        // Au maximum, le renvoi vaut 120 % : il couvre le coup, qui est donc annule AVANT d'etre
+        // porte — pas de degats, pas de recul, pas de rouge. Voir Skill.onAttacked.
         data.addSkillExp(reflection, 1f);
         var absorbed = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(zombie), 10f);
         cn.academy.ability.AbilityEvents.onLivingAttack(absorbed);
         assertTrue(helper, absorbed.isCanceled(), "un renvoi complet ne laisse rien passer");
+        // Le zombie a deja encaisse les 6 points du coup precedent, et vanilla ne compte la
+        // deuxieme atteinte du meme tick que pour la DIFFERENCE (12 - 6) : il lui reste donc 8.
+        assertTrue(helper, zombie.getHealth() < 8.5f,
+                "et l'attaquant encaisse les 12 points renvoyes : " + zombie.getHealth());
+
+        // Ce qui n'a PAS d'auteur — la lave, le feu, une chute — est absorbe, mais ne se paie pas :
+        // il n'y a personne a qui rendre le coup. Sans cette regle, la reserve fondait dans la
+        // lave : « mes cp fondent quand je vais dans la lave, comme si la reflexion essayait de
+        // renvoyer les degats a la lave, ce qui n'a pas de sens ».
+        double beforeLava = data.getControlPoint();
+        var lava = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().lava(), 4f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(lava);
+        assertTrue(helper, lava.isCanceled(), "la lave ne passe pas non plus");
+        assertTrue(helper, Math.abs(beforeLava - data.getControlPoint()) < 0.001d,
+                "et elle ne coute rien du tout : " + data.getControlPoint());
 
         // Hors du maintien, plus rien : les degats passent entiers, et rien n'est annule.
         data.cancelCharge(reflection);

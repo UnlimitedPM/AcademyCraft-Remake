@@ -56,14 +56,24 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * coup, ne bouclent sans fin. Le port suit l'intention, avec le garde-fou a sa place.
  *
  * <p>La seconde est la partie de l'original que le port avait crue fausse, et qui ne l'est pas :
- * la <b>comparaison du test anticipe</b>. Le code prevoyait {@code reflectDamage >= 1} la ou le
- * port comparait au montant encaisse, en jugeant que l'original annulait ainsi presque tout et
- * rendait son porteur intouchable. C'est pourtant ce que fait le vrai mod, et le joueur l'a dit
- * clairement : « quand on a le vecteur reflexion d'actif, on est juste cense ne pouvoir prendre
- * litteralement aucun degats, la maintenant on prend des degats visuellement ». Le port suit donc
- * l'original : des qu'un renvoi vaut au moins {@link #FULL_ABSORB}, le coup est absorbe en entier,
- * teste sur {@code LivingAttackEvent} — avant le recul et avant le rouge —, et seul ce qui ne vaut
- * pas un point de renvoi passe par la reduction ordinaire.
+ * le <b>test anticipe</b> sur {@code LivingAttackEvent}. Le code prevoyait {@code reflectDamage >=
+ * 1}, ce que le port jugeait trop large — un renvoi atteint 1 des qu'un coup depasse un point et
+ * demi. Le joueur a tranche les deux fois, et la verite tient en trois phrases :
+ *
+ * <ul>
+ *   <li><b>a pleine experience</b>, la reflexion ne laisse rien passer du tout, et c'est ce qu'il
+ *       attend — « quand on a le vecteur reflexion d'actif, on est juste cense ne pouvoir prendre
+ *       litteralement aucun degats ». D'ou le test anticipe, qui annule le coup avant meme qu'il ne
+ *       soit porte, donc sans recul ni rouge ;</li>
+ *   <li><b>a zero</b>, il ne faut pas de cela : « je prends bien aucun degats a 100 %, mais il ne
+ *       faut pas que ce soit le cas quand le pouvoir est a 0 % ». Le renvoi ne vaut alors que 60 %
+ *       des degats, donc il les amortit sans les annuler — et le seuil est celui du port, celui qui
+ *       compare le renvoi au coup, pas le {@code >= 1} de l'original ;</li>
+ *   <li>et ce qui n'a pas <b>d'auteur</b> — la lave, le feu, une chute — est absorbe ou amorti,
+ *       mais ne se paie pas : il n'y a personne a qui rendre le coup. Sans cette regle, la reserve
+ *       fondait dans la lave, « comme si la reflexion essayait de renvoyer les degats a la lave, ce
+ *       qui n'a pas de sens ».</li>
+ * </ul>
  *
  * <p>Un detail de l'original, en revanche, n'est pas suivi : il lisait l'auteur du coup avec
  * {@code getImmediateSource} — la fleche, pas l'archer — et renvoyer sur une fleche ne faisait
@@ -109,14 +119,14 @@ public class VecReflectionSkill extends Skill {
     public static final float BIG_HIT = 9999f;
 
     /**
-     * Le renvoi qui vaut un point : au-dela, le coup est absorbe en entier.
+     * Le renvoi qui couvre le coup : au-dela, le coup est absorbe en entier.
      *
-     * <p>C'est le seuil du test anticipe de l'original ({@code reflectDamage >= 1}), et il est
-     * ecrit tel quel chez lui. Comme un renvoi vaut au moins 60 % du coup, tout coup d'un point et
-     * demi ou plus est donc refuse — c'est-a-dire tous ceux qui comptent : tant que la veille
-     * tient, son porteur ne prend <b>rien</b>, et c'est ce que le joueur attend de la reflexion
-     * (« on est juste cense ne pouvoir prendre litteralement aucun degats »). Ce qui passe par la
-     * reduction ordinaire, ce sont les miettes de moins d'un point et demi.
+     * <p>C'est la part renvoyee qui doit valoir le coup ENTIER, et non le seuil d'un point de
+     * l'original : a 100 % d'experience la reflexion rend 120 % de ce qu'elle prend, donc rien ne
+     * passe ; a 0 % elle n'en rend que 60 %, donc elle amortit sans annuler. Le joueur a demande
+     * les deux, dans cet ordre : « on est juste cense ne pouvoir prendre litteralement aucun
+     * degats » puis « je prends bien aucun degats a 100 %, mais il ne faut pas que ce soit le cas
+     * quand le pouvoir est a 0 % ».
      */
     public static final float FULL_ABSORB = 1f;
 
@@ -337,7 +347,7 @@ public class VecReflectionSkill extends Skill {
         // gardien.
         if (reflecting) return reduce(event, amount - reflected);
 
-        reflect(player, data, event.getSource(), amount, reflected);
+        reflect(player, data, event.getSource(), amount);
         return reduce(event, amount - reflected);
     }
 
@@ -351,23 +361,27 @@ public class VecReflectionSkill extends Skill {
      * moitie, d'ou ce que le joueur voyait : « on prend des degats visuellement » — le rouge et le
      * recul d'un coup qui ne coutait rien.
      *
-     * <p>Le renvoi lui-meme passe par le meme chemin que dans {@code onDamaged} : meme paiement,
-     * meme experience, meme coup rendu, meme onde. Et l'evenement etant annule, {@code onDamaged}
-     * n'est jamais appele : rien ne se paie deux fois.
+     * <p>Et il faut que le renvoi <b>couvre</b> le coup ({@link #FULL_ABSORB}) pour l'annuler : a
+     * 0 % d'experience il n'en rend que 60 %, et le coup suit alors son chemin ordinaire, amorti
+     * par la reduction ci-dessus.
      */
     @Override
     public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return false;
 
-        float reflected = amount * reflectRatio(data);
         // Le renvoi d'un renvoi ne se renvoie pas : il est refuse s'il ne laissait rien passer,
         // et rendu au jeu sinon. Meme garde-fou que dans onDamaged.
-        if (reflecting) return amount - reflected <= 0f;
-        if (reflected < FULL_ABSORB) return false;
+        if (reflecting) return covers(data);
+        if (!covers(data)) return false;
 
-        reflect(player, data, event.getSource(), amount, reflected);
+        reflect(player, data, event.getSource(), amount);
         return true;
+    }
+
+    /** Vrai quand la part renvoyee vaut le coup entier : le coup ne passe alors pas du tout. */
+    private boolean covers(AbilityData data) {
+        return reflectRatio(data) >= FULL_ABSORB;
     }
 
     /**
@@ -375,28 +389,33 @@ public class VecReflectionSkill extends Skill {
      *
      * <p>La part renvoyee est lue <b>avant</b> que l'experience du coup ne soit versee, comme dans
      * l'original : un coup ne se renforce donc pas de l'experience qu'il vient de donner.
+     *
+     * <p>Et rien de tout cela n'a lieu quand le coup n'a pas <b>d'auteur</b> : la lave, le feu, une
+     * chute se heurtent a la veille, qui les amortit ou les absorbe, mais il n'y a personne a qui
+     * rendre le coup — et donc rien a payer. Sans cette regle, la reserve fondait dans la lave :
+     * « mes cp fondent quand je vais dans la lave, comme si la reflexion essayait de renvoyer les
+     * degats a la lave, ce qui n'a pas de sens ». C'est aussi ce que faisait le vrai mod, dont le
+     * corps du renvoi ne s'executait jamais — voir la note sur le garde-fou de l'original.
      */
-    private void reflect(Player player, AbilityData data, DamageSource source, float amount,
-                         float reflected) {
+    private void reflect(Player player, AbilityData data, DamageSource source, float amount) {
+        Entity attacker = source.getEntity();
+        if (!(attacker instanceof LivingEntity living) || living == player) return;
+
         reflecting = true;
         try {
             data.performForced(damageCost(data, amount), 0f);
             data.addSkillExp(this, amount * EXP_PER_DAMAGE);
 
-            Entity attacker = source.getEntity();
-            if (attacker instanceof LivingEntity living && living != player) {
-                living.hurt(player.damageSources().indirectMagic(player, player),
-                        scaled(reflected));
-                // Et l'onde du renvoi, devant le joueur et du cote de l'attaquant : l'original
-                // posait la sienne a un demi-bloc de sa tete, dans cette direction-la. Voir
-                // VecWaves.
-                Vec3 head = player.getEyePosition(1f);
-                Vec3 toward = living.getEyePosition().subtract(head);
-                Vec3 at = player.position().add(0, 0.4 + player.getRandom().nextDouble() * 0.9, 0)
-                        .add(toward.lengthSqr() > 1e-6 ? toward.normalize().scale(0.5) : Vec3.ZERO);
-                cn.academy.ability.network.VecWavePacket.send(player, at,
-                        player.getYHeadRot(), player.getXRot(), 2, 1.1);
-            }
+            living.hurt(player.damageSources().indirectMagic(player, player),
+                    scaled(amount * reflectRatio(data)));
+            // Et l'onde du renvoi, devant le joueur et du cote de l'attaquant : l'original posait
+            // la sienne a un demi-bloc de sa tete, dans cette direction-la. Voir VecWaves.
+            Vec3 head = player.getEyePosition(1f);
+            Vec3 toward = living.getEyePosition().subtract(head);
+            Vec3 at = player.position().add(0, 0.4 + player.getRandom().nextDouble() * 0.9, 0)
+                    .add(toward.lengthSqr() > 1e-6 ? toward.normalize().scale(0.5) : Vec3.ZERO);
+            cn.academy.ability.network.VecWavePacket.send(player, at,
+                    player.getYHeadRot(), player.getXRot(), 2, 1.1);
         } finally {
             reflecting = false;
         }
