@@ -82,20 +82,26 @@ class BodyIntensifyChargeTest {
     }
 
     @Test
-    @DisplayName("le niveau et l'entretien tombent de 20 a 15 CP")
-    void lEntretienDeLaCharge() {
-        assertEquals(20f, BodyIntensifySkill.cpPerTick(0.0), 1e-4);
-        assertEquals(15f, BodyIntensifySkill.cpPerTick(1.0), 1e-4);
+    @DisplayName("le renfort dure cinq secondes au depart, dix a pleine experience")
+    void laDureeDuRenfort() {
+        assertEquals(100, BodyIntensifySkill.durationTicks(0f), "cinq secondes au depart");
+        assertEquals(150, BodyIntensifySkill.durationTicks(0.5f), "et la moitie au milieu");
+        assertEquals(200, BodyIntensifySkill.durationTicks(1f), "dix secondes au maximum");
+        // Elle ne doit RIEN au temps tenu ni a un tirage : deux appels au meme point se ressemblent.
+        assertEquals(BodyIntensifySkill.durationTicks(0.7f), BodyIntensifySkill.durationTicks(0.7f));
     }
 
     @Test
-    @DisplayName("la duree d'un effet suit le temps tenu et le facteur")
-    void laDureeSuitLeTempsTenu() {
-        assertEquals(60, BodyIntensifySkill.buffTime(40, 1.0, 1.5f), "1,5 fois quarante");
-        assertEquals(200, BodyIntensifySkill.buffTime(40, 2.0, 2.5f),
-                "2,5 fois quarante, au plus");
-        assertEquals(1.5f, BodyIntensifySkill.timeFactor(0.0), 1e-4);
-        assertEquals(2.5f, BodyIntensifySkill.timeFactor(1.0), 1e-4);
+    @DisplayName("la charge ne coute rien : seuls le surcout d'ouverture et la recharge se paient")
+    void laChargeEstGratuite() {
+        BodyIntensifySkill skill = new BodyIntensifySkill();
+
+        assertEquals(0f, skill.getCpCost(), 1e-4, "rien a l'ouverture");
+        assertEquals(0f, skill.getCpCost(null), 1e-4, "rien non plus avec la donnee");
+        for (int tick = BodyIntensifySkill.MIN_TIME; tick < 120; tick++) {
+            assertEquals(0f, skill.getTickUpkeep(null, tick), 1e-4,
+                    "et rien pendant la charge, au tick " + tick);
+        }
     }
 
     @Test
@@ -106,6 +112,6 @@ class BodyIntensifyChargeTest {
         assertEquals(BodyIntensifySkill.MIN_TIME, skill.getMinChargeTicks(null));
         assertEquals(BodyIntensifySkill.MAX_TIME, skill.getMaxChargeTicks(null));
         assertEquals(0f, skill.getCpCost(), 1e-4,
-                "la charge se paie tick par tick, pas d'un coup a l'ouverture");
+                "la charge ne se paie pas, et le surcout tombe a l'appui");
     }
 }

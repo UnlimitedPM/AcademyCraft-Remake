@@ -4586,6 +4586,7 @@ public final class AcademyGameTests {
         player.removeAllEffects();
         intensify.onActivateCharged(player, data, 40);
         assertBoost(helper, player, net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 0,
+                cn.academy.ability.electromaster.BodyIntensifySkill.durationTicks(0.1f),
                 "force I au depart");
         assertTrue(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER),
                 "et la famine qui la paie");
@@ -4597,21 +4598,26 @@ public final class AcademyGameTests {
         player.removeAllEffects();
         intensify.onActivateCharged(player, data, 40);
         assertBoost(helper, player, net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 0,
+                cn.academy.ability.electromaster.BodyIntensifySkill.durationTicks(0.6f),
                 "vitesse I a 50 %");
         assertBoost(helper, player, net.minecraft.world.effect.MobEffects.REGENERATION, 0,
+                cn.academy.ability.electromaster.BodyIntensifySkill.durationTicks(0.6f),
                 "regeneration I");
         assertTrue(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER),
                 "et la famine, encore");
 
-        // La maitrise : tout d'un cran, et plus de famine.
+        // La maitrise : tout d'un cran, et plus de famine. Les dix secondes se lisent sur la duree.
         data.setSkillExp(intensify, 1f);
         player.removeAllEffects();
         intensify.onActivateCharged(player, data, 40);
         assertBoost(helper, player, net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 1,
+                cn.academy.ability.electromaster.BodyIntensifySkill.DURATION_MAX_TICKS,
                 "vitesse II a 100 %");
         assertBoost(helper, player, net.minecraft.world.effect.MobEffects.REGENERATION, 1,
+                cn.academy.ability.electromaster.BodyIntensifySkill.DURATION_MAX_TICKS,
                 "regeneration II");
         assertBoost(helper, player, net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 0,
+                cn.academy.ability.electromaster.BodyIntensifySkill.DURATION_MAX_TICKS,
                 "et la force, qui ne bouge pas");
         assertFalse(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER),
                 "la famine s'en va a 75 %");
@@ -4620,14 +4626,15 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
-    /** Un effet attendu, au niveau voulu (0 = niveau I), pose sur un vivant. */
+    /** Un effet attendu, a son niveau et pour sa duree, pose sur un vivant. */
     private static void assertBoost(GameTestHelper helper,
                                     net.minecraft.world.entity.LivingEntity holder,
                                     net.minecraft.world.effect.MobEffect effect, int amplifier,
-                                    String what) {
+                                    int duration, String what) {
         var instance = holder.getEffect(effect);
         assertTrue(helper, instance != null, what + " : l'effet est absent");
         assertValue(helper, amplifier, instance.getAmplifier(), what + " (niveau)");
+        assertValue(helper, duration, instance.getDuration(), what + " (duree)");
     }
 
     /**

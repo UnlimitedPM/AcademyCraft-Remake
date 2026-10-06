@@ -19,18 +19,24 @@ import java.util.List;
  * repris : « on est cense charger l'attaque et relacher la touche pour l'utiliser, pas
  * simplement appuyer pour activer immediatement ».
  *
- * <p>Ce que la charge coute :
- * <ul>
- *   <li>a l'appui, le surcout de l'original — 200 a 120 selon l'experience — epingle pendant
- *       toute la charge, exactement comme celui du claquement d'orage ;</li>
- *   <li>puis 20 a 15 CP par tick, et seulement les {@link #MAX_TIME} premiers : au-dela,
- *       l'original ne facturait plus rien.</li>
- * </ul>
+ * <p>Ce que la charge coute : <b>rien</b>. Le surcout de l'original (200 a 120 selon l'experience)
+ * tombe a l'appui et reste epingle pendant toute la charge, comme celui du claquement d'orage, mais
+ * la reserve n'est pas touchee — la charge ne fait que tenir la touche, et elle est gratuite comme
+ * celle des ailes de tempete.
+ *
+ * <p>ECART ASSUME : l'original facturait 20 a 15 CP par tick de charge, ce qui avait un sens chez lui
+ * — tenir plus longtemps donnait un renfort plus fort. Le port ne le fait plus (le contenu depend des
+ * <b>paliers d'experience</b>, voir {@link #boostsFor}), donc payer par tick ne payait plus rien : le
+ * joueur l'a vu tout de suite, « quand on reste appuyer sur la competence pour la preparer elle
+ * consomme tout nos cp pour rien ». La charge est donc gratuite, et seuls le surcout d'ouverture et
+ * la recharge se paient.
  *
  * <p>Ce qu'elle rend : le renfort est le meme pour tous ceux qui la connaissent aussi bien, et il
  * grandit par <b>paliers d'experience</b> — voir {@link #boostsFor}, qui porte la table. Le temps
- * tenu, lui, ne decide plus de son contenu : il donne sa <b>duree</b>, de 1,5 a 2,5 fois ce qu'on a
- * tenu, et c'est la famine des premiers paliers qui laisse « de quoi manger ».
+ * tenu ne decide plus de rien, pas meme de la duree : celle-ci ne depend que de l'experience, de
+ * {@link #DURATION_MIN_TICKS} a {@link #DURATION_MAX_TICKS} — cinq secondes au depart, dix a pleine
+ * experience, ce que le joueur a demande (« la duree est tres nulle dans le vrai mod, je voudrais que
+ * ca dure pendant 5 secondes jusqu'a 10 secondes au niveau max »).
  *
  * <p>ECART ASSUME : l'original tirait au sort un a deux effets parmi cinq, et plafonnait leur niveau
  * sur le temps tenu — on ne savait donc jamais ce qu'on obtenait, et rien ne s'ameliorait vraiment en
@@ -44,25 +50,18 @@ public class BodyIntensifySkill extends Skill {
     public static final int MIN_TIME = 10;
 
     /**
-     * Au-dela, le renfort ne grandit plus, et l'original ne facturait plus.
+     * Le plafond du compteur de charge : quarante ticks.
      *
-     * <p>Il laissait pourtant tenir jusqu'a cent ticks, en ne donnant rien du tout a celui qui
-     * depassait — une punition, pas une regle. Le port s'arrete a ce plafond-ci : la charge part
-     * toute seule a quarante ticks, et le renfort est alors au maximum, ce que l'original aurait
-     * donne au meme moment.
+     * <p>Il ne decide plus de rien depuis que le renfort suit l'experience — ni son contenu, ni sa
+     * duree : c'est la borne de la <b>barre de charge</b>, et le temps qu'on peut tenir au-dela ne
+     * change rien. L'original, lui, laissait tenir jusqu'a cent ticks en ne donnant rien du tout a
+     * celui qui depassait — une punition, pas une regle.
      */
     public static final int MAX_TIME = 40;
 
-    /** Le facteur de duree du renfort : de 1,5 a 2,5 fois le temps tenu. */
-    private static final float TIME_FACTOR_MIN = 1.5f;
-    private static final float TIME_FACTOR_MAX = 2.5f;
-
-    /** Ce que le renfort laisse derriere lui : 1,25 fois le temps tenu. */
-    private static final float HUNGER_FACTOR = 1.25f;
-
-    /** L'entretien de la charge, par tick : de 20 a 15 CP, comme l'original. */
-    private static final float CP_PER_TICK_MIN = 20f;
-    private static final float CP_PER_TICK_MAX = 15f;
+    /** La duree du renfort : cinq secondes au depart, dix a pleine experience. */
+    public static final int DURATION_MIN_TICKS = 100;
+    public static final int DURATION_MAX_TICKS = 200;
 
     // --- CE QUE LE RENFORT DONNE ---
 
@@ -159,23 +158,12 @@ public class BodyIntensifySkill extends Skill {
         return 0f;
     }
 
-    /** L'entretien d'un tick de charge : de 20 a 15 CP selon l'experience. */
-    public float chargeCpCost(AbilityData data) {
-        return cpPerTick(data.getSkillExp(this));
-    }
-
     /**
-     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     * Surcout d'ouverture : de 200 a 120, celui de l'original.
      *
-     * <p>Au-dela du temps de charge, l'original ne facturait plus rien : la charge tient encore,
-     * mais elle est gratuite, et le client le sait comme le serveur.
+     * <p>C'est le SEUL prix de la competence avec sa recharge : la charge, elle, ne touche pas a la
+     * reserve — voir {@link #onChargeTick}.
      */
-    @Override
-    public float getTickUpkeep(AbilityData data, int ticks) {
-        return ticks <= MAX_TIME ? chargeCpCost(data) : 0f;
-    }
-
-    /** Surcout d'ouverture : de 200 a 120, celui de l'original. */
     @Override
     public float getOverloadCost(AbilityData data) {
         return lerp(200f, 120f, data.getSkillExp(this));
@@ -223,29 +211,32 @@ public class BodyIntensifySkill extends Skill {
         data.setHeldOverload(this, data.getOverload());
     }
 
-    /** La competence paie elle-meme, a l'appui et tick par tick : rien a la fin. */
+    /** La competence paie elle-meme a l'appui : la charge, elle, est gratuite. */
     @Override
     public boolean paysOnEffect() {
         return true;
     }
 
     /**
-     * L'entretien de la charge : 20 a 15 CP par tick, sur les quarante premiers.
+     * Un tick de charge : <b>rien</b>.
      *
-     * <p>Au-dela, l'original ne facturait plus rien. Une reserve qui ne suit plus ferme la
-     * charge, comme chez lui — et rien ne part alors, ni renfort ni recharge.
+     * <p>L'original facturait 20 a 15 CP par tick, ce qui avait un sens chez lui : tenir plus
+     * longtemps donnait un renfort plus fort. Ici le contenu comme la duree se lisent sur
+     * l'experience et sur rien d'autre, donc payer par tick ne paierait rien du tout — c'est ce que
+     * le joueur a vu, « quand on reste appuyer sur la competence pour la preparer elle consomme tout
+     * nos cp pour rien ». La charge ne fait plus que tenir la touche, et c'est le relachement qui
+     * applique le renfort ; une reserve vide ne l'arrete donc plus au milieu de la preparation.
      */
     @Override
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
-        if (chargeTicks > MAX_TIME) return true;
-        return data.consumeControlPoint(getTickUpkeep(data, chargeTicks));
+        return true;
     }
 
     // --- LE RENFORT ---
 
     @Override
     public void onActivateCharged(Player player, AbilityData data, int chargeTicks) {
-        applyBuffs(player, data, chargeTicks);
+        applyBuffs(player, data);
 
         cn.academy.sound.AcademySounds.playFor(player,
                 cn.academy.ModSounds.EM_INTENSIFY_ACTIVATE, 0.5f);
@@ -256,19 +247,14 @@ public class BodyIntensifySkill extends Skill {
     /**
      * Le renfort, pose tel que {@link #boostsFor} le decrit.
      *
-     * <p>La duree est celle de l'original : une fraction tiree du temps tenu, fois le facteur
-     * d'experience — de 1,5 a 2,5 fois. La <b>famine</b> garde la sienne, plus courte (1,25 fois le
-     * temps tenu), parce qu'elle n'est pas un benefice : c'est le prix, et elle doit s'oublier plus
-     * vite que ce qu'elle a paye. Le niveau, lui, vient des paliers et de personne d'autre.
+     * <p>Tous ses effets durent {@link #durationTicks} — la famine comprise. C'est elle qui paie le
+     * renfort, et c'est pour cela que la maitrise la fait disparaitre : la garder plus longtemps que
+     * le benefice n'aurait pas de sens, et l'ancienne regle (1,25 fois le temps tenu) ne dit plus
+     * rien depuis que la duree ne depend plus de la charge.
      */
-    private void applyBuffs(Player player, AbilityData data, int chargeTicks) {
-        int held = Math.min(chargeTicks, MAX_TIME);
-        float exp = data.getSkillExp(this);
-        int time = buffTime(held, player.getRandom().nextDouble(), timeFactor(exp));
-        int famine = (int) (HUNGER_FACTOR * held);
-
-        for (Boost boost : boostsFor(exp)) {
-            int ticks = boost.kind() == Kind.FAMINE ? famine : time;
+    private void applyBuffs(Player player, AbilityData data) {
+        int ticks = durationTicks(data.getSkillExp(this));
+        for (Boost boost : boostsFor(data.getSkillExp(this))) {
             player.addEffect(new MobEffectInstance(effectOf(boost.kind()), ticks,
                     boost.level() - 1, false, true));
         }
@@ -276,19 +262,17 @@ public class BodyIntensifySkill extends Skill {
 
     // --- LES NOMBRES, EN CLAIR, POUR LE TEST ---
 
-    /** Le facteur de duree, de 1,5 a 2,5 selon l'experience. */
-    public static float timeFactor(double exp) {
-        return (float) (TIME_FACTOR_MIN + (TIME_FACTOR_MAX - TIME_FACTOR_MIN) * exp);
-    }
-
-    /** La duree d'un effet, en ticks : {@code roll} fois le temps tenu fois le facteur. */
-    public static int buffTime(int heldTicks, double roll, float factor) {
-        return (int) (roll * heldTicks * factor);
-    }
-
-    /** L'entretien d'un tick de charge, de 20 a 15 CP. */
-    public static float cpPerTick(double exp) {
-        return (float) (CP_PER_TICK_MIN + (CP_PER_TICK_MAX - CP_PER_TICK_MIN) * exp);
+    /**
+     * La duree du renfort, en ticks : de {@link #DURATION_MIN_TICKS} a {@link #DURATION_MAX_TICKS}
+     * selon l'experience, soit cinq a dix secondes.
+     *
+     * <p>Elle ne depend NI du temps tenu, NI d'un tirage : le joueur a demande une fourchette, et
+     * elle est la meme pour tous ses effets — l'ancienne (une fraction aleatoire du temps tenu, fois
+     * 1,5 a 2,5) donnait des renforts d'une seconde ou deux, « la duree est tres nulle dans le vrai
+     * mod ».
+     */
+    public static int durationTicks(float exp) {
+        return (int) lerp(DURATION_MIN_TICKS, DURATION_MAX_TICKS, exp);
     }
 
     /**
