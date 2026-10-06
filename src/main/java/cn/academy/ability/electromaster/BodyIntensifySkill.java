@@ -8,7 +8,6 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,10 +27,16 @@ import java.util.List;
  *       l'original ne facturait plus rien.</li>
  * </ul>
  *
- * <p>Ce qu'elle rend : le renfort se lit sur le temps tenu. Sa probabilite vaut
- * {@code (ticks - 10) / 18}, donc nulle au minimum et depassee seulement a 28 ticks, et chaque
- * unite de cette probabilite vaut un effet de plus, tire parmi les cinq de l'original. Le tout
- * dure de 1,5 a 2,5 fois le temps tenu, et laisse de quoi manger.
+ * <p>Ce qu'elle rend : le renfort est le meme pour tous ceux qui la connaissent aussi bien, et il
+ * grandit par <b>paliers d'experience</b> — voir {@link #boostsFor}, qui porte la table. Le temps
+ * tenu, lui, ne decide plus de son contenu : il donne sa <b>duree</b>, de 1,5 a 2,5 fois ce qu'on a
+ * tenu, et c'est la famine des premiers paliers qui laisse « de quoi manger ».
+ *
+ * <p>ECART ASSUME : l'original tirait au sort un a deux effets parmi cinq, et plafonnait leur niveau
+ * sur le temps tenu — on ne savait donc jamais ce qu'on obtenait, et rien ne s'ameliorait vraiment en
+ * s'entrainant. Le joueur trouvait la competence « pas assez forte » et a donne ses paliers, qui
+ * remplacent ce tirage : un socle de force, la vitesse puis la regeneration qui s'ajoutent, la famine
+ * qui s'en va, et le tout d'un cran a pleine experience.
  */
 public class BodyIntensifySkill extends Skill {
 
@@ -52,32 +57,83 @@ public class BodyIntensifySkill extends Skill {
     private static final float TIME_FACTOR_MIN = 1.5f;
     private static final float TIME_FACTOR_MAX = 2.5f;
 
-    /** Ce que le renfort laisse derriere lui : 1,25 fois le temps tenu, au niveau deux. */
+    /** Ce que le renfort laisse derriere lui : 1,25 fois le temps tenu. */
     private static final float HUNGER_FACTOR = 1.25f;
-    private static final int HUNGER_LEVEL = 2;
 
     /** L'entretien de la charge, par tick : de 20 a 15 CP, comme l'original. */
     private static final float CP_PER_TICK_MIN = 20f;
     private static final float CP_PER_TICK_MAX = 15f;
 
-    /** Les cinq effets de l'original, dans son ordre, avec le niveau ou il les plafonnait. */
-    private record Buff(MobEffect effect, int maxLevel) {}
+    // --- CE QUE LE RENFORT DONNE ---
+
+    /** A partir de la, la vitesse s'ajoute. Sous ce seuil, la force et la famine, rien de plus. */
+    public static final float SPEED_FROM = 0.25f;
+
+    /** Et a partir de la, la regeneration. */
+    public static final float REGENERATION_FROM = 0.5f;
+
+    /** A partir de la, la famine s'en va : le renfort ne se paie plus. */
+    public static final float NO_FAMINE_FROM = 0.75f;
+
+    /** Et a pleine experience, tout monte d'un cran : vitesse et regeneration au niveau II. */
+    public static final float MASTERY = 1f;
 
     /**
-     * La table des effets, construite A LA DEMANDE — et pas en constante.
+     * Une famille d'effets du renfort.
      *
-     * <p>{@code MobEffects} est un REGISTRE, et il n'existe pas dans les tests unitaires, qui
-     * chargent cette classe pour lire ses courbes. Une table posee en champ statique faisait donc
-     * echouer la classe entiere des qu'on la lisait, et avec elle les categories qui la
-     * contiennent.
+     * <p>PURE, et c'est voulu : les effets de Minecraft sont des entrees de <b>registre</b>, et il
+     * n'existe pas dans les tests unitaires — qui chargent cette classe pour lire ses courbes. Le nom
+     * de la famille se traduit donc en effet au dernier moment, dans {@link #effectOf}.
      */
-    private static List<Buff> buffs() {
-        return List.of(
-                new Buff(MobEffects.MOVEMENT_SPEED, 3),
-                new Buff(MobEffects.JUMP, 1),
-                new Buff(MobEffects.REGENERATION, 1),
-                new Buff(MobEffects.DAMAGE_BOOST, 1),
-                new Buff(MobEffects.DAMAGE_RESISTANCE, 1));
+    public enum Kind { FORCE, SPEED, REGENERATION, FAMINE }
+
+    /** Un effet du renfort, et son niveau : 1 vaut « I », 2 vaut « II ». */
+    public record Boost(Kind kind, int level) {}
+
+    /**
+     * Ce que le renfort donne a cette experience — les paliers du joueur, tels quels.
+     *
+     * <p>Il trouvait la competence « pas assez forte », et la logique de l'original n'etait pas une
+     * progression : un tirage d'un a deux effets parmi cinq, qu'on ne pouvait ni prevoir ni ameliorer
+     * en s'entrainant. Les paliers le remplacent :
+     *
+     * <ul>
+     * <li><b>0 a 24 %</b> : force I, et la famine qui la paie ;</li>
+     * <li><b>25 a 49 %</b> : la vitesse I s'ajoute ;</li>
+     * <li><b>50 a 74 %</b> : la regeneration I s'ajoute ;</li>
+     * <li><b>75 a 99 %</b> : la famine s'en va ;</li>
+     * <li><b>100 %</b> : force I, vitesse II et regeneration II.</li>
+     * </ul>
+     *
+     * <p>La force, elle, ne bouge jamais : c'est le socle de la competence, et elle est au niveau I
+     * partout. L'ordre de la liste est celui dans lequel les effets se posent — le HUD du joueur les
+     * montre dans cet ordre-la.
+     */
+    public static List<Boost> boostsFor(float exp) {
+        List<Boost> boosts = new ArrayList<>();
+        // Le socle, toujours.
+        boosts.add(new Boost(Kind.FORCE, 1));
+
+        if (exp >= MASTERY) {
+            // A pleine experience : les deux qui restent passent au niveau II, et la famine s'en va.
+            boosts.add(new Boost(Kind.SPEED, 2));
+            boosts.add(new Boost(Kind.REGENERATION, 2));
+            return List.copyOf(boosts);
+        }
+        if (exp >= SPEED_FROM) boosts.add(new Boost(Kind.SPEED, 1));
+        if (exp >= REGENERATION_FROM) boosts.add(new Boost(Kind.REGENERATION, 1));
+        if (exp < NO_FAMINE_FROM) boosts.add(new Boost(Kind.FAMINE, 1));
+        return List.copyOf(boosts);
+    }
+
+    /** L'effet de Minecraft d'une famille. Le seul endroit qui nomme le registre. */
+    private static MobEffect effectOf(Kind kind) {
+        return switch (kind) {
+            case FORCE -> MobEffects.DAMAGE_BOOST;
+            case SPEED -> MobEffects.MOVEMENT_SPEED;
+            case REGENERATION -> MobEffects.REGENERATION;
+            case FAMINE -> MobEffects.HUNGER;
+        };
     }
 
     public BodyIntensifySkill() {
@@ -198,53 +254,27 @@ public class BodyIntensifySkill extends Skill {
     }
 
     /**
-     * Le renfort, ecrit comme l'original : jusqu'a deux effets tires dans les cinq, et de quoi
-     * manger.
+     * Le renfort, pose tel que {@link #boostsFor} le decrit.
      *
-     * <p>Sa boucle vaut `while (p > 0)`: a la probabilite, on ajoute un effet, puis on retire
-     * une unite. Deux effets au plus — la probabilite plafonne a 1,67 — et meme parfois aucun,
-     * puisque c'est un tirage.
-     *
-     * <p>ECART ASSUME : l'original incrementait son compteur <b>avant</b> de lire sa table, donc
-     * ne servait jamais le premier effet tire et decalait tous les autres d'un cran. Le port lit
-     * a partir de zero — meme tirage, sans ce decalage.
+     * <p>La duree est celle de l'original : une fraction tiree du temps tenu, fois le facteur
+     * d'experience — de 1,5 a 2,5 fois. La <b>famine</b> garde la sienne, plus courte (1,25 fois le
+     * temps tenu), parce qu'elle n'est pas un benefice : c'est le prix, et elle doit s'oublier plus
+     * vite que ce qu'elle a paye. Le niveau, lui, vient des paliers et de personne d'autre.
      */
     private void applyBuffs(Player player, AbilityData data, int chargeTicks) {
         int held = Math.min(chargeTicks, MAX_TIME);
+        float exp = data.getSkillExp(this);
+        int time = buffTime(held, player.getRandom().nextDouble(), timeFactor(exp));
+        int famine = (int) (HUNGER_FACTOR * held);
 
-        List<Buff> pool = new ArrayList<>(buffs());
-        Collections.shuffle(pool, new java.util.Random(player.getRandom().nextLong()));
-
-        double chance = probability(held);
-        int level = level(held);
-        int time = buffTime(held, player.getRandom().nextDouble(), timeFactor(data.getSkillExp(this)));
-
-        int taken = 0;
-        while (chance > 0.0) {
-            if (player.getRandom().nextDouble() < chance) {
-                Buff buff = pool.get(taken % pool.size());
-                taken++;
-                player.addEffect(new MobEffectInstance(buff.effect(), time,
-                        Math.min(level, buff.maxLevel()), false, true));
-            }
-            chance -= 1.0;
+        for (Boost boost : boostsFor(exp)) {
+            int ticks = boost.kind() == Kind.FAMINE ? famine : time;
+            player.addEffect(new MobEffectInstance(effectOf(boost.kind()), ticks,
+                    boost.level() - 1, false, true));
         }
-
-        player.addEffect(new MobEffectInstance(MobEffects.HUNGER,
-                (int) (HUNGER_FACTOR * held), HUNGER_LEVEL, false, true));
     }
 
     // --- LES NOMBRES, EN CLAIR, POUR LE TEST ---
-
-    /** La probabilite d'un effet apres ce temps tenu : {@code (ticks - 10) / 18}. */
-    public static double probability(int heldTicks) {
-        return (heldTicks - MIN_TIME) / 18.0;
-    }
-
-    /** Le niveau donne : la partie entiere de la probabilite. */
-    public static int level(int heldTicks) {
-        return (int) Math.floor(probability(heldTicks));
-    }
 
     /** Le facteur de duree, de 1,5 a 2,5 selon l'experience. */
     public static float timeFactor(double exp) {

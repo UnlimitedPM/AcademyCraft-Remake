@@ -4559,6 +4559,78 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le renfort du corps, palier par palier.
+     *
+     * <p>C'est le seul endroit ou les effets se verifient vraiment : la table des paliers est
+     * <b>pure</b> — elle ne nomme aucun effet de Minecraft, et se relit en JUnit (voir
+     * {@code BodyIntensifySkill.boostsFor}) —, mais sa traduction en effets demande le REGISTRE,
+     * donc un monde. Le joueur trouvait la competence pas assez forte, et ses cinq paliers
+     * remplacent le tirage au sort de l'original.
+     */
+    @GameTest(template = "empty")
+    public static void leRenfortSuitSesPaliers(GameTestHelper helper) {
+        var intensify = cn.academy.ability.electromaster.ElectromasterCategory.BODY_INTENSIFY;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 210);
+
+        var player = ownPlayer(helper, "intensified");
+        clearCorridor(helper, abs, 4);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(intensify.getCategory(), 3);
+        data.learnSkill(intensify);
+
+        // Le socle : la force I, et la famine qui la paie. Rien de plus.
+        data.setSkillExp(intensify, 0.1f);
+        player.removeAllEffects();
+        intensify.onActivateCharged(player, data, 40);
+        assertBoost(helper, player, net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 0,
+                "force I au depart");
+        assertTrue(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER),
+                "et la famine qui la paie");
+        assertFalse(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED),
+                "la vitesse n'arrive qu'a 25 % d'experience");
+
+        // Le palier du milieu : les quatre, famine comprise.
+        data.setSkillExp(intensify, 0.6f);
+        player.removeAllEffects();
+        intensify.onActivateCharged(player, data, 40);
+        assertBoost(helper, player, net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 0,
+                "vitesse I a 50 %");
+        assertBoost(helper, player, net.minecraft.world.effect.MobEffects.REGENERATION, 0,
+                "regeneration I");
+        assertTrue(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER),
+                "et la famine, encore");
+
+        // La maitrise : tout d'un cran, et plus de famine.
+        data.setSkillExp(intensify, 1f);
+        player.removeAllEffects();
+        intensify.onActivateCharged(player, data, 40);
+        assertBoost(helper, player, net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED, 1,
+                "vitesse II a 100 %");
+        assertBoost(helper, player, net.minecraft.world.effect.MobEffects.REGENERATION, 1,
+                "regeneration II");
+        assertBoost(helper, player, net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 0,
+                "et la force, qui ne bouge pas");
+        assertFalse(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.HUNGER),
+                "la famine s'en va a 75 %");
+
+        player.removeAllEffects();
+        helper.succeed();
+    }
+
+    /** Un effet attendu, au niveau voulu (0 = niveau I), pose sur un vivant. */
+    private static void assertBoost(GameTestHelper helper,
+                                    net.minecraft.world.entity.LivingEntity holder,
+                                    net.minecraft.world.effect.MobEffect effect, int amplifier,
+                                    String what) {
+        var instance = holder.getEffect(effect);
+        assertTrue(helper, instance != null, what + " : l'effet est absent");
+        assertValue(helper, amplifier, instance.getAmplifier(), what + " (niveau)");
+    }
+
+    /**
      * Le canon a plasma : la charge se paie, le tir part, la boule vole et explose.
      *
      * <p>C'est la seule competence du port a trois temps, et le seul test qui va jusqu'au
