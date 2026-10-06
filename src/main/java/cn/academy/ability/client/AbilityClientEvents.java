@@ -598,6 +598,16 @@ public class AbilityClientEvents {
         boolean performed = skill.isChargeable()
                 && ClientCharge.getTicks(skill.getName())
                         >= skill.getMinChargeTicks(ClientAbilityData.get());
+        // Et ce que l'original faisait LUI-MEME au relachement : poser sa vitesse chez le joueur,
+        // avant de le dire au serveur. La charge se lit MAINTENANT, avant `closeHeld` qui la
+        // referme. Voir Skill.onClientRelease.
+        if (performed) {
+            var local = net.minecraft.client.Minecraft.getInstance().player;
+            if (local != null) {
+                skill.onClientRelease(local, ClientAbilityData.get(),
+                        ClientCharge.getTicks(skill.getName()));
+            }
+        }
         closeHeld(binding, skill, performed);
         send(category, skill, Phase.RELEASE);
     }

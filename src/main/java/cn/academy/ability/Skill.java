@@ -579,6 +579,32 @@ public abstract class Skill {
     }
 
     /**
+     * Le relachement, cote client : le moment ou l'original appliquait son effet LUI-MEME.
+     *
+     * <p>Le contexte de la 1.12.2 vivait des deux cotes, et c'est le <b>client</b> qui posait la
+     * vitesse de l'acceleration de vecteur ({@code VecAccelContext.l_perform} : {@code
+     * VecUtils.setMotion(player, initSpeed())}) avant de prevenir le serveur, qui se contentait de
+     * consommer et de remettre la chute a zero. Le port avait tout mis chez le serveur, et cela se
+     * paie : la vitesse fait alors l'aller-retour par un paquet, et elle peut se faire <b>avaler
+     * par le tick du joueur</b> qui l'attend — un saut pile a ce moment-la
+     * ({@code jumpFromGround} ecrit 0,42 en Y et le paquet arrive avant le tick, pas apres). Le
+     * joueur : « si je saute pile poil au bon moment ca annule la competence [...] je n'ai pas de
+     * boost ».
+     *
+     * <p>Appele au relachement, chez le client, avant que la charge ne se referme, et seulement
+     * quand elle a tenu assez longtemps pour que le serveur l'execute. {@code heldTicks} est l'age
+     * de la charge <b>du client</b> : c'est celui que l'original lisait pour sa vitesse.
+     *
+     * <p>Ce crochet vient <b>apres</b> le tick du joueur — Forge tire la fin du tick client une fois
+     * le monde avance —, donc ce qu'il pose n'est pas ecrase dans la foulee : c'est ce qui rend le
+     * geste fiable. Le serveur garde le sien pour les autres et pour le multijoueur.
+     *
+     * <p>Defaut : rien. Seule competence concernee : {@code vec_accel}.
+     */
+    public void onClientRelease(Player player, AbilityData data, int heldTicks) {
+    }
+
+    /**
      * Une action <b>pendant</b> un maintien, venue d'une touche qui n'est pas la sienne.
      *
      * <p>Une seule competence du port s'en sert : le {@code flashing} ecoute les quatre

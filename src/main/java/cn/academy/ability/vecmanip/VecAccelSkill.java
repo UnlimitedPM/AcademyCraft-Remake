@@ -90,25 +90,66 @@ public class VecAccelSkill extends Skill {
         return lerp(30f, 15f, data.getSkillExp(this));
     }
 
+    /** Les dix degres de plus que l'original donnait a la visee. */
+    public static final double LOOK_TILT = 10;
+
+    /**
+     * La direction de la poussee, dans le repere du monde : le regard, dix degres plus haut.
+     *
+     * <p>C'est le {@code EntityLook(yaw, pitch - 10).toVec3} de l'original, et ses deux
+     * conventions sont gardees telles quelles : {@code pitchDegrees} est le tangage brut du jeu
+     * ({@code getXRot()}, positif vers le bas), donc lui retirer dix degres fait <b>monter</b> la
+     * poussee — c'est ce qui donne son arc au vol.
+     *
+     * <p>Pure : le serveur et le client s'en servent tous les deux, donc ils ne peuvent pas
+     * diverger.
+     */
+    public static Vec3 boostDirection(double pitchDegrees, double yawDegrees) {
+        double pitch = Math.toRadians(pitchDegrees - LOOK_TILT);
+        double yaw = Math.toRadians(yawDegrees);
+        return new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch),
+                Math.cos(yaw) * Math.cos(pitch)).normalize();
+    }
+
+    /** La vitesse posee : la direction du regard, a la vitesse de cette charge-la. */
+    public static Vec3 boost(double pitchDegrees, double yawDegrees, int chargeTicks) {
+        return boostDirection(pitchDegrees, yawDegrees).scale(speedAt(chargeTicks));
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
-        // Look slightly upward like the original (pitch - 10) so the arc carries the player forward.
-        double pitch = Math.toRadians(player.getXRot() - 10);
-        double yaw = Math.toRadians(player.getYRot());
-        double x = -Math.sin(yaw) * Math.cos(pitch);
-        double y = -Math.sin(pitch);
-        double z = Math.cos(yaw) * Math.cos(pitch);
-
-        // Original replaces the velocity outright rather than stacking onto existing motion.
-        player.setDeltaMovement(new Vec3(x, y, z).normalize().scale(speed(data)));
+        // La meme poussee que chez le client, posee ici aussi : c'est elle qui fait bouger le
+        // joueur pour les AUTRES, et qui repond au rebond du sien si son propre crochet n'a pas
+        // tourne. Voir onClientRelease pour le cote client, qui est celui de l'original.
+        player.setDeltaMovement(boost(player.getXRot(), player.getYRot(), data.getChargeTicks(this)));
         player.fallDistance = 0;
         // Et la chute qui suit le lancement est gratuite : ce coup jette son porteur en l'air,
-        // et il se tuait donc lui-meme en s'envolant. Le joueur l'a demande — « j'aimerais que
+        // et il se tuait donc lui-meme en s'envoyant. Le joueur l'a demande — « j'aimerais que
         // apres avoir fait ces competences, tout comme avec la teleporteuse, on ne prenne pas de
         // degats de chute juste apres ». Voir AbilityData.protectFromFall.
         data.protectFromFall();
         player.hurtMarked = true;
 
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_VEC_ACCEL, 0.35f);
+    }
+
+    /**
+     * Le relachement, chez le joueur : la poussee est posee ICI, comme dans l'original.
+     *
+     * <p>Le port la posait seulement chez le serveur, et elle y perdait la course. Un saut pile au
+     * bon moment l'annulait : le paquet de vitesse arrive chez le client <b>avant</b> le tick de son
+     * joueur, et le saut de ce tick-la ({@code jumpFromGround}, 0,42 en Y) ecrasait la poussee —
+     * sans parler du regard, qui monte. Le joueur : « parfois, j'ai l'impression que si je saute pil
+     * poil au bon moment ca annule la competence, pas litteralement mais dans le sens ou je n'ai
+     * pas de boost ».
+     *
+     * <p>Ce crochet arrive APRES le tick du joueur (Forge tire la fin du tick client une fois le
+     * monde avance), donc la poussee tient jusqu'au tick suivant — et le saut, lui, est deja passe.
+     * C'est aussi ce que faisait l'original ({@code VecAccelContext.l_perform} posait la vitesse
+     * chez le client, et le serveur se contentait de consommer).
+     */
+    @Override
+    public void onClientRelease(Player player, AbilityData data, int heldTicks) {
+        player.setDeltaMovement(boost(player.getXRot(), player.getYRot(), heldTicks));
     }
 }
