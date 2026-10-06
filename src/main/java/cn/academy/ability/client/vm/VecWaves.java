@@ -129,28 +129,41 @@ public final class VecWaves {
         return List.copyOf(out);
     }
 
+    /**
+     * L'age d'une onde a cette image : ses ticks, et la part du tick en cours.
+     *
+     * <p>Sans elle, tout ce qui vieillit ici — l'echelle, l'opacite, l'avancee — ne changeait
+     * qu'une fois par tick : l'onde s'animait donc a <b>vingt images par seconde</b>, et cela se
+     * voit sur une lueur qui s'efface. Le joueur l'a vu : « l'animation ne va qu'a 20 fps ». C'est
+     * la meme lecon que la poussiere des ailes et la fumee du choc au sol — ce qui vit entre deux
+     * ticks se relit entre deux ticks. Voir {@code WaveRenderer}.
+     */
+    public static double ageAt(Wave wave, float partialTick) {
+        return wave.age() + partialTick;
+    }
+
     /** L'opacite globale de l'onde, qui prend le pas sur celle de ses anneaux. */
-    public static double maxAlpha(int ticks) {
+    public static double maxAlpha(double ticks) {
         return clamp01(ALPHA.valueAt(ticks / (double) LIFE));
     }
 
     /** Et celle d'un anneau, qui a sa propre vie et son propre retard. */
-    public static double ringAlpha(int ticks, Ring ring) {
+    public static double ringAlpha(double ticks, Ring ring) {
         return clamp01(ALPHA.valueAt((ticks - ring.timeOffset()) / (double) ring.life()));
     }
 
     /** Ce qui se dessine vraiment : la plus petite des deux, attenuee de trois dixiemes. */
-    public static double alpha(int ticks, Ring ring) {
+    public static double alpha(double ticks, Ring ring) {
         return Math.min(maxAlpha(ticks), ringAlpha(ticks, ring)) * DRAW_ALPHA;
     }
 
     /** L'echelle de l'onde a cet age-la : ses anneaux grandissent tous ensemble. */
-    public static double sizeScale(int ticks) {
+    public static double sizeScale(double ticks) {
         return SIZE.valueAt(clamp(ticks / SIZE_DIVISOR, 0, SIZE_CEILING));
     }
 
     /** L'avancee de la pile, en blocs. */
-    public static double drift(int ticks) {
+    public static double drift(double ticks) {
         return ticks * DRIFT_PER_TICK;
     }
 

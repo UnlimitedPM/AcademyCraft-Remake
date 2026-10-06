@@ -39,6 +39,10 @@ import java.util.List;
  *
  * <p>Et le <b>brouillard</b> est repousse le temps du dessin, comme pour elle : sans cela, la
  * cecite d'une detection en cours repeindrait l'onde en noir.
+ *
+ * <p>Enfin l'age se lit <b>entre deux ticks</b> : ce qui vieillit ici — l'echelle, l'opacite,
+ * l'avancee — lissait sinon a vingt images par seconde, ce que le joueur a vu. Voir
+ * {@code VecWaves#ageAt}.
  */
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -63,6 +67,7 @@ public final class WaveRenderer {
 
         Vec3 camera = event.getCamera().getPosition();
         Matrix4f base = event.getPoseStack().last().pose();
+        float partialTick = event.getPartialTick();
 
         RenderSystem.setShaderFogStart(FOG_AWAY);
         RenderSystem.setShaderFogEnd(FOG_AWAY);
@@ -85,11 +90,14 @@ public final class WaveRenderer {
                             (float) (wave.position().z - camera.z))
                     .rotateY((float) Math.toRadians(-wave.yaw()))
                     .rotateX((float) Math.toRadians(wave.pitch()));
-            double scale = VecWaves.sizeScale(wave.age());
-            double drift = VecWaves.drift(wave.age());
+            // L'age se lit ENTRE deux ticks, pas au tick : sinon la lueur qui s'efface avance par
+            // sauts de vingt par seconde. Voir VecWaves#ageAt.
+            double age = VecWaves.ageAt(wave, partialTick);
+            double scale = VecWaves.sizeScale(age);
+            double drift = VecWaves.drift(age);
 
             for (VecWaves.Ring ring : wave.rings()) {
-                float alpha = (float) VecWaves.alpha(wave.age(), ring);
+                float alpha = (float) VecWaves.alpha(age, ring);
                 if (alpha <= 0f) continue;
 
                 double half = ring.size() * scale / 2;

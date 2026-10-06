@@ -3663,6 +3663,17 @@ public final class AcademyGameTests {
         empty.learnSkill(blast);
         player.moveTo(player.getX(), player.getY(), player.getZ(), 0f, -90f);
 
+        // Le monde de test est partage, et les structures voisines partagent le meme axe : une
+        // bete lancee par le test d'a cote peut traverser ce volume en montant ou en tombant.
+        // Le vide se mesure donc sur un ciel propre — sans quoi la vague « ne trouve personne »
+        // alors qu'elle a trouve quelqu'un, et le gain d'experience la trahit.
+        for (var stray : helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.Entity.class,
+                new net.minecraft.world.phys.AABB(abs.getX() - 1, abs.getY(), abs.getZ() - 1,
+                        abs.getX() + 5, abs.getY() + 12, abs.getZ() + 5))) {
+            if (stray != player) stray.discard();
+        }
+
         // Et le repli lui-meme, chiffre : le bout du regard se prend sur les yeux. Le port
         // partait des pieds — la branche morte de l'original — et l'onde s'ouvrait a
         // hauteur de sol.

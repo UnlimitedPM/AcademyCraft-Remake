@@ -100,4 +100,38 @@ class VecWavesTest {
                 "l'original multipliait son opacite par sept dixiemes");
         assertEquals(15, VecWaves.LIFE, "et sa vie valait quinze ticks");
     }
+
+    /**
+     * L'age se lit entre deux ticks, pas au tick.
+     *
+     * <p>Tout ce qui vieillit dans une onde — l'echelle, l'opacite, l'avancee — ne changeait donc
+     * qu'une fois par tick, et la lueur qui s'efface sautait vingt fois par seconde. Le joueur l'a
+     * vu : « l'animation ne va qu'a 20 fps ». C'est la meme lecon que la poussiere des ailes, ou
+     * que la fumee du choc au sol.
+     */
+    @Test
+    @DisplayName("une onde vieillit entre deux ticks, pas par sauts")
+    void lAgeSeLitEntreDeuxTicks() {
+        VecWaves.clear();
+        VecWaves.play(net.minecraft.world.phys.Vec3.ZERO, 0f, 0f, 2, 1);
+        VecWaves.Wave onde = VecWaves.live().get(0);
+
+        assertEquals(0.0, VecWaves.ageAt(onde, 0f), 1e-9, "a sa naissance, l'age est son tick");
+        assertEquals(0.5, VecWaves.ageAt(onde, 0.5f), 1e-9, "plus la part du tick en cours");
+        VecWaves.tick();
+        assertEquals(1.75, VecWaves.ageAt(onde, 0.75f), 1e-9, "et il suit les ticks");
+        VecWaves.clear();
+
+        // Et les courbes lisent cet age-la : entre deux ticks, tout bouge encore.
+        VecWaves.Ring anneau = new VecWaves.Ring(10, 0, 1, 0);
+        double demiEchelle = VecWaves.sizeScale(4.5);
+        assertTrue(demiEchelle > VecWaves.sizeScale(4) && demiEchelle < VecWaves.sizeScale(5),
+                "l'echelle d'un demi-tick tient entre ses deux ticks : " + demiEchelle);
+
+        double basse = VecWaves.alpha(8, anneau);
+        double haute = VecWaves.alpha(9, anneau);
+        double demiAlpha = VecWaves.alpha(8.5, anneau);
+        assertTrue(demiAlpha > Math.min(basse, haute) && demiAlpha < Math.max(basse, haute),
+                "et l'opacite d'un demi-tick aussi, elle qui retombe : " + demiAlpha);
+    }
 }
