@@ -79,7 +79,8 @@ public final class JetEngineEffect {
         LocalPlayer player = Minecraft.getInstance().player;
 
         if (player == null
-                || !JetEngineVisuals.showsMark(ClientCharge.getSkill(), ClientCharge.isSustained())) {
+                || !JetEngineVisuals.showsMark(JetEngineVisuals.SKILL,
+                        ClientCharge.isSustained(JetEngineVisuals.SKILL))) {
             markAt = null;
             markTicks = 0;
             return;

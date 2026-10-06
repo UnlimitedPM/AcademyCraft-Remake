@@ -41,8 +41,9 @@ public final class ShieldSparks {
 
         // Le bouclier n'existe que pendant son maintien, et un maintien ne se synchronise pas :
         // c'est la charge du joueur local qui dit s'il est la. Meme regle que le disque, dans
-        // ShieldRenderer.
-        if (!ShieldVisuals.showsShield(ClientCharge.getSkill(), ClientCharge.isSustained())) {
+        // ShieldRenderer — et c'est SA charge qui est lue, pas celle qui vient d'etre ouverte.
+        if (!ShieldVisuals.showsShield(ShieldVisuals.SKILL,
+                ClientCharge.isSustained(ShieldVisuals.SKILL))) {
             return;
         }
 

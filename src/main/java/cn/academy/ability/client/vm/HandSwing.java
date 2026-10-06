@@ -128,18 +128,25 @@ public final class HandSwing {
     }
 
     /**
-     * Vrai quand la charge qui armait le poing n'est plus celle du client.
+     * Vrai quand la charge qui armait le poing n'est plus ouverte.
      *
-     * <p>Deux cas, et le second est une correction du port : le joueur a change de competence sans
-     * relacher, ou bien sa charge a depasse la fenetre de la sienne — le serveur la ferme a ce
-     * moment-la, et le client, lui, ne l'apprend pas. Sans ce second cas, un joueur qui tient sa
-     * touche trop longtemps garderait le poing en l'air indefiniment.
+     * <p>Deux cas, et le second est une correction du port : la charge de CETTE competence s'est
+     * refermee — le relachement, un maintien que le serveur a termine — ou bien son age a depasse
+     * la fenetre de la sienne : le serveur la ferme a ce moment-la, et le client, lui, ne l'apprend
+     * pas. Sans ce second cas, un joueur qui tient sa touche trop longtemps garderait le poing en
+     * l'air indefiniment.
+     *
+     * <p>Et c'est bien SA charge qui est lue, pas « la charge en cours » : le port comparait le nom
+     * du poing a celui de la derniere charge ouverte, donc ouvrir une seconde competence pendant
+     * que le poing s'armait — preparer un `dir_blast` puis lancer un `vec_accel` — desarmait le
+     * poing et annulait son geste. Le joueur : « si je prepare un dir blast avant de faire le vec
+     * accel, l'animation est annulee et ca cause pas mal de bug ».
      */
     private static boolean detached() {
         if (held == null) return true;
-        if (!held.getName().equals(ClientCharge.getSkill())) return true;
+        if (!ClientCharge.isOpen(held.getName())) return true;
         int max = held.getMaxChargeTicks(ClientAbilityData.get());
-        return max > 0 && ClientCharge.getTicks() >= max;
+        return max > 0 && ClientCharge.getTicks(held.getName()) >= max;
     }
 
     /** Le geste, applique a l'empilement de poses de la main. */
@@ -151,7 +158,8 @@ public final class HandSwing {
         if (event.getHand() != InteractionHand.MAIN_HAND) return;
 
         boolean preparing = phase == Phase.PREPARE;
-        double age = (preparing ? ClientCharge.getTicks() : punchTicks) + event.getPartialTick();
+        double age = (preparing ? ClientCharge.getTicks(held.getName()) : punchTicks)
+                + event.getPartialTick();
         HandAnim.Pose pose = (preparing ? HandAnim.PREPARE : HandAnim.PUNCH)
                 .pose(preparing ? HandAnim.prepareTime(age) : HandAnim.punchTime(age));
 

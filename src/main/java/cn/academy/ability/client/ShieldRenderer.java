@@ -44,7 +44,10 @@ public class ShieldRenderer {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
-        if (!ShieldVisuals.showsShield(ClientCharge.getSkill(), ClientCharge.isSustained())) {
+        // C'est SA charge qui est lue, et non « la charge en cours » : le joueur peut tenir le
+        // bouclier et charger autre chose en meme temps. Voir ClientCharge.
+        if (!ShieldVisuals.showsShield(ShieldVisuals.SKILL,
+                ClientCharge.isSustained(ShieldVisuals.SKILL))) {
             // Rien a dessiner : on remet le disque a zero pour que le prochain bouclier
             // reparte de la meme position, comme une entite neuve.
             spin = 0;
@@ -55,7 +58,7 @@ public class ShieldRenderer {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
-        int ticks = ClientCharge.getTicks();
+        int ticks = ClientCharge.getTicks(ShieldVisuals.SKILL);
         long now = System.nanoTime();
         float deltaMs = lastFrame == 0 ? 0f : (now - lastFrame) / 1_000_000f;
         lastFrame = now;

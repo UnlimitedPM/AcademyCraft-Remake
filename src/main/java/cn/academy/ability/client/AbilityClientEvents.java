@@ -144,7 +144,7 @@ public class AbilityClientEvents {
         // nombres du F4 et les deux barres du temoin de CP avanceraient par bonds. Un
         // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur.
         // Voir ClientAbilityData.tick.
-        ClientAbilityData.tick(ClientCharge.getSkill() != null);
+        ClientAbilityData.tick(ClientCharge.anyOpen());
         // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
         cn.academy.client.hud.NotificationHud.tick();
         // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
@@ -184,6 +184,9 @@ public class AbilityClientEvents {
             cn.academy.ability.client.vm.HandSwing.clear();
             // Et le corps de plasma du canon, pour la meme raison : voir PlasmaBodies.
             cn.academy.ability.client.vm.PlasmaBodies.clear();
+            // Et les charges elles-memes : un monde quitte n'en garde aucune. Sans cela, une
+            // competence tenue au moment du depart y resterait ouverte dans la liste du client.
+            ClientCharge.clear();
         }
 
         // LA PAUSE NE PILOTE RIEN.
@@ -322,7 +325,7 @@ public class AbilityClientEvents {
      * demande de fin pour un maintien qui n'existe plus.
      */
     public static void onHoldOver(String skillName) {
-        if (skillName == null || !skillName.equals(ClientCharge.getSkill())) return;
+        if (skillName == null || !ClientCharge.isOpen(skillName)) return;
 
         for (Binding binding : BINDINGS) {
             Skill skill = skillOf(binding);
@@ -338,7 +341,7 @@ public class AbilityClientEvents {
             cn.academy.ability.client.vm.PlasmaBodies.end(skill);
         }
 
-        ClientCharge.end();
+        ClientCharge.end(skillName);
         ThunderClapEffect.end();
         MeltdownerCharge.end();
         BodyIntensifyEffect.endCharge(false);
@@ -430,10 +433,9 @@ public class AbilityClientEvents {
                 return;
             }
             // Une competence A BASCULE se ferme au second appui : son maintien est un etat, pas
-            // une touche tenue. Le client ferme donc ses propres effets tout de suite — le
-            // serveur fera de meme de son cote —, et l'appui part quand meme pour le lui dire.
-            // C'est l'original : son gestionnaire d'activation terminait le contexte ouvert.
-            if (skill.isToggle() && skill.getName().equals(ClientCharge.getSkill())) {
+            // une touche tenue. C'est SON propre maintien qui compte, et non « la charge en
+            // cours » : le joueur peut tres bien tenir les ailes et charger autre chose.
+            if (skill.isToggle() && ClientCharge.isOpen(skill.getName())) {
                 closeHeld(binding, skill, false);
                 send(category, skill, Phase.PRESS);
                 return;
@@ -493,7 +495,7 @@ public class AbilityClientEvents {
         // la ferme — c'est ainsi que les ailes de tempete s'ouvrent et se ferment, et que les deux
         // veilles tiennent.
         if (binding.key.isDown() || skill.isToggle()) {
-            ClientCharge.tick();
+            ClientCharge.tick(skill.getName());
             // Le scintillement vise avec les touches de deplacement pendant tout son
             // maintien : c'est la seule competence qui ecoute autre chose que sa touche.
             if (skill.listensToDirections()) {
@@ -505,12 +507,12 @@ public class AbilityClientEvents {
             if (skill.isHeld()) {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
-                    skill.onClientHoldTick(player, ClientAbilityData.get(), ClientCharge.getTicks(),
-                            localWish);
+                    skill.onClientHoldTick(player, ClientAbilityData.get(),
+                            ClientCharge.getTicks(skill.getName()), localWish);
                     // L'electricite des maintiens : l'arc de la charge et son essaim, celui de
                     // la traction magnetique. Des images, rien d'autre — voir leurs classes.
-                    ChargingEffect.tick(player, skill, ClientCharge.getTicks());
-                    MagMovementEffect.tick(player, skill, ClientCharge.getTicks());
+                    ChargingEffect.tick(player, skill, ClientCharge.getTicks(skill.getName()));
+                    MagMovementEffect.tick(player, skill, ClientCharge.getTicks(skill.getName()));
                     // Et le bloc de la manipulation magnetique, que le client porte lui aussi :
                     // sans cela il attend les positions du serveur, et traine derriere le regard
                     // des qu'on tourne la tete. Voir MagManipEffect.tickHeld.
@@ -528,7 +530,7 @@ public class AbilityClientEvents {
                     // sienne. Le client sait tout ce qu'il leur faut — quelle competence il tient,
                     // depuis combien de ticks, et ou est son porteur. Voir VecmanipTornados.
                     cn.academy.ability.client.vm.VecmanipTornados.tickHeld(player, skill,
-                            ClientCharge.getTicks());
+                            ClientCharge.getTicks(skill.getName()));
                 }
             }
             // L'electricite des charges : l'orage s'amase autour de celui qui le prepare.
@@ -536,28 +538,28 @@ public class AbilityClientEvents {
             if (skill.isChargeable()) {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
-                    ThunderClapEffect.tick(player, skill, ClientCharge.getTicks());
+                    ThunderClapEffect.tick(player, skill, ClientCharge.getTicks(skill.getName()));
                     // Et le plasma du meltdowner, qui tourne autour de celui qui le charge :
                     // l'essaim de l'original, aux memes nombres. Voir MeltdownerCharge.
-                    MeltdownerCharge.tick(player, skill, ClientCharge.getTicks());
+                    MeltdownerCharge.tick(player, skill, ClientCharge.getTicks(skill.getName()));
                     // Et le dezoom du retour de sang, qui previent que la touche est pleine :
                     // voir BloodRetroCharge.
-                    BloodRetroCharge.tick(player, skill, ClientCharge.getTicks());
+                    BloodRetroCharge.tick(player, skill, ClientCharge.getTicks(skill.getName()));
                     // Et la montee du choc au sol, dont la visee se leve pendant la charge : voir
                     // GroundshockCamera.
                     cn.academy.ability.client.vm.GroundshockCamera.charge(player, skill,
-                            ClientCharge.getTicks());
+                            ClientCharge.getTicks(skill.getName()));
                     // Et la parabole de visee de l'acceleration de vecteur : elle part de la main
                     // droite, suit le regard baisse de dix degres, et s'allonge avec la charge.
                     // Voir VecAccelPreview.
                     cn.academy.ability.client.vm.VecAccelPreview.tickHeld(player, skill,
-                            ClientCharge.getTicks());
+                            ClientCharge.getTicks(skill.getName()));
                     // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
                     // la charge : voir BodyIntensifyEffect.
                     BodyIntensifyEffect.tickCharge(skill);
                     // Et le fantome de la teleportation au marqueur, dont la portee grandit avec la
                     // charge : il se pose des le premier tick, lui aussi. Voir TeleportMark.
-                    TeleportMark.tick(player, skill, ClientCharge.getTicks(), 0);
+                    TeleportMark.tick(player, skill, ClientCharge.getTicks(skill.getName()), 0);
                     // L'orage tombe TOUT SEUL au bout de sa charge maximale : l'original
                     // terminait sa charge a MAX_TICKS pour frapper, sans attendre que la touche
                     // se relache. Le serveur ne peut pas s'en charger — c'est le client qui tient
@@ -569,7 +571,8 @@ public class AbilityClientEvents {
                     // que cela donne sur la premiere qu'il a essayee — « le laser part sans que
                     // j'aie a relacher la touche ».
                     int max = skill.getMaxChargeTicks(ClientAbilityData.get());
-                    if (max > 0 && ClientCharge.getTicks() >= max && skill.firesAtMaxCharge()) {
+                    if (max > 0 && ClientCharge.getTicks(skill.getName()) >= max
+                            && skill.firesAtMaxCharge()) {
                         // Une charge qui va jusqu'a son plafond a passe le minimum : le renfort
                         // prend, et sa gerbe aussi.
                         closeHeld(binding, skill, true);
@@ -593,7 +596,8 @@ public class AbilityClientEvents {
         if (skill.isToggle()) return;
 
         boolean performed = skill.isChargeable()
-                && ClientCharge.getTicks() >= skill.getMinChargeTicks(ClientAbilityData.get());
+                && ClientCharge.getTicks(skill.getName())
+                        >= skill.getMinChargeTicks(ClientAbilityData.get());
         closeHeld(binding, skill, performed);
         send(category, skill, Phase.RELEASE);
     }
@@ -607,7 +611,7 @@ public class AbilityClientEvents {
      */
     private static void closeHeld(Binding binding, Skill skill, boolean performed) {
         binding.charging = false;
-        ClientCharge.end();
+        ClientCharge.end(skill.getName());
         ThunderClapEffect.end();
         MeltdownerCharge.end();
         BloodRetroCharge.end();

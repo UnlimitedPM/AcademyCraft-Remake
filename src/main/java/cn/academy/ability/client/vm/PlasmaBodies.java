@@ -118,6 +118,16 @@ public final class PlasmaBodies {
                 : PlasmaBodyVisuals.alpha(ageTicks / 20.0);
     }
 
+    /**
+     * La charge du canon est ouverte : c'est elle qui fait naitre le corps.
+     *
+     * <p>C'est SA charge qui est lue, et non « la charge en cours » : le joueur peut charger le
+     * canon et tenir autre chose — une veille, les ailes — en meme temps. Voir ClientCharge.
+     */
+    private static boolean charging() {
+        return ClientCharge.isOpen(VecmanipCategory.PLASMA_CANNON.getName());
+    }
+
     /** Un tick du client : c'est ici que le corps nait, avance, et s'en va. */
     public static void tick() {
         Player player = net.minecraft.client.Minecraft.getInstance().player;
@@ -126,7 +136,7 @@ public final class PlasmaBodies {
         if (phase == Phase.NONE) {
             // Le corps nait a l'appui, et c'est la charge du canon qui le dit : le client ouvre la
             // sienne lui-meme, donc il n'a rien a demander a personne.
-            if (VecmanipCategory.PLASMA_CANNON.getName().equals(ClientCharge.getSkill())) {
+            if (charging()) {
                 begin(player);
             }
             return;

@@ -51,7 +51,14 @@ public class RippleOverlay implements IGuiOverlay {
     @Override
     public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth,
                        int screenHeight) {
-        WaveRipples.Settings settings = WaveRipples.forSkill(ClientCharge.getSkill());
+        // L'ondulation cherche SA competence dans les charges ouvertes, de la plus recente a la
+        // plus ancienne : la veille qui la produit n'est pas forcement la derniere ouverte, puisque
+        // le joueur peut tenir une veille et charger autre chose en meme temps. Voir ClientCharge.
+        WaveRipples.Settings settings = null;
+        for (String open : ClientCharge.openSkills()) {
+            settings = WaveRipples.forSkill(open);
+            if (settings != null) break;
+        }
         if (settings == null) {
             WaveRipples.clear();
             return;
