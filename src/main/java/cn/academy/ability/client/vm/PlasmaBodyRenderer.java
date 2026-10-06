@@ -17,9 +17,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Le rendu du corps de plasma du canon, portage de {@code PlasmaBodyRenderer}.
  *
@@ -33,9 +30,12 @@ import java.util.List;
  * <b>couleurs</b> des boules — en melange ajoute, un rose et un bleu superposes font du blanc, et
  * le joueur n'a vu que ca.
  *
- * <p>L'ordre de dessin va donc des <b>petites aux grosses</b> : les roses se posent en premier, et
- * les bleues par-dessus, ce qui met le coeur bleu devant la peripherie rose. C'est la meme
- * direction que le nuanceur, qui bleuissait la ou la densite montait.
+ * <p>Les boules sont toutes au <b>rose</b> des bords du nuanceur, et le <b>bleu</b> est pose a part,
+ * en un seul coeur au centre. Chez l'original, la ou le nuanceur bleuissait, c'est le centre du
+ * <b>volume</b> — la ou les boules s'entassent et ou la densite monte — et aucune boule prise a part
+ * n'est bleue. Le port les peignait une a une, il en sortait donc quatre grosses boules bleues qui
+ * n'existent pas : c'est le joueur qui l'a vu, sur une capture du vrai mod. Voir
+ * {@code PlasmaBodyVisuals#CORE_RADIUS}.
  *
  * <p>Comme le reste des effets du port : aucune lumiere (un plasma emet la sienne), aucune face
  * cachee, et <b>pas d'ecriture de profondeur</b> — les boules se croisent en permanence, et si
@@ -93,29 +93,29 @@ public final class PlasmaBodyRenderer {
         BufferBuilder buffer = tesselator.getBuilder();
         buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
 
-        // Des petites aux grosses : le rose se pose le premier, le bleu passe devant. Voir le
-        // commentaire de la classe.
-        for (PlasmaBodyVisuals.Ball ball : sorted(PlasmaBodies.balls())) {
+        // Des couleurs tirees une fois : elles ne dependent ni de la boule ni de l'instant.
+        float[] ballColor = PlasmaBodyVisuals.ballColor();
+        float[] coreColor = PlasmaBodyVisuals.coreColor();
+
+        for (PlasmaBodyVisuals.Ball ball : PlasmaBodies.balls()) {
             Vec3 at = centre.add(PlasmaBodyVisuals.offset(ball, age));
-            float[] rgb = PlasmaBodyVisuals.color(ball.size());
             // Son rayon suit la racine de sa taille, et il grandit avec le corps : voir
             // PlasmaBodyVisuals#visibleRadius.
             double half = PlasmaBodyVisuals.visibleRadius(ball.size(), alpha);
-            quad(buffer, base, camera, at, across.scale(half), upright.scale(half), rgb, face);
+            quad(buffer, base, camera, at, across.scale(half), upright.scale(half), ballColor, face);
         }
+
+        // Et le coeur bleu par-dessus, au centre du volume — la ou la densite monte. C'est la piece
+        // que le nuanceur calculait et que le port ajoute : voir PlasmaBodyVisuals#CORE_RADIUS.
+        double core = PlasmaBodyVisuals.coreRadius(alpha);
+        quad(buffer, base, camera, centre, across.scale(core), upright.scale(core),
+                coreColor, face);
 
         BufferUploader.drawWithShader(buffer.end());
 
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
-    }
-
-    /** L'essaim range des petites aux grosses, sans toucher a celui qui vit. */
-    private static List<PlasmaBodyVisuals.Ball> sorted(List<PlasmaBodyVisuals.Ball> balls) {
-        List<PlasmaBodyVisuals.Ball> out = new ArrayList<>(balls);
-        out.sort(java.util.Comparator.comparingDouble(PlasmaBodyVisuals.Ball::size));
-        return out;
     }
 
     /**

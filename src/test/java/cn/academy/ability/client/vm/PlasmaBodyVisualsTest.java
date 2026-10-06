@@ -135,21 +135,26 @@ class PlasmaBodyVisualsTest {
     }
 
     @Test
-    void laPeripheriePrendLeRoseEtLeCoeurLeBleu() {
-        // Les deux bouts du nuanceur, tels quels : rose (0,98 / 0,51 / 0,92) et bleu (0,43 / 0,74 / 1).
-        float[] pink = PlasmaBodyVisuals.color(PlasmaBodyVisuals.SMALL_SIZE_MIN);
-        assertEquals(0.98f, pink[0], 1e-6f, "la plus petite boule est rose, en rouge");
-        assertEquals(0.51f, pink[1], 1e-6f, "en vert");
-        assertEquals(0.92f, pink[2], 1e-6f, "en bleu");
+    void lesBoulesSontToutesRoseEtLeBleuEstAuCentre() {
+        // Le joueur l'a dit devant une capture du vrai mod : AUCUNE boule n'y est bleue. La ou le
+        // nuanceur bleuissait, c'est le centre du VOLUME — la ou les boules s'entassent — et le port
+        // les peignait une a une : il en sortait quatre grosses boules bleues qui n'existent pas.
+        float[] ball = PlasmaBodyVisuals.ballColor();
+        assertEquals(0.98f, ball[0], 1e-6f, "une boule prend le rose des bords, en rouge");
+        assertEquals(0.51f, ball[1], 1e-6f, "en vert");
+        assertEquals(0.92f, ball[2], 1e-6f, "en bleu");
 
-        float[] blue = PlasmaBodyVisuals.color(PlasmaBodyVisuals.BIG_SIZE_MAX);
-        assertEquals(0.43f, blue[0], 1e-6f, "la plus grosse est bleue, en rouge");
-        assertEquals(0.74f, blue[1], 1e-6f, "en vert");
-        assertEquals(1.0f, blue[2], 1e-6f, "en bleu");
+        float[] core = PlasmaBodyVisuals.coreColor();
+        assertEquals(0.43f, core[0], 1e-6f, "et le coeur prend le bleu, en rouge");
+        assertEquals(0.74f, core[1], 1e-6f, "en vert");
+        assertEquals(1.0f, core[2], 1e-6f, "en bleu");
 
-        // Et entre les deux, elle bleuit a mesure qu'elle grossit.
-        assertTrue(PlasmaBodyVisuals.depth(0.75) > PlasmaBodyVisuals.depth(0.2),
-                "plus une boule est grosse, plus elle prend le bleu");
+        // Le coeur grandit avec le corps, comme les boules.
+        assertEquals(PlasmaBodyVisuals.CORE_RADIUS, PlasmaBodyVisuals.coreRadius(1f), 1e-9,
+                "sa taille pleine une fois le corps noue");
+        assertEquals(0.0, PlasmaBodyVisuals.coreRadius(0f), 1e-9, "et rien a la naissance");
+        assertTrue(PlasmaBodyVisuals.coreRadius(0.8f) > PlasmaBodyVisuals.coreRadius(0.2f),
+                "il grandit a mesure que la matiere se noue");
     }
 
     /** Vrai si un centre tient dans le cube de plus ou moins 1,5 bloc des grosses. */

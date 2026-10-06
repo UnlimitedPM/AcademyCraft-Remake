@@ -42,9 +42,11 @@ import java.util.List;
  * le tir part, c'est voulu — et redescend d'un coup quand elle meurt, en une seconde. Ces deux
  * nombres sont des <b>secondes</b>, comme chez l'original, dont l'horloge comptait en secondes.
  *
- * <p>La couleur d'une boule se lit sur sa <b>taille</b> : les grosses sont au coeur et prennent le
- * bleu, les petites tournent a la peripherie et prennent le rose. C'est la meme direction que le
- * nuanceur de l'original, qui bleuissait la ou la densite montait.
+ * <p>Et les <b>couleurs</b> sont separees, ce qui ne s'invente pas : les boules prennent toutes le
+ * <b>rose</b> des bords du nuanceur, et le <b>bleu</b> est un coeur pose a part, au centre. Chez
+ * l'original, la ou le nuanceur bleuissait, c'est le centre du <b>volume</b> — la ou les boules
+ * s'entassent et ou la densite monte — et aucune boule prise a part n'est bleue. Voir
+ * {@link #CORE_RADIUS}, qui raconte comment le joueur l'a fait voir.
  *
  * <p>Tout est <b>pur</b> — ni Minecraft ni horloge — donc verifiable en JUnit.
  */
@@ -132,13 +134,34 @@ public final class PlasmaBodyVisuals {
         return RADIUS_SCALE * Math.sqrt(Math.max(0.0, size)) * growth(alpha);
     }
 
-    /** Les deux bouts de la couleur du nuanceur : le rose des bords, le bleu du coeur. */
+    /**
+     * Les deux bouts de la couleur du nuanceur : le rose des bords, le bleu du coeur.
+     *
+     * <p>Et c'est la <b>densite</b> qui choisissait entre les deux : {@code 1 - densite/2}, donc
+     * rose la ou la matiere est clairsemee, bleu la ou elle s'entasse. L'original en faisait un
+     * degrade continu.
+     */
     public static final float EDGE_RED = 0.98f;
     public static final float EDGE_GREEN = 0.51f;
     public static final float EDGE_BLUE = 0.92f;
     public static final float CORE_RED = 0.43f;
     public static final float CORE_GREEN = 0.74f;
     public static final float CORE_BLUE = 1.0f;
+
+    /**
+     * Le rayon du coeur bleu, une fois le corps noue.
+     *
+     * <p>C'est une PIECE AJOUTEE, et elle vient du joueur : devant une capture du vrai mod, il a
+     * dit que <b>aucune boule n'y est bleue</b>. Il a raison — la ou le nuanceur bleuissait, c'est
+     * le centre du VOLUME, la ou les boules s'entassent et ou la densite monte. Aucune boule prise
+     * a part n'est bleue, et le port les peignait une a une : il en sortait quatre grosses boules
+     * bleues, qui n'existent pas.
+     *
+     * <p>Le port dessine donc la meme chose qu'elles, mais <b>a part</b> : toutes les boules au rose
+     * des bords, et un coeur bleu par-dessus, au centre et a cette taille-la — un peu moins de la
+     * moitie de ce que l'essaim occupe.
+     */
+    public static final double CORE_RADIUS = 2.2;
 
     /** Un balancement tire : son amplitude, sa vitesse, et son retard de phase. */
     public record Trig(double amplitude, double speed, double phase) {
@@ -221,20 +244,19 @@ public final class PlasmaBodyVisuals {
         return (float) Math.max(0.0, alphaAtDeath - Math.max(0.0, dyingSeconds) * FADE_PER_SECOND);
     }
 
-    /** La quantite de bleu d'une boule, de zero pour la plus petite a un pour la plus grosse. */
-    public static float depth(double size) {
-        double t = (size - SMALL_SIZE_MIN) / (BIG_SIZE_MAX - SMALL_SIZE_MIN);
-        return (float) Math.min(1.0, Math.max(0.0, t));
+    /** La couleur d'une boule : le ROSE des bords du nuanceur, la seule qui se voie. */
+    public static float[] ballColor() {
+        return new float[] { EDGE_RED, EDGE_GREEN, EDGE_BLUE };
     }
 
-    /** Les trois canaux de sa couleur : rose a la peripherie, bleu au coeur. */
-    public static float[] color(double size) {
-        float t = depth(size);
-        return new float[] {
-                EDGE_RED + (CORE_RED - EDGE_RED) * t,
-                EDGE_GREEN + (CORE_GREEN - EDGE_GREEN) * t,
-                EDGE_BLUE + (CORE_BLUE - EDGE_BLUE) * t,
-        };
+    /** Et celle du coeur : le bleu, la ou la densite monte. */
+    public static float[] coreColor() {
+        return new float[] { CORE_RED, CORE_GREEN, CORE_BLUE };
+    }
+
+    /** Le rayon du coeur a cet instant : une part de sa taille, et la croissance du corps. */
+    public static double coreRadius(float alpha) {
+        return CORE_RADIUS * growth(alpha);
     }
 
     /** Un tirage uniforme, du plus petit au plus grand : le {@code rangef} de l'original. */
