@@ -93,6 +93,9 @@ public final class GroundshockCamera {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END || slashTicks <= 0) return;
+        // En pause, la visee ne bouge plus d'elle-meme : c'est un effet du monde, pas du menu. Le
+        // joueur lisait ce piquage continu comme le menu qui lui tire le regard. Voir ClientPause.
+        if (cn.academy.ability.client.ClientPause.frozen()) return;
         Player player = Minecraft.getInstance().player;
         if (player != null) {
             player.setXRot(player.getXRot() + SLASH_DEGREES);

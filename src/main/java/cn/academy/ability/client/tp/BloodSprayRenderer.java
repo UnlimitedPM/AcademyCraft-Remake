@@ -96,6 +96,9 @@ public final class BloodSprayRenderer {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        // En pause, le sang ne vieillit pas : il ne se fane pas pendant qu'on regarde son menu.
+        // Voir ClientPause.
+        if (cn.academy.ability.client.ClientPause.frozen()) return;
         Level level = Minecraft.getInstance().level;
         if (level != null) BloodSprays.tick(level);
     }

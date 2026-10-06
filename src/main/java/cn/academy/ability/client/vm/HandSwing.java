@@ -119,6 +119,9 @@ public final class HandSwing {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        // Pause ouverte, le geste se fige : il reprendra ou il en etait, au retour du monde. Voir
+        // ClientPause.
+        if (cn.academy.ability.client.ClientPause.frozen()) return;
 
         if (phase == Phase.PUNCH) {
             if (++punchTicks >= HandAnim.PUNCH_TICKS) clear();

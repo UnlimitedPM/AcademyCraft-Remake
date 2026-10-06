@@ -222,6 +222,9 @@ public class ArcRenderer {
             ClientArcs.clear();
             return;
         }
+        // Pause ouverte, les eclairs ne scintillent plus : c'est ce que le joueur voyait derriere
+        // son menu — « l'animation des eclairs tourne toujours en arriere plan ». Voir ClientPause.
+        if (cn.academy.ability.client.ClientPause.frozen()) return;
         ClientArcs.tick(minecraft.level.getGameTime(), RANDOM);
         BEAMS.removeIf(beam -> minecraft.level.getGameTime() - beam.birth() >= beam.life());
     }

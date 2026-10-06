@@ -89,6 +89,8 @@ public final class MineDetectOverlay {
             ores = List.of();
             return;
         }
+        // En pause, la sphere n'a pas change : on ne la balaie pas pour rien. Voir ClientPause.
+        if (ClientPause.frozen()) return;
         if (scanCooldown-- > 0) return;
         scanCooldown = MineDetectVisuals.SCAN_PERIOD;
         ores = scan(player);

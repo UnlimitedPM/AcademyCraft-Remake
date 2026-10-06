@@ -139,21 +139,6 @@ public class AbilityClientEvents {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
-        // La reserve et le surcout remontent d'un tick, chez le client aussi : la
-        // synchronisation du serveur ne passe que tous les dix ticks, et sans ce rejeu les
-        // nombres du F4 et les deux barres du temoin de CP avanceraient par bonds. Un
-        // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur —
-        // et c'est aussi lui qui fait descendre la reserve, par paquets : voir
-        // ClientAbilityData.tick.
-        ClientAbilityData.tick(ClientCharge.anyOpen(), upkeepPerTick(), upkeepOverloadPerTick());
-        // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
-        cn.academy.client.hud.NotificationHud.tick();
-        // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
-        // arcs d'ecran scintillent a chaque tick — voir BodyIntensifyEffect.
-        BodyIntensifyEffect.tick();
-        // Et le bloc tenu par la manipulation magnetique gresille tout le temps qu'il vit :
-        // l'essaim se reensemence a chaque tick, voir MagManipEffect.
-        MagManipEffect.tick();
         // Les rayons du plasma et leurs etincelles : leur forme se lit en millisecondes et se
         // dessine a chaque image, mais c'est bien au tick qu'ils meurent et que les etincelles
         // avancent — voir MdRays et MdSparks.
@@ -201,9 +186,28 @@ public class AbilityClientEvents {
         // jeu en pause, les ailes ne se mettent pas en pause et continuent de me donner une vitesse
         // vers le haut qui s'accumule, donc quand je met mon jeu en pause juste apres je m'envole
         // comme une fusee ». Pause ouverte, le client ne touche donc plus a rien : ni la charge,
-        // ni le vol, ni les effets. En MULTIJOUEUR la pause ne vaut rien (`Minecraft.isPaused`
-        // demande un serveur local non publie), donc rien ne change la-bas.
-        if (net.minecraft.client.Minecraft.getInstance().isPaused()) return;
+        // ni le vol, ni les effets. La regle, et ses trois degats — les ailes, les eclairs qui
+        // scintillaient derriere le menu, et les arcs de la manipulation qui se CUMULAIENT —, sont
+        // racontes dans ClientPause.
+        if (ClientPause.frozen()) return;
+        // La reserve et le surcout remontent d'un tick, chez le client aussi : la
+        // synchronisation du serveur ne passe que tous les dix ticks, et sans ce rejeu les
+        // nombres du F4 et les deux barres du temoin de CP avanceraient par bonds. Un
+        // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur —
+        // et c'est aussi lui qui fait descendre la reserve, par paquets : voir
+        // ClientAbilityData.tick.
+        ClientAbilityData.tick(ClientCharge.anyOpen(), upkeepPerTick(), upkeepOverloadPerTick());
+        // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
+        cn.academy.client.hud.NotificationHud.tick();
+        // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
+        // arcs d'ecran scintillent a chaque tick — voir BodyIntensifyEffect. Son onde est SEMEE au
+        // tick, donc une pause la figerait de toute facon ; c'est en la laissant courir qu'elle
+        // continuait derriere le menu.
+        BodyIntensifyEffect.tick();
+        // Et le bloc tenu par la manipulation magnetique gresille tout le temps qu'il vit :
+        // l'essaim se reensemence a chaque tick, voir MagManipEffect — et c'est LUI qui se
+        // cumulait pendant une pause, ses arcs mourant au temps du monde, qui n'avance plus.
+        MagManipEffect.tick();
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
         // Les etincelles de la teleportation vieillissent au meme rythme, et leur marque se
