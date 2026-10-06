@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -102,6 +103,16 @@ public class AbilityEvents {
         if (event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(AbilityCapability.ABILITY_DATA)
                     .ifPresent(data -> {
+                        // Les maintiens se TERMINENT, un par un, avant d'etre oublies : c'est ce
+                        // qui rend ce qu'ils ont emprunte (les ailes rendent le vol), ce qui pose
+                        // leur recharge — effacee juste apres — et surtout ce qui le DIT au client.
+                        // Le joueur : « si on meurt avec le deviation activer, quand on reapparait
+                        // on a encore l'animation d'actif alors que le pouvoir ne l'est plus ».
+                        // `clearCharges` seul vidait la table du serveur en laissant le temoin du
+                        // client allume — la fin d'un maintien, elle, envoie `HoldOverPacket`.
+                        for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
+                            endHeld(player, data, skill);
+                        }
                         data.clearCooldowns();
                         data.clearCharges();
                         // L'original eteignait l'aptitude a la mort, et la rallumait a la main :
@@ -139,6 +150,38 @@ public class AbilityEvents {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
         player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
             if (data.isProtectedFromFall()) event.setCanceled(true);
+        });
+    }
+
+    /**
+     * Le coup, AVANT qu'il ne soit porte : ce qu'une veille peut refuser en entier.
+     *
+     * <p>L'original avait deux crochets, et sa propre note dit pourquoi : annuler l'evenement de
+     * degats provoque quand meme le recul, donc il testait d'abord sur {@code LivingAttackEvent} —
+     * le tout premier crochet de {@code LivingEntity.hurt} — et annulait le coup la quand il etait
+     * absorbe en entier. Sans ce crochet, le porteur voit le rouge et le recul d'un coup qu'il n'a
+     * pas pris : « quand on a le vecteur reflexion d'actif, on est juste cense ne pouvoir prendre
+     * litteralement aucun degats, la maintenant on prend des degats visuellement ».
+     *
+     * <p>Seule competence concernee : {@code vec_reflection}.
+     */
+    @SubscribeEvent
+    public static void onLivingAttack(LivingAttackEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            for (Category category : CategoryManager.INSTANCE.getCategories()) {
+                if (!data.hasLearned(category)) continue;
+                for (Skill skill : category.getSkills()) {
+                    // Meme regle que pour les degats : une passive est toujours la, une tenue
+                    // seulement pendant son maintien.
+                    if (skill.isPassive() || data.isCharging(skill)) {
+                        if (skill.onAttacked(player, data, event)) {
+                            event.setCanceled(true);
+                            return;
+                        }
+                    }
+                }
+            }
         });
     }
 

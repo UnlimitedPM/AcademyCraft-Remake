@@ -4051,10 +4051,11 @@ public final class AcademyGameTests {
         assertTrue(helper, deviation.onHoldTick(player, data, 2), "la veille tient toujours");
         assertClose(helper, 0.001d, data.getSkillExp(deviation),
                 "une entite deja deviee ne rapporte plus d'experience");
-        assertTrue(helper, data.getOverload() > overloadBefore + 14f,
-                "chaque prise se paie en surcout : " + data.getOverload());
-        assertTrue(helper, data.getControlPoint() < reserveBefore - 0.9f,
-                "et l'entretien se paie par tick : " + data.getControlPoint());
+        assertTrue(helper, Math.abs(overloadBefore - data.getOverload()) < 0.001d,
+                "chaque prise se paie en RESERVE, pas en surcout : " + data.getOverload());
+        // Et la reserve le dit : 13 d'entretien, 15 pour la fleche, puis 12,992 d'entretien.
+        assertTrue(helper, Math.abs((reserveBefore - 40.992d) - data.getControlPoint()) < 0.01d,
+                "l'entretien et chaque prise se paient par la reserve : " + data.getControlPoint());
 
         // La reduction de degats, par le crochet du jeu. Le gain d'experience du coup est
         // verse AVANT que la reduction ne soit calculee, comme dans l'original : le coup
@@ -4190,35 +4191,50 @@ public final class AcademyGameTests {
         zombie.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
         level.addFreshEntity(zombie);
 
-        // Un coup de 10 donne par le zombie : 60 % repartent, donc 6 points, et il en reste 4.
+        // Un coup de dix points donne par le zombie : il est absorbe EN ENTIER, et refuse avant
+        // meme d'etre porte — c'est le test anticipe de l'original, celui qui evite le recul et le
+        // rouge d'un coup qu'on ne prend pas. Voir Skill.onAttacked.
         double reserveBefore = data.getControlPoint();
-        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+        var attack = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(zombie), 10f);
-        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
-        assertClose(helper, 4.0d, hurt.getAmount(), "10 points dont 60 % repartent");
+        cn.academy.ability.AbilityEvents.onLivingAttack(attack);
+        assertTrue(helper, attack.isCanceled(),
+                "10 points dont 6 repartent : le coup est annule avant d'etre porte");
         assertTrue(helper, zombie.getHealth() < 15f && zombie.getHealth() > 13f,
                 "et l'attaquant encaisse les 6 points renvoyes : " + zombie.getHealth());
         assertClose(helper, 0.004d, data.getSkillExp(reflection),
                 "0,0004 par point encaisse");
         assertTrue(helper, data.getControlPoint() < reserveBefore - 7f,
-                "un coup de 10 points coute 7,1 CP : " + data.getControlPoint());
+                "et le coup se paie en reserve : " + data.getControlPoint());
 
-        // Au maximum la part renvoyee vaut 120 % : le coup est entierement rendu, donc
-        // annule — le porteur ne prend rien du tout.
+        // Ce qui reste a la reduction ordinaire, ce sont les miettes : un coup d'un point ne vaut
+        // que 0,6 de renvoi, donc il n'est pas absorbe, et le jeu en laisse 0,4.
+        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().mobAttack(zombie), 1f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
+        assertTrue(helper, Math.abs(0.4d - hurt.getAmount()) < 0.01d,
+                "un point dont 60 % repartent : " + hurt.getAmount());
+        assertFalse(helper, hurt.isCanceled(), "et il en reste un peu");
+
+        // Au maximum la part renvoyee vaut 120 % : la moindre egratignure est donc absorbe elle
+        // aussi, et le porteur ne prend plus rien du tout.
         data.addSkillExp(reflection, 1f);
-        var absorbed = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+        var absorbed = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(zombie), 10f);
-        cn.academy.ability.AbilityEvents.onLivingHurt(absorbed);
-        assertClose(helper, 0.0d, absorbed.getAmount(), "un renvoi complet ne laisse rien passer");
-        assertTrue(helper, absorbed.isCanceled(), "et le coup est annule");
+        cn.academy.ability.AbilityEvents.onLivingAttack(absorbed);
+        assertTrue(helper, absorbed.isCanceled(), "un renvoi complet ne laisse rien passer");
 
         // Hors du maintien, plus rien : les degats passent entiers, et rien n'est annule.
         data.cancelCharge(reflection);
-        var after = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+        var after = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(zombie), 10f);
-        cn.academy.ability.AbilityEvents.onLivingHurt(after);
-        assertClose(helper, 10.0d, after.getAmount(), "sans maintien, les degats passent entiers");
-        assertFalse(helper, after.isCanceled(), "et rien n'est annule");
+        cn.academy.ability.AbilityEvents.onLivingAttack(after);
+        assertFalse(helper, after.isCanceled(), "sans maintien, rien n'est annule");
+        var afterHurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                player.damageSources().mobAttack(zombie), 10f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(afterHurt);
+        assertClose(helper, 10.0d, afterHurt.getAmount(), "les degats passent entiers");
+        assertFalse(helper, afterHurt.isCanceled(), "et rien n'est annule");
 
         zombie.discard();
         helper.succeed();
@@ -4280,6 +4296,51 @@ public final class AcademyGameTests {
         assertFalse(helper, player.getAbilities().mayfly, "le vol est rendu a la fin");
         assertTrue(helper, data.isOnCooldown(wing), "et la recharge est posee");
 
+        helper.succeed();
+    }
+
+    /**
+     * La mort termine les maintiens — et le dit au client.
+     *
+     * <p>Le joueur : « si on meurt avec le deviation activer, quand on reapparait on a encore
+     * l'animation d'actif alors que le pouvoir ne l'est plus ». Le serveur vidait bien ses tables
+     * ({@code clearCharges}), mais sans rien dire au client, dont le temoin restait allume : une
+     * fin de maintien, elle, envoie {@code HoldOverPacket}. Les maintiens passent donc par la fin
+     * ordinaire avant d'etre oublies — ce qui rend aussi ce qu'ils avaient emprunte, ici le vol
+     * des ailes.
+     */
+    @GameTest(template = "empty")
+    public static void laMortTermineLesMaintiens(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 130);
+
+        var player = ownPlayer(helper, "winged-and-dead");
+        player.moveTo(abs.getX() + 0.5, abs.getY() + 20, abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(wing.getCategory(), 3);
+        data.learnSkill(wing);
+
+        assertTrue(helper, data.perform(wing.getCpCost(), wing.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        wing.onStart(player, data);
+        data.beginCharge(wing);
+        assertTrue(helper, player.getAbilities().mayfly, "les ailes ouvrent le vol");
+        assertTrue(helper, data.isCharging(wing), "et le maintien est ouvert");
+
+        // La mort, telle que le jeu la poste.
+        cn.academy.ability.AbilityEvents.onDeath(
+                new net.minecraftforge.event.entity.living.LivingDeathEvent(player,
+                        player.damageSources().generic()));
+
+        assertFalse(helper, data.isCharging(wing), "la mort termine le maintien");
+        assertFalse(helper, player.getAbilities().mayfly,
+                "et rend ce qu'il avait emprunte : le vol");
+        assertTrue(helper, data.getChargingSkills().isEmpty(), "plus rien ne tient");
+        assertFalse(helper, data.isActivated(), "et l'aptitude s'eteint, comme chez l'original");
+
+        player.getAbilities().mayfly = false;
         helper.succeed();
     }
 

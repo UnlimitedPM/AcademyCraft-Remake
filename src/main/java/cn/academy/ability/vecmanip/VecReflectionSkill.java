@@ -4,6 +4,7 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -12,6 +13,7 @@ import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
 /**
@@ -53,12 +55,15 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * renvoie pas, ce qui evite qu'un gardien et ses epines, ou deux joueurs qui se renvoient un
  * coup, ne bouclent sans fin. Le port suit l'intention, avec le garde-fou a sa place.
  *
- * <p>La seconde est la <b>comparaison du test anticipe</b> : le code prevoyait
- * {@code reflectDamage >= 1} la ou il fallait comparer au montant encaisse. Comme un renvoi
- * atteint 1 des qu'un coup depasse un point et demi, l'original annulait
- * {@code LivingAttackEvent} pour presque tout et son porteur ne prenait plus rien du tout — au
- * lieu de ne rien prendre <b>que</b> quand la reflexion couvre le coup. Le port compare au
- * montant, et n'annule que ce qui est entierement renvoye.
+ * <p>La seconde est la partie de l'original que le port avait crue fausse, et qui ne l'est pas :
+ * la <b>comparaison du test anticipe</b>. Le code prevoyait {@code reflectDamage >= 1} la ou le
+ * port comparait au montant encaisse, en jugeant que l'original annulait ainsi presque tout et
+ * rendait son porteur intouchable. C'est pourtant ce que fait le vrai mod, et le joueur l'a dit
+ * clairement : « quand on a le vecteur reflexion d'actif, on est juste cense ne pouvoir prendre
+ * litteralement aucun degats, la maintenant on prend des degats visuellement ». Le port suit donc
+ * l'original : des qu'un renvoi vaut au moins {@link #FULL_ABSORB}, le coup est absorbe en entier,
+ * teste sur {@code LivingAttackEvent} — avant le recul et avant le rouge —, et seul ce qui ne vaut
+ * pas un point de renvoi passe par la reduction ordinaire.
  *
  * <p>Un detail de l'original, en revanche, n'est pas suivi : il lisait l'auteur du coup avec
  * {@code getImmediateSource} — la fleche, pas l'archer — et renvoyer sur une fleche ne faisait
@@ -66,9 +71,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * l'original voulait dire.
  *
  * <p>Non portes : le temoin de renvoi ({@code MSG_REFLECT_ENTITY} : le port n'a pas de
- * particules), le test anticipe sur {@code LivingAttackEvent} (le port n'a pas ce crochet, donc
- * un coup entierement renvoye ne laisse que sa poussee, celle de vanilla), et le
- * {@code ReflectEvent} que l'original exposait aux autres mods.
+ * particules), et le {@code ReflectEvent} que l'original exposait aux autres mods.
  */
 public class VecReflectionSkill extends Skill {
 
@@ -104,6 +107,18 @@ public class VecReflectionSkill extends Skill {
 
     /** Le coup de scene : au-dela, l'original laissait passer sans rien tenter. */
     public static final float BIG_HIT = 9999f;
+
+    /**
+     * Le renvoi qui vaut un point : au-dela, le coup est absorbe en entier.
+     *
+     * <p>C'est le seuil du test anticipe de l'original ({@code reflectDamage >= 1}), et il est
+     * ecrit tel quel chez lui. Comme un renvoi vaut au moins 60 % du coup, tout coup d'un point et
+     * demi ou plus est donc refuse — c'est-a-dire tous ceux qui comptent : tant que la veille
+     * tient, son porteur ne prend <b>rien</b>, et c'est ce que le joueur attend de la reflexion
+     * (« on est juste cense ne pouvoir prendre litteralement aucun degats »). Ce qui passe par la
+     * reduction ordinaire, ce sont les miettes de moins d'un point et demi.
+     */
+    public static final float FULL_ABSORB = 1f;
 
     /**
      * La force de l'explosion d'une grosse boule de feu relancee.
@@ -322,12 +337,53 @@ public class VecReflectionSkill extends Skill {
         // gardien.
         if (reflecting) return reduce(event, amount - reflected);
 
+        reflect(player, data, event.getSource(), amount, reflected);
+        return reduce(event, amount - reflected);
+    }
+
+    /**
+     * Le renvoi TOTAL, teste avant meme que le coup ne soit porte.
+     *
+     * <p>C'est le second crochet de l'original, et il porte sa raison en commentaire : annuler
+     * l'evenement de degats provoque quand meme le recul, donc il testait d'abord sur
+     * {@code LivingAttackEvent} — le tout premier crochet de {@code LivingEntity.hurt} — et
+     * annulait le coup la quand il etait absorbe en entier. Le port ne faisait que la seconde
+     * moitie, d'ou ce que le joueur voyait : « on prend des degats visuellement » — le rouge et le
+     * recul d'un coup qui ne coutait rien.
+     *
+     * <p>Le renvoi lui-meme passe par le meme chemin que dans {@code onDamaged} : meme paiement,
+     * meme experience, meme coup rendu, meme onde. Et l'evenement etant annule, {@code onDamaged}
+     * n'est jamais appele : rien ne se paie deux fois.
+     */
+    @Override
+    public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
+        float amount = event.getAmount();
+        if (amount > BIG_HIT) return false;
+
+        float reflected = amount * reflectRatio(data);
+        // Le renvoi d'un renvoi ne se renvoie pas : il est refuse s'il ne laissait rien passer,
+        // et rendu au jeu sinon. Meme garde-fou que dans onDamaged.
+        if (reflecting) return amount - reflected <= 0f;
+        if (reflected < FULL_ABSORB) return false;
+
+        reflect(player, data, event.getSource(), amount, reflected);
+        return true;
+    }
+
+    /**
+     * Le renvoi lui-meme : la reserve, l'experience, le coup rendu a son auteur, et l'onde.
+     *
+     * <p>La part renvoyee est lue <b>avant</b> que l'experience du coup ne soit versee, comme dans
+     * l'original : un coup ne se renforce donc pas de l'experience qu'il vient de donner.
+     */
+    private void reflect(Player player, AbilityData data, DamageSource source, float amount,
+                         float reflected) {
         reflecting = true;
         try {
             data.performForced(damageCost(data, amount), 0f);
             data.addSkillExp(this, amount * EXP_PER_DAMAGE);
 
-            Entity attacker = event.getSource().getEntity();
+            Entity attacker = source.getEntity();
             if (attacker instanceof LivingEntity living && living != player) {
                 living.hurt(player.damageSources().indirectMagic(player, player),
                         scaled(reflected));
@@ -344,7 +400,6 @@ public class VecReflectionSkill extends Skill {
         } finally {
             reflecting = false;
         }
-        return reduce(event, amount - reflected);
     }
 
     /**

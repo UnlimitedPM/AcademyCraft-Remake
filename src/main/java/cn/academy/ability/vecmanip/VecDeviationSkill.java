@@ -61,13 +61,24 @@ public class VecDeviationSkill extends Skill {
     public static final float TICK_CP_MIN = 13f;
     public static final float TICK_CP_MAX = 5f;
 
-    /** Le surcout que coute chaque entite arretee : 15 a 12, verbatim. */
-    public static final float ENTITY_OVERLOAD_MIN = 15f;
-    public static final float ENTITY_OVERLOAD_MAX = 12f;
-
     /** Le surcout epingle a l'ouverture : 80 a 50. */
     public static final float PIN_MIN = 80f;
     public static final float PIN_MAX = 50f;
+
+    /**
+     * Ce que coute chaque entite arretee : 15 a 12, verbatim — et c'est de la RESERVE.
+     *
+     * <p>Le piege que la classe raconte plus haut a ete paye ici meme : l'original ecrit
+     * {@code ctx.consumeWithForce(0, comsumption)}, ou le premier argument est la surcharge et le
+     * second la reserve — donc 0 de surcharge, et {@code comsumption} de reserve. Le port avait
+     * recopie les deux nombres dans son propre ordre, {@code performForced(cp, overload)}, et
+     * payait donc la SURCHARGE a la place de la reserve. La deviation etait ainsi bien moins chere
+     * qu'elle ne devrait l'etre : c'est l'une des deux raisons pour lesquelles le joueur la
+     * trouvait plus forte que le renvoi — « elle consomme moins de cp et moins d'overload que le
+     * vecteur reflexion qui lui coute juste plus cher en tout point ».
+     */
+    public static final float ENTITY_CP_MIN = 15f;
+    public static final float ENTITY_CP_MAX = 12f;
 
     /** Ce qu'un coup encaisse coute au plus : 15 a 12 CP, comme l'original. */
     public static final float RESIST_CP_MIN = 15f;
@@ -110,9 +121,9 @@ public class VecDeviationSkill extends Skill {
         return lerp(TICK_CP_MIN, TICK_CP_MAX, data.getSkillExp(this));
     }
 
-    /** Le surcout que coute chaque entite arretee. */
-    public float entityOverload(AbilityData data) {
-        return lerp(ENTITY_OVERLOAD_MIN, ENTITY_OVERLOAD_MAX, data.getSkillExp(this));
+    /** Ce qu'une entite arretee coute a la reserve, selon l'experience. */
+    public float entityCost(AbilityData data) {
+        return lerp(ENTITY_CP_MIN, ENTITY_CP_MAX, data.getSkillExp(this));
     }
 
     /** Le surcout epingle a l'ouverture, le temps du maintien. */
@@ -217,9 +228,11 @@ public class VecDeviationSkill extends Skill {
             EntityAffection.Affect affect = EntityAffection.affect(entity);
             if (affect.excluded()) continue;
 
-            // Chaque entite arretee se paie sans verification : la veille est deja ouverte,
-            // et refuser ici laisserait passer ce qu'on a promis d'arreter.
-            data.performForced(0f, entityOverload(data));
+            // Chaque entite arretee se paie sans verification : la veille est deja ouverte, et
+            // refuser la laisserait passer ce qu'on a promis d'arreter. Et c'est la RESERVE
+            // qu'elle coute, comme le `consumeWithForce(0, comsumption)` de l'original — voir
+            // ENTITY_CP_MIN.
+            data.performForced(entityCost(data), 0f);
             stop(level, entity);
 
             // Le son se pose sur l'entite arretee, comme le `MSG_PLAY` de l'original :

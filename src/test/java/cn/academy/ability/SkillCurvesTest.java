@@ -1038,7 +1038,7 @@ class SkillCurvesTest {
         // par 28), surcout epingle 80 a 50, et 15 a 12 de surcout par entite arretee.
         assertBounds("entretien de vec_deviation", 13f, 5f, deviation::tickCost, deviation);
         assertBounds("epingle de vec_deviation", 80f, 50f, deviation::pin, deviation);
-        assertBounds("surcout par entite", 15f, 12f, deviation::entityOverload, deviation);
+        assertBounds("cout par entite de vec_deviation", 15f, 12f, deviation::entityCost, deviation);
 
         // La reduction : de 40 % a 90 % des degats, payee 0,54 a 0,43 CP par coup encaisse,
         // mais jamais plus que ce qu'il reste en reserve.

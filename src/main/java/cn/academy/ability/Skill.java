@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
 import javax.annotation.Nullable;
@@ -602,6 +603,26 @@ public abstract class Skill {
      * <p>Defaut : rien. Seule competence concernee : {@code vec_accel}.
      */
     public void onClientRelease(Player player, AbilityData data, int heldTicks) {
+    }
+
+    /**
+     * Le coup, AVANT qu'il ne soit porte — et refuse entierement s'il l'est.
+     *
+     * <p>{@code LivingAttackEvent} est le tout premier crochet de {@code LivingEntity.hurt} :
+     * l'annuler fait sortir la methode sur-le-champ, donc <b>sans degats, sans recul et sans
+     * rouge</b>. Le commentaire de l'original dit pourquoi il en avait besoin : « annuler
+     * l'evenement de degats provoque quand meme le recul, donc il faut un test avant ». Son renvoi
+     * de vecteur s'inscrivait donc la, testait si le coup etait absorbe en entier, l'annulait, et
+     * portait le coup lui-meme.
+     *
+     * <p>Rendre {@code true} consomme le coup : l'evenement est annule et {@link #onDamaged} ne
+     * sera meme pas appele. A n'utiliser que pour un refus <b>total</b> — une reduction partielle
+     * se fait dans {@code onDamaged}, le seul chemin ou le jeu a deja calcule ses degats.
+     *
+     * <p>Defaut : rien. Seule competence concernee : {@code vec_reflection}.
+     */
+    public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
+        return false;
     }
 
     /**
