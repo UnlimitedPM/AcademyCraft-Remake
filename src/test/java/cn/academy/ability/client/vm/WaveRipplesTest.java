@@ -140,6 +140,38 @@ class WaveRipplesTest {
                 1e-9, "et un rond ne a la largeur, aux trois quarts");
     }
 
+    /**
+     * Le centre d'un rond ne bouge pas : seule sa taille grandit.
+     *
+     * <p>C'est la faute que le joueur a vue : « le centre du rond n'est jamais au meme endroit, ce
+     * qui fait que le cercle vibre et ce n'est pas normal ». Un blit de HUD arrondit la position
+     * <b>et</b> la taille, et les deux arrondis ne tombent pas ensemble — le carre se posait donc
+     * de travers des que la taille changeait, d'un pixel, plusieurs fois par seconde. Ici rien
+     * n'est arrondi, et le milieu du carre reste le centre a tout age.
+     */
+    @Test
+    @DisplayName("le centre d'un rond ne bouge pas, seule sa taille grandit")
+    void leCentreDUnRondNeBougePas() {
+        for (double age = 0; age <= 2; age += 0.05) {
+            WaveRipples.Ripple rond = new WaveRipples.Ripple(700, 400, 2, 100, age);
+            double size = WaveRipples.drawnSize(rond);
+
+            assertEquals(WaveRipples.drawnX(rond, 1920),
+                    WaveRipples.cornerX(rond, 1920) + size / 2, 1e-9,
+                    "le milieu du carre est le centre, a l'age " + age);
+            assertEquals(WaveRipples.drawnY(rond, 1080),
+                    WaveRipples.cornerY(rond, 1080) + size / 2, 1e-9,
+                    "en hauteur aussi, a l'age " + age);
+        }
+
+        // Et le coin n'est pas entier : un demi-pixel compte, c'est tout le propos. Arrondir ici
+        // ramenerait la vibration.
+        WaveRipples.Ripple demi = new WaveRipples.Ripple(700, 400, 2, 100, 0.5);
+        assertEquals(802.5, WaveRipples.cornerX(demi, 1920), 1e-9, "le coin tombe a 802,5");
+        assertEquals(442.5, WaveRipples.cornerY(demi, 1080), 1e-9, "et en hauteur a 442,5");
+        assertEquals(55, WaveRipples.drawnSize(demi), 1e-9, "pour un carre de 55 pixels");
+    }
+
     @Test
     @DisplayName("les deux veilles ont leurs trois nombres")
     void lesDeuxVeillesOntLeursNombres() {

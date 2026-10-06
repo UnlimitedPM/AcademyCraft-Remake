@@ -190,4 +190,23 @@ public final class WaveRipples {
     public static double drawnSize(Ripple ripple) {
         return ripple.drawSize() / 2;
     }
+
+    /**
+     * Le coin haut-gauche du carre d'un rond, en large : le centre, recule d'une demi-taille.
+     *
+     * <p><b>Rien n'est arrondi</b>, et c'est tout le propos. Un {@code blit} de HUD, lui, arrondit
+     * la position <b>et</b> la taille, et les deux arrondis ne tombent pas ensemble : le milieu du
+     * carre se posait donc un pixel a cote du centre des que la taille changeait, et l'ondulation
+     * vibrait en grandissant. Le joueur l'a vu : « le centre du rond n'est jamais au meme endroit,
+     * ce qui fait que le cercle vibre ». Le carre se pose donc a sa place exacte, et seule sa
+     * taille bouge — le milieu du carre reste le centre de {@link #drawnX} a tout age.
+     */
+    public static double cornerX(Ripple ripple, double width) {
+        return drawnX(ripple, width) - drawnSize(ripple) / 2;
+    }
+
+    /** Et la meme chose en hauteur. */
+    public static double cornerY(Ripple ripple, double height) {
+        return drawnY(ripple, height) - drawnSize(ripple) / 2;
+    }
 }
