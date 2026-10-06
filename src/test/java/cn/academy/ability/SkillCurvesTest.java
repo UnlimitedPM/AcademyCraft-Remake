@@ -73,7 +73,8 @@ class SkillCurvesTest {
         assertBounds("degats de arc_gen", 5f, 9f, arcGen::damage, arcGen);
 
         var railgun = cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN;
-        assertBounds("degats de railgun", 60f, 110f, railgun::damage, railgun);
+        // Releve a la demande du joueur : l'original fait 60 a 110.
+        assertBounds("degats de railgun", 110f, 160f, railgun::damage, railgun);
 
         // Le thunder bolt fait deux degats : la cible touchee, et ce qui l'entoure.
         var thunderBolt = cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_BOLT;
@@ -210,11 +211,14 @@ class SkillCurvesTest {
         assertEquals(1.0667f, clap.damageFactor(60), 0.0001f);
         assertEquals(1f, clap.damageFactor(0), 0.0001f, "et jamais moins de 1");
 
-        // Degats : 36 a 72 selon l'experience, fois le facteur de charge.
-        assertEquals(36f, clap.damage(atExperience(clap, 0f, 40)), 0.0001f);
-        assertEquals(38.4f, clap.damage(atExperience(clap, 0f, 60)), 0.0001f,
+        // Degats : 72 a 108 selon l'experience, fois le facteur de charge. Les trois paliers du
+        // joueur (72 a 0 %, 90 a 50 %, 108 a 100 %) sont sur une droite, donc c'est un lerp.
+        assertEquals(72f, clap.damage(atExperience(clap, 0f, 40)), 0.0001f);
+        assertEquals(90f, clap.damage(atExperience(clap, 0.5f, 40)), 0.0001f,
+                "le palier du milieu, exactement");
+        assertEquals(76.8f, clap.damage(atExperience(clap, 0f, 60)), 0.0001f,
                 "60 ticks au depart");
-        assertEquals(76.8f, clap.damage(atExperience(clap, 1f, 60)), 0.0001f,
+        assertEquals(115.2f, clap.damage(atExperience(clap, 1f, 60)), 0.0001f,
                 "et 60 ticks au maximum");
 
         Curve range = data -> (float) clap.range(data);

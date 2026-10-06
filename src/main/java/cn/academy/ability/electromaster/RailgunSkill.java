@@ -46,15 +46,18 @@ public class RailgunSkill extends Skill {
     }
 
     /**
-     * Degats repris de l'original : de 60 a 110 selon l'experience.
+     * Degats : de 110 a 160 selon l'experience.
      *
-     * C'est le chiffre de la 1.12.2, et il est bien plus eleve que celui du port (20)
-     * : le railgun est cense tuer net, et c'est une competence de niveau 4. Le
-     * reglage {@code general.damageScale} permet de l'adoucir sans rien recompiler.
+     * <p>ECART DEMANDE PAR LE JOUEUR : l'original fait 60 a 110, et c'est ce que le port portait.
+     * Le railgun est une competence de niveau 4 a cible unique, et il doublait presque le claquement
+     * d'orage devenu plus fort (voir {@code ThunderClapSkill.damage}) : la borne basse passe donc
+     * au-dessus de la sienne, l'ecart entre les deux se lisant sur la portee (vingt-cinq contre
+     * trente blocs) et sur la zone (une cible contre tout le rayon). Le reglage
+     * {@code general.damageScale} adoucit toujours l'ensemble sans rien recompiler.
      * Le cout en CP suit l'original : 200 a 450, et il monte avec l'experience.
      */
     public float damage(AbilityData data) {
-        return lerp(60f, 110f, data.getSkillExp(this));
+        return lerp(110f, 160f, data.getSkillExp(this));
     }
 
     /** Recharge reprise de l'original : de 300 a 160 ticks, soit 15 a 8 secondes. */

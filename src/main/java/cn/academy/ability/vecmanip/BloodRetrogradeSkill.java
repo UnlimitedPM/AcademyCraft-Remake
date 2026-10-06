@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
  * la main, et le sang reflue.
  *
  * <p>La plus courte portee du port — <b>deux blocs</b> — pour le plus gros coup : 30 a 60
- * points de degats, la ou le railgun en fait 60 a 110 pour un rayon de vingt-cinq. C'est
+ * points de degats, la ou le railgun en fait 110 a 160 pour un rayon de vingt-cinq. C'est
  * une competence de contact, et elle ne part que si la main trouve quelque chose : sans
  * cible, <b>rien n'est facture</b>, pas meme une recharge. Le paquet ne peut pas le savoir
  * a l'avance, donc le prix se paie dans l'effet — voir {@link Skill#paysOnEffect()}.

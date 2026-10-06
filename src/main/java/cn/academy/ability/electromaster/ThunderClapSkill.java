@@ -53,9 +53,18 @@ public class ThunderClapSkill extends Skill {
         return lerp(1f, 1.2f, (chargeTicks - MIN_TICKS) / 60f);
     }
 
-    /** Degats de la foudre : de 36 a 72 selon l'experience, fois le facteur de charge. */
+    /**
+     * Degats de la foudre : de 72 a 108 selon l'experience, fois le facteur de charge.
+     *
+     * <p>ECART DEMANDE PAR LE JOUEUR : l'original fait 36 a 72, et il le trouvait « un peu
+     * faible » pour la competence la plus chere de la categorie — 390 a 252 de surcout, quarante
+     * ticks de charge a 18 a 25 CP/tick, et vingt secondes de recharge. Ses trois paliers, 72 a
+     * 0 %, 90 a 50 % et 108 a 100 %, tombent exactement sur une droite : c'est donc bien
+     * {@code lerp(72, 108)} et rien d'autre. Le doublement, puis une fois et demie, garde le
+     * milieu plus genereux que les deux bouts.
+     */
     public float damage(AbilityData data) {
-        return lerp(36f, 72f, data.getSkillExp(this)) * damageFactor(data.getChargeTicks(this));
+        return lerp(72f, 108f, data.getSkillExp(this)) * damageFactor(data.getChargeTicks(this));
     }
 
     /** Rayon frappe autour du point d'impact : de 15 a 30 blocs. */
