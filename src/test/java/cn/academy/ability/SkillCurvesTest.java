@@ -971,6 +971,24 @@ class SkillCurvesTest {
     }
 
     /**
+     * Le nombre d'anneaux de l'onde dirigee : <b>deux</b>, et jamais trois.
+     *
+     * <p>L'original tirait {@code rangei(2, 3)}, qui rend deux — sa borne haute est exclue. Le port
+     * en tirait deux ou trois, et cette troisieme pile allait trop loin : elle s'ouvrait a un bloc
+     * et demi de plus, soit pres de six blocs devant les yeux, alors que la visee n'en porte que
+     * quatre. Le joueur l'a vu : « les ondes vont trop loin du joueur quand on tape dans le vide
+     * [...] l'impression qu'on a une tres grande portee ».
+     */
+    @Test
+    void lOndeDirigeeNOuvreQueDeuxAnneaux() {
+        for (long seed = 0; seed < 64; seed++) {
+            assertEquals(2, cn.academy.ability.vecmanip.DirectedBlastwaveSkill.ringCount(
+                            net.minecraft.util.RandomSource.create(seed)),
+                    "rangei(2, 3) rend deux, quel que soit le tirage");
+        }
+    }
+
+    /**
      * Le retour de sang : le plus court rayon du port, pour le plus gros coup.
      */
     @Test

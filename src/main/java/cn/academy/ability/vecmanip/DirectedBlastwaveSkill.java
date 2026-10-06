@@ -119,6 +119,25 @@ public class DirectedBlastwaveSkill extends Skill {
     public static final float EXP_EFFECTIVE = 0.0025f;
     public static final float EXP_EMPTY = 0.0012f;
 
+    /** Le tirage de l'original, {@code rangei(2, 3)} : deux anneaux, la borne haute exclue. */
+    public static final int RING_MIN = 2;
+    public static final int RING_MAX = 3;
+
+    /**
+     * Combien d'anneaux l'onde ouvre : <b>deux</b>, toujours.
+     *
+     * <p>Le tirage de l'original etait {@code rangei(2, 3)}, qui rend deux — sa borne haute etant
+     * exclue. Le port lisait {@code 2 + nextInt(2)}, donc un anneau de trop une fois sur deux, et
+     * cette troisieme pile allait trop loin : un bloc et demi de plus, soit pres de six blocs
+     * devant les yeux, bien au-dela des quatre blocs de la visee. Le joueur a vu « les ondes vont
+     * trop loin du joueur quand on tape dans le vide [...] l'impression qu'on a une tres grande
+     * portee ». Les deux anneaux de l'original, eux, tiennent dans la portee : le premier a sept
+     * dixiemes du chemin, le second un bloc et demi plus loin.
+     */
+    public static int ringCount(RandomSource random) {
+        return RING_MIN + random.nextInt(RING_MAX - RING_MIN);
+    }
+
     public DirectedBlastwaveSkill() {
         // Le nom est celui de l'original : le fichier s'appelait DirectedBlastwave, la
         // competence "dir_blast".
@@ -284,14 +303,14 @@ public class DirectedBlastwaveSkill extends Skill {
         cn.academy.sound.AcademySounds.playAt(level, point,
                 cn.academy.ModSounds.VECMANIP_DIRECTED_BLAST, 0.5f, 1.0f);
 
-        // Et l'onde elle-meme : deux ou trois anneaux qui s'ouvrent a sept dixiemes du chemin
-        // entre la tete et le point vise, legerement de travers. C'est le geste de l'original,
-        // qui tirait ces trois nombres au sort a chaque coup. Voir VecWaves.
+        // Et l'onde elle-meme : les deux anneaux de l'original, qui s'ouvrent a sept dixiemes du
+        // chemin entre la tete et le point vise, legerement de travers. C'est le geste de
+        // l'original, qui tirait ces trois nombres au sort a chaque coup. Voir VecWaves.
         Vec3 head = player.getEyePosition(1f);
         cn.academy.ability.network.VecWavePacket.send(player,
                 head.add(point.subtract(head).scale(0.7)),
                 player.getYHeadRot() + jitter(20), player.getXRot() + jitter(10),
-                2 + level.random.nextInt(2), 1);
+                ringCount(level.random), 1);
 
         // D'abord les corps : tous ceux du cube, vivants ou non.
         AABB box = new AABB(point.x - BLAST_RANGE, point.y - BLAST_RANGE, point.z - BLAST_RANGE,
