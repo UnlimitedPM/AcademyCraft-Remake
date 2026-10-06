@@ -118,6 +118,23 @@ class PlasmaBodyVisualsTest {
     }
 
     @Test
+    void laCouvertureNeLaissePasLeCorpsTerne() {
+        // Le facteur du nuanceur, mot pour mot : alpha * (0,5 + 0,5 alpha). Le port multipliait par
+        // la seule opacite, et le joueur a vu le resultat — « tellement transparent que c'est a
+        // peine si j'arrive a le voir ».
+        assertEquals(PlasmaBodyVisuals.DRAW_ALPHA * 0.5f, PlasmaBodyVisuals.coverage(0f), 1e-6f,
+                "a la naissance la moitie du facteur — mais le rayon, lui, est nul");
+        assertEquals(PlasmaBodyVisuals.DRAW_ALPHA * 0.75f, PlasmaBodyVisuals.coverage(0.5f), 1e-6f,
+                "a mi-charge, deja les trois quarts");
+        assertEquals(PlasmaBodyVisuals.DRAW_ALPHA, PlasmaBodyVisuals.coverage(1f), 1e-6f,
+                "et le plein une fois le corps noue");
+
+        assertEquals(PlasmaBodyVisuals.DRAW_ALPHA, PlasmaBodyVisuals.coverage(4f), 1e-6f, "bornee");
+        assertEquals(PlasmaBodyVisuals.DRAW_ALPHA * 0.5f, PlasmaBodyVisuals.coverage(-1f), 1e-6f,
+                "et jamais sous la moitie");
+    }
+
+    @Test
     void laPeripheriePrendLeRoseEtLeCoeurLeBleu() {
         // Les deux bouts du nuanceur, tels quels : rose (0,98 / 0,51 / 0,92) et bleu (0,43 / 0,74 / 1).
         float[] pink = PlasmaBodyVisuals.color(PlasmaBodyVisuals.SMALL_SIZE_MIN);

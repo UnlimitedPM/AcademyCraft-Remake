@@ -92,8 +92,27 @@ public final class PlasmaBodyVisuals {
      * <p>Le melange est <b>normal</b> — celui de l'original, qui composait son volume en alpha —
      * donc les boules s'empilent au lieu de s'additionner. C'est ce qui garde leurs couleurs :
      * en melange ajoute, un rose et un bleu superposes font du BLANC, et le joueur n'a vu que ca.
+     *
+     * <p>La valeur est haute parce qu'une boule seule ne fait PAS le corps : il faut trois ou
+     * quatre recouvrements pour que le coeur devienne opaque, comme chez l'original, dont le
+     * marcheur de rayon empilait vingt pas et atteignait le plein des les premieres couches.
      */
-    public static final float DRAW_ALPHA = 0.35f;
+    public static final float DRAW_ALPHA = 0.6f;
+
+    /**
+     * La couverture d'une boule a cette opacite de corps.
+     *
+     * <p>C'est le facteur du nuanceur, mot pour mot : il terminait par
+     * {@code alpha * (0.5 + 0.5 * alpha)}, donc le corps n'etait <b>jamais</b> terne, meme a mi-charge.
+     * Le port multipliait par la seule opacite, et le joueur a vu le resultat — « tellement
+     * transparent que c'est a peine si j'arrive a le voir ».
+     *
+     * <p>C'est cette courbe qui disparait a la naissance, et non le rayon : voir {@link #growth},
+     * qui fait naitre les boules de rien. Les deux ensemble font la matiere qui se noue.
+     */
+    public static float coverage(float alpha) {
+        return DRAW_ALPHA * (0.5f + 0.5f * Math.min(1f, Math.max(0f, alpha)));
+    }
 
     /**
      * La croissance d'une boule, en part de son rayon.

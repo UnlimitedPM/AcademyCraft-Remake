@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class HeldLoopsTest {
 
     /** Les competences de l'original qui font tourner un son tant qu'on tient la touche. */
-    private static final int LOOPS = 10;
+    private static final int LOOPS = 11;
 
     @Test
     void lesCompetencesALBoucleSontCellesDeLOriginal() {
@@ -39,8 +39,8 @@ class HeldLoopsTest {
 
         // Les huit competences d'origine, et les trois rayons miniers qui partagent la leur.
         for (String skill : new String[] { "light_shield", "body_intensify", "mag_movement",
-                "mag_manip", "storm_wing", "meltdowner", "charging", "mine_ray_basic",
-                "mine_ray_expert", "mine_ray_luck" }) {
+                "mag_manip", "storm_wing", "plasma_cannon", "meltdowner", "charging",
+                "mine_ray_basic", "mine_ray_expert", "mine_ray_luck" }) {
             assertNotNull(HeldLoops.forSkill(skill), "boucle attendue : " + skill);
         }
 

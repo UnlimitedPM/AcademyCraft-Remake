@@ -65,7 +65,7 @@ public final class PlasmaBodyRenderer {
         if (PlasmaBodies.phase() == PlasmaBodies.Phase.NONE) return;
 
         float alpha = PlasmaBodies.alpha();
-        float face = alpha * PlasmaBodyVisuals.DRAW_ALPHA;
+        float face = PlasmaBodyVisuals.coverage(alpha);
         if (face <= 0f) return;
 
         Vec3 camera = event.getCamera().getPosition();
