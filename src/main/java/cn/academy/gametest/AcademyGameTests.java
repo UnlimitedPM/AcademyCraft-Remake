@@ -2980,9 +2980,9 @@ public final class AcademyGameTests {
         assertTrue(helper, data.isProtectedFromFall(), "cent ticks de chute ne l'usent pas");
 
         // L'atterrissage lui-meme est encore gratuit : vanilla remet la chute a zero en
-        // touchant le bloc. Mais ce premier bloc touche ne leve plus la protection : elle attend
-        // que le joueur SOIT POSE, sinon un atterrissage a cheval sur deux blocs, ou un
-        // glissement de quelques ticks, se paie. Voir AbilityData.LANDING_GRACE_TICKS.
+        // touchant le bloc. Mais ce premier bloc touche ne leve plus la protection sur-le-champ :
+        // elle attend que le joueur SOIT pose, sinon un atterrissage a cheval sur deux blocs se
+        // paie. Voir AbilityData.LANDING_GRACE_TICKS.
         assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
                 "l'atterrissage est encore protege");
         player.fallDistance = 0f;
@@ -2990,29 +2990,22 @@ public final class AcademyGameTests {
         assertTrue(helper, data.isProtectedFromFall(),
                 "le premier bloc touche ne la leve pas tout de suite");
         assertFalse(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
-                "et le glissement qui suit l'atterrissage est gratuit");
+                "et le contact du deuxieme bloc, une image plus tard, est gratuit");
 
-        // La fenetre se compte AU SOL, et elle repart de zero tant que le joueur glisse. Le
-        // premier tick au sol a deja ete compte juste avant : ces deux boucles s'arretent donc a
-        // un tick de la fin.
-        for (int i = 0; i < cn.academy.ability.AbilityData.LANDING_GRACE_TICKS - 2; i++) {
-            tickerLeJoueur(player);
-        }
-        assertTrue(helper, data.isProtectedFromFall(), "au bout de la fenetre, elle tient encore");
+        // La fenetre se compte AU SOL, et elle repart de zero tant que le joueur glisse : le
+        // contact suivant est encore la meme chute.
         player.fallDistance = 2f;
         tickerLeJoueur(player);
         player.fallDistance = 0f;
-        for (int i = 0; i < cn.academy.ability.AbilityData.LANDING_GRACE_TICKS - 2; i++) {
-            tickerLeJoueur(player);
-        }
+        tickerLeJoueur(player);
         assertTrue(helper, data.isProtectedFromFall(),
-                "un glissement qui repart la remet a zero");
+                "un glissement ne compte pas comme un atterrissage");
 
         // Et elle se leve seule, une fois le joueur pose : la chute suivante se paie.
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < cn.academy.ability.AbilityData.LANDING_GRACE_TICKS; i++) {
             tickerLeJoueur(player);
         }
-        assertFalse(helper, data.isProtectedFromFall(), "le joueur pose, la fenetre se ferme");
+        assertFalse(helper, data.isProtectedFromFall(), "pose, la fenetre se ferme");
         assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
                 "la chute se repaie apres l'atterrissage");
 

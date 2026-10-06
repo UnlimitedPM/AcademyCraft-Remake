@@ -816,19 +816,23 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private int landedTicks;
 
     /**
-     * Le temps laisse a un atterrissage pour se poser : vingt ticks, une seconde.
+     * Le temps laisse a un atterrissage pour se poser : deux ticks.
      *
      * <p>Le premier bloc touche ne leve donc plus la protection sur-le-champ, et c'est une demande
      * du joueur : « parfois je prends quand meme des degats de chute [...] je pense que c'est du au
      * fait que parfois j'atteris entre plusieurs blocs et ca annule les degats d'un bloc mais pas
-     * l'autre ». Un atterrissage a cheval sur deux blocs, un glissement de quelques ticks, une
-     * pente : le premier contact etait gratuit, le second — une ou deux images plus tard — se
-     * payait. La protection couvre desormais l'atterrissage ET ce qui le suit.
+     * l'autre ». Un atterrissage a cheval sur deux blocs, le contact suivant une image plus tard :
+     * le premier etait gratuit, le second se payait. La protection couvre desormais l'atterrissage
+     * ET l'image qui le suit.
+     *
+     * <p>Deux ticks, et pas plus : la premiere version en donnait vingt, et le joueur a trouve ca
+     * <b>abusif</b> — une seconde entiere d'invulnerabilite a la chute apres chaque pose. Deux ticks
+     * suffisent au double contact, et ne se voient pas.
      *
      * <p>Et elle repart de zero des que le joueur retombe : un glissement qui quitte son bloc est
      * encore la meme chute, et elle reste gratuite.
      */
-    public static final int LANDING_GRACE_TICKS = 20;
+    public static final int LANDING_GRACE_TICKS = 2;
 
     /**
      * Protege de la chute jusqu'a ce que le joueur se soit pose.
