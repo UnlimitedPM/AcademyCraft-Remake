@@ -1,7 +1,7 @@
 package cn.academy.ability.client.vm;
 
-import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -9,87 +9,98 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * L'ombre des anneaux des tornades, et des ailes de tempete.
  *
- * <p>L'original posait une normale par quad — {@code glNormal3d(x0, y0, 0)} — et son pipeline les
- * eclairait de la lumiere <b>par defaut</b> de GL. Le port avait d'abord refait cette lumiere avec
- * une lampe posee sur l'oeil ; elle vient maintenant du <b>soleil</b>, sa direction et sa hauteur,
- * ce que le joueur a demande. C'est ce que ces verifications figent : la face qui regarde le soleil
- * est au plus clair, celle qui lui tourne le dos au plancher, et la nuit eteint tout le monde.
+ * <p>L'original posait une normale par quad — {@code glNormal3d(x0, y0, 0)} — et <b>laissait
+ * faire la lumiere du jeu</b> : la lumiere standard de GL, celle des objets tenus en main, avec
+ * ses deux lampes opposees et son ambiance. C'est elle que le port refait maintenant, apres deux
+ * tentatives — une lampe posee sur l'oeil, puis le soleil — dont le joueur a dit qu'elles ne
+ * ressemblaient pas au vrai.
+ *
+ * <p>Les normales de ces verifications sont deja dans le repere de l'oeil : c'est la que la
+ * matrice du rendu les amene, et c'est la que la lumiere se lit.
  */
 class TornadoShadeTest {
 
-    /** Le repere d'un anneau sans transformation : la normale est celle du tampon. */
-    private static final Matrix4f IDENTITY = new Matrix4f();
+    /** L'oeil regarde vers les Z negatifs : une face qui regarde l'oeil a donc +Z pour normale. */
+    private static final Vector3f VERS_LOEIL = new Vector3f(0, 0, 1);
 
-    /** Un quad dont la normale du tampon est celle-la, eclaire par le soleil donne. */
-    private static float lit(double x0, double y0, TornadoRenderer.Sun sun) {
-        return TornadoRenderer.shade(TornadoRenderer.normal(IDENTITY, x0, y0), sun);
+    /** Et celle qui lui tourne le dos, -Z — c'est la direction de la premiere lampe. */
+    private static final Vector3f DOS_A_LOEIL = new Vector3f(0, 0, -1);
+
+    /** Le cosinus de la premiere lampe pour une normale donnee, tel que le rendu le calcule. */
+    private static double cosinus(Vector3f normal) {
+        double light = Math.sqrt(TornadoRenderer.LIGHT_X * TornadoRenderer.LIGHT_X
+                + TornadoRenderer.LIGHT_Y * TornadoRenderer.LIGHT_Y
+                + TornadoRenderer.LIGHT_Z * TornadoRenderer.LIGHT_Z);
+        return (normal.x * TornadoRenderer.LIGHT_X + normal.y * TornadoRenderer.LIGHT_Y
+                + normal.z * TornadoRenderer.LIGHT_Z) / (normal.length() * light);
     }
 
     @Test
-    void uneFaceTourneeVersLeSoleilEstEclairee() {
-        // Midi : le soleil est au-dessus, et la normale (0, 1, 0) du tampon lui fait face.
-        TornadoRenderer.Sun midi = TornadoRenderer.sun(0);
-
-        assertVec(midi.direction(), new Vec3(0, 1, 0), "a midi, le soleil est droit dessus");
-        assertEquals(1.0, midi.strength(), 1e-9, "et il donne toute sa lumiere");
-        assertEquals(TornadoRenderer.SHADE_MAX, lit(0, 1, midi), 1e-6f,
-                "la face qui regarde le soleil est au plus clair");
+    void uneFaceQuiRegardeUneLampeEstAuPlusClair() {
+        // La premiere lampe est devant l'oeil, en haut a droite : une face qui lui tourne le dos
+        // (donc qui regarde l'oeil) la prend de plein fouet. L'ambiance de 0,4 plus les 0,8 de la
+        // lampe depassent 1 : la lumiere sature.
+        assertEquals(1f, TornadoRenderer.shade(VERS_LOEIL), 1e-6f,
+                "la face qui regarde la lampe est au plus clair");
+        assertEquals(1f, TornadoRenderer.shade(DOS_A_LOEIL), 1e-6f,
+                "et celle qui regarde l'autre lampe aussi");
     }
 
     @Test
-    void uneFaceQuiTourneLeDosAuSoleilPrendLOmbre() {
-        TornadoRenderer.Sun midi = TornadoRenderer.sun(0);
+    void lesDeuxLampesSontOpposeesDoncLesDeuxCotesSontAussiClairs() {
+        // C'est la difference avec les deux essais precedents, et c'est ce que le joueur voyait
+        // dans le vrai mod : la lumiere du jeu a DEUX lampes opposees, donc le cote qui regarde
+        // l'oeil n'est pas plus sombre que celui qui lui tourne le dos. Une lampe unique — celle de
+        // l'oeil — assombrissait tout un cote, et c'est ce qui rendait les ailes bizarres.
+        float vers = TornadoRenderer.shade(VERS_LOEIL);
+        float dos = TornadoRenderer.shade(DOS_A_LOEIL);
 
-        // Le meme quad, mais retourne : sa normale pointe vers le bas, loin du soleil.
-        assertEquals(0.72f, lit(0, -1, midi), 1e-6f, "et celle qui lui tourne le dos prend l'ombre");
-        // De biais, entre les deux.
-        float deCote = lit(1, 0, midi);
-        assertEquals(0.72f, deCote, 1e-6f, "une face couchée ne prend rien non plus");
-        assertEquals(true, lit(0, 1, midi) > deCote,
-                "et l'ombre se voit : " + lit(0, 1, midi) + " contre " + deCote);
+        assertEquals(vers, dos, 1e-6f, "les deux faces opposees prennent la meme lumiere");
+        // La lampe est posee en (0,2 ; 0,2 ; -1) : normalisee, son axe vaut 1 / racine(1,08).
+        assertEquals(0.9622504486493761, cosinus(DOS_A_LOEIL), 1e-9,
+                "l'une est sous la premiere lampe");
+        assertEquals(-0.9622504486493761, cosinus(VERS_LOEIL), 1e-9,
+                "et l'autre sous la seconde");
     }
 
     @Test
-    void leSoleilSeLeveDansLePlanXYEtSaHauteurEteintLesAiles() {
-        // Le ciel de la 1.20.1 tourne autour de l'axe des X : le soleil se leve a l'est, passe au
-        // zenith a midi, et se couche a l'ouest — sans jamais sortir du plan X/Y.
-        TornadoRenderer.Sun aube = TornadoRenderer.sun(Math.PI / 2);
-        TornadoRenderer.Sun midi = TornadoRenderer.sun(0);
-        TornadoRenderer.Sun nuit = TornadoRenderer.sun(Math.PI);
+    void leCreuxDOmbreEstLAmbianteDuJeu() {
+        // Une normale perpendiculaire a la lampe ne prend rien du tout : il ne lui reste que
+        // l'ambiance. Cette normale la est perpendiculaire, parce que les deux composantes
+        // laterales de la lampe sont egales — (1, -1, 0) annule (0,2, 0,2, -1).
+        Vector3f perpendiculaire = new Vector3f(1f, -1f, 0f);
 
-        assertVec(aube.direction(), new Vec3(1, 0, 0), "au lever, il est a l'horizon");
-        assertVec(nuit.direction(), new Vec3(0, -1, 0), "et la nuit, sous nos pieds");
-        for (TornadoRenderer.Sun sun : new TornadoRenderer.Sun[] { aube, midi, nuit }) {
-            assertEquals(0.0, sun.direction().z, 1e-9, "aucun soleil ne sort du plan X/Y");
-        }
-
-        // Sa hauteur est ce qui eteint les ailes : plein jour au zenith, le plancher de nuit en
-        // dessous de l'horizon, et rien entre les deux qui passe sous ce plancher.
-        assertEquals(1.0, midi.strength(), 1e-9, "a midi, toute la lumiere");
-        assertEquals(TornadoRenderer.NIGHT_MIN, aube.strength(), 1e-9,
-                "a l'horizon, deja la nuit");
-        assertEquals(TornadoRenderer.NIGHT_MIN, nuit.strength(), 1e-9, "et sous terre, la nuit");
-        assertEquals(true, midi.strength() > aube.strength(), "le jour eclaire plus que l'aube");
+        assertEquals(0.0, cosinus(perpendiculaire), 1e-9, "elle ne prend rien des lampes");
+        assertEquals(TornadoRenderer.AMBIENT, TornadoRenderer.shade(perpendiculaire), 1e-6f,
+                "et il ne lui reste que l'ambiance du jeu");
     }
 
     @Test
-    void laMemeFaceChangeDAspectQuandLeJoueurTourne() {
-        // Les ailes tiennent au dos : c'est donc le CORPS qui decide de leur normale. Le meme quad,
-        // au meme instant, ne prend pas la meme lumiere selon le cote ou il se trouve, et c'est ce
-        // qui fait bouger l'ombre quand on tourne — ce que le joueur avait demande de garder.
-        TornadoRenderer.Sun aube = TornadoRenderer.sun(Math.PI / 2);
+    void lOmbreGlisseAutourDuRuban() {
+        // Les normales d'un ruban tournent autour de son axe : celles qui sont couchées dans le
+        // plan de l'oeil prennent l'ombre, celles qui regardent une lampe sont au plus clair. C'est
+        // ce glissement qui fait vivre le ruban, et il est le meme des deux cotes.
+        float couche = TornadoRenderer.shade(new Vector3f(1, 0, 0));
 
-        float versLeSoleil = lit(1, 0, aube);
-        float aLOppose = lit(-1, 0, aube);
-        assertEquals(true, versLeSoleil > aLOppose,
-                "la face tournee vers le soleil est la plus claire : "
-                        + versLeSoleil + " contre " + aLOppose);
+        assertEquals(0.4f + 0.8f * (float) Math.abs(cosinus(new Vector3f(1, 0, 0))), couche, 1e-6f,
+                "une face couchee prend l'ambiance plus ce que la lampe lui donne : " + couche);
+        assertEquals(true, couche < TornadoRenderer.shade(VERS_LOEIL),
+                "et elle est plus sombre que celles qui regardent une lampe");
+        assertEquals(TornadoRenderer.shade(new Vector3f(1, 0, 0)),
+                TornadoRenderer.shade(new Vector3f(-1, 0, 0)), 1e-6f,
+                "les deux cotes du ruban prennent la meme lumiere");
     }
 
-    /** Les vecteurs sont egaux a la tolerance pres. */
-    private static void assertVec(Vec3 expected, Vec3 actual, String what) {
-        assertEquals(expected.x, actual.x, 1e-9, what + " (x)");
-        assertEquals(expected.y, actual.y, 1e-9, what + " (y)");
-        assertEquals(expected.z, actual.z, 1e-9, what + " (z)");
+    @Test
+    void laNormaleDuTamponEstTourneeAvecLeQuad() {
+        // L'original posait (x0, y0, 0) dans le repere du ruban ; le port la tourne avec lui, et
+        // c'est ce qui met la lumiere du bon cote. Un quart de tour autour de Y envoie le rayon
+        // vers les Z negatifs.
+        Matrix4f quart = new Matrix4f().rotateY((float) Math.toRadians(90));
+
+        Vector3f tournee = TornadoRenderer.normal(quart, 1, 0);
+        assertEquals(0f, tournee.x, 1e-6f, "le rayon part vers -Z");
+        assertEquals(-1f, tournee.z, 1e-6f, "de la meme longueur");
+        assertEquals(0f, tournee.y, 1e-6f, "et sans hauteur");
     }
 }
