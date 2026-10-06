@@ -54,15 +54,18 @@ import net.minecraft.world.phys.Vec3;
  *
  * <h2>Ce que le vol coute, et ce qu'il casse</h2>
  *
- * Chaque tick d'ailes ouvertes verse 0,00005 d'experience et paie 40 a 25 CP et 10 a 7 de
- * surcout ; quand l'une des deux reserve manque, le vol s'arrete. Ce sont les nombres de
- * l'original, bruts : sa reserve va de 1800 a 8000 selon le niveau, et son surcout de 100 a 500,
- * donc ils s'y lisent sans conversion — le detour par un plafond de 100 et un facteur 28 qui les
- * rendait lisibles a ete retire avec le plafond (voir {@code AbilityData.BASE_MAX_CONTROL_POINT}).
- * La charge, elle,
- * est gratuite. Le surcout d'ouverture est le <b>premier tick de vol</b>, paye a l'appui :
- * c'est un ecart assume, l'original ne facturant rien tant que les ailes ne s'etaient pas
- * ouvertes.
+ * Chaque tick d'ailes ouvertes verse 0,00005 d'experience et paie 40 a 25 CP et 10 a 2,33 de
+ * surcout ; quand l'une des deux reserve manque, le vol s'arrete. Les CP sont ceux de l'original,
+ * bruts : sa reserve va de 1800 a 8000 selon le niveau, donc ils s'y lisent sans conversion — le
+ * detour par un plafond de 100 et un facteur 28 qui les rendait lisibles a ete retire avec le
+ * plafond (voir {@code AbilityData.BASE_MAX_CONTROL_POINT}). Le <b>surcout</b>, lui, a ete
+ * <b>abaisse</b> a la demande du joueur : l'original montait de 10 a 7, ce qui remplissait la barre
+ * plus vite qu'on ne pouvait en profiter, et il ne monte maintenant qu'a un tiers de cela — voir
+ * {@link #OVERLOAD_MAX_EXP}.
+ *
+ * <p>La charge, elle, est gratuite. Le surcout d'ouverture est le <b>premier tick de vol</b>, paye
+ * a l'appui : c'est un ecart assume, l'original ne facturant rien tant que les ailes ne s'etaient
+ * pas ouvertes.
  *
  * <p>Sous 15 % d'experience, les ailes sont <b>maladroites</b> : quarante positions sont
  * tirees dans dix blocs autour du joueur, et tout ce qui y a une durete comprise entre 0 et
@@ -106,11 +109,25 @@ public class StormWingSkill extends Skill {
     public static final double LIFT = 0.078;
     public static final double HOVER = 0.1;
 
-    /** Un tick de vol : 40 a 25 CP, et 10 a 7 de surcout, comme l'original. */
+    /** Un tick de vol : 40 a 25 CP, et 10 a 2,33 de surcout — voir {@link #OVERLOAD_MAX_EXP}. */
     public static final float CP_MIN_EXP = 40f;
     public static final float CP_MAX_EXP = 25f;
     public static final float OVERLOAD_MIN_EXP = 10f;
-    public static final float OVERLOAD_MAX_EXP = 7f;
+
+    /**
+     * Le surcout d'un tick de vol a pleine experience : un tiers de ce qu'il valait.
+     *
+     * <p>L'original montait de 10 a 7, et le joueur a demande une courbe : « le cout des ailes soit
+     * moins eleve en terme d'overload, parce que la maintenant, on accumule l'overload tellement
+     * vite qu'on n'a pas vraiment le temps d'en profiter ». A 0 % d'experience rien ne change — le
+     * vol coute toujours 10 par tick, comme autrefois — et a 100 % il coute trois fois moins
+     * qu'avant, soit un tiers de 7. La barre de surcout se remplit donc trois fois plus lentement
+     * quand on sait voler, ce qui est precisement ce que l'experience doit acheter.
+     *
+     * <p>Les CP, eux, ne bougent pas : l'original les tenaient deja, et c'est la surcharge qui
+     * empechait de profiter du vol — la reserve se vide plus doucement qu'elle ne se remplit.
+     */
+    public static final float OVERLOAD_MAX_EXP = 7f / 3f;
 
     /** 0,00005 d'experience par tick de vol. */
     public static final float EXP_PER_TICK = 0.00005f;

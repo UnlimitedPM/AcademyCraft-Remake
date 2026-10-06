@@ -1136,9 +1136,10 @@ class SkillCurvesTest {
         assertBounds("charge des ailes", 70f, 30f, wing::chargeTime, wing);
         assertEquals(0f, wing.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
 
-        // Le vol : 40 a 25 CP par tick (divises par 28) et 10 a 7 de surcout.
+        // Le vol : 40 a 25 CP par tick (divises par 28), et 10 a 7/3 de surcout — trois fois
+        // moins a pleine experience qu'avant, a la demande du joueur. Voir StormWingSkill.
         assertBounds("cout du vol", 40f, 25f, wing::consumption, wing);
-        assertBounds("surcout du vol", 10f, 7f, wing::overload, wing);
+        assertBounds("surcout du vol", 10f, 7f / 3f, wing::overload, wing);
         assertEquals(wing.overload(atExperience(wing, 0f)),
                 wing.getOverloadCost(atExperience(wing, 0f)), 0.0001f,
                 "le surcout d'ouverture est le premier tick de vol");

@@ -194,6 +194,47 @@ class StormWingTest {
         assertEquals(3.6f, WING.speed(full), 1.0e-4f, "1,2 fois 3 au maximum");
     }
 
+    /**
+     * Le prix d'un tick de vol, et surtout ce dont il ne depend pas.
+     *
+     * <p>Deux demandes du joueur se rejoignent ici. Le <b>surcout</b> d'abord : il monte de 10 a un
+     * <b>tiers</b> de son ancien maximum — « le cout des ailes soit moins eleve en terme
+     * d'overload [...] a 0 % c'est comme avant, et une fois a 100 %, ca consomme 3 fois moins que le
+     * 100 % actuel ». Le depart ne bouge donc pas, et l'experience achete une barre qui se remplit
+     * trois fois plus lentement.
+     *
+     * <p>La <b>visee</b> ensuite : « si je vise vers plusieurs directions en meme temps quand je
+     * vole, ca ne doit pas couter plus cher que si je visais une seule direction ». Le serveur ne
+     * voit meme pas les touches : il paie une fois par tick de vol, et son prix ne prend que l'age
+     * du maintien. Le deplacement, lui, ramene la direction a un avant de la mettre a l'echelle de
+     * la vitesse — trois touches ne poussent donc pas plus fort qu'une.
+     */
+    @Test
+    void leSurcoutBaisseEtLaViseeNeCoutePasPlus() {
+        // Le depart est celui d'avant, et le maximum vaut un tiers de l'ancien 100 %, qui valait 7.
+        assertEquals(10f, WING.overload(atExperience(0f)), 1.0e-6f, "10 a 0 % d'experience");
+        assertEquals(7f / 3f, WING.overload(atExperience(1f)), 1.0e-6f,
+                "et un tiers de 7 a 100 %");
+        assertEquals(7f, 3f * WING.overload(atExperience(1f)), 1.0e-4f,
+                "trois fois moins qu'avant, exactement");
+
+        // Le prix d'un tick de vol ne depend que de l'experience : il ne sait rien de la visee.
+        AbilityData half = atExperience(0.5f);
+        int flying = WING.chargeTicks(half) + 1;
+        assertTrue(WING.getTickUpkeep(half, flying) > 0f, "les ailes ouvertes se paient");
+        assertEquals(WING.consumption(half), WING.getTickUpkeep(half, flying), 1.0e-6f,
+                "un tick de vol coute la courbe des CP, et rien d'autre");
+
+        // Et une visee de plusieurs directions ne pousse pas plus fort qu'une seule.
+        double speed = WING.speed(half);
+        Vec3[] wishes = {new Vec3(0, 0, 1), new Vec3(1, 0, 0), new Vec3(1, 0, 1),
+                new Vec3(1, 1, 1), new Vec3(0, 1, 0), new Vec3(-1, 0, 1)};
+        for (Vec3 local : wishes) {
+            Vec3 pushed = StormWingSkill.flightDirection(0f, 0f, local).normalize().scale(speed);
+            assertEquals(speed, pushed.length(), 1.0e-6, "la meme poussee, pour " + local);
+        }
+    }
+
     /** Une donnee d'aptitude a cette experience, sans passer par un vrai joueur. */
     private static AbilityData atExperience(float exp) {
         AbilityData data = new AbilityData();
