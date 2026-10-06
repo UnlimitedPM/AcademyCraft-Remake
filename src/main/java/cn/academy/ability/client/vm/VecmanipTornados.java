@@ -5,8 +5,6 @@ import cn.academy.ability.vecmanip.PlasmaCannonSkill;
 import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -148,7 +146,7 @@ public final class VecmanipTornados {
                 // se noue sous le plafond, et la colonne se raccourcit donc avec elle au lieu de
                 // traverser la pierre. Voir PlasmaCannonSkill.spawnPoint.
                 Vec3 spawn = PlasmaCannonSkill.spawnPoint(player);
-                Vec3 base = ground(player, spawn);
+                Vec3 base = PlasmaCannonSkill.groundBelow(player, spawn);
                 cannon = new Live(TornadoVisuals.cannon(RANDOM, spawn.y - base.y), base, 0, 0);
             }
             cannon.alpha = TornadoVisuals.cannonRiseAlpha(cannon.age);
@@ -209,13 +207,5 @@ public final class VecmanipTornados {
     public static void clear() {
         wings = null;
         cannon = null;
-    }
-
-    /** Le sol sous un point, ou vingt blocs plus bas : le point de pose de la colonne. */
-    private static Vec3 ground(Player player, Vec3 from) {
-        Vec3 down = from.subtract(0, 20, 0);
-        var hit = player.level().clip(new ClipContext(from, down, ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE, player));
-        return hit.getType() == HitResult.Type.MISS ? down : hit.getLocation();
     }
 }

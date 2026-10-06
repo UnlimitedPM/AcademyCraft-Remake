@@ -197,6 +197,50 @@ class PlasmaBodyVisualsTest {
                 "il grandit a mesure que la matiere se noue");
     }
 
+    /**
+     * L'essaim se resserre a l'echelle de la colonne, et ses rayons avec lui.
+     *
+     * <p>Dans une grotte, la colonne du canon se raccourcit (voir {@code TornadoVisuals.cannonScale})
+     * et les boules doivent suivre, sans quoi une masse large comme une maison pend sous une colonne
+     * de trois blocs. Le joueur : « il faudrait aussi un peu reduire la taille des boules pour que
+     * ce soit dans le meme ordre que la grande tornade ».
+     */
+    @Test
+    void lesBoulesSeResserrantAvecLaColonne() {
+        List<PlasmaBodyVisuals.Ball> essaim = PlasmaBodyVisuals.roll(RandomSource.create(4));
+        PlasmaBodyVisuals.Ball grosse = essaim.get(0);
+
+        // A l'echelle un, rien ne bouge : c'est le corps de l'original, sous le ciel.
+        PlasmaBodyVisuals.Ball entiere = PlasmaBodyVisuals.scaled(grosse, 1.0);
+        assertEquals(grosse.cx(), entiere.cx(), 1e-9, "a ciel ouvert, aucun centre ne bouge");
+        assertEquals(grosse.horizontal().amplitude(), entiere.horizontal().amplitude(), 1e-9,
+                "ni aucun balancement");
+
+        // Au quart, les ecarts tombent au quart — et la matiere, elle, ne change pas de nombre.
+        PlasmaBodyVisuals.Ball quart = PlasmaBodyVisuals.scaled(grosse, 0.25);
+        assertEquals(grosse.cx() * 0.25, quart.cx(), 1e-9, "le centre suit l'echelle");
+        assertEquals(grosse.cy() * 0.25, quart.cy(), 1e-9, "sur les trois axes");
+        assertEquals(grosse.cz() * 0.25, quart.cz(), 1e-9);
+        assertEquals(grosse.horizontal().amplitude() * 0.25, quart.horizontal().amplitude(), 1e-9,
+                "et le balancement aussi");
+        assertEquals(grosse.size(), quart.size(), 1e-9, "mais la boule reste la meme matiere");
+
+        // Le rayon dessine, lui, suit l'echelle du dessin — et pas la racine de la taille : sinon
+        // une boule trois fois plus petite se verrait encore a moitie.
+        assertEquals(PlasmaBodyVisuals.quadRadius(2.0) * 0.25,
+                PlasmaBodyVisuals.quadRadius(2.0, 0.25), 1e-9, "le carre suit la meme echelle");
+        assertTrue(PlasmaBodyVisuals.offset(quart, 3.0).length()
+                        < PlasmaBodyVisuals.offset(grosse, 3.0).length(),
+                "et la boule tourne donc plus pres du centre");
+
+        // L'essaim entier, enfin, et dans l'ordre.
+        List<PlasmaBodyVisuals.Ball> serre = PlasmaBodyVisuals.scaled(essaim, 0.25);
+        assertEquals(essaim.size(), serre.size(), "personne ne se perd en chemin");
+        for (int i = 0; i < essaim.size(); i++) {
+            assertEquals(essaim.get(i).cx() * 0.25, serre.get(i).cx(), 1e-9, "boule " + i);
+        }
+    }
+
     /** Vrai si un centre tient dans le cube de plus ou moins 1,5 bloc des grosses. */
     private static boolean within(double value) {
         return Math.abs(value) <= PlasmaBodyVisuals.BIG_OFFSET;

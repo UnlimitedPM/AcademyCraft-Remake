@@ -149,6 +149,36 @@ public class PlasmaCannonSkill extends Skill {
                 hit.getLocation().y - CEILING_CLEARANCE), feet.z);
     }
 
+    /** La profondeur ou le pied de la colonne cherche le sol : vingt blocs, comme l'original. */
+    public static final double GROUND_PROBE = 20.0;
+
+    /**
+     * Le sol sous un point, ou vingt blocs plus bas : c'est le pied de la colonne du canon.
+     *
+     * <p>Il vit ici, et non chez le client qui s'en sert, parce que les DEUX effets du canon s'y
+     * mesurent : la colonne s'y pose, et c'est l'ecart entre ce pied et la boule qui donne
+     * l'echelle de toute la figure (colonne et boules, voir {@link #groundGap}). Deux calculs
+     * separes finiraient par diverger.
+     */
+    public static Vec3 groundBelow(Player player, Vec3 from) {
+        Vec3 down = from.subtract(0, GROUND_PROBE, 0);
+        var hit = player.level().clip(new ClipContext(from, down, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS ? down : hit.getLocation();
+    }
+
+    /**
+     * L'ecart entre la boule et le sol sous elle, en blocs.
+     *
+     * <p>C'est lui qui donne l'echelle du canon : quinze a ciel ouvert (la boule est a quinze
+     * blocs du sol), moins dans une grotte, ou la boule se noue bas. Les nombres qui en sortent
+     * sont dans {@code TornadoVisuals.cannonScale}, avec ceux de la colonne.
+     */
+    public static double groundGap(Player player) {
+        Vec3 spawn = spawnPoint(player);
+        return spawn.y - groundBelow(player, spawn).y;
+    }
+
     /** Elle avance d'un bloc par tick, sur au plus 240 ticks. */
     public static final double SPEED = 1.0;
     public static final int FLIGHT_TICKS = 240;

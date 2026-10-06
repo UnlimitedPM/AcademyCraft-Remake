@@ -146,6 +146,35 @@ class TornadoVisualsTest {
         assertTrue(court.size() < TornadoVisuals.CANNON_SIZE, "donc plus etroite");
     }
 
+    /**
+     * L'echelle du canon : un a ciel ouvert, et moins sous un plafond.
+     *
+     * <p>C'est la part de la colonne qui reste a dresser, et c'est elle qui sert aussi aux
+     * <b>boules de plasma</b> : le joueur a demande qu'elles suivent — « il faudrait aussi un peu
+     * reduire la taille des boules pour que ce soit dans le meme ordre que la grande tornade ». Si
+     * elle changeait d'un cote sans l'autre, les deux ne seraient plus du meme ordre.
+     */
+    @Test
+    @DisplayName("l'echelle du canon suit la place qu'il a")
+    void lEchelleSuitLaPlaceDisponible() {
+        assertEquals(1.0, TornadoVisuals.cannonScale(
+                TornadoVisuals.CANNON_HEIGHT + TornadoVisuals.CANNON_GAP), 1e-9,
+                "quinze blocs de place : l'echelle de l'original, un");
+        assertTrue(TornadoVisuals.cannonScale(20) <= 1.0,
+                "plus de place ne fait pas une colonne plus grande que douze");
+
+        // Sept blocs : trois de colonne sur douze, soit un quart.
+        assertEquals((7 - TornadoVisuals.CANNON_GAP) / TornadoVisuals.CANNON_HEIGHT,
+                TornadoVisuals.cannonScale(7), 1e-9, "sept blocs de place : trois douziemes");
+        // Et c'est bien l'echelle de la colonne dessinee, pas un nombre a cote.
+        TornadoVisuals.Tornado court = TornadoVisuals.cannon(RandomSource.create(6), 7)
+                .parts().get(0).tornado();
+        assertEquals(TornadoVisuals.cannonScale(7), court.size() / TornadoVisuals.CANNON_SIZE, 1e-9,
+                "la largeur de la colonne EST cette echelle");
+        assertTrue(TornadoVisuals.cannonScale(4) >= TornadoVisuals.MIN_CANNON_HEIGHT
+                / TornadoVisuals.CANNON_HEIGHT, "sous la boule, la colonne ne disparait pas");
+    }
+
     @Test
     @DisplayName("le pied est presque droit, le sommet part dans tous les sens")
     void leGondolementGranditAvecLaHauteur() {

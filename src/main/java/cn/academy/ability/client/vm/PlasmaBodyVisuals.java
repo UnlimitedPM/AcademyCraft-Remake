@@ -220,6 +220,11 @@ public final class PlasmaBodyVisuals {
         return visibleRadius / SPRITE_REACH;
     }
 
+    /** La moitie du carre a dessiner pour obtenir ce rayon vu, une fois le corps mis a l'echelle. */
+    public static double quadRadius(double visibleRadius, double scale) {
+        return quadRadius(visibleRadius) * scale;
+    }
+
     /** La ou {@code alpha * taille / distance carre} tombe sous un seuil donne, en blocs. */
     private static double densityRadius(double size, float alpha, double threshold) {
         return Math.sqrt(Math.max(0.0, alpha) * Math.max(0.0, size) / threshold);
@@ -314,6 +319,38 @@ public final class PlasmaBodyVisuals {
                 ball.cx() + ball.horizontal().amplitude() * Math.sin(horizontal),
                 ball.cy() + ball.vertical().amplitude() * Math.sin(vertical),
                 ball.cz() + ball.horizontal().amplitude() * Math.cos(horizontal));
+    }
+
+    /**
+     * Le meme essaim, resserre a l'echelle du canon.
+     *
+     * <p>Dans une grotte, la boule se noue sous le plafond (voir {@code PlasmaCannonSkill.spawnPoint})
+     * et la colonne se raccourcit avec elle ; les boules doivent suivre, sans quoi une masse large
+     * comme une maison pend sous une colonne de trois blocs. Le joueur l'a demande ainsi : « il
+     * faudrait aussi un peu reduire la taille des boules pour que ce soit dans le meme ordre que la
+     * grande tornade ».
+     *
+     * <p>Ce sont les <b>ecarts</b> qui se resserrent — centres et balancements — et non la taille,
+     * qui est un nombre de matiere : les rayons suivent la meme echelle, mais au moment du dessin
+     * (voir {@link #quadRadius(double, double)}). A l'echelle un, rien ne bouge : a ciel ouvert le
+     * corps est exactement celui de l'original.
+     */
+    public static Ball scaled(Ball ball, double scale) {
+        return new Ball(ball.size(),
+                ball.cx() * scale, ball.cy() * scale, ball.cz() * scale,
+                new Trig(ball.horizontal().amplitude() * scale, ball.horizontal().speed(),
+                        ball.horizontal().phase()),
+                new Trig(ball.vertical().amplitude() * scale, ball.vertical().speed(),
+                        ball.vertical().phase()));
+    }
+
+    /** Et l'essaim entier, de la meme facon. */
+    public static List<Ball> scaled(List<Ball> balls, double scale) {
+        List<Ball> out = new ArrayList<>(balls.size());
+        for (Ball ball : balls) {
+            out.add(scaled(ball, scale));
+        }
+        return out;
     }
 
     /** L'opacite du corps a cet age-la, en secondes : elle monte, et se plafonne a un. */

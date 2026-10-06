@@ -75,6 +75,10 @@ public final class PlasmaBodyRenderer {
         float partialTick = event.getPartialTick();
         double age = PlasmaBodies.ageSeconds(partialTick);
         Vec3 centre = PlasmaBodies.centre(partialTick);
+        // L'echelle du corps : celle de la colonne du canon, figee a sa naissance. Sous un plafond
+        // elle vaut moins de un, et tout le corps se resserre donc avec la colonne au lieu de
+        // pendre sous elle comme une masse large comme une maison.
+        double scale = PlasmaBodies.scale();
 
         // Les carres sont dans le plan de l'ecran : la gauche et le haut de la camera suffisent,
         // et une boule se presente donc toujours de face.
@@ -104,7 +108,7 @@ public final class PlasmaBodyRenderer {
         for (PlasmaBodyVisuals.Ball ball : PlasmaBodies.balls()) {
             Vec3 at = centre.add(PlasmaBodyVisuals.offset(ball, age));
             double halo = PlasmaBodyVisuals.quadRadius(
-                    PlasmaBodyVisuals.haloRadius(ball.size(), alpha));
+                    PlasmaBodyVisuals.haloRadius(ball.size(), alpha), scale);
             quad(buffer, base, camera, at, across.scale(halo), upright.scale(halo),
                     ballColor, face);
         }
@@ -114,14 +118,14 @@ public final class PlasmaBodyRenderer {
         for (PlasmaBodyVisuals.Ball ball : PlasmaBodies.balls()) {
             Vec3 at = centre.add(PlasmaBodyVisuals.offset(ball, age));
             double core = PlasmaBodyVisuals.quadRadius(
-                    PlasmaBodyVisuals.coreRadius(ball.size(), alpha));
+                    PlasmaBodyVisuals.coreRadius(ball.size(), alpha), scale);
             quad(buffer, base, camera, at, across.scale(core), upright.scale(core),
                     coreColor, face);
         }
 
         // Et celui du corps entier, par-dessus : au centre, les densites de toutes les boules
         // s'additionnent, et c'est la que le nuanceur faisait une tache bleue continue.
-        double body = PlasmaBodyVisuals.quadRadius(PlasmaBodyVisuals.bodyCoreRadius(alpha));
+        double body = PlasmaBodyVisuals.quadRadius(PlasmaBodyVisuals.bodyCoreRadius(alpha), scale);
         quad(buffer, base, camera, centre, across.scale(body), upright.scale(body),
                 coreColor, face);
 

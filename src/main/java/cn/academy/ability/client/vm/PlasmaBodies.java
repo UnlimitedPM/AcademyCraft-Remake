@@ -72,6 +72,7 @@ public final class PlasmaBodies {
     private static int dyingTicks;
     private static int graceTicks;
     private static float alphaAtDeath;
+    private static double scale = 1.0;
 
     private PlasmaBodies() {
     }
@@ -84,6 +85,20 @@ public final class PlasmaBodies {
     /** L'essaim en vie, ses balancements compris. */
     public static List<PlasmaBodyVisuals.Ball> balls() {
         return balls;
+    }
+
+    /**
+     * L'echelle du corps : un a ciel ouvert, moins sous un plafond.
+     *
+     * <p>C'est celle de la colonne du canon (voir {@code TornadoVisuals.cannonScale}), et elle est
+     * figee a la naissance : le corps garde la taille qu'il a prise en se nouant, meme quand la
+     * boule part ensuite au grand jour. Les rayons et les ecarts la suivent tous les deux — les
+     * ecarts dans l'essaim, les rayons au moment du dessin. Le joueur l'a demande : « il faudrait
+     * aussi un peu reduire la taille des boules pour que ce soit dans le meme ordre que la grande
+     * tornade ».
+     */
+    public static double scale() {
+        return scale;
     }
 
     /** Ou est le corps, vue par une image : l'entre-deux d'un vol, pour qu'il ne saute pas. */
@@ -154,7 +169,7 @@ public final class PlasmaBodies {
      */
     public static void shot(Vec3 position, Vec3 destination) {
         if (phase == Phase.NONE) {
-            balls = PlasmaBodyVisuals.roll(RANDOM);
+            balls = PlasmaBodyVisuals.scaled(PlasmaBodyVisuals.roll(RANDOM), scale);
             ageTicks = 1;
         }
 
@@ -185,11 +200,19 @@ public final class PlasmaBodies {
         dyingTicks = 0;
         graceTicks = 0;
         alphaAtDeath = 0f;
+        scale = 1.0;
     }
 
-    /** La naissance : l'essaim se tire, et se pose quinze blocs au-dessus — ou sous le plafond. */
+    /**
+     * La naissance : l'essaim se tire, et se pose quinze blocs au-dessus — ou sous le plafond.
+     *
+     * <p>La place qu'on y trouve decide de l'echelle de tout le corps : c'est le meme nombre que
+     * celui de la colonne (voir {@code TornadoVisuals.cannonScale}), donc les deux ne peuvent pas
+     * se contredire.
+     */
     private static void begin(Player player) {
-        balls = PlasmaBodyVisuals.roll(RANDOM);
+        scale = TornadoVisuals.cannonScale(PlasmaCannonSkill.groundGap(player));
+        balls = PlasmaBodyVisuals.scaled(PlasmaBodyVisuals.roll(RANDOM), scale);
         previous = PlasmaCannonSkill.spawnPoint(player);
         position = previous;
         destination = previous;
