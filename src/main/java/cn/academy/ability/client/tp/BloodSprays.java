@@ -65,6 +65,15 @@ public final class BloodSprays {
     public static final double PLANE_JITTER = 0.15;
 
     /**
+     * L'ombre d'une tache : l'ambiance de l'original, et son plein.
+     *
+     * <p>Le 0,4 n'est pas un reglage, c'est l'ambiance meme de la lumiere de GL — le peu qui reste
+     * quand la face se detourne de la lampe. Voir {@link #shade}.
+     */
+    public static final float SHADE_MIN = 0.4f;
+    public static final float SHADE_MAX = 1f;
+
+    /**
      * Une tache posee : son bloc, sa face, son centre, sa taille, son inclinaison, son image, son age.
      *
      * @param pos le bloc qui la porte
@@ -135,6 +144,28 @@ public final class BloodSprays {
     /** Vrai pour une face horizontale : le sol, ou un plafond. */
     public static boolean floor(Direction face) {
         return face.getAxis().isVertical();
+    }
+
+    /**
+     * L'ombre d'une tache, selon le regard qui la voit.
+     *
+     * <p>Le materiau de l'original <b>ne coupait pas l'eclairage</b> : la ou les ailes appellent
+     * {@code setIgnoreLight()}, lui ne l'appelle pas, et sa facture pose une normale — (0, 0, 1)
+     * dans le repere de la tache, donc <b>la normale de la face</b> — puis laisse GL l'eclairer. Sa
+     * lampe vient de l'oeil, comme celle des ailes, mais son plancher n'est pas le meme : ici il
+     * n'est pas arrange, c'est l'ambiance meme de GL (0,4), le peu qui reste quand la face se
+     * detourne. Aux ailes, la normale est fausse — {@code (rayon, hauteur, 0)} n'est pas la normale
+     * du ruban — et son plancher de 0,55 est un reglage. Voir {@code TornadoRenderer#shade}.
+     *
+     * <p>Une tache qui regarde l'oeil est donc en pleine lumiere, et celle qu'on voit de biais — le
+     * sol, la plupart du temps — s'assombrit jusqu'au plancher. Le port les dessinait toutes au
+     * plein, et le joueur a trouve les siennes claires : « les taches de sang ne sont pas assez
+     * sombres par rapport au vrai mod ».
+     */
+    public static float shade(Direction face, Vec3 look) {
+        Vec3 normal = Vec3.atLowerCornerOf(face.getNormal());
+        double lambert = Math.max(0.0, normal.dot(look.scale(-1)));
+        return (float) (SHADE_MIN + (SHADE_MAX - SHADE_MIN) * lambert);
     }
 
     /**

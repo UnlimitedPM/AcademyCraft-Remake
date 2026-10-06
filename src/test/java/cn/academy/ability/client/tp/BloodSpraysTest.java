@@ -67,4 +67,45 @@ class BloodSpraysTest {
                 BloodSprays.LIFE_TICKS);
         assertFalse(vieille.alive(), "et s'en va a la minute pile");
     }
+
+    /**
+     * L'ombre d'une tache : la lumiere de l'original venait de GL, et elle tombait sur la normale
+     * de la face.
+     *
+     * <p>C'est ce qui decide si le sang parait rouge vif ou sombre, et le port le dessinait au
+     * plein : une tache vue de biais sortait delavee. Le joueur a vu la difference — « les taches
+     * de sang ne sont pas assez sombres par rapport au vrai mod ».
+     */
+    @Test
+    @DisplayName("une tache est d'autant plus sombre que sa face se detourne du regard")
+    void lOmbreSuitLeRegard() {
+        Vec3 versLeBas = new Vec3(0, -1, 0);
+        Vec3 versLeNord = new Vec3(0, 0, -1);
+
+        // Le sol sous nos pieds, vu droit dessus : le regard tombe dessus, pleine lumiere.
+        assertEquals(BloodSprays.SHADE_MAX, BloodSprays.shade(Direction.UP, versLeBas), 1e-6f,
+                "le sol regarde l'oeil quand on le regarde");
+        // Et le meme sol, vu de l'horizon : il se detourne, et tombe au plancher.
+        assertEquals(BloodSprays.SHADE_MIN, BloodSprays.shade(Direction.UP, versLeNord), 1e-6f,
+                "vu de l'horizon, il ne prend plus rien");
+        // Une paroi en face de soi, elle, est toujours en pleine lumiere : son regard a le regard.
+        assertEquals(BloodSprays.SHADE_MAX, BloodSprays.shade(Direction.SOUTH, versLeNord), 1e-6f,
+                "un mur qu'on regarde est en pleine lumiere");
+        assertEquals(BloodSprays.SHADE_MIN, BloodSprays.shade(Direction.NORTH, versLeNord), 1e-6f,
+                "et celui qu'on tourne, non");
+        // Le plafond, lui, est detourne des qu'on regarde devant soi.
+        assertEquals(BloodSprays.SHADE_MIN, BloodSprays.shade(Direction.DOWN, versLeNord), 1e-6f,
+                "et le plafond est sombre des qu'on baisse le nez");
+
+        // Entre les deux, l'ombre monte avec le regard, sans jamais sortir des bornes.
+        Vec3 deBiais = new Vec3(0, -0.5, -0.866).normalize();
+        float moyenne = BloodSprays.shade(Direction.UP, deBiais);
+        assertTrue(moyenne > BloodSprays.SHADE_MIN && moyenne < BloodSprays.SHADE_MAX,
+                "un sol vu de biais prend une part de la lumiere : " + moyenne);
+        for (Direction face : Direction.values()) {
+            float ombre = BloodSprays.shade(face, deBiais);
+            assertTrue(ombre >= BloodSprays.SHADE_MIN && ombre <= BloodSprays.SHADE_MAX,
+                    "et jamais hors des bornes : " + face + " en " + ombre);
+        }
+    }
 }

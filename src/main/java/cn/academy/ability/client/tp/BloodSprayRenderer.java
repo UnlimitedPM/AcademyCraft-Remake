@@ -30,6 +30,11 @@ import org.joml.Matrix4f;
  * l'autre. Le reste est l'ordinaire de la maison : la lueur de l'original est une texture, donc
  * une image et pas un nuanceur.
  *
+ * <p><b>Ce qu'elle prend de lumiere</b> : l'original laissait GL l'eclairer — sa facture posait la
+ * normale de la face — et le port reprend cette ombre, une lampe venant de l'oeil. Voir
+ * {@code BloodSprays#shade}, ou le plancher est l'ambiance meme de GL. Sans elle, les taches du sol
+ * se dessinaient au plein et paraissaient delavees.
+ *
  * <p>Le monde est aussi ce qui les fait vivre : elles s'en vont au bout d'une minute, ou des que
  * le bloc qui les porte disparait — c'est le tick d'horloge, plus bas.
  */
@@ -50,6 +55,7 @@ public final class BloodSprayRenderer {
         if (BloodSprays.live().isEmpty()) return;
 
         Vec3 camera = event.getCamera().getPosition();
+        Vec3 look = new Vec3(event.getCamera().getLookVector());
         Matrix4f base = event.getPoseStack().last().pose();
 
         RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
@@ -76,7 +82,7 @@ public final class BloodSprayRenderer {
                 bound = texture;
                 drawing = true;
             }
-            quad(buffer, base, camera, spray);
+            quad(buffer, base, camera, look, spray);
         }
 
         if (drawing) BufferUploader.drawWithShader(buffer.end());
@@ -123,15 +129,17 @@ public final class BloodSprayRenderer {
         };
     }
 
-    private static void quad(BufferBuilder buffer, Matrix4f base, Vec3 camera,
+    private static void quad(BufferBuilder buffer, Matrix4f base, Vec3 camera, Vec3 look,
                              BloodSprays.Spray spray) {
         Vec3[] corners = corners(spray);
+        // Une seule ombre pour les quatre coins : l'original ne posait qu'une normale par carre.
+        float shade = BloodSprays.shade(spray.face(), look);
         float[][] uv = { { 0f, 1f }, { 1f, 1f }, { 1f, 0f }, { 0f, 0f } };
         for (int i = 0; i < 4; i++) {
             Vec3 corner = corners[i];
             buffer.vertex(base, (float) (corner.x - camera.x), (float) (corner.y - camera.y),
                             (float) (corner.z - camera.z))
-                    .color(1f, 1f, 1f, 1f)
+                    .color(shade, shade, shade, 1f)
                     .uv(uv[i][0], uv[i][1])
                     .endVertex();
         }
