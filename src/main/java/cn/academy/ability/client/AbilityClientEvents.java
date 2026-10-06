@@ -19,6 +19,7 @@ import cn.academy.ability.teleporter.TeleporterCategory;
 import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.player.Input;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraftforge.client.event.MovementInputUpdateEvent;
@@ -356,6 +357,16 @@ public class AbilityClientEvents {
     /** La direction visee par le clavier, ou 0 : le scintillement saute au relachement. */
     private static int aimed;
 
+    /**
+     * Ce que le joueur demande, dans son propre repere : les touches tenues, sommees.
+     *
+     * <p>Les quatre de deplacement, ET l'espace et l'accroupissement — l'original n'ecoutait que
+     * les quatre premieres, et le joueur a demande de quoi monter et descendre. Voir
+     * {@code StormWingSkill.localWish} pour le repere et les signes, et
+     * {@code StormWingSkill.flightDirection} pour ce que le vol en fait.
+     */
+    private static Vec3 localWish = Vec3.ZERO;
+
     /** L'etat des quatre touches au tick precedent, pour guetter les relachements. */
     private static final boolean[] directionHeld = new boolean[4];
 
@@ -475,11 +486,12 @@ public class AbilityClientEvents {
             }
             // Et les ailes de tempete lisent le mouvement a chaque tick, chez le joueur :
             // c'est ce que faisait le MSG_TICK client de l'original. La direction est celle
-            // du dernier appui, comme son currentDir.
+            // des touches tenues, toutes ensemble, dans le repere du joueur.
             if (skill.isHeld()) {
                 var player = net.minecraft.client.Minecraft.getInstance().player;
                 if (player != null) {
-                    skill.onClientHoldTick(player, ClientAbilityData.get(), ClientCharge.getTicks(), aimed);
+                    skill.onClientHoldTick(player, ClientAbilityData.get(), ClientCharge.getTicks(),
+                            localWish);
                     // L'electricite des maintiens : l'arc de la charge et son essaim, celui de
                     // la traction magnetique. Des images, rien d'autre — voir leurs classes.
                     ChargingEffect.tick(player, skill, ClientCharge.getTicks());
@@ -705,9 +717,26 @@ public class AbilityClientEvents {
             }
             directionHeld[i] = down;
         }
+        localWish = wishDirection();
         // Et la competence prend les touches pour de bon : c'est ce drapeau que lira le refus de
         // la marche, au prochain tick du joueur.
         directionsTaken = true;
+    }
+
+    /**
+     * Les touches tenues, dans le repere du joueur : les quatre de deplacement, l'espace, et
+     * l'accroupissement.
+     *
+     * <p>Elles se <b>somment</b> — c'est ce qui permet la diagonale et la montee en avancent —, et
+     * l'ordre des arguments est celui du repere que lit la competence. Voir
+     * {@code StormWingSkill.localWish}.
+     */
+    private static Vec3 wishDirection() {
+        net.minecraft.client.Options options = net.minecraft.client.Minecraft.getInstance().options;
+        return cn.academy.ability.vecmanip.StormWingSkill.localWish(
+                options.keyUp.isDown(), options.keyDown.isDown(),
+                options.keyLeft.isDown(), options.keyRight.isDown(),
+                options.keyJump.isDown(), options.keyShift.isDown());
     }
 
     /**
@@ -716,6 +745,7 @@ public class AbilityClientEvents {
      */
     private static void endDirections() {
         aimed = 0;
+        localWish = Vec3.ZERO;
         java.util.Arrays.fill(directionHeld, false);
         directionsTaken = false;
     }

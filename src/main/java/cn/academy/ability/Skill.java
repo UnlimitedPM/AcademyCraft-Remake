@@ -9,6 +9,7 @@ import cn.academy.ability.develop.condition.LearningCondition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
 import javax.annotation.Nullable;
@@ -566,14 +567,15 @@ public abstract class Skill {
      * c'est ainsi que les ailes de tempete volent, en posant la vitesse a chaque tick au lieu
      * de la demander au serveur.
      *
-     * <p>{@code direction} est la touche de deplacement tenue (1 a 4, 0 pour aucune), telle
-     * que le client la lit : l'original appelait cela {@code currentDir}, et la retenait du
-     * dernier appui. Le serveur, lui, ne recoit rien de tout cela — il compte ses propres
-     * ticks et facture le vol de son cote.
+     * <p>{@code local} est ce que le joueur demande, dans son <b>propre repere</b> : +X sa gauche,
+     * +Y son haut, +Z son avant, chaque composante valant -1, 0 ou 1 selon les touches tenues. La
+     * competence en fait ce qu'elle veut — les ailes de tempete la tournent avec le regard — et
+     * rien de tout cela ne part au serveur : il compte ses propres ticks et facture le vol de son
+     * cote.
      *
      * <p>Defaut : rien. Seule competence concernee : {@code storm_wing}.
      */
-    public void onClientHoldTick(Player player, AbilityData data, int heldTicks, int direction) {
+    public void onClientHoldTick(Player player, AbilityData data, int heldTicks, Vec3 local) {
     }
 
     /**

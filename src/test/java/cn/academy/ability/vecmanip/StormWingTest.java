@@ -25,6 +25,12 @@ class StormWingTest {
     private static final StormWingSkill WING = VecmanipCategory.STORM_WING;
     private static final double EPS = 1.0e-9;
 
+    /** Le repere local d'un jeu de touches, dans l'ordre ou le client les lit. */
+    private static Vec3 wish(boolean forward, boolean back, boolean left, boolean right,
+                             boolean up, boolean down) {
+        return StormWingSkill.localWish(forward, back, left, right, up, down);
+    }
+
     @Test
     void lePasRapprocheSansDepasser() {
         // Le `move` de l'original : 0,16 par tick, et la valeur voulue quand elle est proche.
@@ -61,13 +67,60 @@ class StormWingTest {
     }
 
     @Test
-    void lesQuatreClefsSontCellesDeLOriginal() {
-        assertVec(new Vec3(1, 0, 0), StormWingSkill.localDirection(1), "gauche");
-        assertVec(new Vec3(-1, 0, 0), StormWingSkill.localDirection(2), "droite");
-        assertVec(new Vec3(0, 0, 1), StormWingSkill.localDirection(3), "avant");
-        assertVec(new Vec3(0, 0, -1), StormWingSkill.localDirection(4), "arriere");
-        assertVec(Vec3.ZERO, StormWingSkill.localDirection(0), "aucune touche");
-        assertVec(Vec3.ZERO, StormWingSkill.localDirection(9), "une direction qui n'existe pas");
+    void lesTouchesSeSommentDansLeRepereDuJoueur() {
+        // +X la gauche, +Y le haut, +Z l'avant : l'original ne retenait que la DERNIERE touche
+        // pressee, et le joueur a demande la difference — « si on appuie pour aller a droite, ca
+        // nous pousse vers la droite, et donc on avance plus en avant en meme temps, meme si on
+        // appuie sur les 2 en meme temps ».
+        assertVec(new Vec3(0, 0, 1), wish(true, false, false, false, false, false), "avant");
+        assertVec(new Vec3(0, 0, -1), wish(false, true, false, false, false, false), "arriere");
+        assertVec(new Vec3(1, 0, 0), wish(false, false, true, false, false, false), "gauche");
+        assertVec(new Vec3(-1, 0, 0), wish(false, false, false, true, false, false), "droite");
+
+        // L'espace monte, l'accroupissement descend : le joueur a demande le premier.
+        assertVec(new Vec3(0, 1, 0), wish(false, false, false, false, true, false), "espace");
+        assertVec(new Vec3(0, -1, 0), wish(false, false, false, false, false, true),
+                "accroupissement");
+
+        // Et elles s'ajoutent : voila la diagonale, et la montee en avancent.
+        assertVec(new Vec3(-1, 0, 1), wish(true, false, false, true, false, false),
+                "avant et droite");
+        assertVec(new Vec3(0, 1, 1), wish(true, false, false, false, true, false),
+                "avant et espace");
+        assertVec(new Vec3(1, 1, 1), wish(true, false, true, false, true, false), "les trois");
+
+        // Deux touches qui se repondent s'annulent, comme sur un clavier.
+        assertVec(Vec3.ZERO, wish(true, true, false, false, false, false),
+                "avant et arriere s'annulent");
+        assertVec(Vec3.ZERO, wish(false, false, false, false, true, true),
+                "monter et descendre aussi");
+        assertVec(Vec3.ZERO, wish(false, false, false, false, false, false), "aucune touche");
+    }
+
+    /**
+     * La montee reste verticale, et le reste suit le regard.
+     *
+     * <p>C'est la deuxieme demande du joueur : « appuyer sur espace pour monter ». Dans le repere
+     * du regard, regarder ses pieds et appuyer sur espace ferait <b>plonger</b> — le haut du regard
+     * est alors l'avant —, donc la montee et la descente se prennent dans le monde.
+     */
+    @Test
+    void laMonteeResteVerticaleMemeEnRegardantSesPieds() {
+        // Le deplacement, lui, suit le regard : viser ses pieds fait piquer l'avant.
+        assertVec(new Vec3(0, -1, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(0, 0, 1)),
+                "l'avant suit le regard qui pique");
+        assertVec(new Vec3(1, 0, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(1, 0, 0)),
+                "et la gauche reste horizontale");
+
+        // Mais pas la montee : elle est verticale dans le monde, quel que soit le regard.
+        assertVec(new Vec3(0, 1, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(0, 1, 0)),
+                "espace monte, meme le nez dans le sol");
+        assertVec(new Vec3(0, 1, 0), StormWingSkill.flightDirection(0f, -60f, new Vec3(0, 1, 0)),
+                "et vers le ciel aussi");
+        assertVec(new Vec3(0, -1, 0), StormWingSkill.flightDirection(0f, 90f, new Vec3(0, -1, 0)),
+                "l'accroupissement, lui, descend");
+        assertVec(Vec3.ZERO, StormWingSkill.flightDirection(0f, 45f, Vec3.ZERO),
+                "et sans touche, on ne demande rien");
     }
 
     @Test

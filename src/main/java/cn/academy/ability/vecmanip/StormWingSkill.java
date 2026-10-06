@@ -42,6 +42,13 @@ import net.minecraft.world.phys.Vec3;
  * d'experience les ailes sont lentes (0,7), au-dela elles sont rapides (1,2), et les deux
  * grandissent jusqu'a 3 fois.
  *
+ * <p>Le joueur a demande trois choses a ce vol, et elles tiennent dans la direction : les quatre
+ * touches <b>se somment</b> — avant et droite donnent la diagonale, la ou l'original ne gardait
+ * que la derniere touche pressee —, l'<b>espace fait monter</b> et l'accroupissement descend, et
+ * la montee <b>reste verticale</b> au lieu de suivre le regard : regarder ses pieds et demander a
+ * monter ferait plonger, sinon. La direction entiere est ensuite normalisee, donc une diagonale ou
+ * une montee va exactement aussi vite qu'un cap franc.
+ *
  * <p>Sans touche tenue, les ailes <b>flottent</b> comme pendant la charge : c'est ainsi qu'on
  * se pose au milieu de l'air, et c'est encore l'original.
  *
@@ -220,15 +227,43 @@ public class StormWingSkill extends Skill {
                 .yRot((float) Math.toRadians(-yawDegrees));
     }
 
-    /** La direction locale d'une touche de deplacement, comme les quatre clefs de l'original. */
-    public static Vec3 localDirection(int direction) {
-        return switch (direction) {
-            case 1 -> new Vec3(1, 0, 0);
-            case 2 -> new Vec3(-1, 0, 0);
-            case 3 -> new Vec3(0, 0, 1);
-            case 4 -> new Vec3(0, 0, -1);
-            default -> Vec3.ZERO;
-        };
+    /**
+     * La direction locale d'un jeu de touches : +1 par touche tenue, -1 par touche opposee.
+     *
+     * <p>Dans le repere du joueur, +X est sa <b>gauche</b>, +Y son <b>haut</b> et +Z son
+     * <b>avant</b> — c'est le repere que {@link #worldSpace} fait tourner. Les touches se
+     * <b>somment</b> : avant et droite donnent la diagonale, la ou l'original ne retenait que la
+     * <b>derniere</b> touche pressee, et le joueur a demande la difference — « si on appuie pour
+     * aller a droite, ca nous pousse vers la droite, et donc on avance plus en avant en meme temps,
+     * meme si on appuie sur les 2 en meme temps ».
+     *
+     * <p>Et deux touches qui se repondent s'annulent : avant et arriere ensemble ne poussent nulle
+     * part, ce qui est le comportement attendu d'un clavier.
+     */
+    public static Vec3 localWish(boolean forward, boolean back, boolean left, boolean right,
+                                 boolean up, boolean down) {
+        return new Vec3((left ? 1 : 0) - (right ? 1 : 0),
+                (up ? 1 : 0) - (down ? 1 : 0),
+                (forward ? 1 : 0) - (back ? 1 : 0));
+    }
+
+    /**
+     * La direction du vol, dans le monde : le deplacement suit le regard, la montee reste droite.
+     *
+     * <p>Le deplacement horizontal passe par {@link #worldSpace} — donc l'avant et l'arriere
+     * suivent le tangage, et la gauche et la droite restent horizontales, comme les quatre clefs de
+     * l'original.
+     *
+     * <p>La <b>montee et la descente</b>, elles, ne suivent pas le regard : elles sont verticales
+     * dans le <b>monde</b>. C'est ce que le joueur a demande — « appuyer sur espace pour monter » —,
+     * et c'est surtout ce qu'il faut : dans le repere du regard, regarder ses pieds et appuyer sur
+     * espace ferait <b>plonger</b>, puisque le haut du regard est alors l'avant.
+     */
+    public static Vec3 flightDirection(float yawDegrees, float pitchDegrees, Vec3 local) {
+        Vec3 aimed = worldSpace(yawDegrees, pitchDegrees, new Vec3(local.x, 0, local.z));
+        // Le tangage de l'avant s'ajoute a la montee, il ne la remplace pas : viser ses pieds fait
+        // piquer, et l'espace continue de monter.
+        return new Vec3(aimed.x, aimed.y + local.y, aimed.z);
     }
 
     /**
@@ -391,18 +426,23 @@ public class StormWingSkill extends Skill {
      * <p>C'est le {@code l_tick} de l'original, et c'est le client qui pousse : la vitesse est
      * posee a chaque tick, dans le repere du regard, par pas de 0,16. Sans touche tenue — ou
      * les ailes encore fermees — on flotte, ce qui permet de se poser en l'air.
+     *
+     * <p>{@code local} est ce que le joueur demande, dans son propre repere (voir
+     * {@link #localWish}). La direction est <b>normalisee</b> avant d'etre mise a la vitesse du
+     * vol : une diagonale ou une montee va donc exactement aussi vite qu'un cap franc, et le vol
+     * se comporte pareil dans toutes les directions, ce que le joueur a demande.
      */
     @Override
-    public void onClientHoldTick(Player player, AbilityData data, int heldTicks, int direction) {
+    public void onClientHoldTick(Player player, AbilityData data, int heldTicks, Vec3 local) {
         Vec3 aim = opened(data, heldTicks)
-                ? worldSpace(player.getYRot(), player.getXRot(), localDirection(direction))
+                ? flightDirection(player.getYRot(), player.getXRot(), local)
                 : Vec3.ZERO;
         Vec3 motion = player.getDeltaMovement();
 
         if (aim.lengthSqr() == 0) {
             player.setDeltaMovement(motion.x, hoverVelocity(groundBelow(player), motion.y), motion.z);
         } else {
-            Vec3 wanted = aim.scale(speed(data));
+            Vec3 wanted = aim.normalize().scale(speed(data));
             player.setDeltaMovement(
                     step(motion.x, wanted.x, ACCEL),
                     step(motion.y, wanted.y, ACCEL),
