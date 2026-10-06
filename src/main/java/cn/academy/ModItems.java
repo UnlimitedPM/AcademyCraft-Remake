@@ -100,7 +100,7 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.WINDGEN_MAIN.get(), new Item.Properties()));
 
     // --- OUTILS ET DIVERS ---[cite: 1]
-    public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new CoinItem());
     public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new SilbarnItem());
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new Item(new Item.Properties()));
@@ -157,6 +157,47 @@ public class ModItems {
             () -> new TooltipItem("ac.app.freq_transmitter.name"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings",
             () -> new AppInstallerItem("settings"));
+
+    /**
+     * La piece : l'objet qu'on LANCE pour armer le railgun.
+     *
+     * <p>Portage d'{@code ItemCoin}, et c'est tout ce qu'il fait — une piece ne sert a rien
+     * d'autre. Le clic droit la jette en l'air, elle monte, retombe en suivant son lanceur, et
+     * revient dans l'inventaire si le railgun n'a pas tire a travers — voir
+     * {@code EntityCoinThrowing}. Le joueur n'en jette qu'une a la fois : l'original refusait le
+     * second lancer tant que la premiere vivait, et c'est cette piece-la que le tir consomme.
+     *
+     * <p>Le son ne se joue que chez le SERVEUR : {@code Item#use} est appele des deux cotes, et un
+     * son pose aux deux s'entendrait deux fois.
+     */
+    public static class CoinItem extends Item {
+        public CoinItem() {
+            super(new Item.Properties());
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+
+            // Une seule piece par joueur, et le client le sait comme le serveur : sa propre piece
+            // est chez lui. Refuser ici evite le geste de main pour rien.
+            if (cn.academy.entity.EntityCoinThrowing.of(player) != null) {
+                return InteractionResultHolder.pass(stack);
+            }
+            if (level.isClientSide) {
+                return InteractionResultHolder.success(stack);
+            }
+
+            level.addFreshEntity(new cn.academy.entity.EntityCoinThrowing(level, player));
+            cn.academy.sound.AcademySounds.playAt(level, player.position(),
+                    ModSounds.ENTITY_FLIPCOIN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f);
+
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
+            return InteractionResultHolder.success(stack);
+        }
+    }
 
     /**
      * La bille de silicium : l'objet qu'on lance, portage de {@code ItemSilbarn}.

@@ -116,6 +116,8 @@ public class AcademyCraft {
             // et un coeur qui clignotent — voir MdBallRenderer.
             event.registerEntityRenderer(ModEntities.MD_BALL.get(),
                     cn.academy.ability.client.md.MdBallRenderer::new);
+            // La piece lancee, qu'on jette pour armer le railgun — voir CoinRenderer.
+            event.registerEntityRenderer(ModEntities.COIN.get(), cn.academy.client.CoinRenderer::new);
         }
 
         @SubscribeEvent

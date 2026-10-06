@@ -2763,6 +2763,128 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le railgun ne part pas les mains vides : sa piece, ou du fer.
+     *
+     * <p>C'est tout le rituel de l'original, et il tient en trois regles. Sans munition, l'appui ne
+     * fait <b>rien</b> — pas un coup, pas un point depense. Une piece encore dans sa <b>montee</b> ne
+     * sert a rien non plus : il faut qu'elle soit retombee, a plus de sept dixiemes de son vol, et
+     * c'est la fenetre de tir. Et le tir <b>consomme</b> sa munition, piece ou lingot.
+     *
+     * <p>Les deux voies sont ici : la piece lancee par l'objet, et le fer en main. Toute la decision
+     * vit dans {@code RailgunSkill.hasAmmo} et {@code EntityCoinThrowing}, donc ce que ce test
+     * verifie vraiment, c'est que le paquet et l'effet passent bien par la — voir
+     * {@code ActivateSkillPacket}, qui appelle {@code canStart} avant de rien facturer.
+     */
+    @GameTest(template = "empty")
+    public static void leRailgunNePartQueSurSaMunition(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        var railgun = cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 260);
+
+        var player = ownPlayer(helper, "railgunner");
+        player.getAbilities().instabuild = false;
+        clearCorridor(helper, abs, 12);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(railgun.getCategory(), 4);
+        data.learnSkill(railgun);
+        data.setSkillExp(railgun, 0.5f);
+
+        // 1. MAINS VIDES : rien ne part, et la porte le dit avant tout paiement.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "les mains vides ne tirent pas");
+        assertFalse(helper, railgun.canStart(player, data),
+                "et la competence refuse de partir : rien ne sera facture");
+
+        // 2. LE FER : le tir part, et un lingot s'en va. La cible est devant, et perd des points.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 3));
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "le fer est une munition admise");
+
+        var cow = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(3, 262, 11));
+        lookAt(player, helper.absolutePos(new BlockPos(3, 262, 11)));
+        float before = cow.getHealth();
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, 2, player.getMainHandItem().getCount(), "un lingot est consomme");
+        assertTrue(helper, cow.getHealth() < before,
+                "et le tir a porte : la vache perd des points");
+
+        // 3. LA PIECE : jetee par l'objet, elle ne sert a rien tant qu'elle monte.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(ModItems.COIN.get(), 2));
+        var thrown = ModItems.COIN.get().use(level, player,
+                net.minecraft.world.InteractionHand.MAIN_HAND);
+        assertValue(helper, net.minecraft.world.InteractionResult.SUCCESS, thrown.getResult(),
+                "le lancer doit aboutir");
+        assertValue(helper, 1, player.getMainHandItem().getCount(), "une piece de moins en main");
+
+        var coin = cn.academy.entity.EntityCoinThrowing.of(player);
+        assertTrue(helper, coin != null, "et la piece est en vol");
+        assertFalse(helper, coin.isReady(), "elle vient de partir, elle monte");
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "une piece qui monte n'ouvre pas le tir");
+        assertValue(helper, net.minecraft.world.InteractionResult.PASS,
+                ModItems.COIN.get().use(level, player,
+                        net.minecraft.world.InteractionHand.MAIN_HAND).getResult(),
+                "on ne jette qu'une piece a la fois");
+
+        // Elle retombe : c'est la que le tir s'ouvre. Vingt-cinq ticks, une seconde et quart.
+        while (!coin.isReady() && coin.tickCount < cn.academy.ability.electromaster.CoinToss.MAX_LIFE) {
+            coin.tick();
+        }
+        assertTrue(helper, coin.isReady(), "la piece finit par redescendre");
+        assertFalse(helper, coin.isRemoved(), "et elle est encore en vol");
+        assertTrue(helper, railgun.canStart(player, data), "le tir est ouvert");
+
+        railgun.onActivateCharged(player, data, 0);
+        assertTrue(helper, coin.isRemoved(), "le tir consomme la piece");
+        assertValue(helper, 1, player.getMainHandItem().getCount(),
+                "et rien ne revient : la piece a servi");
+
+        helper.succeed();
+    }
+
+    /**
+     * La piece qu'on n'a pas tiree revient dans la main.
+     *
+     * <p>C'est le {@code finishThrowing} de l'original : la piece retombe au niveau de son lanceur,
+     * et elle rentre dans l'inventaire — dans la main libre, sinon empilee, sinon par terre. Sans
+     * cela, chaque essai manque couterait une piece, et le railgun serait une competence a
+     * munitions perissables.
+     */
+    @GameTest(template = "empty")
+    public static void laPieceNonTireeRevientDansLaMain(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 270);
+
+        var player = ownPlayer(helper, "coin_flipper");
+        player.getAbilities().instabuild = false;
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(ModItems.COIN.get(), 4));
+
+        ModItems.COIN.get().use(level, player, net.minecraft.world.InteractionHand.MAIN_HAND);
+        var coin = cn.academy.entity.EntityCoinThrowing.of(player);
+        assertTrue(helper, coin != null, "la piece doit etre en vol");
+        assertValue(helper, 3, player.getMainHandItem().getCount(), "trois pieces en main");
+
+        // On la laisse finir son vol : elle retombe au niveau du lanceur et rentre.
+        int guard = 0;
+        while (!coin.isRemoved() && guard++ < cn.academy.ability.electromaster.CoinToss.MAX_LIFE) {
+            coin.tick();
+        }
+        assertTrue(helper, coin.isRemoved(), "elle finit par retomber et disparaitre");
+        assertValue(helper, 4, player.getMainHandItem().getCount(),
+                "et la piece est revenue dans la main");
+
+        helper.succeed();
+    }
+
+    /**
      * La boite de la bille, et la visee qu'elle sert.
      *
      * <p>C'est ce que le joueur a demande : viser une bille pour amorcer la salve de rayons

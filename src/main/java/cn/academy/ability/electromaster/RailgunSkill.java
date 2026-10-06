@@ -8,7 +8,24 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-/** Active skill, port of original Railgun: long-range high-damage snipe with strong knockback. */
+/**
+ * Competence active, portage de {@code Railgun} : un tir tendu, a longue portee, qui traverse ce
+ * qu'il trouve et le repousse violemment.
+ *
+ * <h2>Il ne part pas les mains vides</h2>
+ *
+ * <p>Portage de l'{@code ItemCoin} et du {@code Delegate} de l'original, qui est tout le rituel du
+ * railgun. Il faut <b>lancer une piece</b> — clic droit avec l'objet {@code coin} — et tirer pendant
+ * qu'elle <b>retombe</b>, plus de sept dixiemes de son vol (voir {@link CoinToss#READY}) : la piece
+ * est alors consommee par le tir. L'autre voie de l'original est le <b>fer</b> — un lingot ou un bloc
+ * en main —, egalement consomme. Sans l'un ou l'autre, l'appui ne fait <b>rien du tout</b>, pas meme
+ * payer.
+ *
+ * <p>ECART ASSUME : l'original demandait vingt ticks de maintien pour la voie du fer (son
+ * {@code chargeTicks = 20}, un decompte cote client), puis consommait le lingot. Le port tire
+ * immediatement dans les deux cas : son systeme de touches ne connait que l'appui et le relachement,
+ * et une arme qui met une seconde a partir pour un lingot en main n'apporte rien a la visee.
+ */
 public class RailgunSkill extends Skill {
 
     private static final float CP_COST_MIN_EXP = 200f;
@@ -99,8 +116,63 @@ public class RailgunSkill extends Skill {
         return lerp(180f, 120f, data.getSkillExp(this));
     }
 
+    /**
+     * Ce que le tir admet comme munition dans la main : le fer de l'original, tel quel.
+     *
+     * <p>{@code acceptedItems} valait le lingot et le bloc de fer, et rien d'autre — pas de fer en
+     * poudre, pas de minerai. C'est le « ferraillage » de la competence : ce qu'on a sous la main
+     * quand on n'a pas de piece.
+     */
+    public static boolean isAccepted(net.minecraft.world.item.ItemStack stack) {
+        return stack.is(net.minecraft.world.item.Items.IRON_INGOT)
+                || stack.is(net.minecraft.world.item.Items.IRON_BLOCK);
+    }
+
+    /**
+     * Le tir a-t-il de quoi partir ?
+     *
+     * <p>La piece retombee d'abord, et le fer ensuite : c'est l'ordre de l'original, dont le
+     * delegue regardait la piece en vol avant la main. Le refus est SILENCIEUX — voir
+     * {@code ActivateSkillPacket}, qui ne facture rien quand cette question repond non.
+     *
+     * <p>C'est la seule competence instantanee qui refuse de partir : elle est le premier appelant
+     * de ce crochet, qui servait aux maintiens (« y a-t-il un bloc a prendre ? »).
+     */
+    @Override
+    public boolean canStart(Player player, AbilityData data) {
+        return hasAmmo(player);
+    }
+
+    /** Une piece assez retombee, ou du fer en main. */
+    public static boolean hasAmmo(Player player) {
+        return cn.academy.entity.EntityCoinThrowing.ready(player) != null
+                || isAccepted(player.getMainHandItem());
+    }
+
+    /**
+     * Le tir consomme sa munition : la piece en vol, ou un fer de la main.
+     *
+     * <p>C'est le {@code MSG_COIN_PERFORM} de l'original — la piece meurt avant que le tir parte —
+     * et son {@code MSG_ITEM_PERFORM} pour le fer, qui retirait un exemplaire sauf en creatif. Rien
+     * n'est rendu : c'est le prix du tir, en plus de ses CP et de son surcout.
+     */
+    private static void consumeAmmo(Player player) {
+        cn.academy.entity.EntityCoinThrowing coin = cn.academy.entity.EntityCoinThrowing.ready(player);
+        if (coin != null) {
+            coin.consume();
+            return;
+        }
+        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+        if (isAccepted(held) && !player.getAbilities().instabuild) {
+            held.shrink(1);
+        }
+    }
+
     @Override
     public void onActivate(Player player, AbilityData data) {
+        // La munition d'abord : le tir part de la piece, et l'original la tuait AVANT de tirer.
+        consumeAmmo(player);
+
         // Le seul son de l'original qui se pose dans le monde plutot qu'au joueur : un tir de
         // railgun s'entend de loin. Il part a CHAQUE tir — le port ne le jouait qu'en touchant,
         // ce qui rendait muet le tir qui manque.

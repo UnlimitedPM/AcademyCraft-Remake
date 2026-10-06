@@ -77,6 +77,23 @@ public class ModEntities {
                     .updateInterval(1)
                     .build("md_ball"));
 
+    /**
+     * La piece lancee du railgun, portage d'{@code EntityCoinThrowing}.
+     *
+     * <p>Un objet minuscule qui suit son lanceur — elle est TOUJOURS a sa position horizontale, et
+     * seule sa hauteur vit de sa vie — donc suivie de pres et rafraichie a chaque tick : c'est en
+     * la voyant remonter et retomber dans la main qu'on sait quand tirer. Un quart de bloc de cote,
+     * comme l'original.
+     */
+    public static final RegistryObject<EntityType<cn.academy.entity.EntityCoinThrowing>> COIN =
+            ENTITIES.register("coin", () -> EntityType.Builder
+                    .<cn.academy.entity.EntityCoinThrowing>of(cn.academy.entity.EntityCoinThrowing::new,
+                            MobCategory.MISC)
+                    .sized(0.25f, 0.25f)
+                    .clientTrackingRange(8)
+                    .updateInterval(1)
+                    .build("coin"));
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) {
         ENTITIES.register(bus);
     }

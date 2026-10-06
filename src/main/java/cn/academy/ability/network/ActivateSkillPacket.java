@@ -263,6 +263,15 @@ public class ActivateSkillPacket {
             return;
         }
 
+        // Et ce que la competence demande pour partir — sa munition, sa cible, ce qu'elle a besoin
+        // de trouver. Le refus est SILENCIEUX, comme le terminate() que l'original appelait dans
+        // son MSG_MADEALIVE : rien n'est facture, et rien n'est pose.
+        //
+        // C'est le meme controle que celui des maintiens (voir canBegin), pose ici depuis que le
+        // railgun en a besoin : il ne part que sur une piece retombee ou un lingot de fer, et
+        // l'original ne facturait rien du tout quand il n'avait ni l'un ni l'autre.
+        if (!skill.canStart(player, data)) return;
+
         // Les deux ressources ensemble ou aucune : portage de CPData.perform. Sans
         // cette atomicite, une competence refusee faute de CP laisserait quand meme
         // du surcout derriere elle. Les competences qui paient dans leur effet sautent
