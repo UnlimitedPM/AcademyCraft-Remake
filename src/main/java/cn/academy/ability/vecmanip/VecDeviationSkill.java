@@ -33,6 +33,18 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * chaque tick ; le port s'en remet a l'epingle des maintiens, qui dit exactement la meme
  * chose — voir {@code AbilityData#setHeldOverload}.
  *
+ * <h2>Tout se paie en surcout</h2>
+ *
+ * <p>C'est un choix de <b>jeu</b>, demande par le joueur, et non un portage : l'original payait
+ * l'entretien, les entites arretees et les coups amortis en <b>reserve</b>, et ne laissait au
+ * surcout que le prix d'ouverture. Ici, tout passe par la barre de surcout, et c'est ce qui la rend
+ * <b>courte</b> : la barre se remplit dix fois plus vite que la reserve, donc elle atteint son
+ * plafond — et a ce moment-la la regle du surcout termine d'elle-meme tout ce qui court (voir
+ * {@code AbilityEvents.onPlayerTick}). La veille de deviation se tient donc le temps d'une barre, la
+ * ou sa soeur le renvoi peut tenir celui d'une reserve.
+ *
+ * <p>Ce sont les memes nombres, au meme endroit qu'avant, seul le compte a change.
+ *
  * <h2>Ce qu'elle n'arrete pas</h2>
  *
  * Tout n'est pas deviable : {@link EntityAffection} decide, et sa config par defaut exclut
@@ -40,15 +52,16 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * ce qui vole, pas ce qui marche. Une entite deviee est <b>marquee</b> : elle ne sera plus
  * touchee, ce qui empeche une cible immobile de rapporter de l'experience a chaque tick.
  *
- * <h2>Un quiproquo qui n'en etait pas un</h2>
+ * <h2>Le quiproquo de l'ordre des arguments</h2>
  *
- * Le port a d'abord cru que sa reduction de degats appelait {@code ctx.consume} avec ses
+ * <p>Le port a d'abord cru que sa reduction de degats appelait {@code ctx.consume} avec ses
  * arguments inverses, comme le fait le bouclier de lumiere. Il n'en est rien : la signature
  * de l'original est {@code consume(overload, cp)}, donc {@code ctx.consume(0, consumption)}
- * paie bien la <b>reserve</b> et rien d'autre — ce que le port fait aussi, par
- * {@code consumeControlPoint}. Le piege existe pourtant, et il vaut la peine d'etre note : le
- * port range ses deux ressources dans l'autre ordre, {@code perform(cp, overload)}, si bien
- * que la meme ligne recopiee telle quelle paierait la surcharge a la place de la reserve.
+ * paie bien la <b>reserve</b> et rien d'autre. Le piege existe pourtant, et il vaut la peine d'etre
+ * note : le port range ses deux ressources dans l'autre ordre, {@code perform(cp, overload)}, et il
+ * y est tombe une fois — la prise d'une entite se payait en surcout la ou l'original la payait en
+ * reserve. Depuis, tout se paie en surcout de toute facon, mais les deux ordres restent a surveiller
+ * dans chaque appel.
  *
  * <p>Non porte : les ondes visuelles et le son de l'original.
  */
@@ -57,32 +70,29 @@ public class VecDeviationSkill extends Skill {
     /** Le rayon de la veille : cinq blocs autour du joueur. */
     public static final double RANGE = 5.0;
 
-    /** L'entretien : 13 a 5 CP par tick, comme l'original. */
-    public static final float TICK_CP_MIN = 13f;
-    public static final float TICK_CP_MAX = 5f;
+    /** L'entretien : 13 a 5 de SURCOUT par tick, comme l'original — et non de la reserve. */
+    public static final float TICK_OVERLOAD_MIN = 13f;
+    public static final float TICK_OVERLOAD_MAX = 5f;
+
+    /**
+     * Ce que coute chaque entite arretee : 15 a 12, verbatim — en SURCOUT.
+     *
+     * <p>L'original les payait en reserve ({@code ctx.consumeWithForce(0, comsumption)}), et le port
+     * avec lui. La veille bascule tout son cout sur la barre de surcout pour une raison de jeu, pas
+     * de portage : c'est ce qui la rend <b>courte</b> — la barre monte dix fois plus vite que la
+     * reserve, donc elle atteint son plafond et le maintien s'arrete la. Voir le commentaire de la
+     * classe.
+     */
+    public static final float ENTITY_OVERLOAD_MIN = 15f;
+    public static final float ENTITY_OVERLOAD_MAX = 12f;
 
     /** Le surcout epingle a l'ouverture : 80 a 50. */
     public static final float PIN_MIN = 80f;
     public static final float PIN_MAX = 50f;
 
-    /**
-     * Ce que coute chaque entite arretee : 15 a 12, verbatim — et c'est de la RESERVE.
-     *
-     * <p>Le piege que la classe raconte plus haut a ete paye ici meme : l'original ecrit
-     * {@code ctx.consumeWithForce(0, comsumption)}, ou le premier argument est la surcharge et le
-     * second la reserve — donc 0 de surcharge, et {@code comsumption} de reserve. Le port avait
-     * recopie les deux nombres dans son propre ordre, {@code performForced(cp, overload)}, et
-     * payait donc la SURCHARGE a la place de la reserve. La deviation etait ainsi bien moins chere
-     * qu'elle ne devrait l'etre : c'est l'une des deux raisons pour lesquelles le joueur la
-     * trouvait plus forte que le renvoi — « elle consomme moins de cp et moins d'overload que le
-     * vecteur reflexion qui lui coute juste plus cher en tout point ».
-     */
-    public static final float ENTITY_CP_MIN = 15f;
-    public static final float ENTITY_CP_MAX = 12f;
-
-    /** Ce qu'un coup encaisse coute au plus : 15 a 12 CP, comme l'original. */
-    public static final float RESIST_CP_MIN = 15f;
-    public static final float RESIST_CP_MAX = 12f;
+    /** Ce qu'un coup encaisse coute au plus : 15 a 12 de SURCOUT, comme l'original. */
+    public static final float RESIST_OVERLOAD_MIN = 15f;
+    public static final float RESIST_OVERLOAD_MAX = 12f;
 
     /** La reduction : de 40 % a 90 % des degats. */
     public static final float RESIST_REDUCTION_MIN = 0.4f;
@@ -116,14 +126,14 @@ public class VecDeviationSkill extends Skill {
     // Courbes, reprises de l'original
     // ------------------------------------------------------------------
 
-    /** L'entretien par tick. */
+    /** L'entretien par tick, en surcout. */
     public float tickCost(AbilityData data) {
-        return lerp(TICK_CP_MIN, TICK_CP_MAX, data.getSkillExp(this));
+        return lerp(TICK_OVERLOAD_MIN, TICK_OVERLOAD_MAX, data.getSkillExp(this));
     }
 
-    /** Ce qu'une entite arretee coute a la reserve, selon l'experience. */
+    /** Ce qu'une entite arretee coute a la barre de surcout, selon l'experience. */
     public float entityCost(AbilityData data) {
-        return lerp(ENTITY_CP_MIN, ENTITY_CP_MAX, data.getSkillExp(this));
+        return lerp(ENTITY_OVERLOAD_MIN, ENTITY_OVERLOAD_MAX, data.getSkillExp(this));
     }
 
     /** Le surcout epingle a l'ouverture, le temps du maintien. */
@@ -131,9 +141,9 @@ public class VecDeviationSkill extends Skill {
         return lerp(PIN_MIN, PIN_MAX, data.getSkillExp(this));
     }
 
-    /** Ce qu'un coup encaisse coute au plus. */
+    /** Ce qu'un coup encaisse coute au plus, en surcout. */
     public float resistCost(AbilityData data) {
-        return lerp(RESIST_CP_MIN, RESIST_CP_MAX, data.getSkillExp(this));
+        return lerp(RESIST_OVERLOAD_MIN, RESIST_OVERLOAD_MAX, data.getSkillExp(this));
     }
 
     /** La part des degats que la deviation epargne. */
@@ -141,9 +151,16 @@ public class VecDeviationSkill extends Skill {
         return lerp(RESIST_REDUCTION_MIN, RESIST_REDUCTION_MAX, data.getSkillExp(this));
     }
 
-    /** La reserve qu'un coup consomme : ce qu'il reste, borne par le prix du palier. */
+    /**
+     * Le surcout qu'un coup consomme : ce qu'il reste a remplir sur la barre, borne par le prix du
+     * palier.
+     *
+     * <p>C'est le {@code min} de l'original, transpose : chez lui la reserve etait bornee par ce
+     * qu'il restait en CP, ici c'est la barre de surcout qui l'est par ce qu'il lui reste a
+     * remplir — un dernier coup encaisse ne laisse donc pas de dette.
+     */
     public float resistCharge(AbilityData data) {
-        return Math.min((float) data.getControlPoint(), resistCost(data));
+        return Math.min(Math.max(0f, data.getMaxOverload() - data.getOverload()), resistCost(data));
     }
 
     /** Tout est verse par ce que la veille arrete, et par ce qu'elle amortit. */
@@ -178,7 +195,7 @@ public class VecDeviationSkill extends Skill {
         return true;
     }
 
-    /** Aucune duree : elle tient tant que la reserve suit, ou jusqu'au second appui. */
+    /** Aucune duree : elle tient tant que la barre de surcout le supporte, ou jusqu'au second appui. */
     @Override
     public int getMaxHoldTicks(AbilityData data) {
         return 0;
@@ -215,8 +232,10 @@ public class VecDeviationSkill extends Skill {
 
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
-        // L'entretien d'abord : une reserve qui ne suit plus termine le maintien.
-        if (!data.consumeControlPoint(tickCost(data))) return false;
+        // L'entretien se paie en SURCOUT, et rien ne peut le refuser : c'est la barre qui dit quand
+        // elle s'arrete, en atteignant son plafond — et a ce moment-la la regle du surcout termine
+        // d'elle-meme tout ce qui court (voir AbilityEvents). La reserve, elle, n'est plus touchee.
+        data.performForced(0f, tickCost(data));
         if (!(player.level() instanceof ServerLevel level)) return true;
 
         Vec3 center = player.position();
@@ -229,10 +248,9 @@ public class VecDeviationSkill extends Skill {
             if (affect.excluded()) continue;
 
             // Chaque entite arretee se paie sans verification : la veille est deja ouverte, et
-            // refuser la laisserait passer ce qu'on a promis d'arreter. Et c'est la RESERVE
-            // qu'elle coute, comme le `consumeWithForce(0, comsumption)` de l'original — voir
-            // ENTITY_CP_MIN.
-            data.performForced(entityCost(data), 0f);
+            // refuser la laisserait passer ce qu'on a promis d'arreter. Et elle se paie en
+            // SURCOUT, comme l'entretien — voir ENTITY_OVERLOAD_MIN.
+            data.performForced(0f, entityCost(data));
             stop(level, entity);
 
             // Le son se pose sur l'entite arretee, comme le `MSG_PLAY` de l'original :
@@ -297,7 +315,7 @@ public class VecDeviationSkill extends Skill {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return amount;
 
-        data.consumeControlPoint(resistCharge(data));
+        data.performForced(0f, resistCharge(data));
         data.addSkillExp(this, amount * EXP_PER_DAMAGE);
         return amount * (1f - reduction(data));
     }

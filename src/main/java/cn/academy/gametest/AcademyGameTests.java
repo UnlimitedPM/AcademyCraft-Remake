@@ -4137,11 +4137,11 @@ public final class AcademyGameTests {
         assertTrue(helper, deviation.onHoldTick(player, data, 2), "la veille tient toujours");
         assertClose(helper, 0.001d, data.getSkillExp(deviation),
                 "une entite deja deviee ne rapporte plus d'experience");
-        assertTrue(helper, Math.abs(overloadBefore - data.getOverload()) < 0.001d,
-                "chaque prise se paie en RESERVE, pas en surcout : " + data.getOverload());
-        // Et la reserve le dit : 13 d'entretien, 15 pour la fleche, puis 12,992 d'entretien.
-        assertTrue(helper, Math.abs((reserveBefore - 40.992d) - data.getControlPoint()) < 0.01d,
-                "l'entretien et chaque prise se paient par la reserve : " + data.getControlPoint());
+        // Tout se paie en SURCOUT : 13 d'entretien, 15 pour la fleche, puis 12,992 d'entretien.
+        assertTrue(helper, Math.abs((overloadBefore + 40.992d) - data.getOverload()) < 0.01d,
+                "l'entretien et chaque prise se paient en surcout : " + data.getOverload());
+        assertTrue(helper, Math.abs(reserveBefore - data.getControlPoint()) < 0.01d,
+                "et la reserve, elle, n'est plus touchee du tout : " + data.getControlPoint());
 
         // La reduction de degats, par le crochet du jeu. Le gain d'experience du coup est
         // verse AVANT que la reduction ne soit calculee, comme dans l'original : le coup

@@ -37,15 +37,20 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *     le coup est <b>annule</b> plutot que reduit.</li>
  * </ul>
  *
- * <h2>Deux couts, et deux paiements differents</h2>
+ * <h2>Tout se paie en reserve</h2>
  *
- * Ouvrir la veille charge la reserve a {@code overloadToKeep} (350, puis 250) et l'<b>epingle</b> :
- * l'original la repoussait a cette valeur a chaque tick, sans quoi tenir la veille remboursait
- * son propre prix. L'entretien, lui, se paie en reserve — 15 a 11 CP par tick chez l'original,
- * divises par 28 comme partout — et chaque entite renvoyee se paie <b>sans verification</b>
- * (300 a 160 par point de difficulte, divises par 28) : refuser la laisserait passer ce qu'on a
- * promis de renvoyer.
+ * <p>C'est un choix de <b>jeu</b>, demande par le joueur, et non un portage : l'original payait son
+ * ouverture en <b>surcout</b> (le {@code overloadToKeep} de 350 puis 250, epingle pour que la
+ * recuperation ne rembourse pas le maintien) et son entretien, ses entites renvoyees et ses coups
+ * renvoyes en <b>reserve</b>. Ici, tout passe par la reserve — ouverture comprise — et rien ne touche
+ * plus la barre de surcout.
  *
+ * <p>C'est ce qui separe les deux veilles, et c'est voulu : la reserve est grande (1800 points des
+ * le niveau 1, 8000 au dernier) et se recharge en continu, la barre de surcout est petite et
+ * verrouille tout quand elle est pleine. Le renvoi se tient donc longtemps — 15 a 11 points par
+ * tick, plus ce qu'il renvoie — la ou sa soeur s'arrete des que sa barre est pleine. Ses nombres a
+ * lui, eux, ne changent pas : ils partent simplement de la reserve.
+
  * <h2>Deux coquilles de l'original corrigees</h2>
  *
  * <p>La premiere est un <b>garde-fou mort</b> : {@code handleAttack} posait {@code _isAttacking
@@ -216,15 +221,29 @@ public class VecReflectionSkill extends Skill {
         return 0;
     }
 
-    /** Le prix d'ouverture est le surcout epingle, et rien d'autre. */
+    /** Le prix d'ouverture, en RESERVE : le surcout epingle de l'original, 350 a 250. */
     @Override
     public float getCpCost() {
-        return 0f;
+        return PIN_MIN;
     }
 
+    /**
+     * Et le prix d'ouverture suit l'experience, comme partout.
+     *
+     * <p>C'est le {@code overloadToKeep} de l'original, 350 puis 250, deplace de la barre de
+     * surcout vers la reserve : la veille ne touche plus du tout au surcout, et tout ce qu'elle
+     * coute — ouverture comprise — se lit donc dans la reserve, qui est grande. C'est ce qui la rend
+     * <b>tenable</b> la ou sa soeur s'arrete : voir le commentaire de la classe.
+     */
+    @Override
+    public float getCpCost(AbilityData data) {
+        return pin(data);
+    }
+
+    /** Plus rien en surcout : l'ouverture se paie en reserve. */
     @Override
     public float getOverloadCost(AbilityData data) {
-        return pin(data);
+        return 0f;
     }
 
     /** Aucune recharge : c'est un maintien, il se termine et se reprend. */
@@ -234,14 +253,15 @@ public class VecReflectionSkill extends Skill {
     }
 
     /**
-     * A l'ouverture : epingler le surcout du moment.
+     * A l'ouverture : rien a epingler.
      *
-     * Meme mecanique que la deviation de vecteur, et pour la meme raison : l'original lisait la
-     * surcharge juste apres l'avoir payee, et la repoussait a cette valeur a chaque tick.
+     * <p>L'original epinglait le surcout consomme ({@code overloadKeep}) pour que la recuperation du
+     * surcout ne rembourse pas le maintien en cours de route. La veille ne consomme plus de surcout
+     * du tout depuis que son prix est passe a la reserve — il n'y a donc rien a epingler, et la
+     * barre de surcout redescend normalement pendant qu'on la tient.
      */
     @Override
     public void onStart(Player player, AbilityData data) {
-        data.setHeldOverload(this, data.getOverload());
     }
 
     @Override
