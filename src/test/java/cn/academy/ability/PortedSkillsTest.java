@@ -517,11 +517,7 @@ class PortedSkillsTest {
             Map.entry("vecmanip.dir_blast", 50f),
             Map.entry("vecmanip.blood_retro", 55f),
             Map.entry("vecmanip.vec_deviation", 80f),
-            // La reflexion ne charge plus la barre de surcout du tout : son prix d'ouverture est
-            // passe a la reserve, avec tout le reste de ses couts. C'est le joueur qui l'a demande,
-            // pour que les deux veilles ne se paient pas avec la meme monnaie. Voir
-            // VecReflectionSkill. (Le 350 de l'original est devenu un cout en reserve.)
-            Map.entry("vecmanip.vec_reflection", 0f),
+            Map.entry("vecmanip.vec_reflection", 350f),
             Map.entry("vecmanip.storm_wing", 10f),
             Map.entry("vecmanip.plasma_cannon", 500f),
             Map.entry("teleporter.penetrate_teleport", 80f),
@@ -549,15 +545,9 @@ class PortedSkillsTest {
         // surcharge, ce que l'original ne permettait a aucune... sauf a une seule.
         // La bombe a electrons ne payait RIEN chez lui : ni CP, ni surcout (son
         // `s_Execute` lachait la bille et posait sa recharge, sans un seul `consume`).
-        //
-        // Et la reflexion de vecteur l'a rejointe, mais pour une autre raison : c'est un
-        // choix de jeu du joueur, qui a demande que les deux veilles ne se paient pas avec la
-        // meme monnaie — la deviation prend tout en surcout, la reflexion tout en reserve.
-        // Elle charge donc la reserve sans jamais toucher la barre. Voir VecReflectionSkill.
         for (Skill skill : allSkills()) {
             if (skill.isPassive()) continue;
             if (fullName(skill).equals("meltdowner.electron_bomb")) continue;
-            if (fullName(skill).equals("vecmanip.vec_reflection")) continue;
             assertTrue(skill.getOverloadCost(charged(skill)) > 0f,
                     fullName(skill) + " ne charge pas la reserve de surcout");
         }

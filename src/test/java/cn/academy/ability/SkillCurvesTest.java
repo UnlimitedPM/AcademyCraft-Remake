@@ -1034,36 +1034,26 @@ class SkillCurvesTest {
         assertEquals(0, deviation.getMaxHoldTicks(atExperience(deviation, 0f)),
                 "aucune duree programmee");
 
-        // Ses courbes, inchangees : entretien 13 a 5 par tick, epingle 80 a 50, et 15 a 12 par
-        // entite arretee — mais tout se paie en SURCOUT depuis que le joueur a demande d'inverser
-        // les deux ressources des deux veilles. Voir VecDeviationSkill.
-        assertBounds("entretien de vec_deviation", 13f, 5f, deviation::tickCost, deviation);
+        // Ses courbes, celles de l'ancien renvoi depuis l'echange demande par le joueur :
+        // entretien 15 a 11 CP par tick, surcout epingle 80 a 50 (inchange), et 300 a 160 de
+        // reserve par point de difficulte d'une entite arretee.
+        assertBounds("entretien de vec_deviation", 15f, 11f, deviation::tickCost, deviation);
         assertBounds("epingle de vec_deviation", 80f, 50f, deviation::pin, deviation);
-        assertBounds("cout par entite de vec_deviation", 15f, 12f, deviation::entityCost, deviation);
+        assertBounds("cout par entite de vec_deviation",
+                300f, 160f, d -> deviation.entityCost(d, 1f), deviation);
 
-        // La reduction : de 40 % a 90 % des degats, payee 15 a 12 de surcout par coup encaisse,
-        // mais jamais plus que ce qu'il reste a remplir sur la barre.
+        // La difficulte multiplie ce qu'une entite coute, comme elle multiplie ce qu'elle
+        // rapporte : une potion (1,4) coute plus cher qu'une fleche (1,0).
+        assertBounds("cout d'une potion",
+                300f * 1.4f, 160f * 1.4f, d -> deviation.entityCost(d, 1.4f), deviation);
+        assertEquals(deviation.entityCost(atExperience(deviation, 0f), 0f), 0f, 0.0001f,
+                "et ce que la config ne connait pas ne coute rien");
+
+        // La reduction : de 40 % a 90 % des degats, payee 20 a 15 CP par point de degats
+        // amorti — la forme de l'ancien renvoi.
         assertBounds("reduction de vec_deviation", 0.4f, 0.9f, deviation::reduction, deviation);
-        assertBounds("cout de la reduction", 15f, 12f, deviation::resistCost, deviation);
-
-        // La barre borne la depense, comme la reserve chez l'original : avec de la place, un coup
-        // encaisse coute le prix du palier ; barre pleine, il ne coute plus rien — c'est le `min`
-        // de l'original, et c'est ce qui fait qu'un dernier coup encaisse ne laisse pas de dette.
-        AbilityData rich = atExperience(deviation, 0f);
-        assertEquals(15f, deviation.resistCharge(rich), 0.0001f,
-                "avec de la place, le coup coute le prix du palier");
-
-        AbilityData full = atExperience(deviation, 0f);
-        full.performForced(0f, full.getMaxOverload() * 2f);
-        assertTrue(full.getOverload() >= full.getMaxOverload() - 2f,
-                "la barre de surcout doit etre pleine : " + full.getOverload()
-                        + " sur " + full.getMaxOverload());
-        // Elle ne l'est jamais au point de ne plus rien prendre : payer fait grandir son plafond
-        // (`addMaxOverload`), donc il reste toujours la valeur de ce qu'on vient de payer. Le coup
-        // suivant n'en paie pas moins, lui : c'est le `min` de l'original, et c'est ce qui fait
-        // qu'un dernier coup encaisse ne laisse pas de dette.
-        assertTrue(deviation.resistCharge(full) < deviation.resistCost(full) / 5f,
-                "une barre pleine ne paie presque plus rien : " + deviation.resistCharge(full));
+        assertBounds("prix d'un coup de 10 points",
+                200f, 150f, d -> deviation.damageCost(d, 10f), deviation);
 
         // Le prix d'ouverture est le surcout epingle, et rien d'autre ; la recharge, elle,
         // n'existe pas : c'est un maintien.
@@ -1094,36 +1084,37 @@ class SkillCurvesTest {
         assertEquals(0, reflection.getCooldownTicks(atExperience(reflection, 0f)),
                 "aucune recharge : un maintien se termine et se reprend");
 
-        // Ses courbes, inchangees : entretien 15 a 11 par tick, ouverture 350 a 250 (verbatim), et
-        // 300 a 160 par entite renvoyee — mais tout se paie en RESERVE depuis que le joueur a
-        // demande d'inverser les deux ressources des deux veilles. Voir VecReflectionSkill.
-        assertBounds("entretien de vec_reflection", 15f, 11f, reflection::tickCost, reflection);
-        assertBounds("ouverture de vec_reflection", 350f, 250f, reflection::pin, reflection);
+        // Ses courbes, celles de l'ancienne deviation depuis l'echange demande par le joueur :
+        // entretien 13 a 5 CP par tick, surcout epingle 350 a 250 (inchange), et 15 a 12 de
+        // reserve par entite renvoyee, quel que soit ce qu'elle vaut.
+        assertBounds("entretien de vec_reflection", 13f, 5f, reflection::tickCost, reflection);
+        assertBounds("epingle de vec_reflection", 350f, 250f, reflection::pin, reflection);
         assertBounds("cout d'une entite renvoyee",
-                300f, 160f, d -> reflection.entityCost(d, 1f), reflection);
+                15f, 12f, reflection::entityCost, reflection);
 
-        // La difficulte multiplie ce qu'une entite coute, comme elle multiplie ce qu'elle
-        // rapporte : une potion (1,4) coute plus cher qu'une fleche (1,0).
-        assertBounds("cout d'une potion",
-                300f * 1.4f, 160f * 1.4f, d -> reflection.entityCost(d, 1.4f), reflection);
-        assertEquals(reflection.entityCost(atExperience(reflection, 0f), 0f), 0f, 0.0001f,
-                "et ce que la config ne connait pas ne coute rien");
-
-        // Les coups : la part renvoyee va de 60 % a 120 %, et son prix suit ce qu'elle rend
-        // — 20 a 15 CP par point de degats.
+        // Les coups : la part renvoyee va de 60 % a 120 %, et son prix ne depend plus que de
+        // ce qu'il reste en reserve — 15 a 12 CP, bornes par la reserve disponible. C'est le
+        // `min` de l'ancienne deviation, et c'est ce qui fait qu'un dernier coup ne laisse pas
+        // de dette.
         assertBounds("part renvoyee", 0.6f, 1.2f, reflection::reflectRatio, reflection);
-        assertBounds("prix d'un coup de 10 points",
-                200f, 150f, d -> reflection.damageCost(d, 10f), reflection);
+        assertBounds("prix d'un coup encaisse", 15f, 12f, reflection::resistCost, reflection);
 
-        // Le prix d'ouverture est passe a la RESERVE (l'epingle de l'original), et plus rien ne
-        // touche la barre de surcout : c'est ce qui separe les deux veilles.
-        assertEquals(reflection.PIN_MIN, reflection.getCpCost(), 0.0001f,
-                "le prix d'ouverture, au depart, se paie en reserve");
+        AbilityData rich = atExperience(reflection, 0f);
+        assertEquals(15f, reflection.resistCharge(rich), 0.0001f,
+                "avec de quoi payer, le coup coute le prix du palier");
+
+        AbilityData poor = atExperience(reflection, 0f);
+        assertTrue(poor.consumeControlPoint(poor.getControlPoint()),
+                "vider la reserve doit marcher");
+        assertEquals(0f, poor.getControlPoint(), 0.0001f, "la reserve doit etre vide");
+        assertEquals(0f, reflection.resistCharge(poor), 0.0001f,
+                "une reserve vide ne paie rien du tout");
+
+        // Le prix d'ouverture est le surcout epingle, et rien d'autre.
+        assertEquals(0f, reflection.getCpCost(), 0.000001f, "aucun cout en reserve a l'ouverture");
         assertEquals(reflection.pin(atExperience(reflection, 0f)),
-                reflection.getCpCost(atExperience(reflection, 0f)), 0.0001f,
-                "et il suit l'experience, comme partout");
-        assertEquals(0f, reflection.getOverloadCost(atExperience(reflection, 0f)), 0.0001f,
-                "plus rien en surcout, ni a l'ouverture ni ensuite");
+                reflection.getOverloadCost(atExperience(reflection, 0f)), 0.0001f,
+                "et le surcout epingle pour seul prix");
         assertTrue(reflection.earnsExpOnEffect(), "tout est verse par la veille et par ses renvois");
         assertEquals(0f, reflection.getExpGain(atExperience(reflection, 0f)), 0.000001f);
     }

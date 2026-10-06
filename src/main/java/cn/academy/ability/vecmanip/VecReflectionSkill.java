@@ -37,20 +37,22 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *     le coup est <b>annule</b> plutot que reduit.</li>
  * </ul>
  *
- * <h2>Tout se paie en reserve</h2>
+ * <h2>Deux couts, et deux paiements differents</h2>
  *
- * <p>C'est un choix de <b>jeu</b>, demande par le joueur, et non un portage : l'original payait son
- * ouverture en <b>surcout</b> (le {@code overloadToKeep} de 350 puis 250, epingle pour que la
- * recuperation ne rembourse pas le maintien) et son entretien, ses entites renvoyees et ses coups
- * renvoyes en <b>reserve</b>. Ici, tout passe par la reserve — ouverture comprise — et rien ne touche
- * plus la barre de surcout.
+ * Ouvrir la veille charge le surcout a {@code overloadToKeep} (350, puis 250) et l'<b>epingle</b> :
+ * l'original la repoussait a cette valeur a chaque tick, sans quoi tenir la veille remboursait
+ * son propre prix. L'entretien, lui, se paie en <b>reserve</b> — 13 a 5 CP par tick — chaque
+ * entite renvoyee se paie <b>sans verification</b> (15 a 12, sans compter ce qu'elle vaut) et un
+ * coup recu se paie de ce que la reserve peut donner, borne par le prix du palier (15 a 12) :
+ * refuser laisserait passer ce qu'on a promis de renvoyer.
  *
- * <p>C'est ce qui separe les deux veilles, et c'est voulu : la reserve est grande (1800 points des
- * le niveau 1, 8000 au dernier) et se recharge en continu, la barre de surcout est petite et
- * verrouille tout quand elle est pleine. Le renvoi se tient donc longtemps — 15 a 11 points par
- * tick, plus ce qu'il renvoie — la ou sa soeur s'arrete des que sa barre est pleine. Ses nombres a
- * lui, eux, ne changent pas : ils partent simplement de la reserve.
-
+ * <h2>Les nombres de la deviation</h2>
+ *
+ * <p>Le joueur a demande que les deux veilles echangent leurs couts en CP : le renvoi se paie
+ * donc exactement ce que la deviation payait autrefois — 13 a 5 par tick, 15 a 12 par entite
+ * renvoyee, 15 a 12 par coup amorti — et la deviation, ce que le renvoi payait. La <b>surcharge</b>
+ * ne bouge pas : le renvoi epingle toujours 350 a 250 a l'ouverture, la deviation 80 a 50.
+ *
  * <h2>Deux coquilles de l'original corrigees</h2>
  *
  * <p>La premiere est un <b>garde-fou mort</b> : {@code handleAttack} posait {@code _isAttacking
@@ -96,21 +98,37 @@ public class VecReflectionSkill extends Skill {
     /** Le point vise par un renvoi : vingt blocs devant les yeux. */
     public static final double AIM_RANGE = 20.0;
 
-    /** L'entretien : 15 a 11 CP par tick, comme l'original. */
-    public static final float TICK_CP_MIN = 15f;
-    public static final float TICK_CP_MAX = 11f;
+    /**
+     * L'entretien : 13 a 5 CP par tick — les nombres de la deviation, echanges par le joueur.
+     *
+     * <p>L'original donnait 15 a 11 au renvoi et 13 a 5 a la deviation. Les deux veilles ont
+     * echange leurs couts : voir le commentaire de la classe.
+     */
+    public static final float TICK_CP_MIN = 13f;
+    public static final float TICK_CP_MAX = 5f;
 
-    /** Ce que coute chaque entite renvoyee : 300 a 160 par point de difficulte, comme l'original. */
-    public static final float ENTITY_CP_MIN = 300f;
-    public static final float ENTITY_CP_MAX = 160f;
+    /**
+     * Ce que coute chaque entite renvoyee : 15 a 12, quel que soit ce qu'elle vaut — les nombres
+     * de la deviation.
+     *
+     * <p>Le renvoi les payait 300 a 160 par point de difficulte. Ce qu'il retourne, il le
+     * retourne : il ne fait plus payer la potion de celui qui tire.
+     */
+    public static final float ENTITY_CP_MIN = 15f;
+    public static final float ENTITY_CP_MAX = 12f;
 
-    /** Le surcout epingle a l'ouverture : 350 a 250, verbatim. */
+    /** Le surcout epingle a l'ouverture : 350 a 250, inchange. */
     public static final float PIN_MIN = 350f;
     public static final float PIN_MAX = 250f;
 
-    /** Ce qu'un coup encaisse coute : 20 a 15 CP par point de degats, comme l'original. */
-    public static final float DAMAGE_CP_MIN = 20f;
-    public static final float DAMAGE_CP_MAX = 15f;
+    /**
+     * Ce qu'un coup encaisse coute au plus : 15 a 12 CP — les nombres de la deviation.
+     *
+     * <p>Le renvoi payait 20 a 15 par point de degats, sans plafond. Il paie maintenant ce qu'un
+     * coup lui demande, borne par ce que la reserve peut donner : c'est la forme de la deviation.
+     */
+    public static final float RESIST_CP_MIN = 15f;
+    public static final float RESIST_CP_MAX = 12f;
 
     /** La part des degats renvoyee a l'auteur du coup : de 60 % a 120 %. */
     public static final float REFLECT_MIN = 0.6f;
@@ -171,14 +189,19 @@ public class VecReflectionSkill extends Skill {
         return lerp(TICK_CP_MIN, TICK_CP_MAX, data.getSkillExp(this));
     }
 
-    /** Ce qu'une entite renvoyee coute, selon ce qu'elle vaut. */
-    public float entityCost(AbilityData data, float difficulty) {
-        return difficulty * lerp(ENTITY_CP_MIN, ENTITY_CP_MAX, data.getSkillExp(this));
+    /** Ce qu'une entite renvoyee coute : 15 a 12, quel que soit ce qu'elle vaut. */
+    public float entityCost(AbilityData data) {
+        return lerp(ENTITY_CP_MIN, ENTITY_CP_MAX, data.getSkillExp(this));
     }
 
-    /** Ce qu'un coup encaisse coute a la reserve, proportionnel a ce qu'il fait mal. */
-    public float damageCost(AbilityData data, float damage) {
-        return lerp(DAMAGE_CP_MIN, DAMAGE_CP_MAX, data.getSkillExp(this)) * damage;
+    /** Ce qu'un coup encaisse coute au plus. */
+    public float resistCost(AbilityData data) {
+        return lerp(RESIST_CP_MIN, RESIST_CP_MAX, data.getSkillExp(this));
+    }
+
+    /** La reserve qu'un coup consomme : ce qu'il reste, borne par le prix du palier. */
+    public float resistCharge(AbilityData data) {
+        return Math.min((float) data.getControlPoint(), resistCost(data));
     }
 
     /** Le surcout epingle a l'ouverture, le temps du maintien. */
@@ -221,29 +244,15 @@ public class VecReflectionSkill extends Skill {
         return 0;
     }
 
-    /** Le prix d'ouverture, en RESERVE : le surcout epingle de l'original, 350 a 250. */
+    /** Le prix d'ouverture est le surcout epingle, et rien d'autre. */
     @Override
     public float getCpCost() {
-        return PIN_MIN;
+        return 0f;
     }
 
-    /**
-     * Et le prix d'ouverture suit l'experience, comme partout.
-     *
-     * <p>C'est le {@code overloadToKeep} de l'original, 350 puis 250, deplace de la barre de
-     * surcout vers la reserve : la veille ne touche plus du tout au surcout, et tout ce qu'elle
-     * coute — ouverture comprise — se lit donc dans la reserve, qui est grande. C'est ce qui la rend
-     * <b>tenable</b> la ou sa soeur s'arrete : voir le commentaire de la classe.
-     */
-    @Override
-    public float getCpCost(AbilityData data) {
-        return pin(data);
-    }
-
-    /** Plus rien en surcout : l'ouverture se paie en reserve. */
     @Override
     public float getOverloadCost(AbilityData data) {
-        return 0f;
+        return pin(data);
     }
 
     /** Aucune recharge : c'est un maintien, il se termine et se reprend. */
@@ -253,15 +262,14 @@ public class VecReflectionSkill extends Skill {
     }
 
     /**
-     * A l'ouverture : rien a epingler.
+     * A l'ouverture : epingler le surcout du moment.
      *
-     * <p>L'original epinglait le surcout consomme ({@code overloadKeep}) pour que la recuperation du
-     * surcout ne rembourse pas le maintien en cours de route. La veille ne consomme plus de surcout
-     * du tout depuis que son prix est passe a la reserve — il n'y a donc rien a epingler, et la
-     * barre de surcout redescend normalement pendant qu'on la tient.
+     * Meme mecanique que la deviation de vecteur, et pour la meme raison : l'original lisait la
+     * surcharge juste apres l'avoir payee, et la repoussait a cette valeur a chaque tick.
      */
     @Override
     public void onStart(Player player, AbilityData data) {
+        data.setHeldOverload(this, data.getOverload());
     }
 
     @Override
@@ -283,7 +291,7 @@ public class VecReflectionSkill extends Skill {
 
             // Chaque entite renvoyee se paie sans verification : la veille est deja ouverte,
             // et refuser ici laisserait passer ce qu'on a promis de retourner.
-            data.performForced(entityCost(data, affect.difficulty()), 0f);
+            data.performForced(entityCost(data), 0f);
 
             if (entity instanceof Fireball fireball) {
                 relaunch(level, fireball, aim);
@@ -423,7 +431,7 @@ public class VecReflectionSkill extends Skill {
 
         reflecting = true;
         try {
-            data.performForced(damageCost(data, amount), 0f);
+            data.performForced(resistCharge(data), 0f);
             data.addSkillExp(this, amount * EXP_PER_DAMAGE);
 
             living.hurt(player.damageSources().indirectMagic(player, player),
