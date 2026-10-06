@@ -64,6 +64,26 @@ public class EntityCoinThrowing extends Entity {
     private double initHt;
     private double maxHt;
 
+    /**
+     * D'ou part la piece : de la main, pas des pieds.
+     *
+     * <p>L'original la posait aux PIEDS ({@code setPosition(posX, posY, posZ)}) et ne la remontait
+     * qu'a l'affichage, un bloc plus haut, devant le visage. Le port la fait partir de la ou elle se
+     * voit — sous les yeux — parce que c'est de la que le vol doit se lire, et parce que c'est la
+     * hauteur ou elle doit revenir : une piece lancee des pieds retombe dans les pieds.
+     */
+    private static final double EYE_OFFSET = -0.4;
+
+    /**
+     * Et de combien elle vole a cote du lanceur : de biais et devant, comme l'affichage de
+     * l'original ({@code translated(-0.63, 1, 0.30)}).
+     *
+     * <p>Sans ce decalage elle monterait et retomberait DANS le corps du joueur, et on ne verrait
+     * d'elle que ce qui depasse de sa tete.
+     */
+    private static final double SIDE_OFFSET = 0.35;
+    private static final double FORWARD_OFFSET = 0.35;
+
     /** Sa vitesse verticale, menee a la main comme le {@code Rigidbody} de l'original. */
     private double fallSpeed;
 
@@ -78,15 +98,16 @@ public class EntityCoinThrowing extends Entity {
                 random.nextDouble() * 2 - 1);
     }
 
-    /** La piece telle que l'objet la jette : dans la main de son lanceur, vers le haut. */
+    /** La piece telle que l'objet la jette : au-dessus de la main, vers le haut. */
     public EntityCoinThrowing(Level level, Player thrower) {
         this(ModEntities.COIN.get(), level);
         this.direct = thrower;
         this.entityData.set(DATA_THROWER, thrower.getId());
-        this.initHt = thrower.getY();
+        this.initHt = thrower.getEyeY() + EYE_OFFSET;
         this.maxHt = this.initHt;
         this.fallSpeed = CoinToss.INIT_VEL;
-        setPos(thrower.getX(), thrower.getY(), thrower.getZ());
+        Vec3 at = followPoint(thrower);
+        setPos(at.x, this.initHt, at.z);
     }
 
     @Override
@@ -121,34 +142,54 @@ public class EntityCoinThrowing extends Entity {
         return axis.lengthSqr() < 1.0E-6 ? new Vec3(0, 1, 0) : axis;
     }
 
+    /**
+     * Le point du monde ou la piece suit son lanceur : de biais et devant lui, a sa hauteur.
+     *
+     * <p>PUR, et recalcule des deux cotes : le client n'a pas besoin qu'on le lui dise, le lanceur et
+     * son regard suffisent.
+     */
+    private static Vec3 followPoint(Player thrower) {
+        Vec3 look = thrower.getViewVector(1f);
+        Vec3 side = look.cross(new Vec3(0, 1, 0));
+        // Un regard droit vers le haut ou le bas ne donne aucun cote : celui de l'original etait
+        // tire au hasard, ici on prend l'est, faute de mieux.
+        side = side.lengthSqr() < 1.0E-6 ? new Vec3(1, 0, 0) : side.normalize();
+        return thrower.position().add(look.scale(FORWARD_OFFSET)).add(side.scale(SIDE_OFFSET));
+    }
+
     @Override
     public void tick() {
         super.tick();
 
         Player thrower = thrower();
-        if (thrower == null || thrower.level() != this.level()) {
-            // Plus personne a suivre : on rend la piece et on s'en va.
-            settle();
+        if (thrower == null) {
+            // Plus personne a suivre. Chez le serveur la piece revient a son proprietaire ; chez le
+            // client on ne fait rien du tout : c'est le serveur qui decide quand elle finit, et une
+            // piece qui se retire toute seule chez le client disparaitrait aussitot nee.
+            if (!this.level().isClientSide) settle();
             return;
         }
 
-        // Elle ne tombe pas : elle est PORTEE par son lanceur, et seule sa hauteur vit de sa vie.
-        // C'est le `KeepPosition` de l'original, et c'est ce qui la fait retomber dans la main meme
-        // quand le joueur court ou vole.
-        double x = thrower.getX();
-        double z = thrower.getZ();
+        if (this.level().isClientSide) {
+            // Le client ne fait que SUIVRE son lanceur : sa hauteur, elle, lui vient du serveur.
+            // S'il la calculait lui-meme il repartirait de zero — sa copie est nee du paquet, elle
+            // ne connait ni la hauteur du lancer ni sa vitesse — et la piece tomberait dans la
+            // seconde qui suit son apparition.
+            Vec3 at = followPoint(thrower);
+            setPos(at.x, getY(), at.z);
+            return;
+        }
 
-        fallSpeed -= CoinToss.GRAVITY;
-        double y = getY() + fallSpeed;
-        maxHt = Math.max(maxHt, y);
+        // Le serveur, seul, mene le vol : elle monte, elle retombe, et c'est LUI qui la ramene.
+        this.fallSpeed -= CoinToss.GRAVITY;
+        double y = getY() + this.fallSpeed;
+        this.maxHt = Math.max(this.maxHt, y);
+        Vec3 at = followPoint(thrower);
+        setPos(at.x, y, at.z);
 
-        // Elle passe a travers tout : l'original ne la deplacait que par sa vitesse, sans jamais
-        // demander au monde si la place etait libre.
-        setPos(x, y, z);
-
-        // Elle a fini de retomber — ou elle traine depuis trop longtemps. Les deux la ramenent au
-        // lanceur : c'est le `finishThrowing` de l'original.
-        if (tickCount > CoinToss.MAX_LIFE || (y < thrower.getY() && fallSpeed < 0)) {
+        // Elle est revenue a sa hauteur de depart — ou elle traine depuis trop longtemps. Les deux
+        // la ramenent au lanceur : c'est le `finishThrowing` de l'original.
+        if (tickCount > CoinToss.MAX_LIFE || (y <= this.initHt && this.fallSpeed < 0)) {
             settle();
         }
     }
