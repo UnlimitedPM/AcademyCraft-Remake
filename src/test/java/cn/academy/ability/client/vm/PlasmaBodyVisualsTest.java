@@ -24,17 +24,29 @@ class PlasmaBodyVisualsTest {
         List<PlasmaBodyVisuals.Ball> balls =
                 PlasmaBodyVisuals.roll(RandomSource.create(20261006L));
 
-        // Quatre grosses, puis quatre ou cinq petites : la borne haute de l'original est exclue.
-        assertTrue(balls.size() >= 8 && balls.size() <= 9,
-                "quatre grosses et quatre ou cinq petites, trouve " + balls.size());
+        // Trois grosses, puis trois petites : c'est la description du joueur, et non plus celle de
+        // l'original, qui en tirait quatre et quatre ou cinq. « On voyait trois grosses boules au
+        // centre [...] et seulement trois petites boules autour », puis « visuellement on devrait
+        // avoir moins de boules ».
+        assertEquals(PlasmaBodyVisuals.BIG_COUNT + PlasmaBodyVisuals.SMALL_COUNT_MIN, balls.size(),
+                "six boules, trois et trois");
 
         for (int i = 0; i < PlasmaBodyVisuals.BIG_COUNT; i++) {
             var ball = balls.get(i);
             assertTrue(ball.size() >= PlasmaBodyVisuals.BIG_SIZE_MIN
                             && ball.size() <= PlasmaBodyVisuals.BIG_SIZE_MAX,
-                    "une grosse mesure de 1 a 1,5 : " + ball.size());
+                    "une grosse mesure de 1,3 a 1,9 : " + ball.size());
             assertTrue(within(ball.cx()) && within(ball.cy()) && within(ball.cz()),
                     "et son centre tient dans le cube du corps");
+            // Et elle ne bouge presque pas : c'est la demande du joueur, « elles ne doivent pas
+            // bouger ». Il leur reste huit fois moins de balancement qu'aux petites de l'original.
+            assertTrue(ball.horizontal().amplitude() <= PlasmaBodyVisuals.AMPLITUDE_MAX
+                            * PlasmaBodyVisuals.BIG_MOTION + 1e-9
+                            && ball.vertical().amplitude() >= PlasmaBodyVisuals.AMPLITUDE_MIN
+                            * PlasmaBodyVisuals.BIG_MOTION - 1e-9,
+                    "et elle reste presque immobile : " + ball.horizontal().amplitude());
+            assertTrue(ball.horizontal().amplitude() < 0.3,
+                    "moins d'un tiers de bloc de derive : " + ball.horizontal().amplitude());
         }
         for (int i = PlasmaBodyVisuals.BIG_COUNT; i < balls.size(); i++) {
             var ball = balls.get(i);
@@ -46,7 +58,7 @@ class PlasmaBodyVisualsTest {
                             && Math.abs(ball.cz()) <= PlasmaBodyVisuals.SMALL_OFFSET,
                     "et son centre tient dans le grand cube");
             // Le balancement des petites vaut deux fois et demie le leur : c'est ce qui les fait
-            // tourner LOIN du corps malgre leur taille minuscule.
+            // tourner LOIN du corps malgre leur taille minuscule. Elles, elles bougent pour de bon.
             assertTrue(ball.horizontal().amplitude() >= PlasmaBodyVisuals.AMPLITUDE_MIN * 2.5
                             && ball.horizontal().amplitude() <= PlasmaBodyVisuals.AMPLITUDE_MAX * 2.5,
                     "elles balancent de 3,5 a 5 blocs : " + ball.horizontal().amplitude());

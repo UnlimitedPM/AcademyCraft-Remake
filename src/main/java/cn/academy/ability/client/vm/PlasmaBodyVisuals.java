@@ -20,15 +20,19 @@ import java.util.List;
  *
  * <h2>Les deux familles, et leurs nombres</h2>
  *
- * <p>L'original en tirait deux sortes, et ce sont elles qui font le volume :
+ * <p>L'original en tirait deux sortes, et ce sont elles qui font le volume — le joueur en a change
+ * les nombres, et la forme se lit mieux ainsi :
  *
  * <ul>
- *   <li><b>quatre grosses</b> — de 1 a 1,5 de rayon, posees dans un cube de plus ou moins 1,5 bloc,
- *       qui balancent de plus ou moins 1,4 a 2 blocs. Ce sont elles qui font le coeur ;</li>
- *   <li><b>quatre ou cinq petites</b> — de 0,1 a 0,3 seulement, mais lancees de plus ou moins 3,5 a
- *       5 blocs : elles tournent <b>loin</b> autour du corps, et ce sont elles qui font la peripherie.
- *       L'original leur donnait une amplitude deux fois et demie plus grande, ce qui compense
- *       exactement leur taille minuscule.</li>
+ *   <li><b>trois grosses</b> — de 1,3 a 1,9 de rayon, posees dans un cube de plus ou moins 1,5 bloc,
+ *       et <b>presque immobiles</b> : elles ne balancent plus que de 0,17 a 0,24 bloc, la ou
+ *       l'original les promenait de 1,4 a 2. Ce sont elles qui font le coeur, et c'est leur immobilité
+ *       qui fait tenir la masse ;</li>
+ *   <li><b>trois petites</b> — de 0,1 a 0,3 seulement, mais lancees de plus ou moins 3,5 a 5 blocs :
+ *       elles tournent <b>loin</b> autour du corps, et ce sont elles qui font la peripherie. Le
+ *       balancement deux fois et demie plus grand de l'original compense exactement leur taille
+ *       minuscule, et c'est ce qui les fait lire comme trois boules qui passent pendant que le centre
+ *       tient.</li>
  * </ul>
  *
  * <p>Le balancement se lit sur deux <b>phases</b> separees, une par axe : {@code x} et {@code z}
@@ -58,15 +62,26 @@ import java.util.List;
  */
 public final class PlasmaBodyVisuals {
 
-    /** Les deux familles, telles que l'original les tirait. */
-    public static final int BIG_COUNT = 4;
-    public static final double BIG_SIZE_MIN = 1.0;
-    public static final double BIG_SIZE_MAX = 1.5;
+    /**
+     * Les deux familles, telles que l'original les tirait — et ce que le joueur en a change.
+     *
+     * <p>L'original tirait <b>quatre</b> grosses et <b>quatre ou cinq</b> petites. Le joueur voit le
+     * vrai mod autrement, et il l'a dit deux fois : « on voyait trois grosses boules au centre qui
+     * ne bougent pas vraiment et seulement trois petites boules autour qui se deplacent », puis
+     * « visuellement on devrait avoir moins de boules ». Le port suit donc sa description : trois
+     * et trois, six boules au lieu de huit ou neuf.
+     *
+     * <p>Et les grosses sont plus grosses qu'a l'original (1,3 a 1,9 au lieu de 1 a 1,5) : elles
+     * paraissaient trop petites une fois leur balancement calme.
+     */
+    public static final int BIG_COUNT = 3;
+    public static final double BIG_SIZE_MIN = 1.3;
+    public static final double BIG_SIZE_MAX = 1.9;
     public static final double BIG_OFFSET = 1.5;
 
-    /** {@code rangei(4, 6)} : quatre ou cinq, la borne haute exclue comme toujours. */
-    public static final int SMALL_COUNT_MIN = 4;
-    public static final int SMALL_COUNT_MAX = 5;
+    /** {@code rangei(4, 6)} chez l'original : quatre ou cinq. Ici trois, toujours. */
+    public static final int SMALL_COUNT_MIN = 3;
+    public static final int SMALL_COUNT_MAX = 3;
     public static final double SMALL_SIZE_MIN = 0.1;
     public static final double SMALL_SIZE_MAX = 0.3;
     public static final double SMALL_OFFSET = 3.0;
@@ -77,6 +92,17 @@ public final class PlasmaBodyVisuals {
     public static final double AMPLITUDE_MAX = 2.0;
     public static final double SPEED_MIN = 0.5;
     public static final double SPEED_MAX = 0.7;
+
+    /**
+     * Ce qui reste du balancement des <b>grosses</b> boules : presque rien.
+     *
+     * <p>Elles balançaient de plus ou moins 1,4 a 2 blocs chez l'original, et le joueur n'en
+     * voulait pas : « les grosses boules qui sont censees rester au centre bougent trop [...]
+     * elles ne doivent pas bouger ». Il leur reste un souffle — 0,17 a 0,24 bloc, soit huit fois
+     * moins —, assez pour que la masse respire, trop peu pour qu'on la voie se deplacer. C'est ce
+     * qui les separe enfin des petites, qui tournent toujours a 3,5 ou 5 blocs.
+     */
+    public static final double BIG_MOTION = 0.12;
 
     /** La montee de l'opacite, en trois dixiemes par seconde, et sa chute, en une seconde. */
     public static final double RISE_PER_SECOND = 0.3;
@@ -95,8 +121,13 @@ public final class PlasmaBodyVisuals {
      * blocs. C'est ce qui fait qu'elles se <b>fondent</b> en une masse au lieu de se compter une a
      * une ; le port avait un rayon de moitie, laissait des trous entre elles, et le joueur y a lu
      * « quinze petites boules qui se deplacent » au lieu d'un corps.
+     *
+     * <p>Le seuil a encore ete <b>baisse</b> (0,15 puis 0,12) : le joueur a trouve « le nuage rose
+     * [...] un peu plus gros » que ce que le port dessinait, et ce seuil est le seul levier qui
+     * elargit les halos de toutes les boules d'un coup — racine de 0,15 sur 0,12 les porte un
+     * huitieme plus loin.
      */
-    public static final double VISIBILITY = 0.15;
+    public static final double VISIBILITY = 0.12;
 
     /**
      * Et le seuil ou elle <b>bleuit</b>.
@@ -246,8 +277,8 @@ public final class PlasmaBodyVisuals {
                     range(random, -BIG_OFFSET, BIG_OFFSET),
                     range(random, -BIG_OFFSET, BIG_OFFSET),
                     range(random, -BIG_OFFSET, BIG_OFFSET),
-                    trig(random, 1.0),
-                    trig(random, 1.0)));
+                    trig(random, BIG_MOTION),
+                    trig(random, BIG_MOTION)));
         }
 
         int small = SMALL_COUNT_MIN + random.nextInt(SMALL_COUNT_MAX - SMALL_COUNT_MIN + 1);
