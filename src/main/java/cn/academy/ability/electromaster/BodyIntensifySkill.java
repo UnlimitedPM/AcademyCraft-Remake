@@ -108,6 +108,17 @@ public class BodyIntensifySkill extends Skill {
         return cpPerTick(data.getSkillExp(this));
     }
 
+    /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>Au-dela du temps de charge, l'original ne facturait plus rien : la charge tient encore,
+     * mais elle est gratuite, et le client le sait comme le serveur.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return ticks <= MAX_TIME ? chargeCpCost(data) : 0f;
+    }
+
     /** Surcout d'ouverture : de 200 a 120, celui de l'original. */
     @Override
     public float getOverloadCost(AbilityData data) {
@@ -171,7 +182,7 @@ public class BodyIntensifySkill extends Skill {
     @Override
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
         if (chargeTicks > MAX_TIME) return true;
-        return data.consumeControlPoint(chargeCpCost(data));
+        return data.consumeControlPoint(getTickUpkeep(data, chargeTicks));
     }
 
     // --- LE RENFORT ---

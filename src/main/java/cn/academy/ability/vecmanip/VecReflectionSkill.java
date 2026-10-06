@@ -189,6 +189,12 @@ public class VecReflectionSkill extends Skill {
         return lerp(TICK_CP_MIN, TICK_CP_MAX, data.getSkillExp(this));
     }
 
+    /** Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}. */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return tickCost(data);
+    }
+
     /** Ce qu'une entite renvoyee coute : 15 a 12, quel que soit ce qu'elle vaut. */
     public float entityCost(AbilityData data) {
         return lerp(ENTITY_CP_MIN, ENTITY_CP_MAX, data.getSkillExp(this));
@@ -275,7 +281,7 @@ public class VecReflectionSkill extends Skill {
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         // L'entretien d'abord : une reserve qui ne suit plus termine la veille.
-        if (!data.consumeControlPoint(tickCost(data))) return false;
+        if (!data.consumeControlPoint(getTickUpkeep(data, heldTicks))) return false;
         if (!(player.level() instanceof ServerLevel level)) return true;
 
         Vec3 center = player.position();

@@ -142,9 +142,10 @@ public class AbilityClientEvents {
         // La reserve et le surcout remontent d'un tick, chez le client aussi : la
         // synchronisation du serveur ne passe que tous les dix ticks, et sans ce rejeu les
         // nombres du F4 et les deux barres du temoin de CP avanceraient par bonds. Un
-        // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur.
-        // Voir ClientAbilityData.tick.
-        ClientAbilityData.tick(ClientCharge.anyOpen());
+        // maintien en cours fige la part de surcout qu'il epingle, comme chez le serveur —
+        // et c'est aussi lui qui fait descendre la reserve, par paquets : voir
+        // ClientAbilityData.tick.
+        ClientAbilityData.tick(ClientCharge.anyOpen(), upkeepPerTick());
         // Et les notifications du mod vieillissent d'un tick, comme tout le reste du HUD.
         cn.academy.client.hud.NotificationHud.tick();
         // Le renfort du corps a besoin du meme crochet : son onde s'egrene sur huit ticks, et ses
@@ -282,6 +283,31 @@ public class AbilityClientEvents {
             if (skill != null) return skill;
         }
         return null;
+    }
+
+    /**
+     * Ce que tous les maintiens ouverts paieront ce tick, somme.
+     *
+     * <p>C'est ce qui fait descendre les points de controle du menu F4 d'un tick a l'autre au lieu
+     * de les faire sauter de synchronisation en synchronisation : le serveur n'envoie son etat que
+     * tous les quatre ticks pendant un maintien, et le joueur voyait donc sa reserve tomber par
+     * paquets. Le montant vient de la <b>competence elle-meme</b> ({@code Skill#getTickUpkeep}) et
+     * non d'une table recopiee ici : c'est le chiffre que le serveur paie, donc les deux cotes ne
+     * peuvent pas diverger.
+     *
+     * <p>L'age lu est celui de la charge du client, comme partout dans ce fichier : une competence
+     * dont l'entretien s'arrete en route (les billes de la bombe a fragmentation, les quarante
+     * premiers ticks du claquement d'orage) s'en sert pour cesser de le compter.
+     */
+    private static float upkeepPerTick() {
+        float total = 0f;
+        for (String name : ClientCharge.openSkills()) {
+            Skill skill = skillByName(name);
+            if (skill != null) {
+                total += skill.getTickUpkeep(ClientAbilityData.get(), ClientCharge.getTicks(name));
+            }
+        }
+        return total;
     }
 
     /**

@@ -61,6 +61,12 @@ public class LightShieldSkill extends Skill {
         return lerp(9f, 4f, data.getSkillExp(this));
     }
 
+    /** Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}. */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return holdCpCost(data);
+    }
+
     /** Degats absorbes par coup : de 15 a 50, comme l'original. */
     public float absorbDamage(AbilityData data) {
         return lerp(15f, 50f, data.getSkillExp(this));
@@ -126,7 +132,7 @@ public class LightShieldSkill extends Skill {
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         // L'entretien se paie par tick : quand la reserve est vide, le bouclier tombe.
-        if (!data.consumeControlPoint(holdCpCost(data))) return false;
+        if (!data.consumeControlPoint(getTickUpkeep(data, heldTicks))) return false;
         // 1e-6 par tick, comme l'original : un bouclier se gagne surtout en absorbant.
         data.addSkillExp(this, 1e-6f);
         damageAround(player, data);

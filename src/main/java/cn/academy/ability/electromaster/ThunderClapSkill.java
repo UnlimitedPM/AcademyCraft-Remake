@@ -80,6 +80,16 @@ public class ThunderClapSkill extends Skill {
     }
 
     /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>Au-dela du minimum, la charge est du bonus : elle ne se paie plus, des deux cotes.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return ticks <= MIN_TICKS ? chargeCpCost(data) : 0f;
+    }
+
+    /**
      * Recharge : le temps tenu fois 10 a 6, selon l'experience.
      *
      * Une charge au minimum coute donc 400 ticks (20 s) au depart, 240 (12 s) au
@@ -149,7 +159,7 @@ public class ThunderClapSkill extends Skill {
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
         // Au-dela du minimum, la charge est du bonus : elle ne se paie plus.
         if (chargeTicks > MIN_TICKS) return true;
-        return data.consumeControlPoint(chargeCpCost(data));
+        return data.consumeControlPoint(getTickUpkeep(data, chargeTicks));
     }
 
     @Override

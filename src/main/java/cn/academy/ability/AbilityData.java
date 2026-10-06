@@ -741,6 +741,29 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
+     * Rejoue chez le client un paiement que le serveur vient de faire, pour l'affichage.
+     *
+     * <p>C'est le pendant de {@link #tickRegen} du cote de la depense : le serveur n'envoie son
+     * etat que tous les quatre ticks pendant un maintien, donc la reserve du client descendait par
+     * paquets — le joueur voyait ses points partir une dizaine a la fois, alors que la reprise, elle,
+     * avancait d'un tick a l'autre. Voir {@code Skill#getTickUpkeep} pour le montant, et
+     * {@code ClientAbilityData} pour qui l'appelle.
+     *
+     * <p>Le delai de reprise est arme comme par {@link #perform}, sans quoi le client se remettrait a
+     * remonter pendant que le serveur, lui, ne remonte pas : les deux nombres divergeraient d'un
+     * demi-point par tick, et la synchronisation suivante les ferait se recroiser.
+     *
+     * <p>Rien n'est marque « a envoyer » et rien n'est sauvegarde : ce n'est pas une decision de jeu,
+     * seulement un affichage qui suit le serveur d'un tick a l'autre. Le serveur reste seul juge.
+     */
+    public void replayUpkeep(float cp) {
+        if (cp <= 0f) return;
+        controlPoint = Math.max(0f, controlPoint - cp);
+        growMaxControlPoint(cp);
+        untilRecover = cn.academy.Config.controlPointRecoverCooldown;
+    }
+
+    /**
      * Agrandit la reserve quand une competence est payee.
      *
      * <p>Portage de {@code CPData.addMaxCP}, appele chez lui des que le paiement a reussi —

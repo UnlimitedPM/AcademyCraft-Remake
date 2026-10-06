@@ -182,6 +182,17 @@ public class StormWingSkill extends Skill {
         return lerp(CP_MIN_EXP, CP_MAX_EXP, data.getSkillExp(this));
     }
 
+    /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>La charge elle-meme ne coute rien — l'original ne facturait que les ailes ouvertes —, donc
+     * le client ne compte qu'a partir du tick ou elles s'ouvrent, celui que le serveur connait.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return opened(data, ticks) ? consumption(data) : 0f;
+    }
+
     /** Ce qu'il charge a la surcharge. */
     public float overload(AbilityData data) {
         return lerp(OVERLOAD_MIN_EXP, OVERLOAD_MAX_EXP, data.getSkillExp(this));
@@ -399,7 +410,7 @@ public class StormWingSkill extends Skill {
         data.addSkillExp(this, EXP_PER_TICK);
         // L'original versait l'experience avant de payer, et terminait le vol quand la
         // reserve ou la surcharge manquait : les deux ressources ou rien, comme toujours.
-        return data.perform(consumption(data), overload(data));
+        return data.perform(getTickUpkeep(data, heldTicks), overload(data));
     }
 
     /** A la fin du maintien : rendre le vol tel qu'il etait. */

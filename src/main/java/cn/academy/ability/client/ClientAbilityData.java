@@ -17,13 +17,15 @@ public class ClientAbilityData {
     }
 
     /**
-     * Rejoue la reprise de la reserve et du surcout, un tick a la fois, entre deux
-     * synchronisations.
+     * Rejoue entre deux synchronisations ce que le serveur, lui, fait a chaque tick : la
+     * reprise de la reserve et du surcout, et — depuis que le joueur l'a demande — la
+     * <b>depense</b> de l'entretien d'un maintien.
      *
-     * <p>Le serveur n'envoie son etat que tous les dix ticks (la cadence de l'original),
-     * et l'original ne le montrait pas : sa barre etait large et ses nombres ne vivaient
-     * que dans un ecran de debogage. Le port, lui, affiche ces nombres et sa reserve est
-     * plus petite (1800 au niveau 1), donc la valeur sautait de dix ticks en dix ticks —
+     * <p>Le serveur n'envoie son etat que tous les dix ticks en regime normal (la cadence de
+     * l'original), et tous les quatre ticks pendant un maintien, parce qu'un paiement le marque
+     * comme « a envoyer tout de suite ». L'original ne le montrait pas : sa barre etait large et
+     * ses nombres ne vivaient que dans un ecran de debogage. Le port, lui, affiche ces nombres et
+     * sa reserve est plus petite (1800 au niveau 1), donc la valeur sautait de paquet en paquet —
      * 1410, puis 1420 — et l'oeil n'y voyait qu'une saccade.
      *
      * <p>Ce n'est <b>pas</b> une decision de jeu : le serveur reste seul juge, chaque
@@ -31,8 +33,23 @@ public class ClientAbilityData {
      * deux envois. Meme formule, meme plafond, et le compteur d'attente qui suit un
      * paiement voyage dans la synchronisation — la reprise ne peut donc pas commencer plus
      * tot ici que chez lui.
+     *
+     * @param holding un maintien ou une charge est ouvert (le surcout est alors epingle par le
+     *                serveur, et c'est le client qui rejoue l'entretien)
+     * @param upkeep  ce que cet entretien coute a ce tick : voir {@code Skill#getTickUpkeep}
      */
-    public static void tick(boolean holding) {
+    public static void tick(boolean holding, float upkeep) {
+        // L'entretien d'un maintien se paie par tick, et c'est ici qu'il se rejoue : sans cela la
+        // reserve du client ne descendait qu'a chaque synchronisation — tous les quatre ticks — et
+        // le joueur voyait ses points partir une cinquantaine a la fois. « Je vois mes cp diminuer
+        // de 20 en 20 par secondes, alors que normalement ca devrait faire un affichage plus joli
+        // ou on voit les nombres defiler, comme avec la recharge des cp. » Le montant vient de la
+        // competence elle-meme ({@code Skill#getTickUpkeep}) : c'est celui que le serveur paie, donc
+        // les deux nombres ne divergent pas — et la synchronisation suivante reecrit la valeur vraie
+        // de toute facon.
+        if (holding && upkeep > 0f) {
+            DATA.replayUpkeep(upkeep);
+        }
         if (DATA.getControlPoint() < DATA.getMaxControlPoint()) {
             DATA.tickRegen();
         }

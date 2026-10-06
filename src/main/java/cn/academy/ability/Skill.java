@@ -540,6 +540,29 @@ public abstract class Skill {
     }
 
     /**
+     * Ce que ce tick de maintien — ou de charge — paiera en reserve.
+     *
+     * <p>C'est le chiffre que le serveur paie, et c'est <b>le meme</b> que le client rejoue pour
+     * l'afficher : les points de controle du menu F4 descendent alors d'un tick a l'autre, au lieu
+     * de sauter de synchronisation en synchronisation — le serveur n'envoie son etat que tous les
+     * quatre ticks pendant un maintien, donc le joueur voyait sa reserve tomber par paquets. Ses
+     * mots : « je vois mes cp diminuer de 20 en 20 par secondes, alors que normalement ca devrait
+     * faire un affichage plus joli ou on voit les nombres defiler, comme avec la recharge des cp ».
+     * Voir {@code ClientAbilityData}.
+     *
+     * <p>Une competence qui s'entretient par tick le dit donc <b>ici</b>, et s'en sert pour payer :
+     * une seule expression les tient ensemble, et les deux cotes ne peuvent pas diverger. Le defaut
+     * est zero — une competence qui ne paie qu'a l'ouverture ou a l'effet n'a rien a dire.
+     *
+     * <p>{@code ticks} est l'age du maintien (ou de la charge), comme dans {@link #onHoldTick} :
+     * c'est ce qui permet a une competence dont l'entretien s'arrete en route — les billes de la
+     * bombe a fragmentation, les quarante premiers ticks du claquement d'orage — de le dire.
+     */
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return 0f;
+    }
+
+    /**
      * Le joueur a relache la touche : l'effet doit-il continuer tout seul ?
      *
      * <p>C'est le quatrieme cas de l'original, et il n'y en a qu'un : le {@code jet_engine}

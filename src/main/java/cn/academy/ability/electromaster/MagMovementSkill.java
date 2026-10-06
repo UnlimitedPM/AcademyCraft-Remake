@@ -75,6 +75,19 @@ public class MagMovementSkill extends Skill {
         return lerp(15f, 8f, data.getSkillExp(this));
     }
 
+    /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>Il le rejoue <b>meme quand rien n'est accroche</b>, ou le serveur ne paie rien : le client
+     * ne voit pas l'ancre (elle vit dans le maintien du serveur, qui n'est pas sauvegarde). L'ecart
+     * est d'un demi-point au pire — cette competence se paie 0,3 a 0,5 par tick —, et la
+     * synchronisation suivante le rattrape.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return cpPerTick(data);
+    }
+
     /** Surcout d'ouverture : de 60 a 30, comme l'original. */
     @Override
     public float getOverloadCost(AbilityData data) {
@@ -173,7 +186,7 @@ public class MagMovementSkill extends Skill {
 
         // Les vraies donnees de l'original : tant qu'on est accroche, le maintien se paie a
         // chaque tick, meme quand le regard a quitte le bloc.
-        return data.consumeControlPoint(cpPerTick(data));
+        return data.consumeControlPoint(getTickUpkeep(data, heldTicks));
     }
 
     /**

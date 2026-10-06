@@ -95,9 +95,20 @@ public abstract class MineRaySkill extends Skill {
         cn.academy.sound.AcademySounds.playFor(player, startupSound(), 0.4f);
     }
 
+    /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>Il ne depend pas de ce que le rayon vise — le cout est le meme qu'on creuse ou qu'on
+     * regarde un mur — donc le client le connait comme le serveur.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return cpPerTick(data);
+    }
+
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
-        if (!data.consumeControlPoint(cpPerTick(data))) return false;
+        if (!data.consumeControlPoint(getTickUpkeep(data, heldTicks))) return false;
 
         BlockPos target = aimedBlock(player, range());
         if (target == null) {

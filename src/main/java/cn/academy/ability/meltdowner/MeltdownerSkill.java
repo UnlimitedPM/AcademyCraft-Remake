@@ -67,6 +67,12 @@ public class MeltdownerSkill extends Skill {
         return lerp(10f, 15f, data.getSkillExp(this));
     }
 
+    /** Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}. */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return ticks <= TICKS_TOLE ? chargeCpCost(data) : 0f;
+    }
+
     @Override
     public void onStart(Player player, AbilityData data) {
         // L'original epingle le surcout de l'ouverture pendant toute la charge (le
@@ -78,7 +84,7 @@ public class MeltdownerSkill extends Skill {
     @Override
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
         if (chargeTicks > TICKS_TOLE) return false;
-        return data.consumeControlPoint(chargeCpCost(data));
+        return data.consumeControlPoint(getTickUpkeep(data, chargeTicks));
     }
 
     /**

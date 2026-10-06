@@ -554,6 +554,59 @@ class PortedSkillsTest {
     }
 
     /**
+     * L'entretien par tick de chaque maintien, a l'experience nulle et a son premier tick.
+     *
+     * <p>C'est le chiffre que le CLIENT rejoue pour que les nombres du F4 descendent d'un tick a
+     * l'autre : le serveur n'envoie son etat que tous les quatre ticks pendant un maintien, donc
+     * sans lui la reserve sautait de cinquante points a la fois — ce que le joueur a vu et demande
+     * de corriger (« je vois mes cp diminuer de 20 en 20 par secondes, alors que ca devrait faire un
+     * affichage plus joli ou on voit les nombres defiler »). Voir {@code Skill.getTickUpkeep}.
+     *
+     * <p>Une competence qui paie par tick sans le dire ne fait rien tomber : elle rend seulement
+     * l'affichage sautillant. D'ou cette table, qui doit suivre toute competence dont l'entretien
+     * apparait ou change.
+     */
+    private static final Map<String, Float> EXPECTED_TICK_UPKEEP = Map.ofEntries(
+            Map.entry("electromaster.charging", 3f),
+            Map.entry("electromaster.mag_movement", 15f),
+            Map.entry("electromaster.body_intensify", 20f),
+            Map.entry("electromaster.thunder_clap", 18f),
+            Map.entry("meltdowner.meltdowner", 10f),
+            Map.entry("meltdowner.light_shield", 9f),
+            Map.entry("meltdowner.electron_missile", 12f),
+            Map.entry("meltdowner.scatter_bomb", 3f),
+            Map.entry("meltdowner.mine_ray_basic", 12f),
+            Map.entry("meltdowner.mine_ray_expert", 25f),
+            Map.entry("meltdowner.mine_ray_luck", 50f),
+            Map.entry("vecmanip.vec_deviation", 15f),
+            Map.entry("vecmanip.vec_reflection", 13f),
+            Map.entry("vecmanip.plasma_cannon", 18f));
+
+    @Test
+    void lesEntretiensParTickSontCeuxQueLeClientRejoue() {
+        for (Skill skill : allSkills()) {
+            Float expected = EXPECTED_TICK_UPKEEP.get(fullName(skill));
+            float actual = skill.getTickUpkeep(charged(skill), 0);
+            if (expected == null) {
+                assertEquals(0f, actual, 0.0001f, fullName(skill)
+                        + " paie un entretien par tick que le client ne sait pas rejouer");
+            } else {
+                assertEquals(expected.floatValue(), actual, 0.0001f,
+                        "entretien par tick de " + fullName(skill));
+            }
+        }
+
+        // Les ailes de tempete ne paient qu'une fois OUVERTES : leur charge est gratuite, et le
+        // client se met a compter au tick ou le serveur s'y met — ni avant, ni apres.
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        AbilityData wingData = charged(wing);
+        assertEquals(0f, wing.getTickUpkeep(wingData, 0), 0.0001f,
+                "une charge d'ailes ne se paie pas");
+        assertTrue(wing.getTickUpkeep(wingData, 1000) > 0f,
+                "mais les ailes ouvertes, si");
+    }
+
+    /**
      * Un etat d'usage : une competence qui se charge est chargee au maximum.
      *
      * Sans cela, les gains d'experience d'une competence chargee seraient mesures au

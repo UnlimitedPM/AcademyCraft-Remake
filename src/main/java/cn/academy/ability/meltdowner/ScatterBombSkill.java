@@ -128,6 +128,17 @@ public class ScatterBombSkill extends Skill {
     }
 
     /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>L'entretien s'arrete une fois les billes posees ({@link #LAST_BALL_TICK}) : au-dela, il ne
+     * reste que le choix du moment, et rien ne se paie — le client le sait comme le serveur.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return ticks <= LAST_BALL_TICK ? cpPerTick(data) : 0f;
+    }
+
+    /**
      * La bombe se tient : elle se paie a l'ouverture, s'entretient tant qu'elle pose, et
      * n'envoie ses billes qu'a la fin.
      */
@@ -208,7 +219,7 @@ public class ScatterBombSkill extends Skill {
             player.level().addFreshEntity(
                     cn.academy.entity.EntityMdBall.silent(player.level(), player, BACKFIRE_TICK));
         }
-        return data.consumeControlPoint(cpPerTick(data));
+        return data.consumeControlPoint(getTickUpkeep(data, heldTicks));
     }
 
     /**

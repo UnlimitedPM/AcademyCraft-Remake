@@ -66,6 +66,12 @@ public class ChargingSkill extends Skill {
         return lerp(3f, 7f, data.getSkillExp(this));
     }
 
+    /** Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}. */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return cpPerTick(data);
+    }
+
     /** Surcout d'ouverture : de 65 a 48, comme l'original. */
     @Override
     public float getOverloadCost(AbilityData data) {
@@ -102,7 +108,7 @@ public class ChargingSkill extends Skill {
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         // L'entretien se paie par tick ; quand la reserve est vide, le branchement
         // s'arrete, comme le terminate() de l'original.
-        if (!data.consumeControlPoint(cpPerTick(data))) return false;
+        if (!data.consumeControlPoint(getTickUpkeep(data, heldTicks))) return false;
 
         boolean fed = feed(player, data);
         // 0,0001 par tick utile, 0,00003 sinon : l'original distinguait le branchement

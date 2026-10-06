@@ -215,6 +215,18 @@ public class PlasmaCannonSkill extends Skill {
         return lerp(TICK_CP_MIN_EXP, TICK_CP_MAX_EXP, data.getSkillExp(this));
     }
 
+    /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>Il n'est payé que pendant la <b>charge</b> : une fois le tir parti, la boule vole et ne
+     * coute plus rien. Et le client ne s'y trompe pas sans rien savoir : sa charge se referme au
+     * relachement, donc il ne rejoue plus rien des que l'effet est en vol.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return chargeCost(data);
+    }
+
     /** Ce que la boule charge a la surcharge, et qui reste epingle jusqu'a la fin. */
     public float pin(AbilityData data) {
         return lerp(PIN_MIN_EXP, PIN_MAX_EXP, data.getSkillExp(this));
@@ -318,7 +330,7 @@ public class PlasmaCannonSkill extends Skill {
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         if (data.getHoldMark(this) < 0) {
             // La charge : elle se paie par tick, et une reserve qui manque l'abandonne.
-            return data.consumeControlPoint(chargeCost(data));
+            return data.consumeControlPoint(getTickUpkeep(data, heldTicks));
         }
 
         if (!(player.level() instanceof ServerLevel level)) return true;

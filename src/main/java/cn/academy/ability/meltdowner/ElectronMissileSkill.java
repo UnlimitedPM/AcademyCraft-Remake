@@ -99,6 +99,12 @@ public class ElectronMissileSkill extends Skill {
         return lerp(12f, 5f, data.getSkillExp(this));
     }
 
+    /** Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}. */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return upkeep(data);
+    }
+
     /** Et le tir lui-meme : de 60 a 25 CP, plus 9 a 4 de surcout. */
     public float shotCost(AbilityData data) {
         return lerp(60f, 25f, data.getSkillExp(this));
@@ -154,7 +160,7 @@ public class ElectronMissileSkill extends Skill {
      */
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int ticks) {
-        if (!data.consumeControlPoint(upkeep(data))) return false;
+        if (!data.consumeControlPoint(getTickUpkeep(data, ticks))) return false;
 
         List<EntityMdBall> balls = EntityMdBall.near(player);
         if (ticks % SPAWN_PERIOD == 0 && balls.size() < MAX_BALLS) {
