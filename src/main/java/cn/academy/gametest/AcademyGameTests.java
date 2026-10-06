@@ -3599,8 +3599,15 @@ public final class AcademyGameTests {
      * A la maitrise, l'onde ramasse : le bloc casse laisse son propre objet.
      *
      * <p>Deuxieme phase : un regard qui ne trouve rien. Le centre se pose alors au bout du
-     * regard, a quatre blocs, et un bloc pose <b>a cote</b> de ce point — donc hors du rayon
-     * lui-meme — doit y passer. C'est le seul moyen de voir ce repli depuis le jeu.
+     * regard, et un bloc pose <b>exactement la</b> passe — c'est le centre, et le centre y
+     * passe toujours, quelle que soit la probabilite (voir {@code breakAround}). C'est le
+     * seul moyen de voir ce repli depuis le jeu : le rayon, lui, ne trouve rien.
+     *
+     * <p>Le compte est celui des <b>yeux</b>, pas des pieds : le joueur regarde droit
+     * au-dessus de lui, donc le centre monte a {@code base + 7} et non a {@code base + 5}.
+     * Les deux separees de deux blocs, un bloc pose a la bonne hauteur et pas a l'autre est
+     * ce qui fige la correction — le port prenait le point sur les pieds, et l'onde
+     * s'ouvrait un bloc et demi trop bas, ce que le joueur a vu en vol.
      */
     @GameTest(template = "empty")
     public static void lOndeDirigeeRamasseALaMaitrise(GameTestHelper helper) {
@@ -3645,19 +3652,32 @@ public final class AcademyGameTests {
             helper.setBlock(new BlockPos(2, base + dy, 2),
                     net.minecraft.world.level.block.Blocks.AIR);
         }
-        // Le centre tombe sur le coin du bloc (3, base + 5, 3) : un bloc pose la y passe,
-        // alors que le rayon, lui, monte le long de la colonne voisine.
-        helper.setBlock(new BlockPos(3, base + 5, 3),
+        // Le centre tombe sur le coin du bloc (3, base + 7, 3) : le regard part des YEUX,
+        // a 1,62 bloc au-dessus des pieds, et le repli monte de quatre blocs de plus. Un
+        // bloc pose la y passe, alors que le rayon, lui, monte le long de la colonne voisine.
+        helper.setBlock(new BlockPos(3, base + 7, 3),
                 net.minecraft.world.level.block.Blocks.STONE);
 
         var empty = new cn.academy.ability.AbilityData();
         empty.setCategoryLevel(blast.getCategory(), 1);
         empty.learnSkill(blast);
         player.moveTo(player.getX(), player.getY(), player.getZ(), 0f, -90f);
+
+        // Et le repli lui-meme, chiffre : le bout du regard se prend sur les yeux. Le port
+        // partait des pieds — la branche morte de l'original — et l'onde s'ouvrait a
+        // hauteur de sol.
+        var eyes = player.getEyePosition(1f);
+        var fallback = cn.academy.ability.TargetingUtil.fallbackPoint(player,
+                cn.academy.ability.vecmanip.DirectedBlastwaveSkill.REACH);
+        assertClose(helper, eyes.y + cn.academy.ability.vecmanip.DirectedBlastwaveSkill.REACH,
+                fallback.y, "le repli monte de quatre blocs au-dessus des yeux");
+        assertClose(helper, eyes.x, fallback.x, "et il reste dans l'axe du regard, en x");
+        assertClose(helper, eyes.z, fallback.z, "comme en z");
+
         blast.onActivateCharged(player, empty, 10);
 
-        assertTrue(helper, helper.getBlockState(new BlockPos(3, base + 5, 3)).isAir(),
-                "sans cible, le centre se pose au bout du regard — et le bloc pose a cote y passe");
+        assertTrue(helper, helper.getBlockState(new BlockPos(3, base + 7, 3)).isAir(),
+                "sans cible, le centre se pose au bout du regard — et le bloc pose la y passe");
         assertClose(helper, 0.0012d, empty.getSkillExp(blast),
                 "une onde qui ne trouve personne ne rapporte que 0,0012");
         helper.succeed();

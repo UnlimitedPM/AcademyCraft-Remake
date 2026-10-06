@@ -30,7 +30,7 @@ import net.minecraft.util.RandomSource;
  * <ul>
  * <li>un corps vivant : le centre est a sa hauteur d'yeux ;</li>
  * <li>un bloc : le centre est <b>aux coordonnees du bloc</b>, pas sur sa face ;</li>
- * <li>rien : le centre est a quatre blocs devant le joueur, au bout du regard.</li>
+ * <li>rien : le centre est au bout du regard, quatre blocs devant ses yeux.</li>
  * </ul>
  *
  * <p>Le rayon s'arrete au plus proche des deux : viser une bete derriere une vitre explose
@@ -242,9 +242,12 @@ public class DirectedBlastwaveSkill extends Skill {
      *
      * <p>Un corps vivant l'emporte sur un bloc s'il est plus proche, et un bloc l'emporte
      * sinon ; sans rien, le centre est au bout du regard. Le point n'est pas le meme selon
-     * le cas, et c'est tout l'interet du rayon : une bete touchée place le centre a ses
+     * le cas, et c'est tout l'interet du rayon : une bete touchee place le centre a ses
      * <b>yeux</b>, un bloc touche le place a ses <b>coordonnees</b> — donc au coin du bloc,
      * pas sur la face frappee.
+     *
+     * <p>Le repli des trois cas est celui du <b>bout du rayon</b>, pas celui des pieds :
+     * l'original en avait deux et un seul vivait. Voir {@link TargetingUtil#fallbackPoint}.
      *
      * <p>L'entite qui sert au rayon est vivante, comme le selecteur de l'original ; celles
      * qui seront projetees, elles, ne le sont pas forcement (voir {@link #blast}).

@@ -61,13 +61,26 @@ public final class TargetingUtil {
         return hit.getType() == HitResult.Type.BLOCK ? hit : null;
     }
 
-    /** Le bout du regard, quand rien ne l'arrete : celui de l'original, portee comprise. */
+    /**
+     * Le bout du regard, quand rien ne l'arrete : c'est le centre des effets d'une visee
+     * qui n'a rien trouve.
+     *
+     * <p>L'original avait deux replis sur trois lignes, et un seul vivait. Son code lisait
+     * {@code if (trace == null) player.getPositionVector + regard * 4} — donc les
+     * <b>pieds</b> — puis un dernier {@code else} qui prenait le <b>point</b> du resultat.
+     * Or {@code Raytrace.perform} ne rend jamais {@code null} : quand rien n'est touche, il
+     * rend un resultat {@code Type.MISS} dont le point est <b>la fin du rayon</b>, c'est-a-dire
+     * {@code yeux + regard * portee}. La branche des pieds etait morte, et le port avait
+     * recopie la morte : ses ondes s'ouvraient un bloc et demi sous les yeux.
+     *
+     * <p>Cela ne se voyait pas devant un mur — le centre etait de toute facon celui du bloc
+     * touche — mais en vol, dans le vide, l'onde s'ouvrait a hauteur de sol au lieu de
+     * s'ouvrir devant le visage. C'est le joueur qui l'a vu : « si je m'envole et que je tape
+     * dans le vide, les ondes apparaissent pratiquement au niveau du sol plutot que d'aller
+     * devant moi ».
+     */
     public static Vec3 fallbackPoint(Player player, double range) {
-        Vec3 eye = player.getEyePosition(1.0f);
-        Vec3 look = player.getViewVector(1.0f);
-        // L'original partait de la <b>position</b> du joueur, pas de ses yeux — et c'est ce
-        // point-la qui devient le centre de ses effets.
-        return player.position().add(look.scale(range));
+        return player.getEyePosition(1.0f).add(player.getViewVector(1.0f).scale(range));
     }
 
     /**
