@@ -2033,6 +2033,92 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Une competence retiree de la barre s'eteint.
+     *
+     * <p>Le joueur : « si je lance le vecteur reflexion par exemple, si je le retire de ma barre
+     * des competences, il continue toujours de fonctionner, alors que ca devrais faire en sorte de
+     * le desactiver par defaut si il n'est pas present dans ma barre ». Le maintien se termine donc
+     * comme un relachement : fin ordinaire, ce qui rend ce qu'il avait emprunte (ici le vol des
+     * ailes), et `HoldOverPacket` au client pour que son temoin s'eteigne.
+     */
+    @GameTest(template = "empty")
+    public static void retirerUneCompetenceDeLaBarreLEteint(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 150);
+
+        var player = ownPlayer(helper, "preregle_eteint");
+        player.moveTo(abs.getX() + 0.5, abs.getY() + 20, abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(wing.getCategory(), 3);
+        data.learnSkill(wing);
+
+        // Les ailes sont dans la barre, et elles volent.
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.ASSIGN, 0, 0,
+                wing.getName());
+        assertTrue(helper, data.perform(wing.getCpCost(), wing.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        wing.onStart(player, data);
+        data.beginCharge(wing);
+        assertTrue(helper, player.getAbilities().mayfly, "les ailes ouvrent le vol");
+
+        // Et on les retire de la barre : le maintien s'eteint, et rend le vol.
+        cn.academy.ability.preset.network.PresetActionPacket.apply(player,
+                cn.academy.ability.preset.network.PresetActionPacket.Action.ASSIGN, 0, 0, null);
+        assertFalse(helper, data.isCharging(wing), "une competence hors de la barre s'eteint");
+        assertFalse(helper, player.getAbilities().mayfly,
+                "et rend ce qu'elle avait emprunte : le vol");
+
+        player.getAbilities().mayfly = false;
+        helper.succeed();
+    }
+
+    /**
+     * Le surcout au maximum retire tout, et sur-le-champ.
+     *
+     * <p>L'original postait un {@code OverloadEvent} au franchissement du plafond, et son
+     * gestionnaire de contextes y disposait tous les contextes du joueur. Le port se contentait de
+     * fermer le verrou des nouvelles competences, donc celle qui courait continuait : le joueur l'a
+     * vu — « si j'atteins l'overload en ayant la competence de lancer, elle continue toujours de
+     * fonctionner jusqu'a ce que je n'aie plus de CP ».
+     */
+    @GameTest(template = "empty")
+    public static void leSurcoutAuMaximumRetireTout(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 170);
+
+        var player = ownPlayer(helper, "surcout_qui_retire");
+        player.moveTo(abs.getX() + 0.5, abs.getY() + 20, abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(wing.getCategory(), 3);
+        data.learnSkill(wing);
+
+        assertTrue(helper, data.perform(wing.getCpCost(), wing.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        wing.onStart(player, data);
+        data.beginCharge(wing);
+        assertTrue(helper, data.isCharging(wing), "et le maintien est ouvert");
+        assertTrue(helper, player.getAbilities().mayfly, "les ailes volent");
+
+        // Un paiement qui franchit le plafond de surcout, comme une prise de la deviation ou une
+        // veille qui s'ouvre sur une barre deja presque pleine.
+        data.performForced(0f, data.getMaxOverload());
+        assertTrue(helper, data.isOverloadRecovering(), "le surcout est au maximum, et verrouille");
+
+        // Au tick suivant, plus rien ne tourne.
+        tickerLeJoueur(player);
+        assertFalse(helper, data.isCharging(wing), "rien ne survit a la surcharge");
+        assertFalse(helper, player.getAbilities().mayfly, "et le vol est rendu");
+
+        player.getAbilities().mayfly = false;
+        helper.succeed();
+    }
+
+    /**
      * Les tutoriels livres, et les objets qui les ouvrent.
      *
      * <p>Le contenu lui-meme se relit dans les ressources, en JUnit. Ce que JUnit ne

@@ -75,8 +75,21 @@ public class AbilityEvents {
             // bloc, et c'est ce signal qui ouvre la fenetre d'atterrissage — voir
             // AbilityData.tickFallProtection et LANDING_GRACE_TICKS.
             data.tickFallProtection(player.fallDistance > 0f);
-            // Les competences tenues vivent tant que la touche reste enfoncee.
+            // Le surcout au maximum retire TOUT, et sur-le-champ.
+            //
+            // L'original postait un `OverloadEvent` au franchissement du plafond
+            // (`CPData.addOverload`), et son gestionnaire de contextes y disposait tous les
+            // contextes du joueur (`ServerManager.__onOverload` -> `disposePlayer`). Le port se
+            // contentait de fermer le verrou des NOUVELLES competences, donc celle qui courait
+            // continuait : le joueur l'a vu — « si j'atteins l'overload en ayant la competence de
+            // lancer, elle continue toujours de fonctionner jusqu'a ce que je n'aie plus de CP ».
+            //
+            // Le controle est fait APRES le tick des maintiens, donc le franchissement de CE tick
+            // les emporte dans la foulee, sans attendre une image de plus.
             tickSustained(player, data);
+            if (data.isOverloadRecovering()) {
+                endAllHolds(player, data);
+            }
             // La reserve ne remonte que si elle est entamee : au ras bord il n'y a rien a
             // faire, et l'original le testait aussi avant de recalculer son gain.
             if (data.getControlPoint() < data.getMaxControlPoint()) {
@@ -110,9 +123,7 @@ public class AbilityEvents {
                         // on a encore l'animation d'actif alors que le pouvoir ne l'est plus ».
                         // `clearCharges` seul vidait la table du serveur en laissant le temoin du
                         // client allume — la fin d'un maintien, elle, envoie `HoldOverPacket`.
-                        for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
-                            endHeld(player, data, skill);
-                        }
+                        endAllHolds(player, data);
                         data.clearCooldowns();
                         data.clearCharges();
                         // L'original eteignait l'aptitude a la mort, et la rallumait a la main :
@@ -120,6 +131,43 @@ public class AbilityEvents {
                         data.setActivated(false);
                     });
         }
+    }
+
+    /**
+     * Termine tous les maintiens en cours, chacun par la fin ordinaire.
+     *
+     * <p>Trois chemins y menent, et c'est le meme geste : la mort, le surcout au maximum, et un
+     * prereglage qui ne porte plus la competence. Passer par {@link #endHeld} est ce qui rend ce
+     * que le maintien avait emprunte, ce qui pose sa recharge, et ce qui previent le client par
+     * {@code HoldOverPacket} — sans quoi son temoin reste allume sur un pouvoir qui n'est plus la.
+     */
+    private static void endAllHolds(ServerPlayer player, AbilityData data) {
+        // Une copie : `endHeld` retire la competence de la table qu'on parcourt.
+        for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
+            endHeld(player, data, skill);
+        }
+    }
+
+    /**
+     * Termine les maintiens dont la competence n'est plus dans le prereglage <b>en service</b>.
+     *
+     * <p>Appele par {@code PresetActionPacket} apres chaque changement de prereglage ou chaque
+     * affectation de touche : une competence qu'on retire de sa barre s'eteint, comme si on avait
+     * relache sa touche. Le joueur : « si je lance le vecteur reflexion par exemple, si je le
+     * retire de ma barre des competences, il continue toujours de fonctionner, alors que ca devrais
+     * faire en sorte de le desactiver par defaut si il n'est pas present dans ma barre ».
+     */
+    public static void endHoldsOutsideCurrentPreset(ServerPlayer player) {
+        var presets = cn.academy.ability.preset.PresetTracker.of(player);
+        if (presets == null) return;
+        var current = presets.getCurrent();
+        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
+                if (!current.contains(skill.getName())) {
+                    endHeld(player, data, skill);
+                }
+            }
+        });
     }
 
     /**

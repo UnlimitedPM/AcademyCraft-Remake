@@ -89,6 +89,12 @@ public class PresetActionPacket {
             data.getPreset(presetId).assign(key, skillName);
         }
 
+        // Et ce qui n'est plus dans la barre ne reste pas allume. Un maintien ne survit pas au
+        // prereglage qui l'a ouverte : le joueur l'a demande — « si je le retire de ma barre des
+        // competences, il continue toujours de fonctionner, alors que ca devrais faire en sorte de
+        // le desactiver par defaut si il n'est pas present dans ma barre ». Voir AbilityEvents.
+        cn.academy.ability.AbilityEvents.endHoldsOutsideCurrentPreset(player);
+
         // Le client ne se contente pas de suivre : il pourrait se tromper. On lui renvoie
         // donc l'etat, et c'est lui qui fait foi.
         PresetTracker.sync(player);

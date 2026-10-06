@@ -75,6 +75,11 @@ public class PresetTracker {
         PresetData data = of(player);
         if (data == null) return;
         data.clearAll();
-        if (player instanceof ServerPlayer server) sync(server);
+        // Une barre vide ne porte plus rien : ce qui courait s'eteint, comme dans l'original, dont
+        // le gestionnaire de contextes disposait tout sur un changement de categorie.
+        if (player instanceof ServerPlayer server) {
+            cn.academy.ability.AbilityEvents.endHoldsOutsideCurrentPreset(server);
+            sync(server);
+        }
     }
 }
