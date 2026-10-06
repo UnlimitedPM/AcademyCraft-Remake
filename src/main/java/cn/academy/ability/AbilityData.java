@@ -799,16 +799,16 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         }
     }
 
-    /** Vrai tant qu'une teleportation protege encore de la chute. */
+    /** Vrai tant qu'un pouvoir protege encore de la chute. */
     private boolean fallProtected;
 
     /**
-     * Vrai quand le joueur a quitte le sol depuis sa teleportation.
+     * Vrai quand le joueur a quitte le sol depuis sa mise sous protection.
      *
-     * <p>Sans lui, une teleportation qui vous pose par terre s'annulerait dans la foulee : le
-     * sol touche EST l'arrivee, et la protection ne servirait donc a rien — ce que le joueur a
-     * vu tout de suite, « je prends des degats de chute peu importe ce que je fais ». C'est
-     * donc le premier bloc touche <b>apres avoir quitte le sol</b> qui la leve.
+     * <p>Sans lui, un deplacement qui vous pose par terre s'annulerait dans la foulee : le sol
+     * touche EST l'arrivee, et la protection ne servirait donc a rien — ce que le joueur a vu tout
+     * de suite, « je prends des degats de chute peu importe ce que je fais ». C'est donc le premier
+     * bloc touche <b>apres avoir quitte le sol</b> qui la leve.
      */
     private boolean fallAirborne;
 
@@ -826,8 +826,10 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * {@link #fallAirborne}), et l'atterrissage lui-meme est encore protege : la levee n'a lieu
      * qu'apres le deplacement du tick, donc c'est la chute <b>suivante</b> qui se paie.
      *
-     * <p>Elle ne couvre pas une chute qui n'a pas commence par une teleportation : voler avec
-     * les ailes de tempete puis couper le moteur reste une chute a payer.
+     * <p>Qui l'appelle, aujourd'hui : les <b>quatre teleportations</b> qui deplacent le joueur,
+     * puis l'<b>acceleration de vecteur</b> et les <b>ailes de tempete</b> — le joueur l'a demande
+     * pour ces deux dernieres, « j'aimerais que apres avoir fait ces competences, tout comme avec
+     * la teleporteuse, on ne prenne pas de degats de chute juste apres ».
      */
     public void protectFromFall() {
         fallProtected = true;
@@ -838,7 +840,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return fallProtected;
     }
 
-    public boolean hasLeftGroundSinceTeleport() {
+    /** Vrai si le joueur a quitte le sol : la protection attend alors un atterrissage. */
+    public boolean hasLeftGround() {
         return fallAirborne;
     }
 
@@ -847,7 +850,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         fallAirborne = true;
     }
 
-    /** Le joueur a touche un bloc : la protection d'une teleportation prend fin. */
+    /** Le joueur a touche un bloc : la protection prend fin. */
     public void endFallProtection() {
         fallProtected = false;
         fallAirborne = false;

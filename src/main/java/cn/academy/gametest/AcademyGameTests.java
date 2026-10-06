@@ -2989,6 +2989,64 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * L'acceleration de vecteur et les ailes de tempete protegent de la chute, comme la
+     * teleporteuse.
+     *
+     * <p>Le joueur l'a demande : « j'aimerais que apres avoir fait ces competences, tout comme
+     * avec la teleporteuse, on ne prenne pas de degats de chute juste apres ». Et les deux le
+     * meritent : l'acceleration jette son porteur en l'air — la chute qui suit est son propre
+     * coup —, et les ailes le posent ou il veut, donc la hauteur dont il descend est celle qu'il
+     * a choisie.
+     *
+     * <p>Le refus de la chute passe par une vraie chute ({@code causeFallDamage}), la ou la
+     * protection se leve au premier bloc touche comme pour une teleportation.
+     */
+    @GameTest(template = "empty")
+    public static void lAccelerationEtLesAilesEchappentALaChute(GameTestHelper helper) {
+        var accel = cn.academy.ability.vecmanip.VecmanipCategory.VEC_ACCEL;
+        var player = ownPlayer(helper, "accel_faller");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(accel.getCategory(), 1);
+        data.learnSkill(accel);
+
+        player.setOnGround(true);
+        player.fallDistance = 0f;
+        accel.onActivate(player, data);
+
+        assertTrue(helper, data.isProtectedFromFall(), "l'acceleration protege de la chute");
+        assertTrue(helper, player.getDeltaMovement().length() > 0.5,
+                "et elle pousse quand meme : " + player.getDeltaMovement());
+        assertClose(helper, 0.0, player.fallDistance, "sa propre chute part de zero");
+
+        // La chute qui suit le lancement est gratuite, meme de trente blocs — et c'est
+        // l'atterrissage lui-meme qui est refuse, pas seulement le vol.
+        player.fallDistance = 30f;
+        tickerLeJoueur(player);
+        assertTrue(helper, data.isProtectedFromFall(), "la protection tient pendant la chute");
+        assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
+                "l'atterrissage apres une acceleration est gratuit");
+        player.fallDistance = 0f;
+        tickerLeJoueur(player);
+        assertFalse(helper, data.isProtectedFromFall(), "le premier bloc touche la leve");
+        assertTrue(helper, player.causeFallDamage(4f, 1f, player.damageSources().fall()),
+                "et la chute suivante se paie");
+
+        // Les ailes de tempete : c'est leur FERMETURE qui protege — tant qu'elles volent, la
+        // chute est deja remise a zero a chaque tick, et la protection se repose avec.
+        var wings = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        data.learnSkill(wings);
+        wings.onHoldEnd(player, data, 60);
+
+        assertTrue(helper, data.isProtectedFromFall(), "les ailes qui se ferment protegent");
+        assertFalse(helper, player.causeFallDamage(300f, 1f, player.damageSources().fall()),
+                "et la chute qui suit la fermeture est gratuite");
+
+        player.setOnGround(true);
+        helper.succeed();
+    }
+
     /** Un tick de joueur, comme le jeu le fait : c'est la que la protection se leve. */
     private static void tickerLeJoueur(net.minecraft.world.entity.player.Player player) {
         cn.academy.ability.AbilityEvents.onPlayerTick(

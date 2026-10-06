@@ -346,6 +346,11 @@ public class StormWingSkill extends Skill {
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         player.fallDistance = 0f;
+        // Tant que les ailes volent, la chute est remise a zero a chaque tick — et la protection
+        // se repose avec elle. Sans ce deuxieme point, un vol qui frôle le sol la consommerait en
+        // route, et c'est la fermeture des ailes qui doit laisser une chute gratuite : la ou on
+        // se pose est un choix, et il ne se paie pas. Voir AbilityData.protectFromFall.
+        data.protectFromFall();
 
         if (clumsy(data) && player.level() instanceof ServerLevel level) {
             breakAround(level, player);
@@ -370,6 +375,10 @@ public class StormWingSkill extends Skill {
             server.onUpdateAbilities();
         }
         player.fallDistance = 0f;
+        // Et la ou on se posera ne se paie pas : la fermeture des ailes laisse tomber de la
+        // hauteur qu'on veut, et c'est le porteur qui la prenait. Meme regle que la teleporteuse,
+        // demandee par le joueur. Voir AbilityData.protectFromFall.
+        data.protectFromFall();
     }
 
     // ------------------------------------------------------------------

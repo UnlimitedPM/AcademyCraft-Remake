@@ -102,6 +102,11 @@ public class VecAccelSkill extends Skill {
         // Original replaces the velocity outright rather than stacking onto existing motion.
         player.setDeltaMovement(new Vec3(x, y, z).normalize().scale(speed(data)));
         player.fallDistance = 0;
+        // Et la chute qui suit le lancement est gratuite : ce coup jette son porteur en l'air,
+        // et il se tuait donc lui-meme en s'envolant. Le joueur l'a demande — « j'aimerais que
+        // apres avoir fait ces competences, tout comme avec la teleporteuse, on ne prenne pas de
+        // degats de chute juste apres ». Voir AbilityData.protectFromFall.
+        data.protectFromFall();
         player.hurtMarked = true;
 
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_VEC_ACCEL, 0.35f);
