@@ -187,10 +187,10 @@ public final class PlasmaBodies {
         alphaAtDeath = 0f;
     }
 
-    /** La naissance : l'essaim se tire, et se pose quinze blocs au-dessus de la tete. */
+    /** La naissance : l'essaim se tire, et se pose quinze blocs au-dessus — ou sous le plafond. */
     private static void begin(Player player) {
         balls = PlasmaBodyVisuals.roll(RANDOM);
-        previous = player.position().add(0, PlasmaCannonSkill.START_HEIGHT, 0);
+        previous = PlasmaCannonSkill.spawnPoint(player);
         position = previous;
         destination = previous;
         phase = Phase.CHARGE;

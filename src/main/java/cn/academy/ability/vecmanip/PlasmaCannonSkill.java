@@ -112,6 +112,43 @@ public class PlasmaCannonSkill extends Skill {
     /** La boule nait quinze blocs au-dessus de la tete, comme dans l'original. */
     public static final double START_HEIGHT = 15.0;
 
+    /**
+     * La place gardee sous un plafond : le halo de la boule fait quatre blocs.
+     *
+     * <p>C'est la taille du halo d'une grosse boule a pleine opacite (voir
+     * {@code PlasmaBodyVisuals.haloRadius}), arrondie : la boule se pose a cette distance du bloc
+     * qui la surplombe, et tout son halo tient donc dessous.
+     */
+    public static final double CEILING_CLEARANCE = 4.0;
+
+    /** Et le plus bas ou elle se noue : juste au-dessus de la tete, jamais dans les pieds. */
+    public static final double MIN_HEIGHT = 3.0;
+
+    /**
+     * Ou la boule se noue : quinze blocs au-dessus, ou juste sous ce qu'il y a au-dessus.
+     *
+     * <p>Quinze blocs, c'est la hauteur de l'original — {@code player.getPositionVector +
+     * (0, 15, 0)} —, et elle ne bouge pas tant qu'il y a de la place. Ce qui manquait, c'est ce
+     * qui se passe quand il n'y en a pas : <b>dans une grotte</b>, la boule se nouait dans la
+     * pierre, et le joueur ne voyait plus que le bas de son halo, plaque au plafond — « quand on
+     * lance l'attaque dans une grotte, tout apparait au dessus de nous au point de toucher le
+     * plafond alors qu'on est presque dix blocs en dessous ».
+     *
+     * <p>Le rayon monte donc jusqu'a quinze blocs, et s'il trouve un bloc, la boule se pose
+     * dessous, a {@link #CEILING_CLEARANCE} de lui. Le serveur (le point de depart du tir) et le
+     * client (le dessin de la charge) passent tous deux par ici, donc les deux sont d'accord.
+     */
+    public static Vec3 spawnPoint(Player player) {
+        Vec3 feet = player.position();
+        Vec3 high = feet.add(0, START_HEIGHT, 0);
+        HitResult hit = player.level().clip(new ClipContext(feet, high,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        if (hit.getType() == HitResult.Type.MISS) return high;
+
+        return new Vec3(feet.x, Math.max(feet.y + MIN_HEIGHT,
+                hit.getLocation().y - CEILING_CLEARANCE), feet.z);
+    }
+
     /** Elle avance d'un bloc par tick, sur au plus 240 ticks. */
     public static final double SPEED = 1.0;
     public static final int FLIGHT_TICKS = 240;
@@ -238,7 +275,7 @@ public class PlasmaCannonSkill extends Skill {
     @Override
     public void onStart(Player player, AbilityData data) {
         data.setHeldOverload(this, data.getOverload());
-        data.setHoldPoint(this, player.position().add(0, START_HEIGHT, 0));
+        data.setHoldPoint(this, spawnPoint(player));
     }
 
     /**

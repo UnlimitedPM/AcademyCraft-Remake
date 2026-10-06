@@ -109,7 +109,9 @@ class TornadoVisualsTest {
     @Test
     @DisplayName("la colonne du canon est une seule, et large")
     void laColonneDuCanonEstUneSeule() {
-        TornadoVisuals.Layout cannon = TornadoVisuals.cannon(RandomSource.create(6));
+        // La boule a quinze blocs : la colonne a donc toute la place de l'original.
+        TornadoVisuals.Layout cannon = TornadoVisuals.cannon(RandomSource.create(6),
+                TornadoVisuals.CANNON_HEIGHT + TornadoVisuals.CANNON_GAP);
 
         assertEquals(1, cannon.parts().size(), "une seule colonne");
         assertEquals(0, cannon.tiltX(), "dresssee, sans inclinaison");
@@ -120,6 +122,28 @@ class TornadoVisualsTest {
         assertEquals(TornadoVisuals.CANNON_SIZE, tornado.size(), "huit de large");
         assertTrue(tornado.rings().size() > 20, "et donc beaucoup d'anneaux : "
                 + tornado.rings().size());
+    }
+
+    /**
+     * La colonne s'arrete sous la boule, meme quand la boule se noue bas.
+     *
+     * <p>C'est la grotte du joueur : sa boule se noue sous le plafond au lieu de le traverser, et
+     * la colonne raccourcit avec elle — sinon elle traverserait la pierre a sa place.
+     */
+    @Test
+    @DisplayName("la colonne raccourcit quand la boule se noue bas")
+    void laColonneRaccourcitAvecLaBoule() {
+        double bas = 7;  // la boule est a sept blocs du sol
+        TornadoVisuals.Tornado court = TornadoVisuals.cannon(RandomSource.create(6), bas)
+                .parts().get(0).tornado();
+
+        assertEquals(bas - TornadoVisuals.CANNON_GAP, court.height(), 1e-9,
+                "elle monte jusqu'a trois blocs sous la boule");
+        assertTrue(court.height() < TornadoVisuals.CANNON_HEIGHT, "donc plus courte qu'a l'original");
+        // Et sa largeur suit sa hauteur : une colonne courte serait trapue autrement.
+        assertEquals(TornadoVisuals.CANNON_SIZE * (court.height() / TornadoVisuals.CANNON_HEIGHT),
+                court.size(), 1e-9, "sa largeur suit sa hauteur");
+        assertTrue(court.size() < TornadoVisuals.CANNON_SIZE, "donc plus etroite");
     }
 
     @Test

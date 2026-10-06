@@ -72,6 +72,16 @@ public final class TornadoVisuals {
     public static final double CANNON_SIZE = 8;
     public static final double CANNON_SCALE = 0.3;
 
+    /**
+     * L'ecart garde entre le sommet de la colonne et la boule : trois blocs.
+     *
+     * <p>C'est celui de l'original : sa boule se nouait a quinze blocs, sa colonne en faisait
+     * douze, donc son sommet tombait juste sous la boule — et c'est ce qui se voit, la colonne
+     * <b>nourrit</b> la boule. La colonne se raccourcit quand il y a moins de place, mais l'ecart,
+     * lui, ne change pas.
+     */
+    public static final double CANNON_GAP = 3;
+
     /** L'opacite des ailes : leur montee pendant la charge, puis une disparition de quinze ticks. */
     public static final double WINGS_ALPHA = 0.7;
     public static final int WINGS_FADE_TICKS = 15;
@@ -166,11 +176,21 @@ public final class TornadoVisuals {
                 tx, ty, tz, rotateY, rotateZ);
     }
 
-    /** La colonne du canon : une seule, droite, et large comme une maison. */
-    public static Layout cannon(RandomSource random) {
+    /**
+     * La colonne du canon : une seule, droite, et large comme une maison.
+     *
+     * <p>Sa hauteur est celle de l'original tant qu'il y a de la place, mais elle s'arrete sous la
+     * boule : {@code gapToBall} est la distance qui separe son pied de la boule, et la colonne
+     * grandit de ce qui reste — {@link #CANNON_GAP} etant garde pour que son sommet tombe juste
+     * sous elle. Sa LARGEUR suit sa hauteur, sans quoi une colonne courte serait trapue. Dans une
+     * grotte, la boule se noue sous le plafond (voir {@code PlasmaCannonSkill.spawnPoint}), et la
+     * colonne se raccourcit donc avec elle au lieu de traverser la pierre.
+     */
+    public static Layout cannon(RandomSource random, double gapToBall) {
+        double height = Math.min(CANNON_HEIGHT, Math.max(1.0, gapToBall - CANNON_GAP));
         return new Layout(0, 0, 0, 0,
-                List.of(new Part(tornado(random, CANNON_HEIGHT, CANNON_SIZE, 1, CANNON_SCALE),
-                        0, 0, 0, 0, 0)));
+                List.of(new Part(tornado(random, height, CANNON_SIZE * (height / CANNON_HEIGHT),
+                        1, CANNON_SCALE), 0, 0, 0, 0, 0)));
     }
 
     /**

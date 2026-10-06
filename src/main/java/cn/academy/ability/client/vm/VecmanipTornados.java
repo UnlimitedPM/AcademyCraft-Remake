@@ -144,10 +144,12 @@ public final class VecmanipTornados {
             // s'efface au relachement, quand la boule part. La borner a la duree de charge la
             // faisait disparaitre sous les yeux du joueur pendant qu'il chargeait encore.
             if (cannon == null) {
-                cannon = new Live(TornadoVisuals.cannon(RANDOM),
-                        ground(player, player.position()
-                                .add(0, PlasmaCannonSkill.START_HEIGHT, 0)),
-                        0, 0);
+                // La colonne part du sol, et grandit jusqu'a la boule : dans une grotte, la boule
+                // se noue sous le plafond, et la colonne se raccourcit donc avec elle au lieu de
+                // traverser la pierre. Voir PlasmaCannonSkill.spawnPoint.
+                Vec3 spawn = PlasmaCannonSkill.spawnPoint(player);
+                Vec3 base = ground(player, spawn);
+                cannon = new Live(TornadoVisuals.cannon(RANDOM, spawn.y - base.y), base, 0, 0);
             }
             cannon.alpha = TornadoVisuals.cannonRiseAlpha(cannon.age);
         }

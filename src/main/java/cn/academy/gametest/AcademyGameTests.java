@@ -3047,6 +3047,66 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Le canon de plasma : la boule se noue SOUS le plafond, pas dedans.
+     *
+     * <p>L'original la posait a quinze blocs au-dessus des pieds, et le port aussi. Tant qu'il y a
+     * du ciel, c'est juste — mais dans une grotte, la boule se nouait <b>dans la pierre</b>, et le
+     * joueur ne voyait plus que le bas de son halo plaque au plafond : « quand on lance l'attaque
+     * dans une grotte, tout apparait au dessus de nous au point de toucher le plafond alors qu'on
+     * est presque dix blocs en dessous ».
+     *
+     * <p>Le rayon monte donc jusqu'a quinze blocs, et s'arrete au premier bloc trouve.
+     *
+     * <p>Le test se fait en l'air, a trois cent quarante-cinq blocs : plus bas on est dans la
+     * pierre — le terrain de test s'arrete a la surface — et le rayon n'y verrait que du solide.
+     */
+    @GameTest(template = "empty")
+    public static void laBouleDuCanonSeNoueSousLePlafond(GameTestHelper helper) {
+        var player = ownPlayer(helper, "cannon_roof");
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 345);
+        // La structure a son origine au fond du monde : un bloc pose dix blocs au-dessus de la
+        // tete du joueur se compte depuis cette origine, pas depuis le joueur.
+        int plafond = 345 + 1 + 10;
+        double pieds = abs.getY();
+        player.moveTo(abs.getX() + 0.5, pieds, abs.getZ() + 0.5, 0f, 0f);
+
+        // Sans rien au-dessus, la boule est a quinze blocs, comme chez l'original.
+        assertClose(helper, pieds + cn.academy.ability.vecmanip.PlasmaCannonSkill.START_HEIGHT,
+                hauteurDeLaBoule(player), "sous le ciel, la boule se noue a quinze blocs");
+
+        // Et un plafond a dix blocs : elle se pose dessous, a quatre blocs de lui.
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                helper.setBlock(new BlockPos(2 + dx, plafond, 2 + dz),
+                        net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+        double boule = hauteurDeLaBoule(player);
+        assertClose(helper, pieds + 10 - cn.academy.ability.vecmanip.PlasmaCannonSkill.CEILING_CLEARANCE,
+                boule, "et sous un plafond, elle reste dessous");
+        assertTrue(helper, boule < pieds + 10, "le halo entier tient sous la pierre : " + boule);
+        assertTrue(helper, boule > pieds, "et la boule reste au-dessus de nous : " + boule);
+
+        // Le plafond retire, elle remonte : rien n'est fige.
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                helper.setBlock(new BlockPos(2 + dx, plafond, 2 + dz),
+                        net.minecraft.world.level.block.Blocks.AIR);
+            }
+        }
+        assertClose(helper, pieds + cn.academy.ability.vecmanip.PlasmaCannonSkill.START_HEIGHT,
+                hauteurDeLaBoule(player), "et elle remonte des que la place revient");
+
+        player.setOnGround(true);
+        helper.succeed();
+    }
+
+    /** La hauteur ou le canon noue sa boule, pour ce joueur. */
+    private static double hauteurDeLaBoule(net.minecraft.world.entity.player.Player player) {
+        return cn.academy.ability.vecmanip.PlasmaCannonSkill.spawnPoint(player).y;
+    }
+
     /** Un tick de joueur, comme le jeu le fait : c'est la que la protection se leve. */
     private static void tickerLeJoueur(net.minecraft.world.entity.player.Player player) {
         cn.academy.ability.AbilityEvents.onPlayerTick(
