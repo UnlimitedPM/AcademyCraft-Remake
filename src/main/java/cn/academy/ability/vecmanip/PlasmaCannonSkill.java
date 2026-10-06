@@ -62,8 +62,23 @@ import net.minecraft.world.phys.Vec3;
  * <p>Et <b>la recharge est posee a la fin du vol</b>, quand l'original la posait au moment du
  * tir : une seconde ou deux de difference, le temps que la boule arrive.
  *
- * <p>Non portes : la tornade qui tourne sous la boule ({@code TornadoEffect}), le son de
- * charge et le suivi de position qui servait a le dessiner. Touche par defaut : {@code END}.
+ * <h2>Ce qui se voit</h2>
+ *
+ * <p>Trois choses, et aucune ne se passe du client : la <b>colonne</b> qui se dresse au sol sous la
+ * boule pendant la charge ({@code VecmanipTornados}), le <b>corps de plasma</b> qui se noue quinze
+ * blocs au-dessus de la tete puis vole avec elle ({@code PlasmaBodyVisuals} et {@code PlasmaBodies}),
+ * et le son de charge, joue chez son porteur seul.
+ *
+ * <p>Le corps de plasma est une <b>approximation</b> : l'original marchait le rayon dans un volume
+ * d'une dizaine de boules, et le port n'a pas de nuanceur pour cela — il dessine donc les boules
+ * elles-memes, une a une. Voir sa classe, qui dit ce qui est garde et ce qui ne l'est pas.
+ *
+ * <p>Et son vol est mene <b>par le client</b> : le serveur lui donne la boule et sa destination au
+ * tir ({@code PlasmaShotPacket}), et le client la conduit d'un bloc par tick, aux memes bornes que
+ * lui. C'est le partage de l'original, dont l'entite etait cliente.
+ *
+ * <p>Non porte : le corps ne se voit que chez son porteur, comme chez l'original, qui ne le posait
+ * que dans le contexte client de celui qui appuyait. Touche par defaut : {@code END}.
  */
 public class PlasmaCannonSkill extends Skill {
 
@@ -276,8 +291,17 @@ public class PlasmaCannonSkill extends Skill {
                 cn.academy.ModSounds.VECMANIP_PLASMA_CANNON_T, 0.5f);
 
         data.addSkillExp(this, EXP_PER_SHOT);
-        data.setHoldOrigin(this, aim(level, player));
+        Vec3 destination = aim(level, player);
+        data.setHoldOrigin(this, destination);
         data.setHoldMark(this, heldTicks);
+
+        // Et le corps de plasma part avec : le serveur dit au client ou est la boule et ou elle va,
+        // et le client mene le vol tout seul — voir PlasmaShotPacket et PlasmaBodies. C'est le
+        // MSG_STATECHG de l'original, qui portait la meme chose.
+        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+            cn.academy.ability.network.PlasmaShotPacket.send(serverPlayer,
+                    data.getHoldPoint(this), destination);
+        }
         return true;
     }
 

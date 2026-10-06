@@ -181,6 +181,8 @@ public class AbilityClientEvents {
             cn.academy.ability.client.vm.Smokes.clear();
             // Et le poing de vecmanip, qui appartient au monde comme le reste : voir HandSwing.
             cn.academy.ability.client.vm.HandSwing.clear();
+            // Et le corps de plasma du canon, pour la meme raison : voir PlasmaBodies.
+            cn.academy.ability.client.vm.PlasmaBodies.clear();
         }
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
@@ -191,6 +193,9 @@ public class AbilityClientEvents {
         // qui est mort s'en va — c'est aussi ce qui rattrape un maintien interrompu. Voir
         // VecmanipTornados.
         cn.academy.ability.client.vm.VecmanipTornados.tick();
+        // Et le corps de plasma du canon, qui vit sa vie : il nait a l'appui, vole quand son tir
+        // part, et s'efface. Voir PlasmaBodies.
+        cn.academy.ability.client.vm.PlasmaBodies.tick();
         // Et la poussiere des ailes de tempete, qui tourne et s'efface toute seule : elle n'est pas
         // une tornade, et elle vit plus longtemps qu'elles. Voir WingDust.
         cn.academy.ability.client.vm.WingDust.tick();
@@ -313,6 +318,8 @@ public class AbilityClientEvents {
             // plantees dans le decor. Voir VecmanipTornados.
             cn.academy.ability.client.vm.VecmanipTornados.end(skill);
             cn.academy.ability.client.vm.VecAccelPreview.end(skill);
+            // Et le corps de plasma du canon, pour la meme raison. Voir PlasmaBodies.
+            cn.academy.ability.client.vm.PlasmaBodies.end(skill);
         }
 
         ClientCharge.end();
@@ -592,6 +599,9 @@ public class AbilityClientEvents {
         // Et les tornades de vecmanip, qui s'effacent au lieu de disparaitre d'un coup : les
         // ailes en quinze ticks, la colonne du canon en trente. Voir VecmanipTornados.
         cn.academy.ability.client.vm.VecmanipTornados.end(skill);
+        // Et le corps de plasma du canon : la charge refermee, il attend son tir — ou s'en va
+        // s'il n'a pas lieu. Voir PlasmaBodies.
+        cn.academy.ability.client.vm.PlasmaBodies.end(skill);
         // La parabole de visee s'en va, que le saut ait lieu ou non.
         cn.academy.ability.client.vm.VecAccelPreview.end(skill);
         // Le fantome de la teleportation s'en va au meme moment — sa competence est finie — et la

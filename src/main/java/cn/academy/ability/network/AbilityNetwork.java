@@ -90,6 +90,11 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, SmokePuffPacket.class,
                 SmokePuffPacket::encode, SmokePuffPacket::decode,
                 SmokePuffPacket::handle);
+        // Et le tir du canon a plasma : son corps de plasma vit chez son porteur seul, et c'est le
+        // serveur qui sait ou la boule va. Voir PlasmaShotPacket et PlasmaBodies.
+        CHANNEL.registerMessage(nextId++, PlasmaShotPacket.class,
+                PlasmaShotPacket::encode, PlasmaShotPacket::decode,
+                PlasmaShotPacket::handle);
         // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
         // Voir MdMissilePacket.
         CHANNEL.registerMessage(nextId++, MdMissilePacket.class,
