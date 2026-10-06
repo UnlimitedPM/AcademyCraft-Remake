@@ -92,15 +92,21 @@ class BodyIntensifyChargeTest {
     }
 
     @Test
-    @DisplayName("la charge ne coute rien : seuls le surcout d'ouverture et la recharge se paient")
-    void laChargeEstGratuite() {
+    @DisplayName("la charge se paie le temps de la preparation, et rien de plus")
+    void laChargeSePaiePendantSaPreparation() {
         BodyIntensifySkill skill = new BodyIntensifySkill();
+        cn.academy.ability.AbilityData data = new cn.academy.ability.AbilityData();
 
         assertEquals(0f, skill.getCpCost(), 1e-4, "rien a l'ouverture");
-        assertEquals(0f, skill.getCpCost(null), 1e-4, "rien non plus avec la donnee");
-        for (int tick = BodyIntensifySkill.MIN_TIME; tick < 120; tick++) {
-            assertEquals(0f, skill.getTickUpkeep(null, tick), 1e-4,
-                    "et rien pendant la charge, au tick " + tick);
+        // Vingt a l'experience nulle, tant que la competence n'est pas prete.
+        assertEquals(20f, skill.getTickUpkeep(data, 1), 1e-4);
+        assertEquals(20f, skill.getTickUpkeep(data, BodyIntensifySkill.MIN_TIME), 1e-4,
+                "et jusqu'au tick ou elle est prete");
+        // Au-dela, tenir la touche ne coute plus rien : meme regle que le canon a plasma, dont le
+        // prix s'arrete quand la charge est faite.
+        for (int tick = BodyIntensifySkill.MIN_TIME + 1; tick < 120; tick++) {
+            assertEquals(0f, skill.getTickUpkeep(data, tick), 1e-4,
+                    "plus rien au tick " + tick);
         }
     }
 
@@ -112,6 +118,6 @@ class BodyIntensifyChargeTest {
         assertEquals(BodyIntensifySkill.MIN_TIME, skill.getMinChargeTicks(null));
         assertEquals(BodyIntensifySkill.MAX_TIME, skill.getMaxChargeTicks(null));
         assertEquals(0f, skill.getCpCost(), 1e-4,
-                "la charge ne se paie pas, et le surcout tombe a l'appui");
+                "la charge se paie tick par tick, pas d'un coup a l'ouverture");
     }
 }

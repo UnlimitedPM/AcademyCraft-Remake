@@ -15,6 +15,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BodyIntensifyEffectTest {
 
     @Test
+    void lElectriciteDeLaChargeSAmasseSurLeCorps() {
+        // La seule chose de cette competence que l'original n'avait pas : pendant la charge, il ne
+        // montrait que son voile d'ecran. Ces arcs remplissent l'attente, et leur courbe est ici.
+        int full = cn.academy.ability.electromaster.BodyIntensifySkill.MAX_TIME;
+
+        // L'anneau part large et se resserre sur le corps : l'electricite se ramasse.
+        assertEquals(0.9, BodyIntensifyEffect.chargeRing(0), 1e-6, "large au premier tick");
+        assertEquals(0.45, BodyIntensifyEffect.chargeRing(full), 1e-6, "et serre a pleine charge");
+        assertTrue(BodyIntensifyEffect.chargeRing(full / 2) < BodyIntensifyEffect.chargeRing(0),
+                "en descendant tout du long");
+
+        // Et elle s'amassE : un arc par tick au depart, trois quand la charge est pleine, donc de
+        // trois a neuf arcs vivants a la fois (SurroundArcs.LIFE_TICKS vaut trois).
+        assertEquals(1, BodyIntensifyEffect.chargeArcs(0));
+        assertEquals(2, BodyIntensifyEffect.chargeArcs(full / 2));
+        assertEquals(3, BodyIntensifyEffect.chargeArcs(full));
+
+        // La progression est bornee : tenir plus longtemps que la charge pleine ne change rien, et
+        // un age negatif non plus.
+        assertEquals(1.0, BodyIntensifyEffect.chargeProgress(full * 10), 1e-9, "bornee a un");
+        assertEquals(0.0, BodyIntensifyEffect.chargeProgress(-5), 1e-9, "et a zero");
+        assertEquals(3, BodyIntensifyEffect.chargeArcs(full * 10), "rien de plus apres la charge");
+
+        // Le corps : des pieds a la tete, comme les hauteurs de l'onde.
+        assertEquals(0.0, BodyIntensifyEffect.CHARGE_LOW, 1e-9);
+        assertEquals(2.0, BodyIntensifyEffect.CHARGE_HIGH, 1e-9);
+    }
+
+    @Test
     void lOndeDescendDesSeptHauteursDeLoriginal() {
         assertEquals(7, BodyIntensifyEffect.HEIGHTS.length);
         assertEquals(7, BodyIntensifyEffect.DELAYS.length);

@@ -604,8 +604,9 @@ public class AbilityClientEvents {
                     cn.academy.ability.client.vm.VecAccelPreview.tickHeld(player, skill,
                             ClientCharge.getTicks(skill.getName()));
                     // Et l'electricite de l'ecran du renfort, qui se pose des le premier tick de
-                    // la charge : voir BodyIntensifyEffect.
-                    BodyIntensifyEffect.tickCharge(skill);
+                    // charge : voir BodyIntensifyEffect. Sa courbe a besoin de l'age de la charge,
+                    // parce que l'electricite s'amassE sur le corps a mesure qu'elle avance.
+                    BodyIntensifyEffect.tickCharge(skill, ClientCharge.getTicks(skill.getName()));
                     // Et le fantome de la teleportation au marqueur, dont la portee grandit avec la
                     // charge : il se pose des le premier tick, lui aussi. Voir TeleportMark.
                     TeleportMark.tick(player, skill, ClientCharge.getTicks(skill.getName()), 0);

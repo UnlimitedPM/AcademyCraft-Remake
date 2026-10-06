@@ -19,17 +19,19 @@ import java.util.List;
  * repris : « on est cense charger l'attaque et relacher la touche pour l'utiliser, pas
  * simplement appuyer pour activer immediatement ».
  *
- * <p>Ce que la charge coute : <b>rien</b>. Le surcout de l'original (200 a 120 selon l'experience)
- * tombe a l'appui et reste epingle pendant toute la charge, comme celui du claquement d'orage, mais
- * la reserve n'est pas touchee — la charge ne fait que tenir la touche, et elle est gratuite comme
- * celle des ailes de tempete.
+ * <p>Ce que la charge coute : le surcout de l'original a l'appui (200 a 120 selon l'experience),
+ * epingle pendant toute la charge comme celui du claquement d'orage, puis 20 a 15 CP par tick — mais
+ * <b>seulement le temps qu'il faut pour que la competence soit prete</b>, soit {@link #MIN_TIME}
+ * ticks. Au-dela, tenir la touche ne coute plus rien : c'est la meme regle que le canon a plasma, ou
+ * le prix s'arrete quand la charge est faite.
  *
- * <p>ECART ASSUME : l'original facturait 20 a 15 CP par tick de charge, ce qui avait un sens chez lui
- * — tenir plus longtemps donnait un renfort plus fort. Le port ne le fait plus (le contenu depend des
- * <b>paliers d'experience</b>, voir {@link #boostsFor}), donc payer par tick ne payait plus rien : le
- * joueur l'a vu tout de suite, « quand on reste appuyer sur la competence pour la preparer elle
- * consomme tout nos cp pour rien ». La charge est donc gratuite, et seuls le surcout d'ouverture et
- * la recharge se paient.
+ * <p>ECART ASSUME : l'original facturait ses 20 a 15 CP jusqu'a {@link #MAX_TIME}, ce qui avait un
+ * sens chez lui — tenir plus longtemps y donnait un renfort plus fort. Ici le contenu comme la duree
+ * se lisent sur les <b>paliers d'experience</b> (voir {@link #boostsFor}), donc payer au-dela du
+ * minimum ne payerait rien : le joueur l'a vu, « quand on reste appuyer sur la competence pour la
+ * preparer elle consomme tout nos cp pour rien ». Une charge gratuite ne lui a pas plu non plus
+ * (« charger le pouvoir ne consomme tout simplement aucun CP, donc c'est pas bon ») : c'est donc la
+ * fenetre de preparation qui est facturee, et elle seule.
  *
  * <p>Ce qu'elle rend : le renfort est le meme pour tous ceux qui la connaissent aussi bien, et il
  * grandit par <b>paliers d'experience</b> — voir {@link #boostsFor}, qui porte la table. Le temps
@@ -160,13 +162,30 @@ public class BodyIntensifySkill extends Skill {
 
     /**
      * Surcout d'ouverture : de 200 a 120, celui de l'original.
-     *
-     * <p>C'est le SEUL prix de la competence avec sa recharge : la charge, elle, ne touche pas a la
-     * reserve — voir {@link #onChargeTick}.
      */
     @Override
     public float getOverloadCost(AbilityData data) {
         return lerp(200f, 120f, data.getSkillExp(this));
+    }
+
+    /**
+     * L'entretien d'un tick de charge : de 20 a 15 CP, les nombres de l'original.
+     *
+     * <p>Facture sur la <b>fenetre de preparation</b> seulement — voir {@link #onChargeTick}.
+     */
+    public float chargeCpCost(AbilityData data) {
+        return lerp(20f, 15f, data.getSkillExp(this));
+    }
+
+    /**
+     * Le client rejoue ce chiffre pour ses nombres : voir {@link Skill#getTickUpkeep}.
+     *
+     * <p>Rien apres {@link #MIN_TIME} : c'est la borne du paiement, et le client la lit comme le
+     * serveur — l'affichage du F4 s'arrete donc de descendre au tick ou la charge est prete.
+     */
+    @Override
+    public float getTickUpkeep(AbilityData data, int ticks) {
+        return ticks <= MIN_TIME ? chargeCpCost(data) : 0f;
     }
 
     /** 0,01 a l'application du renfort, comme dans l'original. */
@@ -211,25 +230,28 @@ public class BodyIntensifySkill extends Skill {
         data.setHeldOverload(this, data.getOverload());
     }
 
-    /** La competence paie elle-meme a l'appui : la charge, elle, est gratuite. */
+    /** La competence paie elle-meme a l'appui et pendant la preparation : rien a la fin. */
     @Override
     public boolean paysOnEffect() {
         return true;
     }
 
     /**
-     * Un tick de charge : <b>rien</b>.
+     * Le prix de la preparation, et rien de plus.
      *
-     * <p>L'original facturait 20 a 15 CP par tick, ce qui avait un sens chez lui : tenir plus
-     * longtemps donnait un renfort plus fort. Ici le contenu comme la duree se lisent sur
-     * l'experience et sur rien d'autre, donc payer par tick ne paierait rien du tout — c'est ce que
-     * le joueur a vu, « quand on reste appuyer sur la competence pour la preparer elle consomme tout
-     * nos cp pour rien ». La charge ne fait plus que tenir la touche, et c'est le relachement qui
-     * applique le renfort ; une reserve vide ne l'arrete donc plus au milieu de la preparation.
+     * <p>La charge se paie par tick — 20 a 15 CP — jusqu'a ce que la competence soit <b>prete</b>,
+     * c'est-a-dire {@link #MIN_TIME} ticks tenus : c'est tout ce qu'il faut pour qu'elle parte, et
+     * au-dela tenir la touche ne change ni le renfort ni sa duree. Meme regle que le canon a plasma,
+     * dont le prix s'arrete quand la charge est faite.
+     *
+     * <p>Une reserve qui ne suit plus ferme la charge, comme chez l'original : rien ne part alors, ni
+     * renfort ni recharge. Et une fois le minimum depasse, la reserve vide ne l'interrompt plus — il
+     * n'y a plus rien a payer.
      */
     @Override
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
-        return true;
+        if (chargeTicks > MIN_TIME) return true;
+        return data.consumeControlPoint(getTickUpkeep(data, chargeTicks));
     }
 
     // --- LE RENFORT ---

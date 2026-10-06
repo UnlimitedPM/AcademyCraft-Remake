@@ -569,6 +569,7 @@ class PortedSkillsTest {
     private static final Map<String, Float> EXPECTED_TICK_UPKEEP = Map.ofEntries(
             Map.entry("electromaster.charging", 3f),
             Map.entry("electromaster.mag_movement", 15f),
+            Map.entry("electromaster.body_intensify", 20f),
             Map.entry("electromaster.thunder_clap", 18f),
             Map.entry("meltdowner.meltdowner", 10f),
             Map.entry("meltdowner.light_shield", 9f),

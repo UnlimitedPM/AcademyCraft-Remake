@@ -2,6 +2,7 @@ package cn.academy.ability.client;
 
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.arc.SurroundArcs;
+import cn.academy.ability.electromaster.BodyIntensifySkill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -121,6 +122,20 @@ public final class BodyIntensifyEffect {
     private static final float CHARGE_ALPHA = 0.3f;
     private static final float BURST_ALPHA = 0.4f;
 
+    // --- L'ELECTRICITE DE LA CHARGE, SUR LE CORPS ---
+
+    /** L'anneau de la charge : de 0,9 bloc au premier tick a 0,45 a pleine charge. */
+    public static final double CHARGE_RING_START = 0.9;
+    public static final double CHARGE_RING_FULL = 0.45;
+
+    /** Et ses hauteurs : des pieds (0) a la tete (2 blocs), comme le corps. */
+    public static final double CHARGE_LOW = 0.0;
+    public static final double CHARGE_HIGH = 2.0;
+
+    /** Les arcs poses par tick : un au premier, trois a pleine charge. */
+    public static final int CHARGE_ARCS_START = 1;
+    public static final int CHARGE_ARCS_FULL = 3;
+
     private static final RandomSource RANDOM = RandomSource.create();
 
     /** Le porteur de l'onde, ou moins un quand rien ne se joue. */
@@ -138,7 +153,6 @@ public final class BodyIntensifyEffect {
 
     private BodyIntensifyEffect() {
     }
-
     // --- L'ONDE, AUTOUR DU CORPS ---
 
     /** Lance l'onde sur ce porteur. Appele par le paquet, et par personne d'autre. */
@@ -202,21 +216,81 @@ public final class BodyIntensifyEffect {
     // --- L'ECRAN ---
 
     /**
-     * Un tick de charge : le voile s'ouvre, et les arcs se posent.
+     * Un tick de charge : le voile s'ouvre, et l'electricite s'amassE autour du corps.
      *
      * <p>Appele tant que la touche est tenue, et seulement pour cette competence : c'est le meme
-     * crochet que celui du claquement d'orage.
+     * crochet que celui du claquement d'orage. Le voile s'ouvre une fois et vit de lui-meme ; les
+     * arcs du corps, eux, se resement a chaque tick — voir {@link #sowChargeArcs}.
      */
-    public static void tickCharge(Skill skill) {
+    public static void tickCharge(Skill skill, int chargeTicks) {
         if (skill != ElectromasterCategory.BODY_INTENSIFY) return;
-        if (hudActive) return;
 
-        hudActive = true;
-        hudBlendingOut = false;
-        hudStart = Util.getMillis();
-        hudBlendStart = 0L;
-        HUD_ARCS.clear();
-        sowHud(false);
+        if (!hudActive) {
+            hudActive = true;
+            hudBlendingOut = false;
+            hudStart = Util.getMillis();
+            hudBlendStart = 0L;
+            HUD_ARCS.clear();
+            sowHud(false);
+        }
+
+        sowChargeArcs(chargeTicks);
+    }
+
+    /**
+     * L'electricite de la charge, sur le corps : quelques arcs semes chaque tick sur un anneau qui
+     * se resserre, de plus en plus nombreux.
+     *
+     * <p>C'est la seule chose de cette competence que l'original n'avait pas : chez lui la charge ne
+     * montrait que son voile d'ecran, et rien dans le monde. Le joueur : « l'animation pour ce pouvoir
+     * n'est pas bonne, les eclairs une fois qu'on s'applique les bonus est bon mais c'est actuellement
+     * la seule animation ». Ces arcs remplissent donc l'attente : ils montent des pieds a la tete, sur
+     * un anneau qui passe de 0,9 a 0,45 bloc — l'electricite se ramasse sur le corps au lieu de tourner
+     * autour —, et leur nombre monte de un a trois par tick, donc de trois a neuf arcs vivants a la
+     * fois, puisque {@code SurroundArcs.LIFE_TICKS} vaut trois.
+     *
+     * <p>Rien de tout cela ne passe par le reseau : c'est le joueur qui tient la touche, et lui seul
+     * voit sa propre preparation.
+     */
+    private static void sowChargeArcs(int chargeTicks) {
+        Entity body = Minecraft.getInstance().player;
+        if (body == null) return;
+
+        double ring = chargeRing(chargeTicks);
+        int count = chargeArcs(chargeTicks);
+        List<Vec3> points = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            double theta = RANDOM.nextDouble() * Math.PI * 2.0;
+            double height = CHARGE_LOW + RANDOM.nextDouble() * (CHARGE_HIGH - CHARGE_LOW);
+            points.add(new Vec3(body.getX() + Math.sin(theta) * ring,
+                    body.getY() + height,
+                    body.getZ() + Math.cos(theta) * ring));
+        }
+        SurroundArcs.spawnAt(SurroundArcs.THIN, points, body.getId(), RANDOM);
+    }
+
+    /**
+     * La progression de la charge, de 0 a 1 : l'age du compteur, borne a la charge pleine.
+     *
+     * <p>PURE, et c'est ce qui la rend relisible : la courbe entiere tient dans les trois methodes
+     * qui suivent, et le semis ne fait que la lire.
+     */
+    public static double chargeProgress(int chargeTicks) {
+        return Math.min(1.0, Math.max(0.0,
+                chargeTicks / (double) BodyIntensifySkill.MAX_TIME));
+    }
+
+    /** Combien d'arcs sont semes a ce tick : un au premier, trois a pleine charge. */
+    public static int chargeArcs(int chargeTicks) {
+        double p = chargeProgress(chargeTicks);
+        return CHARGE_ARCS_START
+                + (int) Math.round(p * (CHARGE_ARCS_FULL - CHARGE_ARCS_START));
+    }
+
+    /** Et le rayon de leur anneau a ce tick : de 0,9 a 0,45 bloc. */
+    public static double chargeRing(int chargeTicks) {
+        double p = chargeProgress(chargeTicks);
+        return CHARGE_RING_START + p * (CHARGE_RING_FULL - CHARGE_RING_START);
     }
 
     /**
