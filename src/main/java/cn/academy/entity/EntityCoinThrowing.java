@@ -25,11 +25,20 @@ import java.util.List;
  *
  * <h2>Ce qu'elle fait</h2>
  *
- * <p>Lancee d'une main, elle monte a {@link CoinToss#INIT_VEL} de vitesse et retombe sous
- * {@link CoinToss#GRAVITY}, en <b>suivant son lanceur</b> : son X et son Z sont recolles sur ceux du
- * joueur a chaque tick, et seule sa hauteur vit de sa vie — c'est le {@code KeepPosition} de
- * l'original, et c'est ce qui fait qu'on la voit retomber dans la main qui vient de la lancer, meme en
- * courant. Elle ne touche rien : elle traverse ce qu'elle rencontre, plafond compris.
+ * <p>Lancee d'une main, elle monte a {@link CoinToss#INIT_VEL} de vitesse — <b>plus l'elan du
+ * joueur</b>, car l'original faisait {@code motionY = player.motionY} avant son {@code += INITVEL} :
+ * une piece jetee en plein saut monte donc bien plus haut, et retombe bien plus tard, que celle jetee
+ * a l'arret. Elle retombe sous {@link CoinToss#GRAVITY}, en <b>suivant son lanceur</b> : son X et son
+ * Z sont recolles sur ceux du joueur a chaque tick, et seule sa hauteur vit de sa vie — c'est le
+ * {@code KeepPosition} de l'original, et c'est ce qui fait qu'on la voit retomber dans la main qui
+ * vient de la lancer, meme en courant. Elle ne touche rien : elle traverse ce qu'elle rencontre,
+ * plafond compris.
+ *
+ * <p>ET ELLE S'ARRETE AVEC CETTE MAIN, pas a son point de depart : des qu'elle redescend au niveau de
+ * la main de son lanceur <b>a cet instant</b>. Un joueur qui monte la rattrape donc plus tot, et un
+ * joueur qui tombe la laisse descendre avec lui — c'est le {@code posY < player.posY} de l'original,
+ * et ce que le joueur a demande : « l'entite retombe juste a son point d'origine alors que
+ * normalement, si je monte en meme temps, l'entite est censee s'arreter avec ».
  *
  * <p>Le railgun ne part que si elle est sur sa <b>retombee</b> — voir {@link CoinToss#isReady} : le
  * joueur la jette, attend le sommet, et tire a travers pendant qu'elle redescend. Une piece encore
@@ -87,6 +96,17 @@ public class EntityCoinThrowing extends Entity {
      */
     private double initHt;
 
+    /**
+     * L'elan du lancer : {@link CoinToss#INIT_VEL} PLUS la vitesse verticale du joueur au moment ou
+     * il a jete la piece.
+     *
+     * <p>C'est l'original au mot pres — {@code motionY = player.motionY}, puis {@code += INITVEL} — et
+     * c'est ce que le joueur a remarque : « si j'envoie la piece en plein pendant un saut elle
+     * s'envole plus haut que si je ne saute pas ». La gravite, elle, ne change pas : un lancer en
+     * pleine montee monte donc bien plus que la hauteur de sa vitesse en plus.
+     */
+    private double launchVel;
+
     /** Le lanceur, chez le serveur : la reference de l'original, et celle des faux joueurs. */
     private Player direct;
 
@@ -127,10 +147,16 @@ public class EntityCoinThrowing extends Entity {
         this(ModEntities.COIN.get(), level);
         this.direct = thrower;
         this.entityData.set(DATA_THROWER, thrower.getId());
-        Vec3 at = followPoint(thrower);
-        // D'ou elle part : la main qui vient de la lancer.
-        this.initHt = thrower.getEyeY() + HAND_OFFSET;
+        Vec3 at = followPoint(thrower, 1f);
+        // D'ou elle part : la main qui vient de la lancer, et avec quel elan.
+        this.initHt = handHeight(thrower);
+        this.launchVel = CoinToss.INIT_VEL + thrower.getDeltaMovement().y;
         setPos(at.x, this.initHt, at.z);
+    }
+
+    /** Ou est la main de son lanceur : la hauteur des yeux moins {@link #HAND_OFFSET}. */
+    private static double handHeight(Player thrower) {
+        return thrower.getEyeY() + HAND_OFFSET;
     }
 
     @Override
@@ -152,12 +178,12 @@ public class EntityCoinThrowing extends Entity {
 
     /** Ou en est-elle de son vol, de 0 a 1 : la courbe de {@link CoinToss}, sur son age. */
     public double tossProgress() {
-        return CoinToss.progress(tickCount);
+        return CoinToss.progress(tickCount, launchVel);
     }
 
     /** Le railgun peut-il partir a travers elle ? Voir {@link CoinToss#READY}. */
     public boolean isReady() {
-        return CoinToss.isReady(tickCount);
+        return CoinToss.isReady(tickCount, launchVel);
     }
 
     /** Son axe de rotation. Jamais nul : un axe de longueur nulle ne tourne rien. */
@@ -171,15 +197,19 @@ public class EntityCoinThrowing extends Entity {
      * <p>Seul le LACET compte, comme chez l'original ({@code rotationYaw}) : la piece reste devant et
      * de biais quoi que le joueur regarde, et lever les yeux ne la fait pas monter plus haut. La
      * hauteur, elle, n'est pas ici — c'est celle du vol, posee a chaque tick par {@link #tick}.
+     *
+     * <p>Le temps partiel sert au RENDU : le serveur pose la position au tick (1), et le client relit
+     * le suivi a chaque image pour que la piece ne traine pas derriere un joueur qui court.
      */
-    private static Vec3 followPoint(Player thrower) {
-        Vec3 look = thrower.getViewVector(1f);
+    public static Vec3 followPoint(Player thrower, float partialTick) {
+        Vec3 look = thrower.getViewVector(partialTick);
         Vec3 flat = new Vec3(look.x, 0.0, look.z);
         // Un regard droit vers le haut ou le bas n'a plus de direction : on prend le sud, le lacet
         // zero de Minecraft.
         flat = flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
         Vec3 side = new Vec3(-flat.z, 0.0, flat.x);
-        return thrower.position().add(flat.scale(FORWARD_OFFSET)).add(side.scale(SIDE_OFFSET));
+        return thrower.getPosition(partialTick)
+                .add(flat.scale(FORWARD_OFFSET)).add(side.scale(SIDE_OFFSET));
     }
 
     /**
@@ -187,11 +217,13 @@ public class EntityCoinThrowing extends Entity {
      *
      * <p>Elle suit son lanceur en X et Z — le {@code KeepPosition} de l'original — et sa hauteur est
      * celle de son age — sa {@code Rigidbody} : {@link CoinToss#height} de {@code tickCount} au-dessus
-     * de la main qui l'a jetee. C'est ce {@code setPos} qui la fait VOYAGER, et c'est tout : le client
-     * recoit sa position, l'interpole entre deux ticks, et n'a rien d'autre a faire.
+     * de la main qui l'a jetee, pour l'elan du lancer. C'est ce {@code setPos} qui la fait VOYAGER, et
+     * c'est tout : le client recoit sa position, l'interpole entre deux ticks, et n'a rien d'autre a
+     * faire.
      *
-     * <p>L'age dit aussi quand le vol est fini ({@link CoinToss#finished}) — et c'est le serveur,
-     * seul, qui la ramene.
+     * <p>Elle S'ARRETE AVEC LA MAIN : des qu'elle redescend au niveau de la main de son lanceur
+     * <b>maintenant</b> — voir {@link CoinToss#hasLanded} — un joueur qui monte la rattrape donc plus
+     * tot. C'est le filet de {@link CoinToss#MAX_LIFE} qui arretre celle qu'il ne rattrape pas.
      */
     @Override
     public void tick() {
@@ -202,13 +234,18 @@ public class EntityCoinThrowing extends Entity {
         if (this.level().isClientSide) return;
 
         Player thrower = thrower();
-        if (thrower == null || CoinToss.finished(tickCount)) {
+        if (thrower == null) {
             settle();
             return;
         }
 
-        Vec3 at = followPoint(thrower);
-        setPos(at.x, this.initHt + CoinToss.height(tickCount), at.z);
+        Vec3 at = followPoint(thrower, 1f);
+        setPos(at.x, this.initHt + CoinToss.height(tickCount, launchVel), at.z);
+
+        double handDrop = handHeight(thrower) - this.initHt;
+        if (CoinToss.hasLanded(tickCount, launchVel, handDrop) || tickCount > CoinToss.MAX_LIFE) {
+            settle();
+        }
     }
 
     /**

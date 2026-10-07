@@ -10,28 +10,27 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.AxisAngle4f;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 /**
- * La piece en vol : un disque qui tourne sur lui-meme, avec sa face et son revers.
+ * La piece en vol : un disque epais qui tourne sur lui-meme, avec sa face, son revers et sa tranche.
  *
  * <p>Portage de {@code RendererCoinThrowing}. L'original la dessinait avec
  * {@code RenderUtils.drawEquippedItem(0.0625, FRONT, BACK)} — l'image d'objet du mod, une face en
- * {@code coin_front} et l'autre en {@code coin_back} — tournee d'un angle qui avance de
- * {@link #SPIN} degres par seconde autour de l'axe tire au hasard par l'entite, le tout a l'echelle
- * 0,3.
+ * {@code coin_front} et l'autre en {@code coin_back} — tournee de son angle d'horloge autour de l'axe
+ * tire au hasard par l'entite, le tout a l'echelle 0,3.
  *
  * <h2>Une piece, pas un carre face a l'oeil</h2>
  *
- * <p>Elle n'est PAS tournee vers la camera : une piece qui flippe se voit de la tranche a la face,
- * et c'est ce qui la fait lire comme un objet qui tourne plutot que comme une image posee dans le
- * vide. Les deux faces se dessinent donc l'une apres l'autre, ecartees d'un millieme de bloc le
- * long de la normale — deux quads exactement coplanaires se disputeraient la profondeur, et la
- * piece scintillerait.
+ * <p>Elle n'est PAS tournee vers la camera : une piece qui flippe se voit de la tranche a la face, et
+ * c'est ce qui la fait lire comme un objet qui tourne plutot que comme une image posee dans le vide.
+ * Le disque a donc une <b>epaisseur</b>, et sa tranche est un anneau de facettes : sans lui, la piece
+ * n'etait que deux quads plats, et elle s'effacait a chaque fois qu'elle passait de profil — deux fois
+ * par tour, soit treize clignotements par seconde. C'est le « un peu de bug » que le joueur voyait
+ * dans son animation.
  *
  * <p>Sa face est celle qui porte le blason : la face avant regarde le haut quand elle monte,
  * comme une piece lancee du plat de la main.
@@ -43,24 +42,42 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
     private static final ResourceLocation BACK = ResourceLocation.fromNamespaceAndPath(
             AcademyCraft.MOD_ID, "textures/item/coin_back.png");
 
-    /** L'echelle de l'original : 0,3 de l'image d'objet, soit un disque d'environ trente centimetres. */
-    private static final float SCALE = 0.3f;
-
-    /** Son demi-cote, une fois mise a l'echelle : de quoi poser les quatre coins. */
-    private static final float HALF = SCALE / 2f;
-
-    /** Le demi-millieme qui separe les deux faces, en blocs. */
-    private static final float FACES_GAP = 0.001f;
+    /**
+     * Le rayon du disque : une piece de quinze centimetres de diametre.
+     *
+     * <p>L'original la dessinait a l'echelle 0,3, soit trente centimetres — et le joueur l'a trouvee
+     * « bien plus grande » que dans le vrai mod en vue externe. C'est une piece, pas une assiette.
+     */
+    private static final float RADIUS = 0.075f;
 
     /**
-     * Degres par seconde : l'original en faisait un tour en 300 millisecondes.
+     * Son demi-millimetre d'epaisseur : un peu moins de deux centimetres de tranche.
      *
-     * <p>ECART ASSUME : son angle repartait de zero toutes les 150 millisecondes — son
-     * {@code (temps * 1000) % 150} — donc la piece faisait un demi-tour puis revenait d'un coup.
-     * Ici l'angle avance sans jamais se remettre a zero : c'est ce que l'auteur voulait, et c'est
-     * invisible sur une piece, mais deux pieces lancees ensemble ne se ressemblent pas pour autant.
+     * <p>C'est la proportion de l'original, qui la dessinait dans une boite de un sur seize d'epais.
      */
-    private static final double SPIN = 1200.0;
+    private static final float HALF_THICKNESS = 0.01f;
+
+    /**
+     * Les facettes de sa tranche : vingt-quatre, comme la piece en main.
+     */
+    private static final int RIM_SEGMENTS = 24;
+
+    /** L'image fait trente-deux pixels de cote, et son anneau touche le bord. */
+    private static final float TEXELS = 32.0f;
+
+    /** Le rayon de cet anneau dans l'image, un demi-pixel en dedans du bord. */
+    private static final float RING_RADIUS = TEXELS / 2.0f - 0.5f;
+
+    /**
+     * La duree d'un demi-tour, en millisecondes : cent cinquante, comme l'original.
+     *
+     * <p>L'original calculait {@code (temps * 1000) % 150} et le multipliait par {@code 360/300} : sa
+     * piece faisait donc un demi-tour toutes les cent cinquante millisecondes, puis son angle
+     * REPARTAIT de zero d'un coup — six demi-tours par seconde, et un clignotement qui se voit. Le
+     * port avait remplace cela par une rotation continue de meme vitesse ; le joueur a trouve celle du
+     * vrai mod plus rapide, et c'est ce retour brusque qui fait la difference.
+     */
+    private static final double FLIP_MILLIS = 150.0;
 
     public CoinRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -70,57 +87,105 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
     @Override
     public void render(EntityCoinThrowing entity, float yaw, float partialTick, PoseStack pose,
                        MultiBufferSource buffers, int light) {
-        // L'angle du moment : il part du tick courant et avance avec le temps partiel, sinon la
-        // piece avancerait par saccades d'un tick.
+        // L'angle du moment : le tick courant, avance du temps partiel — sinon la piece avancerait par
+        // saccades d'un tick.
         double millis = (entity.tickCount + partialTick) * 50.0;
+        // L'ANGLE DE L'ORIGINAL, au mot pres : un demi-tour, puis le retour a zero.
+        float degrees = (float) (millis % FLIP_MILLIS * 360.0 / 300.0);
         Vec3 axis = entity.spinAxis();
 
         pose.pushPose();
-        // ELLE EST LA OU EST L'ENTITE, et nulle part ailleurs : le serveur la deplace a chaque tick
-        // — elle suit son lanceur, et sa hauteur est celle de son age — et le client l'interpole
-        // entre deux positions recues. Le rendu n'a donc RIEN a recalculer, et c'est ce qui l'empeche
-        // de trembler, de reculer, ou de disparaitre pendant que le joueur court.
-        pose.mulPose(new Quaternionf(new AxisAngle4f((float) Math.toRadians(millis * SPIN / 1000.0),
+        // LE SUIVI SE RELIT ICI, a chaque image : c'est ce qu'il restait a corriger quand le joueur
+        // marche. La position de l'entite lui arrive par le reseau avec un tick de retard, et un
+        // joueur qui court s'eloigne de sa piece entre deux paquets. Le X et le Z se relisent donc du
+        // LANCEUR — lisse, interpole entre deux ticks, et celui du joueur lui-meme — tandis que la
+        // HAUTEUR reste celle de l'entite : elle vient de son vol, et personne d'autre ne la connait.
+        Player thrower = entity.thrower();
+        if (thrower != null) {
+            Vec3 at = EntityCoinThrowing.followPoint(thrower, partialTick);
+            Vec3 base = entity.getPosition(partialTick);
+            pose.translate((float) (at.x - base.x), 0f, (float) (at.z - base.z));
+        }
+        pose.mulPose(new Quaternionf(new AxisAngle4f((float) Math.toRadians(degrees),
                 (float) axis.x, (float) axis.y, (float) axis.z)));
 
-        VertexConsumer front = buffers.getBuffer(
-                RenderType.entityCutoutNoCull(FRONT));
-        vertex(front, pose, light, +FACES_GAP);
-        VertexConsumer back = buffers.getBuffer(
-                RenderType.entityCutoutNoCull(BACK));
-        vertex(back, pose, light, -FACES_GAP);
+        coin(pose, buffers, light);
 
         pose.popPose();
         super.render(entity, yaw, partialTick, pose, buffers, light);
     }
 
-    /**
-     * Un carre de la taille de la piece, pose a plat et decale le long de sa normale.
-     *
-     * @param gap {@code +} pour la face du dessus, {@code -} pour celle du dessous
-     */
-    private static void vertex(VertexConsumer consumer, PoseStack pose, int light, float gap) {
-        Matrix4f matrix = pose.last().pose();
-        Matrix3f normal = pose.last().normal();
-
-        // Le carre est pose dans le plan horizontal : ses quatre coins, dans l'ordre de l'image
-        // (haut-gauche, bas-gauche, bas-droit, haut-droit), avec `v` qui vaut zero en haut.
-        float y = gap;
-        quad(consumer, matrix, normal, light, -HALF, y, -HALF, 0f, 0f);
-        quad(consumer, matrix, normal, light, -HALF, y, +HALF, 0f, 1f);
-        quad(consumer, matrix, normal, light, +HALF, y, +HALF, 1f, 1f);
-        quad(consumer, matrix, normal, light, +HALF, y, -HALF, 1f, 0f);
+    /** La piece : sa face, son revers, et sa tranche. */
+    private static void coin(PoseStack pose, MultiBufferSource buffers, int light) {
+        // Les deux faces se dessinent l'une apres l'autre, ecartees de l'epaisseur : deux quads
+        // exactement coplanaires se disputeraient la profondeur, et la piece scintillerait.
+        face(buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT)), pose, light,
+                +HALF_THICKNESS, 0f, 1f, 0f);
+        face(buffers.getBuffer(RenderType.entityCutoutNoCull(BACK)), pose, light,
+                -HALF_THICKNESS, 0f, -1f, 0f);
+        rim(pose, buffers, light);
     }
 
-    /** Un coin, avec sa lumiere plate : une piece fine n'a pas de relief a ombrer. */
-    private static void quad(VertexConsumer consumer, Matrix4f matrix, Matrix3f normal, int light,
-                             float x, float y, float z, float u, float v) {
-        consumer.vertex(matrix, x, y, z)
+    /**
+     * Une face : un carre de la taille de la piece, pose a plat dans le plan horizontal.
+     *
+     * <p>Ses quatre coins, dans l'ordre de l'image (haut-gauche, bas-gauche, bas-droit, haut-droit),
+     * avec `v` qui vaut zero en haut.
+     */
+    private static void face(VertexConsumer consumer, PoseStack pose, int light, float y,
+                             float nx, float ny, float nz) {
+        quad(consumer, pose, light, -RADIUS, y, -RADIUS, 0f, 0f, nx, ny, nz);
+        quad(consumer, pose, light, -RADIUS, y, +RADIUS, 0f, 1f, nx, ny, nz);
+        quad(consumer, pose, light, +RADIUS, y, +RADIUS, 1f, 1f, nx, ny, nz);
+        quad(consumer, pose, light, +RADIUS, y, -RADIUS, 1f, 0f, nx, ny, nz);
+    }
+
+    /**
+     * Sa tranche : un anneau de facettes, chacune prenant sa couleur sur le BORD de l'image.
+     *
+     * <p>C'est ce qui remplace les deux quads plats du debut, qui laissaient la piece s'effacer chaque
+     * fois qu'elle passait de profil.
+     */
+    private static void rim(PoseStack pose, MultiBufferSource buffers, int light) {
+        VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
+        for (int i = 0; i < RIM_SEGMENTS; i++) {
+            double a0 = Math.PI * 2.0 * i / RIM_SEGMENTS;
+            double a1 = Math.PI * 2.0 * (i + 1) / RIM_SEGMENTS;
+            float x0 = (float) (Math.cos(a0) * RADIUS);
+            float z0 = (float) (Math.sin(a0) * RADIUS);
+            float x1 = (float) (Math.cos(a1) * RADIUS);
+            float z1 = (float) (Math.sin(a1) * RADIUS);
+            // La normale pointe vers l'exterieur : c'est ce qui donne son eclairage a la tranche.
+            float nx = (float) Math.cos((a0 + a1) / 2.0);
+            float nz = (float) Math.sin((a0 + a1) / 2.0);
+
+            quad(consumer, pose, light, x0, +HALF_THICKNESS, z0, texelU(a0), texelV(a0), nx, 0f, nz);
+            quad(consumer, pose, light, x1, +HALF_THICKNESS, z1, texelU(a1), texelV(a1), nx, 0f, nz);
+            quad(consumer, pose, light, x1, -HALF_THICKNESS, z1, texelU(a1), texelV(a1), nx, 0f, nz);
+            quad(consumer, pose, light, x0, -HALF_THICKNESS, z0, texelU(a0), texelV(a0), nx, 0f, nz);
+        }
+    }
+
+    /** L'abscisse, dans l'image, du bord de l'anneau a cet angle. */
+    private static float texelU(double angle) {
+        return (TEXELS / 2.0f + (float) (Math.cos(angle) * RING_RADIUS)) / TEXELS;
+    }
+
+    /** Et son ordonnee : l'image a son zero EN HAUT, le modele a son zero en bas. */
+    private static float texelV(double angle) {
+        return (TEXELS / 2.0f - (float) (Math.sin(angle) * RING_RADIUS)) / TEXELS;
+    }
+
+    /** Un sommet de la piece : position, couleur, image, ecran, lumiere et normale. */
+    private static void quad(VertexConsumer consumer, PoseStack pose, int light,
+                             float x, float y, float z, float u, float v,
+                             float nx, float ny, float nz) {
+        consumer.vertex(pose.last().pose(), x, y, z)
                 .color(255, 255, 255, 255)
                 .uv(u, v)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(light)
-                .normal(normal, 0f, 1f, 0f)
+                .normal(pose.last().normal(), nx, ny, nz)
                 .endVertex();
     }
 

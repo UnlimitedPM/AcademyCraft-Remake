@@ -2783,6 +2783,9 @@ public final class AcademyGameTests {
 
         var player = ownPlayer(helper, "railgunner");
         player.getAbilities().instabuild = false;
+        // Un lancer A L'ARRET : sans cela l'elan du faux joueur s'ajouterait au lancer, et les bornes
+        // du vol (READY_TICK, LAND_TICK) ne seraient plus celles de la piece.
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         clearCorridor(helper, abs, 12);
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
 
@@ -2865,6 +2868,7 @@ public final class AcademyGameTests {
 
         var player = ownPlayer(helper, "coin_flipper");
         player.getAbilities().instabuild = false;
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(ModItems.COIN.get(), 4));

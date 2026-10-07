@@ -10,6 +10,12 @@ package cn.academy.ability.electromaster;
  * fraiche — encore dans sa montee — ne sert a rien, et une piece retombee revient simplement dans
  * l'inventaire.
  *
+ * <p>DEUX CHOSES dependent du JOUEUR, et pas de la piece : l'elan avec lequel il la lance — une piece
+ * jetee en plein saut monte beaucoup plus haut, parce que la vitesse verticale du saut s'ajoute a
+ * celle du lancer — et l'endroit ou il a la main quand elle redescend, puisqu'elle est rattrapee plus
+ * tot s'il est monte. Les deux sont des parametres des fonctions d'ici, et pas des constantes : c'est
+ * ce qui les rend lisibles en JUnit, sans monde ni joueur.
+ *
  * <h2>Tout se lit sur l'AGE</h2>
  *
  * <p>Le port tenait d'abord une hauteur et une vitesse dans l'entite, avancees tick par tick ; la
@@ -27,7 +33,7 @@ package cn.academy.ability.electromaster;
  */
 public final class CoinToss {
 
-    /** La vitesse verticale du lancer : {@code INITVEL} de l'original. */
+    /** La vitesse verticale du lancer, sans l'elan du joueur : {@code INITVEL} de l'original. */
     public static final double INIT_VEL = 0.92;
 
     /** Et sa gravite, par tick. */
@@ -36,9 +42,10 @@ public final class CoinToss {
     /**
      * La vie maximale d'une piece en vol : cent vingt ticks, comme {@code MAXLIFE}.
      *
-     * <p>C'est le filet de l'original, et il ne sert plus a rien : le vol dure {@link #LAND_TICK}
-     * ticks, toujours, puisqu'il ne depend de rien d'autre que de l'age. Il reste pour qu'une piece ne
-     * puisse pas rester ouverte a jamais si {@link #finished} change un jour.
+     * <p>C'est le filet de l'original, et il ne sert presque a rien : le vol dure une quarantaine de
+     * ticks au plus, puisqu'il ne depend que de son age et de son elan. Il reste pour qu'une piece ne
+     * puisse pas rester ouverte a jamais — c'est lui qui arrete celle que son lanceur, parti trop
+     * haut et trop vite, ne rattraperait pas.
      */
     public static final int MAX_LIFE = 120;
 
@@ -49,57 +56,89 @@ public final class CoinToss {
      */
     public static final double READY = 0.7;
 
+    // --- LES BORNES DU LANCER A L'ARRET ---
+    //
+    // Le vol se lit sur l'age, mais aussi sur la vitesse a laquelle il est parti : une piece lancee
+    // pendant un saut n'a donc pas de bornes fixes, et le tir s'ouvre plus tard. Celles-ci sont
+    // celles du lancer a l'arret — le seul cas qui en ait, et celui qu'un joueur immobile voit tous
+    // les jours.
+
     /** Le tick de la plus haute hauteur : le dernier ou la vitesse est encore positive. */
-    public static final int APEX_TICK = firstTickWhere(t -> velocity(t) <= 0) - 1;
+    public static final int APEX_TICK = apexTick(INIT_VEL);
 
     /** Le tick ou elle revient a sa hauteur de depart, en descendant. */
-    public static final int LAND_TICK = firstTickWhere(t -> height(t) <= 0 && velocity(t) < 0);
+    public static final int LAND_TICK = landTick(INIT_VEL);
 
     /** Et le premier tick ou le tir est ouvert : la borne de {@link #READY}, sur la retombee. */
-    public static final int READY_TICK = firstTickWhere(t -> progress(t) > READY);
+    public static final int READY_TICK = firstTickWhere(t -> isReady(t, INIT_VEL));
 
     private CoinToss() {
     }
 
-    /** La vitesse verticale au tick {@code ticks} du vol : positive en montee, negative en descente. */
-    public static double velocity(int ticks) {
-        return INIT_VEL - GRAVITY * ticks;
+    /**
+     * La vitesse verticale au tick {@code ticks}, pour un lancer parti a {@code launchVel}.
+     *
+     * <p>{@code launchVel} vaut {@link #INIT_VEL} plus la vitesse verticale du joueur au moment du
+     * lancer : l'original posait {@code motionY = player.motionY} avant d'y ajouter son {@code INITVEL}.
+     */
+    public static double velocity(double ticks, double launchVel) {
+        return launchVel - GRAVITY * ticks;
     }
 
     /** Sa hauteur RELATIVE a celle du lancer, au tick {@code ticks} : la somme des vitesses. */
-    public static double height(double ticks) {
-        return INIT_VEL * ticks - GRAVITY * ticks * (ticks + 1) / 2.0;
+    public static double height(double ticks, double launchVel) {
+        return launchVel * ticks - GRAVITY * ticks * (ticks + 1) / 2.0;
     }
 
-    /** La hauteur du sommet, relative a celle du lancer. */
-    public static double apexHeight() {
-        return height(APEX_TICK);
+    /** Le dernier tick ou elle monte encore. */
+    public static int apexTick(double launchVel) {
+        return firstTickWhere(t -> velocity(t, launchVel) <= 0) - 1;
+    }
+
+    /** Et sa hauteur a ce moment-la, relative a celle du lancer. */
+    public static double apexHeight(double launchVel) {
+        return height(apexTick(launchVel), launchVel);
     }
 
     /**
      * Ou en est la piece dans son vol, de 0 a 1.
      *
      * <p>C'est la courbe de l'original. La montee compte pour la <b>premiere moitie</b> : la vitesse
-     * restante est la part du vol qui reste. La descente compte pour la seconde : la hauteur perdue
-     * depuis le sommet, sur la hauteur totale du vol. Donc 0 au lancer, 0,5 au sommet, 1 au retour.
+     * qu'il lui reste, rapportee a {@link #INIT_VEL} — donc le sommet vaut toujours 0,5, meme pour un
+     * lancer parti plus vite, qui commence alors sous zero. La descente compte pour la seconde : la
+     * hauteur perdue depuis le sommet, sur la hauteur totale du vol. Donc 0 au lancer a l'arret, 0,5
+     * au sommet, 1 au retour.
      */
-    public static double progress(int ticks) {
-        if (velocity(ticks) > 0) {
-            return GRAVITY * ticks / INIT_VEL * 0.5;
+    public static double progress(double ticks, double launchVel) {
+        if (velocity(ticks, launchVel) > 0) {
+            return (INIT_VEL - velocity(ticks, launchVel)) / INIT_VEL * 0.5;
         }
-        double apex = apexHeight();
+        double apex = apexHeight(launchVel);
         if (apex <= 0) return 1.0;
-        return Math.min(1.0, 0.5 + (apex - height(ticks)) / apex * 0.5);
+        return Math.min(1.0, 0.5 + (apex - height(ticks, launchVel)) / apex * 0.5);
     }
 
     /** Le railgun part-il ? La piece doit avoir depasse {@link #READY} de son vol. */
-    public static boolean isReady(int ticks) {
-        return progress(ticks) > READY;
+    public static boolean isReady(double ticks, double launchVel) {
+        return progress(ticks, launchVel) > READY;
     }
 
-    /** La piece a-t-elle fini son vol ? Elle est alors revenue a sa hauteur de depart, ou en dessous. */
-    public static boolean finished(int ticks) {
-        return ticks >= LAND_TICK || ticks > MAX_LIFE;
+    /** Le tick ou elle revient a sa hauteur de depart, ou passe en dessous. */
+    public static int landTick(double launchVel) {
+        return firstTickWhere(t -> height(t, launchVel) <= 0 && velocity(t, launchVel) < 0);
+    }
+
+    /**
+     * La piece a-t-elle fini son vol ?
+     *
+     * <p>Oui des qu'elle redescend au niveau de la main de son lanceur <b>maintenant</b> — et pas a
+     * celui d'ou elle est partie. {@code handDrop} est ce que cette main a bouge depuis le lancer :
+     * zero si le joueur n'a pas bouge, positif s'il est monte (et elle est alors rattrapee plus tot),
+     * negatif s'il est descendu (et elle continue de tomber avec lui). C'est le
+     * {@code posY < player.posY} de l'original.
+     */
+    public static boolean hasLanded(double ticks, double launchVel, double handDrop) {
+        return velocity(ticks, launchVel) < 0 && height(ticks, launchVel) <= handDrop;
     }
 
     /** Le premier tick ou la condition est vraie, en partant de 1 — et jamais avant. */
