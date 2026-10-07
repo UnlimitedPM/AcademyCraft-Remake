@@ -76,6 +76,13 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
         Vec3 axis = entity.spinAxis();
 
         pose.pushPose();
+        // OU ELLE SE DESSINE : l'entite, elle, ne bouge jamais — c'est ce que le client voit arriver
+        // par le reseau, et le melanger a un calcul local la faisait trembler des que le joueur
+        // marchait. Le vol se relit donc ici, de la position du lanceur et de l'age, comme le
+        // faisait le client de l'original avec sa propre copie de la piece.
+        Vec3 at = entity.drawPosition(partialTick);
+        pose.translate((float) (at.x - entity.getX()), (float) (at.y - entity.getY()),
+                (float) (at.z - entity.getZ()));
         pose.mulPose(new Quaternionf(new AxisAngle4f((float) Math.toRadians(millis * SPIN / 1000.0),
                 (float) axis.x, (float) axis.y, (float) axis.z)));
 

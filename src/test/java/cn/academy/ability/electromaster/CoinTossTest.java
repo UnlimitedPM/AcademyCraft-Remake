@@ -8,94 +8,93 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Le vol de la piece du railgun : sa courbe, et la fenetre pendant laquelle le tir est permis.
+ * Le vol de la piece du railgun : sa courbe, ses bornes, et la fenetre pendant laquelle le tir est
+ * permis.
  *
- * <p>C'est la seule partie de la piece qui se relit sans monde : l'entite ne fait que la nourrir
- * avec ses champs, et le railgun ne fait que la lire. Tout le reste — le lancer, l'objet, le tir —
+ * <p>C'est la seule partie de la piece qui se relit sans monde : le vol entier est une fonction de
+ * l'AGE, donc les deux cotes le calculent a l'identique. Tout le reste — le lancer, l'objet, le tir —
  * demande un serveur, donc un GameTest.
  */
 class CoinTossTest {
 
-    /** Le vol simule : la meme integration que l'entite, tick par tick. */
-    private record Flight(double maxHt, int apexTick, int landTick, int readyTick) {}
-
-    private static Flight fly() {
-        double posY = 0, motionY = CoinToss.INIT_VEL, maxHt = 0, previous = 0;
-        int apex = -1, land = -1, ready = -1;
-        for (int tick = 1; tick <= CoinToss.MAX_LIFE; tick++) {
-            motionY -= CoinToss.GRAVITY;
-            posY += motionY;
-
-            // Le sommet est le dernier tick ou l'on monte encore : c'est la que la hauteur cesse
-            // d'augmenter, et non le premier tick ou la vitesse devient negative (elle l'est un
-            // tick apres le sommet, quand la piece a deja commence a descendre).
-            if (apex < 0 && posY < previous) apex = tick - 1;
-            previous = posY;
-            maxHt = Math.max(maxHt, posY);
-
-            if (ready < 0 && CoinToss.isReady(CoinToss.progress(motionY, maxHt, posY, 0))) ready = tick;
-            if (posY <= 0 && motionY < 0) {
-                land = tick;
-                break;
-            }
-        }
-        return new Flight(maxHt, apex, land, ready);
-    }
-
     @Test
     @DisplayName("la piece part a zero, passe par la moitie au sommet, et finit a un")
     void laCourbeDeLoriginal() {
-        // L'original : la montee compte pour la premiere moitie, la descente pour la seconde.
-        assertEquals(0.0, CoinToss.progress(CoinToss.INIT_VEL, 0, 0, 0), 1e-9, "au lancer");
-        assertEquals(0.25, CoinToss.progress(CoinToss.INIT_VEL / 2, 7, 5, 0), 1e-9,
-                "a mi-montee");
-        assertEquals(0.5, CoinToss.progress(0, 7, 7, 0), 1e-9, "au sommet, vitesse nulle");
-        assertEquals(0.75, CoinToss.progress(-0.46, 7, 3.5, 0), 1e-9, "a mi-descente");
-        assertEquals(1.0, CoinToss.progress(-0.92, 7, 0, 0), 1e-9, "et de retour au sol");
+        // L'original : la montee compte pour la premiere moitie du vol, la descente pour la seconde.
+        assertEquals(0.0, CoinToss.progress(0), 1e-9, "au lancer");
+        // Sur la montee, la progression est la vitesse perdue : 5 ticks font 5 x 0,06 sur 0,92, et
+        // la montee entiere ne compte que pour la moitie du vol.
+        assertEquals(0.16304, CoinToss.progress(5), 1e-5, "cinq ticks de montee");
+        assertTrue(CoinToss.progress(CoinToss.APEX_TICK) < 0.5,
+                "elle n'atteint la moitie qu'au sommet, pas avant");
+
+        // Et sur la descente, c'est la hauteur perdue depuis le sommet qui compte.
+        assertEquals(1.0, CoinToss.progress(CoinToss.LAND_TICK), 1e-9, "de retour au sol");
     }
 
     @Test
     @DisplayName("la progression ne redescend jamais, et la borne est respectee")
     void laProgressionMonteToujours() {
         double previous = -1;
-        double posY = 0, motionY = CoinToss.INIT_VEL, maxHt = 0;
-
-        for (int tick = 1; tick <= CoinToss.MAX_LIFE; tick++) {
-            motionY -= CoinToss.GRAVITY;
-            posY += motionY;
-            maxHt = Math.max(maxHt, posY);
-
-            double progress = CoinToss.progress(motionY, maxHt, posY, 0);
-            assertTrue(progress >= previous, "le vol recule au tick " + tick);
-            assertTrue(progress >= 0 && progress <= 1, "hors des bornes au tick " + tick);
+        for (int ticks = 0; ticks <= CoinToss.LAND_TICK; ticks++) {
+            double progress = CoinToss.progress(ticks);
+            assertTrue(progress >= previous, "le vol recule au tick " + ticks);
+            assertTrue(progress >= 0 && progress <= 1, "hors des bornes au tick " + ticks);
             previous = progress;
-
-            if (posY <= 0 && motionY < 0) break;
         }
+    }
+
+    @Test
+    @DisplayName("la hauteur monte puis retombe, et le sommet est celui qu'on croit")
+    void laHauteurDuVol() {
+        assertEquals(0.0, CoinToss.height(0), 1e-9, "elle part de la hauteur du lancer");
+
+        double previous = 0;
+        for (int ticks = 1; ticks <= CoinToss.APEX_TICK; ticks++) {
+            assertTrue(CoinToss.height(ticks) > previous, "elle monte au tick " + ticks);
+            previous = CoinToss.height(ticks);
+        }
+        assertEquals(previous, CoinToss.apexHeight(), 1e-9, "et le sommet est le dernier tick montant");
+        assertEquals(0.0, CoinToss.velocity(CoinToss.APEX_TICK + 1), 0.05,
+                "ou la vitesse s'annule");
+
+        // Sept blocs de haut : elle passe au-dessus de la tete du joueur, comme l'original.
+        assertTrue(CoinToss.apexHeight() > 6.0 && CoinToss.apexHeight() < 7.0,
+                "un sommet a sept blocs : " + CoinToss.apexHeight());
+        assertTrue(CoinToss.height(CoinToss.LAND_TICK) <= 0, "et elle revient a sa hauteur");
     }
 
     @Test
     @DisplayName("le tir n'est permis que sur la retombee, et pendant assez longtemps")
     void laFenetreDeTir() {
-        Flight flight = fly();
-
         // Une piece retombee en un peu plus d'une seconde et demie : 0,92 de vitesse pour 0,06 de
         // gravite font un sommet vers le quinzieme tick, et un retour vers le trentieme.
-        assertEquals(15, flight.apexTick(), "le sommet, au quinzieme tick");
-        assertEquals(30, flight.landTick(), "et le retour au sol, a une seconde et demie");
+        assertEquals(15, CoinToss.APEX_TICK, "le sommet, au quinzieme tick");
+        assertEquals(30, CoinToss.LAND_TICK, "et le retour, a une seconde et demie");
+        assertEquals(25, CoinToss.READY_TICK, "le tir s'ouvre au vingt-cinquieme");
 
-        // La piece atteint sept dixiemes APRES le sommet : la fenetre est donc dans la descente, et
-        // elle dure une poignee de ticks — de quoi appuyer, pas de quoi attendre.
-        assertTrue(flight.readyTick() > flight.apexTick(),
+        assertTrue(CoinToss.READY_TICK > CoinToss.APEX_TICK,
                 "le tir s'ouvre sur la retombee, jamais dans la montee");
-        assertTrue(flight.landTick() - flight.readyTick() >= 5,
+        assertTrue(CoinToss.LAND_TICK - CoinToss.READY_TICK >= 5,
                 "et la fenetre dure au moins cinq ticks");
+        assertFalse(CoinToss.isReady(CoinToss.APEX_TICK), "rien au sommet");
+        assertTrue(CoinToss.isReady(CoinToss.READY_TICK), "et le tir est ouvert a partir de la");
 
-        // Ce que la borne veut dire : juste en dessous, on ne tire pas.
+        // Ce que la borne veut dire, tick par tick : rien jusqu'au vingt-quatrieme.
+        for (int ticks = 0; ticks < CoinToss.READY_TICK; ticks++) {
+            assertFalse(CoinToss.isReady(ticks), "le tir ne s'ouvre pas au tick " + ticks);
+        }
         assertEquals(0.7, CoinToss.READY, 1e-9, "sept dixiemes, comme l'original");
-        assertFalse(CoinToss.isReady(0.7), "la borne elle-meme n'ouvre pas le tir");
-        assertFalse(CoinToss.isReady(0.69));
-        assertTrue(CoinToss.isReady(0.71));
-        assertFalse(CoinToss.isReady(0.0), "et jamais pendant la montee");
+    }
+
+    @Test
+    @DisplayName("le vol finit tout seul, et jamais deux fois")
+    void laFinDuVol() {
+        for (int ticks = 0; ticks < CoinToss.LAND_TICK; ticks++) {
+            assertFalse(CoinToss.finished(ticks), "le vol dure encore au tick " + ticks);
+        }
+        assertTrue(CoinToss.finished(CoinToss.LAND_TICK), "et il est fini au retour");
+        assertTrue(CoinToss.finished(CoinToss.MAX_LIFE + 1),
+                "le filet de l'original attrape ce qui traine");
     }
 }

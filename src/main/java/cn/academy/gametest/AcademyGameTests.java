@@ -2832,10 +2832,12 @@ public final class AcademyGameTests {
                         net.minecraft.world.InteractionHand.MAIN_HAND).getResult(),
                 "on ne jette qu'une piece a la fois");
 
-        // Elle retombe : c'est la que le tir s'ouvre. Vingt-cinq ticks, une seconde et quart.
-        while (!coin.isReady() && coin.tickCount < cn.academy.ability.electromaster.CoinToss.MAX_LIFE) {
-            coin.tick();
-        }
+        // Elle retombe : c'est la que le tir s'ouvre. Le vol se lit sur l'AGE, donc on l'avance d'un
+        // coup au lieu de faire tourner l'entite vingt-cinq fois. C'est ce qu'il faut faire : la
+        // faire tourner en boucle depuis un test a deja envoye le serveur de test en vrille sur le
+        // verrou de ses donnees synchronisees (SynchedEntityData, lecture/ecriture), et c'est CE
+        // blocage qui faisait echouer les autres tests du voisinage.
+        coin.tickCount = cn.academy.ability.electromaster.CoinToss.READY_TICK;
         assertTrue(helper, coin.isReady(), "la piece finit par redescendre");
         assertFalse(helper, coin.isRemoved(), "et elle est encore en vol");
         assertTrue(helper, railgun.canStart(player, data), "le tir est ouvert");
@@ -2872,11 +2874,10 @@ public final class AcademyGameTests {
         assertTrue(helper, coin != null, "la piece doit etre en vol");
         assertValue(helper, 3, player.getMainHandItem().getCount(), "trois pieces en main");
 
-        // On la laisse finir son vol : elle retombe au niveau du lanceur et rentre.
-        int guard = 0;
-        while (!coin.isRemoved() && guard++ < cn.academy.ability.electromaster.CoinToss.MAX_LIFE) {
-            coin.tick();
-        }
+        // On la laisse finir son vol : elle retombe a la hauteur de son lanceur et rentre. Son age
+        // se pose d'un coup — voir l'autre test — et un seul tick suffit a faire rentrer la piece.
+        coin.tickCount = cn.academy.ability.electromaster.CoinToss.LAND_TICK;
+        coin.tick();
         assertTrue(helper, coin.isRemoved(), "elle finit par retomber et disparaitre");
         assertValue(helper, 4, player.getMainHandItem().getCount(),
                 "et la piece est revenue dans la main");
