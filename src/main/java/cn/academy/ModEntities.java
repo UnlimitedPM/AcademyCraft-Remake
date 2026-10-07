@@ -82,15 +82,19 @@ public class ModEntities {
      *
      * <p>Un objet minuscule qui ne bouge JAMAIS : il nait la ou on le jette et y reste, et c'est son
      * RENDU qui le fait voler — voir {@code EntityCoinThrowing.drawPosition}. Ses positions n'ont donc
-     * rien a faire sur le reseau, d'ou la cadence lente : seules sa naissance et sa mort voyagent. Un
-     * quart de bloc de cote, comme l'original.
+     * rien a faire sur le reseau, d'ou la cadence lente : seules sa naissance et sa mort voyagent.
+     *
+     * <p>ET IL SE SUIT DE LOIN : puisqu'il ne suit pas son lanceur, un joueur qui court s'en eloigne,
+     * et a huit blocs le serveur cessait de le lui envoyer — la piece s'evaporait en plein vol (« elle
+     * disparait avant de finir si je vais un peu trop vite »). Trente-deux blocs couvrent le vol
+     * entier, meme en sprintant. Un quart de bloc de cote, comme l'original.
      */
     public static final RegistryObject<EntityType<cn.academy.entity.EntityCoinThrowing>> COIN =
             ENTITIES.register("coin", () -> EntityType.Builder
                     .<cn.academy.entity.EntityCoinThrowing>of(cn.academy.entity.EntityCoinThrowing::new,
                             MobCategory.MISC)
                     .sized(0.25f, 0.25f)
-                    .clientTrackingRange(8)
+                    .clientTrackingRange(32)
                     .updateInterval(20)
                     .build("coin"));
 

@@ -1,25 +1,7 @@
 {
-  "credit": "Piece du railgun : sa face, son revers, et sa tranche.",
-  "ambientocclusion": false,
-  "textures": {
-    "particle": "academy:item/coin_front",
-    "front": "academy:item/coin_front",
-    "back": "academy:item/coin_back"
-  },
-  "elements": [
-    {
-      "from": [0, 0, 7.5],
-      "to": [16, 16, 8.5],
-      "faces": {
-        "north": { "texture": "#back" },
-        "south": { "texture": "#front" },
-        "up": { "texture": "#front", "uv": [0, 0, 32, 1] },
-        "down": { "texture": "#front", "uv": [0, 31, 32, 32] },
-        "east": { "texture": "#front", "uv": [31, 0, 32, 32] },
-        "west": { "texture": "#front", "uv": [0, 0, 1, 32] }
-      }
-    }
-  ],
+  "credit": "Piece du railgun : la geometrie vit dans CoinItemRenderer, ici il ne reste que les poses.",
+  "parent": "minecraft:item/generated",
+  "textures": { "layer0": "academy:item/coin_front" },
   "display": {
     "gui": { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625] },
     "fixed": { "rotation": [0, 180, 0], "translation": [0, 0, 0], "scale": [0.5, 0.5, 0.5] },

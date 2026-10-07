@@ -83,6 +83,19 @@ public class EntityCoinThrowing extends Entity {
     private static final EntityDataAccessor<Float> DATA_INIT_HT =
             SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.FLOAT);
 
+    /**
+     * L'heure du monde ou elle a ete jetee : c'est l'AGE du dessin, et il vient de la, pas de
+     * l'entite.
+     *
+     * <p>L'age d'une copie cliente repart de ZERO chaque fois qu'elle arrive : quand le joueur
+     * s'eloigne trop loin, le serveur cesse de la lui envoyer, il l'oublie, et la copie suivante
+     * nait avec un age de zero — la piece repartait donc du debut, voire s'evanouissait, des que le
+     * joueur marchait vite (« l'animation est toujours buguee voire disparait avant de finir »).
+     * L'heure du monde, elle, est la meme partout et ne recule jamais.
+     */
+    private static final EntityDataAccessor<Long> DATA_LAUNCH_TICK =
+            SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.LONG);
+
     /** Le lanceur, chez le serveur : la reference de l'original, et celle des faux joueurs. */
     private Player direct;
 
@@ -99,9 +112,17 @@ public class EntityCoinThrowing extends Entity {
      * finit. La remonter ici, comme le port l'a fait un moment, deplacait le point de retour — la
      * piece rentrait un demi-bloc trop haut.
      *
-     * <p>Et de combien elle vole a cote du lanceur : de biais et devant, la aussi comme l'affichage de
-     * l'original. Sans ce decalage elle monterait et retomberait DANS le corps du joueur, et on ne
-     * verrait d'elle que ce qui depasse de sa tete.
+     * <p>ET ELLE PART DE LA MAIN, PAS DES PIEDS : le joueur a vu l'entite a la hauteur de ses
+     * pieds, et la piece rampait le long de ses jambes avant de monter. Le vol par donc de
+     * {@link #HAND_OFFSET} sous les yeux — la hauteur d'une main qui lance.
+     */
+    private static final double HAND_OFFSET = -0.4;
+
+    /**
+     * De combien elle vole a cote du lanceur : de biais et devant, comme l'affichage de l'original.
+     *
+     * <p>Sans ce decalage elle monterait et retomberait DANS le corps du joueur, et on ne verrait
+     * d'elle que ce qui depasse de sa tete.
      */
     private static final double SIDE_OFFSET = 0.35;
     private static final double FORWARD_OFFSET = 0.35;
@@ -122,8 +143,9 @@ public class EntityCoinThrowing extends Entity {
         this(ModEntities.COIN.get(), level);
         this.direct = thrower;
         this.entityData.set(DATA_THROWER, thrower.getId());
-        double launch = thrower.getY();
+        double launch = thrower.getEyeY() + HAND_OFFSET;
         this.entityData.set(DATA_INIT_HT, (float) launch);
+        this.entityData.set(DATA_LAUNCH_TICK, level.getGameTime());
         Vec3 at = followPoint(thrower);
         setPos(at.x, launch, at.z);
     }
@@ -133,6 +155,7 @@ public class EntityCoinThrowing extends Entity {
         this.entityData.define(DATA_THROWER, -1);
         // « On ne sait pas encore d'ou elle a ete lancee » : voir DATA_INIT_HT.
         this.entityData.define(DATA_INIT_HT, Float.NaN);
+        this.entityData.define(DATA_LAUNCH_TICK, 0L);
     }
 
     /** La hauteur du lancer, ou {@code NaN} tant qu'elle n'est pas connue. */
@@ -202,7 +225,18 @@ public class EntityCoinThrowing extends Entity {
             return position();
         }
         Vec3 at = followPoint(thrower);
-        return new Vec3(at.x, launch + CoinToss.height(tickCount + partialTick), at.z);
+        return new Vec3(at.x, launch + CoinToss.height(flightAge(partialTick)), at.z);
+    }
+
+    /**
+     * L'age du VOL, en ticks : depuis l'heure du monde ou elle a ete jetee.
+     *
+     * <p>C'est celui du dessin, et il ne depend pas de la copie qui le lit — voir
+     * {@link #DATA_LAUNCH_TICK}. Il s'accorde avec {@code tickCount} chez le serveur (a un tick
+     * pres), qui reste, lui, l'age de la DECISION : c'est celui que les tests posent.
+     */
+    public double flightAge(float partialTick) {
+        return this.level().getGameTime() - this.entityData.get(DATA_LAUNCH_TICK) + partialTick;
     }
 
     /**

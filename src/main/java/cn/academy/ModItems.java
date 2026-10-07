@@ -175,6 +175,30 @@ public class ModItems {
             super(new Item.Properties());
         }
 
+        /**
+         * Le rendu de l'objet : l'image dans l'inventaire, la piece en volume dans la main.
+         *
+         * <p>Portage du {@code TileEntityItemStackRenderer} de l'original, par le moyen
+         * d'aujourd'hui : un modele JSON ne sait dessiner que des boites, donc sa tranche est un
+         * carre (le joueur l'a vu deux fois) et il ne peut pas montrer l'image telle quelle dans
+         * l'inventaire en montrant autre chose dans la main. Voir {@code CoinItemRenderer}.
+         */
+        @Override
+        public void initializeClient(java.util.function.Consumer<
+                net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
+            consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
+                private cn.academy.client.CoinItemRenderer renderer;
+
+                @Override
+                public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                    if (renderer == null) {
+                        renderer = new cn.academy.client.CoinItemRenderer();
+                    }
+                    return renderer;
+                }
+            });
+        }
+
         @Override
         public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
             ItemStack stack = player.getItemInHand(hand);
