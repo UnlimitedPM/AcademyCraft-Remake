@@ -26,8 +26,8 @@ import java.util.List;
  * <h2>Ce qu'elle fait</h2>
  *
  * <p>Lancee d'une main, elle monte a {@link CoinToss#INIT_VEL} de vitesse et retombe sous
- * {@link CoinToss#GRAVITY}, en <b>suivant son lanceur</b> : le X et le Z du dessin sont recolles sur
- * ceux du joueur a chaque image, et seule sa hauteur vit de sa vie — c'est le {@code KeepPosition} de
+ * {@link CoinToss#GRAVITY}, en <b>suivant son lanceur</b> : son X et son Z sont recolles sur ceux du
+ * joueur a chaque tick, et seule sa hauteur vit de sa vie — c'est le {@code KeepPosition} de
  * l'original, et c'est ce qui fait qu'on la voit retomber dans la main qui vient de la lancer, meme en
  * courant. Elle ne touche rien : elle traverse ce qu'elle rencontre, plafond compris.
  *
@@ -37,13 +37,19 @@ import java.util.List;
  * chez l'original : dans la main libre, sinon en s'empilant sur les autres, sinon en tombant au sol —
  * et jamais en creatif.
  *
- * <h2>Elle ne bouge pas : elle est DESSINEE ailleurs</h2>
+ * <h2>Elle BOUGE : c'est l'ENTITE qui suit son lanceur, pas la piece qui s'invente un vol</h2>
  *
- * <p>C'est le point delicat, et le joueur l'a vu deux fois. L'entite reste ou elle a ete jetee ; tout
- * son vol est relu au dessin, par {@link #drawPosition}, a partir du lanceur et de l'age. Sans cela
- * deux positions se disputaient la piece — celle, locale, que le client recalculait, et celle que le
- * serveur envoyait par le reseau et que le client etale sur trois ticks — et elle tremblait des que le
- * joueur marchait (« quand je bouge la piece a l'air un peu buguee dans les airs »).
+ * <p>Le port a commence par la figer la ou elle naissait, et par relire tout son vol au DESSIN — une
+ * position fabriquee par le client, a cote de celle que le serveur envoyait, et le joueur l'a vue
+ * trembler des qu'il marchait (« quand je bouge la piece a l'air un peu buguee dans les airs »).
+ * L'original ne fait pas cela : son {@code KeepPosition} recolle l'entite sur son lanceur, sa
+ * {@code Rigidbody} la fait monter, et le rendu ne fait que TOURNER une piece sur place. C'est ce que
+ * fait le port, et c'est ce qui rend l'animation fluide : une entite qui bouge est interpolee par le
+ * client entre deux positions recues, a chaque image, sans que personne n'ait a recalculer son vol.
+ *
+ * <p>Le rendu ne dessine donc plus rien a cote d'elle : il la dessine la ou est l'entite. Les
+ * decalages de l'original — de biais, devant, a hauteur de main — sont dans sa POSITION, la ou tout le
+ * monde les voit : le serveur, les autres joueurs, et le client qui l'interpole.
  *
  * <h2>Une seule piece par joueur</h2>
  *
@@ -53,68 +59,46 @@ import java.util.List;
  *
  * <h2>Ce qui voyage</h2>
  *
- * <p>Le lanceur seul ({@code DATA_THROWER}), et rien d'autre : sa hauteur, sa vitesse et son axe de
- * rotation se recalculent des deux cotes avec les memes nombres. Le porteur est tenu de cote chez
- * le serveur comme celui de la bille de plasma — un joueur factice, celui des tests, n'est pas dans
- * la table des entites du niveau, et une piece qui ne le retrouverait que par son numero ne le
- * suivrait pas.
+ * <p>Sa POSITION, d'abord : c'est du mouvement d'entite ordinaire, donc le reseau s'en occupe tout
+ * seul, et c'est ce qui la rend fluide. Le lanceur ensuite ({@code DATA_THROWER}) : le client s'en
+ * sert pour repondre a la seule question qu'il lui pose — ce joueur a-t-il deja une piece en l'air ?
+ * Le porteur est tenu de cote chez le serveur comme celui de la bille de plasma — un joueur factice,
+ * celui des tests, n'est pas dans la table des entites du niveau, et une piece qui ne le retrouverait
+ * que par son numero ne le suivrait pas.
  */
 public class EntityCoinThrowing extends Entity {
 
-    /** Le lanceur, par son numero d'entite : c'est ce que le client a besoin de savoir. */
+    /**
+     * Le lanceur, par son numero d'entite.
+     *
+     * <p>C'est tout ce que le client a besoin de savoir d'elle : il s'en sert pour la reconnaitre
+     * ({@link #isThrownBy}) et refuser un second lancer. Le vol, lui, ne se relit plus nulle part — il
+     * lui arrive par le mouvement de l'entite.
+     */
     private static final EntityDataAccessor<Integer> DATA_THROWER =
             SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.INT);
 
     /**
-     * La hauteur du lancer, et c'est la SEULE chose qui voyage.
+     * La hauteur d'ou la piece est partie : la main qui vient de la lancer.
      *
-     * <p>Le reste du vol se recalcule des deux cotes a partir de l'age : voir {@link CoinToss}. Le
-     * client a donc besoin de cette hauteur-la — et d'elle seule — pour dessiner une piece qui monte
-     * et retombe a la bonne place, et sans elle il la verrait partir du sol.
-     *
-     * <p>Sa valeur par defaut est {@code NaN}, et ce n'est pas un hasard : c'est l'etat « je ne sais
-     * pas encore ou elle a ete lancee », celui du client pendant le tick qui separe le paquet de
-     * creation de celui de sa donnee. Tant qu'elle y est, la piece ne bouge pas.
-     *
-     * <p>Un FLOAT et non un double : la 1.20.1 n'a pas de serialiseur de double (voir
-     * {@code EntityDataSerializers}), et une hauteur de lancer n'a pas besoin de plus — c'est une
-     * coordonnee de monde.
+     * <p>Un simple champ, et plus une donnee synchronisee : le client n'en a plus besoin depuis que
+     * l'entite vole pour de vrai — sa position entiere lui arrive par le reseau. C'est le serveur,
+     * seul, qui s'en sert, a chaque tick, pour poser sa hauteur.
      */
-    private static final EntityDataAccessor<Float> DATA_INIT_HT =
-            SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.FLOAT);
-
-    /**
-     * L'heure du monde ou elle a ete jetee : c'est l'AGE du dessin, et il vient de la, pas de
-     * l'entite.
-     *
-     * <p>L'age d'une copie cliente repart de ZERO chaque fois qu'elle arrive : quand le joueur
-     * s'eloigne trop loin, le serveur cesse de la lui envoyer, il l'oublie, et la copie suivante
-     * nait avec un age de zero — la piece repartait donc du debut, voire s'evanouissait, des que le
-     * joueur marchait vite (« l'animation est toujours buguee voire disparait avant de finir »).
-     * L'heure du monde, elle, est la meme partout et ne recule jamais.
-     */
-    private static final EntityDataAccessor<Long> DATA_LAUNCH_TICK =
-            SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.LONG);
+    private double initHt;
 
     /** Le lanceur, chez le serveur : la reference de l'original, et celle des faux joueurs. */
     private Player direct;
 
     /**
-     * D'ou part la piece : DES PIEDS, comme l'original, et c'est l'affichage qui la remonte.
+     * D'ou part la piece : de la MAIN, et non des pieds.
      *
-     * <p>L'original la posait a {@code (posX, posY, posZ)} — les pieds — et son rendu la dessinait un
-     * bloc plus haut, devant le visage ({@code translated(-0.63, 1, 0.30)}). C'est ce meme bloc qui
-     * fait tout : la piece parait sortir de la main, et, comme elle revient a la hauteur d'ou elle est
-     * partie, elle parait y rentrer. Le joueur l'a demande dans ces termes : « au final au visuel on
-     * voit vraiment la piece partir de la main et reatterrir dans la main ».
-     *
-     * <p>La hauteur du VOL reste donc celle des pieds, et c'est celle-la qui decide quand le vol
-     * finit. La remonter ici, comme le port l'a fait un moment, deplacait le point de retour — la
-     * piece rentrait un demi-bloc trop haut.
-     *
-     * <p>ET ELLE PART DE LA MAIN, PAS DES PIEDS : le joueur a vu l'entite a la hauteur de ses
-     * pieds, et la piece rampait le long de ses jambes avant de monter. Le vol par donc de
-     * {@link #HAND_OFFSET} sous les yeux — la hauteur d'une main qui lance.
+     * <p>L'original la posait a la hauteur des pieds ({@code player.posY}) et son rendu la remontait
+     * d'un bloc, devant le visage ({@code translated(-0.63, 1, 0.30)}). Le port, lui, pose des le
+     * depart la position qui compte : le joueur voyait l'entite a ses pieds et la piece ramper le
+     * long de ses jambes avant de monter. Elle part donc de {@link #HAND_OFFSET} sous les yeux — la
+     * hauteur d'une main qui lance — et, comme elle y revient, elle parait y rentrer : « au final au
+     * visuel on voit vraiment la piece partir de la main et reatterrir dans la main ».
      */
     private static final double HAND_OFFSET = -0.4;
 
@@ -143,25 +127,17 @@ public class EntityCoinThrowing extends Entity {
         this(ModEntities.COIN.get(), level);
         this.direct = thrower;
         this.entityData.set(DATA_THROWER, thrower.getId());
-        double launch = thrower.getEyeY() + HAND_OFFSET;
-        this.entityData.set(DATA_INIT_HT, (float) launch);
-        this.entityData.set(DATA_LAUNCH_TICK, level.getGameTime());
         Vec3 at = followPoint(thrower);
-        setPos(at.x, launch, at.z);
+        // D'ou elle part : la main qui vient de la lancer.
+        this.initHt = thrower.getEyeY() + HAND_OFFSET;
+        setPos(at.x, this.initHt, at.z);
     }
 
     @Override
     protected void defineSynchedData() {
         this.entityData.define(DATA_THROWER, -1);
-        // « On ne sait pas encore d'ou elle a ete lancee » : voir DATA_INIT_HT.
-        this.entityData.define(DATA_INIT_HT, Float.NaN);
-        this.entityData.define(DATA_LAUNCH_TICK, 0L);
     }
 
-    /** La hauteur du lancer, ou {@code NaN} tant qu'elle n'est pas connue. */
-    public double launchHeight() {
-        return this.entityData.get(DATA_INIT_HT);
-    }
     /** Qui l'a lancee, ou nul si on ne le trouve pas — piece orpheline, joueur deconnecte. */
     public Player thrower() {
         if (direct != null && !direct.isRemoved()) return direct;
@@ -190,73 +166,49 @@ public class EntityCoinThrowing extends Entity {
     }
 
     /**
-     * Le point du monde ou la piece suit son lanceur : de biais et devant lui, a sa hauteur.
+     * Le point du monde ou la piece suit son lanceur : de biais et devant lui.
      *
-     * <p>PUR, et recalcule des deux cotes : le client n'a pas besoin qu'on le lui dise, le lanceur et
-     * son regard suffisent.
+     * <p>Seul le LACET compte, comme chez l'original ({@code rotationYaw}) : la piece reste devant et
+     * de biais quoi que le joueur regarde, et lever les yeux ne la fait pas monter plus haut. La
+     * hauteur, elle, n'est pas ici — c'est celle du vol, posee a chaque tick par {@link #tick}.
      */
     private static Vec3 followPoint(Player thrower) {
         Vec3 look = thrower.getViewVector(1f);
-        Vec3 side = look.cross(new Vec3(0, 1, 0));
-        // Un regard droit vers le haut ou le bas ne donne aucun cote : celui de l'original etait
-        // tire au hasard, ici on prend l'est, faute de mieux.
-        side = side.lengthSqr() < 1.0E-6 ? new Vec3(1, 0, 0) : side.normalize();
-        return thrower.position().add(look.scale(FORWARD_OFFSET)).add(side.scale(SIDE_OFFSET));
+        Vec3 flat = new Vec3(look.x, 0.0, look.z);
+        // Un regard droit vers le haut ou le bas n'a plus de direction : on prend le sud, le lacet
+        // zero de Minecraft.
+        flat = flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+        Vec3 side = new Vec3(-flat.z, 0.0, flat.x);
+        return thrower.position().add(flat.scale(FORWARD_OFFSET)).add(side.scale(SIDE_OFFSET));
     }
 
     /**
-     * OU ELLE SE DESSINE, a cet age. Le rendu s'en sert, et rien d'autre.
+     * Un tick : le VOL, et c'est le serveur qui le fait.
      *
-     * <p>L'entite, elle, ne bouge JAMAIS : elle reste ou elle a ete jetee. C'est la seule facon
-     * d'eviter le tremblement que le joueur a vu — « quand je bouge la piece a l'air un peu buguee
-     * dans les airs » —, qui venait de deux positions qui se disputaient la piece : celle, locale,
-     * que le client recalculait chaque tick, et celle que le serveur lui envoyait par le reseau, que
-     * le client etale sur trois ticks.
+     * <p>Elle suit son lanceur en X et Z — le {@code KeepPosition} de l'original — et sa hauteur est
+     * celle de son age — sa {@code Rigidbody} : {@link CoinToss#height} de {@code tickCount} au-dessus
+     * de la main qui l'a jetee. C'est ce {@code setPos} qui la fait VOYAGER, et c'est tout : le client
+     * recoit sa position, l'interpole entre deux ticks, et n'a rien d'autre a faire.
      *
-     * <p>Le vol se relit donc ici, entierement : la position du lanceur, son decalage, et la hauteur
-     * de l'age. Les deux cotes ont tout ce qu'il faut, et le dessin se fait a chaque image — c'est
-     * exactement ce que faisait le client de l'original, qui tenait sa PROPRE copie de la piece.
-     */
-    public Vec3 drawPosition(float partialTick) {
-        double launch = launchHeight();
-        Player thrower = thrower();
-        if (Double.isNaN(launch) || thrower == null) {
-            // Rien de connu : on la laisse ou le paquet de creation l'a posee.
-            return position();
-        }
-        Vec3 at = followPoint(thrower);
-        return new Vec3(at.x, launch + CoinToss.height(flightAge(partialTick)), at.z);
-    }
-
-    /**
-     * L'age du VOL, en ticks : depuis l'heure du monde ou elle a ete jetee.
-     *
-     * <p>C'est celui du dessin, et il ne depend pas de la copie qui le lit — voir
-     * {@link #DATA_LAUNCH_TICK}. Il s'accorde avec {@code tickCount} chez le serveur (a un tick
-     * pres), qui reste, lui, l'age de la DECISION : c'est celui que les tests posent.
-     */
-    public double flightAge(float partialTick) {
-        return this.level().getGameTime() - this.entityData.get(DATA_LAUNCH_TICK) + partialTick;
-    }
-
-    /**
-     * Un tick : le vol, et rien d'autre.
-     *
-     * <p>Elle ne se DEPLACE pas — voir {@link #drawPosition} — donc il n'y a rien a avancer ici. Ce
-     * qui vit, c'est son age : c'est lui qui dit quand elle est assez retombee pour le tir
-     * ({@link #isReady}) et quand son vol est fini. Et c'est le serveur, seul, qui la ramene.
+     * <p>L'age dit aussi quand le vol est fini ({@link CoinToss#finished}) — et c'est le serveur,
+     * seul, qui la ramene.
      */
     @Override
     public void tick() {
         super.tick();
 
-        // Chez le client, rien du tout : ni fin de vol, ni inventaire. Sa disparition lui arrive par
-        // le reseau, et son dessin se fait dans le rendu.
+        // Chez le client, rien du tout : sa position et sa disparition lui arrivent par le reseau, et
+        // son dessin se fait dans le rendu.
         if (this.level().isClientSide) return;
 
-        if (thrower() == null || CoinToss.finished(tickCount)) {
+        Player thrower = thrower();
+        if (thrower == null || CoinToss.finished(tickCount)) {
             settle();
+            return;
         }
+
+        Vec3 at = followPoint(thrower);
+        setPos(at.x, this.initHt + CoinToss.height(tickCount), at.z);
     }
 
     /**
@@ -309,10 +261,9 @@ public class EntityCoinThrowing extends Entity {
      * <p>Le port la cherche dans le monde plutot que dans une table : c'est le
      * {@code ItemCoin.getPlayerCoin} de l'original, sans ce qui survivrait a un changement de monde.
      *
-     * <p>ET ELLE NE SUIT PAS LE JOUEUR, elle : l'entite reste la ou elle a ete jetee, c'est le DESSIN
-     * qui la fait voler ({@link #drawPosition}). La boite doit donc etre large — un joueur qui sprinte
-     * s'eloigne de huit blocs pendant les trente ticks du vol, et l'original suivait son porteur la ou
-     * le port, lui, laisse la piece derriere. Trente-deux blocs couvrent le vol entier, meme en volant.
+     * <p>La boite est large : elle ne coute qu'une recherche, et elle pardonne les cas ou la piece
+     * n'est pas exactement la ou on l'attend — un vol ne dure que trente ticks, et une piece perdue
+     * vaudrait une piece perdue pour de bon.
      */
     public static EntityCoinThrowing of(Player player) {
         if (player == null) return null;

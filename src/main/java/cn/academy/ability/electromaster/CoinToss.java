@@ -10,7 +10,7 @@ package cn.academy.ability.electromaster;
  * fraiche — encore dans sa montee — ne sert a rien, et une piece retombee revient simplement dans
  * l'inventaire.
  *
- * <h2>Tout se lit sur l'AGE, et c'est ce qui rend le vol juste des deux cotes</h2>
+ * <h2>Tout se lit sur l'AGE</h2>
  *
  * <p>Le port tenait d'abord une hauteur et une vitesse dans l'entite, avancees tick par tick ; la
  * <b>copie cliente</b> d'une entite ne connait ni l'une ni l'autre — elle nait du paquet de creation
@@ -18,8 +18,9 @@ package cn.academy.ability.electromaster;
  * vu tout de suite : « visuellement la piece se deplace a 20 fps au lieu des 60 ».
  *
  * <p>L'age suffit a tout dire : la vitesse du tick {@code t} est {@code INIT_VEL - GRAVITY * t}, et
- * sa hauteur est la somme des vitesses d'avant. Les deux cotes calculent donc la MEME chose a partir
- * du meme age, sans rien se dire, et le vol se dessine a chaque image.
+ * sa hauteur est la somme des vitesses d'avant. C'est le SERVEUR qui s'en sert pour poser la piece a
+ * chaque tick — voir {@code EntityCoinThrowing.tick} — et le client, lui, n'a plus rien a recalculer :
+ * il interpole la position qui lui arrive.
  *
  * <p>Tout est PUR, et c'est pour cela que ca vit ici : un vol qui « ne monte pas assez » ou une
  * fenetre de tir trop courte se relisent en JUnit, sans monde ni joueur.

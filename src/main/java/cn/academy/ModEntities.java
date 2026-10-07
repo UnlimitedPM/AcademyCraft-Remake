@@ -80,22 +80,22 @@ public class ModEntities {
     /**
      * La piece lancee du railgun, portage d'{@code EntityCoinThrowing}.
      *
-     * <p>Un objet minuscule qui ne bouge JAMAIS : il nait la ou on le jette et y reste, et c'est son
-     * RENDU qui le fait voler — voir {@code EntityCoinThrowing.drawPosition}. Ses positions n'ont donc
-     * rien a faire sur le reseau, d'ou la cadence lente : seules sa naissance et sa mort voyagent.
+     * <p>Un objet minuscule qui VOLE, et c'est l'ENTITE qui vole : elle suit son lanceur et porte sa
+     * hauteur, tick par tick ({@code EntityCoinThrowing.tick}). Sa position voyage donc avec elle,
+     * d'ou la cadence d'un tick : c'est ce qui permet au client de l'interpoler et de la voir glisser
+     * a chaque image, au lieu d'avancer par bonds de vingt ticks.
      *
-     * <p>ET IL SE SUIT DE LOIN : puisqu'il ne suit pas son lanceur, un joueur qui court s'en eloigne,
-     * et a huit blocs le serveur cessait de le lui envoyer — la piece s'evaporait en plein vol (« elle
-     * disparait avant de finir si je vais un peu trop vite »). Trente-deux blocs couvrent le vol
-     * entier, meme en sprintant. Un quart de bloc de cote, comme l'original.
+     * <p>Huit blocs de portee suffisent, puisqu'elle ne quitte jamais son lanceur — un joueur qui
+     * court la garde devant lui au lieu de la laisser derriere. Un quart de bloc de cote, comme
+     * l'original.
      */
     public static final RegistryObject<EntityType<cn.academy.entity.EntityCoinThrowing>> COIN =
             ENTITIES.register("coin", () -> EntityType.Builder
                     .<cn.academy.entity.EntityCoinThrowing>of(cn.academy.entity.EntityCoinThrowing::new,
                             MobCategory.MISC)
                     .sized(0.25f, 0.25f)
-                    .clientTrackingRange(32)
-                    .updateInterval(20)
+                    .clientTrackingRange(8)
+                    .updateInterval(1)
                     .build("coin"));
 
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) {
