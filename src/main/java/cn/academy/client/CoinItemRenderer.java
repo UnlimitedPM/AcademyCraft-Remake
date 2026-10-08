@@ -34,9 +34,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <ul>
  *   <li><b>L'inventaire, l'objet pose, l'objet fixe</b> : l'IMAGE, telle quelle — le meme carre plat
  *       que les objets de vanilla, avec ses deux faces dans le bon sens. Rien qu'elle.</li>
- *   <li><b>En main</b> : la piece en volume — son blason devant, mais lu en miroir comme chez
- *       l'original, son disque uni derriere, et une TRAN CHE faite d'un anneau de facettes, donc
- *       ronde, et qui prend ses couleurs sur le bord de l'image.</li>
+ *   <li><b>En main</b> : la piece en volume — son blason devant, un peu plus mat, son disque uni
+ *       derriere, et une TRAN CHE faite d'un anneau de facettes, donc ronde, et qui prend ses couleurs
+ *       sur le bord de l'image.</li>
  * </ul>
  *
  * <p>Le repere est celui que Forge donne a un rendu d'objet : le cube du modele, de un bloc de cote,
@@ -55,13 +55,22 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float RADIUS = 0.5f;
 
     /**
-     * Sa tranche : quatre centiemes de bloc de chaque cote, donc huit pour cent de sa largeur.
+     * Sa tranche : deux centiemes de bloc de chaque cote, donc quatre pour cent de sa largeur.
      *
-     * <p>C'est l'original — son {@code drawEquippedItem(0,04)} — et c'est deux fois l'epaisseur que le
-     * port lui donnait : la tranche etant prise sur le BORD sombre de l'image, c'est aussi ce qui
-     * donne a la piece son air un peu plus mat que celui d'une image posee a plat.
+     * <p>Le joueur a trouve la piece « trop epaisse » a huit pour cent — c'est pourtant le {@code w}
+     * de l'original — donc la tranche est deux fois plus fine que lui. Elle est prise sur le BORD de
+     * l'image, et c'est elle qui donne a la piece sa matiere.
      */
-    private static final float HALF_THICKNESS = 0.04f;
+    private static final float HALF_THICKNESS = 0.02f;
+
+    /**
+     * La teinte du recto : quatre-vingt-cinq pour cent du blanc.
+     *
+     * <p>C'est ce que le joueur a demande — « dans le vrai mod la piece a l'air plus sombre » — et
+     * c'est la couleur des sommets qui la donne : la lumiere, elle, reste celle du monde, et elle est
+     * juste. Le verso, lui, garde toute sa couleur : le joueur l'a valide tel quel.
+     */
+    private static final float RECT_SHADE = 0.85f;
 
     /**
      * Les facettes de la tranche : vingt-quatre.
@@ -130,10 +139,10 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     /**
      * La piece de biais : le blason devant, le disque uni derriere, et sa tranche ronde.
      *
-     * <p>LE BLASON EST DEVANT, ET A L'ENVERS. Les deux faces de l'original sont dessinees avec
-     * l'abscisse RETOURNEE — son {@code drawEquippedItem} fait {@code u = 1 - x} des deux cotes — donc
-     * la piece du vrai mod se lit en miroir, exactement comme le joueur l'a decrit : « le recto est la
-     * meme image mais en inverse ». Le port, lui, la lisait a l'endroit.
+     * <p>LE BLASON SE LIT NORMALEMENT, comme dans l'inventaire. Le port l'avait un moment retourne,
+     * en croyant lire dans l'original une abscisse inversee ({@code u = 1 - x}) ; le joueur a tranche —
+     * « il n'est pas en miroir ». C'est aussi ce que veut la coherence : l'inventaire et la main
+     * montrent la MEME face du modele, donc la meme image dans le meme sens.
      *
      * <p>La tranche est un <b>anneau de facettes</b>, et chacune prend sa couleur sur le BORD de
      * l'image, a l'angle ou elle se trouve — c'est ce qui fait qu'elle suit l'anneau de la piece au
@@ -141,14 +150,14 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * droites d'un modele JSON.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        // Le blason, sur la face que le joueur a devant lui, lu A L'ENVERS — u va de un a zero pendant
-        // que x va de moins a plus. SANS CULL, comme l'autre face : aucune des deux ne peut plus
-        // disparaitre selon le sens dans lequel on la regarde, ni se faire passer pour l'autre.
+        // Le blason, sur la face que le joueur a devant lui, LU NORMALEMENT — u va de zero a un pendant
+        // que x va de moins a plus — et un peu plus mat que le reste. SANS CULL, comme l'autre face :
+        // aucune des deux ne peut plus disparaitre selon le sens dans lequel on la regarde.
         VertexConsumer front = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
-        vertex(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
-        vertex(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
-        vertex(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
-        vertex(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
 
         // Et le disque uni derriere, dans le meme sens que lui : c'est le verso de la piece.
         VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
@@ -200,8 +209,28 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static void vertex(VertexConsumer consumer, PoseStack pose, int light, int overlay,
                                float x, float y, float z, float u, float v,
                                float nx, float ny, float nz) {
+        vertex(consumer, pose, light, overlay, 255, x, y, z, u, v, nx, ny, nz);
+    }
+
+    /**
+     * Un sommet teinte, pour le blason : c'est ce qui le rend plus mat que le reste.
+     *
+     * <p>La teinte est une couleur de sommet, donc elle ne touche pas a la lumiere : la piece reste
+     * eclairee par le monde comme les autres objets, elle est simplement un peu plus grise.
+     */
+    private static void shaded(VertexConsumer consumer, PoseStack pose, int light, int overlay,
+                               float x, float y, float z, float u, float v,
+                               float nx, float ny, float nz) {
+        vertex(consumer, pose, light, overlay, Math.round(RECT_SHADE * 255f),
+                x, y, z, u, v, nx, ny, nz);
+    }
+
+    /** Et le sommet lui-meme, avec la couleur demandee. */
+    private static void vertex(VertexConsumer consumer, PoseStack pose, int light, int overlay,
+                               int color, float x, float y, float z, float u, float v,
+                               float nx, float ny, float nz) {
         consumer.vertex(pose.last().pose(), x, y, z)
-                .color(255, 255, 255, 255)
+                .color(color, color, color, 255)
                 .uv(u, v)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(light)
