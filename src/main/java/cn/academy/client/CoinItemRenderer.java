@@ -35,9 +35,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <ul>
  *   <li><b>L'inventaire, l'objet pose, l'objet fixe</b> : l'IMAGE, telle quelle — le meme carre plat
  *       que les objets de vanilla, avec ses deux faces dans le bon sens. Rien qu'elle.</li>
- *   <li><b>En main</b> : la piece en volume — son blason devant, un peu plus mat, son disque uni
- *       derriere, et une TRAN CHE faite d'un anneau de facettes, donc ronde, et qui prend ses couleurs
- *       sur le bord de l'image.</li>
+ *   <li><b>En main</b> : la piece en volume — son blason devant, son disque uni derriere, et une
+ *       TRANCHE faite d'un panneau plat par pixel de son bord, donc en escalier, et qui prend ses
+ *       couleurs sur le bord de l'image.</li>
  * </ul>
  *
  * <p>Le repere est celui que Forge donne a un rendu d'objet : le cube du modele, de un bloc de cote,
@@ -63,26 +63,6 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * l'image, et c'est elle qui donne a la piece sa matiere.
      */
     private static final float HALF_THICKNESS = 0.02f;
-
-    /**
-     * La teinte du recto : soixante-cinq pour cent du blanc.
-     *
-     * <p>C'est ce que le joueur a demande — « dans le vrai mod la piece a l'air plus sombre » — et
-     * c'est la couleur des sommets qui la donne : la lumiere, elle, reste celle du monde, et elle est
-     * juste. Le verso, lui, garde toute sa couleur : c'est le seul point qu'il a valide du premier
-     * coup.
-     *
-     * <p>SES REGLAGES, et la lecon qu'il en a tiree : 0,85 d'abord, « encore un peu trop clair » ;
-     * 0,75 ensuite, valide ; puis « remets la piece un peu plus clair » — donc 0,80 — avant qu'il ne
-     * trouve lui-meme la cause de son impression : « dans le vrai mod la piece me paraissait sombre a
-     * cause de l'interface quand les pouvoirs sont actifs, alors qu'en realite elle n'etait pas si
-     * sombre ». Le VOILE DU HUD assombrit tout l'ecran, la piece comprise, et c'est LUI qu'il
-     * comparait : retour a 0,75, puis un cran plus bas encore, « met 0,65 pour voir ».
-     *
-     * <p>LECON : une couleur jugee en jeu ne vaut que par ce qui la recouvre. Ici le HUD cornaque les
-     * pouvoirs, et le joueur ne le voyait pas comme une couche a part.
-     */
-    private static final float RECT_SHADE = 0.65f;
 
     /**
      * Les pixels du dessin, lus une fois pour toutes : c'est eux qui disent ou passe le bord.
@@ -176,14 +156,18 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * d'un anneau de facettes.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        // Le blason, sur la face que le joueur a devant lui, retourne de gauche a droite, et un peu
-        // plus mat que le reste. SANS CULL, comme l'autre face : aucune des deux ne peut plus
-        // disparaitre selon le sens dans lequel on la regarde.
+        // Le blason, sur la face que le joueur a devant lui, retourne de gauche a droite. AUCUNE
+        // TEINTE : l'original n'en pose pas. Son drawEquippedItem ne fait que des sommets, sans jamais
+        // appeler setColorOpaque — la piece est donc blanche, et c'est la LUMIERE du monde qui la
+        // fonce, comme tout objet tenu en main. Le port lui avait mis une teinte par-dessus, parce que
+        // le joueur trouvait celle du vrai mod plus sombre ; il en a trouve la cause lui-meme : le
+        // voile plein ecran du HUD quand un pouvoir est actif. SANS CULL, comme l'autre face : aucune
+        // des deux ne peut plus disparaitre selon le sens dans lequel on la regarde.
         VertexConsumer front = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
-        shaded(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
 
         // Et le disque uni derriere, LU COMME LA FACE AVANT — meme abscisse au meme endroit : les deux
         // faces se repondent donc quand on retourne la piece, et leurs bords tombent en face.
@@ -292,32 +276,12 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
 
     // --- LES SOMMETS ---
 
-    /** Un sommet du format des objets : position, couleur, image, ecran, lumiere et normale. */
+    /** Et le sommet lui-meme : blanc, comme ceux de l'original. */
     private static void vertex(VertexConsumer consumer, PoseStack pose, int light, int overlay,
                                float x, float y, float z, float u, float v,
-                               float nx, float ny, float nz) {
-        vertex(consumer, pose, light, overlay, 255, x, y, z, u, v, nx, ny, nz);
-    }
-
-    /**
-     * Un sommet teinte, pour le blason : c'est ce qui le rend plus mat que le reste.
-     *
-     * <p>La teinte est une couleur de sommet, donc elle ne touche pas a la lumiere : la piece reste
-     * eclairee par le monde comme les autres objets, elle est simplement un peu plus grise.
-     */
-    private static void shaded(VertexConsumer consumer, PoseStack pose, int light, int overlay,
-                               float x, float y, float z, float u, float v,
-                               float nx, float ny, float nz) {
-        vertex(consumer, pose, light, overlay, Math.round(RECT_SHADE * 255f),
-                x, y, z, u, v, nx, ny, nz);
-    }
-
-    /** Et le sommet lui-meme, avec la couleur demandee. */
-    private static void vertex(VertexConsumer consumer, PoseStack pose, int light, int overlay,
-                               int color, float x, float y, float z, float u, float v,
                                float nx, float ny, float nz) {
         consumer.vertex(pose.last().pose(), x, y, z)
-                .color(color, color, color, 255)
+                .color(255, 255, 255, 255)
                 .uv(u, v)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(light)
