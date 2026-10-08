@@ -34,8 +34,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <ul>
  *   <li><b>L'inventaire, l'objet pose, l'objet fixe</b> : l'IMAGE, telle quelle — le meme carre plat
  *       que les objets de vanilla, avec ses deux faces dans le bon sens. Rien qu'elle.</li>
- *   <li><b>En main</b> : la piece en volume, avec sa face, son revers, et une TRAN CHE faite d'un
- *       anneau de facettes — donc ronde, et qui prend ses couleurs sur le bord de l'image.</li>
+ *   <li><b>En main</b> : la piece en volume, avec son dos, son blason de l'autre cote, et une
+ *       TRAN CHE faite d'un anneau de facettes — donc ronde, et qui prend ses couleurs sur le bord de
+ *       l'image.</li>
  * </ul>
  *
  * <p>Le repere est celui que Forge donne a un rendu d'objet : le cube du modele, de un bloc de cote,
@@ -123,23 +124,33 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     /**
      * La piece de biais : sa face, son revers, et sa tranche ronde.
      *
+     * <p>LA FACE QUE LE JOUEUR VOIT PORTE {@code coin_back}. C'est ce que fait l'original : son
+     * {@code ItemCoin} appelait {@code drawEquippedItem(0,04, TEX_COIN_BACK, TEX_COIN_FRONT)} la ou la
+     * piece en VOL montre {@code coin_front} — le joueur a reconnu le dos tout de suite : « dans le
+     * vrai mod la piece a l'air plus sombre », puisque le dos est un disque uni alors que l'avant
+     * porte le blason. L'inventaire, lui, garde l'avant : c'est ce que le joueur a valide.
+     *
      * <p>La tranche est un <b>anneau de facettes</b>, et chacune prend sa couleur sur le BORD de
      * l'image, a l'angle ou elle se trouve — c'est ce qui fait qu'elle suit l'anneau de la piece au
      * lieu de dessiner un carre. Le joueur avait vu ce carre deux fois : il venait des quatre bandes
      * droites d'un modele JSON.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        VertexConsumer face = buffers.getBuffer(RenderType.itemEntityTranslucentCull(FRONT));
-        vertex(face, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
-        vertex(face, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
-        vertex(face, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
-        vertex(face, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
+        // Le dos, sur la face que le joueur a devant lui, et SANS CULL : une face ne peut plus
+        // disparaitre selon le sens dans lequel on la regarde, et les deux cotes ne peuvent donc plus
+        // montrer la meme image.
+        VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
+        vertex(back, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
+        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
+        vertex(back, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
+        vertex(back, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
 
-        VertexConsumer reverse = buffers.getBuffer(RenderType.itemEntityTranslucentCull(BACK));
-        vertex(reverse, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
-        vertex(reverse, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
-        vertex(reverse, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
-        vertex(reverse, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
+        // Et le blason derriere, lu dans l'autre sens : vu de la, l'axe des X part de l'autre cote.
+        VertexConsumer front = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
+        vertex(front, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
+        vertex(front, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
+        vertex(front, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
+        vertex(front, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
 
         // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance, et chaque
         // facette lit un pixel du bord de l'image.
