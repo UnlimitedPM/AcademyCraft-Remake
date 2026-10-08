@@ -240,6 +240,13 @@ public final class RailgunHandEffect {
      * autres sont posees sur leur main droite, ou l'on regarde un bras qui lance — l'original les
      * posait a un endroit fixe de son porteur, sans suivre le bras.
      *
+     * <p>ET LA PLACE DEPEND DE LA VUE, non de qui l'on regarde : c'est en regardant PAR SES PROPRES
+     * YEUX qu'on a besoin de l'illusion, parce que la main qu'on croit voir n'est alors que du
+     * dessin en bas de l'ecran. En vue de trois quarts, notre propre rafale se pose comme celle de
+     * tout le monde — sur notre main, en deux blocs — sans quoi elle apparaissait collee a notre
+     * tete et minuscule, ce que le joueur a vu tout de suite : « la maintenant en vue exterieure il
+     * n'est ni au bon endroit ni de la bonne taille ».
+     *
      * <p>Le carre regarde la CAMERA, et c'est ce que le port ajoute a l'original : lui le dessinait
      * dans le repere du joueur, donc de profil pour qui se tenait de cote. Une etincelle qu'on ne
      * voit pas ne sert a rien.
@@ -262,9 +269,12 @@ public final class RailgunHandEffect {
             int frame = frameAt(entry.getValue(), partialTick);
             if (frame >= FRAME_COUNT) continue;
 
-            boolean mine = player == Minecraft.getInstance().player;
-            Vec3 at = mine ? inFrontOfEyes(player, partialTick) : handOf(player, partialTick);
-            float scale = mine ? SCALE_HAND : SCALE_WORLD;
+            // L'illusion de main ne sert qu'a celui qui regarde PAR SES YEUX : voir le commentaire
+            // de la classe. En vue de trois quarts, tout le monde est pose pareil.
+            boolean throughMyEyes = player == Minecraft.getInstance().player
+                    && Minecraft.getInstance().options.getCameraType().isFirstPerson();
+            Vec3 at = throughMyEyes ? inFrontOfEyes(player, partialTick) : handOf(player, partialTick);
+            float scale = throughMyEyes ? SCALE_HAND : SCALE_WORLD;
 
             PoseStack pose = event.getPoseStack();
             pose.pushPose();
