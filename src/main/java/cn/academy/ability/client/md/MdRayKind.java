@@ -4,7 +4,11 @@ import cn.academy.AcademyCraft;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * Un genre de rayon du meltdowner : ses textures, ses deux cylindres, sa lueur, sa duree.
+ * Un genre de rayon : ses textures, ses deux cylindres, sa lueur, sa duree.
+ *
+ * <p>La classe est nee avec le meltdowner, dont tous les rayons en descendent — mais elle n'est pas
+ * a lui : l'original avait une seule base, {@code EntityRayBase}, et le <b>railgun</b> s'y dessinait
+ * avec le meme composeur que les siens. Il a donc son genre ici, {@link #RAILGUN}, a cote des autres.
  *
  * <p>L'original avait une entite par genre de rayon — {@code EntityMdRaySmall},
  * {@code EntityMDRay}, {@code EntityMdRayBarrage}, et un par rayon minier — mais toutes
@@ -200,6 +204,43 @@ public record MdRayKind(String name,
             0.22, new Tint(106, 242, 106, 50),
             50, 200, 700, 300,
             0.8, "md.meltdowner", 0.5f, true, 0.0);
+
+    /**
+     * Le <b>railgun</b>, {@code EntityRailgunFX} : le tir tendu de l'electromaster.
+     *
+     * <p>Il n'appartient pas au meltdowner, mais il descend de la MEME base — {@code EntityRayBase} —
+     * et se dessinait avec le meme composeur : une lueur et deux cylindres. Le joueur a eu raison de
+     * le dire — « c'est cense etre la meme logique que pour l'arc gen », puis « regarde comment ont
+     * ete faits les mine ray du meltdowner, puis t'en inspirer pour refaire le railgun ». Ses
+     * nombres sont donc ceux de {@code RailgunRender}, et il n'y a rien a y interpreter :
+     *
+     * <ul>
+     *   <li>sa <b>lueur</b> fait 1,1 bloc — plus du double de celle des autres, et c'est ce qui
+     *       donne au tir son epaisseur de chaleur ;</li>
+     *   <li>son <b>coeur</b> est un blanc chaud (241, 240, 222) de 9 cm, et sa <b>gaine</b> un orange
+     *       (236, 170, 93) de 13 cm, beaucoup plus transparent : c'est l'orange qui teinte, pas le
+     *       coeur ;</li>
+     *   <li>il vit <b>cinquante</b> ticks, s'allume en 150 millisecondes, s'effile sur les huit
+     *       derniers dixiemes et s'efface sur la derniere seconde ;</li>
+     *   <li>son <b>glowEndFix</b> est le seul de tout le mod a valoir autre chose que zero —
+     *       {@code 0,3}, le {@code endFix} de son composeur, qui allongeait sa lueur jusqu'au bout de
+     *       ses cylindres. Le port le lisait deja dans la doc de ce champ ;</li>
+     *   <li>il n'a <b>ni son ni etincelle</b> : le son est celui de la competence, joue par elle ;</li>
+     *   <li>et il se recollait a la <b>main</b> de son tireur ({@code viewOptimize}), ce que
+     *       {@code MdRayView} fait deja pour lui.</li>
+     * </ul>
+     *
+     * <p>Sa longueur, elle, n'est pas ici : c'est son ecart qui la donne, et c'est la competence qui
+     * le pose — quarante-cinq blocs d'affichage contre cinquante de degats, comme l'original.
+     */
+    public static final MdRayKind RAILGUN = new MdRayKind("railgun",
+            texture("railgun", "blend_in"), texture("railgun", "tile"),
+            texture("railgun", "blend_out"),
+            1.1, 0.9f,
+            0.09, new Tint(241, 240, 222, 200),
+            0.13, new Tint(236, 170, 93, 60),
+            50, 150, 1000, 800,
+            0.0, "", 0.0f, true, 0.3);
 
     /**
      * La vie d'un rayon <b>tenu</b> : les {@code 233333} ticks de l'original, soit trois heures.

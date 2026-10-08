@@ -230,41 +230,24 @@ public class ArcRenderer {
     }
 
     /**
-     * Pose un faisceau : deux bouts, une duree, et c'est tout.
+     * Pose le faisceau du railgun : il passe par le MOTEUR DES RAYONS, comme les mine ray.
      *
-     * <p>Appele par le paquet du railgun. Un faisceau n'a ni motif, ni proprietaire a suivre :
-     * c'est un trait, pas un eclair.
+     * <p>Le joueur l'a demande ainsi, et il a raison : l'original dessinait son railgun avec le MEME
+     * composeur que tous ses autres rayons — {@code RendererRayComposite} — et non avec un dessin a
+     * lui. Le port, lui, s'etait fabrique celui d'a cote (trois cylindres et une lueur, voir
+     * {@code drawBeam}), avec ses propres nombres ; c'est ce qui faisait que « le railgun ne ressemble
+     * pas au vrai ».
+     *
+     * <p>Il y a donc maintenant un genre de rayon, {@code MdRayKind.RAILGUN}, avec les nombres de
+     * l'original — lueur de 1,1 bloc, coeur blanc chaud de 9 cm, gaine orange de 13 — et c'est lui qui
+     * le dessine, etincelles et vue comprises.
+     *
+     * <p>Ce qui reste ici — {@code BEAMS} et son dessin — n'est donc plus JAMAIS alimente : c'est du
+     * code mort, garde le temps de la bascule, et a supprimer. Voir le cerveau du projet.
      */
     public static void spawnBeam(Vec3 from, Vec3 to, int lifeTicks, int ownerId) {
-        Minecraft minecraft = Minecraft.getInstance();
-        long gameTime = minecraft.level == null ? 0 : minecraft.level.getGameTime();
-
-        // Le decalage de vue est applique MAINTENANT, une fois pour toutes, et le faisceau est
-        // fige dans le monde a cet instant. Il se recalculait a chaque image, donc il suivait le
-        // regard du joueur — ce qu'il a vu : « une fois lance, le railgun suit mon regard ».
-        // L'original figeait aussi le sien : son entite retenait l'orientation du tireur au
-        // moment du tir, et son rendu ne faisait plus que poser ce qu'elle avait retenu.
-        boolean own = minecraft.player != null && minecraft.player.getId() == ownerId;
-        boolean firstPerson = own && minecraft.options.getCameraType().isFirstPerson();
-        org.joml.Vector3f up = minecraft.gameRenderer.getMainCamera().getUpVector();
-        double[] above = { up.x, up.y, up.z };
-
-        double[][] fixed = ArcView.fix(
-                new double[] { from.x, from.y, from.z },
-                new double[] { to.x, to.y, to.z },
-                above, firstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
-
-        // Et un rien en avant : le tir part de la piece lancee, juste devant la main.
-        double[] axis = normalize(fixed[1][0] - fixed[0][0], fixed[1][1] - fixed[0][1],
-                fixed[1][2] - fixed[0][2]);
-        if (axis != null) {
-            for (int i = 0; i < 3; i++) {
-                fixed[0][i] += axis[i] * BEAM_FORWARD;
-                fixed[1][i] += axis[i] * BEAM_FORWARD;
-            }
-        }
-
-        BEAMS.add(new Beam(fixed[0], fixed[1], gameTime, Math.max(1, lifeTicks), ownerId));
+        cn.academy.ability.client.md.MdRayView.spawn(cn.academy.ability.client.md.MdRayKind.RAILGUN,
+                from, to, ownerId);
     }
 
     /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
