@@ -1,6 +1,7 @@
 package cn.academy.client;
 
 import cn.academy.AcademyCraft;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
@@ -13,6 +14,8 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+
+import java.util.Arrays;
 
 /**
  * La piece du railgun dans la main, portage du {@code TileEntityItemStackRenderer} de l'original.
@@ -73,12 +76,13 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float RECT_SHADE = 0.85f;
 
     /**
-     * Les facettes de la tranche : vingt-quatre.
+     * Les facettes de la tranche : quarante-huit, deux par pixel de son bord.
      *
-     * <p>En dessous d'une douzaine, le rond se voit ; au-dela, cela ne change rien a l'ecran et
-     * chaque facette coute quatre sommets.
+     * <p>Le bord du dessin fait le tour de la piece en une centaine de pixels : a quarante-huit
+     * facettes, chacune en couvre deux, et la silhouette suit l'escalier du dessin au lieu de le
+     * lisser.
      */
-    private static final int RIM_SEGMENTS = 24;
+    private static final int RIM_SEGMENTS = 48;
 
     /** Le plan de l'image, dans le repere du modele : celui des objets plats de vanilla (7,5 sur 16). */
     private static final float SPRITE_Z = 7.5f / 16.0f - 0.5f;
@@ -90,14 +94,20 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float RING_RADIUS = TEXELS / 2.0f - 0.5f;
 
     /**
-     * Le rayon de la TRAN CHE, cale sur le bord du DESSIN et non sur celui du carre.
+     * Le rayon de secours de la tranche : le bord du DESSIN, un demi-pixel en dedans du carre.
      *
-     * <p>L'image de la piece s'arrete a un demi-pixel du bord de la texture : la tranche se pose donc
-     * sur cette limite. Au bord du carre, elle depasserait le dessin et la piece aurait deux bords —
-     * celui de l'image et le sien — ce que le joueur a decrit ainsi : « le rebord de la piece cumule
-     * le rebord de la face avant et de la face arriere ».
+     * <p>C'est aussi celui de l'anneau dont les facettes tirent leur couleur ({@link #RING_RADIUS}),
+     * mais la hauteur reelle de la tranche est relevee dans l'image — voir {@link #edgeRadii}. Cette
+     * valeur-la ne sert que si l'image ne se lit pas.
      */
     private static final float RIM_RADIUS = RADIUS * RING_RADIUS / (TEXELS / 2.0f);
+
+    /**
+     * Le rayon du bord du DESSIN, facette par facette, mesure dans l'image une fois pour toutes.
+     *
+     * <p>Nul tant qu'il n'a pas ete mesure — voir {@link #edgeRadii}.
+     */
+    private static float[] edgeRadii;
 
     public CoinItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(),
@@ -140,23 +150,23 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * nord superposees), donc l'image ne se lit jamais a l'envers. Le type de rendu cache les faces
      * arriere : une seule des deux se dessine, selon l'ou on regarde.
      *
-     * <p>ET ELLE SE LIT RETOURNEE — voir le demi-tour explique a {@link #coin}.
+     * <p>ET ELLE SE LIT EN MIROIR — voir le miroir sur X explique a {@link #coin}.
      */
     private static void sprite(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         VertexConsumer consumer = buffers.getBuffer(RenderType.itemEntityTranslucentCull(FRONT));
 
-        // Face avant, le demi-tour applique : l'abscisse et l'ordonnee partent toutes deux de un.
-        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, 1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, 1f);
-        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
-        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, 1f);
+        // Face avant, le miroir applique : l'abscisse part de un, l'ordonnee de zero.
+        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, 1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, 1f);
+        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, 1f);
+        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
 
-        // Et le revers, retourne de la meme facon : vu de derriere, le demi-tour se compose avec la
+        // Et le revers, retourne de la meme facon : vu de derriere, le miroir se compose avec la
         // symetrie du regard, donc l'image se lit juste des deux cotes.
-        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
     }
 
     // --- LA PIECE, EN VOLUME ---
@@ -164,12 +174,11 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     /**
      * La piece de biais : le blason devant, le disque uni derriere, et sa tranche ronde.
      *
-     * <p>LE DEMI-TOUR. L'image se lit retournee : l'abscisse ET l'ordonnee partent de un, ce qui fait
-     * un demi-tour et non une symetrie. Le joueur l'a demande deux fois — « dans le vrai mod la piece a
-     * l'air plus sombre et dans le sens inverse » — et une simple symetrie ne l'a pas satisfait : c'est
-     * le demi-tour que fait l'original, dont les deux faces lisent {@code u = 1 - x} et {@code v = 1 - y}
-     * dans ses propres reperes. L'inventaire et la main montrent la meme face du modele, donc la meme
-     * image dans le meme sens.
+     * <p>LE MIROIR SUR X. L'image se lit retournee de gauche a droite, et rien d'autre : le joueur a
+     * demande deux fois « dans le sens inverse », puis a precise — « je voulais qu'elle ne soit
+     * inversee que sur l'axe X, pas sur Z aussi ». C'est aussi ce que fait l'original, dont l'abscisse
+     * part de un quand l'ordonnee part de zero. L'inventaire et la main montrent la meme face du
+     * modele, donc la meme image dans le meme sens.
      *
      * <p>La tranche est un <b>anneau de facettes</b>, et chacune prend sa couleur sur le BORD de
      * l'image, a l'angle ou elle se trouve — c'est ce qui fait qu'elle suit l'anneau de la piece au
@@ -177,33 +186,36 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * droites d'un modele JSON.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        // Le blason, sur la face que le joueur a devant lui, retourne d'un demi-tour, et un peu plus
-        // mat que le reste. SANS CULL, comme l'autre face : aucune des deux ne peut plus disparaitre
-        // selon le sens dans lequel on la regarde.
+        // Le blason, sur la face que le joueur a devant lui, retourne de gauche a droite, et un peu
+        // plus mat que le reste. SANS CULL, comme l'autre face : aucune des deux ne peut plus
+        // disparaitre selon le sens dans lequel on la regarde.
         VertexConsumer front = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
-        shaded(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
 
-        // Et le disque uni derriere, avec le meme demi-tour : c'est le verso de la piece.
+        // Et le disque uni derriere, avec le meme miroir : c'est le verso de la piece.
         VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
-        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
 
-        // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance, et chaque facette
-        // lit un pixel du bord de l'image — au rayon du DESSIN, pas a celui du carre.
+        // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance. Chaque facette
+        // monte a la hauteur du DESSIN a son angle — voir edgeRadii — et prend la couleur d'un pixel
+        // entier, sans melange.
+        float[] radii = edgeRadii();
         VertexConsumer rim = buffers.getBuffer(
                 RenderType.entityCutoutNoCull(FRONT));
         for (int i = 0; i < RIM_SEGMENTS; i++) {
+            int next = (i + 1) % RIM_SEGMENTS;
             double a0 = Math.PI * 2.0 * i / RIM_SEGMENTS;
-            double a1 = Math.PI * 2.0 * (i + 1) / RIM_SEGMENTS;
-            float x0 = (float) (Math.cos(a0) * RIM_RADIUS);
-            float y0 = (float) (Math.sin(a0) * RIM_RADIUS);
-            float x1 = (float) (Math.cos(a1) * RIM_RADIUS);
-            float y1 = (float) (Math.sin(a1) * RIM_RADIUS);
+            double a1 = Math.PI * 2.0 * next / RIM_SEGMENTS;
+            float x0 = (float) (Math.cos(a0) * radii[i]);
+            float y0 = (float) (Math.sin(a0) * radii[i]);
+            float x1 = (float) (Math.cos(a1) * radii[next]);
+            float y1 = (float) (Math.sin(a1) * radii[next]);
             float u0 = texelU(a0);
             float v0 = texelV(a0);
             float u1 = texelU(a1);
@@ -220,14 +232,69 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
     }
 
-    /** L'abscisse, dans l'image, du bord de l'anneau a cet angle — retournee comme les faces. */
+    /** L'abscisse, dans l'image, du bord de l'anneau a cet angle — MIROIR sur X, comme les faces. */
     private static float texelU(double angle) {
-        return (TEXELS / 2.0f - (float) (Math.cos(angle) * RING_RADIUS)) / TEXELS;
+        return snap((TEXELS / 2.0f - (float) (Math.cos(angle) * RING_RADIUS)) / TEXELS);
     }
 
-    /** Et son ordonnee, retournee de la meme facon : l'image a son zero EN HAUT, le modele aussi. */
+    /** Et son ordonnee, dans le sens du dessin : l'image a son zero EN HAUT, le modele aussi. */
     private static float texelV(double angle) {
-        return (TEXELS / 2.0f + (float) (Math.sin(angle) * RING_RADIUS)) / TEXELS;
+        return snap((TEXELS / 2.0f - (float) (Math.sin(angle) * RING_RADIUS)) / TEXELS);
+    }
+
+    /**
+     * Le CENTRE du pixel qui contient cette abscisse.
+     *
+     * <p>C'est ce qui donne a la tranche son air de mosaique : chaque facette prend la couleur d'un
+     * pixel entier, sans melange, comme le dessin qui l'entoure — « un rond fait de carres ».
+     */
+    private static float snap(float uv) {
+        return (float) ((Math.floor(uv * TEXELS) + 0.5) / TEXELS);
+    }
+
+    /**
+     * Le rayon du bord du DESSIN, facette par facette — et c'est la demande du joueur : « les bords
+     * sont en forme de rond alors que la piece c'est un rond oui, mais fait de carres ».
+     *
+     * <p>Le dessin de la piece est un cercle de PIXELS : son bord est donc un escalier, avec les
+     * petites billes de la bordure. Une tranche posee sur un cercle parfait lissait tout cela ;
+     * celle-ci se pose sur le bord reel, releve dans l'image une fois pour toutes.
+     */
+    private static float[] edgeRadii() {
+        if (edgeRadii == null) {
+            edgeRadii = measureEdge();
+        }
+        return edgeRadii;
+    }
+
+    /** Releve le bord de l'image dans tous les sens, et retombe sur le cercle du dessin si elle manque. */
+    private static float[] measureEdge() {
+        float[] radii = new float[RIM_SEGMENTS];
+        try (var stream = Minecraft.getInstance().getResourceManager().getResource(FRONT)
+                .orElseThrow().open();
+             var image = NativeImage.read(stream)) {
+            for (int i = 0; i < RIM_SEGMENTS; i++) {
+                radii[i] = measureEdgeAt(image, Math.PI * 2.0 * i / RIM_SEGMENTS);
+            }
+        } catch (Exception e) {
+            // Une image illisible ne doit pas empecher la piece d'exister : on revient au cercle.
+            Arrays.fill(radii, RIM_RADIUS);
+        }
+        return radii;
+    }
+
+    /** Le dernier pixel OPAQUE rencontre en partant du centre, dans ce sens-la. */
+    private static float measureEdgeAt(NativeImage image, double angle) {
+        float half = TEXELS / 2.0f;
+        float radius = RIM_RADIUS;
+        for (float step = 1.0f; step < half; step += 1.0f) {
+            int px = (int) Math.floor(half - Math.cos(angle) * step);
+            int py = (int) Math.floor(half - Math.sin(angle) * step);
+            if (px < 0 || py < 0 || px >= TEXELS || py >= TEXELS) break;
+            if ((image.getPixelRGBA(px, py) >>> 24) == 0) break;
+            radius = RADIUS * step / half;
+        }
+        return radius;
     }
 
     // --- LES SOMMETS ---
