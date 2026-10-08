@@ -139,12 +139,14 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, 1f);
         vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
 
-        // Et le revers, retourne de la meme facon : vu de derriere, le miroir se compose avec la
-        // symetrie du regard, donc l'image se lit juste des deux cotes.
-        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
+        // Et le revers porte la MEME image, au MEME endroit : c'est ce que fait l'original, dont les
+        // deux faces lisent les memes coordonnees, et c'est ce que le joueur a demande — « la face
+        // arriere aussi il faut la faire tourner », sans quoi les deux faces ne se repondent pas quand
+        // on retourne la piece, et le bord ne tombe plus en face.
+        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
     }
 
     // --- LA PIECE, EN VOLUME ---
@@ -173,12 +175,13 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
         shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
 
-        // Et le disque uni derriere, avec le meme miroir : c'est le verso de la piece.
+        // Et le disque uni derriere, LU COMME LA FACE AVANT — meme abscisse au meme endroit : les deux
+        // faces se repondent donc quand on retourne la piece, et leurs bords tombent en face.
         VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
-        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
 
         // Et sa TRANCHE : un panneau plat par pixel de son bord, exactement comme l'image que Minecraft
         // fabrique lui-meme pour un objet plat — c'est le rendu que le joueur a reconnu : « hier tu
