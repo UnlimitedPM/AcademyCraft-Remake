@@ -69,22 +69,23 @@ import java.util.Map;
  * blocs a la ronde, et chacun la dessinait alors sur son porteur. Le port le fait — voir
  * {@link #onAnnounced} — et il la dessine de la meme facon pour tout le monde.
  *
- * <h2>Ou elle se pose : la convention de TOUT le mod, retrouvee dans le vrai code</h2>
+ * <h2>Ou elle se pose : les deux branches du vrai code, reproduites</h2>
  *
  * <p>Le joueur a tranche, et il connait le vrai mod : « elle n'est pas litteralement dans la main,
  * mais dans la main de la meme maniere que les autres competences, pour juste avoir l'impression que
- * c'est dans la main sans l'etre vraiment » — puis, devant un premier essai a cote de la plaque :
- * « c'est aussi cense etre la meme logique que pour l'arc gen, mais regarde aussi le vrai code ».
- * Il avait raison, et le vrai code dit tout : les arcs de {@code arc_gen}, de la charge, du
- * mouvement magnetique et du thunder bolt sont tous des {@code EntityArc}, dont le constructeur
- * pose l'entite a {@code player.posY + eyeHeight} et lui donne le REGARD du joueur — puis dont le
- * rendu appelle {@code ViewOptimize.fix}. Et {@code ViewOptimize} l'annonce dans son propre
- * commentaire : « transforms the origin to the player's hand in thirdPerson or firstPerson ».
+ * c'est dans la main sans l'etre vraiment » ; puis, devant deux essais a cote de la plaque : « c'est
+ * aussi cense etre la meme logique que pour l'arc gen, mais lit le vrai code et essaie de le faire ».
+ * C'est ce qui a ete fait, et il n'y a plus rien a interpreter : l'original a DEUX branches, elles
+ * sont reproduites telles quelles — voir {@link #EYE_SIDE} et {@link #SEEN_UP}, ou chacune est
+ * chiffree et commentee.
  *
- * <p>C'est donc cette convention que le port reprend, et rien d'autre : <b>l'ancre aux yeux, dans le
- * repere du regard</b>, plus un decalage qui depend de QUI REGARDE — les nombres de
- * {@code ViewOptimize}, ecrits ici. Voir {@link #EYE_DOWN} et {@link #SEEN_DOWN} : la difference est
- * la hauteur, et c'est elle qui fait tout l'effet.
+ * <p>Ce qu'il faut savoir du chemin, parce qu'il faut trois fichiers pour le lire : le hook est
+ * appele par {@code RenderDummy}, dans le repere du MANNEQUIN du joueur — sa position, son lacet, et
+ * son tangage en premiere personne seulement. Ce mannequin y ajoute deja quelque chose : le tangage
+ * en premiere personne, et {@code ViewOptimize.fixThirdPerson()} en trois quarts — le decalage de
+ * "main" de toute la librairie, dont le commentaire dit « transforms the origin to the player's hand
+ * in thirdPerson or firstPerson ». Le hook pose ensuite SON decalage par-dessus, et les deux
+ * s'additionnent. Rien n'est a chercher ailleurs.
  *
  * <p>ET L'EFFET SE DESSINE DANS LE MONDE, comme le bouclier de lumiere et comme les arcs — jamais
  * dans le rendu de la main, et c'est une lecon payee :
@@ -119,48 +120,46 @@ public final class RailgunHandEffect {
     private static final int LIFE_TICKS = 32;
 
     /**
-     * OU elle se pose : l'ancre est aux YEUX du porteur, et le decalage depend de QUI REGARDE.
+     * PREMIERE PERSONNE : les nombres de l'original, dans le repere de son mannequin.
      *
-     * <p>C'est la convention de TOUT le mod d'origine, et le joueur a eu raison de me renvoyer
-     * vers elle : les arcs de {@code arc_gen}, de la charge, du mouvement magnetique et du
-     * thunder bolt sont tous des {@code EntityArc}, et son constructeur pose l'entite a
-     * {@code player.posY + eyeHeight} avant de lui donner le regard du joueur — puis son rendu
-     * appelle {@code ViewOptimize.fix}. Et {@code ViewOptimize} dit tout dans son propre
-     * commentaire : « transforms the origin to the player's hand in thirdPerson or firstPerson ».
-     * C'est cela, la main sans y etre.
+     * <p>Son {@code renderHand} commencait par rejoindre les YEUX ({@code glTranslated(0,
+     * cos(pitch) * eyeHeight, sin(pitch) * eyeHeight)} depuis les pieds), puis decalait de
+     * {@code (.26, -.15, -.24)}. Dans son repere — +X la droite du joueur, +Y son haut, -Z son
+     * regard — cela fait <b>26 cm a droite, 15 cm en bas, 24 cm devant</b>. Seule l'abscisse a bouge :
+     * le joueur la trouvait « un peu trop de la droite » — et c'est cette version-la qu'il a validee
+     * en jeu, « l'animation de l'eclair autour de la main est parfaite ».
+     */
+    private static final double EYE_SIDE = 0.10;
+    private static final double EYE_DOWN = 0.15;
+    private static final double EYE_FORWARD = 0.24;
+
+    /**
+     * TROIS QUARTS : les pieds, un bloc au-dessus, 15 cm a droite et 77 cm devant — A L'HORIZONTALE.
      *
-     * <p>Et ses trois nombres ne se lisent pas « devant, haut, droite » dans cet ordre : son repere
-     * sort des deux rotations de {@code EntityArc.Renderer} — son lacet plus quatre-vingt-dix autour
-     * de MOINS Y, puis son tangage autour de MOINS Z — et, en le calculant, on retrouve son <b>X
-     * pour l'AVANT</b> du regard, son <b>Y pour le haut</b>, et son <b>Z pour la DROITE</b> du
-     * joueur. Ses noms trahissent le contraire, et s'y fier a coute un aller-retour.
-     *
-     * <p>AINSI, ET C'EST LA CONVENTION QU'ON GARDE :
+     * <p>C'est la branche {@code else} de l'original, plus ce que le mannequin y ajoute deja. Ce
+     * chemin-la est en DEUX morceaux, et il faut les additionner :
      *
      * <ul>
-     *   <li><b>Premiere personne</b> — les nombres que le joueur a valides en jeu : 24 cm devant,
-     *       10 cm a droite, 15 cm sous les yeux. Ce sont ceux de la rafale elle-meme ({@code 0.26}
-     *       et {@code -0.15} de l'original, l'abscisse rapprochee a sa demande), et ils sont dans le
-     *       repere du regard.</li>
-     *   <li><b>Trois quarts</b> — les nombres de {@code ViewOptimize} : 15 cm devant, 23 cm a droite,
-     *       <b>80 cm sous les yeux</b>. C'est le bras d'un homme vu de l'exterieur, et c'est ce qui
-     *       manquait : la vue de trois quarts n'a pas la main collee au bas de l'ecran, elle a un
-     *       vrai bras qui pend.</li>
+     *   <li>{@code RenderDummy} applique {@code ViewOptimize.fixThirdPerson()} avant d'appeler le
+     *       hook — soit {@code (0.15, -0.8, 0.23)}, le decalage de "main" de toute la librairie ;</li>
+     *   <li>et le hook lui-meme pose alors {@code glTranslated(0, 1.8, -1)} — 1,8 au-dessus et un
+     *       bloc d'avance.</li>
      * </ul>
      *
-     * <p>UNE DIFFERENCE ASSUMEE avec {@code ViewOptimize} : son decalage d'avant vaut {@code -0.05}
-     * dans les deux vues, c'est-a-dire cinq centimetres EN ARRIERE des yeux. Ses arcs s'en moquent —
-     * ce sont de longs rubans qui partent vers l'avant, et ce qui se voit, c'est leur longueur — mais
-     * la rafale, elle, est une IMAGE posee en un point : en arriere des yeux, elle serait derriere la
-     * camera et ne se verrait pas du tout. Sa composante d'avant est donc positive dans les deux vues.
+     * <p>Le total, dans le repere du mannequin (+X la droite, +Y le haut, -Z le regard) : <b>15 cm a
+     * droite, 1 bloc au-dessus des pieds, 77 cm devant</b>. Un metre au-dessus des pieds, c'est la
+     * poitrine : la rafale flotte a hauteur de bras, devant l'epaule, ce qui est bien ce qu'on voit
+     * de quelqu'un qui lance quelque chose.
+     *
+     * <p>Et comme ce decalage est pose AVANT la rotation de tangage du mannequin, son avance est
+     * <b>horizontale</b> : la rafale ne monte ni ne descend quand son porteur leve les yeux.
+     *
+     * <p>Sa taille, elle, n'est pas mise a l'echelle : le carre garde ses deux unites, donc deux
+     * blocs. Voir {@link #SCALE_WORLD}.
      */
-    private static final double EYE_FORWARD = 0.24;
-    private static final double EYE_DOWN = 0.15;
-    private static final double EYE_SIDE = 0.10;
-
-    private static final double SEEN_FORWARD = 0.15;
-    private static final double SEEN_DOWN = 0.80;
-    private static final double SEEN_SIDE = 0.23;
+    private static final double SEEN_UP = 1.00;
+    private static final double SEEN_SIDE = 0.15;
+    private static final double SEEN_FORWARD = 0.77;
 
     /** La demi-largeur du carre, avant echelle : deux unites, comme son billboard. */
     private static final float HALF = 1.0f;
@@ -268,14 +267,14 @@ public final class RailgunHandEffect {
     /**
      * Les rafales, dessinees dans le monde — le procede du bouclier de lumiere.
      *
-     * <p>CHAQUE RAFALE EST POSEe par la convention de {@code ViewOptimize} — l'ancre aux yeux de
-     * son porteur, le decalage du regard qui la regarde. Voir le commentaire de la classe : c'est
-     * la regle de tous les arcs de l'original, et c'est ce que le joueur a demande en la nommant
-     * (« la meme logique que pour l'arc gen »).
+     * <p>CHAQUE RAFALE est posee par les deux branches du vrai hook, reproduites : la main de celui
+     * qui regarde par ses yeux, le flottement devant l'epaule pour tout autre regard — voir
+     * {@link #EYE_SIDE} et {@link #SEEN_UP}. La vue se decide par la meme regle que le mannequin de
+     * l'original : « c'est moi, ET je regarde en premiere personne ».
      *
-     * <p>Le carre regarde la CAMERA, et c'est ce que le port ajoute a l'original : lui le dessinait
-     * dans le repere du joueur, donc de profil pour qui se tenait de cote. Une etincelle qu'on ne
-     * voit pas ne sert a rien.
+     * <p>Et le carre est ORIENTE COMME LE REGARD de son porteur, comme lui : ses deux rotations sont
+     * celles du mannequin, lacet puis tangage. En premiere personne c'est exactement la camera, ce
+     * qui est bien la raison d'etre de cette branche-la.
      */
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -295,19 +294,20 @@ public final class RailgunHandEffect {
             int frame = frameAt(entry.getValue(), partialTick);
             if (frame >= FRAME_COUNT) continue;
 
-            // LA MAIN SANS Y ETRE, et la regle est celle de ViewOptimize : qui regarde par ses
-            // propres yeux recoit le decalage de premiere personne, tout autre regard celui de trois
-            // quarts. C'est ce qui fait qu'une rafale tombe juste pour tout le monde — et pour un
-            // joueur qui se regarde lui-meme, la vue decide, pas son nom.
+            // LES DEUX BRANCHES DE L'ORIGINAL, mot pour mot : la main de celui qui regarde par ses
+            // yeux, le flottement devant l'epaule pour tout autre regard. Voir les constantes.
             boolean throughMyEyes = player == Minecraft.getInstance().player
                     && Minecraft.getInstance().options.getCameraType().isFirstPerson();
-            Vec3 at = handOf(player, partialTick, throughMyEyes);
+            Vec3 at = anchorOf(player, partialTick, throughMyEyes);
             float scale = throughMyEyes ? SCALE_HAND : SCALE_WORLD;
 
             PoseStack pose = event.getPoseStack();
             pose.pushPose();
             pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
-            faceCamera(pose, camera.subtract(at));
+            // Et il oriente son carre COMME LE REGARD de son porteur — ses deux rotations sont
+            // celles du mannequin, lacet puis tangage — et non vers la camera. En premiere personne
+            // c'est la meme chose, et c'est bien pour cela que cette branche-la existe.
+            faceLook(pose, player.getViewVector(partialTick));
             pose.scale(scale, scale, 1f);
             quad(buffers.getBuffer(type(FRAMES[frame])), pose.last().pose());
             pose.popPose();
@@ -318,34 +318,43 @@ public final class RailgunHandEffect {
     }
 
     /**
-     * Le point de la "main" d'un porteur : ses YEUX, plus le decalage du regard qui regarde.
+     * L'ancre de la rafale d'un porteur : ses YEUX en premiere personne, ses PIEDS en trois quarts.
      *
-     * <p>Le repere est celui de son regard — l'avant est sa visee, le haut son haut, la droite sa
-     * droite — et c'est le repere que {@code ViewOptimize} decalait, celui de tous les arcs de
-     * l'original. Le passage de ses trois nombres aux trois d'ici est explique sur
-     * {@link #EYE_SIDE} : son X est l'avant, et son Z la droite.
+     * <p>Ce sont les deux branches de {@code RailgunHandEffect.renderHand}, mot pour mot — voir
+     * {@link #EYE_SIDE} et {@link #SEEN_UP}, ou chacune est expliquee.
      */
-    private static Vec3 handOf(Player player, float partialTick, boolean throughMyEyes) {
+    private static Vec3 anchorOf(Player player, float partialTick, boolean throughMyEyes) {
         Vec3 look = player.getViewVector(partialTick).normalize();
-        Vec3 flat = new Vec3(look.x, 0.0, look.z);
-        flat = flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+        Vec3 flat = horizontal(look);
+
+        if (!throughMyEyes) {
+            // Les pieds, un bloc plus haut, 15 cm a droite et 77 cm devant A L'HORIZONTALE : le
+            // decalage du mannequin et celui du hook, additionnes — voir SEEN_UP.
+            return player.getPosition(partialTick).add(0.0, SEEN_UP, 0.0)
+                    .add(flat.scale(SEEN_FORWARD))
+                    .add(new Vec3(-flat.z, 0.0, flat.x).scale(SEEN_SIDE));
+        }
+
+        // Les yeux, puis les trois decalages dans le repere du regard : sa droite est horizontale,
+        // son avant suit le regard, son haut lui est perpendiculaire.
         Vec3 right = new Vec3(-flat.z, 0.0, flat.x);
         Vec3 up = right.cross(look).normalize();
-
-        double forward = throughMyEyes ? EYE_FORWARD : SEEN_FORWARD;
-        double down = throughMyEyes ? EYE_DOWN : SEEN_DOWN;
-        double side = throughMyEyes ? EYE_SIDE : SEEN_SIDE;
-
         return player.getEyePosition(partialTick)
-                .add(look.scale(forward)).add(right.scale(side)).add(up.scale(-down));
+                .add(look.scale(EYE_FORWARD)).add(right.scale(EYE_SIDE)).add(up.scale(-EYE_DOWN));
     }
 
-    /** Tourne le carre pour qu'il regarde la camera, d'ou qu'elle vienne. */
-    private static void faceCamera(PoseStack pose, Vec3 toCamera) {
-        double length = toCamera.length();
+    /** La direction horizontale d'un vecteur, ou le sud quand il n'en a plus. */
+    private static Vec3 horizontal(Vec3 v) {
+        Vec3 flat = new Vec3(v.x, 0.0, v.z);
+        return flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+    }
+
+    /** Tourne le carre comme le REGARD du porteur : ses deux rotations de mannequin. */
+    private static void faceLook(PoseStack pose, Vec3 look) {
+        double length = look.length();
         if (length < 1.0E-6) return;
-        double yaw = Math.toDegrees(Math.atan2(-toCamera.x, toCamera.z));
-        double pitch = Math.toDegrees(Math.asin(-toCamera.y / length));
+        double yaw = Math.toDegrees(Math.atan2(-look.x, look.z));
+        double pitch = Math.toDegrees(Math.asin(-look.y / length));
         pose.mulPose(Axis.YP.rotationDegrees((float) -yaw));
         pose.mulPose(Axis.XP.rotationDegrees((float) pitch));
     }
