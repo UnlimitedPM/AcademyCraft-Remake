@@ -625,6 +625,13 @@ public class ArcRenderer {
                                     RenderSystem.disableBlend();
                                     RenderSystem.defaultBlendFunc();
                                 }))
+                        // ET IL N'ECRIT PAS LA PROFONDEUR, comme les effets du plasma : un eclair est
+                        // une lueur, et s'il ecrit la profondeur il fait disparaitre ce qu'il croise.
+                        // C'est ce que le joueur a vu sur le railgun : « les eclairs qui passent
+                        // devant le railgun lui donnent de la transparence » — un arc passant devant
+                        // le faisceau, donc plus pres, le rayait de la profondeur, et le faisceau
+                        // n'etait plus dessine derriere lui.
+                        .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, false))
                         .setCullState(new RenderStateShard.CullStateShard(false))
                         .createCompositeState(true)));
     }

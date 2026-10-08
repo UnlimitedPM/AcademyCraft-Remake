@@ -301,7 +301,10 @@ public class RailgunSkill extends Skill {
 
         for (int i = 0; i < BEAM_ARCS; i++) {
             double start = 1.0 + i * (BEAM_LENGTH - 1.0) / BEAM_ARCS;
-            double end = Math.min(BEAM_LENGTH, start + 1.5 + random.nextDouble() * 1.5);
+            // Leur LONGUEUR, et elle a ete raccourcie : le joueur les trouvait « trop grands ». Ce
+            // n'est pas la place qu'ils prennent dans l'original — qui les seme un tous les un a deux
+            // blocs — mais la longueur de chacun, et une par seconde et demie de tir.
+            double end = Math.min(BEAM_LENGTH, start + 0.8 + random.nextDouble() * 0.8);
             // Les arcs ne sont pas SUR l'axe : ils gresillent autour, comme les siens. Un rail
             // parfaitement droit ne ressemblerait a rien.
             //

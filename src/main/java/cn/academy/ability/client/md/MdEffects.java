@@ -79,7 +79,12 @@ public class MdEffects {
 
         // Le tremblement des lueurs se fait par IMAGE, comme dans l'original : il ne se lit
         // pas au tick.
-        MdRays.advanceFrame(now);
+        //
+        // SAUF EN PAUSE : le temps de l'animation est un temps REEL, donc il continuait de courir
+        // derriere le menu, et le joueur voyait son railgun s'animer tout seul : « quand je mets mon
+        // jeu en pause, le railgun continue quand meme son animation au lieu de se stopper ». Fige
+        // ici, l'horloge du plasma reprend exactement ou elle etait. Voir ClientPause.
+        if (!cn.academy.ability.client.ClientPause.frozen()) MdRays.advanceFrame(now);
         if (MdRays.live().isEmpty() && MdSparks.live().isEmpty()) return;
 
         PoseStack pose = event.getPoseStack();
