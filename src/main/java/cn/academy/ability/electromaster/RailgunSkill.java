@@ -2,11 +2,12 @@ package cn.academy.ability.electromaster;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
-import cn.academy.ability.TargetingUtil;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
 
 /**
  * Competence active, portage de {@code Railgun} : un tir tendu, a longue portee, qui traverse ce
@@ -30,7 +31,6 @@ public class RailgunSkill extends Skill {
 
     private static final float CP_COST_MIN_EXP = 200f;
     private static final float CP_COST_MAX_EXP = 450f;
-    private static final double RANGE = 30;
     private static final double KNOCKBACK = 2.5;
 
     /** La longueur du rail, comme le rayon de l'original : quarante-cinq blocs. */
@@ -237,13 +237,46 @@ public class RailgunSkill extends Skill {
 
         shootBeam(player);
 
-        Entity target = TargetingUtil.findEntityInSight(player, RANGE);
-        if (!(target instanceof LivingEntity living)) return;
+        // LES DEGATS : TOUT UN CYLINDRE, et non une cible unique. C'est le RangedRayDamage de
+        // l'original — rayon 2, longueur 50, voir RailgunHit — et le port, lui, ne prenait qu'une
+        // cible a trente blocs : le joueur a trouve le trou tout seul, « un monstre a 46 blocs ne se
+        // fait pas tuer alors que dans le vrai mod si ». Toutes les cibles du cylindre sont donc
+        // touchees, de la plus proche a la plus lointaine, chacune avec l'attenuation de sa distance.
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 look = player.getViewVector(1.0f).normalize();
+        float base = scaled(damage(data));
 
-        living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
-        Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
-        living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
-        living.hurtMarked = true;
+        for (Entity target : entitiesInBeam(player, eye, look)) {
+            if (!(target instanceof LivingEntity living)) continue;
+            Vec3 to = target.position().subtract(eye);
+            double distance = RailgunHit.hitDistance(to.x, to.y, to.z, look.x, look.y, look.z);
+            if (distance < 0.0) continue;
+
+            living.hurt(player.damageSources().indirectMagic(player, player),
+                    (float) (base * RailgunHit.damageFactor(distance)));
+            Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
+            living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
+            living.hurtMarked = true;
+        }
+    }
+
+    /**
+     * Les entites qui peuvent etre dans le faisceau, de la plus proche du tireur a la plus loin.
+     *
+     * <p>Une boite d'abord, et c'est une commodite autant qu'une optimisation : elle englobe le
+     * cylindre, et le test exact — {@link RailgunHit#hitDistance} — se fait ensuite sur chaque
+     * candidate. C'est l'ordre de l'original, qui triait ses cibles par distance avant de les
+     * frapper une a une.
+     */
+    private static List<Entity> entitiesInBeam(Player player, Vec3 eye, Vec3 look) {
+        Vec3 end = eye.add(look.scale(RailgunHit.LENGTH));
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(eye, end)
+                .inflate(RailgunHit.RADIUS * RailgunHit.WIDEN + 1.0);
+
+        List<Entity> targets = player.level().getEntities(player, box);
+        targets.sort(java.util.Comparator.comparingDouble(
+                target -> target.distanceToSqr(eye)));
+        return targets;
     }
 
     /**
