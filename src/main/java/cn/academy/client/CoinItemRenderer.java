@@ -67,22 +67,25 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float HALF_THICKNESS = 0.02f;
 
     /**
-     * La teinte du recto : quatre-vingt-cinq pour cent du blanc.
+     * La teinte du recto : soixante-quinze pour cent du blanc.
      *
      * <p>C'est ce que le joueur a demande — « dans le vrai mod la piece a l'air plus sombre » — et
      * c'est la couleur des sommets qui la donne : la lumiere, elle, reste celle du monde, et elle est
-     * juste. Le verso, lui, garde toute sa couleur : le joueur l'a valide tel quel.
+     * juste. Premier reglage a 0,85, encore « un peu trop clair », donc 0,75. Le verso, lui, garde
+     * toute sa couleur : c'est le seul point que le joueur a valide du premier coup.
      */
-    private static final float RECT_SHADE = 0.85f;
+    private static final float RECT_SHADE = 0.75f;
 
     /**
-     * Les facettes de la tranche : quarante-huit, deux par pixel de son bord.
+     * Les facettes de la tranche : DOUZE, des PANNEAUX PLATS.
      *
-     * <p>Le bord du dessin fait le tour de la piece en une centaine de pixels : a quarante-huit
-     * facettes, chacune en couvre deux, et la silhouette suit l'escalier du dessin au lieu de le
-     * lisser.
+     * <p>C'est ce que le joueur a demande deux fois sans que le port le comprenne : « les bords sont en
+     * forme de rond alors que la piece c'est un rond oui, mais fait de carres ». Une piece dessinee en
+     * pixels est un rond fait de carres : son bord est une suite de panneaux PLATS, pas un tube lisse.
+     * A quarante-huit facettes la silhouette etait un cercle ; a douze elle est un dodecagone, donc un
+     * rond visiblement fait de morceaux. L'original en avait quatre — un carre, trop peu.
      */
-    private static final int RIM_SEGMENTS = 48;
+    private static final int RIM_SEGMENTS = 12;
 
     /** Le plan de l'image, dans le repere du modele : celui des objets plats de vanilla (7,5 sur 16). */
     private static final float SPRITE_Z = 7.5f / 16.0f - 0.5f;
