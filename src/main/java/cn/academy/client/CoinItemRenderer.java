@@ -65,24 +65,24 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float HALF_THICKNESS = 0.02f;
 
     /**
-     * La teinte du recto : soixante-quinze pour cent du blanc.
+     * La teinte du recto : soixante-cinq pour cent du blanc.
      *
      * <p>C'est ce que le joueur a demande — « dans le vrai mod la piece a l'air plus sombre » — et
      * c'est la couleur des sommets qui la donne : la lumiere, elle, reste celle du monde, et elle est
      * juste. Le verso, lui, garde toute sa couleur : c'est le seul point qu'il a valide du premier
      * coup.
      *
-     * <p>SES TROIS REGLAGES, et la lecon qu'il en a tiree : 0,85 d'abord, « encore un peu trop
-     * clair » ; 0,75 ensuite, valide ; puis « remets la piece un peu plus clair » — donc 0,80 — avant
-     * qu'il ne trouve lui-meme la cause de son impression : « dans le vrai mod la piece me paraissait
-     * sombre a cause de l'interface quand les pouvoirs sont actifs, alors qu'en realite elle n'etait
-     * pas si sombre ». Le VOILE DU HUD assombrit tout l'ecran, la piece comprise, et c'est LUI qu'il
-     * comparait — d'ou le retour a 0,75, qui redevient la valeur juste.
+     * <p>SES REGLAGES, et la lecon qu'il en a tiree : 0,85 d'abord, « encore un peu trop clair » ;
+     * 0,75 ensuite, valide ; puis « remets la piece un peu plus clair » — donc 0,80 — avant qu'il ne
+     * trouve lui-meme la cause de son impression : « dans le vrai mod la piece me paraissait sombre a
+     * cause de l'interface quand les pouvoirs sont actifs, alors qu'en realite elle n'etait pas si
+     * sombre ». Le VOILE DU HUD assombrit tout l'ecran, la piece comprise, et c'est LUI qu'il
+     * comparait : retour a 0,75, puis un cran plus bas encore, « met 0,65 pour voir ».
      *
      * <p>LECON : une couleur jugee en jeu ne vaut que par ce qui la recouvre. Ici le HUD cornaque les
      * pouvoirs, et le joueur ne le voyait pas comme une couche a part.
      */
-    private static final float RECT_SHADE = 0.75f;
+    private static final float RECT_SHADE = 0.65f;
 
     /**
      * Les pixels du dessin, lus une fois pour toutes : c'est eux qui disent ou passe le bord.
