@@ -209,6 +209,10 @@ public class ModItems {
                 return InteractionResultHolder.pass(stack);
             }
             if (level.isClientSide) {
+                // L'ANIMATION SPECIALE, et elle n'appartient qu'au client : la rafale d'arcs qui
+                // jaillit de la main d'un electromaster qui a son railgun pret. Voir
+                // RailgunHandEffect, ou vivent les deux verrous de l'original.
+                cn.academy.ability.client.RailgunHandEffect.onCoinThrown(player);
                 return InteractionResultHolder.success(stack);
             }
 
