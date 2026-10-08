@@ -89,6 +89,16 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     /** Le rayon de cet anneau dans l'image, un demi-pixel en dedans du bord. */
     private static final float RING_RADIUS = TEXELS / 2.0f - 0.5f;
 
+    /**
+     * Le rayon de la TRAN CHE, cale sur le bord du DESSIN et non sur celui du carre.
+     *
+     * <p>L'image de la piece s'arrete a un demi-pixel du bord de la texture : la tranche se pose donc
+     * sur cette limite. Au bord du carre, elle depasserait le dessin et la piece aurait deux bords —
+     * celui de l'image et le sien — ce que le joueur a decrit ainsi : « le rebord de la piece cumule
+     * le rebord de la face avant et de la face arriere ».
+     */
+    private static final float RIM_RADIUS = RADIUS * RING_RADIUS / (TEXELS / 2.0f);
+
     public CoinItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(),
                 Minecraft.getInstance().getEntityModels());
@@ -97,6 +107,16 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     @Override
     public void renderByItem(ItemStack stack, ItemDisplayContext context, PoseStack pose,
                              MultiBufferSource buffers, int light, int overlay) {
+        // LE CUBE DU MODELE A SON COIN SUR L'ORIGINE, et c'est a nous de nous y placer.
+        //
+        // C'est le piege de ce rendu, et le joueur l'a vu tout de suite : une image d'objet fabriquee
+        // par Minecraft recoit un translate(-0,5, -0,5, -0,5) qui la recentre sur le cube, mais un
+        // rendu en code n'y a PAS droit — c'est a lui de se decaler, exactement comme le font ceux de
+        // vanilla (le coffre, la shulker). Sans ce demi-cube, la piece partait en haut a gauche de la
+        // case (« la piece n'est absolument plus centree ») et sortait de la main.
+        pose.pushPose();
+        pose.translate(0.5f, 0.5f, 0.5f);
+
         // A plat, ou en volume ? L'image pour tout ce qui se regarde de face (l'inventaire, l'objet
         // pose, l'objet fixe), et la piece pour tout ce qui se tient (les deux mains, la tete).
         boolean flat = context == ItemDisplayContext.GUI || context == ItemDisplayContext.FIXED
@@ -106,6 +126,8 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         } else {
             coin(pose, buffers, light, overlay);
         }
+
+        pose.popPose();
     }
 
     // --- L'IMAGE, TELLE QUELLE ---
@@ -115,23 +137,26 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      *
      * <p>Les deux faces sont au MEME endroit, avec chacune son sens de lecture : c'est exactement ce
      * que fait vanilla pour un objet plat ({@code ItemModelGenerator} pose une face sud et une face
-     * nord superposees), donc l'image ne se lit jamais a l'envers ni en miroir. Le type de rendu
-     * cache les faces arriere : une seule des deux se dessine, selon l'ou on regarde.
+     * nord superposees), donc l'image ne se lit jamais a l'envers. Le type de rendu cache les faces
+     * arriere : une seule des deux se dessine, selon l'ou on regarde.
+     *
+     * <p>ET ELLE SE LIT RETOURNEE — voir le demi-tour explique a {@link #coin}.
      */
     private static void sprite(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         VertexConsumer consumer = buffers.getBuffer(RenderType.itemEntityTranslucentCull(FRONT));
 
-        // Face avant : son coin haut-gauche lit le coin haut-gauche de l'image.
-        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, 1f);
-        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, 1f);
-        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, 1f);
+        // Face avant, le demi-tour applique : l'abscisse et l'ordonnee partent toutes deux de un.
+        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, 1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, 1f);
+        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
+        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, 1f);
 
-        // Et le revers, lu dans l'autre sens : vu de derriere, l'image est retournee sans lui.
-        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
+        // Et le revers, retourne de la meme facon : vu de derriere, le demi-tour se compose avec la
+        // symetrie du regard, donc l'image se lit juste des deux cotes.
+        vertex(consumer, pose, light, overlay, RADIUS, RADIUS, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, RADIUS, -RADIUS, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, -RADIUS, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
+        vertex(consumer, pose, light, overlay, -RADIUS, RADIUS, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
     }
 
     // --- LA PIECE, EN VOLUME ---
@@ -139,10 +164,12 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     /**
      * La piece de biais : le blason devant, le disque uni derriere, et sa tranche ronde.
      *
-     * <p>LE BLASON SE LIT NORMALEMENT, comme dans l'inventaire. Le port l'avait un moment retourne,
-     * en croyant lire dans l'original une abscisse inversee ({@code u = 1 - x}) ; le joueur a tranche —
-     * « il n'est pas en miroir ». C'est aussi ce que veut la coherence : l'inventaire et la main
-     * montrent la MEME face du modele, donc la meme image dans le meme sens.
+     * <p>LE DEMI-TOUR. L'image se lit retournee : l'abscisse ET l'ordonnee partent de un, ce qui fait
+     * un demi-tour et non une symetrie. Le joueur l'a demande deux fois — « dans le vrai mod la piece a
+     * l'air plus sombre et dans le sens inverse » — et une simple symetrie ne l'a pas satisfait : c'est
+     * le demi-tour que fait l'original, dont les deux faces lisent {@code u = 1 - x} et {@code v = 1 - y}
+     * dans ses propres reperes. L'inventaire et la main montrent la meme face du modele, donc la meme
+     * image dans le meme sens.
      *
      * <p>La tranche est un <b>anneau de facettes</b>, et chacune prend sa couleur sur le BORD de
      * l'image, a l'angle ou elle se trouve — c'est ce qui fait qu'elle suit l'anneau de la piece au
@@ -150,33 +177,33 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * droites d'un modele JSON.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        // Le blason, sur la face que le joueur a devant lui, LU NORMALEMENT — u va de zero a un pendant
-        // que x va de moins a plus — et un peu plus mat que le reste. SANS CULL, comme l'autre face :
-        // aucune des deux ne peut plus disparaitre selon le sens dans lequel on la regarde.
+        // Le blason, sur la face que le joueur a devant lui, retourne d'un demi-tour, et un peu plus
+        // mat que le reste. SANS CULL, comme l'autre face : aucune des deux ne peut plus disparaitre
+        // selon le sens dans lequel on la regarde.
         VertexConsumer front = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
-        shaded(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
-        shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
+        shaded(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
 
-        // Et le disque uni derriere, dans le meme sens que lui : c'est le verso de la piece.
+        // Et le disque uni derriere, avec le meme demi-tour : c'est le verso de la piece.
         VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
-        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
-        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
 
-        // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance, et chaque
-        // facette lit un pixel du bord de l'image.
+        // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance, et chaque facette
+        // lit un pixel du bord de l'image — au rayon du DESSIN, pas a celui du carre.
         VertexConsumer rim = buffers.getBuffer(
                 RenderType.entityCutoutNoCull(FRONT));
         for (int i = 0; i < RIM_SEGMENTS; i++) {
             double a0 = Math.PI * 2.0 * i / RIM_SEGMENTS;
             double a1 = Math.PI * 2.0 * (i + 1) / RIM_SEGMENTS;
-            float x0 = (float) (Math.cos(a0) * RADIUS);
-            float y0 = (float) (Math.sin(a0) * RADIUS);
-            float x1 = (float) (Math.cos(a1) * RADIUS);
-            float y1 = (float) (Math.sin(a1) * RADIUS);
+            float x0 = (float) (Math.cos(a0) * RIM_RADIUS);
+            float y0 = (float) (Math.sin(a0) * RIM_RADIUS);
+            float x1 = (float) (Math.cos(a1) * RIM_RADIUS);
+            float y1 = (float) (Math.sin(a1) * RIM_RADIUS);
             float u0 = texelU(a0);
             float v0 = texelV(a0);
             float u1 = texelU(a1);
@@ -193,14 +220,14 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         }
     }
 
-    /** L'abscisse, dans l'image, du bord de l'anneau a cet angle. */
+    /** L'abscisse, dans l'image, du bord de l'anneau a cet angle — retournee comme les faces. */
     private static float texelU(double angle) {
-        return (TEXELS / 2.0f + (float) (Math.cos(angle) * RING_RADIUS)) / TEXELS;
+        return (TEXELS / 2.0f - (float) (Math.cos(angle) * RING_RADIUS)) / TEXELS;
     }
 
-    /** Et son ordonnee : l'image a son zero EN HAUT, le modele a son zero en bas. */
+    /** Et son ordonnee, retournee de la meme facon : l'image a son zero EN HAUT, le modele aussi. */
     private static float texelV(double angle) {
-        return (TEXELS / 2.0f - (float) (Math.sin(angle) * RING_RADIUS)) / TEXELS;
+        return (TEXELS / 2.0f + (float) (Math.sin(angle) * RING_RADIUS)) / TEXELS;
     }
 
     // --- LES SOMMETS ---
