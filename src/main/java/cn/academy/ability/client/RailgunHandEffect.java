@@ -20,6 +20,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -125,11 +126,13 @@ public final class RailgunHandEffect {
      * <p>Son {@code renderHand} commencait par rejoindre les YEUX ({@code glTranslated(0,
      * cos(pitch) * eyeHeight, sin(pitch) * eyeHeight)} depuis les pieds), puis decalait de
      * {@code (.26, -.15, -.24)}. Dans son repere — +X la droite du joueur, +Y son haut, -Z son
-     * regard — cela fait <b>26 cm a droite, 15 cm en bas, 24 cm devant</b>. Seule l'abscisse a bouge :
-     * le joueur la trouvait « un peu trop de la droite » — et c'est cette version-la qu'il a validee
-     * en jeu, « l'animation de l'eclair autour de la main est parfaite ».
+     * regard — cela fait <b>26 cm a droite, 15 cm en bas, 24 cm devant</b>.
+     *
+     * <p>Son abscisse, elle, a bouge deux fois, et dans les deux sens : 26 cm d'abord, que le joueur
+     * trouvait « un peu trop de la droite » ; puis 10, qu'il a trouve « un peu trop vers la gauche ».
+     * C'est donc le milieu, et c'est la seule valeur qui ne vient pas de l'original.
      */
-    private static final double EYE_SIDE = 0.10;
+    private static final double EYE_SIDE = 0.18;
     private static final double EYE_DOWN = 0.15;
     private static final double EYE_FORWARD = 0.24;
 
@@ -307,7 +310,7 @@ public final class RailgunHandEffect {
             // Et il oriente son carre COMME LE REGARD de son porteur — ses deux rotations sont
             // celles du mannequin, lacet puis tangage — et non vers la camera. En premiere personne
             // c'est la meme chose, et c'est bien pour cela que cette branche-la existe.
-            faceLook(pose, player.getViewVector(partialTick));
+            faceLook(pose, player, partialTick);
             pose.scale(scale, scale, 1f);
             quad(buffers.getBuffer(type(FRAMES[frame])), pose.last().pose());
             pose.popPose();
@@ -322,41 +325,62 @@ public final class RailgunHandEffect {
      *
      * <p>Ce sont les deux branches de {@code RailgunHandEffect.renderHand}, mot pour mot — voir
      * {@link #EYE_SIDE} et {@link #SEEN_UP}, ou chacune est expliquee.
+     *
+     * <p>ET LES AXES VIENNENT DU LACET ET DU TANGAGE, pas du vecteur du regard. C'est le bug que le
+     * joueur a vu : « si je vise a 100% en haut ou en bas, l'animation se decale ». Un vecteur du
+     * regard qui pointe droit en l'air n'a plus d'horizontale du tout, et les deux axes qu'on en
+     * tirait — sa droite et son haut — s'ecrasaient alors sur une direction de secours, fixe dans le
+     * monde : la rafale sautait d'un coup a un endroit qui n'avait plus rien a voir avec la visee.
+     * Le lacet et le tangage, eux, ne degenerent jamais, et c'est d'eux que le mannequin de l'original
+     * tirait son repere — deux rotations, dans cet ordre. Ils sont INTERPOLES au temps partiel, comme
+     * partout ailleurs, sinon la rafale avancerait par saccades d'un tick.
      */
     private static Vec3 anchorOf(Player player, float partialTick, boolean throughMyEyes) {
-        Vec3 look = player.getViewVector(partialTick).normalize();
-        Vec3 flat = horizontal(look);
+        float yaw = yawOf(player, partialTick);
+        float pitch = pitchOf(player, partialTick);
+
+        // Les trois axes du mannequin, en coordonnees du monde : sa droite,
+        // son haut et SON ARRIERE (le regard est l'arriere retourne).
+        Vec3 right = new Vec3(-Math.cos(yaw), 0.0, -Math.sin(yaw));
+        Vec3 forward = new Vec3(-Math.sin(yaw), 0.0, Math.cos(yaw));
+        Vec3 up = new Vec3(-Math.sin(pitch) * Math.sin(yaw), Math.cos(pitch),
+                Math.sin(pitch) * Math.cos(yaw));
+        Vec3 back = new Vec3(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch),
+                -Math.cos(pitch) * Math.cos(yaw));
 
         if (!throughMyEyes) {
-            // Les pieds, un bloc plus haut, 15 cm a droite et 77 cm devant A L'HORIZONTALE : le
-            // decalage du mannequin et celui du hook, additionnes — voir SEEN_UP.
-            return player.getPosition(partialTick).add(0.0, SEEN_UP, 0.0)
-                    .add(flat.scale(SEEN_FORWARD))
-                    .add(new Vec3(-flat.z, 0.0, flat.x).scale(SEEN_SIDE));
+            // Les pieds, un bloc plus haut, 15 cm a droite et 77 cm devant — et cette avance est
+            // HORIZONTALE, comme chez lui : le decalage est pose avant la rotation de tangage.
+            return player.getPosition(partialTick)
+                    .add(0.0, SEEN_UP, 0.0)
+                    .add(right.scale(SEEN_SIDE)).add(forward.scale(SEEN_FORWARD));
         }
 
-        // Les yeux, puis les trois decalages dans le repere du regard : sa droite est horizontale,
-        // son avant suit le regard, son haut lui est perpendiculaire.
-        Vec3 right = new Vec3(-flat.z, 0.0, flat.x);
-        Vec3 up = right.cross(look).normalize();
+        // Les yeux, puis les trois decalages dans le repere du regard : a droite, en bas, et devant.
         return player.getEyePosition(partialTick)
-                .add(look.scale(EYE_FORWARD)).add(right.scale(EYE_SIDE)).add(up.scale(-EYE_DOWN));
+                .add(right.scale(EYE_SIDE)).add(up.scale(-EYE_DOWN)).add(back.scale(-EYE_FORWARD));
     }
 
-    /** La direction horizontale d'un vecteur, ou le sud quand il n'en a plus. */
-    private static Vec3 horizontal(Vec3 v) {
-        Vec3 flat = new Vec3(v.x, 0.0, v.z);
-        return flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+    /** Le lacet du joueur, interpole, en radians. */
+    private static float yawOf(Player player, float partialTick) {
+        return (float) Math.toRadians(Mth.lerp(partialTick, player.yRotO, player.getYRot()));
     }
 
-    /** Tourne le carre comme le REGARD du porteur : ses deux rotations de mannequin. */
-    private static void faceLook(PoseStack pose, Vec3 look) {
-        double length = look.length();
-        if (length < 1.0E-6) return;
-        double yaw = Math.toDegrees(Math.atan2(-look.x, look.z));
-        double pitch = Math.toDegrees(Math.asin(-look.y / length));
-        pose.mulPose(Axis.YP.rotationDegrees((float) -yaw));
-        pose.mulPose(Axis.XP.rotationDegrees((float) pitch));
+    /** Et son tangage, interpole lui aussi, en radians. */
+    private static float pitchOf(Player player, float partialTick) {
+        return (float) Math.toRadians(Mth.lerp(partialTick, player.xRotO, player.getXRot()));
+    }
+
+    /**
+     * Tourne le carre comme le REGARD du porteur : ses deux rotations de mannequin, lacet puis
+     * tangage.
+     *
+     * <p>Les memes angles que l'ancre, et pour la meme raison : tires du lacet et du tangage, ils ne
+     * sautent pas quand la visee passe par la verticale.
+     */
+    private static void faceLook(PoseStack pose, Player player, float partialTick) {
+        pose.mulPose(Axis.YP.rotationDegrees(-(float) Math.toDegrees(yawOf(player, partialTick))));
+        pose.mulPose(Axis.XP.rotationDegrees((float) Math.toDegrees(pitchOf(player, partialTick))));
     }
 
     /** L'image de la rafale a un instant donne : une toutes les quarante millisecondes. */
