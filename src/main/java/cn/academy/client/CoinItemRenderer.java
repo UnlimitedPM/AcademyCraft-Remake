@@ -15,8 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
-import java.util.Arrays;
-
 /**
  * La piece du railgun dans la main, portage du {@code TileEntityItemStackRenderer} de l'original.
  *
@@ -77,40 +75,17 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float RECT_SHADE = 0.75f;
 
     /**
-     * Les facettes de la tranche : DOUZE, des PANNEAUX PLATS.
+     * Les pixels du dessin, lus une fois pour toutes : c'est eux qui disent ou passe le bord.
      *
-     * <p>C'est ce que le joueur a demande deux fois sans que le port le comprenne : « les bords sont en
-     * forme de rond alors que la piece c'est un rond oui, mais fait de carres ». Une piece dessinee en
-     * pixels est un rond fait de carres : son bord est une suite de panneaux PLATS, pas un tube lisse.
-     * A quarante-huit facettes la silhouette etait un cercle ; a douze elle est un dodecagone, donc un
-     * rond visiblement fait de morceaux. L'original en avait quatre — un carre, trop peu.
+     * <p>Nul tant qu'ils n'ont pas ete lus — voir {@link #opaque}.
      */
-    private static final int RIM_SEGMENTS = 12;
+    private static boolean[] pixels;
 
     /** Le plan de l'image, dans le repere du modele : celui des objets plats de vanilla (7,5 sur 16). */
     private static final float SPRITE_Z = 7.5f / 16.0f - 0.5f;
 
-    /** L'image de la piece fait trente-deux pixels de cote, et son anneau touche le bord. */
+    /** L'image de la piece fait trente-deux pixels de cote, et son bord touche le bord du carre. */
     private static final float TEXELS = 32.0f;
-
-    /** Le rayon de cet anneau dans l'image, un demi-pixel en dedans du bord. */
-    private static final float RING_RADIUS = TEXELS / 2.0f - 0.5f;
-
-    /**
-     * Le rayon de secours de la tranche : le bord du DESSIN, un demi-pixel en dedans du carre.
-     *
-     * <p>C'est aussi celui de l'anneau dont les facettes tirent leur couleur ({@link #RING_RADIUS}),
-     * mais la hauteur reelle de la tranche est relevee dans l'image — voir {@link #edgeRadii}. Cette
-     * valeur-la ne sert que si l'image ne se lit pas.
-     */
-    private static final float RIM_RADIUS = RADIUS * RING_RADIUS / (TEXELS / 2.0f);
-
-    /**
-     * Le rayon du bord du DESSIN, facette par facette, mesure dans l'image une fois pour toutes.
-     *
-     * <p>Nul tant qu'il n'a pas ete mesure — voir {@link #edgeRadii}.
-     */
-    private static float[] edgeRadii;
 
     public CoinItemRenderer() {
         super(Minecraft.getInstance().getBlockEntityRenderDispatcher(),
@@ -130,10 +105,10 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         pose.pushPose();
         pose.translate(0.5f, 0.5f, 0.5f);
 
-        // A plat, ou en volume ? L'image pour tout ce qui se regarde de face (l'inventaire, l'objet
-        // pose, l'objet fixe), et la piece pour tout ce qui se tient (les deux mains, la tete).
-        boolean flat = context == ItemDisplayContext.GUI || context == ItemDisplayContext.FIXED
-                || context == ItemDisplayContext.GROUND;
+        // A plat, ou en volume ? L'image pour ce qui se REGARDE de face — la case de l'inventaire et le
+        // cadre a objet — et la piece partout ailleurs : en main, sur la tete, et PAR TERRE, ou le
+        // joueur voulait « vraiment la piece en 3D », pas une image.
+        boolean flat = context == ItemDisplayContext.GUI || context == ItemDisplayContext.FIXED;
         if (flat) {
             sprite(pose, buffers, light, overlay);
         } else {
@@ -183,10 +158,10 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * part de un quand l'ordonnee part de zero. L'inventaire et la main montrent la meme face du
      * modele, donc la meme image dans le meme sens.
      *
-     * <p>La tranche est un <b>anneau de facettes</b>, et chacune prend sa couleur sur le BORD de
-     * l'image, a l'angle ou elle se trouve — c'est ce qui fait qu'elle suit l'anneau de la piece au
-     * lieu de dessiner un carre. Le joueur avait vu ce carre deux fois : il venait des quatre bandes
-     * droites d'un modele JSON.
+     * <p>Sa TRANCHE se lit comme celle de Minecraft : un panneau plat par pixel du bord du dessin,
+     * chacun avec la couleur de ce pixel-la. C'est ce qui donne a la piece son bord en ESCALIER — « un
+     * rond fait de carres » — au lieu du carre des quatre bandes d'un modele JSON, ou du cercle lisse
+     * d'un anneau de facettes.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
         // Le blason, sur la face que le joueur a devant lui, retourne de gauche a droite, et un peu
@@ -205,99 +180,101 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
         vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
         vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
 
-        // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance. Chaque facette
-        // monte a la hauteur du DESSIN a son angle — voir edgeRadii — et prend la couleur d'un pixel
-        // entier, sans melange.
-        float[] radii = edgeRadii();
-        VertexConsumer rim = buffers.getBuffer(
-                RenderType.entityCutoutNoCull(FRONT));
-        for (int i = 0; i < RIM_SEGMENTS; i++) {
-            int next = (i + 1) % RIM_SEGMENTS;
-            double a0 = Math.PI * 2.0 * i / RIM_SEGMENTS;
-            double a1 = Math.PI * 2.0 * next / RIM_SEGMENTS;
-            float x0 = (float) (Math.cos(a0) * radii[i]);
-            float y0 = (float) (Math.sin(a0) * radii[i]);
-            float x1 = (float) (Math.cos(a1) * radii[next]);
-            float y1 = (float) (Math.sin(a1) * radii[next]);
-            float u0 = texelU(a0);
-            float v0 = texelV(a0);
-            float u1 = texelU(a1);
-            float v1 = texelV(a1);
-
-            // La normale pointe vers l'exterieur : c'est ce qui donne son eclairage a la tranche.
-            float nx = (float) Math.cos((a0 + a1) / 2.0);
-            float ny = (float) Math.sin((a0 + a1) / 2.0);
-
-            vertex(rim, pose, light, overlay, x0, y0, HALF_THICKNESS, u0, v0, nx, ny, 0f);
-            vertex(rim, pose, light, overlay, x1, y1, HALF_THICKNESS, u1, v1, nx, ny, 0f);
-            vertex(rim, pose, light, overlay, x1, y1, -HALF_THICKNESS, u1, v1, nx, ny, 0f);
-            vertex(rim, pose, light, overlay, x0, y0, -HALF_THICKNESS, u0, v0, nx, ny, 0f);
-        }
-    }
-
-    /** L'abscisse, dans l'image, du bord de l'anneau a cet angle — MIROIR sur X, comme les faces. */
-    private static float texelU(double angle) {
-        return snap((TEXELS / 2.0f - (float) (Math.cos(angle) * RING_RADIUS)) / TEXELS);
-    }
-
-    /** Et son ordonnee, dans le sens du dessin : l'image a son zero EN HAUT, le modele aussi. */
-    private static float texelV(double angle) {
-        return snap((TEXELS / 2.0f - (float) (Math.sin(angle) * RING_RADIUS)) / TEXELS);
+        // Et sa TRANCHE : un panneau plat par pixel de son bord, exactement comme l'image que Minecraft
+        // fabrique lui-meme pour un objet plat — c'est le rendu que le joueur a reconnu : « hier tu
+        // avais reussi a le faire bien ».
+        rim(pose, buffers, light, overlay);
     }
 
     /**
-     * Le CENTRE du pixel qui contient cette abscisse.
+     * Sa tranche : un panneau plat par pixel du bord du dessin.
      *
-     * <p>C'est ce qui donne a la tranche son air de mosaique : chaque facette prend la couleur d'un
-     * pixel entier, sans melange, comme le dessin qui l'entoure — « un rond fait de carres ».
+     * <p>Chaque pixel OPAQUE qui touche la transparence est un morceau de bord : selon le cote par
+     * lequel il touche le vide, il recoit un panneau perpendiculaire, large d'un pixel et haut de
+     * l'epaisseur de la piece, et ce panneau porte la couleur de ce pixel-la, sans melange. C'est
+     * exactement ce que fait Minecraft pour une image d'objet plate, et c'est ce qui donne a la piece
+     * son bord en escalier.
      */
-    private static float snap(float uv) {
-        return (float) ((Math.floor(uv * TEXELS) + 0.5) / TEXELS);
+    private static void rim(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
+        VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
+        float step = 2f * RADIUS / TEXELS;
+        for (int px = 0; px < (int) TEXELS; px++) {
+            for (int py = 0; py < (int) TEXELS; py++) {
+                if (!opaque(px, py)) continue;
+
+                // Le pixel dans le plan du dessin. L'abscisse est MIROIR, comme les faces : plus px
+                // avance, plus on va vers les x negatifs.
+                float x1 = RADIUS - px * step;
+                float x0 = x1 - step;
+                float y1 = RADIUS - py * step;
+                float y0 = y1 - step;
+                float u = (px + 0.5f) / TEXELS;
+                float v = (py + 0.5f) / TEXELS;
+
+                // Un panneau pour chaque cote qui donne sur le vide.
+                if (!opaque(px, py - 1)) {
+                    panelH(consumer, pose, light, overlay, x0, x1, y1, u, v, 1f);
+                }
+                if (!opaque(px, py + 1)) {
+                    panelH(consumer, pose, light, overlay, x0, x1, y0, u, v, -1f);
+                }
+                if (!opaque(px - 1, py)) {
+                    panelV(consumer, pose, light, overlay, y0, y1, x1, u, v, 1f);
+                }
+                if (!opaque(px + 1, py)) {
+                    panelV(consumer, pose, light, overlay, y0, y1, x0, u, v, -1f);
+                }
+            }
+        }
+    }
+
+    /** Un morceau de tranche pose a plat : une bande d'un pixel de large, a une ordonnee donnee. */
+    private static void panelH(VertexConsumer consumer, PoseStack pose, int light, int overlay,
+                               float x0, float x1, float y, float u, float v, float ny) {
+        vertex(consumer, pose, light, overlay, x0, y, HALF_THICKNESS, u, v, 0f, ny, 0f);
+        vertex(consumer, pose, light, overlay, x1, y, HALF_THICKNESS, u, v, 0f, ny, 0f);
+        vertex(consumer, pose, light, overlay, x1, y, -HALF_THICKNESS, u, v, 0f, ny, 0f);
+        vertex(consumer, pose, light, overlay, x0, y, -HALF_THICKNESS, u, v, 0f, ny, 0f);
+    }
+
+    /** Et un morceau de cote : la meme bande, mais debout, a une abscisse donnee. */
+    private static void panelV(VertexConsumer consumer, PoseStack pose, int light, int overlay,
+                               float y0, float y1, float x, float u, float v, float nx) {
+        vertex(consumer, pose, light, overlay, x, y0, HALF_THICKNESS, u, v, nx, 0f, 0f);
+        vertex(consumer, pose, light, overlay, x, y1, HALF_THICKNESS, u, v, nx, 0f, 0f);
+        vertex(consumer, pose, light, overlay, x, y1, -HALF_THICKNESS, u, v, nx, 0f, 0f);
+        vertex(consumer, pose, light, overlay, x, y0, -HALF_THICKNESS, u, v, nx, 0f, 0f);
+    }
+
+    /** Le pixel (px, py) du dessin est-il opaque ? Hors de l'image, il ne l'est pas. */
+    private static boolean opaque(int px, int py) {
+        if (pixels == null) {
+            pixels = readPixels();
+        }
+        if (px < 0 || py < 0 || px >= (int) TEXELS || py >= (int) TEXELS) return false;
+        return pixels[py * (int) TEXELS + px];
     }
 
     /**
-     * Le rayon du bord du DESSIN, facette par facette — et c'est la demande du joueur : « les bords
-     * sont en forme de rond alors que la piece c'est un rond oui, mais fait de carres ».
+     * Lit l'image une fois pour toutes, et retient ou elle est opaque.
      *
-     * <p>Le dessin de la piece est un cercle de PIXELS : son bord est donc un escalier, avec les
-     * petites billes de la bordure. Une tranche posee sur un cercle parfait lissait tout cela ;
-     * celle-ci se pose sur le bord reel, releve dans l'image une fois pour toutes.
+     * <p>Si elle ne se lit pas, tout est transparent : la piece reste dessinee, sans tranche, plutot
+     * que de faire tomber le rendu.
      */
-    private static float[] edgeRadii() {
-        if (edgeRadii == null) {
-            edgeRadii = measureEdge();
-        }
-        return edgeRadii;
-    }
-
-    /** Releve le bord de l'image dans tous les sens, et retombe sur le cercle du dessin si elle manque. */
-    private static float[] measureEdge() {
-        float[] radii = new float[RIM_SEGMENTS];
+    private static boolean[] readPixels() {
+        boolean[] result = new boolean[(int) (TEXELS * TEXELS)];
         try (var stream = Minecraft.getInstance().getResourceManager().getResource(FRONT)
                 .orElseThrow().open();
              var image = NativeImage.read(stream)) {
-            for (int i = 0; i < RIM_SEGMENTS; i++) {
-                radii[i] = measureEdgeAt(image, Math.PI * 2.0 * i / RIM_SEGMENTS);
+            for (int py = 0; py < (int) TEXELS; py++) {
+                for (int px = 0; px < (int) TEXELS; px++) {
+                    result[py * (int) TEXELS + px] = (image.getPixelRGBA(px, py) >>> 24) != 0;
+                }
             }
         } catch (Exception e) {
-            // Une image illisible ne doit pas empecher la piece d'exister : on revient au cercle.
-            Arrays.fill(radii, RIM_RADIUS);
+            // Une image illisible ne doit pas empecher la piece d'exister.
         }
-        return radii;
-    }
-
-    /** Le dernier pixel OPAQUE rencontre en partant du centre, dans ce sens-la. */
-    private static float measureEdgeAt(NativeImage image, double angle) {
-        float half = TEXELS / 2.0f;
-        float radius = RIM_RADIUS;
-        for (float step = 1.0f; step < half; step += 1.0f) {
-            int px = (int) Math.floor(half - Math.cos(angle) * step);
-            int py = (int) Math.floor(half - Math.sin(angle) * step);
-            if (px < 0 || py < 0 || px >= TEXELS || py >= TEXELS) break;
-            if ((image.getPixelRGBA(px, py) >>> 24) == 0) break;
-            radius = RADIUS * step / half;
-        }
-        return radius;
+        return result;
     }
 
     // --- LES SOMMETS ---
