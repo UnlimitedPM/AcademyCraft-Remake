@@ -77,9 +77,14 @@ import java.util.Map;
  * son repere etait celui du mannequin qui portait l'effet, ou l'avant est Z <b>positif</b>, alors
  * que celui du rendu de la main de Minecraft a l'avant en Z <b>negatif</b>. Son {@code -.24} est
  * donc le {@code -0.24} d'ici : devant les yeux, un peu a droite et un peu bas — la place de la
- * main qui vient de lacher la piece. Le carre fait deux unites avant echelle et 0,4 apres, donc
- * huit dixiemes de bloc, dont le dessin n'occupe que le milieu : c'est un jaillissement d'arcs,
- * pas un flash d'ecran.
+ * main qui vient de lacher la piece.
+ *
+ * <p>ET SA TAILLE N'EST PAS LA MEME DES DEUX COTES, ce que le joueur a vu avant que le code ne le
+ * dise : « on voit bien les eclairs en troisieme vue, mais ils sont tres petits, ils tiennent dans
+ * la main, alors que dans le vrai ils debordent ». L'original ne pose son echelle de 0,4 que dans
+ * sa branche de PREMIERE personne — huit dixiemes de bloc, la taille d'une main — et ne met
+ * <b>aucune</b> echelle de l'autre : le carre y fait ses deux unites, donc <b>deux blocs</b>, et
+ * l'electricite deborde du bras et de l'epaule. Voir {@link #SCALE_HAND} et {@link #SCALE_WORLD}.
  */
 @OnlyIn(Dist.CLIENT)
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
@@ -94,14 +99,33 @@ public final class RailgunHandEffect {
     /** Ce que la rafale dure, en ticks : quarante fois quarante millisecondes, arrondi au tick. */
     private static final int LIFE_TICKS = 32;
 
-    /** Ou elle se pose, devant la main — les trois decalages de l'original, en blocs. */
-    private static final float HAND_X = 0.26f;
+    /**
+     * Ou elle se pose, devant la main — les trois decalages de l'original, en blocs.
+     *
+     * <p>Son abscisse a ete rapprochee du centre : le joueur la trouvait « un peu trop de la
+     * droite », et c'est la seule des trois qui a bouge — les deux autres sont ses nombres.
+     */
+    private static final float HAND_X = 0.10f;
     private static final float HAND_Y = -0.15f;
     private static final float HAND_Z = -0.24f;
 
-    /** La demi-largeur du carre avant echelle, et son echelle : deux unites, puis 0,4. */
+    /** La demi-largeur du carre, avant echelle : deux unites, comme son billboard. */
     private static final float HALF = 1.0f;
-    private static final float SCALE = 0.4f;
+
+    /**
+     * Son echelle en PREMIERE personne : 0,4, donc huit dixiemes de bloc — la taille d'une main.
+     * C'est la seule echelle de l'original, et elle n'est que dans sa branche de main.
+     */
+    private static final float SCALE_HAND = 0.4f;
+
+    /**
+     * Et son echelle en TROIS QUARTS : aucune, soit les deux unites du carre.
+     *
+     * <p>L'original n'en posait pas la, et c'est ce que le joueur a vu de lui-meme : « en troisieme
+     * vue ils sont tres petits, ils tiennent dans la main, alors que dans le vrai ils debordent ».
+     * Deux blocs d'electricite autour du bras, donc, et non huit dixiemes.
+     */
+    private static final float SCALE_WORLD = 1.0f;
 
     /** L'age de la rafale en cours, en ticks, ou {@code -1} quand il n'y en a pas. */
     private static int age = -1;
@@ -239,7 +263,7 @@ public final class RailgunHandEffect {
             pose.pushPose();
             pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
             faceCamera(pose, camera.subtract(at));
-            pose.scale(SCALE, SCALE, 1f);
+            pose.scale(SCALE_WORLD, SCALE_WORLD, 1f);
             quad(buffers.getBuffer(type(FRAMES[frame])), pose.last().pose());
             pose.popPose();
             drawn = true;
@@ -291,7 +315,7 @@ public final class RailgunHandEffect {
         PoseStack pose = event.getPoseStack();
         pose.pushPose();
         pose.translate(HAND_X, HAND_Y, HAND_Z);
-        pose.scale(SCALE, SCALE, 1f);
+        pose.scale(SCALE_HAND, SCALE_HAND, 1f);
         quad(event.getMultiBufferSource().getBuffer(type(FRAMES[frame])), pose.last().pose());
         pose.popPose();
     }
