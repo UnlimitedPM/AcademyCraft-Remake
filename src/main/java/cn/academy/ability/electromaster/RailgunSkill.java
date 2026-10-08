@@ -150,6 +150,54 @@ public class RailgunSkill extends Skill {
     }
 
     /**
+     * Les deux verrous de la rafale de la main, lus sur une donnee et un prereglage quelconques.
+     *
+     * <p>C'est la condition {@code spawn} de {@code Railgun.onThrowCoin} : l'aptitude ouverte
+     * ({@code CPData.canUseAbility} : allumee, pas de surcharge pleine, pas de brouillage) ET le
+     * railgun sur une touche du prereglage en service ({@code hasControllable}).
+     *
+     * <p>Une fonction pure, et c'est ce qui la rend utilisable des DEUX cotes : le serveur lui passe
+     * la donnee qu'il tient, le client celle de ses miroirs. Les deux lisent donc exactement la meme
+     * regle, et un joueur ne peut pas voir chez lui un effet que les autres ne voient pas.
+     */
+    public boolean allowsHandEffect(AbilityData data, cn.academy.ability.preset.AbilityPreset preset) {
+        if (!data.isActivated() || data.isOverloadRecovering() || data.isInterfered()) return false;
+        return preset.contains(getName());
+    }
+
+    /**
+     * Le serveur annonce la rafale a ceux qui voient ce joueur.
+     *
+     * <p>C'est le {@code NetworkMessage.sendToAllAround(player, 30, MSG_CHARGE_EFFECT)} de
+     * l'original : chacun la dessine alors sur la main du lanceur, de trois quarts. Le port suit le
+     * meme chemin que ses faisceaux — les joueurs qui suivent le lanceur — et s'annonce a lui-meme
+     * aussi, parce qu'un joueur en vue de trois quarts doit la voir sur son propre modele.
+     */
+    public void announceHandEffect(Player player) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
+                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
+                        .with(() -> player),
+                new cn.academy.ability.network.RailgunHandPacket(player.getId()));
+    }
+
+    /**
+     * Et l'annonce complete, verrous compris, telle que le lancer de piece l'appelle.
+     *
+     * <p>La piece part d'un objet, pas d'une competence : ce n'est donc pas le systeme d'activation
+     * qui l'annonce, et c'est ici que le serveur relit ses deux verrous — voir
+     * {@link #allowsHandEffect}.
+     */
+    public static void announceHandEffectIfAllowed(Player player) {
+        AbilityData data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElse(null);
+        if (data == null) return;
+        cn.academy.ability.preset.PresetData presets = cn.academy.ability.preset.PresetTracker.of(player);
+        if (presets == null) return;
+        if (!ElectromasterCategory.RAILGUN.allowsHandEffect(data, presets.getCurrent())) return;
+        ElectromasterCategory.RAILGUN.announceHandEffect(player);
+    }
+
+    /**
      * Le tir consomme sa munition : la piece en vol, ou un fer de la main.
      *
      * <p>C'est le {@code MSG_COIN_PERFORM} de l'original — la piece meurt avant que le tir parte —
@@ -171,7 +219,15 @@ public class RailgunSkill extends Skill {
     @Override
     public void onActivate(Player player, AbilityData data) {
         // La munition d'abord : le tir part de la piece, et l'original la tuait AVANT de tirer.
+        boolean fromCoin = cn.academy.entity.EntityCoinThrowing.ready(player) != null;
         consumeAmmo(player);
+
+        // LA RAFALE D'ARCS, et c'est ici pour le fer seulement : sur une piece, le lancer s'en est
+        // deja charge (voir ModItems.CoinItem.use), alors que la voie du fer ne se decide que la,
+        // au moment ou le tir part. C'est ce que faisait l'original, dont le Delegate.onKeyDown
+        // appelait spawnClientEffect des que la main tenait du fer. L'annonce s'en va aux autres
+        // joueurs aussi : voir announceHandEffect.
+        if (!fromCoin) announceHandEffect(player);
 
         // Le seul son de l'original qui se pose dans le monde plutot qu'au joueur : un tir de
         // railgun s'entend de loin. Il part a CHAQUE tir — le port ne le jouait qu'en touchant,

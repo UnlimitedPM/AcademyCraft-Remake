@@ -137,5 +137,11 @@ public class AbilityNetwork {
                 cn.academy.ability.preset.network.PresetActionPacket::encode,
                 cn.academy.ability.preset.network.PresetActionPacket::decode,
                 cn.academy.ability.preset.network.PresetActionPacket::handle);
+        // Et la rafale d'arcs du railgun, que le serveur annonce a ceux qui voient le lanceur —
+        // l'effet de main de l'original, celui qui se voit sur les autres joueurs.
+        CHANNEL.registerMessage(nextId++, cn.academy.ability.network.RailgunHandPacket.class,
+                cn.academy.ability.network.RailgunHandPacket::encode,
+                cn.academy.ability.network.RailgunHandPacket::decode,
+                cn.academy.ability.network.RailgunHandPacket::handle);
     }
 }

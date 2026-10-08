@@ -217,6 +217,12 @@ public class ModItems {
             }
 
             level.addFreshEntity(new cn.academy.entity.EntityCoinThrowing(level, player));
+            // L'ANIMATION SPECIALE : le serveur l'annonce a ceux qui voient le lanceur, comme
+            // l'original (MSG_CHARGE_EFFECT, trente blocs a la ronde), et il relit pour cela ses
+            // deux verrous. Le lanceur la joue deja chez lui — voir le client, plus bas — et son
+            // client ignore l'annonce en vue de premiere personne : elle ne lui revient que s'il
+            // regarde son propre modele, ou il n'a pas de main a l'ecran.
+            cn.academy.ability.electromaster.RailgunSkill.announceHandEffectIfAllowed(player);
             cn.academy.sound.AcademySounds.playAt(level, player.position(),
                     ModSounds.ENTITY_FLIPCOIN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f);
 

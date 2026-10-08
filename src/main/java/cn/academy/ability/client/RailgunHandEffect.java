@@ -13,6 +13,8 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
@@ -20,14 +22,18 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -100,6 +106,19 @@ public final class RailgunHandEffect {
     /** L'age de la rafale en cours, en ticks, ou {@code -1} quand il n'y en a pas. */
     private static int age = -1;
 
+    /**
+     * Les rafales des AUTRES joueurs, par numero d'entite, et leur age.
+     *
+     * <p>Elles vivent separement de la notre : plusieurs peuvent courir en meme temps, et elles
+     * n'ont rien a voir avec la main du joueur local — c'est le modele de l'autre qui les porte.
+     */
+    private static final Map<Integer, Integer> OTHERS = new HashMap<>();
+
+    /** Ou tombe la main d'un joueur en vue de trois quarts, en blocs : devant, de biais, en haut. */
+    private static final double HAND_FORWARD = 0.35;
+    private static final double HAND_SIDE = 0.30;
+    private static final double HAND_HEIGHT = 1.25;
+
     /** Les images, et un type de rendu par image : les construire a chaque image allouerait. */
     private static final ResourceLocation[] FRAMES = frames();
     private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
@@ -159,6 +178,95 @@ public final class RailgunHandEffect {
         // Pause ouverte, l'electricite se fige : elle reprendra ou elle en etait. Voir ClientPause.
         if (cn.academy.ability.client.ClientPause.frozen()) return;
         if (age >= 0 && ++age >= LIFE_TICKS) age = -1;
+
+        for (Iterator<Map.Entry<Integer, Integer>> it = OTHERS.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Integer, Integer> entry = it.next();
+            entry.setValue(entry.getValue() + 1);
+            if (entry.getValue() >= LIFE_TICKS) it.remove();
+        }
+    }
+
+    /**
+     * Le serveur annonce la rafale d'un joueur : c'est celle des AUTRES, et elle se dessine sur son
+     * modele, de trois quarts.
+     *
+     * <p>Sauf si c'est la notre et qu'on regarde en premiere personne : elle joue alors deja, dans
+     * le repere de la main (voir {@link #onRenderHand}), et la dessiner une seconde fois la
+     * doublerait. En vue de trois quarts, en revanche, il n'y a pas de main a l'ecran : c'est cette
+     * voie-la qui la montre, sur notre propre modele.
+     */
+    public static void onAnnounced(int playerId) {
+        var me = Minecraft.getInstance().player;
+        if (me != null && me.getId() == playerId
+                && Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
+            return;
+        }
+        OTHERS.put(playerId, 0);
+    }
+
+    /**
+     * La rafale d'un autre joueur, dessinee dans le monde.
+     *
+     * <p>L'original la posait a un endroit FIXE de son porteur — un bloc huit dixiemes au-dessus de
+     * ses pieds, et un bloc devant — sans suivre le bras, qui bouge. Le port prend la main DROITE,
+     * qui est celle qui lance : en vue de trois quarts elle tombe devant, de biais et a hauteur de
+     * poitrine.
+     *
+     * <p>Le carre regarde la CAMERA, et c'est ce que le port ajoute a l'original : lui le dessinait
+     * dans le repere du joueur, donc de profil pour qui se tenait de cote. Une etincelle qu'on ne
+     * voit pas ne sert a rien.
+     */
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (OTHERS.isEmpty()) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        Level level = Minecraft.getInstance().level;
+        if (level == null) return;
+
+        float partialTick = event.getPartialTick();
+        Vec3 camera = event.getCamera().getPosition();
+        MultiBufferSource.BufferSource buffers =
+                Minecraft.getInstance().renderBuffers().bufferSource();
+        boolean drawn = false;
+
+        for (Map.Entry<Integer, Integer> entry : OTHERS.entrySet()) {
+            if (!(level.getEntity(entry.getKey()) instanceof Player player)) continue;
+            int frame = frameAt(entry.getValue(), partialTick);
+            if (frame >= FRAME_COUNT) continue;
+
+            Vec3 at = handOf(player, partialTick);
+            PoseStack pose = event.getPoseStack();
+            pose.pushPose();
+            pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
+            faceCamera(pose, camera.subtract(at));
+            pose.scale(SCALE, SCALE, 1f);
+            quad(buffers.getBuffer(type(FRAMES[frame])), pose.last().pose());
+            pose.popPose();
+            drawn = true;
+        }
+
+        if (drawn) buffers.endBatch();
+    }
+
+    /** Ou est la main droite de ce joueur, en blocs du monde. */
+    private static Vec3 handOf(Player player, float partialTick) {
+        Vec3 look = player.getViewVector(partialTick);
+        Vec3 flat = new Vec3(look.x, 0.0, look.z);
+        flat = flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+        Vec3 side = new Vec3(-flat.z, 0.0, flat.x);
+        return player.getPosition(partialTick)
+                .add(flat.scale(HAND_FORWARD)).add(side.scale(HAND_SIDE))
+                .add(0.0, HAND_HEIGHT, 0.0);
+    }
+
+    /** Tourne le carre pour qu'il regarde la camera, d'ou qu'elle vienne. */
+    private static void faceCamera(PoseStack pose, Vec3 toCamera) {
+        double length = toCamera.length();
+        if (length < 1.0E-6) return;
+        double yaw = Math.toDegrees(Math.atan2(-toCamera.x, toCamera.z));
+        double pitch = Math.toDegrees(Math.asin(-toCamera.y / length));
+        pose.mulPose(Axis.YP.rotationDegrees((float) -yaw));
+        pose.mulPose(Axis.XP.rotationDegrees((float) pitch));
     }
 
     /**
@@ -189,8 +297,13 @@ public final class RailgunHandEffect {
     }
 
     /** L'image de la rafale a un instant donne : une toutes les quarante millisecondes. */
-    private static int frameAt(float partialTick) {
+    private static int frameAt(int age, float partialTick) {
         return (int) ((age + partialTick) * 50.0 / PER_FRAME_MS);
+    }
+
+    /** L'image de la rafale du joueur, a cette image-ci. */
+    private static int frameAt(float partialTick) {
+        return frameAt(age, partialTick);
     }
 
     /** Le carre de l'image : deux triangles, dans le plan de la camera, image a l'endroit. */
