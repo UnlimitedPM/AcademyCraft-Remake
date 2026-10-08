@@ -100,11 +100,12 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
         Vec3 axis = entity.spinAxis();
 
         pose.pushPose();
-        // LE SUIVI SE RELIT ICI, a chaque image : c'est ce qu'il restait a corriger quand le joueur
-        // marche. La position de l'entite lui arrive par le reseau avec un tick de retard, et un
-        // joueur qui court s'eloigne de sa piece entre deux paquets. Le X et le Z se relisent donc du
-        // LANCEUR — lisse, interpole entre deux ticks, et celui du joueur lui-meme — tandis que la
-        // HAUTEUR reste celle de l'entite : elle vient de son vol, et personne d'autre ne la connait.
+        // LE SUIVI SE RELIT ICI, a chaque image. L'entite porte deja le bon vol — les deux cotes le
+        // calculent avec les memes nombres, voir EntityCoinThrowing.tick — mais son X et son Z peuvent
+        // dater du dernier paquet recu, et c'est le joueur qui court qui s'en apercoit. Ils se relisent
+        // donc du LANCEUR, au temps partiel : la piece reste collee a sa main, quel que soit le retard
+        // du reseau. La HAUTEUR, elle, ne se recalcule pas ici : elle est dans la position de l'entite,
+        // donc interpolee entre deux positions justes.
         Player thrower = entity.thrower();
         if (thrower != null) {
             Vec3 at = EntityCoinThrowing.followPoint(thrower, partialTick);

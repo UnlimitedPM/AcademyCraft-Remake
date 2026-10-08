@@ -1,7 +1,8 @@
 {
-  "credit": "Piece du railgun : la geometrie vit dans CoinItemRenderer, ici il ne reste que les poses. CELLES-CI SONT CELLES DE L'ORIGINAL (ItemCoin, onModelBake) : premiere personne 0,5 avec un decalage de 0,2 bloc, troisieme personne 0,2, objet pose 0,3 retourne et pose a 0,1 bloc. L'inventaire, lui, reste a 0,9 - la case remplie, ce que le joueur a valide.",
-  "parent": "minecraft:item/generated",
-  "textures": { "layer0": "academy:item/coin_front" },
+  "credit": "Piece du railgun : AUCUNE geometrie ici, c'est CoinItemRenderer qui la dessine - d'ou builtin/entity, sans quoi Minecraft fabriquerait lui-meme une image plate a partir de layer0 et c'est ELLE qu'on verrait (c'est ce qui est arrive jusqu'ici). Il ne reste que les poses, et ce sont celles de l'original (ItemCoin, onModelBake) : premiere personne 0,5 avec un decalage de 0,2 bloc, troisieme personne 0,2, objet pose 0,3 retourne et pose a 0,1 bloc. L'inventaire, lui, reste a 0,9 - la case remplie, ce que le joueur a valide.",
+  "parent": "builtin/entity",
+  "gui_light": "front",
+  "textures": { "particle": "academy:item/coin_front" },
   "display": {
     "gui": { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.9, 0.9, 0.9] },
     "fixed": { "rotation": [0, 0, 0], "translation": [0, 0, 0], "scale": [0.9, 0.9, 0.9] },

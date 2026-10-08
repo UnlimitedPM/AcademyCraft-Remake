@@ -88,24 +88,32 @@ public class EntityCoinThrowing extends Entity {
             SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.INT);
 
     /**
-     * La hauteur d'ou la piece est partie : la main qui vient de la lancer.
+     * La hauteur d'ou la piece est partie : la main qui vient de la lancer, et l'ELAN qu'elle a recu.
      *
-     * <p>Un simple champ, et plus une donnee synchronisee : le client n'en a plus besoin depuis que
-     * l'entite vole pour de vrai — sa position entiere lui arrive par le reseau. C'est le serveur,
-     * seul, qui s'en sert, a chaque tick, pour poser sa hauteur.
+     * <p>Ces deux nombres, plus l'heure du lancer, sont tout ce que le vol demande — et c'est aussi
+     * tout ce que le CLIENT doit savoir pour le refaire lui-meme. Ils voyagent donc, et le client n'a
+     * rien d'autre a recevoir : voir {@link #tick}, ou les deux cotes recalculent la meme position.
+     *
+     * <p>Un FLOAT et non un double : la 1.20.1 n'a pas de serialiseur de double (voir
+     * {@code EntityDataSerializers}), et une hauteur comme une vitesse de lancer n'ont pas besoin de
+     * plus.
      */
-    private double initHt;
+    private static final EntityDataAccessor<Float> DATA_INIT_HT =
+            SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.FLOAT);
+
+    /** Et l'elan du lancer : {@link CoinToss#INIT_VEL} plus la vitesse verticale du joueur. */
+    private static final EntityDataAccessor<Float> DATA_LAUNCH_VEL =
+            SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.FLOAT);
 
     /**
-     * L'elan du lancer : {@link CoinToss#INIT_VEL} PLUS la vitesse verticale du joueur au moment ou
-     * il a jete la piece.
+     * L'heure du MONDE ou elle a ete jetee : c'est l'AGE du vol, et il est le meme partout.
      *
-     * <p>C'est l'original au mot pres — {@code motionY = player.motionY}, puis {@code += INITVEL} — et
-     * c'est ce que le joueur a remarque : « si j'envoie la piece en plein pendant un saut elle
-     * s'envole plus haut que si je ne saute pas ». La gravite, elle, ne change pas : un lancer en
-     * pleine montee monte donc bien plus que la hauteur de sa vitesse en plus.
+     * <p>Et non l'age de la copie qui le lit : celui-la repart de ZERO chaque fois que le serveur
+     * renvoie la piece a un joueur qui s'etait eloigne, donc un client qui arrive en retard rejouerait
+     * tout le vol depuis le debut. L'heure du monde, elle, ne recule jamais.
      */
-    private double launchVel;
+    private static final EntityDataAccessor<Long> DATA_LAUNCH_TICK =
+            SynchedEntityData.defineId(EntityCoinThrowing.class, EntityDataSerializers.LONG);
 
     /** Le lanceur, chez le serveur : la reference de l'original, et celle des faux joueurs. */
     private Player direct;
@@ -153,11 +161,15 @@ public class EntityCoinThrowing extends Entity {
         this(ModEntities.COIN.get(), level);
         this.direct = thrower;
         this.entityData.set(DATA_THROWER, thrower.getId());
+        // Ce que le vol demande : d'ou elle part, avec quel elan, et a quelle heure du monde. L'elan
+        // est l'original au mot pres (motionY = player.motionY, puis += INITVEL) : une piece jetee en
+        // plein saut monte donc bien plus haut que celle jetee a l'arret.
+        this.entityData.set(DATA_INIT_HT, (float) handHeight(thrower));
+        this.entityData.set(DATA_LAUNCH_VEL,
+                (float) (CoinToss.INIT_VEL + thrower.getDeltaMovement().y));
+        this.entityData.set(DATA_LAUNCH_TICK, level.getGameTime());
         Vec3 at = followPoint(thrower, 1f);
-        // D'ou elle part : la main qui vient de la lancer, et avec quel elan.
-        this.initHt = handHeight(thrower);
-        this.launchVel = CoinToss.INIT_VEL + thrower.getDeltaMovement().y;
-        setPos(at.x, this.initHt, at.z);
+        setPos(at.x, launchHeight(), at.z);
     }
 
     /** Ou est la main de son lanceur : la hauteur des yeux moins {@link #HAND_OFFSET}. */
@@ -165,9 +177,30 @@ public class EntityCoinThrowing extends Entity {
         return thrower.getEyeY() + HAND_OFFSET;
     }
 
+    /** La hauteur d'ou elle est partie : la main qui venait de la lancer. */
+    private double launchHeight() {
+        return this.entityData.get(DATA_INIT_HT);
+    }
+
+    /** L'elan qu'elle a recu : {@link CoinToss#INIT_VEL} plus la vitesse verticale du joueur. */
+    private double launchSpeed() {
+        return this.entityData.get(DATA_LAUNCH_VEL);
+    }
+
+    /**
+     * L'age du vol, en ticks : depuis l'heure du MONDE ou elle a ete jetee — voir
+     * {@link #DATA_LAUNCH_TICK}.
+     */
+    private double flightAge() {
+        return this.level().getGameTime() - this.entityData.get(DATA_LAUNCH_TICK);
+    }
+
     @Override
     protected void defineSynchedData() {
         this.entityData.define(DATA_THROWER, -1);
+        this.entityData.define(DATA_INIT_HT, 0f);
+        this.entityData.define(DATA_LAUNCH_VEL, (float) CoinToss.INIT_VEL);
+        this.entityData.define(DATA_LAUNCH_TICK, 0L);
     }
 
     /** Qui l'a lancee, ou nul si on ne le trouve pas — piece orpheline, joueur deconnecte. */
@@ -184,12 +217,12 @@ public class EntityCoinThrowing extends Entity {
 
     /** Ou en est-elle de son vol, de 0 a 1 : la courbe de {@link CoinToss}, sur son age. */
     public double tossProgress() {
-        return CoinToss.progress(tickCount, launchVel);
+        return CoinToss.progress(tickCount, launchSpeed());
     }
 
     /** Le railgun peut-il partir a travers elle ? Voir {@link CoinToss#READY}. */
     public boolean isReady() {
-        return CoinToss.isReady(tickCount, launchVel);
+        return CoinToss.isReady(tickCount, launchSpeed());
     }
 
     /** Son axe de rotation. Jamais nul : un axe de longueur nulle ne tourne rien. */
@@ -219,37 +252,45 @@ public class EntityCoinThrowing extends Entity {
     }
 
     /**
-     * Un tick : le VOL, et c'est le serveur qui le fait.
+     * Un tick : LE VOL, et il est calcule DES DEUX COTES, sur la meme horloge.
      *
      * <p>Elle suit son lanceur en X et Z — le {@code KeepPosition} de l'original — et sa hauteur est
-     * celle de son age — sa {@code Rigidbody} : {@link CoinToss#height} de {@code tickCount} au-dessus
-     * de la main qui l'a jetee, pour l'elan du lancer. C'est ce {@code setPos} qui la fait VOYAGER, et
-     * c'est tout : le client recoit sa position, l'interpole entre deux ticks, et n'a rien d'autre a
-     * faire.
+     * celle de son age — sa {@code Rigidbody} : {@link CoinToss#height} de l'age du vol, pour l'elan
+     * du lancer.
+     *
+     * <p>ET LE CLIENT LE FAIT AUSSI, avec les memes nombres : l'heure du monde, la hauteur de depart
+     * et l'elan, qui voyagent ({@link #DATA_LAUNCH_TICK}). C'est ce qui rend l'animation fluide : les
+     * deux cotes posent la piece exactement au meme endroit, donc les positions du reseau ne
+     * contredisent plus celles que le client calcule, et le rendu n'a plus qu'a interpoler deux
+     * positions justes — c'est ce qui manquait, et c'est ce que le joueur demandait en voulant « une
+     * animation plus fluide ».
      *
      * <p>Elle S'ARRETE AVEC LA MAIN : des qu'elle redescend au niveau de la main de son lanceur
      * <b>maintenant</b> — voir {@link CoinToss#hasLanded} — un joueur qui monte la rattrape donc plus
-     * tot. C'est le filet de {@link CoinToss#MAX_LIFE} qui arretre celle qu'il ne rattrape pas.
+     * tot. C'est le filet de {@link CoinToss#MAX_LIFE} qui arrete celle qu'il ne rattrape pas. Les
+     * DECISIONS, elles, restent au serveur, et se lisent sur {@code tickCount} : c'est l'age que les
+     * tests posent pour avancer un vol d'un coup.
      */
     @Override
     public void tick() {
         super.tick();
 
-        // Chez le client, rien du tout : sa position et sa disparition lui arrivent par le reseau, et
-        // son dessin se fait dans le rendu.
-        if (this.level().isClientSide) return;
-
         Player thrower = thrower();
         if (thrower == null) {
-            settle();
+            // Une piece orpheline : chez le client elle reste ou elle est, chez le serveur elle rend
+            // la piece et disparait.
+            if (!this.level().isClientSide) settle();
             return;
         }
 
         Vec3 at = followPoint(thrower, 1f);
-        setPos(at.x, this.initHt + CoinToss.height(tickCount, launchVel), at.z);
+        setPos(at.x, launchHeight() + CoinToss.height(flightAge(), launchSpeed()), at.z);
 
-        double handDrop = handHeight(thrower) - this.initHt;
-        if (CoinToss.hasLanded(tickCount, launchVel, handDrop) || tickCount > CoinToss.MAX_LIFE) {
+        if (this.level().isClientSide) return;
+
+        double handDrop = handHeight(thrower) - launchHeight();
+        if (CoinToss.hasLanded(tickCount, launchSpeed(), handDrop)
+                || tickCount > CoinToss.MAX_LIFE) {
             settle();
         }
     }
