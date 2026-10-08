@@ -475,6 +475,11 @@ public class AbilityClientEvents {
         // son compteur, une competence tenue vit a partir de maintenant, une autre part
         // tout de suite.
         if (pressed) {
+            // La rafale d'arcs du railgun, voie du fer : l'original la faisait jaillir de la main
+            // des que sa touche partait avec un lingot ou un bloc de fer tenu, sans rien demander a
+            // personne. Voir RailgunHandEffect, ou vivent ses verrous.
+            RailgunHandEffect.onIronAimed(skill, minecraftPlayer());
+
             // Une competence qui ouvre un ecran ne part pas : c'est la liste des marques qui
             // decide, et c'est un clic dedans qui enverra quelque chose au serveur.
             if (skill.opensScreen()) {

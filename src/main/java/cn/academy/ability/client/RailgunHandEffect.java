@@ -2,7 +2,9 @@ package cn.academy.ability.client;
 
 import cn.academy.AcademyCraft;
 import cn.academy.ability.AbilityData;
+import cn.academy.ability.Skill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
+import cn.academy.ability.electromaster.RailgunSkill;
 import cn.academy.ability.preset.client.ClientPresetData;
 import com.mojang.blaze3d.platform.GlStateManager.DestFactor;
 import com.mojang.blaze3d.platform.GlStateManager.SourceFactor;
@@ -119,6 +121,28 @@ public final class RailgunHandEffect {
         age = 0;
     }
 
+    /**
+     * La <b>voie du fer</b> : la touche du railgun, un lingot ou un bloc de fer en main.
+     *
+     * <p>C'est le second chemin de l'original — voir {@code isAccepted} de {@code Railgun} — et sa
+     * rafale partait exactement la meme : son {@code Delegate.onKeyDown} appelait
+     * {@code spawnClientEffect} des que la main tenait du fer. Elle ne passe donc pas par la piece,
+     * et n'attend pas non plus la reponse du serveur : le geste part a l'appui, comme chez lui.
+     *
+     * <p>Un mot sur les verrous, ici : celui du PREREGLAGE ne se pose pas, puisque appuyer sur cette
+     * touche prouve deja que le railgun y est range ; celui de l'APTITUDE, le port le garde, comme
+     * partout ailleurs — une main qui ne peut rien faire ne fait rien.
+     *
+     * @param skill la competence de la touche pressee
+     * @param player le joueur local, ou {@code null} s'il n'y en a pas
+     */
+    public static void onIronAimed(Skill skill, Player player) {
+        if (player == null || skill != ElectromasterCategory.RAILGUN) return;
+        if (!RailgunSkill.isAccepted(player.getMainHandItem())) return;
+        if (!ClientAbilityData.get().isActivated()) return;
+        age = 0;
+    }
+
     /** Les deux verrous de l'original : l'aptitude ouverte, et le railgun sur une touche. */
     private static boolean allowed() {
         AbilityData data = ClientAbilityData.get();
@@ -195,6 +219,15 @@ public final class RailgunHandEffect {
      * ({@code SRC_ALPHA / ONE_MINUS_SRC_ALPHA}), coupait le tri des faces arriere, et dessinait
      * avec un programme qui ne connait <b>ni normale ni lumiere</b> : une etincelle emet la
      * sienne, et l'eclairer avec la lumiere du monde l'eteindrait dans le noir.
+     *
+     * <p>ET IL N'ECRIT PAS LA PROFONDEUR, comme les effets du plasma — meme piege, meme parade.
+     * La rafale est un carre de huit dixiemes de bloc pose a un quart de bloc des yeux, donc
+     * DEVANT la main ; si ses pixels ecrivaient la profondeur, la main — dessinee apres lui, et
+     * plus loin — serait refusee par le test de profondeur sur TOUTE la surface du carre, y
+     * compris la ou il n'y a rien a voir. Le joueur l'a dit ainsi : « cette animation cache ma
+     * main, l'objet que j'ai en main ». Ce n'est pas la rafale qui cache la main, c'est son
+     * carre vide : en n'ecrivant plus la profondeur, l'arcs se pose par-dessus la main et la
+     * main reste ou elle est.
      */
     private static RenderType type(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_railgun_hand",
@@ -218,6 +251,7 @@ public final class RailgunHandEffect {
                                     RenderSystem.disableBlend();
                                     RenderSystem.defaultBlendFunc();
                                 }))
+                        .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, false))
                         .setCullState(new RenderStateShard.CullStateShard(false))
                         .createCompositeState(true)));
     }
