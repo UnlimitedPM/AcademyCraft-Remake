@@ -65,14 +65,16 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     private static final float HALF_THICKNESS = 0.02f;
 
     /**
-     * La teinte du recto : soixante-quinze pour cent du blanc.
+     * La teinte du recto : quatre-vingts pour cent du blanc.
      *
      * <p>C'est ce que le joueur a demande — « dans le vrai mod la piece a l'air plus sombre » — et
      * c'est la couleur des sommets qui la donne : la lumiere, elle, reste celle du monde, et elle est
-     * juste. Premier reglage a 0,85, encore « un peu trop clair », donc 0,75. Le verso, lui, garde
-     * toute sa couleur : c'est le seul point que le joueur a valide du premier coup.
+     * juste. Ses trois reglages : 0,85 d'abord, « encore un peu trop clair » ; 0,75 ensuite, qu'il a
+     * fini par trouver un rien trop sombre — « finalement remets la piece un peu plus clair » — et
+     * donc 0,80, entre les deux. Le verso, lui, garde toute sa couleur : c'est le seul point qu'il a
+     * valide du premier coup.
      */
-    private static final float RECT_SHADE = 0.75f;
+    private static final float RECT_SHADE = 0.80f;
 
     /**
      * Les pixels du dessin, lus une fois pour toutes : c'est eux qui disent ou passe le bord.

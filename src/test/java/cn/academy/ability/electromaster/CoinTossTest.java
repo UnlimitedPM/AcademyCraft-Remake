@@ -131,6 +131,33 @@ class CoinTossTest {
                 "et la montee commence sous zero, avec sa vitesse en plus");
     }
 
+    @Test
+    @DisplayName("le dessin relit le vol au tick precedent, avance du temps partiel")
+    void lageDuDessin() {
+        double vel = CoinToss.INIT_VEL;
+
+        // Une image montre le monde du tick PRECEDENT, avance du temps partiel : c'est la convention
+        // de Minecraft, ou toute entite se dessine entre ses deux dernieres positions. Un vol relu a
+        // l'age du tick courant serait donc en avance d'un tick entier.
+        assertEquals(9.0, CoinToss.frameAge(10, 0f), 1e-9, "au debut d'une image");
+        assertEquals(9.5, CoinToss.frameAge(10, 0.5f), 1e-9, "a mi-chemin entre deux ticks");
+        assertEquals(10.0, CoinToss.frameAge(10, 1f), 1e-9, "et au tick suivant");
+
+        // Donc le dessin et le vol tombent D'ACCORD au tick : ce que l'entite pose, le rendu le relit,
+        // et la piece ne flotte ni au-dessus ni en dessous de la place de son vol.
+        assertEquals(CoinToss.height(9, vel), CoinToss.height(CoinToss.frameAge(10, 0f), vel), 1e-9,
+                "au debut de l'image, la hauteur du tick precedent");
+        assertEquals(CoinToss.height(10, vel), CoinToss.height(CoinToss.frameAge(10, 1f), vel), 1e-9,
+                "et a la fin, celle du tick courant");
+
+        // Une piece qui vient de naitre n'a pas encore vecu un tick : elle est a sa hauteur de lancer,
+        // jamais SOUS la main.
+        assertEquals(0.0, CoinToss.frameAge(0, 0f), 1e-9, "a la naissance");
+        assertEquals(0.0, CoinToss.frameAge(0, 0.5f), 1e-9, "et encore au milieu de l'image");
+        assertTrue(CoinToss.height(CoinToss.frameAge(0, 0.9f), vel) >= 0.0,
+                "elle ne descend jamais sous la main qui vient de la lancer");
+    }
+
     /** Le premier tick ou la piece a rejoint une main decalee de {@code drop} blocs. */
     private static int premierAtterrissage(double launchVel, double drop) {
         for (int ticks = 1; ticks <= CoinToss.MAX_LIFE; ticks++) {

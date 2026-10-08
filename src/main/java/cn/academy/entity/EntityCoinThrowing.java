@@ -154,6 +154,12 @@ public class EntityCoinThrowing extends Entity {
         // piece, avec un peu de travers, donc elle bascule toujours.
         double tilt = random.nextDouble() * Math.PI * 2.0;
         this.axis = new Vec3(Math.cos(tilt), (random.nextDouble() - 0.5) * 0.4, Math.sin(tilt));
+
+        // ET ELLE NE SE LAISSE PAS SORTIR DE L'ECRAN, comme l'original (son ignoreFrustumCheck). Le
+        // rendu la pose la ou son vol l'amene, et un tick de lancer fait presque un bloc, alors que le
+        // cube d'une entite de vingt-cinq centimetres, lui, reste a sa place : un regard qui balaie la
+        // piece pourrait la voir s'effacer au bord de l'ecran alors qu'elle est encore a l'image.
+        this.noCulling = true;
     }
 
     /** La piece telle que l'objet la jette : dans la main, vers le haut. */
@@ -249,6 +255,37 @@ public class EntityCoinThrowing extends Entity {
         Vec3 side = new Vec3(-flat.z, 0.0, flat.x);
         return thrower.getPosition(partialTick)
                 .add(flat.scale(FORWARD_OFFSET)).add(side.scale(SIDE_OFFSET));
+    }
+
+    /** L'age du vol a une image donnee : {@link CoinToss#frameAge}, sur l'age du tick courant. */
+    public double flightAgeAt(float partialTick) {
+        return CoinToss.frameAge(flightAge(), partialTick);
+    }
+
+    /**
+     * La place EXACTE de la piece a une image donnee : son suivi, et sa hauteur de vol.
+     *
+     * <p>C'est cela que le rendu pose, et non la position que le client tient de l'entite — meme si,
+     * au tick, les deux tombent exactement d'accord. La difference est le RESEAU. Le serveur envoie la
+     * position de la piece a chaque tick ({@code updateInterval(1)}), et le client la recoit TELLE
+     * QUELLE : le {@code lerpTo} d'une entite ordinaire se contente de la reposer, sans interpoler,
+     * donc le point d'ou l'image interpole est remis a une position qui date d'un tick ou deux. Entre
+     * deux images, la piece parcourt alors tantot deux ticks de vol, tantot aucun, et l'oeil y voit
+     * des a-coups que le vrai mod n'a pas : sa piece n'etait pas reseautee du tout, son client la
+     * simulait seul, et jamais un paquet ne venait remettre son vol en arriere.
+     *
+     * <p>Le rendu relit donc le vol de source sure — {@link #followPoint} pour le suivi, la courbe de
+     * {@link CoinToss#height} pour la hauteur, a l'age de l'image — et la position de l'entite ne lui
+     * sert plus qu'a dire d'ou partir. C'est le procede de la bille de plasma, qui « se repose sur la
+     * place exacte de son porteur » pour ne plus trembler.
+     */
+    public Vec3 flightPointAt(float partialTick) {
+        Player thrower = thrower();
+        if (thrower == null) return position();
+        Vec3 follow = followPoint(thrower, partialTick);
+        return new Vec3(follow.x,
+                launchHeight() + CoinToss.height(flightAgeAt(partialTick), launchSpeed()),
+                follow.z);
     }
 
     /**

@@ -10,7 +10,6 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.AxisAngle4f;
 import org.joml.Quaternionf;
@@ -92,26 +91,26 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
     @Override
     public void render(EntityCoinThrowing entity, float yaw, float partialTick, PoseStack pose,
                        MultiBufferSource buffers, int light) {
-        // L'angle du moment : le tick courant, avance du temps partiel — sinon la piece avancerait par
-        // saccades d'un tick.
-        double millis = (entity.tickCount + partialTick) * 50.0;
+        // L'AGE DU VOL A CETTE IMAGE : le tick courant, recule d'un tick et avance du temps partiel —
+        // voir CoinToss.frameAge. La place et la rotation lisent la MEME horloge, continue, et jamais
+        // celle du dernier tick.
+        double age = entity.flightAgeAt(partialTick);
+        double millis = age * 50.0;
         // L'angle du moment, une rotation CONTINUE : voir SPIN, et l'historique de ses trois reglages.
         float degrees = (float) (millis * SPIN / 1000.0);
         Vec3 axis = entity.spinAxis();
 
         pose.pushPose();
-        // LE SUIVI SE RELIT ICI, a chaque image. L'entite porte deja le bon vol — les deux cotes le
-        // calculent avec les memes nombres, voir EntityCoinThrowing.tick — mais son X et son Z peuvent
-        // dater du dernier paquet recu, et c'est le joueur qui court qui s'en apercoit. Ils se relisent
-        // donc du LANCEUR, au temps partiel : la piece reste collee a sa main, quel que soit le retard
-        // du reseau. La HAUTEUR, elle, ne se recalcule pas ici : elle est dans la position de l'entite,
-        // donc interpolee entre deux positions justes.
-        Player thrower = entity.thrower();
-        if (thrower != null) {
-            Vec3 at = EntityCoinThrowing.followPoint(thrower, partialTick);
-            Vec3 base = entity.getPosition(partialTick);
-            pose.translate((float) (at.x - base.x), 0f, (float) (at.z - base.z));
-        }
+        // LA PLACE EXACTE, relue elle aussi a chaque image — le suivi au temps partiel, et la hauteur
+        // du vol a l'age de l'image : voir EntityCoinThrowing.flightPointAt. Ce n'est donc plus la
+        // position interpolee de l'entite, que les paquets du serveur remettent en arriere d'un tick a
+        // chaque tick. Le joueur y voyait « son animation toujours un peu moins fluide que dans le vrai
+        // mod », et c'est la seule chose qui l'etait : la ou le suivi se relisait deja a chaque image,
+        // la HAUTEUR, elle, venait de deux positions de ticks — donc d'un vol hache en morceaux de
+        // cinquante millisecondes, et de deux, chaque fois qu'un paquet venait de tomber.
+        Vec3 at = entity.flightPointAt(partialTick);
+        Vec3 base = entity.getPosition(partialTick);
+        pose.translate((float) (at.x - base.x), (float) (at.y - base.y), (float) (at.z - base.z));
         pose.mulPose(new Quaternionf(new AxisAngle4f((float) Math.toRadians(degrees),
                 (float) axis.x, (float) axis.y, (float) axis.z)));
 

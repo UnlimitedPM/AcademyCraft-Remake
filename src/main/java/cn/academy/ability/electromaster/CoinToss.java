@@ -90,6 +90,22 @@ public final class CoinToss {
         return launchVel * ticks - GRAVITY * ticks * (ticks + 1) / 2.0;
     }
 
+    /**
+     * L'age du vol tel que le DESSIN doit le lire : celui du tick courant, recule d'un tick et avance
+     * de la fraction de tick ecoulee.
+     *
+     * <p>C'est la convention de Minecraft, et elle n'est pas negociable : une image montre le monde tel
+     * qu'il etait <b>au tick precedent</b>, avance du temps partiel — toute entite se dessine entre ses
+     * deux dernieres positions, jamais au-dela de la derniere. Un vol relu a l'age du tick courant
+     * serait donc en avance d'un tick entier, soit presque un bloc au lancer.
+     *
+     * <p>Jamais negatif : une piece qui vient de naitre n'a pas encore vecu un tick, et un age negatif
+     * la ferait apparaitre SOUS la main qui vient de la lancer.
+     */
+    public static double frameAge(double ticks, float partialTick) {
+        return Math.max(0.0, ticks - 1.0 + partialTick);
+    }
+
     /** Le dernier tick ou elle monte encore. */
     public static int apexTick(double launchVel) {
         return firstTickWhere(t -> velocity(t, launchVel) <= 0) - 1;
