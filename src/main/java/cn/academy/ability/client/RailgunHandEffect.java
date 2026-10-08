@@ -20,13 +20,11 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -68,16 +66,32 @@ import java.util.Map;
  * faisait l'original — son client avait sa propre copie de la piece, donc sa propre decision.
  *
  * <p>En revanche l'original la montrait AUSSI aux autres : son serveur l'annoncait a trente
- * blocs a la ronde, et chacun la dessinait alors sur la main du lanceur, de trois quarts. Le port
- * ne le fait pas encore — voir {@link #onCoinThrown}.
+ * blocs a la ronde, et chacun la dessinait alors sur son porteur. Le port le fait — voir
+ * {@link #onAnnounced} — et il la dessine de la meme facon pour tout le monde.
  *
- * <h2>Ou elle se pose</h2>
+ * <h2>Ou elle se pose, et POURQUOI PAS dans la main</h2>
  *
- * <p>Les nombres sont ceux de l'original, au signe pres, et ce signe vaut la peine d'etre dit :
- * son repere etait celui du mannequin qui portait l'effet, ou l'avant est Z <b>positif</b>, alors
- * que celui du rendu de la main de Minecraft a l'avant en Z <b>negatif</b>. Son {@code -.24} est
- * donc le {@code -0.24} d'ici : devant les yeux, un peu a droite et un peu bas — la place de la
- * main qui vient de lacher la piece.
+ * <p>Le joueur a tranche, et il connait le vrai mod : « elle n'est pas litteralement dans la main,
+ * mais dans la main de la meme maniere que les autres competences, pour juste avoir l'impression que
+ * c'est dans la main sans l'etre vraiment » — puis, pour dire comment : « comme on a fait pour nos
+ * pouvoirs, comme le light shield ».
+ *
+ * <p>Le port suit donc {@code ShieldRenderer} : l'effet est dessine DANS LE MONDE, a un point
+ * devant les yeux du joueur, et non dans le rendu de la main. Trois raisons, dont la premiere est
+ * une lecon payee :
+ *
+ * <ul>
+ *   <li>un carre pose dans le rendu de la main est dessine AVANT elle et ECRIT la profondeur : ses
+ *       pixels vides cachaient la main et l'objet tenu (« cette animation cache ma main ») ;</li>
+ *   <li>les autres joueurs n'ont pas de main a l'ecran, et il aurait fallu deux rendus et un
+ *       placement par modele ;</li>
+ *   <li>c'est deja le procede des pouvoirs du port — le bouclier, les rayons, les tornades — donc
+ *       un effet de plus n'invente rien.</li>
+ * </ul>
+ *
+ * <p>C'est une ILLUSION de main, comme dans le vrai mod : un point devant les yeux, un peu a droite
+ * et un peu bas, dans le repere du regard — les trois decalages de l'original, qui valent pour le
+ * lanceur comme pour ceux qui le regardent.
  *
  * <p>ET SA TAILLE N'EST PAS LA MEME DES DEUX COTES, ce que le joueur a vu avant que le code ne le
  * dise : « on voit bien les eclairs en troisieme vue, mais ils sont tres petits, ils tiennent dans
@@ -100,14 +114,15 @@ public final class RailgunHandEffect {
     private static final int LIFE_TICKS = 32;
 
     /**
-     * Ou elle se pose, devant la main — les trois decalages de l'original, en blocs.
+     * Ou elle se pose devant les yeux, dans le repere du REGARD : devant, a droite, en bas.
      *
-     * <p>Son abscisse a ete rapprochee du centre : le joueur la trouvait « un peu trop de la
-     * droite », et c'est la seule des trois qui a bouge — les deux autres sont ses nombres.
+     * <p>Ce sont les trois decalages de l'original — son {@code -.24} etait bien « devant », son
+     * repere ayant l'avant en Z positif la ou celui de Minecraft l'a en Z negatif. Seule
+     * l'abscisse a bouge depuis : le joueur la trouvait « un peu trop de la droite ».
      */
-    private static final float HAND_X = 0.10f;
-    private static final float HAND_Y = -0.15f;
-    private static final float HAND_Z = -0.24f;
+    private static final double SELF_FORWARD = 0.24;
+    private static final double SELF_SIDE = 0.10;
+    private static final double SELF_DOWN = 0.15;
 
     /** La demi-largeur du carre, avant echelle : deux unites, comme son billboard. */
     private static final float HALF = 1.0f;
@@ -127,18 +142,16 @@ public final class RailgunHandEffect {
      */
     private static final float SCALE_WORLD = 1.0f;
 
-    /** L'age de la rafale en cours, en ticks, ou {@code -1} quand il n'y en a pas. */
-    private static int age = -1;
-
     /**
-     * Les rafales des AUTRES joueurs, par numero d'entite, et leur age.
+     * Les rafales en cours, par numero de joueur, et leur age en ticks.
      *
-     * <p>Elles vivent separement de la notre : plusieurs peuvent courir en meme temps, et elles
-     * n'ont rien a voir avec la main du joueur local — c'est le modele de l'autre qui les porte.
+     * <p>La NOTRE y est comme les autres : depuis que l'effet se dessine dans le monde et non dans
+     * le rendu de la main, il n'y a plus deux chemins mais un seul — ce qui a supprime d'un coup le
+     * crochet de la main, le double rendu, et le risque de cacher la main.
      */
-    private static final Map<Integer, Integer> OTHERS = new HashMap<>();
+    private static final Map<Integer, Integer> PLAYING = new HashMap<>();
 
-    /** Ou tombe la main d'un joueur en vue de trois quarts, en blocs : devant, de biais, en haut. */
+    /** Ou tombe la main d'un porteur vu de trois quarts, en blocs : devant, de biais, en haut. */
     private static final double HAND_FORWARD = 0.35;
     private static final double HAND_SIDE = 0.30;
     private static final double HAND_HEIGHT = 1.25;
@@ -153,15 +166,13 @@ public final class RailgunHandEffect {
     /**
      * Le joueur vient de jeter une piece : la rafale part si elle y a droit.
      *
-     * <p>Appele par le client seulement — voir {@code ModItems.CoinItem.use} — et c'est aussi le
-     * seul endroit ou l'effet nait : les autres joueurs ne la voient pas. L'original, lui,
-     * l'annoncait a trente blocs ({@code MSG_CHARGE_EFFECT}) et la dessinait sur la main du
-     * lanceur, en trois quarts par-dessus le marche. Ce sera l'affaire d'un paquet et d'une
-     * couche de rendu du modele du joueur, et le port n'en a encore aucune.
+     * <p>Appele par le client seulement — voir {@code ModItems.CoinItem.use} — et c'est ce qui rend
+     * le geste instantane : le lanceur n'attend pas que son serveur ait annonce quoi que ce soit.
+     * L'annonce arrive ensuite, et {@link #onAnnounced} ne la repose pas.
      */
     public static void onCoinThrown(Player player) {
         if (!allowed()) return;
-        age = 0;
+        PLAYING.put(player.getId(), 0);
     }
 
     /**
@@ -183,7 +194,7 @@ public final class RailgunHandEffect {
         if (player == null || skill != ElectromasterCategory.RAILGUN) return;
         if (!RailgunSkill.isAccepted(player.getMainHandItem())) return;
         if (!ClientAbilityData.get().isActivated()) return;
-        age = 0;
+        PLAYING.put(player.getId(), 0);
     }
 
     /** Les deux verrous de l'original : l'aptitude ouverte, et le railgun sur une touche. */
@@ -195,15 +206,14 @@ public final class RailgunHandEffect {
         return ClientPresetData.get().getCurrent().contains(ElectromasterCategory.RAILGUN.getName());
     }
 
-    /** Un tick : la rafale vieillit, et s'oublie quand ses images sont passees. */
+    /** Un tick : chaque rafale vieillit, et s'oublie quand ses images sont passees. */
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         // Pause ouverte, l'electricite se fige : elle reprendra ou elle en etait. Voir ClientPause.
         if (cn.academy.ability.client.ClientPause.frozen()) return;
-        if (age >= 0 && ++age >= LIFE_TICKS) age = -1;
 
-        for (Iterator<Map.Entry<Integer, Integer>> it = OTHERS.entrySet().iterator(); it.hasNext(); ) {
+        for (Iterator<Map.Entry<Integer, Integer>> it = PLAYING.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<Integer, Integer> entry = it.next();
             entry.setValue(entry.getValue() + 1);
             if (entry.getValue() >= LIFE_TICKS) it.remove();
@@ -211,30 +221,24 @@ public final class RailgunHandEffect {
     }
 
     /**
-     * Le serveur annonce la rafale d'un joueur : c'est celle des AUTRES, et elle se dessine sur son
-     * modele, de trois quarts.
+     * Le serveur annonce la rafale d'un joueur : c'est celle qu'on voit sur son porteur.
      *
-     * <p>Sauf si c'est la notre et qu'on regarde en premiere personne : elle joue alors deja, dans
-     * le repere de la main (voir {@link #onRenderHand}), et la dessiner une seconde fois la
-     * doublerait. En vue de trois quarts, en revanche, il n'y a pas de main a l'ecran : c'est cette
-     * voie-la qui la montre, sur notre propre modele.
+     * <p>Une rafale DEJA en cours n'est pas relancee : le lanceur s'est annonce a lui-meme en
+     * jetant sa piece (voir {@link #onCoinThrown}), et l'annonce lui revient un ou deux ticks plus
+     * tard — la reposer ferait sauter son animation de retour en arriere.
      */
     public static void onAnnounced(int playerId) {
-        var me = Minecraft.getInstance().player;
-        if (me != null && me.getId() == playerId
-                && Minecraft.getInstance().options.getCameraType().isFirstPerson()) {
-            return;
-        }
-        OTHERS.put(playerId, 0);
+        if (PLAYING.containsKey(playerId)) return;
+        PLAYING.put(playerId, 0);
     }
 
     /**
-     * La rafale d'un autre joueur, dessinee dans le monde.
+     * Les rafales, dessinees dans le monde — le procede du bouclier de lumiere.
      *
-     * <p>L'original la posait a un endroit FIXE de son porteur — un bloc huit dixiemes au-dessus de
-     * ses pieds, et un bloc devant — sans suivre le bras, qui bouge. Le port prend la main DROITE,
-     * qui est celle qui lance : en vue de trois quarts elle tombe devant, de biais et a hauteur de
-     * poitrine.
+     * <p>LA NOTRE est posee devant nos YEUX, dans le repere du regard : c'est l'illusion de main de
+     * l'original, et c'est ce que le joueur a reconnu en demandant « comme le light shield ». Les
+     * autres sont posees sur leur main droite, ou l'on regarde un bras qui lance — l'original les
+     * posait a un endroit fixe de son porteur, sans suivre le bras.
      *
      * <p>Le carre regarde la CAMERA, et c'est ce que le port ajoute a l'original : lui le dessinait
      * dans le repere du joueur, donc de profil pour qui se tenait de cote. Une etincelle qu'on ne
@@ -242,7 +246,7 @@ public final class RailgunHandEffect {
      */
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (OTHERS.isEmpty()) return;
+        if (PLAYING.isEmpty()) return;
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         Level level = Minecraft.getInstance().level;
         if (level == null) return;
@@ -253,17 +257,20 @@ public final class RailgunHandEffect {
                 Minecraft.getInstance().renderBuffers().bufferSource();
         boolean drawn = false;
 
-        for (Map.Entry<Integer, Integer> entry : OTHERS.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : PLAYING.entrySet()) {
             if (!(level.getEntity(entry.getKey()) instanceof Player player)) continue;
             int frame = frameAt(entry.getValue(), partialTick);
             if (frame >= FRAME_COUNT) continue;
 
-            Vec3 at = handOf(player, partialTick);
+            boolean mine = player == Minecraft.getInstance().player;
+            Vec3 at = mine ? inFrontOfEyes(player, partialTick) : handOf(player, partialTick);
+            float scale = mine ? SCALE_HAND : SCALE_WORLD;
+
             PoseStack pose = event.getPoseStack();
             pose.pushPose();
             pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
             faceCamera(pose, camera.subtract(at));
-            pose.scale(SCALE_WORLD, SCALE_WORLD, 1f);
+            pose.scale(scale, scale, 1f);
             quad(buffers.getBuffer(type(FRAMES[frame])), pose.last().pose());
             pose.popPose();
             drawn = true;
@@ -272,7 +279,21 @@ public final class RailgunHandEffect {
         if (drawn) buffers.endBatch();
     }
 
-    /** Ou est la main droite de ce joueur, en blocs du monde. */
+    /** Le point devant NOS yeux : l'illusion de main, dans le repere du regard. */
+    private static Vec3 inFrontOfEyes(Player player, float partialTick) {
+        Vec3 look = player.getViewVector(partialTick).normalize();
+        // Le "a droite" du regard, puis son "en haut", pour poser le troisieme decalage dans le
+        // meme repere que les deux autres — celui de l'original, qui tournait avec le regard.
+        Vec3 flat = new Vec3(look.x, 0.0, look.z);
+        flat = flat.lengthSqr() < 1.0E-6 ? new Vec3(0, 0, 1) : flat.normalize();
+        Vec3 side = new Vec3(-flat.z, 0.0, flat.x);
+        Vec3 up = side.cross(look).normalize();
+        return player.getEyePosition(partialTick)
+                .add(look.scale(SELF_FORWARD)).add(side.scale(SELF_SIDE))
+                .add(up.scale(-SELF_DOWN));
+    }
+
+    /** Et celle d'un AUTRE porteur : sa main droite. */
     private static Vec3 handOf(Player player, float partialTick) {
         Vec3 look = player.getViewVector(partialTick);
         Vec3 flat = new Vec3(look.x, 0.0, look.z);
@@ -293,41 +314,9 @@ public final class RailgunHandEffect {
         pose.mulPose(Axis.XP.rotationDegrees((float) pitch));
     }
 
-    /**
-     * La rafale, dessinee dans l'empilement de poses de la main.
-     *
-     * <p>Une seule fois par image : l'evenement passe pour les deux mains, et le port n'en veut
-     * qu'une — la principale, celle qui a lance la piece.
-     *
-     * <p>Le carre est dans le plan X Y de ce repere, et c'est exactement ce qu'il faut : ce repere
-     * EST celui de la camera, donc un carre qui lui fait face est un carre qui fait face au
-     * joueur, vu de face quoi qu'il regarde. L'original le dessinait avec une maille de
-     * « billboard » pour la meme raison.
-     */
-    @SubscribeEvent
-    public static void onRenderHand(RenderHandEvent event) {
-        if (age < 0) return;
-        if (event.getHand() != InteractionHand.MAIN_HAND) return;
-
-        int frame = frameAt(event.getPartialTick());
-        if (frame >= FRAME_COUNT) return;
-
-        PoseStack pose = event.getPoseStack();
-        pose.pushPose();
-        pose.translate(HAND_X, HAND_Y, HAND_Z);
-        pose.scale(SCALE_HAND, SCALE_HAND, 1f);
-        quad(event.getMultiBufferSource().getBuffer(type(FRAMES[frame])), pose.last().pose());
-        pose.popPose();
-    }
-
     /** L'image de la rafale a un instant donne : une toutes les quarante millisecondes. */
     private static int frameAt(int age, float partialTick) {
         return (int) ((age + partialTick) * 50.0 / PER_FRAME_MS);
-    }
-
-    /** L'image de la rafale du joueur, a cette image-ci. */
-    private static int frameAt(float partialTick) {
-        return frameAt(age, partialTick);
     }
 
     /** Le carre de l'image : deux triangles, dans le plan de la camera, image a l'endroit. */
@@ -357,14 +346,14 @@ public final class RailgunHandEffect {
      * avec un programme qui ne connait <b>ni normale ni lumiere</b> : une etincelle emet la
      * sienne, et l'eclairer avec la lumiere du monde l'eteindrait dans le noir.
      *
-     * <p>ET IL N'ECRIT PAS LA PROFONDEUR, comme les effets du plasma — meme piege, meme parade.
-     * La rafale est un carre de huit dixiemes de bloc pose a un quart de bloc des yeux, donc
-     * DEVANT la main ; si ses pixels ecrivaient la profondeur, la main — dessinee apres lui, et
-     * plus loin — serait refusee par le test de profondeur sur TOUTE la surface du carre, y
-     * compris la ou il n'y a rien a voir. Le joueur l'a dit ainsi : « cette animation cache ma
-     * main, l'objet que j'ai en main ». Ce n'est pas la rafale qui cache la main, c'est son
-     * carre vide : en n'ecrivant plus la profondeur, l'arcs se pose par-dessus la main et la
-     * main reste ou elle est.
+     * <p>ET IL N'ECRIT PAS LA PROFONDEUR, comme les effets du plasma — meme piege, meme parade,
+     * et il reste indispensable maintenant que la rafale se dessine dans le monde. Elle y passe
+     * AVANT la main, qui vient tout a la fin du rendu, et elle est a un quart de bloc des yeux :
+     * si ses pixels ecrivaient la profondeur, la main — dessinee apres elle, et plus loin — serait
+     * refusee par le test de profondeur sur TOUTE la surface de son carre, y compris la ou il n'y a
+     * rien a voir. Le joueur l'a dit ainsi : « cette animation cache ma main, l'objet que j'ai en
+     * main ». Ce n'etait pas la rafale qui cachait la main, c'etait son carre vide : en n'ecrivant
+     * plus la profondeur, les arcs se posent derriere la main et la main reste ou elle est.
      */
     private static RenderType type(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_railgun_hand",
