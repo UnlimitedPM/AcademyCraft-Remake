@@ -48,6 +48,16 @@ public class AbilityClientEvents {
         /** Vrai entre l'appui et le relachement d'une competence qui se charge ou se tient. */
         boolean charging;
 
+        /**
+         * Les ticks d'armement qui restent a courir, ou zero.
+         *
+         * <p>C'est le {@code chargeTicks} de la voie du fer du railgun, et il vit ici plutot que
+         * dans {@code ClientCharge} parce que la competence reste <b>instantanee</b> : rien n'est
+         * ouvert, rien n'est facture, et le serveur n'en sait rien tant que le compte n'est pas
+         * arrive a zero. Voir {@code Skill#getArmingTicks}.
+         */
+        int arming;
+
         /** La touche etait-elle enfoncee au tick precedent ? Voir {@code tick}. */
         boolean wasDown;
 
@@ -381,6 +391,7 @@ public class AbilityClientEvents {
             if (skill == null || !skillName.equals(skill.getName())) continue;
 
             binding.charging = false;
+            binding.arming = 0;
             // Les deux effets de vecmanip appartiennent a leur maintien comme les autres : un
             // maintien que le serveur termine doit les emporter, sans quoi des ailes resteraient
             // plantees dans le decor. Voir VecmanipTornados.
@@ -521,8 +532,15 @@ public class AbilityClientEvents {
                 send(category, skill, Phase.PRESS);
                 return;
             }
+            // L'ARMEMENT, s'il y en a un : la touche doit rester enfoncee un temps avant que le coup
+            // ne parte, et le serveur n'en sait RIEN avant l'echeance — l'appui n'est donc pas
+            // envoye ici. C'est le compte du {@code Delegate} du railgun, tenu chez le client comme
+            // chez l'original ; voir Skill#getArmingTicks, dont c'est le seul cas.
+            var armPlayer = minecraftPlayer();
+            binding.arming = armPlayer == null ? 0
+                    : skill.getArmingTicks(armPlayer, ClientAbilityData.get());
             binding.charging = skill.isChargeable() || skill.isHeld();
-            send(category, skill, Phase.PRESS);
+            if (binding.arming <= 0) send(category, skill, Phase.PRESS);
             // Le saut traversant se VISE : sa distance part de sa portee maximale, et la molette
             // la regle ensuite cran par cran. C'est le seul geste du mod qui se regle avant de
             // partir — voir TeleportAim.
@@ -543,12 +561,29 @@ public class AbilityClientEvents {
             }
         }
 
-        if (!binding.charging) return;
+        // Un ARMEMENT en cours vaut un maintien pour ce qui suit : il faut continuer de venir ici
+        // tant qu'il court, et c'est le relachement qui l'emporte.
+        if (!binding.charging && binding.arming <= 0) return;
         // Une competence a bascule vit SANS la touche : son etat est dans son maintien, pas dans le
         // clavier. Ses effets continuent donc de suivre son porteur jusqu'a ce qu'un second appui
         // la ferme — c'est ainsi que les ailes de tempete s'ouvrent et se ferment, et que les deux
         // veilles tiennent.
         if (binding.key.isDown() || skill.isToggle()) {
+            // L'ARMEMENT COURT ICI, et il n'y a rien d'autre a faire pendant qu'il court : la
+            // touche tient, le compte descend, et c'est son echeance qui envoie l'appui — le seul
+            // envoi de tout le geste. Une competence qui s'arme n'est ni chargee ni tenue, donc
+            // rien de ce qui suit ne la concerne.
+            if (binding.arming > 0) {
+                // Le tick de l'APPUI ne compte pas : l'original ouvrait son decompte a vingt a
+                // l'appui, et c'est le tick suivant qui commencait a le descendre — son
+                // {@code onKeyTick} n'etait pas appele par son {@code onKeyDown}. Vingt ticks
+                // pleins, donc, et le tir part au vingtieme.
+                if (!pressed) {
+                    binding.arming -= 1;
+                    if (binding.arming == 0) send(category, skill, Phase.PRESS);
+                }
+                return;
+            }
             ClientCharge.tick(skill.getName());
             // Le scintillement vise avec les touches de deplacement pendant tout son
             // maintien : c'est la seule competence qui ecoute autre chose que sa touche.
@@ -650,6 +685,14 @@ public class AbilityClientEvents {
         // fermera. Ses effets continuent de vivre jusque-la — voir la fermeture, plus bas.
         if (skill.isToggle()) return;
 
+        // LA TOUCHE S'EST RELEVEE AVANT L'ECHEANCE : rien ne part, rien n'est annonce, et rien n'est
+        // facture. C'est le {@code onKeyUp} de l'original, qui remettait son decompte a moins un.
+        // Et le relachement ordinaire ne s'applique pas ici : il n'y a aucune charge a refermer.
+        if (binding.arming > 0) {
+            binding.arming = 0;
+            return;
+        }
+
         boolean performed = skill.isChargeable()
                 && ClientCharge.getTicks(skill.getName())
                         >= skill.getMinChargeTicks(ClientAbilityData.get());
@@ -676,6 +719,7 @@ public class AbilityClientEvents {
      */
     private static void closeHeld(Binding binding, Skill skill, boolean performed) {
         binding.charging = false;
+        binding.arming = 0;
         ClientCharge.end(skill.getName());
         ThunderClapEffect.end();
         MeltdownerCharge.end();

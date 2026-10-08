@@ -1,7 +1,6 @@
 package cn.academy.ability.client.md;
 
 import cn.academy.AcademyCraft;
-import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
@@ -145,7 +144,7 @@ public final class MdSparks {
 
     /** Une etincelle, aux nombres de l'original. */
     public static void spawn(Vec3 pos, Vec3 vel) {
-        spawn(pos, vel, 0.0, MdSparks.PLAIN, Util.getMillis(), RANDOM);
+        spawn(pos, vel, 0.0, MdSparks.PLAIN, cn.academy.ability.client.EffectClock.now(), RANDOM);
     }
 
     /**
@@ -155,10 +154,10 @@ public final class MdSparks {
      * zero partout chez lui, 0,01 pour les trois etincelles du bloc mine — celles-la tombent.
      */
     public static void spawn(Vec3 pos, Vec3 vel, double gravity, ResourceLocation texture) {
-        spawn(pos, vel, gravity, texture, Util.getMillis(), RANDOM);
+        spawn(pos, vel, gravity, texture, cn.academy.ability.client.EffectClock.now(), RANDOM);
     }
 
-    /** La meme, avec un hasard et un instant donnes — pour le test. */
+    /** La meme, avec un hasard et un instant donnes : l'heure du rayon qui la semme, ou celle d'un test. */
     public static void spawn(Vec3 pos, Vec3 vel, long nowMs, Random random) {
         spawn(pos, vel, 0.0, MdSparks.PLAIN, nowMs, random);
     }
@@ -177,7 +176,7 @@ public final class MdSparks {
 
     /** Un tick du client : les etincelles avancent, et les mortes s'en vont. */
     public static void tick() {
-        tick(Util.getMillis());
+        tick(cn.academy.ability.client.EffectClock.now());
     }
 
     public static void tick(long nowMs) {

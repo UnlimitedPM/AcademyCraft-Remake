@@ -3,7 +3,6 @@ package cn.academy.ability.client.md;
 import cn.academy.AcademyCraft;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.ResourceLocation;
@@ -59,7 +58,12 @@ public class MdEffects {
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
 
-        long now = Util.getMillis();
+        // ET L'HORLOGE EST CELLE DES EFFETS, qui s'arrete avec la pause : la duree d'un rayon se lit
+        // en millisecondes, et le rendu la rejouait donc a chaque image meme derriere le menu —
+        // le joueur voyait son railgun continuer de s'animer tout seul, « quand je mets mon jeu en
+        // pause, le railgun continue quand meme son animation au lieu de se stopper ». Voir
+        // EffectClock, ou cette horloge est racontee.
+        long now = cn.academy.ability.client.EffectClock.now();
 
         Vec3 camera = event.getCamera().getPosition();
         Vector3f upVector = event.getCamera().getUpVector();
@@ -80,11 +84,11 @@ public class MdEffects {
         // Le tremblement des lueurs se fait par IMAGE, comme dans l'original : il ne se lit
         // pas au tick.
         //
-        // SAUF EN PAUSE : le temps de l'animation est un temps REEL, donc il continuait de courir
-        // derriere le menu, et le joueur voyait son railgun s'animer tout seul : « quand je mets mon
-        // jeu en pause, le railgun continue quand meme son animation au lieu de se stopper ». Fige
-        // ici, l'horloge du plasma reprend exactement ou elle etait. Voir ClientPause.
-        if (!cn.academy.ability.client.ClientPause.frozen()) MdRays.advanceFrame(now);
+        // Et il ne bouge plus en pause, sans avoir a le demander : l'horloge ci-dessus s'y arrete,
+        // donc le pas vaut zero et les lueurs restent ou elles etaient. C'est ce qu'il fallait —
+        // la garde explicite de ClientPause ne suffisait pas, puisque le dessin, lui, continuait de
+        // lire une horloge qui courait.
+        MdRays.advanceFrame(now);
         if (MdRays.live().isEmpty() && MdSparks.live().isEmpty()) return;
 
         PoseStack pose = event.getPoseStack();

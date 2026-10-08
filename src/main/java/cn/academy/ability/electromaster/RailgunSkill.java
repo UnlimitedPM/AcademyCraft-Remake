@@ -22,10 +22,16 @@ import java.util.List;
  * en main —, egalement consomme. Sans l'un ou l'autre, l'appui ne fait <b>rien du tout</b>, pas meme
  * payer.
  *
- * <p>ECART ASSUME : l'original demandait vingt ticks de maintien pour la voie du fer (son
- * {@code chargeTicks = 20}, un decompte cote client), puis consommait le lingot. Le port tire
- * immediatement dans les deux cas : son systeme de touches ne connait que l'appui et le relachement,
- * et une arme qui met une seconde a partir pour un lingot en main n'apporte rien a la visee.
+ * <h2>Les deux voies ne partent pas au meme moment</h2>
+ *
+ * <p>La <b>piece</b> part a l'appui, tout de suite : c'est un QTE, et sa fenetre ne dure que le temps
+ * du vol. Le <b>fer</b>, lui, demande de garder la touche <b>vingt ticks</b> — une seconde — avant que
+ * le coup ne parte, et relacher avant l'echeance ne tire rien du tout. C'est le {@code chargeTicks =
+ * 20} du {@code Delegate} de l'original, un decompte cote client que le port n'avait pas repris : le
+ * joueur l'a remarque aussitot — « si je lance le railgun avec un lingot ou un bloc de fer
+ * directement, le clic lance le railgun directement alors que normalement il y a un petit temps
+ * d'attente ». Pendant ces vingt ticks, la rafale d'arcs jaillit deja de la main, comme chez
+ * l'original, qui la faisait partir a l'appui et non au tir.
  */
 public class RailgunSkill extends Skill {
 
@@ -54,6 +60,22 @@ public class RailgunSkill extends Skill {
      * et non d'un reglage.
      */
     private static final int BEAM_ARC_TICKS = 50;
+
+    /**
+     * La vie des ARCS, en ticks : trente, et c'est la plus COURTE des deux.
+     *
+     * <p>L'original effacait ses eclairs bien avant la fin de son rayon : son
+     * {@code EntityRailgunFX.onUpdate} appelle {@code arcHandler.clear()} des que
+     * {@code ticksExisted == 30}, alors que le rayon, lui, vit cinquante ticks et s'efface sur sa
+     * derniere seconde. Le port les faisait vivre tous les deux cinquante ticks : le faisceau avait
+     * donc commence a s'effacer que ses eclairs restaient pleins, et le joueur voyait « les eclairs
+     * s'arreter legerement apres le railgun ». Trente ticks, c'est exactement l'instant ou le rayon
+     * commence a s'effacer — 1500 millisecondes sur 2500, voir {@code MdRayKind.RAILGUN}.
+     */
+    private static final int ARC_TICKS = 30;
+
+    /** L'armement de la voie du fer, en ticks : les vingt de l'original. */
+    private static final int IRON_ARMING_TICKS = 20;
 
     /** L'ecart lateral des arcs autour de l'axe, comme le sien (0,1 a 0,25). */
     private static final double BEAM_WOBBLE = 0.25;
@@ -147,6 +169,27 @@ public class RailgunSkill extends Skill {
     public static boolean hasAmmo(Player player) {
         return cn.academy.entity.EntityCoinThrowing.ready(player) != null
                 || isAccepted(player.getMainHandItem());
+    }
+
+    /**
+     * Le temps d'<b>armement</b> de la voie du fer : les vingt ticks du {@code Delegate} de
+     * l'original.
+     *
+     * <p>C'est son {@code chargeTicks = 20}, ouvert a l'appui, decremente par son {@code onKeyTick},
+     * et suivi du tir a zero. Son {@code onKeyUp} le ramenait a moins un : relacher avant l'echeance
+     * annulait tout. Le port compte donc chez le client et n'envoie son appui qu'a l'echeance — voir
+     * {@code AbilityClientEvents}, qui tient le compte —, ce qui revient au meme : le serveur ne voit
+     * le tir qu'une fois les vingt ticks passes, et une seconde touche du railgun suffit a l'armer
+     * pendant que la premiere piece, elle, part sur-le-champ.
+     *
+     * <p>UNE PIECE QUI VOLE N'ARME RIEN : l'appui est alors celui du QTE, et il part immediatement,
+     * comme chez l'original dont le decompte ne s'ouvrait que « quand il n'avait pas de piece ».
+     * Sinon c'est la main qui decide : du fer — voir {@link #isAccepted} —, et rien d'autre.
+     */
+    @Override
+    public int getArmingTicks(Player player, AbilityData data) {
+        if (cn.academy.entity.EntityCoinThrowing.of(player) != null) return 0;
+        return isAccepted(player.getMainHandItem()) ? IRON_ARMING_TICKS : 0;
     }
 
     /**
@@ -314,8 +357,7 @@ public class RailgunSkill extends Skill {
             // deux bouts sont pris sur la visee, donc les arcs suivent le faisceau.
             Vec3 from = wobble(eye.add(look.scale(start)), random);
             Vec3 to = wobble(eye.add(look.scale(end)), random);
-            sendArc(player, cn.academy.ability.client.arc.ArcPattern.RAILGUN.name(), from, to,
-                    BEAM_ARC_TICKS);
+            sendArc(player, cn.academy.ability.client.arc.ArcPattern.RAILGUN.name(), from, to, ARC_TICKS);
         }
     }
 

@@ -418,6 +418,27 @@ public abstract class Skill {
     }
 
     /**
+     * Le temps d'<b>ARMEMENT</b> d'une competence instantanee : les ticks pendant lesquels sa touche
+     * doit rester enfoncee avant que le coup ne parte.
+     *
+     * <p>C'est une troisieme famille de temps, a cote de la charge et du maintien, et c'est la plus
+     * discrete des trois : la competence reste <b>instantanee</b> — elle ne se paie qu'une fois
+     * partie, et son relachement ne fait rien d'autre qu'annuler —, mais elle ne part plus a l'appui.
+     * Son exemple, et son seul cas, est le <b>railgun</b> : sa voie du fer demandait vingt ticks de
+     * maintien a l'original, comtes chez le client — voir {@code RailgunSkill#getArmingTicks}.
+     *
+     * <p>Le compte est donc tenu par {@code AbilityClientEvents}, et il l'est <b>chez le client</b>,
+     * comme l'original : l'appui n'est PAS envoye au serveur tant que l'echeance n'est pas atteinte,
+     * et il ne part que si la touche est encore enfoncee a ce moment-la. Relacher avant est un
+     * abandon silencieux — rien n'est envoye, rien n'est facture, et le serveur n'en sait rien.
+     *
+     * <p>Defaut : zero, aucune arme ne s'arme.
+     */
+    public int getArmingTicks(Player player, AbilityData data) {
+        return 0;
+    }
+
+    /**
      * Ouverture, avant le premier tick de charge.
      *
      * C'est le {@code MSG_MADEALIVE} de l'original, le meme pour les deux familles qui

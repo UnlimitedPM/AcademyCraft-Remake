@@ -1,6 +1,5 @@
 package cn.academy.ability.client.md;
 
-import net.minecraft.Util;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -22,7 +21,9 @@ import java.util.Random;
  * calcul — et c'est pourquoi les courbes ci-dessous parlent en millisecondes elles aussi.
  *
  * <p>Le temps est <b>donne</b> a chaque appel plutot que lu ici : c'est ce qui permet de
- * derouler la vie entiere d'un rayon dans un test, sans lancer un jeu.
+ * derouler la vie entiere d'un rayon dans un test, sans lancer un jeu. Les appelants qui ne le
+ * donnent pas prennent celui de {@code EffectClock}, l'horloge des effets — et c'est elle qui
+ * arrete un rayon avec la pause, sans qu'aucun d'eux ait a s'en occuper.
  */
 public final class MdRays {
 
@@ -186,13 +187,19 @@ public final class MdRays {
             return ageMs(nowMs) >= kind.lifeMs();
         }
 
-        /** Une etincelle, posee au hasard entre le depart et dix blocs plus loin. */
-        void sowSpark() {
+        /**
+         * Une etincelle, posee au hasard entre le depart et dix blocs plus loin.
+         *
+         * <p>Elle nait a l'instant <b>donne</b> — celui du tick de son rayon — et non a celui de
+         * l'horloge du client : les deux se confondent en jeu, mais c'est ce qui permet de derouler
+         * la vie d'un rayon dans un test, ou il n'y a aucun client a interroger.
+         */
+        void sowSpark(long nowMs) {
             double along = RANDOM.nextDouble() * SPARK_DISTANCE / length;
             Vec3 pos = new Vec3(from[0] + (to[0] - from[0]) * along,
                     from[1] + (to[1] - from[1]) * along,
                     from[2] + (to[2] - from[2]) * along);
-            MdSparks.spawn(pos, new Vec3(spread(), spread(), spread()));
+            MdSparks.spawn(pos, new Vec3(spread(), spread(), spread()), nowMs, RANDOM);
         }
 
         private static double spread() {
@@ -214,7 +221,7 @@ public final class MdRays {
 
     /** Ouvre un rayon entre deux points du monde. */
     public static void spawn(MdRayKind kind, Vec3 from, Vec3 to) {
-        spawn(kind, from, to, Util.getMillis());
+        spawn(kind, from, to, cn.academy.ability.client.EffectClock.now());
     }
 
     /** Le meme, a un instant donne — pour le test, qui deroule sa vie sans horloge. */
@@ -260,7 +267,7 @@ public final class MdRays {
      * de touche. Sa naissance — donc son temps de poussee — est celle de ce premier appel.
      */
     public static void hold(MdRayKind kind, Vec3 from, Vec3 to) {
-        hold(kind, from, to, Util.getMillis());
+        hold(kind, from, to, cn.academy.ability.client.EffectClock.now());
     }
 
     /** Le meme, a un instant donne — pour le test, qui deroule sa vie sans horloge. */
@@ -291,7 +298,7 @@ public final class MdRays {
 
     /** Un tick du client : les etincelles des rayons, puis les rayons morts s'en vont. */
     public static void tick() {
-        tick(Util.getMillis());
+        tick(cn.academy.ability.client.EffectClock.now());
     }
 
     public static void tick(long nowMs) {
@@ -304,7 +311,7 @@ public final class MdRays {
             // Le rayon crache ses etincelles : c'est ce que faisait l'{@code onUpdate} de
             // {@code EntityMdRaySmall}, une par tick, posee au hasard le long de lui-meme.
             if (ray.kind().sparkRate() > 0 && RANDOM.nextDouble() < ray.kind().sparkRate()) {
-                ray.sowSpark();
+                ray.sowSpark(nowMs);
             }
         }
     }
