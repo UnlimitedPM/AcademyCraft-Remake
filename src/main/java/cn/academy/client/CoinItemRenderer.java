@@ -34,9 +34,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <ul>
  *   <li><b>L'inventaire, l'objet pose, l'objet fixe</b> : l'IMAGE, telle quelle — le meme carre plat
  *       que les objets de vanilla, avec ses deux faces dans le bon sens. Rien qu'elle.</li>
- *   <li><b>En main</b> : la piece en volume, avec son dos, son blason de l'autre cote, et une
- *       TRAN CHE faite d'un anneau de facettes — donc ronde, et qui prend ses couleurs sur le bord de
- *       l'image.</li>
+ *   <li><b>En main</b> : la piece en volume — son blason devant, mais lu en miroir comme chez
+ *       l'original, son disque uni derriere, et une TRAN CHE faite d'un anneau de facettes, donc
+ *       ronde, et qui prend ses couleurs sur le bord de l'image.</li>
  * </ul>
  *
  * <p>Le repere est celui que Forge donne a un rendu d'objet : le cube du modele, de un bloc de cote,
@@ -54,8 +54,14 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     /** Le rayon du disque : la piece remplit le cube du modele, ses coins sont transparents. */
     private static final float RADIUS = 0.5f;
 
-    /** Sa tranche : deux centiemes de bloc, de quoi la lire de biais sans en faire un palet. */
-    private static final float HALF_THICKNESS = 0.02f;
+    /**
+     * Sa tranche : quatre centiemes de bloc de chaque cote, donc huit pour cent de sa largeur.
+     *
+     * <p>C'est l'original — son {@code drawEquippedItem(0,04)} — et c'est deux fois l'epaisseur que le
+     * port lui donnait : la tranche etant prise sur le BORD sombre de l'image, c'est aussi ce qui
+     * donne a la piece son air un peu plus mat que celui d'une image posee a plat.
+     */
+    private static final float HALF_THICKNESS = 0.04f;
 
     /**
      * Les facettes de la tranche : vingt-quatre.
@@ -122,13 +128,12 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
     // --- LA PIECE, EN VOLUME ---
 
     /**
-     * La piece de biais : sa face, son revers, et sa tranche ronde.
+     * La piece de biais : le blason devant, le disque uni derriere, et sa tranche ronde.
      *
-     * <p>LA FACE QUE LE JOUEUR VOIT PORTE {@code coin_back}. C'est ce que fait l'original : son
-     * {@code ItemCoin} appelait {@code drawEquippedItem(0,04, TEX_COIN_BACK, TEX_COIN_FRONT)} la ou la
-     * piece en VOL montre {@code coin_front} — le joueur a reconnu le dos tout de suite : « dans le
-     * vrai mod la piece a l'air plus sombre », puisque le dos est un disque uni alors que l'avant
-     * porte le blason. L'inventaire, lui, garde l'avant : c'est ce que le joueur a valide.
+     * <p>LE BLASON EST DEVANT, ET A L'ENVERS. Les deux faces de l'original sont dessinees avec
+     * l'abscisse RETOURNEE — son {@code drawEquippedItem} fait {@code u = 1 - x} des deux cotes — donc
+     * la piece du vrai mod se lit en miroir, exactement comme le joueur l'a decrit : « le recto est la
+     * meme image mais en inverse ». Le port, lui, la lisait a l'endroit.
      *
      * <p>La tranche est un <b>anneau de facettes</b>, et chacune prend sa couleur sur le BORD de
      * l'image, a l'angle ou elle se trouve — c'est ce qui fait qu'elle suit l'anneau de la piece au
@@ -136,21 +141,21 @@ public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
      * droites d'un modele JSON.
      */
     private static void coin(PoseStack pose, MultiBufferSource buffers, int light, int overlay) {
-        // Le dos, sur la face que le joueur a devant lui, et SANS CULL : une face ne peut plus
-        // disparaitre selon le sens dans lequel on la regarde, et les deux cotes ne peuvent donc plus
-        // montrer la meme image.
-        VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
-        vertex(back, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
-        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
-        vertex(back, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
-        vertex(back, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
-
-        // Et le blason derriere, lu dans l'autre sens : vu de la, l'axe des X part de l'autre cote.
+        // Le blason, sur la face que le joueur a devant lui, lu A L'ENVERS — u va de un a zero pendant
+        // que x va de moins a plus. SANS CULL, comme l'autre face : aucune des deux ne peut plus
+        // disparaitre selon le sens dans lequel on la regarde, ni se faire passer pour l'autre.
         VertexConsumer front = buffers.getBuffer(RenderType.entityCutoutNoCull(FRONT));
-        vertex(front, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
-        vertex(front, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
-        vertex(front, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
-        vertex(front, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
+        vertex(front, pose, light, overlay, -RADIUS, RADIUS, HALF_THICKNESS, 1f, 0f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, -RADIUS, -RADIUS, HALF_THICKNESS, 1f, 1f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, RADIUS, -RADIUS, HALF_THICKNESS, 0f, 1f, 0f, 0f, 1f);
+        vertex(front, pose, light, overlay, RADIUS, RADIUS, HALF_THICKNESS, 0f, 0f, 0f, 0f, 1f);
+
+        // Et le disque uni derriere, dans le meme sens que lui : c'est le verso de la piece.
+        VertexConsumer back = buffers.getBuffer(RenderType.entityCutoutNoCull(BACK));
+        vertex(back, pose, light, overlay, RADIUS, RADIUS, -HALF_THICKNESS, 0f, 0f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, RADIUS, -RADIUS, -HALF_THICKNESS, 0f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, -RADIUS, -HALF_THICKNESS, 1f, 1f, 0f, 0f, -1f);
+        vertex(back, pose, light, overlay, -RADIUS, RADIUS, -HALF_THICKNESS, 1f, 0f, 0f, 0f, -1f);
 
         // La tranche : sans cull, donc le sens d'enroulement n'a pas d'importance, et chaque
         // facette lit un pixel du bord de l'image.

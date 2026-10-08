@@ -43,12 +43,14 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
             AcademyCraft.MOD_ID, "textures/item/coin_back.png");
 
     /**
-     * Le rayon du disque : une piece de quinze centimetres de diametre.
+     * Le rayon du disque : une piece de vingt-deux centimetres de diametre.
      *
-     * <p>L'original la dessinait a l'echelle 0,3, soit trente centimetres — et le joueur l'a trouvee
-     * « bien plus grande » que dans le vrai mod en vue externe. C'est une piece, pas une assiette.
+     * <p>Troisieme reglage, et le joueur a encadre la bonne valeur lui-meme : l'original la dessinait
+     * a l'echelle 0,3, soit trente centimetres, et le port la trouvait « bien plus grande » que dans
+     * le vrai mod ; passe a quinze, elle n'etait plus « pas assez grande dans l'animation ». Vingt-deux
+     * est entre les deux.
      */
-    private static final float RADIUS = 0.075f;
+    private static final float RADIUS = 0.11f;
 
     /**
      * Son demi-millimetre d'epaisseur : un peu moins de deux centimetres de tranche.
@@ -69,15 +71,18 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
     private static final float RING_RADIUS = TEXELS / 2.0f - 0.5f;
 
     /**
-     * La duree d'un demi-tour, en millisecondes : cent cinquante, comme l'original.
+     * Degres par seconde : dix-huit cents, soit un demi-tour toutes les cent millisecondes.
      *
-     * <p>L'original calculait {@code (temps * 1000) % 150} et le multipliait par {@code 360/300} : sa
-     * piece faisait donc un demi-tour toutes les cent cinquante millisecondes, puis son angle
-     * REPARTAIT de zero d'un coup — six demi-tours par seconde, et un clignotement qui se voit. Le
-     * port avait remplace cela par une rotation continue de meme vitesse ; le joueur a trouve celle du
-     * vrai mod plus rapide, et c'est ce retour brusque qui fait la difference.
+     * <p>HISTORIQUE, et c'est le troisieme reglage de cette rotation. L'original fait un demi-tour
+     * toutes les cent cinquante millisecondes PUIS revient a zero d'un coup — son
+     * {@code (temps * 1000) % 150} multiplie par {@code 360/300} — et c'est ce retour brusque qui donne
+     * a sa piece son air de tourner vite. Le port l'avait reproduit au mot pres ; le joueur a alors
+     * trouve l'animation « encore un peu buguee » : ce saut de cent quatre-vingts degres se voit, a
+     * soixante images par seconde. La rotation est donc de nouveau CONTINUE, mais plus rapide que
+     * l'original — cent quatre-vingts degres en cent millisecondes au lieu de cent cinquante — pour
+     * garder la vitesse qu'il avait reconnue.
      */
-    private static final double FLIP_MILLIS = 150.0;
+    private static final double SPIN = 1800.0;
 
     public CoinRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -90,8 +95,8 @@ public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
         // L'angle du moment : le tick courant, avance du temps partiel — sinon la piece avancerait par
         // saccades d'un tick.
         double millis = (entity.tickCount + partialTick) * 50.0;
-        // L'ANGLE DE L'ORIGINAL, au mot pres : un demi-tour, puis le retour a zero.
-        float degrees = (float) (millis % FLIP_MILLIS * 360.0 / 300.0);
+        // L'angle du moment, une rotation CONTINUE : voir SPIN, et l'historique de ses trois reglages.
+        float degrees = (float) (millis * SPIN / 1000.0);
         Vec3 axis = entity.spinAxis();
 
         pose.pushPose();

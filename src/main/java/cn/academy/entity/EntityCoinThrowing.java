@@ -138,8 +138,14 @@ public class EntityCoinThrowing extends Entity {
         super(type, level);
         // L'axe se tire ici et non dans un initialiseur de champ : le hasard de l'entite n'est pose
         // qu'au constructeur, et un initialiseur s'executerait avant lui.
-        this.axis = new Vec3(random.nextDouble() * 2 - 1, random.nextDouble() * 2 - 1,
-                random.nextDouble() * 2 - 1);
+        //
+        // ET C'EST UNE CULBUTE, pas n'importe quel axe : la piece est un disque pose a plat, donc un
+        // axe proche de la verticale la ferait tourner SUR ELLE-MEME — le disque ne bougerait pas et
+        // l'image tournerait sur place, ce qui ne se lit pas comme une piece qu'on lance. L'original
+        // tirait son axe au hasard dans les trois directions ; celui-ci reste dans le plan de la
+        // piece, avec un peu de travers, donc elle bascule toujours.
+        double tilt = random.nextDouble() * Math.PI * 2.0;
+        this.axis = new Vec3(Math.cos(tilt), (random.nextDouble() - 0.5) * 0.4, Math.sin(tilt));
     }
 
     /** La piece telle que l'objet la jette : dans la main, vers le haut. */
