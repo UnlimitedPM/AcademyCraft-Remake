@@ -128,11 +128,13 @@ public final class RailgunHandEffect {
      * {@code (.26, -.15, -.24)}. Dans son repere — +X la droite du joueur, +Y son haut, -Z son
      * regard — cela fait <b>26 cm a droite, 15 cm en bas, 24 cm devant</b>.
      *
-     * <p>Son abscisse, elle, a bouge deux fois, et dans les deux sens : 26 cm d'abord, que le joueur
-     * trouvait « un peu trop de la droite » ; puis 10, qu'il a trouve « un peu trop vers la gauche ».
-     * C'est donc le milieu, et c'est la seule valeur qui ne vient pas de l'original.
+     * <p>ET TOUT EST DE L'ORIGINAL, y compris l'abscisse. Elle a pourtant bouge deux fois, et dans
+     * les deux sens — 0,10, puis 0,18 — mais le joueur a explique pourquoi : « j'avais effectivement
+     * demande un decalage, mais c'est uniquement parce que le code de tout a l'heure n'etait pas
+     * comme le vrai ». Ces deux valeurs compensaient un rendu qui n'etait pas encore le bon ;
+     * maintenant qu'il l'est, c'est 0,26, comme lui.
      */
-    private static final double EYE_SIDE = 0.18;
+    private static final double EYE_SIDE = 0.26;
     private static final double EYE_DOWN = 0.15;
     private static final double EYE_FORWARD = 0.24;
 
