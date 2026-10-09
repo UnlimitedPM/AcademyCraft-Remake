@@ -62,8 +62,10 @@ public final class MagManipEffect {
 
             // Les points sont tires DANS le cube, centre sur le bloc : c'est le
             // CubePointFactory(...).setCentered(true) de l'original, dont le port rend les
-            // memes trois nombres par spread.
-            List<Vec3> points = SurroundArcs.spread(block.position(),
+            // memes trois nombres par spread. On les prend sur la POSE DU JEU — celle du rendu —
+            // pour que le gresillement colle au bloc que le joueur voit, et pas a la copie du
+            // reseau.
+            List<Vec3> points = SurroundArcs.spread(block.displayPosition(),
                     MagManipVisuals.SURROUND_CUBE, -half, half, count, RANDOM);
             // Le proprietaire ne sert ici qu'a l'affichage a la premiere personne : c'est un
             // bloc, son identifiant ne sera jamais celui du joueur. L'original ne demandait rien.
@@ -96,10 +98,17 @@ public final class MagManipEffect {
 
         Vec3 target = MagManipVisuals.carryTarget(player.getEyePosition(1f),
                 player.getViewVector(1f));
-        Vec3 velocity = MagManipVisuals.carryVelocity(block.position(), target);
+        // ON REPART DE NOTRE POSE, jamais de celle que le reseau vient de poser : c'est ce qui fait
+        // que la copie cliente ne recule plus a chaque paquet. Voir displayPosition().
+        Vec3 from = block.displayPosition();
+        Vec3 velocity = MagManipVisuals.carryVelocity(from, target);
         block.markCarried();
+        block.setPos(from.x, from.y, from.z);
         block.setDeltaMovement(velocity);
         block.move(net.minecraft.world.entity.MoverType.SELF, velocity);
+        // Ce que le moteur a fait devient notre pose, et l'ancienne est celle d'ou l'on vient :
+        // le rendu interpole entre les deux, comme pour n'importe quelle entite.
+        block.poseCarried(block.position(), from);
     }
 
     /** Le bloc que le joueur porte : le sien, et le plus proche de ses yeux. */

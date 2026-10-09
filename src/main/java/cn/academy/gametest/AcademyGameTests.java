@@ -6762,6 +6762,208 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le lancer a PLEINE experience : il se pose SUR LE SOL, et pas un cran plus loin.
+     *
+     * <p>Le joueur : « j'ai lance un bloc de fer avec le pouvoir appris a 100 %, et au lieu de se
+     * lancer a environ 60 blocs comme dans le vrai mod, il a "glisse" et il est parti plus loin
+     * au lieu de s'arreter sur le sol ».
+     *
+     * <p>La portee est celle du calcul balistique (le meme que les deux autres tests, a la vitesse
+     * et a la gravite doublees de {@code MagManipVisuals.STEPS}), mais le lancer doit surtout FINIR
+     * ou il touche : la boite de collision du bloc est celle de l'original, et c'est le moteur qui
+     * la resout. Un rayon unique, parti du centre de la boite, ne voyait le sol qu'une fois son axe
+     * au-dessus — sur une arete, une pente ou un trou, il ne voyait rien, et le bloc filait dessus
+     * au lieu de s'y poser.
+     *
+     * <p>Le point de pose est verifie A L'IDENTIQUE : le bloc de fer se retrouve a l'endroit exact
+     * ou la boite s'est arretee, et cette ordonnee est celle du sol — pas au bout d'une glissade.
+     */
+    @GameTest(template = "empty")
+    public static void leLancerAuMaximumSePoseSurLeSol(GameTestHelper helper) {
+        var manip = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        var iron = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        var air = net.minecraft.world.level.block.Blocks.AIR;
+        int height = 300;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Un sol plat de quatre-vingts blocs de long : le lancer a pleine experience en demande
+        // une cinquantaine, et rien ne doit l'arreter avant.
+        for (int dx = -8; dx <= 8; dx++) {
+            for (int dz = -6; dz <= 80; dz++) {
+                helper.setBlock(eyes.offset(dx, -1, dz), stone);
+                for (int dy = 0; dy <= 14; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz), air);
+                }
+            }
+        }
+        double floorTop = helper.absolutePos(eyes.offset(0, -1, 0)).getY() + 1.0;
+
+        var player = ownPlayer(helper, "lancer-au-maximum");
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(manip.getCategory(), 2);
+        data.learnSkill(manip);
+        data.addSkillExp(manip, 1f);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        var box = new net.minecraft.world.phys.AABB(
+                abs.getX() - 12, abs.getY() - 6, abs.getZ() - 12,
+                abs.getX() + 13, abs.getY() + 40, abs.getZ() + 90);
+        for (var stray : helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box)) {
+            stray.discard();
+        }
+
+        helper.setBlock(eyes.offset(0, 0, 3), iron);
+        manip.onStart(player, data);
+        var carried = helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box);
+        assertValue(helper, 1, carried.size(), "le bloc est devenu une entite");
+        var block = carried.get(0);
+
+        // Quarante-cinq degres vers le haut, et le temps de se poser sur son point de portage.
+        player.setXRot(-45f);
+        for (int i = 0; i < 200; i++) {
+            manip.onHoldTick(player, data, i);
+            block.tick();
+        }
+        net.minecraft.world.phys.Vec3 launch = block.position();
+        assertFalse(helper, manip.onRelease(player, data, 40), "le lancer termine le maintien");
+
+        int ticks = 0;
+        while (block.isAlive() && ticks < 400) {
+            block.tick();
+            ticks++;
+        }
+        assertFalse(helper, block.isAlive(),
+                "le bloc finit par se poser — arrêt a " + block.position());
+
+        // (1) IL S'ARRETE SUR LE SOL : l'ordonnee du dernier point est celle de la surface.
+        assertClose(helper, floorTop, block.position().y,
+                "le lancer se pose SUR le sol, et pas au-dessus");
+        // (2) ET IL S'Y POSE : le bloc de fer est a l'endroit exact ou la boite s'est arretee.
+        assertTrue(helper, helper.getLevel().getBlockState(block.blockPosition()).is(iron),
+                "le bloc de fer se pose la ou l'entite s'est arretee : " + block.blockPosition()
+                        + " porte " + helper.getLevel().getBlockState(block.blockPosition()));
+        // (3) LA PORTEE est celle du calcul, a la vitesse et a la gravite du lancer.
+        double distance = Math.hypot(block.position().x - launch.x, block.position().z - launch.z);
+        double drop = launch.y - floorTop;
+        double speed = cn.academy.ability.electromaster.MagManipVisuals.flightSpeed(1.0);
+        double w = speed * Math.cos(Math.PI / 4);
+        double g = cn.academy.ability.electromaster.MagManipVisuals.flightGravity();
+        double expected = w / g * (w + Math.sqrt(w * w + 2 * g * drop));
+        assertTrue(helper, Math.abs(distance - expected) < 2.0,
+                "portee " + (Math.round(distance * 100) / 100.0) + " blocs en " + ticks
+                        + " ticks pour un calcul de " + (Math.round(expected * 100) / 100.0)
+                        + " | depart " + launch + " sol " + floorTop);
+
+        // Le bloc pose est laisse dans le monde pour rien : le couloir se range.
+        helper.getLevel().setBlockAndUpdate(block.blockPosition(), air.defaultBlockState());
+        helper.succeed();
+    }
+
+    /**
+     * Un bloc en l'air arrete le lancer, meme s'il ne croise que le HAUT de la boite.
+     *
+     * <p>C'est le cas que l'ancien rayon ne voyait pas : le rayon partait du bas de la boite et
+     * filait droit devant, donc un obstacle qui ne croise que sa moitie haute passait inapercu. La
+     * boite, elle, s'y arrete — c'est la collision « accurate » de l'original —, et le bloc s'y
+     * pose au lieu de rester en l'air a pousser contre, sans jamais se poser.
+     *
+     * <p>L'obstacle est pose SUR MESURE : un cran au-dessus du bas de la boite (donc invisible pour
+     * le rayon du bas) et a deux blocs devant, la ou la boite passe encore dedans. Le test le dit
+     * a l'identique — si la geometrie changeait, il tomberait sur l'arrêt et non sur un silence.
+     */
+    @GameTest(template = "empty")
+    public static void unBlocEnLAirArreteLeLancer(GameTestHelper helper) {
+        var manip = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        var iron = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        var air = net.minecraft.world.level.block.Blocks.AIR;
+        int height = 340;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        for (int dx = -6; dx <= 6; dx++) {
+            for (int dz = -6; dz <= 20; dz++) {
+                helper.setBlock(eyes.offset(dx, -1, dz), stone);
+                for (int dy = 0; dy <= 10; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz), air);
+                }
+            }
+        }
+        double floorTop = helper.absolutePos(eyes.offset(0, -1, 0)).getY() + 1.0;
+
+        var player = ownPlayer(helper, "obstacle-en-lair");
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(manip.getCategory(), 2);
+        data.learnSkill(manip);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        var box = new net.minecraft.world.phys.AABB(
+                abs.getX() - 10, abs.getY() - 6, abs.getZ() - 6,
+                abs.getX() + 11, abs.getY() + 20, abs.getZ() + 24);
+        for (var stray : helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box)) {
+            stray.discard();
+        }
+
+        helper.setBlock(eyes.offset(0, 0, 3), iron);
+        manip.onStart(player, data);
+        var carried = helper.getLevel().getEntitiesOfClass(
+                cn.academy.entity.EntityMagManipBlock.class, box);
+        var block = carried.get(0);
+
+        // Le regard droit devant : le bloc part a hauteur de portage, et c'est la que l'obstacle
+        // doit l'attendre. A l'experience nulle la vitesse vaut 1 bloc par tick (0,5 double),
+        // donc deux ticks suffisent pour arriver sur lui. Deux, et pas un : a un bloc, la boite
+        // commencerait deja a chevaucher l'obstacle au moment du lancer, et elle glisserait
+        // DESSOUS au lieu de s'y arreter — le test mesurait alors un atterrissage au sol.
+        for (int i = 0; i < 200; i++) {
+            manip.onHoldTick(player, data, i);
+            block.tick();
+        }
+        net.minecraft.world.phys.Vec3 launch = block.position();
+        BlockPos obstacle = BlockPos.containing(launch.x, Math.floor(launch.y) + 1.0, launch.z + 2.0);
+        helper.getLevel().setBlockAndUpdate(obstacle, stone.defaultBlockState());
+        // Le controle de la geometrie : l'obstacle est bien AU-DESSUS du bas de la boite, sinon le
+        // rayon d'avant l'aurait vu lui aussi et le test ne prouverait rien.
+        assertTrue(helper, obstacle.getY() > launch.y,
+                "l'obstacle est au-dessus du bas de la boite : " + obstacle + " contre " + launch);
+
+        assertFalse(helper, manip.onRelease(player, data, 40), "le lancer termine le maintien");
+        int ticks = 0;
+        while (block.isAlive() && ticks < 200) {
+            block.tick();
+            ticks++;
+        }
+        assertFalse(helper, block.isAlive(),
+                "la boite s'arrete contre l'obstacle et le bloc se pose — arrêt a " + block.position()
+                        + " apres " + ticks + " ticks");
+        assertTrue(helper, block.position().y > floorTop,
+                "et il s'arrete EN L'AIR, contre l'obstacle : " + block.position()
+                        + " pour un sol a " + floorTop);
+        assertTrue(helper, block.blockPosition().getZ() <= obstacle.getZ(),
+                "le bloc ne depasse pas l'obstacle : pose a " + block.blockPosition()
+                        + ", obstacle a " + obstacle);
+        assertTrue(helper, helper.getLevel().getBlockState(obstacle).is(stone),
+                "et l'obstacle est toujours la");
+
+        helper.getLevel().setBlockAndUpdate(obstacle, air.defaultBlockState());
+        helper.getLevel().setBlockAndUpdate(block.blockPosition(), air.defaultBlockState());
+        helper.succeed();
+    }
+
+    /**
      * Les trois cursus generiques donnent leurs bonus au joueur qui les apprend.
      *
      * <p>{@code PortedSkillsTest} fige les valeurs ; ce test-ci verifie l'autre bout, celui que

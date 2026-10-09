@@ -18,11 +18,8 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -43,12 +40,20 @@ import net.minecraft.world.phys.Vec3;
  *
  * <h2>Ou elle se pose</h2>
  *
- * L'original cherchait le premier emplacement libre en partant du bloc touche : lui-meme s'il
- * est remplacable, sinon le voisin de la face touchee, sinon l'un des huit coins. Le port
- * suit les memes trois etapes ; la ou l'original finissait par {@code EntityBlock Lost} quand
- * rien ne convenait — le bloc disparaissait en silence —, le port le <b>laisse tomber en
- * objet</b>. Perdre un bloc de fer sans rien dire serait un prix un peu cher pour une
- * competence de niveau 2.
+ * <p>Des que sa <b>boite</b> touche quelque chose, et pas des que son axe passe au-dessus :
+ * c'est le moteur qui resout la collision de la boite entiere, comme la {@code Rigidbody}
+ * « accurate » de l'original, et le bloc se pose la ou elle s'est arretee. Un rayon unique, parti
+ * du centre, laissait le bloc GLISSER sur les pentes et les aretes — il ne voyait le sol qu'une
+ * fois son axe au-dessus, et filait dessus au lieu de s'y poser. Le client, lui, arrete sa copie
+ * au meme endroit : il ne pose rien (c'est le serveur qui pose et qui enleve l'entite), mais il
+ * ne continue pas a glisser en attendant le paquet.
+ *
+ * <p>L'original cherchait le premier emplacement libre a partir du bloc touche : lui-meme s'il
+ * est remplacable, puis le voisin de la face touchee, puis l'un des huit coins. Le port part de
+ * la boite qui a touche — son propre bloc, ses six voisins, puis ses huit coins —, et la ou
+ * l'original finissait par {@code EntityBlock Lost} quand rien ne convenait — le bloc
+ * disparaissait en silence —, le port le <b>laisse tomber en objet</b>. Perdre un bloc de fer
+ * sans rien dire serait un prix un peu cher pour une competence de niveau 2.
  *
  * <p>Non porte : la sonde de particules ({@code EntitySurroundArc}) que l'original accrochait
  * au bloc pour l'entourer d'arcs electriques.
@@ -64,8 +69,18 @@ public class EntityMagManipBlock extends Projectile {
      */
     public static final double GRAVITY = MagManipVisuals.flightGravity();
 
-    /** La quantite d'emplacements essayes apres le bloc touche : les huit coins. */
-    private static final int[][] CORNERS = {
+    /**
+     * Les emplacements essayes quand la boite a touche : le sien, ses six voisins, ses coins.
+     *
+     * <p>C'est l'ordre de l'original a une chose pres : il partait du bloc TOUCHE, puis du voisin
+     * de la face, puis des huit coins — et il ne regardait jamais les voisins d'arete. Le port
+     * part de la boite elle-meme, parce que c'est elle qui detecte le contact maintenant : son
+     * propre bloc d'abord (l'air juste au-dessus du sol quand elle s'est posee, l'air juste
+     * devant le mur quand elle s'y est arretee), puis ses six voisins, puis ses huit coins.
+     */
+    private static final int[][] SPOTS = {
+            { 0, 0, 0 },
+            { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 },
             { 1, 1, 1 }, { 1, 1, -1 }, { 1, -1, 1 }, { 1, -1, -1 },
             { -1, 1, 1 }, { -1, 1, -1 }, { -1, -1, 1 }, { -1, -1, -1 },
     };
@@ -76,8 +91,6 @@ public class EntityMagManipBlock extends Projectile {
     /** Le point que le bloc suit, ou {@code null} quand il est lache. */
     private Vec3 carryTo;
 
-    /** Vrai quand un bloc lache doit se poser au lieu de traverser le monde. */
-    private boolean placeOnCollide = true;
     /** Le bloc s'est-il deja pose ? */
     private boolean placed;
 
@@ -98,6 +111,20 @@ public class EntityMagManipBlock extends Projectile {
      * client avant : un bloc qui n'est plus porte reprend donc son vol tout seul.
      */
     private boolean clientCarried;
+
+    /**
+     * La pose LOCALE du portage, et celle d'avant.
+     *
+     * <p>Elles n'appartiennent qu'au client, et c'est tout le sujet : le portage est mene des DEUX
+     * cotes, chacun suivant le regard qu'il connait, et le serveur envoie sa position tous les deux
+     * ticks. Sans ces deux points, chaque paquet RAMENAIT la copie cliente jusqu'a un demi-bloc en
+     * arriere — les « ralentissements » que le joueur voit quand il tourne la tete ou s'eloigne.
+     * Le rendu part de ces deux points-la, jamais de ceux du reseau.
+     *
+     * <p>Voir {@link #poseCarried} et {@link #displayPosition}.
+     */
+    private Vec3 carriedAt;
+    private Vec3 carriedBefore;
 
     public EntityMagManipBlock(EntityType<? extends EntityMagManipBlock> type, Level level) {
         super(type, level);
@@ -158,6 +185,35 @@ public class EntityMagManipBlock extends Projectile {
     /** Le portage client ne veut plus de ce bloc : il vole de ses propres ailes. */
     public void unmarkCarried() {
         this.clientCarried = false;
+        this.carriedAt = null;
+        this.carriedBefore = null;
+    }
+
+    /**
+     * Pose la copie locale du bloc porte.
+     *
+     * <p>Deux points, et pas un : le point d'arrivee et celui d'OU l'on vient. Le rendu interpole
+     * entre les anciennes positions de l'entite et les nouvelles, et celles du reseau ne sont pas
+     * les notres — un paquet recu juste avant l'image partirait donc d'un point ou le bloc n'a
+     * jamais ete, et ferait un bond au lieu de glisser.
+     */
+    public void poseCarried(Vec3 at, Vec3 before) {
+        this.carriedAt = at;
+        this.carriedBefore = before;
+        this.xo = before.x;
+        this.yo = before.y;
+        this.zo = before.z;
+        setPos(at.x, at.y, at.z);
+    }
+
+    /**
+     * Ou le bloc se dessine : sa pose locale s'il est porte par ce client, sa position sinon.
+     *
+     * <p>Un bloc porte par un AUTRE joueur n'est pas concerne : il n'a pas de pose locale ici, et
+     * suit les positions du serveur comme n'importe quelle entite.
+     */
+    public Vec3 displayPosition() {
+        return carriedAt != null ? carriedAt : position();
     }
 
     @Override
@@ -176,7 +232,14 @@ public class EntityMagManipBlock extends Projectile {
             if (!clientOwned || clientCarried) return;
             if (getDeltaMovement().lengthSqr() < 1.0E-6) return;
             setDeltaMovement(getDeltaMovement().add(0, -GRAVITY, 0));
-            move(MoverType.SELF, getDeltaMovement());
+            // S'IL TOUCHE, IL S'ARRETE ICI. Le client ne pose pas de bloc — c'est le serveur qui
+            // le fait, et qui enleve l'entite —, mais il ne doit pas non plus continuer a glisser
+            // en attendant le paquet : a deux blocs par tick, ces deux ticks d'attente font
+            // quatre blocs de trop, et c'est ce que le joueur a vu — « il a glisse et il est
+            // parti plus loin au lieu de s'arreter sur le sol ».
+            if (touched()) {
+                setDeltaMovement(Vec3.ZERO);
+            }
             return;
         }
 
@@ -188,18 +251,33 @@ public class EntityMagManipBlock extends Projectile {
 
         setDeltaMovement(getDeltaMovement().add(0, -GRAVITY, 0));
 
-        // Le rayon se lance AVANT le deplacement, sur le trajet voulu entier.
+        // La boite avance, et le MOTEUR dit si elle a touche quelque chose.
         //
-        // Le faire APRES, entre la position d'arrivee et elle-meme, ne trouverait rien : `move`
-        // a deja resolu la collision, donc le bloc s'arrete colle au mur, son rayon est de
-        // longueur nulle, et il reste la, en l'air, sans jamais se poser. C'est le GameTest qui
-        // l'a vu.
-        Vec3 from = position();
-        Vec3 motion = getDeltaMovement();
-        if (hitSomething(from, from.add(motion))) return;
-
-        move(MoverType.SELF, motion);
+        // C'etait un rayon, parti du centre de la boite, et c'etait le defaut : un rayon ne voit
+        // ni les pentes, ni les aretes, ni les blocs qui ne croisent que les coins. Le bloc
+        // touchait le sol du cote et continuait a glisser dessus au lieu de s'y poser. L'original
+        // ne faisait pas ca : sa Rigidbody « accurate » regardait la boite ENTIERE.
+        //
+        // Et la pose n'attend pas la fin du tick : des que la boite touche, le bloc est pose la
+        // ou elle s'est arretee.
+        if (touched()) {
+            placeAround();
+            return;
+        }
         hurtAlong();
+    }
+
+    /**
+     * Avance la boite de son mouvement, et dit si elle a touche quelque chose.
+     *
+     * <p>Les deux drapeaux du moteur disent exactement cela : quelque chose sur le cote
+     * ({@code horizontalCollision}) ou dessous, dessus ({@code verticalCollision}). Le moteur
+     * resout aussi la collision — la boite s'arrete collee a ce qu'elle a touche, et ne peut pas
+     * traverser un mur d'un bloc, meme avancee de deux blocs par tick.
+     */
+    private boolean touched() {
+        move(MoverType.SELF, getDeltaMovement());
+        return horizontalCollision || verticalCollision;
     }
 
     /** Un corps sur le trajet, et c'est dix points. */
@@ -217,55 +295,29 @@ public class EntityMagManipBlock extends Projectile {
     }
 
     /**
-     * Un bloc touche : le bloc pose se pose, ou s'arrete net.
+     * Un bloc touche : le bloc pose se pose.
      *
-     * <p>Le rayon rend a la fois le bloc touche et sa face — c'est l'evenement de collision de
-     * l'original — et c'est de la que partent les trois recherches d'emplacement. Il se lance
-     * sur le trajet <b>voulu</b>, avant que {@code move} n'ait resolu la collision : voir
-     * {@link #tick()}.
+     * <p>Le rayon qui vivait ici rendait a la fois le bloc touche et sa face — l'evenement de
+     * collision de l'original —, et les trois recherches d'emplacement partaient de la. Il ne
+     * touchait rien des qu'il passait a cote : voir {@link #touched()}, qui regarde la boite
+     * entiere, et {@link #placeAround()}, qui part de la boite elle-meme.
      */
-    private boolean hitSomething(Vec3 from, Vec3 to) {
-        HitResult hit = level().clip(new ClipContext(from, to,
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
-        if (hit.getType() != HitResult.Type.BLOCK) return false;
-        place((BlockHitResult) hit);
-        return true;
-    }
-
-    /** Pose le bloc, ou le laisse tomber en objet s'il n'y a pas de place. */
-    private void place(BlockHitResult hit) {
+    private void placeAround() {
         if (placed) return;
         placed = true;
 
-        BlockPos hitPos = hit.getBlockPos();
-        BlockPos target = spot(hitPos, hit);
-        if (target != null) {
-            level().setBlock(target, getBlockState(), 3);
-        } else {
-            Containers.dropItemStack(level(), getX(), getY(), getZ(),
-                    new ItemStack(getBlockState().getBlock()));
+        BlockPos around = blockPosition();
+        for (int[] offset : SPOTS) {
+            BlockPos pos = around.offset(offset[0], offset[1], offset[2]);
+            if (free(pos)) {
+                level().setBlock(pos, getBlockState(), 3);
+                discard();
+                return;
+            }
         }
+        Containers.dropItemStack(level(), getX(), getY(), getZ(),
+                new ItemStack(getBlockState().getBlock()));
         discard();
-    }
-
-    /**
-     * Le premier emplacement qui accepte le bloc.
-     *
-     * <p>Le bloc touche s'il est remplacable — de l'herbe, de l'eau — puis le voisin de la
-     * face touchee, puis les huit coins. C'est la recherche de l'original, y compris son
-     * dernier filet : il ne regardait que les coins, jamais les voisins d'arete.
-     */
-    private BlockPos spot(BlockPos hitPos, BlockHitResult hit) {
-        if (free(hitPos)) return hitPos;
-
-        BlockPos face = hitPos.relative(hit.getDirection());
-        if (free(face)) return face;
-
-        for (int[] corner : CORNERS) {
-            BlockPos pos = hitPos.offset(corner[0], corner[1], corner[2]);
-            if (free(pos)) return pos;
-        }
-        return null;
     }
 
     private boolean free(BlockPos pos) {

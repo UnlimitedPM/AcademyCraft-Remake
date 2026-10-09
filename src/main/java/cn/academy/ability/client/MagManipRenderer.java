@@ -61,18 +61,27 @@ public final class MagManipRenderer {
         Vec3 camera = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = client.renderBuffers().bufferSource();
+        float partialTick = event.getPartialTick();
         boolean drawn = false;
 
         for (Entity entity : client.level.entitiesForRendering()) {
             if (!(entity instanceof EntityMagManipBlock block)) continue;
 
+            // La POSITION INTERPOLEE, comme pour n'importe quelle entite : c'est celle que le jeu
+            // donne a `doRender` depuis toujours, et l'original s'en servait. Lire `getX()` nu
+            // fait avancer le bloc par bonds de tick — deux blocs d'un coup quand il vole —, ce
+            // que le joueur appelait des « ralentissements ».
+            Vec3 at = block.getPosition(partialTick);
             pose.pushPose();
-            pose.translate(block.getX() - camera.x, block.getY() - camera.y,
-                    block.getZ() - camera.z);
+            pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
+            // L'age du RENDU, lui aussi interpole : l'original dessinait son lacet entre son
+            // ancien et son nouveau (`lerpf(e.lastYaw, e.yaw, pt)`), et la rotation repart donc du
+            // tick d'avant, avance du temps partiel.
+            double age = block.tickCount - 1 + partialTick;
             pose.mulPose(Axis.YP.rotationDegrees(
-                    (float) MagManipVisuals.spinYaw(block.tickCount, block.getId())));
+                    (float) MagManipVisuals.spinYaw(age, block.getId())));
             pose.mulPose(Axis.XP.rotationDegrees(
-                    (float) MagManipVisuals.spinPitch(block.tickCount, block.getId())));
+                    (float) MagManipVisuals.spinPitch(age, block.getId())));
             // Le recul vient APRES la rotation : le bloc tourne ainsi sur son centre, au lieu de
             // tourner autour de son coin et de partir de biais.
             pose.translate(-0.5, -0.5, -0.5);

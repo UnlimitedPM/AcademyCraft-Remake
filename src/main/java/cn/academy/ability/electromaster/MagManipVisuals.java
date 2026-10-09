@@ -164,19 +164,24 @@ public final class MagManipVisuals {
     }
 
     /**
-     * La rotation d'un bloc attrape, en degres, a ce tick.
+     * La rotation d'un bloc attrape, en degres, a un age donne.
      *
      * <p>L'original tirait ses deux vitesses au hasard : entre 1 et 3 degres par tick pour le
      * lacet, autant pour le tangage. Le port les deduit de l'identifiant, ce qui donne la meme
-     * variete sans le hasard — et un lacet et un tangage qui ne tombent jamais ensemble, sans
-     * quoi le bloc tournerait autour d'un axe fixe. D'ou le quart de degre du tangage : entier
-     * d'un cote, en quarts de l'autre, ils ne peuvent pas se confondre.
+     * variete sans le hasard — et un lacet et un tangage qui ne tombent jamais ensemble, sans quoi
+     * le bloc tournerait autour d'un axe fixe. D'ou le quart de degre du tangage : entier d'un
+     * cote, en quarts de l'autre, ils ne peuvent pas se confondre.
+     *
+     * <p>L'age est celui du RENDU, et c'est un {@code double} : {@code tickCount - 1} plus le temps
+     * partiel de l'image. L'original interpolait exactement comme cela
+     * ({@code lerpf(e.lastYaw, e.yaw, pt)}), et sans cette avance le bloc tourne par saccades de
+     * tick — vingt images par seconde au lieu de la soixantaine de l'ecran.
      */
-    public static double spinYaw(int tickCount, int entityId) {
-        return (Math.floorMod(entityId, 3) + 1) * tickCount;
+    public static double spinYaw(double age, int entityId) {
+        return (Math.floorMod(entityId, 3) + 1) * age;
     }
 
-    public static double spinPitch(int tickCount, int entityId) {
-        return (Math.floorMod(entityId / 3, 3) + 1) * tickCount * 0.75;
+    public static double spinPitch(double age, int entityId) {
+        return (Math.floorMod(entityId / 3, 3) + 1) * age * 0.75;
     }
 }
