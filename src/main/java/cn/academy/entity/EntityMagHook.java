@@ -343,6 +343,27 @@ public class EntityMagHook extends Projectile {
         tag.putInt("hookZ", this.entityData.get(DATA_Z));
     }
 
+    /**
+     * La naissance chez le client, et un piege de vanilla qui se corrige ici.
+     *
+     * <p>{@code Entity.recreateFromPacket} pose la position de l'entite neuve par
+     * {@code moveTo(x, y, z)} — et cette surcharge-la remet les angles DU MOMENT a
+     * {@code setOldPosAndRot()}, c'est-a-dire zero et zero, puisqu'elle ne recoit ceux du paquet
+     * que juste <b>apres</b>. Un crochet neuf arrive donc chez son client avec un {@code yRotO} et
+     * un {@code xRotO} a zero, et le rendu, qui interpole ses angles, le fait <b>tournoyer depuis le
+     * sud pendant sa premiere image</b>. Le joueur l'a vu tout de suite : « le modele en lui meme
+     * n'est pas le probleme [...] c'est juste qu'il tourne mal » — et d'autant plus dur a lire
+     * qu'il file a deux blocs par tick.
+     *
+     * <p>Un {@code setOldPosAndRot()} de plus, une fois les vrais angles en place, et il nait
+     * tourne comme il faut.
+     */
+    @Override
+    public void recreateFromPacket(ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
+        this.setOldPosAndRot();
+    }
+
     @Override
     public Packet<ClientGamePacketListener> getAddEntityPacket() {
         return new ClientboundAddEntityPacket(this);

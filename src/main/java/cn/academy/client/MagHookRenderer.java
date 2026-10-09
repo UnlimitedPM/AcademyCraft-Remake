@@ -34,8 +34,11 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *   <li><b>L'echelle</b> est celle du fichier, {@link MagHookVisuals#MODEL_SCALE} : le modele est
  *       dessine en unites de l'OBJ, pas en blocs.</li>
  *   <li><b>Et un crochet plante ne glisse pas</b> : l'original repeignait sa position sur la face
- *       au lieu de la laisser s'interpoler, ce qui fait claquer le crochet contre le mur au lieu de
- *       l'y faire deriver pendant une image. Voir {@link EntityMagHook#snapPosition()}.</li>
+ *       au lieu de laisser l'interpolation l'y faire deriver pendant une image. Voir
+ *       {@link EntityMagHook#snapPosition()}.</li>
+ *   <li><b>Et ses angles s'interpolent</b> — le lancer est continu, la rotation d'un crochet ne
+ *       bouge plus apres lui. Si le modele tournoie a la naissance, la faute n'est pas ici : voir
+ *       {@code EntityMagHook.recreateFromPacket}, ou vit le piege de vanilla.</li>
  * </ul>
  */
 @OnlyIn(Dist.CLIENT)
@@ -73,6 +76,10 @@ public class MagHookRenderer extends EntityRenderer<EntityMagHook> {
 
         // Les deux angles : ceux de la face quand il est plante, ceux de la visee quand il vole —
         // et la visee s'interpole, sinon le crochet avancerait par saccades de vingt images.
+        //
+        // Si le modele tournoie pourtant, ce n'est pas ici qu'il faut chercher : voir
+        // {@link EntityMagHook#recreateFromPacket}, ou vit le piege de vanilla qui donnait a un
+        // crochet neuf des angles anciens a zero.
         float hookYaw = planted ? MagHookVisuals.yawFor(entity.hitSide()) : yaw;
         float hookPitch = planted ? MagHookVisuals.pitchFor(entity.hitSide())
                 : Mth.lerp(partialTick, entity.xRotO, entity.getXRot());

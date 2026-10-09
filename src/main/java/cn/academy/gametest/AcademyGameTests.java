@@ -2544,6 +2544,42 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le crochet neuf nait tourne, chez le client.
+     *
+     * <p>C'est le piege que le joueur a paye : {@code Entity.recreateFromPacket} pose la position
+     * d'une entite neuve par {@code moveTo(x, y, z)}, et cette surcharge enregistre les angles DU
+     * MOMENT — zero et zero — comme « angles de l'image precedente », AVANT de leur donner les vrais,
+     * qui viennent du paquet. Le rendu, lui, interpole ses angles : le crochet tournoyait donc
+     * depuis le sud pendant sa premiere image, ce que le joueur a decrit mot pour mot — « le modele
+     * en lui meme n'est pas le probleme [...] c'est juste qu'il tourne mal ». L'entite recale ses
+     * angles a la naissance, et ce test fige l'invariant.
+     */
+    @GameTest(template = "empty")
+    public static void unCrochetNeufNaitAvecSesVraisAngles(GameTestHelper helper) {
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 280);
+        var player = ownPlayer(helper, "mag-hook-birth");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 123f, 31f);
+
+        var hook = new cn.academy.entity.EntityMagHook(helper.getLevel(), player);
+        assertClose(helper, 123.0, hook.getYRot(), "il part dans l'axe du regard");
+        assertClose(helper, 31.0, hook.getXRot(), "tangage compris");
+
+        // La naissance chez le client : la meme porte que le paquet de pose emprunte.
+        hook.recreateFromPacket(
+                new net.minecraft.network.protocol.game.ClientboundAddEntityPacket(hook));
+
+        // Le paquet arrondit les angles au byte (1,4 degre) et l'entite les relit arrondis : ce qui
+        // compte est qu'ils soient les MEMES des deux cotes de la naissance — tout le sujet est la.
+        assertTrue(helper, Math.abs(hook.getYRot() - 123f) < 2f,
+                "toujours dans l'axe du regard : " + hook.getYRot());
+        assertClose(helper, hook.getYRot(), hook.yRotO,
+                "ses angles anciens sont les vrais, sans quoi le rendu tournoie");
+        assertClose(helper, hook.getXRot(), hook.xRotO, "les deux, tangage compris");
+
+        helper.succeed();
+    }
+
+    /**
      * Le relachement de {@code mag_movement} : une poussee en avant, et la chute qui suit est
      * gratuite.
      *
