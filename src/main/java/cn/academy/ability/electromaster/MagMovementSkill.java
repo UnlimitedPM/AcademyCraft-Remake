@@ -22,9 +22,10 @@ import javax.annotation.Nullable;
  *
  * <p>C'est le deplacement de l'electromaster : viser un rail, un bloc de fer ou un
  * wagonnet a vingt-cinq blocs, tenir la touche, et partir. La traction monte
- * progressivement — chaque tick rapproche la vitesse de la direction voulue de
- * {@code ACCEL} — donc le depart est mou et l'arrivee rapide, comme dans l'original. Une
- * exception, demandee par le joueur : la <b>montee</b> ne freine pas — voir {@link #lift}.
+ * progressivement — chaque tick rapproche la vitesse de la direction voulue d'un pas,
+ * le double de {@code ACCEL}, comme l'original — donc le depart est mou et l'arrivee
+ * rapide. Une exception, demandee par le joueur : la <b>montee</b> ne freine pas — voir
+ * {@link #lift}.
  *
  * <p>L'ancre <b>colle</b> : viser du metal en pose une, ou la remplace, et detourner les yeux
  * ne la lache pas — la traction continue, comme dans le vrai mod. Le maintien se paie tant
@@ -36,6 +37,33 @@ public class MagMovementSkill extends Skill {
     /** Rapprochement de la vitesse par tick, comme {@code ACCEL}. */
     public static final double ACCEL = 0.08;
 
+    /**
+     * Le pas REELLEMENT parcouru par tick : le double, soit 0,16.
+     *
+     * <p>C'est l'original, et le port l'avait oublie : son {@code tryAdjust} etait appele DEUX
+     * fois par tick — une fois pour la vitesse posee, une fois pour celle qu'il gardait en
+     * memoire —, donc sa traction montait de 0,16 par tick et atteignait la vitesse voulue en une
+     * demi-seconde. Le port, lui, n'avançait que de 0,08 : deux fois plus mou, et c'est le
+     * contraire de ce que le joueur decrit — « un peu comme si j'etais propulse de la meme
+     * maniere qu'avec le vec accel ». Meme motif que {@code MagManipVisuals.STEPS} : LambdaLib
+     * avancait ses entites d'un cran de son cote, et le port n'avance qu'une fois.
+     */
+    public static final double STEP = ACCEL * 2;
+
+    /**
+     * La gravite que le tick suivant retirera au joueur, en blocs par tick.
+     *
+     * <p>La traction est posee a la FIN du tick du joueur (voir {@code AbilityEvents.onPlayerTick},
+     * phase END) : sa physique a deja eu lieu, et celle du tick qui vient n'a pas encore retire la
+     * gravite. Sans la compenser, une montee de 0,08 par tick etait mangée par une gravite de
+     * 0,08 : le joueur ne montait JAMAIS, il restait colle au sol avec sa traction dans les mains
+     * — le defaut que le joueur a signale (« si je suis en bas et que je vise un bloc de fer en
+     * haut, je ne suis pas du tout propulse dans les airs »).
+     *
+     * <p>Le vol — celui du jeu comme celui des ailes de tempete — ne subit pas cette gravite, donc
+     * il ne la recoit pas non plus.
+     */
+    public static final double GRAVITY = 0.08;
     /** Vitesse visee, en blocs par tick, comme {@code velocity}. */
     private static final double VELOCITY = 1.0;
 
@@ -258,12 +286,24 @@ public class MagMovementSkill extends Skill {
         Vec3 motion = player.getDeltaMovement();
         player.setDeltaMovement(
                 approach(motion.x, want.x),
-                want.y > 0 ? lift(motion.y, want.y) : approach(motion.y, want.y),
+                pulledVertical(motion.y, want.y, player.getAbilities().flying),
                 approach(motion.z, want.z));
         // Le client doit accepter cette vitesse : sans cela il la corrigerait au tick
         // suivant, et la traction ne se verrait pas.
         player.hurtMarked = true;
         player.fallDistance = 0.0f;
+    }
+
+    /**
+     * La composante verticale posee par la traction, gravite du tick suivant comprise.
+     *
+     * <p>La montee passe par {@link #lift} (elle ne freine pas), la descente par
+     * {@link #approach}, et la gravite ne se paie que si le joueur la subit — voir
+     * {@code GRAVITY}.
+     */
+    public static double pulledVertical(double motionY, double wantY, boolean flying) {
+        double gravity = flying ? 0.0 : GRAVITY;
+        return (wantY > 0 ? lift(motionY, wantY) : approach(motionY, wantY)) + gravity;
     }
 
     /**
@@ -284,7 +324,7 @@ public class MagMovementSkill extends Skill {
      * tick, exactement comme l'original. Ce qui change est ce qui se passe a l'arrivee.
      */
     public static double lift(double from, double to) {
-        return from >= to ? from : Math.min(to, from + ACCEL);
+        return from >= to ? from : Math.min(to, from + STEP);
     }
 
     /**
@@ -302,15 +342,16 @@ public class MagMovementSkill extends Skill {
     }
 
     /**
-     * Rapproche une composante de la valeur voulue, d'au plus {@code ACCEL}.
+     * Rapproche une composante de la valeur voulue, d'au plus {@link #STEP}.
      *
      * Portage de {@code tryAdjust} : c'est ce qui rend le depart mou et l'arrivee
-     * rapide, au lieu d'une vitesse posee d'un coup.
+     * rapide, au lieu d'une vitesse posee d'un coup. Le pas est celui de l'original,
+     * deux fois {@code ACCEL} — voir {@link #STEP}.
      */
     public static double approach(double from, double to) {
         double delta = to - from;
-        if (Math.abs(delta) < ACCEL) return to;
-        return delta > 0 ? from + ACCEL : from - ACCEL;
+        if (Math.abs(delta) < STEP) return to;
+        return delta > 0 ? from + STEP : from - STEP;
     }
 
     /**

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * La traction de {@code mag_movement}.
@@ -45,11 +46,11 @@ class MagMovementTest {
 
     @Test
     void laVitesseSeRapprocheDUnePas() {
-        // Un huitieme de bloc par tick : il faut une douzaine de ticks pour atteindre la
-        // vitesse voulue, ce qui fait un depart mou.
-        assertEquals(0.08, MagMovementSkill.approach(0, 1), 0.0001);
-        assertEquals(0.16, MagMovementSkill.approach(0.08, 1), 0.0001);
-        assertEquals(-0.08, MagMovementSkill.approach(0, -1), 0.0001);
+        // Un pas de 0,16 — deux fois ACCEL, comme l'original qui rapprochait sa vitesse deux
+        // fois par tick : la vitesse voulue est atteinte en une demi-seconde.
+        assertEquals(0.16, MagMovementSkill.approach(0, 1), 0.0001);
+        assertEquals(0.32, MagMovementSkill.approach(0.16, 1), 0.0001);
+        assertEquals(-0.16, MagMovementSkill.approach(0, -1), 0.0001);
     }
 
     @Test
@@ -75,17 +76,32 @@ class MagMovementTest {
         // L'approche de l'original freine : arrive sous le bloc, la traction retirait la
         // vitesse qui allait le depasser, et on s'arretait a sa hauteur — « je ne peux jamais
         // depasser cette hauteur ».
-        assertEquals(0.92, MagMovementSkill.approach(1.0, 0.7), 0.0001);
+        assertEquals(0.84, MagMovementSkill.approach(1.0, 0.7), 0.0001);
         // La montee, elle, laisse aller.
         assertEquals(1.0, MagMovementSkill.lift(1.0, 0.7), 0.0001);
         assertEquals(0.7, MagMovementSkill.lift(0.7, 0.7), 0.0001, "a la vitesse voulue, on la garde");
     }
 
     @Test
+    void laMonteeSurvitALaGraviteDuTickSuivant() {
+        // La traction est posee en fin de tick : la gravite du tick qui vient n'a pas encore ete
+        // retiree. Au repos, la composante posee doit donc depasser la gravite — sans quoi le
+        // joueur ne montait JAMAIS, ce qui est exactement le defaut signale.
+        double montee = MagMovementSkill.pulledVertical(-0.08, 1.0, false);
+        assertTrue(montee > MagMovementSkill.GRAVITY, "la montee se voit : " + montee);
+        assertTrue(montee - MagMovementSkill.GRAVITY > 0, "et il reste une vitesse ascendante");
+
+        // En vol, le jeu ne lui retire rien : la traction ne compense donc rien non plus.
+        assertEquals(montee - MagMovementSkill.GRAVITY,
+                MagMovementSkill.pulledVertical(-0.08, 1.0, true), 1.0e-9,
+                "rien a compenser en vol");
+    }
+
+    @Test
     void laMonteePousseAuMemePasQueLOriginal() {
-        // Le depart ne change pas : sous la valeur voulue, la montee avance de ACCEL par
+        // Le depart ne change pas : sous la valeur voulue, la montee avance d'un pas par
         // tick et ne la depasse pas.
-        assertEquals(0.08, MagMovementSkill.lift(0, 0.7), 0.0001);
+        assertEquals(0.16, MagMovementSkill.lift(0, 0.7), 0.0001);
         assertEquals(0.7, MagMovementSkill.lift(0.62, 0.7), 0.0001);
     }
 
