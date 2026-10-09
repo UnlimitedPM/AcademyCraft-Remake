@@ -81,11 +81,24 @@ public final class Config {
      * Ce que l'electromaster attire, repris de {@code normalMetalBlocks} de l'original.
      *
      * Ces blocs s'attrapent a tout niveau d'experience.
+     *
+     * <p>Avec trois blocs que l'original n'avait pas, et que le joueur a demandes : la porte et la
+     * trappe en fer — « qui n'etait pas possible dans le vrai mod pour aucune raison apparente » — et
+     * le <b>cuivre travaille</b>, qui n'existait pas en 1.12.2. Le cuivre s'ajoute ici a titre
+     * d'exemple : c'est son NOM qui le fait reconnaitre par {@code MetalTargets}, toutes variantes
+     * comprises, oxydees, cirees et taillees. Voir aussi {@code MetalTargets.NEW_STRONG_METALS}, qui
+     * porte les memes blocs en code : la config d'un joueur qui met son mod a jour ne les verra pas.
      */
     private static final List<String> DEFAULT_METAL_BLOCKS = List.of(
             "minecraft:rail",
             "minecraft:iron_bars",
             "minecraft:iron_block",
+            "minecraft:iron_door",
+            "minecraft:iron_trapdoor",
+            "minecraft:copper_block",
+            "minecraft:cut_copper",
+            "minecraft:cut_copper_stairs",
+            "minecraft:cut_copper_slab",
             "minecraft:activator_rail",
             "minecraft:detector_rail",
             "minecraft:golden_rail",
@@ -97,12 +110,20 @@ public final class Config {
      *
      * Il faut soixante pour cent d'experience pour s'y accrocher : une machine ou un
      * minerai de fer ne s'attrapent pas du premier coup.
+     *
+     * <p>Avec le cuivre et le fer non travailles, qui sont neufs ou oublies : le minerai de cuivre,
+     * le cuivre brut, et le bloc de fer brut. Voir {@code MetalTargets.NEW_WEAK_METALS} pour la meme
+     * raison que ci-dessus — les deux endroits, la config et le code, sont voulus.
      */
     private static final List<String> DEFAULT_WEAK_METAL_BLOCKS = List.of(
             "minecraft:dispenser",
             "minecraft:hopper",
             "minecraft:iron_ore",
-            "minecraft:deepslate_iron_ore");
+            "minecraft:deepslate_iron_ore",
+            "minecraft:copper_ore",
+            "minecraft:deepslate_copper_ore",
+            "minecraft:raw_copper_block",
+            "minecraft:raw_iron_block");
 
     /**
      * Les entites metalliques, reprises de {@code metalEntities}.

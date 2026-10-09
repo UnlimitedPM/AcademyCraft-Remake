@@ -2426,6 +2426,77 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Les blocs qui n'existaient pas dans l'original s'aimantent aussi.
+     *
+     * <p>Le joueur : « avec les mises a jour de minecraft, maintenant il y a aussi le cuivre de
+     * present dans le jeu, avec enormement de variantes de bloc en cuivre, et dans la logique on
+     * devrait pouvoir s'y aimanter aussi », puis le bloc de fer brut, la porte et la trappe en fer —
+     * « qui n'etait pas possible dans le vrai mod pour aucune raison apparente ».
+     *
+     * <p>C'est le CODE qui les reconnait, et pas seulement la liste de la config : celle du joueur a
+     * ete ecrite avant eux, et Forge ne complete pas une liste existante. Le cuivre, lui, se reconnait
+     * a son NOM — toutes les variantes du jeu, oxydees, cirees et taillees, et celles qui viendront —
+     * comme les minerais se reconnaissent au mot « ore ».
+     */
+    @GameTest(template = "empty")
+    public static void lesBlocsNeufsDuJeuSAimententAussi(GameTestHelper helper) {
+        // Le cuivre TRAVAILLE : quatre oxydations, chacun en bloc, taille, escalier et dalle, et
+        // chacun aussi en version ciree. Tous s'accrochent a tout niveau.
+        for (var copper : new net.minecraft.world.level.block.Block[] {
+                net.minecraft.world.level.block.Blocks.COPPER_BLOCK,
+                net.minecraft.world.level.block.Blocks.EXPOSED_COPPER,
+                net.minecraft.world.level.block.Blocks.WEATHERED_COPPER,
+                net.minecraft.world.level.block.Blocks.OXIDIZED_COPPER,
+                net.minecraft.world.level.block.Blocks.CUT_COPPER,
+                net.minecraft.world.level.block.Blocks.CUT_COPPER_STAIRS,
+                net.minecraft.world.level.block.Blocks.CUT_COPPER_SLAB,
+                net.minecraft.world.level.block.Blocks.EXPOSED_CUT_COPPER,
+                net.minecraft.world.level.block.Blocks.EXPOSED_CUT_COPPER_STAIRS,
+                net.minecraft.world.level.block.Blocks.EXPOSED_CUT_COPPER_SLAB,
+                net.minecraft.world.level.block.Blocks.WEATHERED_CUT_COPPER,
+                net.minecraft.world.level.block.Blocks.OXIDIZED_CUT_COPPER,
+                net.minecraft.world.level.block.Blocks.WAXED_COPPER_BLOCK,
+                net.minecraft.world.level.block.Blocks.WAXED_EXPOSED_COPPER,
+                net.minecraft.world.level.block.Blocks.WAXED_WEATHERED_COPPER,
+                net.minecraft.world.level.block.Blocks.WAXED_OXIDIZED_COPPER,
+                net.minecraft.world.level.block.Blocks.WAXED_CUT_COPPER,
+                net.minecraft.world.level.block.Blocks.WAXED_CUT_COPPER_STAIRS,
+                net.minecraft.world.level.block.Blocks.WAXED_CUT_COPPER_SLAB,
+                net.minecraft.world.level.block.Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB,
+                net.minecraft.world.level.block.Blocks.WAXED_WEATHERED_CUT_COPPER_STAIRS,
+                net.minecraft.world.level.block.Blocks.WAXED_OXIDIZED_CUT_COPPER }) {
+            assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.canHook(copper, 0f),
+                    net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(copper)
+                            + " est du cuivre travaille, il s'accroche a tout niveau");
+        }
+
+        // Et le fer que l'original avait oublie, alors qu'il avait deja le bloc et les barreaux.
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.canHook(
+                        net.minecraft.world.level.block.Blocks.IRON_DOOR, 0f),
+                "une porte en fer s'accroche");
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.canHook(
+                        net.minecraft.world.level.block.Blocks.IRON_TRAPDOOR, 0f),
+                "et sa trappe aussi");
+
+        // Le metal NON travaille suit le sort du minerai de fer : soixante pour cent d'experience,
+        // comme lui. C'est la regle de l'original pour ce qui n'est pas encore du metal.
+        for (var brut : new net.minecraft.world.level.block.Block[] {
+                net.minecraft.world.level.block.Blocks.RAW_IRON_BLOCK,
+                net.minecraft.world.level.block.Blocks.RAW_COPPER_BLOCK,
+                net.minecraft.world.level.block.Blocks.COPPER_ORE,
+                net.minecraft.world.level.block.Blocks.DEEPSLATE_COPPER_ORE }) {
+            assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.canHook(brut, 0.5f),
+                    net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(brut)
+                            + " n'est pas du metal travaille : pas a moitie d'experience");
+            assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.canHook(brut, 0.6f),
+                    net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(brut)
+                            + " s'accroche au seuil de l'original");
+        }
+
+        helper.succeed();
+    }
+
     /** Les entites metalliques, qui se lisent aussi dans les registres. */
     @GameTest(template = "empty")
     public static void lesEntitesMetalliquesSontCellesDeLOriginal(GameTestHelper helper) {

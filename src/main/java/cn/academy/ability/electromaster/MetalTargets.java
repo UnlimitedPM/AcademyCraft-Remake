@@ -71,6 +71,37 @@ public final class MetalTargets {
     private static Set<ResourceLocation> entities = Set.of();
 
     /**
+     * Les blocs metalliques que l'ORIGINAL ne pouvait pas connaitre, et qui s'ajoutent a la config.
+     *
+     * <p>C'est le joueur qui les a demandes : « avec les mises a jour de minecraft, maintenant il y a
+     * aussi le cuivre de present dans le jeu, avec enormement de variantes de bloc en cuivre, et dans
+     * la logique on devrait pouvoir s'y aimanter aussi ». Le fer, lui, etait la depuis toujours — la
+     * porte et la trappe en fer manquaient simplement a la liste de l'original, « pour aucune raison
+     * apparente ».
+     *
+     * <p>Et ils sont ici, en CODE, en plus d'etre dans les listes par defaut de la config, parce que
+     * la config d'une installation deja ecrite ne les connaitra jamais : Forge ne complete pas une
+     * liste existante, il ne remplit que les cles absentes. C'est la lecon du crochet magnetique, qui
+     * avait echoue exactement la — voir {@link #isMetallic}.
+     */
+    private static final Set<Block> NEW_STRONG_METALS = Set.of(
+            net.minecraft.world.level.block.Blocks.IRON_DOOR,
+            net.minecraft.world.level.block.Blocks.IRON_TRAPDOOR);
+
+    /**
+     * Les memes, mais du metal non travaille : ils suivent le sort des minerais de fer.
+     *
+     * <p>Une pepite brute, un minerai, cela ne s'attrape pas du premier coup — l'original le disait
+     * deja de son minerai de fer, et le bloc de fer brut et le minerai de cuivre sont exactement la
+     * meme chose en plus recent.
+     */
+    private static final Set<Block> NEW_WEAK_METALS = Set.of(
+            net.minecraft.world.level.block.Blocks.RAW_IRON_BLOCK,
+            net.minecraft.world.level.block.Blocks.RAW_COPPER_BLOCK,
+            net.minecraft.world.level.block.Blocks.COPPER_ORE,
+            net.minecraft.world.level.block.Blocks.DEEPSLATE_COPPER_ORE);
+
+    /**
      * Les listes dont les ensembles ont ete construits.
      *
      * La config remplace ses listes par de nouvelles instances a chaque chargement :
@@ -85,12 +116,33 @@ public final class MetalTargets {
 
     public static boolean isNormalMetalBlock(Block block) {
         ensureBuilt();
-        return normal.contains(block);
+        return normal.contains(block) || NEW_STRONG_METALS.contains(block) || isWorkedCopper(block);
     }
 
     public static boolean isWeakMetalBlock(Block block) {
         ensureBuilt();
-        return weak.contains(block);
+        return weak.contains(block) || NEW_WEAK_METALS.contains(block);
+    }
+
+    /**
+     * Vrai si ce bloc est du cuivre <b>travaille</b> : le metal lui-meme, taille, en escalier, en
+     * dalle, oxyde ou cire — bref, tout ce que la 1.17 a apporte.
+     *
+     * <p>Il se reconnait a son <b>nom</b>, et pas a une liste, exactement comme les minerais se
+     * reconnaissent au mot « ore » : le cuivre a quatre etats d'oxydation, chacun decline en bloc,
+     * bloc taille, escalier, dalle et dalle d'escalier, et chacun de ces cinq existe aussi en version
+     * ciree. Une liste ecrite a la main en oublierait, alors que le nom les porte tous — et il portera
+     * aussi ceux des versions suivantes, et ceux des autres mods.
+     *
+     * <p>Deux familles en sont ecartees, et c'est voulu : le cuivre <b>brut</b> et le <b>minerai</b> de
+     * cuivre, qui sont du metal non travaille et rejoignent le minerai de fer parmi les blocs qui
+     * demandent soixante pour cent d'experience. Voir {@link #NEW_WEAK_METALS}.
+     */
+    private static boolean isWorkedCopper(Block block) {
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
+        if (id == null) return false;
+        String name = id.getPath();
+        return name.contains("copper") && !name.contains("raw") && !name.contains("ore");
     }
 
     public static boolean isMetalBlock(Block block) {
