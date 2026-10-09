@@ -91,6 +91,9 @@ public class EntityMagManipBlock extends Projectile {
     /** Le point que le bloc suit, ou {@code null} quand il est lache. */
     private Vec3 carryTo;
 
+    /** Ou ce point etait au tick precedent : c'est lui qui donne le deplacement a suivre. */
+    private Vec3 carryFrom;
+
     /** Le bloc s'est-il deja pose ? */
     private boolean placed;
 
@@ -153,6 +156,8 @@ public class EntityMagManipBlock extends Projectile {
 
     /** La competence lui donne le point a suivre, a chaque tick. */
     public void carryTo(Vec3 target) {
+        // Le point precedent, garde pour le suivi : voir MagManipVisuals.carryStep.
+        this.carryFrom = this.carryTo != null ? this.carryTo : target;
         this.carryTo = target;
     }
 
@@ -250,8 +255,8 @@ public class EntityMagManipBlock extends Projectile {
             // pas lache. Le port, lui, faisait un `move` : le bloc s'arretait contre les murs et
             // les reliefs que le regard balayait, et mettait du temps a s'en degager — ce que le
             // joueur decrivait comme un ralentissement des qu'il tournait la tete.
-            setDeltaMovement(MagManipVisuals.carryVelocity(position(), carryTo));
-            Vec3 step = getDeltaMovement();
+            Vec3 step = MagManipVisuals.carryStep(position(), carryTo, carryFrom);
+            setDeltaMovement(step);
             setPos(getX() + step.x, getY() + step.y, getZ() + step.z);
             return;
         }

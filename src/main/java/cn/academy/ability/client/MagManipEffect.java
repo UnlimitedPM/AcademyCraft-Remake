@@ -38,6 +38,10 @@ public final class MagManipEffect {
 
     private static final RandomSource RANDOM = RandomSource.create();
 
+    /** Le bloc porte par ce client, et son point du tick precedent : le suivi a besoin des deux. */
+    private static int lastBlockId = -1;
+    private static Vec3 lastTarget;
+
     private MagManipEffect() {}
 
     /** A appeler a chaque tick client : voir {@code AbilityClientEvents.onClientTick}. */
@@ -115,12 +119,20 @@ public final class MagManipEffect {
         Vec3 from = block.displayPosition();
         // Et un simple pas, sans collision, comme l'original : le bloc porte traverse ce que le
         // regard balaie au lieu de s'y accrocher — voir le commentaire de EntityMagManipBlock.
-        Vec3 velocity = MagManipVisuals.carryVelocity(from, target);
+        //
+        // Le point du tick precedent est a nous, et il repart de zero quand ce n'est plus le meme
+        // bloc (une nouvelle prise, un lancer) : c'est lui qui donne le deplacement a suivre.
+        if (block.getId() != lastBlockId) {
+            lastBlockId = block.getId();
+            lastTarget = null;
+        }
+        Vec3 step = MagManipVisuals.carryStep(from, target, lastTarget != null ? lastTarget : target);
+        lastTarget = target;
         block.markCarried();
-        block.setDeltaMovement(velocity);
+        block.setDeltaMovement(step);
         // La pose du tick, posee des maintenant : c'est elle que le rendu interpole (l'ancienne
         // etant celle d'ou l'on vient), et c'est elle aussi que suit l'essaim seme juste apres.
-        block.poseCarried(from.add(velocity), from);
+        block.poseCarried(from.add(step), from);
         // L'essaim se seme MAINTENANT, sur la pose du tick : seme avec le reste des blocs, il
         // partirait d'un tick en arriere et trainerait derriere le bloc des que le joueur tourne
         // la tete ou se deplace vite.

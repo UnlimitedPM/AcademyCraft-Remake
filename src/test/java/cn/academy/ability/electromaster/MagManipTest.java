@@ -39,33 +39,50 @@ class MagManipTest {
     }
 
     @Test
-    void laVitesseDePortageSAnnuleSurLePoint() {
-        Vec3 target = new Vec3(0, 0, 0);
+    void lePortageSuitUnPointQuiFile() {
+        // Le point du joueur avance de 3,6 blocs par tick — la vitesse des ailes de tempete. Le
+        // bloc part dessus, et l'ecart ne doit PLUS grandir : c'est ce retard qui laissait le bloc
+        // derriere son point, et qui se refermait d'un coup des que le joueur s'arretait — ce que
+        // le joueur a decrit comme « on voit le bloc se teleporter ».
+        Vec3 target = new Vec3(0, 64, 0);
+        Vec3 block = target;
+        double worst = 0;
+        for (int tick = 0; tick < 60; tick++) {
+            Vec3 previous = target;
+            target = target.add(3.6, 0, 0);
+            block = block.add(MagManipVisuals.carryStep(block, target, previous));
+            worst = Math.max(worst, target.distanceTo(block));
+        }
+        assertTrue(worst < 1.0e-6, "aucun retard a la vitesse des ailes de tempete : " + worst);
 
-        // Loin : le plafond, 1,2 par tick. C'est la demande du joueur — l'original s'arretait a
-        // 0,4 et rampait les derniers centimetres, ce qui se voyait des qu'on tournait la tete.
-        Vec3 far = MagManipVisuals.carryVelocity(new Vec3(0, 0, 10), target);
-        assertEquals(1.2, far.length(), EPS);
-        assertEquals(-1.2, far.z, 1.0e-6, "elle va vers le point");
+        // Et quand le point a fini de bouger, le bloc est DEJA dessus : il n'y a rien a rattraper,
+        // donc rien qui saute a l'ecran.
+        Vec3 stopped = target;
+        block = block.add(MagManipVisuals.carryStep(block, stopped, target));
+        assertEquals(0.0, stopped.distanceTo(block), 1.0e-6, "le bloc est sur son point");
+    }
 
-        // A un bloc : 0,8, la ou l'original n'avançait plus que de 0,1.
-        Vec3 near = MagManipVisuals.carryVelocity(new Vec3(0, 0, 1), target);
-        assertEquals(0.8, near.length(), EPS, "a un bloc, huit dixiemes de bloc par tick");
+    @Test
+    void unEcartQuiVientDeNaitreSeRefermeEnVolant() {
+        // Le joueur vient de se teleporter : son point est a vingt blocs du bloc.
+        Vec3 target = new Vec3(20, 64, 0);
+        Vec3 block = new Vec3(0, 64, 0);
 
-        // La vitesse reste la fraction CARRY_PULL de la distance tant qu'on est sous le plafond :
-        // a un bloc et quart elle vaut donc 1,0.
-        assertEquals(1.0, MagManipVisuals.carryVelocity(new Vec3(0, 0, 1.25), target).length(),
-                1.0e-9, "proportionnelle a la distance");
-
-        // Et le plafond prend le relais a un bloc et demi : au-dela, la vitesse ne grandit plus.
+        // Le premier pas est PLAFONNE : le bloc vole vers son point, il ne s'y teleporte pas.
         assertEquals(MagManipVisuals.CARRY_MAX,
-                MagManipVisuals.carryVelocity(new Vec3(0, 0, 1.5), target).length(), 1.0e-9,
-                "le plafond commence a 1,5 bloc");
-        assertEquals(MagManipVisuals.CARRY_MAX, far.length(), EPS, "et il tient a dix blocs");
+                MagManipVisuals.carryStep(block, target, target).length(), EPS);
 
-        // Et sur le point : nulle, donc le bloc s'y arrete au lieu de le depasser d'un cote
-        // puis de l'autre.
-        assertEquals(Vec3.ZERO, MagManipVisuals.carryVelocity(target, target));
+        // Et il ne le depasse jamais : l'ecart ne fait que diminuer, et le bloc reste du meme cote
+        // du point — c'est ce que garantit un pas toujours plus court que la distance.
+        double error = block.distanceTo(target);
+        for (int tick = 0; tick < 80 && error > 0.01; tick++) {
+            block = block.add(MagManipVisuals.carryStep(block, target, target));
+            double next = block.distanceTo(target);
+            assertTrue(next < error, "l'ecart diminue : " + next + " apres " + error);
+            assertTrue(block.x < target.x, "et le bloc reste du meme cote : " + block);
+            error = next;
+        }
+        assertTrue(error <= 0.01, "il finit sur son point : " + error);
     }
 
     @Test

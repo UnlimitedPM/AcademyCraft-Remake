@@ -10,8 +10,9 @@ import net.minecraft.world.phys.Vec3;
  *
  * <ul>
  * <li>le <b>point de portage</b> — deux blocs devant les yeux, un dixieme sous la tete ;</li>
- * <li>la <b>vitesse</b> qui l'y amene : proportionnelle a la distance, donc elle s'annule sur le
- *     point au lieu de l'osciller, et plafonnee pour revenir de loin d'un coup ;</li>
+ * <li>la <b>vitesse</b> qui l'y amene : le deplacement du point suivi tel quel, plus l'ecart
+ *     restant referme a {@code CARRY_PULL} de la distance, plafonne — donc le bloc ne prend
+ *     jamais de retard, et il vole vers son point au lieu de s'y teleporter ;</li>
  * <li>et sa <b>rotation</b> : l'original tirait deux vitesses au hasard entre 1 et 3 degres
  *     par tick, une pour le lacet et une pour le tangage.</li>
  * </ul>
@@ -28,31 +29,30 @@ public final class MagManipVisuals {
     public static final double CARRY_DROP = 0.1;
 
     /**
-     * La vitesse du portage, <b>par bloc de distance</b> : 0,8.
+     * La part de l'ecart refermee par tick : 0,8. L'ecart est donc divise par cinq a chaque tick.
      *
-     * <p>C'est la regle de l'original changee sur demande du joueur — « quand je bouge mon regard
-     * l'animation du bloc ralentit » et « si je me deplace vite, le bloc est plus rapide qu'avant
-     * mais pas encore assez ». L'original faisait {@code 0,2 par tick}, avance deux fois (voir
-     * {@link #STEPS}), et surtout <b>ralenti au carre de la distance sous deux blocs</b> :
-     * {@code distSq / 4}. A un bloc, son bloc n'avançait donc plus que de 0,1 par tick, et a un
-     * demi-bloc de 0,025 — il <b>rampait</b> les derniers centimetres. Comme un regard qui tourne
-     * ne laisse jamais son bloc tres loin, tout mouvement de tete se payait dans cette rampe :
-     * c'est elle que le joueur voyait « ralentir ».
+     * <p>Elle ne s'applique QU'A L'ECART RESTANT — un point qui vient de sauter, une chute, une
+     * teleportation. Un point qui avance, lui, est suivi tel quel, sans aucun retard : c'est la
+     * reponse au dernier retour du joueur, « quand on bouge vite, l'animation en elle meme n'est
+     * pas ralentie mais on a vraiment l'impression de voir le bloc se teleporter ».
      *
-     * <p>Ici la vitesse est simplement proportionnelle a la distance, donc elle s'annule encore
-     * sur le point — sans jamais osciller, un pas valant moins que la distance —, mais elle ne
-     * traine plus : a un bloc elle vaut 0,8 par tick au lieu de 0,1, et a deux blocs elle est au
-     * plafond. La distance restante est divisee par cinq a chaque tick, donc le bloc se pose en
-     * deux ou trois ticks au lieu de quinze.
+     * <p>Une vitesse proportionnelle a la distance, seule, ne peut pas suivre : a la vitesse
+     * {@code v} il reste toujours a {@code v / CARRY_PULL} blocs DERRIERE le point (quatre blocs
+     * et demi a la vitesse des ailes de tempete, donc derriere le joueur), et ce retard se
+     * referme d'un coup des qu'il s'arrete — ce qui se lit comme un teleport. L'original avait
+     * ce defaut la aussi : sa vitesse etait {@code 0,2 par tick}, avancee deux fois (voir
+     * {@link #STEPS}), et ralentie au carre de la distance sous deux blocs.
      */
     public static final double CARRY_PULL = 0.8;
 
     /**
-     * Et son plafond, en blocs par tick : 1,2, soit trois fois celui de l'original.
+     * Le plafond d'un pas, en blocs par tick : 1,2.
      *
-     * <p>Il ne sert qu'aux grands ecarts — un regard qui vient de faire demi-tour, une chute, un
-     * vol. De quoi rejoindre le point en deux ticks, et de quoi suivre n'importe quel deplacement
-     * sans trainer derriere (le joueur le plus rapide avance de 0,28 par tick).
+     * <p>Il ne porte QUE sur l'ecart referme, jamais sur le suivi du point : un point qui file a
+     * trente blocs par seconde est suivi entierement, et le bloc ne prend donc jamais de retard,
+     * quelle que soit la vitesse du joueur. Ce plafond dit seulement qu'un ecart qui vient de
+     * naitre (une teleportation, une chute) se referme en VOLANT — un bloc par tick et des
+     * poussieres —, et non d'un bond.
      */
     public static final double CARRY_MAX = 1.2;
 
@@ -151,18 +151,36 @@ public final class MagManipVisuals {
     }
 
     /**
-     * La vitesse qui amene le bloc au point de portage.
+     * Le pas du portage : le bloc SUIT le deplacement de son point, et referme l'ecart qui reste.
      *
-     * <p>Proportionnelle a la distance et plafonnee : voir {@link #CARRY_PULL} et
-     * {@link #CARRY_MAX}, ou l'ecart a l'original est dit en toutes lettres. Comme le pas reste
-     * plus court que la distance (0,8 fois), le bloc ne depasse jamais son point : il s'en
-     * approche de plus en plus pres, et s'y arrete.
+     * <p>Les deux termes, et pourquoi il faut les deux :
+     *
+     * <ul>
+     * <li>le <b>deplacement du point</b> est suivi tel quel — aucun retard, quelle que soit la
+     *     vitesse du joueur. C'est lui qui manquait : une vitesse proportionnelle a la distance
+     *     laisse le bloc a {@code v / CARRY_PULL} blocs derriere, et le rattrapage se lit comme
+     *     un teleport quand le joueur s'arrete ;</li>
+     * <li>l'<b>ecart qui reste APRES ce suivi</b> (le ``residu``, c'est-a-dire ce que le bloc a
+     *     encore a rattraper une fois qu'il est venu la ou le point etait) est referme a
+     *     {@code CARRY_PULL} de la distance, plafonne a {@code CARRY_MAX} — donc sans jamais
+     *     depasser le point, et sans jamais sauter. Un bloc deja sur son point qui suit un point
+     *     qui avance n'a AUCUN residu : il ne corrige rien du tout.</li>
+     * </ul>
+     *
+     * <p>Le bloc ne bouge donc que si son point bouge : celui qui ne bouge pas tient son bloc
+     * immobile, exactement, au lieu de le faire vibrer autour.
+     *
+     * @param position       ou le bloc est
+     * @param target         ou son point est maintenant
+     * @param previousTarget ou son point etait au tick precedent (le meme, au premier)
      */
-    public static Vec3 carryVelocity(Vec3 position, Vec3 target) {
-        Vec3 delta = target.subtract(position);
-        double distance = delta.length();
-        if (distance < 1.0E-6) return Vec3.ZERO;
-        return delta.scale(Math.min(CARRY_MAX, CARRY_PULL * distance) / distance);
+    public static Vec3 carryStep(Vec3 position, Vec3 target, Vec3 previousTarget) {
+        Vec3 follow = target.subtract(previousTarget);
+        Vec3 residual = target.subtract(position).subtract(follow);
+        double distance = residual.length();
+        if (distance < 1.0E-6) return follow;
+        double speed = Math.min(CARRY_MAX, CARRY_PULL * distance);
+        return follow.add(residual.scale(speed / distance));
     }
 
     /**
