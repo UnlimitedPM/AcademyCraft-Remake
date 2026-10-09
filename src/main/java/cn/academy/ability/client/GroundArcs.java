@@ -30,38 +30,65 @@ import java.util.Random;
  * decharges qui jaillissent du sol dans tout le rayon, « comme si la foudre s'etait propagee dans le
  * sol ».
  *
+ * <h2>C'est un CARRE, pas un rond</h2>
+ *
+ * <p>La question du joueur — « je dis 360o mais je sais pas si c'est une forme de rond ou de
+ * carree » — a une reponse, et c'est le code qui la donne : les degats de la competence prennent
+ * tout ce qui vit dans une <b>boite</b> de cote deux fois le rayon ({@code new AABB(impact,
+ * impact).inflate(range)}), donc un carre vu de dessus, et non un disque. Le semis couvre donc le
+ * carre : ses quatre coins compris. S'en tenir au disque inscrit laissait mourir des monstres dans
+ * les coins sans qu'aucun eclair n'y soit jamais sorti — exactement le defaut que ces eclairs-la
+ * sont venus corriger.
+ *
+ * <h2>Une grille, et non un tirage libre</h2>
+ *
+ * <p>Seize positions tirees au hasard dans le carre laissent des trous et des paquets : le joueur
+ * a demande « un peu plus d'eclairs repartis sur les 360o », et c'est cette repartition-la qui
+ * manquait. Le carre est donc decoupe en {@link #GRID} x {@link #GRID} cellules, et chaque cellule
+ * en recoit <b>un</b>, pose au hasard dedans : la grille est reguliere, le semis ne l'est pas. Aucune
+ * direction n'est vide, et il n'y a jamais deux eclairs au meme endroit.
+ *
  * <h2>La vague</h2>
  *
  * <p>Elles ne sortent pas toutes ensemble : chacune attend d'autant plus longtemps qu'elle est
- * <b>loin</b> du point d'impact ({@link #SPREAD_TICKS} ticks pour le bord du rayon, zero au centre).
- * L'oeil lit donc une propagation du centre vers l'exterieur, et non un semis qui s'allume d'un coup
- * — c'est ce que demandait le joueur, et c'est aussi ce qui donne sa taille a l'attaque.
+ * <b>loin</b> du point d'impact — {@link #SPREAD_TICKS} ticks au bord du carre, rien au centre. La
+ * distance qui compte est celle du <b>carre</b> (le plus grand des deux ecarts, celui des quatre
+ * bords), et l'onde se lit donc comme un carre qui s'ouvre — pas comme un rond, qui n'aurait rien a
+ * voir avec la zone frappee. L'oeil lit une propagation du centre vers l'exterieur, et non un semis
+ * qui s'allume d'un coup : c'est ce que demandait le joueur, et c'est ce qui donne sa taille a
+ * l'attaque.
  *
  * <h2>Ou elles sortent</h2>
  *
- * <p>Sur le <b>sol</b>, et pas dans l'air : pour chaque point tire dans le disque, on descend une
- * colonne depuis le niveau de l'impact ({@link #SEARCH_DEPTH} blocs au plus) jusqu'a la premiere
- * face tournee vers le haut. Une colonne qui n'en trouve pas — un impact en plein ciel, une falaise
- * sous laquelle on a tire — ne donne rien du tout : mieux vaut quatre eclairs justes que seize qui
- * flottent dans le vide.
+ * <p>Sur le <b>sol</b>, et pas dans l'air : pour chaque point tire, on descend une colonne depuis le
+ * niveau de l'impact ({@link #SEARCH_DEPTH} blocs au plus) jusqu'a la premiere face tournee vers le
+ * haut. Une colonne qui n'en trouve pas — un impact en plein ciel, une falaise sous laquelle on a
+ * tire — ne donne rien du tout : mieux vaut quatre eclairs justes que trente-six qui flottent dans
+ * le vide.
  *
  * <p>Le vrai <b>tirage</b> est dans {@link #rolls}, qui ne connait ni monde ni bloc : c'est la seule
- * partie de cet effet qu'un test puisse relire, et c'est aussi celle qui porte la regle de la vague.
+ * partie de cet effet qu'un test puisse relire, et c'est aussi celle qui porte les deux regles — la
+ * grille, et la vague qui part du centre.
  */
 @OnlyIn(Dist.CLIENT)
 public final class GroundArcs {
 
-    /** Le nombre d'eclairs d'un claquement. Assez pour lire la portee, pas assez pour la noyer. */
-    public static final int COUNT = 16;
+    /**
+     * La grille du semis : {@link #GRID} x {@link #GRID} eclairs, un par cellule.
+     *
+     * <p>Six de cote, donc trente-six eclairs — un peu plus du double de la premiere version, qui en
+     * posait seize au hasard. C'est ce qu'il fallait pour que les 360o soient tenus : a seize, un
+     * tirage libre laissait des quartiers entiers sans rien.
+     */
+    public static final int GRID = 6;
 
-    /** Leur distance au point d'impact, en part du rayon : jamais dessus, jusqu'au bord. */
-    public static final double REACH_MIN = 0.15;
-    public static final double REACH_MAX = 1.0;
+    /** Le nombre d'eclairs d'un claquement : une cellule, un eclair. */
+    public static final int COUNT = GRID * GRID;
 
     /** Leur penchant lateral, en blocs : ils ne sortent pas tous bien droits. */
     public static final double TILT_MAX = 0.3;
 
-    /** Le retard du bord du rayon, en ticks : c'est la duree de la vague. */
+    /** Le retard du bord du carre, en ticks : c'est la duree de la vague. */
     public static final int SPREAD_TICKS = 6;
 
     /** La vie d'un eclair, en ticks : plus longue que celle d'un gresillement, pour qu'on la voie. */
@@ -91,10 +118,10 @@ public final class GroundArcs {
     }
 
     /**
-     * Un tirage, sans son sol : sa distance en part du rayon, son azimut, sa hauteur, son
-     * penchant, et le retard de sa sortie.
+     * Un tirage, sans son sol : ou il tombe dans le carre — deux fractions du rayon, entre moins
+     * un et un —, sa hauteur, son penchant, et le retard de sa sortie.
      */
-    public record Shot(double fraction, double heading, double length, double tilt, int delay) {}
+    public record Shot(double offsetX, double offsetZ, double length, double tilt, int delay) {}
 
     /** Un eclair pret a sortir : ses deux bouts, et les ticks qu'il attend encore. */
     private static final class Pending {
@@ -119,18 +146,16 @@ public final class GroundArcs {
         Level level = Minecraft.getInstance().level;
         if (level == null || radius <= 0) return;
 
-        for (Shot shot : rolls(radius, RANDOM)) {
-            double angle = shot.heading();
-            double reach = radius * shot.fraction();
-            Vec3 ground = surface(level, impact.x + Math.cos(angle) * reach,
-                    impact.y, impact.z + Math.sin(angle) * reach);
+        for (Shot shot : rolls(RANDOM)) {
+            Vec3 ground = surface(level, impact.x + shot.offsetX() * radius, impact.y,
+                    impact.z + shot.offsetZ() * radius);
             if (ground == null) continue;
 
             // Il penche vers l'exterieur — du meme cote que celui ou il est par rapport a
             // l'impact —, comme s'il suivait la propagation.
-            double tilt = shot.tilt();
+            Vec3 outward = new Vec3(shot.offsetX(), 0, shot.offsetZ()).normalize();
             PENDING.add(new Pending(ground,
-                    ground.add(Math.cos(angle) * tilt, shot.length(), Math.sin(angle) * tilt),
+                    ground.add(outward.scale(shot.tilt())).add(0, shot.length(), 0),
                     shot.delay()));
         }
     }
@@ -160,26 +185,46 @@ public final class GroundArcs {
     }
 
     /**
-     * Les traits d'un claquement, sans le sol.
+     * Les traits d'un claquement, sans le sol : une cellule de la grille chacun.
      *
-     * <p>Pur, et c'est tout l'interet : la regle de la vague — un eclair d'autant plus tardif qu'il
-     * est loin — se relit en test, sans monde ni rendu. Le sol, lui, se cherche apres, dans
-     * {@link #surface}.
+     * <p>Pur, et c'est tout l'interet : la grille — aucune direction vide — et la vague — un eclair
+     * d'autant plus tardif qu'il est loin — se relisent en test, sans monde ni rendu. Le sol, lui,
+     * se cherche apres, dans {@link #surface}.
      *
-     * <p>Les tirages sont faits dans cet ordre, et ils n'ont pas le droit de bouger : c'est celui
-     * des nombres du joueur quand il reglera l'effet a l'oeil.
+     * <p>Les tirages sont faits dans cet ordre, et ils n'ont pas le droit de bouger : c'est celui des
+     * nombres du joueur quand il reglera l'effet a l'oeil.
      */
-    public static List<Shot> rolls(double radius, Random random) {
+    public static List<Shot> rolls(Random random) {
         List<Shot> shots = new ArrayList<>(COUNT);
-        for (int i = 0; i < COUNT; i++) {
-            double fraction = REACH_MIN + random.nextDouble() * (REACH_MAX - REACH_MIN);
-            double heading = random.nextDouble() * Math.PI * 2;
-            double length = LENGTH_MIN + random.nextDouble() * (LENGTH_MAX - LENGTH_MIN);
-            double tilt = (random.nextDouble() * 2 - 1) * TILT_MAX;
-            int delay = (int) Math.round(fraction * SPREAD_TICKS);
-            shots.add(new Shot(fraction, heading, length, tilt, delay));
+        for (int cellX = 0; cellX < GRID; cellX++) {
+            for (int cellZ = 0; cellZ < GRID; cellZ++) {
+                // Une position au hasard DANS la cellule, ramenee entre moins un et un — donc une
+                // fraction du rayon. C'est ce qui fait que la grille est reguliere sans que le semis
+                // le soit.
+                double offsetX = edge(cellX, random);
+                double offsetZ = edge(cellZ, random);
+                double length = LENGTH_MIN + random.nextDouble() * (LENGTH_MAX - LENGTH_MIN);
+                double tilt = (random.nextDouble() * 2 - 1) * TILT_MAX;
+                int delay = (int) Math.round(square(offsetX, offsetZ) * SPREAD_TICKS);
+                shots.add(new Shot(offsetX, offsetZ, length, tilt, delay));
+            }
         }
         return shots;
+    }
+
+    /**
+     * La distance d'un point au centre, <b>pour un carre</b> : le plus grand des deux ecarts.
+     *
+     * <p>C'est ce qui fait la vague carree — le bord du carre est partout a la meme distance, et
+     * non le coin comme le voudrait un cercle.
+     */
+    public static double square(double offsetX, double offsetZ) {
+        return Math.max(Math.abs(offsetX), Math.abs(offsetZ));
+    }
+
+    /** Une position tiree dans la cellule {@code cell}, ramenee entre moins un et un. */
+    private static double edge(int cell, Random random) {
+        return (cell + random.nextDouble()) / GRID * 2 - 1;
     }
 
     /**
