@@ -8,6 +8,13 @@ package cn.academy.ability.meltdowner;
  * trois ondes qui se relaient sur un cycle de 3,6 secondes, et un bouclier de diamant qui
  * apparait pendant le vol — et les figer par un test est la seule facon de verifier qu'elles ne
  * bougent pas sans lancer un jeu.
+ *
+ * <p>ET LA PREMIERE MOITIE N'EST PAS AU REACTEUR : l'original n'avait qu'une marque et qu'un
+ * rendu, {@code EntityRippleMark} et {@code RippleMarkRender}, et c'est le <b>claquement d'orage</b>
+ * qui posait l'autre — en gris, a l'endroit ou sa foudre tombe. Ses courbes vivent donc ici parce
+ * que c'est ici qu'elles ont ete portees, mais elles sont lues par {@code RippleMark}, le dessin
+ * partage des deux competences ; seules {@link #RED}, {@link #GREEN} et {@link #BLUE} sont
+ * propres au reacteur, le claquement d'orage donnant les siennes.
  */
 public final class JetEngineVisuals {
 

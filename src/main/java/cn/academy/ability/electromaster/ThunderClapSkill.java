@@ -31,8 +31,8 @@ public class ThunderClapSkill extends Skill {
     /** Charge maximale, comme {@code MAX_TICKS} : au-dela, la foudre ne grossit plus. */
     public static final int MAX_TICKS = 60;
 
-    /** Portee de la visee ou tombe la foudre, comme l'original. */
-    private static final double RANGE = 40.0;
+    /** Portee de la visee ou tombe la foudre, comme l'original — et comme {@code JetEngineSkill}. */
+    public static final double AIM_RANGE = 40.0;
 
     /** La duree d'un arc : celle du thunder bolt, pour que les deux se ressemblent. */
     private static final int STRIKE_ARC_TICKS = 20;
@@ -173,7 +173,7 @@ public class ThunderClapSkill extends Skill {
 
     @Override
     public void onActivateCharged(Player player, AbilityData data, int chargeTicks) {
-        Vec3 impact = TargetingUtil.findImpactPoint(player, RANGE);
+        Vec3 impact = TargetingUtil.findImpactPoint(player, AIM_RANGE);
 
         if (player.level() instanceof ServerLevel level) {
             // Foudre purement visuelle : l'original la posait en `effectOnly`, donc elle

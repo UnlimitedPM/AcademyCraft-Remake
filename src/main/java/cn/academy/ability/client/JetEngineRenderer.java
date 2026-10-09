@@ -18,21 +18,16 @@ import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 /**
- * Dessine les deux effets du reacteur, portage de {@code RippleMarkRender} et de
- * {@code RenderDiamondShield}.
+ * Dessine le bouclier de diamant du reacteur, portage de {@code RenderDiamondShield}.
  *
  * <h2>Les ondes de la marque</h2>
  *
- * <p>Trois carres <b>horizontaux</b> de la texture {@code effects/ripple}, poses au point vise et
- * decales d'un tiers de cycle. Chacun monte de trente centimetres par seconde, se resserre de 1,9 a
- * 1,4 bloc, et apparait puis s'efface en 1,6 seconde. Les trois ensemble font une vague continue —
- * c'est tout ce que le joueur voit de sa competence avant de partir.
- *
- * <p>L'original les dessinait <b>sans test de profondeur</b>, parce qu'elles sont posees au niveau
- * du sol : un carre exactement coplanaire avec la terre s'y dispute la profondeur au micron pres.
- * Le port les leve d'un centimetre a la place, et garde le test — c'est la meme regle que partout
- * ailleurs ici : un effet translucide ne dispute pas la profondeur, dans un sens comme dans
- * l'autre.
+ * <p>Elles ne se dessinent plus ici : c'est {@link RippleMark} — la classe de
+ * l'{@code EntityRippleMark} de l'original — qui s'en charge, et c'est le <b>claquement d'orage</b>
+ * qui l'a fait demenager. Le port les avait ouvertes dans ce fichier pour le reacteur, mais
+ * l'original n'avait qu'une marque et qu'un rendu pour les deux competences ; il en va de meme ici.
+ * Ses courbes, elles, sont restees dans {@code JetEngineVisuals}, ou elles ont ete portees et ou un
+ * test les fige.
  *
  * <h2>Le bouclier de diamant</h2>
  *
@@ -43,11 +38,7 @@ import org.joml.Matrix4f;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class JetEngineRenderer {
 
-    private static final ResourceLocation RIPPLE = texture("ripple");
     private static final ResourceLocation DIAMOND = texture("diamond_shield");
-
-    /** Le centimetre qui separe une onde du sol. Voir le commentaire de la classe. */
-    private static final double GROUND_LIFT = 0.01;
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -64,7 +55,7 @@ public class JetEngineRenderer {
         buffers.endBatch();
     }
 
-    /** Les trois ondes de la marque, au point vise. */
+    /** Les trois ondes de la marque, au point vise — voir {@link RippleMark}. */
     private static void drawMark(RenderLevelStageEvent event, PoseStack pose,
                                  MultiBufferSource buffers, Vec3 camera) {
         Vec3 at = JetEngineEffect.markAt();
@@ -73,45 +64,8 @@ public class JetEngineRenderer {
         double age = JetEngineEffect.markAgeSeconds(event.getPartialTick());
         if (age < 0) return;
 
-        VertexConsumer consumer = buffers.getBuffer(MdRenderType.of(RIPPLE));
-
-        for (int i = 0; i < JetEngineVisuals.OFFSETS.length; i++) {
-            double phase = JetEngineVisuals.phase(age, i);
-            float alpha = JetEngineVisuals.alpha(phase);
-            if (alpha <= 0f) continue;
-
-            float size = JetEngineVisuals.size(phase);
-            double height = JetEngineVisuals.height(phase);
-
-            pose.pushPose();
-            // Le repere de l'onde : le point vise, monte de ce qu'elle a gagne.
-            pose.translate(at.x - camera.x, at.y - camera.y + height + GROUND_LIFT, at.z - camera.z);
-            pose.scale(size, 1f, size);
-            ripple(consumer, pose.last().pose(), alpha);
-            pose.popPose();
-        }
-    }
-
-    /**
-     * Un carre horizontal, de la texture seule et teinte du vert de l'original.
-     *
-     * <p>Une seule face, comme son maillage : le type de rendu ne trie pas les faces arriere, une
-     * onde se voit donc aussi bien d'en dessous. En dessiner une seconde ne ferait que melanger
-     * deux fois les memes pixels, et l'onde paraitrait deux fois plus opaque.
-     */
-    private static void ripple(VertexConsumer out, Matrix4f matrix, float alpha) {
-        out.vertex(matrix, -0.5f, 0f, -0.5f)
-                .color(JetEngineVisuals.RED, JetEngineVisuals.GREEN, JetEngineVisuals.BLUE, alpha)
-                .uv(0f, 0f).endVertex();
-        out.vertex(matrix, 0.5f, 0f, -0.5f)
-                .color(JetEngineVisuals.RED, JetEngineVisuals.GREEN, JetEngineVisuals.BLUE, alpha)
-                .uv(0f, 1f).endVertex();
-        out.vertex(matrix, 0.5f, 0f, 0.5f)
-                .color(JetEngineVisuals.RED, JetEngineVisuals.GREEN, JetEngineVisuals.BLUE, alpha)
-                .uv(1f, 1f).endVertex();
-        out.vertex(matrix, -0.5f, 0f, 0.5f)
-                .color(JetEngineVisuals.RED, JetEngineVisuals.GREEN, JetEngineVisuals.BLUE, alpha)
-                .uv(1f, 0f).endVertex();
+        RippleMark.draw(pose, buffers, camera, at, age,
+                JetEngineVisuals.RED, JetEngineVisuals.GREEN, JetEngineVisuals.BLUE);
     }
 
     /** La pyramide du bouclier, devant les yeux de son porteur. */

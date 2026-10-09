@@ -183,6 +183,10 @@ public class AbilityClientEvents {
             // Et les charges elles-memes : un monde quitte n'en garde aucune. Sans cela, une
             // competence tenue au moment du depart y resterait ouverte dans la liste du client.
             ClientCharge.clear();
+            // Et la marque du claquement d'orage, qui est relue a chaque tick de SA charge : la
+            // charge oubliee, plus rien ne la repose ni ne l'efface, et le prochain monde la
+            // dessinerait a l'endroit du precedent. Voir ThunderClapEffect.
+            ThunderClapEffect.end();
         }
 
         // LA PAUSE NE PILOTE RIEN.

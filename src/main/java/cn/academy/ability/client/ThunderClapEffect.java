@@ -1,8 +1,10 @@
 package cn.academy.ability.client;
 
 import cn.academy.ability.Skill;
+import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.arc.SurroundArcs;
 import cn.academy.ability.electromaster.ElectromasterCategory;
+import cn.academy.ability.electromaster.ThunderClapSkill;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -26,6 +28,25 @@ import net.minecraft.world.phys.Vec3;
  * <p>Comme les autres effets du genre, tout est cote client et rien ne voyage : chacun voit
  * l'eclair s'amasser autour de celui qui le prepare, sans que le serveur ait a en savoir quoi
  * que ce soit.
+ *
+ * <h2>Et la marque au sol</h2>
+ *
+ * <p>Le claquement d'orage ne se declenche qu'au relachement, et il frappe un point que le joueur
+ * ne voit pas : l'endroit ou son regard touche, jusqu'a quarante blocs. L'original lui donnait
+ * donc une <b>marque au sol</b> — la meme {@code EntityRippleMark} que le reacteur du meltdowner,
+ * vue par le meme rendu — posee des le debut de la charge au point d'impact, relue a chaque tick,
+ * et tuee avec la charge. Sans elle, le joueur chargeait a l'aveugle.
+ *
+ * <p>Elle n'existait que chez le lanceur ({@code if(isLocal)}), et c'est encore le cas ici :
+ * l'entourage d'arcs non plus n'est pas annonce, et il n'y a rien a voir sur quelqu'un qui prepare
+ * quelque chose sans savoir ou il le lancera.
+ *
+ * <p>Sa couleur est celle de l'original, un gris clair — ses 204 sur 255, avec un alpha de 179 que
+ * son propre rendu ecrasait par celui de la courbe, voir {@link RippleMark}. Une originalite : son
+ * calcul de repli ecrivait {@code hitX = mo.z}, si bien qu'une visee qui ne touchait rien posait
+ * la marque a une abscisse egale a sa cote ; le port suit l'intention et prend le meme point que
+ * le serveur, {@code TargetingUtil.findImpactPoint}, donc la marque tombe <b>exactement</b> la ou
+ * la foudre tombera.
  */
 public final class ThunderClapEffect {
 
@@ -46,8 +67,24 @@ public final class ThunderClapEffect {
      */
     private static final float FOV_DEGREES = 40f;
 
+    /**
+     * La couleur de la marque : un gris clair, les 204 sur 255 de l'original.
+     *
+     * <p>L'alpha de son 179 n'est pas repris : son rendu l'ecrasait par celui de la courbe de
+     * l'onde, donc il ne se voyait nulle part. Voir {@link RippleMark}.
+     */
+    public static final float MARK_RED = 204 / 255f;
+    public static final float MARK_GREEN = 204 / 255f;
+    public static final float MARK_BLUE = 204 / 255f;
+
     /** Où en est la charge montree, de 0 a 1 ; 0 quand rien ne charge. */
     private static float progress;
+
+    /** Le point ou la foudre tombera, relu a chaque tick de charge. Nul, rien a dessiner. */
+    private static Vec3 markAt;
+
+    /** L'age de la marque, en ticks client depuis sa naissance. */
+    private static int markTicks;
 
     private ThunderClapEffect() {
     }
@@ -57,9 +94,27 @@ public final class ThunderClapEffect {
         return FOV_DEGREES * progress;
     }
 
-    /** La charge s'arrete : la vue reprend sa place. */
+    /** Ou les ondes se posent, ou {@code null} s'il n'y a rien a dessiner. */
+    public static Vec3 markAt() {
+        return markAt;
+    }
+
+    /**
+     * L'age de la marque, en secondes, ou -1 s'il n'y en a pas.
+     *
+     * <p>Le tick partiel compte : sans lui, les ondes avanceraient par saccades, et c'est
+     * justement leur glissement continu qui fait la vague — c'est le meme calcul que celui du
+     * reacteur, voir {@code JetEngineEffect.markAgeSeconds}.
+     */
+    public static double markAgeSeconds(double partialTick) {
+        return markAt == null ? -1 : (markTicks + partialTick) / 20.0;
+    }
+
+    /** La charge s'arrete : la vue reprend sa place, et la marque s'en va. */
     public static void end() {
         progress = 0f;
+        markAt = null;
+        markTicks = 0;
     }
 
     /**
@@ -74,9 +129,11 @@ public final class ThunderClapEffect {
      */
     public static void tick(Player player, Skill skill, int chargeTicks) {
         if (skill != ElectromasterCategory.THUNDER_CLAP) {
-            // Une autre charge : la vue reprend sa place tout de suite, sans attendre la fin
-            // de celle-ci. Les charges qui s'arretent ne rappellent personne.
-            progress = 0f;
+            // Une autre charge. Elle ne doit PAS emporter celle de l'orage pour autant : le joueur
+            // peut tenir deux charges a la fois, chacune ayant son propre compteur (voir
+            // ClientCharge), et cette methode est appelee pour chacune d'elles. La vue et la marque
+            // ne se rangent donc que si l'orage lui-meme ne charge plus.
+            if (!ClientCharge.isOpen(ElectromasterCategory.THUNDER_CLAP.getName())) end();
             return;
         }
 
@@ -84,6 +141,13 @@ public final class ThunderClapEffect {
         // plus, donc la vue non plus.
         int max = Math.max(1, skill.getMaxChargeTicks(ClientAbilityData.get()));
         progress = Math.min(1f, chargeTicks / (float) max);
+
+        // ET LA MARQUE, avant tout le reste : elle se repose a chaque tick, sans exception, la
+        // ou la foudre tombera. Son age, lui, ne repart pas a zero — c'est celui de la marque,
+        // pas celui du point, et c'est ce qui fait glisser les trois ondes.
+        if (markAt == null) markTicks = 0;
+        else markTicks++;
+        markAt = TargetingUtil.findImpactPoint(player, ThunderClapSkill.AIM_RANGE);
 
         if (chargeTicks % SurroundArcs.LIFE_TICKS != 0) return;
 
