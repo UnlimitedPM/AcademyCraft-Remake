@@ -48,6 +48,11 @@ import java.util.Random;
  * en recoit <b>un</b>, pose au hasard dedans : la grille est reguliere, le semis ne l'est pas. Aucune
  * direction n'est vide, et il n'y a jamais deux eclairs au meme endroit.
  *
+ * <p>Puis il en a redemande — « peut-etre rajouter le nombre d'eclairs qui apparaissent sur le sol
+ * directement, independamment des monstres » — et c'est {@link #GRID} qu'on avance : la grille est
+ * plus fine, la densite monte, et la regle ne bouge pas. C'est le seul chiffre a toucher pour en
+ * vouloir plus ou moins.
+ *
  * <h2>La vague</h2>
  *
  * <p>Elles ne sortent pas toutes ensemble : chacune attend d'autant plus longtemps qu'elle est
@@ -63,8 +68,8 @@ import java.util.Random;
  * <p>Sur le <b>sol</b>, et pas dans l'air : pour chaque point tire, on descend une colonne depuis le
  * niveau de l'impact ({@link #SEARCH_DEPTH} blocs au plus) jusqu'a la premiere face tournee vers le
  * haut. Une colonne qui n'en trouve pas — un impact en plein ciel, une falaise sous laquelle on a
- * tire — ne donne rien du tout : mieux vaut quatre eclairs justes que trente-six qui flottent dans
- * le vide.
+ * tire — ne donne rien du tout : mieux vaut quatre eclairs justes que soixante-quatre qui flottent
+ * dans le vide.
  *
  * <p>Le vrai <b>tirage</b> est dans {@link #rolls}, qui ne connait ni monde ni bloc : c'est la seule
  * partie de cet effet qu'un test puisse relire, et c'est aussi celle qui porte les deux regles — la
@@ -76,11 +81,13 @@ public final class GroundArcs {
     /**
      * La grille du semis : {@link #GRID} x {@link #GRID} eclairs, un par cellule.
      *
-     * <p>Six de cote, donc trente-six eclairs — un peu plus du double de la premiere version, qui en
-     * posait seize au hasard. C'est ce qu'il fallait pour que les 360o soient tenus : a seize, un
-     * tirage libre laissait des quartiers entiers sans rien.
+     * <p>Huit de cote, donc soixante-quatre eclairs. Le chemin : seize tirages au hasard, puis
+     * trente-six en grille (c'est ce qu'il fallait pour tenir les 360o — un tirage libre laissait des
+     * quartiers entiers sans rien), et le joueur en a redemande encore. Huit double presque la
+     * densite a grille inchangee, et c'est le seul chiffre a bouger pour en vouloir plus ou moins :
+     * sept en fait quarante-neuf, dix en fait cent.
      */
-    public static final int GRID = 6;
+    public static final int GRID = 8;
 
     /** Le nombre d'eclairs d'un claquement : une cellule, un eclair. */
     public static final int COUNT = GRID * GRID;
