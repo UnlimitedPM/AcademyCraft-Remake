@@ -60,15 +60,24 @@ public final class MagHookVisuals {
     public static final float MODEL_SCALE = 0.0054f;
 
     /**
-     * Les groupes du fichier {@code maghook.obj} — les sept du crochet, et les memes dans
-     * {@code maghook_open.obj}.
+     * Les groupes du fichier {@code maghook.obj} — et les memes dans {@code maghook_open.obj}.
      *
-     * <p>Le lecteur OBJ du port rend ses faces par groupe, parce que c'est ainsi que les modeles
-     * de blocs du mod s'en servent. Un nom qui change dans le fichier laisserait donc un modele
-     * vide, sans erreur : c'est ce que le test de cette classe surveille.
+     * <p><b>Neuf</b>, et pas sept : les deux derniers sont le <b>quatrieme crampon</b>, ajoute au
+     * modele du port. Celui de l'original n'en portait que trois — l'auteur avait duplique la paire
+     * +/-X et le crampon +Z, mais pas le jumeau de ce dernier — et c'est le joueur qui a demande les
+     * quatre : « il pourrait tres clairement en posseder 4 [...] je prefererais en voir 4 ». Les deux
+     * groupes ajoutes sont le miroir en Z des deux parties du crampon +Z ({@code Object004} et
+     * {@code Object005}), avec la meme recette que sa paire : geometrie retournee, enroulement
+     * inverse, coordonnees de texture conservees. L'en-tete des deux fichiers {@code .obj} le dit
+     * aussi, pour qui les ouvrirait sans passer par ce code.
+     *
+     * <p>Le lecteur OBJ du port rend ses faces par groupe, parce que c'est ainsi que les modeles de
+     * blocs du mod s'en servent. Un nom qui change dans le fichier laisserait donc un morceau
+     * invisible, sans erreur : c'est ce que le test de cette classe surveille.
      */
     public static final List<String> GROUPS = List.of(
-            "Box010", "Object009", "Object008", "Object004", "Object005", "Object007", "Object006");
+            "Box010", "Object009", "Object008", "Object004", "Object005", "Object007", "Object006",
+            "Object004_mirror", "Object005_mirror");
 
     private MagHookVisuals() {}
 

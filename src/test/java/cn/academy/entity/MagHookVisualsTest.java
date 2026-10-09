@@ -87,7 +87,7 @@ class MagHookVisualsTest {
     }
 
     @Test
-    @DisplayName("les deux modeles portent bien les sept groupes du rendu")
+    @DisplayName("les deux modeles portent bien les neuf groupes du rendu")
     void lesDeuxModelesOntLeursGroupes() throws Exception {
         // Le rendu dessine le crochet groupe par groupe, avec des noms ecrits a la main : un nom
         // qui change dans le fichier laisserait un morceau invisible, sans erreur ni avertissement.
@@ -103,6 +103,52 @@ class MagHookVisualsTest {
             assertEquals(mesh.all().size(), connu,
                     file + " : un groupe du fichier n'est pas dans MagHookVisuals.GROUPS");
         }
+    }
+
+    @Test
+    @DisplayName("le crochet a quatre crampons, et pas trois")
+    void leCrochetAQuatreCrampons() throws Exception {
+        // L'original n'en avait que trois : son auteur avait duplique la paire +/-X et le crampon
+        // +Z, mais pas le jumeau de ce dernier. Le port a ajoute ce quatrieme crampon — les deux
+        // groupes `_mirror` — et c'est le joueur qui l'a demande : « il pourrait tres clairement en
+        // posseder 4 [...] je prefererais en voir 4 ».
+        for (String file : new String[] { "/assets/academy/models/maghook.obj",
+                                          "/assets/academy/models/maghook_open.obj" }) {
+            ObjMesh mesh = lire(file);
+            for (String[] paire : new String[][] { { "Object004", "Object004_mirror" },
+                                                   { "Object005", "Object005_mirror" } }) {
+                double[] source = zExtent(mesh, paire[0]);
+                double[] jumeau = zExtent(mesh, paire[1]);
+                assertEquals(-source[1], jumeau[0], EPSILON,
+                        file + " : " + paire[1] + " commence au miroir de la fin de " + paire[0]);
+                assertEquals(-source[0], jumeau[1], EPSILON,
+                        file + " : et finit au miroir de son debut");
+            }
+            // Et le modele entier est symetrique en Z autour de son origine : quatre crampons
+            // autour de l'axe, plus trois. C'est ce que le joueur voulait voir.
+            ObjMesh tout = mesh;
+            double mn = Double.MAX_VALUE, mx = -Double.MAX_VALUE;
+            for (ObjMesh.Face face : tout.all()) {
+                for (ObjMesh.Vertex v : face.vertices()) {
+                    mn = Math.min(mn, v.z());
+                    mx = Math.max(mx, v.z());
+                }
+            }
+            assertEquals(mx, -mn, 1e-4, file + " : le crochet est symetrique en Z");
+        }
+    }
+
+    /** L'etendue en Z d'un groupe du modele : { min, max }. */
+    private static double[] zExtent(ObjMesh mesh, String group) {
+        double mn = Double.MAX_VALUE, mx = -Double.MAX_VALUE;
+        for (ObjMesh.Face face : mesh.group(group)) {
+            assertFalse(face.vertices().isEmpty(), group + " a des faces");
+            for (ObjMesh.Vertex v : face.vertices()) {
+                mn = Math.min(mn, v.z());
+                mx = Math.max(mx, v.z());
+            }
+        }
+        return new double[] { mn, mx };
     }
 
     private static ObjMesh lire(String chemin) throws Exception {
