@@ -440,7 +440,7 @@ public class VecReflectionSkill extends Skill {
             data.performForced(resistCharge(data), 0f);
             data.addSkillExp(this, amount * EXP_PER_DAMAGE);
 
-            living.hurt(player.damageSources().indirectMagic(player, player),
+            living.hurt(skillDamage(player),
                     scaled(amount * reflectRatio(data)));
             // Et l'onde du renvoi, devant le joueur et du cote de l'attaquant : l'original posait
             // la sienne a un demi-bloc de sa tete, dans cette direction-la. Voir VecWaves.

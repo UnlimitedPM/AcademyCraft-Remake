@@ -179,7 +179,7 @@ public class BloodRetrogradeSkill extends Skill {
         // regarder, et le joueur l'a vu — « parfois les monstres ne subissent aucun degat », et des
         // taches apparaissaient quand meme. Une cible encore invulnerable, ou un coup refuse faute
         // de reserve, n'ouvre rien, et ne doit donc rien tacher.
-        boolean wounded = target.hurt(player.damageSources().indirectMagic(player, player),
+        boolean wounded = target.hurt(skillDamage(player),
                 scaled(damage(data)));
         // Et le sang qui gicle de la plaie : l'original posait une eclaboussure sur la cible
         // frappee, et le port ne le faisait pas — c'est le meme retour que la teleporteuse, qui

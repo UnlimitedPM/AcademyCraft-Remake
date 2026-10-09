@@ -6624,6 +6624,83 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Un monstre tue par une COMPETENCE laisse ce qu'un coup de joueur laisse.
+     *
+     * <p>Demande du joueur, sur le thunder bolt : « les autres ennemis qui se font tuer par le
+     * ricochet ne drop pas de stuff [...] il faut aussi prendre en compte l'arme que le joueur
+     * porte en main, pour l'effet de looting ».
+     *
+     * <p>Le butin d'un monstre ne depend que d'une chose, et elle n'est pas dans la competence :
+     * la bete doit avoir ete tuee par un JOUEUR. C'est le drapeau que le jeu poste avec
+     * {@code LivingDropsEvent} — le {@code lastHurtByPlayerTime > 0} de
+     * {@code LivingEntity.dropAllDeathLoot} —, et c'est lui qui ouvre la table de butin reservee
+     * au joueur, qui verse l'experience, et qui laisse lire le niveau de <b>Butin de l'arme
+     * tenue</b> : {@code ForgeHooks.getLootingLevel} lit la main de celui qui a porte le coup, pas
+     * la competence qui l'a commande.
+     *
+     * <p>Le test mesure donc la source que TOUTES les competences du port emploient, avec un
+     * temoin sans auteur : la meme bete, le meme coup, et la seule chose qui change est de savoir
+     * si le jeu reconnait le joueur.
+     */
+    @GameTest(template = "empty")
+    public static void unMonstreTueParUneCompetenceLaisseUnButinDeJoueur(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var player = ownPlayer(helper, "skill_loot");
+
+        // L'arme en main : une epee de Butin III, pour lire au passage ce que le jeu en tire.
+        var sword = new net.minecraft.world.item.ItemStack(
+                net.minecraft.world.item.Items.DIAMOND_SWORD);
+        net.minecraft.world.item.enchantment.EnchantmentHelper.setEnchantments(
+                java.util.Map.of(net.minecraft.world.item.enchantment.Enchantments.MOB_LOOTING, 3),
+                sword);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, sword);
+
+        var at = helper.absolutePos(new net.minecraft.core.BlockPos(2, 2, 2));
+        var anonymous = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        anonymous.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        level.addFreshEntity(anonymous);
+        var credited = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        credited.moveTo(at.getX() + 4.5, at.getY(), at.getZ() + 0.5);
+        level.addFreshEntity(credited);
+
+        boolean[] anonymousWasPlayer = { true };
+        boolean[] creditedWasPlayer = { false };
+        int[] creditedLooting = { -1 };
+        java.util.function.Consumer<net.minecraftforge.event.entity.living.LivingDropsEvent> watched =
+                event -> {
+                    if (event.getEntity() == anonymous) {
+                        anonymousWasPlayer[0] = event.isRecentlyHit();
+                    } else if (event.getEntity() == credited) {
+                        creditedWasPlayer[0] = event.isRecentlyHit();
+                        creditedLooting[0] = event.getLootingLevel();
+                    }
+                };
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(watched);
+        try {
+            anonymous.hurt(level.damageSources().generic(), 100f);
+            credited.hurt(player.damageSources().indirectMagic(player, player), 100f);
+        } finally {
+            net.minecraftforge.common.MinecraftForge.EVENT_BUS.unregister(watched);
+        }
+
+        assertTrue(helper, anonymous.isDeadOrDying() && credited.isDeadOrDying(),
+                "les deux betes sont tombees : sans ca, le test ne regarde rien");
+        assertFalse(helper, anonymousWasPlayer[0],
+                "un coup sans auteur ne compte pas comme un coup de joueur");
+        assertTrue(helper, creditedWasPlayer[0],
+                "la source des competences DOIT compter comme un coup de joueur : c'est ce drapeau "
+                        + "qui ouvre le butin, l'experience et le Butin de l'arme");
+        assertValue(helper, 3, creditedLooting[0],
+                "et le Butin se lit sur l'ARME TENUE par ce joueur, pas sur la competence");
+
+        anonymous.discard();
+        credited.discard();
+        helper.succeed();
+    }
+
+    /**
      * Les trois cursus generiques donnent leurs bonus au joueur qui les apprend.
      *
      * <p>{@code PortedSkillsTest} fige les valeurs ; ce test-ci verifie l'autre bout, celui que

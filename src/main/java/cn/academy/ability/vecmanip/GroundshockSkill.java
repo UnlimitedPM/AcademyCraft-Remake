@@ -486,7 +486,7 @@ public class GroundshockSkill extends Skill {
             for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, box)) {
                 if (entity == player || !struck.add(entity)) continue;
                 energy -= ENTITY_COST;
-                entity.hurt(player.damageSources().indirectMagic(player, player),
+                entity.hurt(skillDamage(player),
                         scaled(skill.damage(data)));
                 entity.setDeltaMovement(entity.getDeltaMovement().x, ySpeed,
                         entity.getDeltaMovement().z);

@@ -782,4 +782,36 @@ public abstract class Skill {
     protected static float scaled(float baseDamage) {
         return baseDamage * (float) cn.academy.Config.damageScale;
     }
+
+    /**
+     * La source de degats d'une competence : celle qui compte comme un coup de <b>joueur</b>.
+     *
+     * <p>Ce n'est pas un detail de style, et c'est toute la raison d'etre de cette methode. Le jeu
+     * n'accorde le butin d'un monstre qu'a une seule condition : que la bete ait ete tuee par un
+     * joueur. C'est le {@code lastHurtByPlayerTime > 0} de {@code LivingEntity.dropAllDeathLoot},
+     * pose par {@code LivingEntity.hurt} des que {@code source.getEntity()} est un joueur — ni le
+     * type de degats ni la competence n'entrent en ligne de compte. Ce meme verrou commande
+     * l'experience, la table de butin reservee au joueur (le fer, la carotte et la pomme de terre
+     * d'un zombie), l'equipement des monstres, et jusqu'au niveau de <b>Butin de l'arme TENUE</b>,
+     * que {@code ForgeHooks.getLootingLevel} lit sur celui qui a porte le coup.
+     *
+     * <p>D'ou ce couple : {@code indirectMagic(player, player)}, le joueur deux fois, pour que la
+     * source le porte comme <b>auteur</b> et comme cause directe — exactement ce que faisait le
+     * {@code SkillDamageSource(player, skill)} de l'original. Une source qui ne nommerait personne
+     * ({@code magic()}, {@code generic()}, {@code lightningBolt()}...) produirait le defaut que le
+     * joueur a decrit sur le ricochet du thunder bolt : « les autres ennemis qui se font tuer par
+     * le ricochet ne drop pas de stuff [...] il faut aussi prendre en compte l'arme que le joueur
+     * porte en main, pour l'effet de looting ». Le GameTest
+     * {@code unMonstreTueParUneCompetenceLaisseUnButinDeJoueur} mesure les deux, avec un temoin
+     * sans auteur.
+     *
+     * <p>Elle est <b>magique</b>, donc l'armure ne l'arrete pas — c'est le choix du port pour
+     * toutes ses competences, et il vient de l'original, qui frappait avec sa propre source et non
+     * avec une attaque d'arme. Un ecart connu et assume : {@code indirect_magic} appartient a
+     * l'etiquette {@code witch_resistant_to}, donc une sorciere encaisse les competences cinq fois
+     * mieux qu'une autre bete — l'original, avec sa source maison, ne l'avait pas.
+     */
+    public static net.minecraft.world.damagesource.DamageSource skillDamage(Player player) {
+        return player.damageSources().indirectMagic(player, player);
+    }
 }

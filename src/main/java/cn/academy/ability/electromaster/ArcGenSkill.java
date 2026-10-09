@@ -149,7 +149,7 @@ public class ArcGenSkill extends Skill {
                 e -> e instanceof LivingEntity);
 
         if (target instanceof LivingEntity living) {
-            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+            living.hurt(skillDamage(player), scaled(damage(data)));
             if (random.nextFloat() < igniteChance(data)) {
                 living.setSecondsOnFire(IGNITE_TICKS / 20);
             }

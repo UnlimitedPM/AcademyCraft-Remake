@@ -117,7 +117,7 @@ public final class TeleportCrits {
             cn.academy.ability.network.TeleportCritPacket.send(target);
         }
 
-        target.hurt(player.damageSources().indirectMagic(player, player), damage(base, tier));
+        target.hurt(Skill.skillDamage(player), damage(base, tier));
     }
 
     /** L'experience d'une competence, ou -1 pour « pas apprise » : la convention de l'original. */

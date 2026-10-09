@@ -176,7 +176,7 @@ public class RayBarrageSkill extends Skill {
 
         if (inSight instanceof LivingEntity living) {
             living.invulnerableTime = 0;
-            living.hurt(player.damageSources().indirectMagic(player, player),
+            living.hurt(skillDamage(player),
                     scaled(plainDamage(data)));
             RadiationMarks.mark(living, data);
         }
@@ -232,7 +232,7 @@ public class RayBarrageSkill extends Skill {
             // `hurtResistantTime = -1` de l'original : tout le monde encaisse, y compris ce
             // qui vient d'etre frappe.
             target.invulnerableTime = 0;
-            target.hurt(player.damageSources().indirectMagic(player, player),
+            target.hurt(skillDamage(player),
                     scaled(scatteredDamage(data)));
             RadiationMarks.mark(target, data);
         }

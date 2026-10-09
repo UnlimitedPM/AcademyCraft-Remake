@@ -203,7 +203,7 @@ public class ThunderClapSkill extends Skill {
         List<LivingEntity> targets =
                 player.level().getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         for (LivingEntity target : targets) {
-            target.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+            target.hurt(skillDamage(player), scaled(damage(data)));
             // Un arc par victime, pose au POINT D'IMPACT : c'est la foudre qui rebondit sur ce
             // qu'elle prend, comme dans le thunder bolt. L'original n'en avait pas, mais sa
             // foudre de vanilla se dessine a l'interieur du plafond des qu'on est sous terre —

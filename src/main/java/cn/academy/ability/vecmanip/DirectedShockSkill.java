@@ -152,7 +152,7 @@ public class DirectedShockSkill extends Skill {
             return;
         }
 
-        living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+        living.hurt(skillDamage(player), scaled(damage(data)));
 
         if (data.getSkillExp(this) >= KNOCKBACK_EXP) {
             living.setDeltaMovement(knockback(player, living));

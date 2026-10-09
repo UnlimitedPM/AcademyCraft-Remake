@@ -441,7 +441,7 @@ public class PlasmaCannonSkill extends Skill {
         for (Entity entity : level.getEntitiesOfClass(Entity.class,
                 new AABB(center, center).inflate(BLAST_RANGE))) {
             if (entity == player) continue;
-            entity.hurt(player.damageSources().indirectMagic(player, player), damage);
+            entity.hurt(skillDamage(player), damage);
             if (entity instanceof LivingEntity living) {
                 living.invulnerableTime = 0;
             }

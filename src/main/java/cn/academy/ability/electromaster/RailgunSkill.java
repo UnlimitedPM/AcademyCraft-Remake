@@ -295,7 +295,7 @@ public class RailgunSkill extends Skill {
             double distance = RailgunHit.hitDistance(to.x, to.y, to.z, look.x, look.y, look.z);
             if (distance < 0.0) continue;
 
-            living.hurt(player.damageSources().indirectMagic(player, player),
+            living.hurt(skillDamage(player),
                     (float) (base * RailgunHit.damageFactor(distance)));
             Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
             living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));

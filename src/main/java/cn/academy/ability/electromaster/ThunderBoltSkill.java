@@ -121,7 +121,7 @@ public class ThunderBoltSkill extends Skill {
 
         if (target instanceof LivingEntity living) {
             effective = true;
-            living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+            living.hurt(skillDamage(player), scaled(damage(data)));
             if (data.getSkillExp(this) > SLOW_EXP && isSlowed(player)) {
                 // 40 ticks d'engourdissement, comme l'original (2 secondes).
                 living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
@@ -130,7 +130,7 @@ public class ThunderBoltSkill extends Skill {
 
         for (LivingEntity around : entitiesAround(player, impact, target)) {
             effective = true;
-            around.hurt(player.damageSources().indirectMagic(player, player), scaled(aoeDamage(data)));
+            around.hurt(skillDamage(player), scaled(aoeDamage(data)));
             // Un arc par voisine : l'original reliait le point d'impact a chacune, d'une duree
             // tiree au hasard entre 15 et 25 ticks.
             sendArc(player, cn.academy.ability.client.arc.ArcPattern.AOE.name(), impact,

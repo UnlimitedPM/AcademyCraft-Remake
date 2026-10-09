@@ -218,7 +218,7 @@ public class JetEngineSkill extends Skill {
         Entity hit = TargetingUtil.findEntityAlong(player, previous, next,
                 e -> e instanceof LivingEntity);
         if (hit instanceof LivingEntity living) {
-            living.hurt(player.damageSources().indirectMagic(player, player),
+            living.hurt(skillDamage(player),
                     scaled(flightDamage(data)));
             RadiationMarks.mark(living, data);
         }

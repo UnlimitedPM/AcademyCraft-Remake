@@ -318,7 +318,7 @@ public class DirectedBlastwaveSkill extends Skill {
         for (Entity entity : level.getEntitiesOfClass(Entity.class, box)) {
             if (entity == player) continue;
             if (entity instanceof LivingEntity living) {
-                living.hurt(player.damageSources().indirectMagic(player, player), scaled(damage(data)));
+                living.hurt(skillDamage(player), scaled(damage(data)));
             }
             project(player, entity);
             effective = true;
