@@ -55,22 +55,34 @@ public final class MagManipEffect {
         }
 
         int count = MagManipVisuals.arcsToSow(RANDOM);
-        double half = MagManipVisuals.SURROUND_CUBE / 2.0;
+
+        // Le bloc que CE client porte est seme par tickHeld, une fois sa pose du tick posee :
+        // ici sa pose a un tick de retard, et l'essaim trainerait derriere lui des qu'il va vite.
+        EntityMagManipBlock held = Minecraft.getInstance().player == null
+                ? null : carried(Minecraft.getInstance().player);
 
         for (Entity entity : client.level.entitiesForRendering()) {
             if (!(entity instanceof EntityMagManipBlock block)) continue;
-
-            // Les points sont tires DANS le cube, centre sur le bloc : c'est le
-            // CubePointFactory(...).setCentered(true) de l'original, dont le port rend les
-            // memes trois nombres par spread. On les prend sur la POSE DU JEU — celle du rendu —
-            // pour que le gresillement colle au bloc que le joueur voit, et pas a la copie du
-            // reseau.
-            List<Vec3> points = SurroundArcs.spread(block.displayPosition(),
-                    MagManipVisuals.SURROUND_CUBE, -half, half, count, RANDOM);
-            // Le proprietaire ne sert ici qu'a l'affichage a la premiere personne : c'est un
-            // bloc, son identifiant ne sera jamais celui du joueur. L'original ne demandait rien.
-            SurroundArcs.spawnAt(SurroundArcs.THIN, points, block.getId(), RANDOM);
+            if (block == held) continue;
+            sow(block, count);
         }
+    }
+
+    /**
+     * L'essaim d'un bloc : quelques arcs tires DANS le cube qui l'entoure.
+     *
+     * <p>Les points sont tires DANS le cube, centre sur le bloc : c'est le
+     * {@code CubePointFactory(...).setCentered(true)} de l'original, dont le port rend les memes
+     * trois nombres par spread. Et on les prend sur la POSE DU JEU — celle du rendu — pour que le
+     * gresillement colle au bloc que le joueur voit, et pas a la copie du reseau.
+     */
+    private static void sow(EntityMagManipBlock block, int count) {
+        double half = MagManipVisuals.SURROUND_CUBE / 2.0;
+        List<Vec3> points = SurroundArcs.spread(block.displayPosition(),
+                MagManipVisuals.SURROUND_CUBE, -half, half, count, RANDOM);
+        // Le proprietaire ne sert ici qu'a l'affichage a la premiere personne : c'est un bloc,
+        // son identifiant ne sera jamais celui du joueur. L'original ne demandait rien.
+        SurroundArcs.spawnAt(SurroundArcs.THIN, points, block.getId(), RANDOM);
     }
 
     /**
@@ -101,14 +113,18 @@ public final class MagManipEffect {
         // ON REPART DE NOTRE POSE, jamais de celle que le reseau vient de poser : c'est ce qui fait
         // que la copie cliente ne recule plus a chaque paquet. Voir displayPosition().
         Vec3 from = block.displayPosition();
+        // Et un simple pas, sans collision, comme l'original : le bloc porte traverse ce que le
+        // regard balaie au lieu de s'y accrocher — voir le commentaire de EntityMagManipBlock.
         Vec3 velocity = MagManipVisuals.carryVelocity(from, target);
         block.markCarried();
-        block.setPos(from.x, from.y, from.z);
         block.setDeltaMovement(velocity);
-        block.move(net.minecraft.world.entity.MoverType.SELF, velocity);
-        // Ce que le moteur a fait devient notre pose, et l'ancienne est celle d'ou l'on vient :
-        // le rendu interpole entre les deux, comme pour n'importe quelle entite.
-        block.poseCarried(block.position(), from);
+        // La pose du tick, posee des maintenant : c'est elle que le rendu interpole (l'ancienne
+        // etant celle d'ou l'on vient), et c'est elle aussi que suit l'essaim seme juste apres.
+        block.poseCarried(from.add(velocity), from);
+        // L'essaim se seme MAINTENANT, sur la pose du tick : seme avec le reste des blocs, il
+        // partirait d'un tick en arriere et trainerait derriere le bloc des que le joueur tourne
+        // la tete ou se deplace vite.
+        sow(block, MagManipVisuals.arcsToSow(RANDOM));
     }
 
     /** Le bloc que le joueur porte : le sien, et le plus proche de ses yeux. */

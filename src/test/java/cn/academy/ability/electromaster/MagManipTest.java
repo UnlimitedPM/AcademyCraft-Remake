@@ -42,15 +42,26 @@ class MagManipTest {
     void laVitesseDePortageSAnnuleSurLePoint() {
         Vec3 target = new Vec3(0, 0, 0);
 
-        // Loin : la vitesse pleine, 0,2 par tick — deux fois, parce que le bloc de l'original
-        // avance deux fois son mouvement dans le meme tick. Voir MagManipVisuals.STEPS.
+        // Loin : le plafond, 1,2 par tick. C'est la demande du joueur — l'original s'arretait a
+        // 0,4 et rampait les derniers centimetres, ce qui se voyait des qu'on tournait la tete.
         Vec3 far = MagManipVisuals.carryVelocity(new Vec3(0, 0, 10), target);
-        assertEquals(0.4, far.length(), EPS);
-        assertEquals(-0.4, far.z, 1.0e-6, "elle va vers le point");
+        assertEquals(1.2, far.length(), EPS);
+        assertEquals(-1.2, far.z, 1.0e-6, "elle va vers le point");
 
-        // A un bloc : ralentie au quart — c'est le distSq / 4 de l'original.
+        // A un bloc : 0,8, la ou l'original n'avançait plus que de 0,1.
         Vec3 near = MagManipVisuals.carryVelocity(new Vec3(0, 0, 1), target);
-        assertEquals(0.4 * 1.0 / 4.0, near.length(), EPS, "a un bloc, un quart de la vitesse");
+        assertEquals(0.8, near.length(), EPS, "a un bloc, huit dixiemes de bloc par tick");
+
+        // La vitesse reste la fraction CARRY_PULL de la distance tant qu'on est sous le plafond :
+        // a un bloc et quart elle vaut donc 1,0.
+        assertEquals(1.0, MagManipVisuals.carryVelocity(new Vec3(0, 0, 1.25), target).length(),
+                1.0e-9, "proportionnelle a la distance");
+
+        // Et le plafond prend le relais a un bloc et demi : au-dela, la vitesse ne grandit plus.
+        assertEquals(MagManipVisuals.CARRY_MAX,
+                MagManipVisuals.carryVelocity(new Vec3(0, 0, 1.5), target).length(), 1.0e-9,
+                "le plafond commence a 1,5 bloc");
+        assertEquals(MagManipVisuals.CARRY_MAX, far.length(), EPS, "et il tient a dix blocs");
 
         // Et sur le point : nulle, donc le bloc s'y arrete au lieu de le depasser d'un cote
         // puis de l'autre.

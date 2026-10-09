@@ -10,9 +10,8 @@ import net.minecraft.world.phys.Vec3;
  *
  * <ul>
  * <li>le <b>point de portage</b> — deux blocs devant les yeux, un dixieme sous la tete ;</li>
- * <li>la <b>vitesse</b> qui l'y amene : 0,2 par tick, ralentie a moins de deux blocs pour ne
- *     pas osciller autour du point, ce que l'original faisait avec un {@code dist < 4} sur une
- *     distance <b>au carre</b> ;</li>
+ * <li>la <b>vitesse</b> qui l'y amene : proportionnelle a la distance, donc elle s'annule sur le
+ *     point au lieu de l'osciller, et plafonnee pour revenir de loin d'un coup ;</li>
  * <li>et sa <b>rotation</b> : l'original tirait deux vitesses au hasard entre 1 et 3 degres
  *     par tick, une pour le lacet et une pour le tangage.</li>
  * </ul>
@@ -28,11 +27,34 @@ public final class MagManipVisuals {
     /** Et un dixieme de bloc sous la tete, comme l'original. */
     public static final double CARRY_DROP = 0.1;
 
-    /** La vitesse du portage, par tick. */
-    public static final double CARRY_PULL = 0.2;
+    /**
+     * La vitesse du portage, <b>par bloc de distance</b> : 0,8.
+     *
+     * <p>C'est la regle de l'original changee sur demande du joueur — « quand je bouge mon regard
+     * l'animation du bloc ralentit » et « si je me deplace vite, le bloc est plus rapide qu'avant
+     * mais pas encore assez ». L'original faisait {@code 0,2 par tick}, avance deux fois (voir
+     * {@link #STEPS}), et surtout <b>ralenti au carre de la distance sous deux blocs</b> :
+     * {@code distSq / 4}. A un bloc, son bloc n'avançait donc plus que de 0,1 par tick, et a un
+     * demi-bloc de 0,025 — il <b>rampait</b> les derniers centimetres. Comme un regard qui tourne
+     * ne laisse jamais son bloc tres loin, tout mouvement de tete se payait dans cette rampe :
+     * c'est elle que le joueur voyait « ralentir ».
+     *
+     * <p>Ici la vitesse est simplement proportionnelle a la distance, donc elle s'annule encore
+     * sur le point — sans jamais osciller, un pas valant moins que la distance —, mais elle ne
+     * traine plus : a un bloc elle vaut 0,8 par tick au lieu de 0,1, et a deux blocs elle est au
+     * plafond. La distance restante est divisee par cinq a chaque tick, donc le bloc se pose en
+     * deux ou trois ticks au lieu de quinze.
+     */
+    public static final double CARRY_PULL = 0.8;
 
-    /** Sous deux blocs — quatre, au carre — elle ralentit proportionnellement. */
-    public static final double CARRY_SLOW_SQ = 4.0;
+    /**
+     * Et son plafond, en blocs par tick : 1,2, soit trois fois celui de l'original.
+     *
+     * <p>Il ne sert qu'aux grands ecarts — un regard qui vient de faire demi-tour, une chute, un
+     * vol. De quoi rejoindre le point en deux ticks, et de quoi suivre n'importe quel deplacement
+     * sans trainer derriere (le joueur le plus rapide avance de 0,28 par tick).
+     */
+    public static final double CARRY_MAX = 1.2;
 
     /** La portee du lancer : cinq blocs — vingt-cinq, au carre. */
     public static final double THROW_RANGE_SQ = 25.0;
@@ -131,17 +153,16 @@ public final class MagManipVisuals {
     /**
      * La vitesse qui amene le bloc au point de portage.
      *
-     * <p>Portage de l'{@code ActMoveTo} de l'original : la direction du point, a 0,2 par tick,
-     * et cette vitesse multipliee par {@code distSq / 4} sous quatre — donc elle s'annule
-     * exactement sur le point, au lieu de le depasser d'un cote puis de l'autre.
+     * <p>Proportionnelle a la distance et plafonnee : voir {@link #CARRY_PULL} et
+     * {@link #CARRY_MAX}, ou l'ecart a l'original est dit en toutes lettres. Comme le pas reste
+     * plus court que la distance (0,8 fois), le bloc ne depasse jamais son point : il s'en
+     * approche de plus en plus pres, et s'y arrete.
      */
     public static Vec3 carryVelocity(Vec3 position, Vec3 target) {
         Vec3 delta = target.subtract(position);
-        double distSq = delta.lengthSqr();
-        if (distSq < 1.0E-6) return Vec3.ZERO;
-        double scale = CARRY_PULL * (distSq < CARRY_SLOW_SQ ? distSq / CARRY_SLOW_SQ : 1.0)
-                * STEPS;
-        return delta.normalize().scale(scale);
+        double distance = delta.length();
+        if (distance < 1.0E-6) return Vec3.ZERO;
+        return delta.scale(Math.min(CARRY_MAX, CARRY_PULL * distance) / distance);
     }
 
     /**

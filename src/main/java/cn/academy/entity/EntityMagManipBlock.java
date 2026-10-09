@@ -161,7 +161,7 @@ public class EntityMagManipBlock extends Projectile {
      *
      * <p>Il se posera au premier contact : c'est le {@code setPlaceFromServer(true)} de
      * l'original, pose au relachement comme a la fin du maintien. Tant qu'il est porte, il ne
-     * se pose pas — un bloc qui frotte un mur pendant qu'on le tient ne doit pas s'y coller.
+     * touche RIEN — ni le sol, ni les murs : il suit son point, et c'est tout.
      */
     public void release() {
         this.carryTo = null;
@@ -244,8 +244,15 @@ public class EntityMagManipBlock extends Projectile {
         }
 
         if (carryTo != null) {
+            // PORTE : il suit son point SANS rien rencontrer. L'original ne collisionnait pas non
+            // plus — son deplacement etait une simple addition a la position, et son gestionnaire
+            // de collision ne postait qu'un evenement que personne n'ecoutait tant qu'il n'etait
+            // pas lache. Le port, lui, faisait un `move` : le bloc s'arretait contre les murs et
+            // les reliefs que le regard balayait, et mettait du temps a s'en degager — ce que le
+            // joueur decrivait comme un ralentissement des qu'il tournait la tete.
             setDeltaMovement(MagManipVisuals.carryVelocity(position(), carryTo));
-            move(MoverType.SELF, getDeltaMovement());
+            Vec3 step = getDeltaMovement();
+            setPos(getX() + step.x, getY() + step.y, getZ() + step.z);
             return;
         }
 
