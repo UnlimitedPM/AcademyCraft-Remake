@@ -150,6 +150,9 @@ public class ArcGenSkill extends Skill {
 
         if (target instanceof LivingEntity living) {
             living.hurt(skillDamage(player), scaled(damage(data)));
+            // L'arc peut charger un creeper : c'est l'autre moitie de l'EMDamageHelper de
+            // l'original, invisible autrement (voir CreeperCharge).
+            CreeperCharge.tryCharge(living, random.nextFloat());
             if (random.nextFloat() < igniteChance(data)) {
                 living.setSecondsOnFire(IGNITE_TICKS / 20);
             }

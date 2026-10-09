@@ -7,6 +7,7 @@ import cn.academy.DeveloperBlockEntity;
 import cn.academy.ImagFusorBlockEntity;
 import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ability.develop.DevelopProgress.DevState;
+import cn.academy.ability.electromaster.CreeperCharge;
 import cn.academy.ModBlocks;
 import cn.academy.ModFluids;
 import cn.academy.ModItems;
@@ -6697,6 +6698,66 @@ public final class AcademyGameTests {
 
         anonymous.discard();
         credited.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Un eclair de l'electromaster charge parfois le creeper qu'il touche.
+     *
+     * <p>Demande du joueur : « je ne connaissais pas cette mecanique pour les creeper charges mais
+     * effectivement c'etait bien present, donc j'aimerais bien que tu le remettes ». C'est le
+     * {@code EMDamageHelper.attack} de l'original : apres son coup, trois chances sur dix de lever
+     * le drapeau du creeper. Un creeper charge explose deux fois plus fort, donc ses explosions
+     * tuent les monstres voisins, qui laissent leur tete.
+     *
+     * <p>Le test tient les trois bouts de la regle, qu'aucun oeil ne peut verifier : le tirage qui
+     * passe leve le DRAPEAU du jeu (celui que le client lit pour faire luire la bete et que le jeu
+     * lit pour doubler son explosion), la borne des trois dixiemes est STRICTE (l'original
+     * comparait avec un « plus petit que », donc 0,3 pile ne passe pas), et une bete qui n'est pas
+     * un creeper n'est pas touchee. Le creeper neuf et le zombie sont la pour ca.
+     */
+    @GameTest(template = "empty")
+    public static void laFoudreChargeParfoisLeCreeper(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var at = helper.absolutePos(new BlockPos(2, 2, 2));
+
+        var charged = new net.minecraft.world.entity.monster.Creeper(
+                net.minecraft.world.entity.EntityType.CREEPER, level);
+        charged.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        level.addFreshEntity(charged);
+
+        var borderline = new net.minecraft.world.entity.monster.Creeper(
+                net.minecraft.world.entity.EntityType.CREEPER, level);
+        borderline.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5);
+        level.addFreshEntity(borderline);
+
+        var bystander = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        bystander.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 3.5);
+        level.addFreshEntity(bystander);
+
+        assertFalse(helper, charged.isPowered(), "un creeper neuf n'est pas charge");
+        assertTrue(helper, CreeperCharge.tryCharge(charged, 0f),
+                "un tirage dans la fenetre charge le creeper");
+        assertTrue(helper, charged.isPowered(),
+                "et c'est le DRAPEAU du jeu qui bascule : c'est lui que le client lit pour faire "
+                        + "luire la bete, et lui que le jeu lit pour doubler son explosion");
+        assertFalse(helper, CreeperCharge.tryCharge(charged, 0f),
+                "un creeper deja charge ne change plus");
+
+        assertFalse(helper, CreeperCharge.tryCharge(borderline, CreeperCharge.CHANCE),
+                "trois dixiemes PILE ne passent pas : l'original comparait avec un strictement "
+                        + "inferieur");
+        assertFalse(helper, borderline.isPowered(), "et la borne haute laisse la bete intacte");
+        assertTrue(helper, CreeperCharge.tryCharge(borderline, 0.29f),
+                "juste en dessous de la borne, elle passe");
+
+        assertFalse(helper, CreeperCharge.tryCharge(bystander, 0f),
+                "un zombie n'est pas un creeper : la mecanique ne le touche pas");
+
+        charged.discard();
+        borderline.discard();
+        bystander.discard();
         helper.succeed();
     }
 
