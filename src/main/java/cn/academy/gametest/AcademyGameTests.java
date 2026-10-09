@@ -2448,6 +2448,80 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le relachement de {@code mag_movement} : une poussee en avant, et la chute qui suit est
+     * gratuite.
+     *
+     * <p>Les deux sont des AJOUTS demandes par le joueur — l'original ne poussait rien en fin de
+     * course, et son balancement se terminait par la chute qui allait avec. Le test tient aussi la
+     * porte : qui n'a RIEN accroche ne recoit ni poussee ni protection, sinon la touche serait un
+     * saut gratuit.
+     */
+    @GameTest(template = "empty")
+    public static void leLacherDuMagMovementPousseEtProtege(GameTestHelper helper) {
+        var skill = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MOVEMENT;
+        var iron = net.minecraft.world.level.block.Blocks.IRON_BLOCK;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, 220);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + 220 + 1, floor.getZ());
+
+        // La chambre est nettoyee AVANT de poser quoi que ce soit, et loin : le monde des tests
+        // est partage et sauvegarde, donc un bloc de fer laisse par l'execution precedente serait
+        // accroche a la place de celui qu'on vient de poser. Les vingt-six blocs devant servent au
+        // premier temps du test, qui a besoin d'un regard qui ne touche RIEN.
+        for (int dz = 0; dz <= 26; dz++) {
+            for (int dx = -1; dx <= 5; dx++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "mag-movement-lever");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 2);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        // Rien accroche : rien du tout. Taper la touche dans le vide ne propulse personne et ne
+        // protege de rien, sinon le pouvoir s'offrirait une poussee gratuite a chaque pression.
+        skill.onStart(player, data);
+        skill.onHoldEnd(player, data, 20);
+        assertFalse(helper, data.isProtectedFromFall(), "rien accroche : rien a proteger");
+        assertClose(helper, 0.0d, player.getDeltaMovement().length(), "et aucune poussee");
+
+        // Un bloc de fer devant, dans l'axe du regard : la traction le prend, et le relachement
+        // ajoute sa poussee a la vitesse du balancement (ADDITION, pas remplacement : le joueur
+        // sort de son arc par son elan).
+        BlockPos cible = eyes.offset(0, 0, 3);
+        helper.setBlock(cible, iron);
+        lookAt(player, helper.absolutePos(cible));
+        skill.onStart(player, data);
+        for (int tick = 1; tick <= 10; tick++) {
+            assertTrue(helper, skill.onHoldTick(player, data, tick), "la traction tient");
+        }
+        assertTrue(helper, data.getHoldLineageSize(skill) > 0,
+                "le bloc de fer est accroche : " + data.getHoldLineageSize(skill));
+
+        var attendu = player.getDeltaMovement().add(
+                cn.academy.ability.electromaster.MagMovementSkill
+                        .endBoost(player.getXRot(), player.getYRot()));
+        skill.onHoldEnd(player, data, 10);
+        assertClose(helper, attendu.length(), player.getDeltaMovement().length(),
+                "la poussee s'ajoute a la vitesse du balancement");
+        assertTrue(helper, player.getDeltaMovement().z > 0,
+                "et elle pousse devant : " + player.getDeltaMovement());
+        assertTrue(helper, data.isProtectedFromFall(),
+                "la chute qui suit est gratuite, comme apres l'acceleration de vecteur");
+
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(gone -> gone.forgetSkill(skill));
+        helper.succeed();
+    }
+
+    /**
      * La lignee de {@code mag_movement}.
      *
      * <p>Ce que le joueur a demande et qu'aucun test unitaire ne peut voir : le premier bloc

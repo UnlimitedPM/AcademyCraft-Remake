@@ -106,6 +106,24 @@ class MagMovementTest {
     }
 
     @Test
+    void laSortiePousseEnAvantEtVersLeHaut() {
+        // AJOUT DEMANDE PAR LE JOUEUR : « a la fin de l'utilisation du pouvoir je sois legerement
+        // propulse en avant ». Le regard droit devant : la poussee part devant et un peu en haut
+        // (les dix degres de l'acceleration de vecteur), a un demi-bloc par tick.
+        Vec3 boost = MagMovementSkill.endBoost(0, 0);
+        assertEquals(MagMovementSkill.END_BOOST, boost.length(), 0.0001);
+        assertEquals(0.0, boost.x, 0.0001, "droit devant, elle ne part pas de cote");
+        assertTrue(boost.z > 0, "elle va devant : " + boost);
+        assertTrue(boost.y > 0, "et un peu en haut : " + boost);
+
+        // Elle reste une sortie de balancement, pas un deuxieme pouvoir : quatre fois moins que la
+        // poussee la plus forte de l'acceleration de vecteur.
+        assertTrue(MagMovementSkill.END_BOOST
+                        < cn.academy.ability.vecmanip.VecAccelSkill.MAX_VELOCITY / 4,
+                "legere, comme demande");
+    }
+
+    @Test
     void unNouveauBlocVautUnDixiemeDePourcent() {
         // Mille fois moins que le plancher du premier bloc : une lignee ne se monnaie pas
         // en trajets. Aucun surcout ne s'y ajoute — le joueur a retire cette regle.

@@ -70,6 +70,19 @@ public class MagMovementSkill extends Skill {
     /** Portee de la visee, comme l'original. */
     private static final double RANGE = 25.0;
 
+    /**
+     * La poussee du relachement : un demi-bloc par tick, vers l'avant.
+     *
+     * <p>AJOUT DEMANDE PAR LE JOUEUR — l'original ne poussait rien du tout en fin de course : « je
+     * veux qu'a la fin de l'utilisation du pouvoir je sois legerement propulse en avant ». Un
+     * demi-bloc par tick (dix metres par seconde) reste loin de l'acceleration de vecteur, qui en
+     * donne jusqu'a 2,5 : c'est une sortie de balancement, pas un deuxieme pouvoir.
+     *
+     * <p>Elle s'AJOUTE a la vitesse du moment : un joueur qui sort de son arc garde son elan et
+     * gagne cette poussee, au lieu de voir sa course remplacee.
+     */
+    public static final double END_BOOST = 0.5;
+
     public MagMovementSkill() {
         super("mag_movement", 2);
     }
@@ -253,6 +266,30 @@ public class MagMovementSkill extends Skill {
         Vec3 origin = data.getHoldOrigin(this);
         if (origin == null) return;
         data.addSkillExp(this, getExpIncr(origin.distanceTo(player.position())));
+
+        // La sortie : une poussee en avant, et la chute qui suit est gratuite. Les deux sont
+        // derriere les sorties ci-dessus, donc elles ne se donnent qu'a qui a REELLEMENT accroche
+        // quelque chose : taper la touche dans le vide ne propulse personne.
+        player.setDeltaMovement(player.getDeltaMovement()
+                .add(endBoost(player.getXRot(), player.getYRot())));
+        player.hurtMarked = true;
+        // Les deux ticks demandes : la protection tient tant que le joueur n'a pas touche le sol,
+        // puis se leve LANDING_GRACE_TICKS ticks apres l'atterrissage. Meme mecanisme que les
+        // quatre teleportations, l'acceleration de vecteur et les ailes de tempete.
+        data.protectFromFall();
+    }
+
+    /**
+     * La poussee de fin, dans le repere du monde : le regard, dix degres plus haut.
+     *
+     * <p>La direction est celle des deux poussees de l'acceleration de vecteur
+     * ({@code VecAccelSkill.boostDirection}, le {@code EntityLook(yaw, pitch - 10)} de l'original),
+     * donc les deux competences jettent dans le meme sens — et cette petite releve de dix degres
+     * evite de partir droit dans le sol quand on visait le pied d'un mur.
+     */
+    public static Vec3 endBoost(double pitchDegrees, double yawDegrees) {
+        return cn.academy.ability.vecmanip.VecAccelSkill
+                .boostDirection(pitchDegrees, yawDegrees).scale(END_BOOST);
     }
 
     /**
