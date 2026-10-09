@@ -250,7 +250,25 @@ public class ArcRenderer {
                 from, to, ownerId);
     }
 
-    /** Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence. */
+    /**
+     * Un eclair <b>sans tireur</b> : il reste ou on l'a pose.
+     *
+     * <p>Tous les arcs du port se recollent a la main de leur tireur — c'est l'optimisation de vue
+     * de l'original, voir {@link ArcView} —, ce qui a un sens pour un eclair qui PART de quelqu'un.
+     * Les eclairs qui sortent du sol apres un claquement d'orage, eux, ne partent de personne : ils
+     * sont poses dans le monde, a vingt blocs du joueur, et les decaler de huit dixiemes de bloc
+     * vers une main qui n'est pas la les sortirait de leur trou. Voir {@code GroundArcs}.
+     *
+     * <p>C'est la meme convention que celle des rayons du plasma, ou {@code -1} dit « pas de
+     * tireur » a {@code MdRayView}.
+     */
+    public static final int NO_OWNER = -1;
+
+    /**
+     * Ouvre un eclair, sur le fil du client. Appele par le paquet de la competence.
+     *
+     * @param ownerId le tireur, ou {@link #NO_OWNER} pour un eclair pose dans le monde
+     */
     public static void spawn(String pattern, Vec3 from, Vec3 to, int lifeTicks, boolean lengthFixed,
                              int ownerId) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -318,8 +336,15 @@ public class ArcRenderer {
 
         for (ClientArcs.LiveArc arc : ClientArcs.live()) {
             if (arc.visible()) {
+                // Quel decalage de vue s'applique : celui de la vue interne, et seulement pour
+                // l'eclair du tireur lui-meme — c'est la condition de l'original,
+                // « thirdPersonView == 0 && clientPlayer == entity.getPlayer() ». Tout le reste
+                // est pose sur la main : la sienne vue de l'exterieur, comme celle des autres
+                // joueurs. Et un eclair SANS tireur n'en recoit aucun : voir NO_OWNER.
                 draw(out, pose.last(), camera, above, arc,
-                        firstPerson && arc.ownerId() == ownId);
+                        arc.ownerId() == NO_OWNER ? null
+                                : firstPerson && arc.ownerId() == ownId
+                                        ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
             }
         }
         buffers.endBatch();
@@ -335,11 +360,14 @@ public class ArcRenderer {
      * <p>L'eclair se pose dans le repere de la main de son tireur ({@link ArcView}), avec le
      * decalage de l'original : celui de la vue interne pour l'eclair du tireur dans sa propre
      * vue, et celui de la main pour tout le reste.
+     *
+     * @param offset le decalage a appliquer, ou {@code null} pour un eclair sans tireur
      */
     private static void draw(VertexConsumer out, PoseStack.Pose pose, Vec3 camera, double[] above,
-                             ClientArcs.LiveArc arc, boolean ownFirstPerson) {
-        double[][] fixed = ArcView.fix(arc.from(), arc.to(), above,
-                ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
+                             ClientArcs.LiveArc arc, double[] offset) {
+        double[][] fixed = offset == null
+                ? new double[][] { arc.from(), arc.to() }
+                : ArcView.fix(arc.from(), arc.to(), above, offset);
         double[] from = fixed[0];
         double[] to = fixed[1];
 

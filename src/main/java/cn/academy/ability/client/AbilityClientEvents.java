@@ -187,6 +187,9 @@ public class AbilityClientEvents {
             // charge oubliee, plus rien ne la repose ni ne l'efface, et le prochain monde la
             // dessinerait a l'endroit du precedent. Voir ThunderClapEffect.
             ThunderClapEffect.end();
+            // Et ses eclairs de sol, qui attendaient peut-etre leur tour : ils appartiennent au
+            // monde ou la foudre est tombee. Voir GroundArcs.
+            GroundArcs.clear();
         }
 
         // LA PAUSE NE PILOTE RIEN.
@@ -224,6 +227,9 @@ public class AbilityClientEvents {
         MagManipEffect.tick();
         cn.academy.ability.client.md.MdRays.tick();
         cn.academy.ability.client.md.MdSparks.tick();
+        // Et les eclairs de sol du claquement d'orage, dont la vague s'ouvre sur quelques ticks —
+        // un eclair ne se pose pas d'avance pour naitre plus tard, voir GroundArcs.
+        GroundArcs.tick();
         // Les etincelles de la teleportation vieillissent au meme rythme, et leur marque se
         // repose au tick suivant — voir TeleportMark et TpParticles.
         cn.academy.ability.client.tp.TpParticles.tick();

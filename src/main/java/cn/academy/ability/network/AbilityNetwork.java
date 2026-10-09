@@ -143,5 +143,11 @@ public class AbilityNetwork {
                 cn.academy.ability.network.RailgunHandPacket::encode,
                 cn.academy.ability.network.RailgunHandPacket::decode,
                 cn.academy.ability.network.RailgunHandPacket::handle);
+        // Et les eclairs qui sortent du sol apres un claquement d'orage : le serveur seul sait ou
+        // la foudre est tombee et jusqu'ou elle emporte, et c'est tout ce que le client a besoin
+        // de savoir — il tire le reste au sort. Voir ThunderClapGroundPacket et GroundArcs.
+        CHANNEL.registerMessage(nextId++, ThunderClapGroundPacket.class,
+                ThunderClapGroundPacket::encode, ThunderClapGroundPacket::decode,
+                ThunderClapGroundPacket::handle);
     }
 }

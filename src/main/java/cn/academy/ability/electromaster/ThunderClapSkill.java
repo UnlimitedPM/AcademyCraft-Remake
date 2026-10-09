@@ -188,6 +188,13 @@ public class ThunderClapSkill extends Skill {
         }
 
         strike(player, impact, data);
+
+        // ET LA PORTEE SE VOIT : une poignee d'eclairs jaillissent du sol dans tout le rayon, du
+        // centre vers le bord. L'original n'en avait pas — sa foudre de Minecraft ne dessine qu'un
+        // eclair au point d'impact, alors que ses degats emportent tout le disque, et le joueur a
+        // vu le defaut : « les monstres alentour prennent quand meme des degats pour aucune raison
+        // apparente ». Voir GroundArcs.
+        cn.academy.ability.network.ThunderClapGroundPacket.send(player, impact, range(data));
     }
 
     /** Frappe tout ce qui se trouve dans le rayon, sauf le lanceur. */

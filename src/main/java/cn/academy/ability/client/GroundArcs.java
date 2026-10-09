@@ -1,0 +1,202 @@
+package cn.academy.ability.client;
+
+import cn.academy.ability.client.arc.ArcPattern;
+import cn.academy.ability.client.arc.ArcRenderer;
+import cn.academy.ability.client.arc.SurroundArcs;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+/**
+ * Les eclairs qui sortent du sol apres un claquement d'orage.
+ *
+ * <h2>Un ajout, pas un portage</h2>
+ *
+ * <p>L'original n'avait rien de tel : sa foudre etait celle de Minecraft — un seul eclair, au point
+ * d'impact — alors que ses degats, eux, emportaient tout un <b>rayon</b> de quinze a trente blocs
+ * (`ctx.attackRange`). Le joueur a dit exactement ce que cela donne : « on voit l'eclair vanilla de
+ * minecraft mais les monstres alentour prennent quand meme des degats pour aucune raison
+ * apparente ». Ces eclairs-ci sont donc la pour <b>montrer la portee</b> : une poignee de petites
+ * decharges qui jaillissent du sol dans tout le rayon, « comme si la foudre s'etait propagee dans le
+ * sol ».
+ *
+ * <h2>La vague</h2>
+ *
+ * <p>Elles ne sortent pas toutes ensemble : chacune attend d'autant plus longtemps qu'elle est
+ * <b>loin</b> du point d'impact ({@link #SPREAD_TICKS} ticks pour le bord du rayon, zero au centre).
+ * L'oeil lit donc une propagation du centre vers l'exterieur, et non un semis qui s'allume d'un coup
+ * — c'est ce que demandait le joueur, et c'est aussi ce qui donne sa taille a l'attaque.
+ *
+ * <h2>Ou elles sortent</h2>
+ *
+ * <p>Sur le <b>sol</b>, et pas dans l'air : pour chaque point tire dans le disque, on descend une
+ * colonne depuis le niveau de l'impact ({@link #SEARCH_DEPTH} blocs au plus) jusqu'a la premiere
+ * face tournee vers le haut. Une colonne qui n'en trouve pas — un impact en plein ciel, une falaise
+ * sous laquelle on a tire — ne donne rien du tout : mieux vaut quatre eclairs justes que seize qui
+ * flottent dans le vide.
+ *
+ * <p>Le vrai <b>tirage</b> est dans {@link #rolls}, qui ne connait ni monde ni bloc : c'est la seule
+ * partie de cet effet qu'un test puisse relire, et c'est aussi celle qui porte la regle de la vague.
+ */
+@OnlyIn(Dist.CLIENT)
+public final class GroundArcs {
+
+    /** Le nombre d'eclairs d'un claquement. Assez pour lire la portee, pas assez pour la noyer. */
+    public static final int COUNT = 16;
+
+    /** Leur distance au point d'impact, en part du rayon : jamais dessus, jusqu'au bord. */
+    public static final double REACH_MIN = 0.15;
+    public static final double REACH_MAX = 1.0;
+
+    /** Leur penchant lateral, en blocs : ils ne sortent pas tous bien droits. */
+    public static final double TILT_MAX = 0.3;
+
+    /** Le retard du bord du rayon, en ticks : c'est la duree de la vague. */
+    public static final int SPREAD_TICKS = 6;
+
+    /** La vie d'un eclair, en ticks : plus longue que celle d'un gresillement, pour qu'on la voie. */
+    private static final int LIFE_TICKS = 6;
+
+    /** La profondeur de la recherche du sol, en blocs sous le niveau de l'impact. */
+    private static final int SEARCH_DEPTH = 6;
+
+    /**
+     * Le motif, et les longueurs : ceux du gresillement de la charge de ce meme orage.
+     *
+     * <p>C'est {@link SurroundArcs#BOLD}, l'electricite qui s'amassait dans la main pendant la
+     * charge : la foudre qui sort du sol est la meme, et le joueur la reconnait. Ses bornes de
+     * longueur sont celles de ce gabarit — de 1,05 a 1,35 bloc —, et c'est aussi loin que porte son
+     * motif : demander plus long ne dessinerait rien de plus, voir {@code ArcMesh}.
+     */
+    private static final ArcPattern PATTERN = SurroundArcs.BOLD.pattern();
+    private static final double LENGTH_MIN = SurroundArcs.BOLD.minLength();
+    private static final double LENGTH_MAX = SurroundArcs.BOLD.maxLength();
+
+    private static final Random RANDOM = new Random();
+
+    /** Les eclairs qui attendent leur tour — voir {@link #tick}. */
+    private static final List<Pending> PENDING = new ArrayList<>();
+
+    private GroundArcs() {
+    }
+
+    /**
+     * Un tirage, sans son sol : sa distance en part du rayon, son azimut, sa hauteur, son
+     * penchant, et le retard de sa sortie.
+     */
+    public record Shot(double fraction, double heading, double length, double tilt, int delay) {}
+
+    /** Un eclair pret a sortir : ses deux bouts, et les ticks qu'il attend encore. */
+    private static final class Pending {
+        private final Vec3 from;
+        private final Vec3 to;
+        private int delay;
+
+        Pending(Vec3 from, Vec3 to, int delay) {
+            this.from = from;
+            this.to = to;
+            this.delay = delay;
+        }
+    }
+
+    /**
+     * La foudre vient de tomber : seme ses eclairs de sol dans tout le rayon.
+     *
+     * <p>Appele par le paquet de la competence, chez tous ceux qui voient le lanceur — c'est la
+     * meme circulation que les arcs de degats, voir {@code ThunderClapGroundPacket}.
+     */
+    public static void burst(Vec3 impact, double radius) {
+        Level level = Minecraft.getInstance().level;
+        if (level == null || radius <= 0) return;
+
+        for (Shot shot : rolls(radius, RANDOM)) {
+            double angle = shot.heading();
+            double reach = radius * shot.fraction();
+            Vec3 ground = surface(level, impact.x + Math.cos(angle) * reach,
+                    impact.y, impact.z + Math.sin(angle) * reach);
+            if (ground == null) continue;
+
+            // Il penche vers l'exterieur — du meme cote que celui ou il est par rapport a
+            // l'impact —, comme s'il suivait la propagation.
+            double tilt = shot.tilt();
+            PENDING.add(new Pending(ground,
+                    ground.add(Math.cos(angle) * tilt, shot.length(), Math.sin(angle) * tilt),
+                    shot.delay()));
+        }
+    }
+
+    /**
+     * Un tick : les eclairs dont le retard est ecoule sortent, les autres attendent.
+     *
+     * <p>Le compte a rebours est tenu ici plutot qu'a la pose : un eclair ne se pose pas d'avance
+     * pour naitre plus tard, et c'est cette liste qui fait la vague. Voir la classe.
+     */
+    public static void tick() {
+        for (int i = PENDING.size() - 1; i >= 0; i--) {
+            Pending pending = PENDING.get(i);
+            if (pending.delay > 0) {
+                pending.delay -= 1;
+                continue;
+            }
+            ArcRenderer.spawn(PATTERN.name(), pending.from, pending.to, LIFE_TICKS, false,
+                    ArcRenderer.NO_OWNER);
+            PENDING.remove(i);
+        }
+    }
+
+    /** Tout oublier : un monde quitte n'emporte pas ses eclairs. */
+    public static void clear() {
+        PENDING.clear();
+    }
+
+    /**
+     * Les traits d'un claquement, sans le sol.
+     *
+     * <p>Pur, et c'est tout l'interet : la regle de la vague — un eclair d'autant plus tardif qu'il
+     * est loin — se relit en test, sans monde ni rendu. Le sol, lui, se cherche apres, dans
+     * {@link #surface}.
+     *
+     * <p>Les tirages sont faits dans cet ordre, et ils n'ont pas le droit de bouger : c'est celui
+     * des nombres du joueur quand il reglera l'effet a l'oeil.
+     */
+    public static List<Shot> rolls(double radius, Random random) {
+        List<Shot> shots = new ArrayList<>(COUNT);
+        for (int i = 0; i < COUNT; i++) {
+            double fraction = REACH_MIN + random.nextDouble() * (REACH_MAX - REACH_MIN);
+            double heading = random.nextDouble() * Math.PI * 2;
+            double length = LENGTH_MIN + random.nextDouble() * (LENGTH_MAX - LENGTH_MIN);
+            double tilt = (random.nextDouble() * 2 - 1) * TILT_MAX;
+            int delay = (int) Math.round(fraction * SPREAD_TICKS);
+            shots.add(new Shot(fraction, heading, length, tilt, delay));
+        }
+        return shots;
+    }
+
+    /**
+     * La surface du sol sous un point, ou {@code null} s'il n'y en a pas.
+     *
+     * <p>Une colonne, du niveau de l'impact vers le bas, et la <b>premiere face tournee vers le
+     * haut</b> : c'est ce qui pose l'eclair sur la terre, sur une dalle ou sur la neige, et non
+     * dedans. Le point rendu est celui de la face frappee, donc un demi-bloc au-dessus d'une dalle
+     * — c'est exactement ce qu'un rayon veut dire.
+     */
+    private static Vec3 surface(Level level, double x, double y, double z) {
+        Vec3 from = new Vec3(x, y + 1, z);
+        Vec3 to = new Vec3(x, y - SEARCH_DEPTH, z);
+        BlockHitResult hit = level.clip(new ClipContext(from, to, ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, Minecraft.getInstance().player));
+        if (hit.getType() != HitResult.Type.BLOCK) return null;
+        if (hit.getDirection() != Direction.UP) return null;
+        return hit.getLocation();
+    }
+}
