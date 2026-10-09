@@ -118,6 +118,10 @@ public class AcademyCraft {
                     cn.academy.ability.client.md.MdBallRenderer::new);
             // La piece lancee, qu'on jette pour armer le railgun — voir CoinRenderer.
             event.registerEntityRenderer(ModEntities.COIN.get(), cn.academy.client.CoinRenderer::new);
+            // Le crochet magnetique : son modele OBJ, ferme en vol et la pince ouverte une fois
+            // plante — voir MagHookRenderer.
+            event.registerEntityRenderer(ModEntities.MAG_HOOK.get(),
+                    cn.academy.client.MagHookRenderer::new);
         }
 
         @SubscribeEvent

@@ -103,7 +103,7 @@ public class ModItems {
     public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new CoinItem());
     public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new SilbarnItem());
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new Item(new Item.Properties()));
+    public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new MagHookItem());
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",
             () -> new TerminalInstallerItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", DeveloperPortableItem::new);
@@ -260,6 +260,43 @@ public class ModItems {
 
             if (!level.isClientSide) {
                 level.addFreshEntity(new cn.academy.entity.EntitySilbarn(level, player));
+            }
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
+            return InteractionResultHolder.success(stack);
+        }
+    }
+
+    /**
+     * Le crochet magnetique : l'objet qu'on LANCE pour se donner une accroche, portage d'{@code
+     * ItemMagHook} — « Elec Move Support Hook ».
+     *
+     * <p>Le clic droit le jette devant, il vole a deux blocs par tick et se plante dans la premiere
+     * paroi ; le deplacement magnetique peut alors s'y accrocher, d'aussi loin que son regard porte.
+     * Il se recupere en frappant le crochet plante, et il se perd si son bloc disparait — voir
+     * {@code EntityMagHook}.
+     *
+     * <p>Le son est celui d'un oeuf lance, comme l'original au mot pres. L'original l'excluait pour
+     * le lanceur ({@code world.playSound(player, ...)}) : le port le fait entendre a tout le monde,
+     * celui qui lance compris — une main qui ne s'entend pas lancer est une main qui fait douter du
+     * clic. C'est la meme decision que pour la bille de silicium.
+     */
+    public static class MagHookItem extends Item {
+        public MagHookItem() {
+            super(new Item.Properties());
+        }
+
+        @Override
+        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+            ItemStack stack = player.getItemInHand(hand);
+
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    net.minecraft.sounds.SoundEvents.EGG_THROW, net.minecraft.sounds.SoundSource.PLAYERS,
+                    0.5f, 0.4f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
+
+            if (!level.isClientSide) {
+                level.addFreshEntity(new cn.academy.entity.EntityMagHook(level, player));
             }
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);

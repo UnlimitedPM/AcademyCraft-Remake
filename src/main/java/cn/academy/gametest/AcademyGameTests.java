@@ -2444,6 +2444,102 @@ public final class AcademyGameTests {
         assertFalse(helper, cn.academy.ability.electromaster.MetalTargets.isMetallic(cow),
                 "une vache, non");
 
+        // Et le crochet magnetique du mod, comme dans l'original : c'est ce qui donne son sens a
+        // l'objet — le deplacement magnetique s'accroche a un crochet lance.
+        var hook = new cn.academy.entity.EntityMagHook(
+                cn.academy.ModEntities.MAG_HOOK.get(), level);
+        hook.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5);
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isMetallic(hook),
+                "un crochet magnetique est metallique");
+
+        helper.succeed();
+    }
+
+    /**
+     * Le crochet magnetique : il vole, il se plante dans la paroi, et il sert d'ancre.
+     *
+     * <p>Le joueur a demande de « refaire fonctionner les magnetic hook », et c'est exactement ce
+     * que l'objet etait devenu dans le port : sa recette, son image, son nom, et un clic droit qui
+     * ne faisait rien. Le test tient les trois gestes de l'original, un par un — le vol s'arrete
+     * dans la premiere paroi, un coup de main le recupere en objet, et pendant qu'il est plante le
+     * deplacement magnetique s'y accroche. Ce dernier point est tout l'objet : un crochet qu'on ne
+     * peut pas utiliser comme ancre ne servirait a rien, et c'est ce que l'original avait prevu en
+     * l'inscrivant dans sa liste d'entites metalliques.
+     */
+    @GameTest(template = "empty")
+    public static void leCrochetMagnetiqueSePlanteEtSertDAncre(GameTestHelper helper) {
+        var skill = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MOVEMENT;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, 240);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + 241, floor.getZ());
+
+        // La chambre est nettoyee AVANT de poser quoi que ce soit : le monde des tests est partage
+        // et sauvegarde, donc un bloc laisse par l'execution precedente arreterait le crochet avant
+        // sa vraie paroi.
+        for (int dz = 0; dz <= 6; dz++) {
+            for (int dx = -1; dx <= 5; dx++) {
+                for (int dy = 0; dy <= 2; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "mag-hook-thrower");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 2);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        // La paroi, trois blocs devant, et le regard pile dessus.
+        BlockPos mur = eyes.offset(0, 0, 3);
+        helper.setBlock(mur, net.minecraft.world.level.block.Blocks.STONE);
+        lookAt(player, helper.absolutePos(mur));
+
+        var hook = new cn.academy.entity.EntityMagHook(helper.getLevel(), player);
+        assertFalse(helper, hook.isHit(), "il part en vol");
+        assertClose(helper, cn.academy.entity.MagHookVisuals.FLY_SIZE,
+                hook.getBoundingBox().getXsize(), "un demi-bloc de cote en vol");
+        assertFalse(helper, hook.isPickable(), "et un crochet en vol ne se vise pas");
+
+        // Le vol, mene a la main : deux blocs par tick, donc deux ticks et il est dans la paroi.
+        for (int tick = 0; tick < 4 && !hook.isHit(); tick++) {
+            hook.tick();
+        }
+        assertTrue(helper, hook.isHit(), "il se plante dans la paroi");
+        assertValue(helper, net.minecraft.core.Direction.NORTH, hook.hitSide(),
+                "dans la face qui le regarde");
+        var attendu = cn.academy.entity.MagHookVisuals.snapTo(helper.absolutePos(mur),
+                net.minecraft.core.Direction.NORTH);
+        assertClose(helper, attendu.x, hook.getX(), "il se pose droit contre la paroi");
+        assertClose(helper, attendu.z, hook.getZ(), "et devant elle, pas dedans");
+        assertClose(helper, 0.0, hook.getDeltaMovement().length(), "sa vitesse tombe a zero");
+        assertClose(helper, cn.academy.entity.MagHookVisuals.HIT_SIZE,
+                hook.getBoundingBox().getXsize(), "et il prend sa taille d'un bloc");
+        assertTrue(helper, hook.isPickable(),
+                "il devient visable : c'est ainsi que la traction le trouve");
+
+        // Il entre dans le monde une fois plante — c'est la que la traction le cherche.
+        helper.getLevel().addFreshEntity(hook);
+
+        assertTrue(helper, cn.academy.ability.electromaster.MetalTargets.isMetallic(hook),
+                "un crochet magnetique compte parmi les metaux");
+        assertTrue(helper, skill.onHoldTick(player, data, 1), "la traction le prend");
+        assertTrue(helper, player.getDeltaMovement().z > 0,
+                "et tire vers lui : " + player.getDeltaMovement());
+
+        // Et il se recupere d'un coup de main : sans cela, chaque lancer couterait un crochet.
+        hook.hurt(player.damageSources().playerAttack(player), 1f);
+        assertFalse(helper, hook.isAlive(), "le crochet recupere disparait");
+        assertFalse(helper, helper.getLevel().getEntitiesOfClass(
+                        net.minecraft.world.entity.item.ItemEntity.class,
+                        new net.minecraft.world.phys.AABB(attendu, attendu).inflate(2.0)).isEmpty(),
+                "et il retombe en objet a ramasser");
+
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(gone -> gone.forgetSkill(skill));
         helper.succeed();
     }
 

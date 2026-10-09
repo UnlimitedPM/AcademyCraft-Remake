@@ -107,8 +107,19 @@ public final class MetalTargets {
         return isNormalMetalBlock(block) || (exp >= WEAK_EXP && isWeakMetalBlock(block));
     }
 
-    /** Vrai si cette entite est de celles que l'electromaster peut attirer. */
+    /**
+     * Vrai si cette entite est de celles que l'electromaster peut attirer.
+     *
+     * <p>Le crochet magnetique du mod l'est <b>par nature</b>, avant meme de regarder la config, et
+     * cette precaution a une raison : sa liste vit dans le fichier de configuration du joueur, qui
+     * a ete ecrit bien avant que le crochet existe. Forge ne rajoute pas une entree a une liste
+     * existante — il ne complete que les cles absentes — donc un joueur qui met son mod a jour
+     * aurait un crochet qu'on ne peut pas accrocher, sans que rien ne le lui dise. L'original
+     * portait son entree dans cette liste ({@code academy:EntityMagHook}), et le port la garde
+     * aussi, pour une installation neuve.
+     */
     public static boolean isMetallic(Entity entity) {
+        if (entity instanceof cn.academy.entity.EntityMagHook) return true;
         ensureBuilt();
         ResourceLocation id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
         return id != null && entities.contains(id);

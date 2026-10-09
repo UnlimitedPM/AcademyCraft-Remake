@@ -104,7 +104,14 @@ public final class Config {
             "minecraft:iron_ore",
             "minecraft:deepslate_iron_ore");
 
-    /** Les entites metalliques, reprises de {@code metalEntities}. */
+    /**
+     * Les entites metalliques, reprises de {@code metalEntities}.
+     *
+     * <p>Avec le crochet magnetique du mod, comme dans l'original : il y figurait sous le nom
+     * {@code academy:EntityMagHook}, et c'est ce qui donne tout son sens a l'objet — le deplacement
+     * magnetique s'accroche a un crochet lance. Le port l'ecrit sous le nom qu'il enregistre,
+     * {@code academy:mag_hook}.
+     */
     private static final List<String> DEFAULT_METAL_ENTITIES = List.of(
             "minecraft:minecart",
             "minecraft:chest_minecart",
@@ -113,7 +120,8 @@ public final class Config {
             "minecraft:hopper_minecart",
             "minecraft:spawner_minecart",
             "minecraft:commandblock_minecart",
-            "minecraft:villager_golem");
+            "minecraft:villager_golem",
+            "academy:mag_hook");
 
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> METAL_BLOCKS = BUILDER
             .comment("Blocs franchement metalliques, que l'electromaster attire a tout niveau.",

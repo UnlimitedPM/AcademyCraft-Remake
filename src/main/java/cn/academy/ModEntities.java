@@ -98,6 +98,28 @@ public class ModEntities {
                     .updateInterval(1)
                     .build("coin"));
 
+    /**
+     * Le crochet magnetique, portage d'{@code EntityMagHook}.
+     *
+     * <p>Un objet qu'on lance et qui se plante dans la premiere paroi qu'il touche : c'est
+     * l'accroche du deplacement magnetique, qui ne s'attrape que sur une entite metallique — voir
+     * {@code Config.DEFAULT_METAL_ENTITIES}, ou le crochet figure comme dans l'original.
+     *
+     * <p>Sa taille change en se plantant (un demi-bloc en vol, un bloc contre une paroi) : celle
+     * que le type annonce ici est donc celle de sa naissance, et l'entite reprend la main par
+     * {@code EntityMagHook.makeBoundingBox}. Suivi comme la bille de silicium — cadence d'un tick,
+     * parce qu'a deux blocs par tick il bondirait d'un bond de deux blocs a chaque image.
+     */
+    public static final RegistryObject<EntityType<cn.academy.entity.EntityMagHook>> MAG_HOOK =
+            ENTITIES.register("mag_hook", () -> EntityType.Builder
+                    .<cn.academy.entity.EntityMagHook>of(cn.academy.entity.EntityMagHook::new,
+                            MobCategory.MISC)
+                    .sized(cn.academy.entity.MagHookVisuals.FLY_SIZE,
+                            cn.academy.entity.MagHookVisuals.FLY_SIZE)
+                    .clientTrackingRange(4)
+                    .updateInterval(1)
+                    .build("mag_hook"));
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) {
         ENTITIES.register(bus);
     }
