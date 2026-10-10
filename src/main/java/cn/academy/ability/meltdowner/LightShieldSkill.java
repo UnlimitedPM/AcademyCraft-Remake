@@ -2,12 +2,15 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -44,6 +47,9 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
  * tick et par le prix de chaque coup refuse —, et <b>le coup de face ne passe pas du tout</b>,
  * refus sur {@code LivingAttackEvent} comme le renvoi de vecteur : pas de degats, pas de recul,
  * pas de rouge. Derriere, en revanche, le joueur encaisse tout, exactement comme avant.
+ *
+ * <p>Et une fleche arretée de face <b>fond dans le bouclier</b> au lieu de retomber intacte : voir
+ * {@link #melt}. C'est la aussi une demande du joueur.
  */
 public class LightShieldSkill extends Skill {
 
@@ -175,8 +181,33 @@ public class LightShieldSkill extends Skill {
         if (!data.isCharging(this)) return false;
         if (!comesFromTheFront(player, event.getSource())) return false;
         if (!data.perform(cpPerHit(data), overloadPerHit(data))) return false;
+        melt(player, event.getSource());
         data.addSkillExp(this, 0.001f);
         return true;
+    }
+
+    /**
+     * La fleche arretée par le bouclier <b>fond</b> : elle est detruite, et non renvoyee.
+     *
+     * <p>Le joueur : « j'aimerais que quand je me prend une fleche, au lieu de la renvoyer ca la
+     * detruise, comme si elle fondait dans mon bouclier ». Une fleche dont le coup est annule
+     * retombait en effet par terre, intacte et ramassable — elle ne repartait pas vers son tireur,
+     * mais elle restait la, alors que rien de ce qui touche un bouclier de plasma ne devrait y
+     * survivre.
+     *
+     * <p>Seules les <b>fleches</b> y passent, et non tous les projectiles : un trident lance est un
+     * {@code AbstractArrow} lui aussi, et le detruire ferait perdre son arme au tireur, ce que le
+     * joueur n'a pas demande et que le bouclier du jeu ne fait pas non plus. Une fleche spectrale ou
+     * enduite y passe, en revanche : c'est la meme entite.
+     *
+     * <p>Le gresillement est celui d'un feu qu'on eteint, et il se joue <b>cote serveur</b> — c'est
+     * le seul chemin qui marche pour un son, voir {@code EntityMdBall.flash}.
+     */
+    private static void melt(Player player, DamageSource source) {
+        if (!(source.getDirectEntity() instanceof Arrow arrow)) return;
+        arrow.discard();
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.6f, 1.4f);
     }
 
     /**

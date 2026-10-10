@@ -7085,7 +7085,10 @@ public final class AcademyGameTests {
                 .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
         data.setCategoryLevel(shield.getCategory(), 2);
         data.learnSkill(shield);
+        // Les DEUX ressources, parce que chaque coup refuse se paie dans les deux : c'est ce qui
+        // fait qu'un bouclier ne peut pas tout encaisser indefiniment.
         data.setControlPoint(data.getMaxControlPoint());
+        data.setOverload(0f);
         shield.onStart(player, data);
         data.beginCharge(shield);
         assertTrue(helper, data.isCharging(shield), "le bouclier est tenu");
@@ -7108,12 +7111,14 @@ public final class AcademyGameTests {
                 "un coup de face ne passe pas du tout : rien a l'ecran non plus");
         assertTrue(helper, reserve - data.getControlPoint() > 40f,
                 "et il se paie en reserve : " + (reserve - data.getControlPoint()) + " CP");
+        assertTrue(helper, data.isCharging(shield), "1. apres le coup de face");
 
         var deDos = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(derriere), 10f);
         cn.academy.ability.AbilityEvents.onLivingAttack(deDos);
         assertFalse(helper, deDos.isCanceled(),
                 "le meme coup, mais de dos, passe : c'est ce que le joueur a demande");
+        assertTrue(helper, data.isCharging(shield), "2. apres le coup de dos");
 
         // Ce qui n'a PAS d'auteur n'a pas de cote : la lave, le feu, une chute ne sont pas des
         // coups portes, et le bouclier ne s'en mele pas.
@@ -7121,6 +7126,34 @@ public final class AcademyGameTests {
                 player.damageSources().lava(), 4f);
         cn.academy.ability.AbilityEvents.onLivingAttack(lave);
         assertFalse(helper, lave.isCanceled(), "la lave n'a pas de cote : elle passe");
+        assertTrue(helper, data.isCharging(shield), "et le bouclier tient toujours");
+
+        // Une fleche de face FOND : elle est detruite, et pas renvoyee. Le joueur : « j'aimerais que
+        // quand je me prend une fleche, au lieu de la renvoyer ca la detruise, comme si elle fondait
+        // dans mon bouclier ». Les deux ressources sont remplies avant, parce que le coup precedent
+        // les a entamees et que chaque coup refuse se paie dans les deux.
+        data.setControlPoint(data.getMaxControlPoint());
+        data.setOverload(0f);
+        var fleche = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        fleche.moveTo(abs.getX() + 0.5, abs.getY() + 1.5, abs.getZ() + 2.5, 0f, 0f);
+        level.addFreshEntity(fleche);
+        var flecheDeFace = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().arrow(fleche, devant), 6f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(flecheDeFace);
+        assertTrue(helper, flecheDeFace.isCanceled(), "une fleche de face ne passe pas");
+        assertTrue(helper, fleche.isRemoved(), "et elle fond dans le bouclier");
+
+        var flecheDeDos = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        flecheDeDos.moveTo(abs.getX() + 0.5, abs.getY() + 1.5, abs.getZ() - 2.5, 0f, 0f);
+        level.addFreshEntity(flecheDeDos);
+        var tirDeDos = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().arrow(flecheDeDos, derriere), 6f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(tirDeDos);
+        assertFalse(helper, tirDeDos.isCanceled(), "une fleche de dos passe");
+        assertFalse(helper, flecheDeDos.isRemoved(),
+                "et celle-la ne fond pas : elle continue sa route");
 
         // Bouclier referme : il ne reste rien.
         data.cancelCharge(shield);
@@ -7131,6 +7164,7 @@ public final class AcademyGameTests {
 
         devant.discard();
         derriere.discard();
+        flecheDeDos.discard();
         helper.succeed();
     }
 
