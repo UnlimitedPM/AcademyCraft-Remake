@@ -88,6 +88,35 @@ public class EntityMagManipBlock extends Projectile {
     private static final EntityDataAccessor<BlockState> DATA_BLOCK =
             SynchedEntityData.defineId(EntityMagManipBlock.class, EntityDataSerializers.BLOCK_STATE);
 
+    /**
+     * Le SECOND bloc de ce qu'on porte, quand il en faut deux.
+     *
+     * <p>Une porte est DEUX blocs : sa moitie basse et sa moitie haute, deux positions, deux etats —
+     * et le pouvoir n'en avait jamais porte qu'un. Le joueur l'a vu tout de suite : « dans le
+     * principe ca fonctionne, mais le probleme c'est que la porte c'est 2 blocs, alors que
+     * maintenant on en a toujours gere qu'un seul avec ce pouvoir ». Une moitie arrachee laissait
+     * donc l'autre plante dans le mur.
+     *
+     * <p>L'ecart est toujours d'un bloc vers le HAUT ou vers le bas, jamais de cote : c'est la forme
+     * d'une porte, et de tout ce que le jeu construit sur deux blocs empiles. Le porteur les emporte
+     * donc ensemble, les dessine ensemble, et les repose ensemble — la ou les DEUX tiennent, et pas
+     * seulement lui.
+     */
+    private static final EntityDataAccessor<BlockState> DATA_COMPANION =
+            SynchedEntityData.defineId(EntityMagManipBlock.class, EntityDataSerializers.BLOCK_STATE);
+
+    /**
+     * Et l'ecart entre les deux : +1, -1, ou 0 quand il n'y a qu'un bloc.
+     *
+     * <p>Le voici aussi en clair, comme celui du crochet magnetique : la boite de collision en a
+     * besoin des la construction, et une donnee synchronisee n'existe pas encore a ce moment-la.
+     */
+    private static final EntityDataAccessor<Integer> DATA_COMPANION_DY =
+            SynchedEntityData.defineId(EntityMagManipBlock.class, EntityDataSerializers.INT);
+
+    /** L'ecart en clair. Voir {@link #DATA_COMPANION_DY}. */
+    private int companionDy;
+
     /** Le point que le bloc suit, ou {@code null} quand il est lache. */
     private Vec3 carryTo;
 
@@ -135,15 +164,28 @@ public class EntityMagManipBlock extends Projectile {
 
     /** Le bloc tel que la competence l'arrache : au centre du bloc vise, ou devant la main. */
     public EntityMagManipBlock(Level level, Player holder, BlockState state, Vec3 position) {
+        this(level, holder, state, position, null, 0);
+    }
+
+    /**
+     * Et le meme, avec le second bloc quand il en faut deux — une porte s'arrache en entier.
+     *
+     * @param companion le jumeau, ou {@code null} ; @param companionDy son ecart en Y
+     */
+    public EntityMagManipBlock(Level level, Player holder, BlockState state, Vec3 position,
+                               BlockState companion, int companionDy) {
         this(ModEntities.MAG_MANIP_BLOCK.get(), level);
         setOwner(holder);
         setBlockState(state);
+        if (companion != null) setCompanion(companion, companionDy);
         setPos(position.x, position.y, position.z);
     }
 
     @Override
     protected void defineSynchedData() {
         this.entityData.define(DATA_BLOCK, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        this.entityData.define(DATA_COMPANION, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        this.entityData.define(DATA_COMPANION_DY, 0);
     }
 
     public BlockState getBlockState() {
@@ -152,6 +194,52 @@ public class EntityMagManipBlock extends Projectile {
 
     public void setBlockState(BlockState state) {
         this.entityData.set(DATA_BLOCK, state);
+    }
+
+    /** Le second bloc porte, s'il y en a un. De l'air quand il n'y en a pas. */
+    public BlockState getCompanion() {
+        return this.entityData.get(DATA_COMPANION);
+    }
+
+    /** L'ecart entre les deux blocs : +1, -1, ou 0 quand il n'y en a qu'un. */
+    public int companionDy() {
+        return this.companionDy;
+    }
+
+    public boolean hasCompanion() {
+        return this.companionDy != 0;
+    }
+
+    /** Donne au bloc son jumeau, et ou il se tient par rapport a lui. */
+    public void setCompanion(BlockState state, int dy) {
+        this.entityData.set(DATA_COMPANION, state);
+        this.entityData.set(DATA_COMPANION_DY, dy);
+        this.companionDy = dy;
+        setBoundingBox(makeBoundingBox());
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        // Chez le client, c'est par la que le couple arrive : l'ecart se recopie en clair, et la
+        // boite suit.
+        if (DATA_COMPANION_DY.equals(key)) {
+            this.companionDy = this.entityData.get(DATA_COMPANION_DY);
+            setBoundingBox(makeBoundingBox());
+        }
+    }
+
+    /**
+     * La boite du bloc, etendue a son jumeau quand il en a un.
+     *
+     * <p>Sans cela, une porte portee n'occupait qu'un bloc sur deux : sa moitie haute sortait du
+     * volume par lequel le jeu decide de la dessiner, et le couple pouvait se glisser dans un trou
+     * d'un seul bloc. Pour un bloc seul, la boite est exactement ce qu'elle etait.
+     */
+    @Override
+    protected net.minecraft.world.phys.AABB makeBoundingBox() {
+        var box = super.makeBoundingBox();
+        return this.companionDy == 0 ? box : box.expandTowards(0, this.companionDy, 0);
     }
 
     /** La competence lui donne le point a suivre, a chaque tick. */
@@ -321,15 +409,41 @@ public class EntityMagManipBlock extends Projectile {
         BlockPos around = blockPosition();
         for (int[] offset : SPOTS) {
             BlockPos pos = around.offset(offset[0], offset[1], offset[2]);
-            if (free(pos)) {
+            if (!fits(pos)) continue;
+            // La moitie BASSE d'abord : c'est l'ordre dans lequel le jeu pose une porte, et celle
+            // dont l'autre se sert pour se tenir.
+            if (this.companionDy < 0) {
+                level().setBlock(pos.offset(0, this.companionDy, 0), getCompanion(), 3);
                 level().setBlock(pos, getBlockState(), 3);
-                discard();
-                return;
+            } else {
+                level().setBlock(pos, getBlockState(), 3);
+                if (this.companionDy > 0) {
+                    level().setBlock(pos.offset(0, this.companionDy, 0), getCompanion(), 3);
+                }
             }
+            discard();
+            return;
         }
+        // Rien ne convient : les deux blocs tombent en objets, et aucun ne se perd.
         Containers.dropItemStack(level(), getX(), getY(), getZ(),
                 new ItemStack(getBlockState().getBlock()));
+        if (hasCompanion()) {
+            Containers.dropItemStack(level(), getX(), getY(), getZ(),
+                    new ItemStack(getCompanion().getBlock()));
+        }
         discard();
+    }
+
+    /**
+     * Vrai si le bloc peut se poser la — lui ET son jumeau.
+     *
+     * <p>Le jumeau compte : poser une moitie de porte la ou l'autre ne tient pas serait exactement
+     * le defaut qu'on repare. C'est aussi ce qui empeche un couple de se glisser dans un trou d'un
+     * seul bloc.
+     */
+    private boolean fits(BlockPos pos) {
+        if (!free(pos)) return false;
+        return this.companionDy == 0 || free(pos.offset(0, this.companionDy, 0));
     }
 
     private boolean free(BlockPos pos) {

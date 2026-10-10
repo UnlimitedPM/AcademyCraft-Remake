@@ -88,6 +88,18 @@ public final class MagManipRenderer {
             client.getBlockRenderer().renderSingleBlock(block.getBlockState(), pose, buffers,
                     LevelRenderer.getLightColor(client.level, block.blockPosition()),
                     OverlayTexture.NO_OVERLAY);
+            // Et son jumeau, un bloc plus haut ou plus bas, DANS le repere du bloc — donc apres la
+            // rotation : le couple tourne d'un seul tenant, comme l'objet qu'il est. Voir
+            // EntityMagManipBlock, qui les emporte et les repose ensemble.
+            if (block.hasCompanion()) {
+                pose.pushPose();
+                pose.translate(0, block.companionDy(), 0);
+                client.getBlockRenderer().renderSingleBlock(block.getCompanion(), pose, buffers,
+                        LevelRenderer.getLightColor(client.level,
+                                block.blockPosition().offset(0, block.companionDy(), 0)),
+                        OverlayTexture.NO_OVERLAY);
+                pose.popPose();
+            }
             pose.popPose();
             drawn = true;
         }

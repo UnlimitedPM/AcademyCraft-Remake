@@ -162,10 +162,18 @@ public class MagManipSkill extends Skill {
     @Override
     public void onStart(Player player, AbilityData data) {
         BlockState state;
+        BlockState companion = null;
+        int companionDy = 0;
         Vec3 position;
         BlockPos aimed = findMetalBlock(player);
         if (aimed != null) {
             state = player.level().getBlockState(aimed);
+            BlockPos second = companionOf(player.level(), aimed, state);
+            if (second != null) {
+                companion = player.level().getBlockState(second);
+                companionDy = second.getY() - aimed.getY();
+                player.level().removeBlock(second, false);
+            }
             player.level().removeBlock(aimed, false);
             position = Vec3.atCenterOf(aimed);
         } else {
@@ -176,9 +184,31 @@ public class MagManipSkill extends Skill {
             if (!player.getAbilities().instabuild) stack.shrink(1);
         }
 
-        EntityMagManipBlock block = new EntityMagManipBlock(player.level(), player, state, position);
+        EntityMagManipBlock block = new EntityMagManipBlock(player.level(), player, state,
+                position, companion, companionDy);
         player.level().addFreshEntity(block);
         data.setHoldTarget(this, block.getId());
+    }
+
+    /**
+     * Le SECOND bloc de ce qu'on vient d'arracher, quand il en faut deux.
+     *
+     * <p>Une porte est deux blocs empiles, et le pouvoir n'en avait jamais porte qu'un : le joueur
+     * l'a vu tout de suite — « dans le principe ca fonctionne, mais le probleme c'est que la porte
+     * c'est 2 blocs, alors que maintenant on en a toujours gere qu'un seul avec ce pouvoir ». Une
+     * moitie partait donc seule, et l'autre restait plantee dans le mur.
+     *
+     * <p>Le jumeau n'est retenu que s'il est bien la, et bien celui de la MEME porte : une porte
+     * dont on a casse la moitie haute n'est plus qu'une moitie, et elle s'arrache comme telle —
+     * l'emporte seul est alors exactement ce qu'il faut.
+     */
+    private static BlockPos companionOf(net.minecraft.world.level.Level level, BlockPos pos,
+                                       BlockState state) {
+        if (!(state.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) return null;
+        boolean lower = state.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+        BlockPos other = pos.offset(0, lower ? 1 : -1, 0);
+        return level.getBlockState(other).getBlock() == state.getBlock() ? other : null;
     }
 
     /** Le bloc suit les yeux, comme la cible d'un maintien qui se deplace. */

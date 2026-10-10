@@ -2497,6 +2497,98 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Une porte en fer s'arrache EN ENTIER : ses deux moities partent et reviennent ensemble.
+     *
+     * <p>Le joueur : « dans le principe ca fonctionne, mais le probleme c'est que la porte c'est
+     * 2 blocs, alors que maintenant on en a toujours gere qu'un seul avec ce pouvoir ». Le porteur
+     * emporte donc le couple quand il en trouve un : ici il l'arrache, le laisse se poser, et la
+     * porte se retrouve entiere.
+     */
+    @GameTest(template = "empty")
+    public static void unePorteEnFerSArracheEnEntier(GameTestHelper helper) {
+        var skill = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        var door = net.minecraft.world.level.block.Blocks.IRON_DOOR;
+        var half = net.minecraft.world.level.block.DoorBlock.HALF;
+        var lower = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+        var upper = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, 200);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + 201, floor.getZ());
+
+        // La chambre est nettoyee AVANT, et assez haute pour une porte entiere : le monde des tests
+        // est partage et sauvegarde.
+        for (int dz = 0; dz <= 8; dz++) {
+            for (int dx = -1; dx <= 5; dx++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "mag-manip-door");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 2);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        // La porte en travers du regard, trois blocs devant : ses deux moities.
+        BlockPos bas = eyes.offset(0, 0, 3);
+        // Et son sol : sans lui, le couple lache tomberait dans le vide, la dalle de l'epreuve ne
+        // portant que le faux joueur. Le bloc reste d'une execution a l'autre, et c'est voulu.
+        helper.setBlock(bas.below(), net.minecraft.world.level.block.Blocks.STONE);
+        var basse = door.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.DoorBlock.FACING,
+                        net.minecraft.core.Direction.SOUTH)
+                .setValue(half, lower);
+        helper.setBlock(bas, basse);
+        helper.setBlock(bas.above(), basse.setValue(half, upper));
+        lookAt(player, helper.absolutePos(bas));
+
+        skill.onStart(player, data);
+
+        assertTrue(helper, helper.getLevel().getBlockState(helper.absolutePos(bas)).isAir(),
+                "la moitie basse est partie");
+        assertTrue(helper, helper.getLevel().getBlockState(helper.absolutePos(bas.above())).isAir(),
+                "et la haute avec elle, sans rester plantee dans le mur");
+
+        var carrier = helper.getLevel().getEntitiesOfClass(
+                        cn.academy.entity.EntityMagManipBlock.class,
+                        new net.minecraft.world.phys.AABB(helper.absolutePos(bas)).inflate(4.0))
+                .stream().findFirst().orElse(null);
+        assertTrue(helper, carrier != null, "le bloc porte existe");
+        assertValue(helper, 1, carrier.companionDy(), "et il emporte son jumeau, un bloc au-dessus");
+        assertValue(helper, upper, carrier.getCompanion().getValue(half),
+                "le jumeau est la moitie haute");
+
+        // Et il le repose avec lui : la porte se retrouve entiere, la ou les deux tiennent.
+        for (int tick = 0; tick < 60 && !carrier.isRemoved(); tick++) {
+            carrier.tick();
+        }
+        assertTrue(helper, carrier.isRemoved(), "le couple s'est pose");
+
+        // La porte se retrouve entiere, et exactement ou elle etait.
+        var posee = helper.getLevel().getBlockState(helper.absolutePos(bas));
+        var dessus = helper.getLevel().getBlockState(helper.absolutePos(bas.above()));
+        assertValue(helper, door, posee.getBlock(), "la moitie basse est revenue a sa place");
+        assertValue(helper, lower, posee.getValue(half), "et c'est bien la basse");
+        assertValue(helper, door, dessus.getBlock(), "la haute est revenue avec elle");
+        assertValue(helper, upper, dessus.getValue(half), "et c'est bien la haute");
+
+        // Et il n'en reste pas une seule autre ailleurs : ni perdue, ni en trop.
+        int moities = 0;
+        for (BlockPos pos : BlockPos.betweenClosed(helper.absolutePos(eyes.offset(-2, 0, -2)),
+                helper.absolutePos(eyes.offset(8, 6, 8)))) {
+            if (helper.getLevel().getBlockState(pos).getBlock() == door) moities++;
+        }
+        assertValue(helper, 2, moities, "la porte a ses deux moities, ni une de perdue ni une en trop");
+
+        helper.succeed();
+    }
+
     /** Les entites metalliques, qui se lisent aussi dans les registres. */
     @GameTest(template = "empty")
     public static void lesEntitesMetalliquesSontCellesDeLOriginal(GameTestHelper helper) {
