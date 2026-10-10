@@ -119,6 +119,48 @@ class MdRaysTest {
     }
 
     @Test
+    @DisplayName("les etincelles d'un rayon court ne sortent pas de son bout")
+    void lesEtincellesNeSortentPasDuRayon() {
+        // Le joueur : « le laser lui va bien moins loin, mais les particules du rad intensify se
+        // propagent comme si le laser avait sa taille complete ». Le rayon de la bombe a electrons
+        // s'arretait bien sur le bloc touche ; ses etincelles, elles, continuaient jusqu'a dix
+        // blocs — c'est la distance qu'elles tirent au sort, et elle ignorait la longueur.
+        MdRays.clear();
+        MdSparks.clear();
+        MdRays.spawn(MdRayKind.SMALL, Vec3.ZERO, new Vec3(0, 0, 3), BIRTH);
+        MdRays.LiveRay court = MdRays.live().get(0);
+        for (int i = 0; i < 300; i++) {
+            court.sowSpark(BIRTH);
+        }
+        assertFalse(MdSparks.live().isEmpty(), "il y a bien des etincelles a regarder");
+        for (MdSparks.Spark spark : MdSparks.live()) {
+            assertTrue(distance(spark) <= 3 + 1e-6,
+                    "aucune ne depasse le bout du rayon : " + distance(spark));
+        }
+
+        // Et un rayon plus long que dix blocs garde ses etincelles dans ses dix premiers : c'est
+        // la qu'elles etaient avant, et c'est la qu'elles restent.
+        MdRays.clear();
+        MdSparks.clear();
+        MdRays.spawn(MdRayKind.SMALL, Vec3.ZERO, new Vec3(0, 0, 30), BIRTH);
+        MdRays.LiveRay longRayon = MdRays.live().get(0);
+        for (int i = 0; i < 300; i++) {
+            longRayon.sowSpark(BIRTH);
+        }
+        for (MdSparks.Spark spark : MdSparks.live()) {
+            double loin = distance(spark);
+            assertTrue(loin > 0 && loin <= MdRays.SPARK_DISTANCE + 1e-6,
+                    "et un rayon long les seme dans ses dix premiers blocs : " + loin);
+        }
+    }
+
+    /** La distance d'une etincelle a l'origine du rayon, qui est la ou on l'a pose. */
+    private static double distance(MdSparks.Spark spark) {
+        double[] pos = spark.pos();
+        return Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    }
+
+    @Test
     void unRayonMeurtALaFinDeSaVie() {
         MdRays.LiveRay ray = rayon(MdRayKind.SMALL);
 

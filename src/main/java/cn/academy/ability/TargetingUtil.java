@@ -105,10 +105,24 @@ public final class TargetingUtil {
      */
     public static Entity findEntityAlong(Player owner, Vec3 from, Vec3 to,
                                          java.util.function.Predicate<Entity> extra) {
+        EntityHitResult hit = findEntityHit(owner, from, to, extra);
+        return hit != null ? hit.getEntity() : null;
+    }
+
+    /**
+     * La meme chose, mais avec le <b>point d'impact</b>.
+     *
+     * <p>C'est ce point qui arrete un rayon : celui de la bombe a electrons se dessinait jusqu'au
+     * bout de sa portee, derriere la bete touchee, faute de le connaitre — voir
+     * {@code EntityMdBall.shoot}. Le point tombe sur la <b>boite</b> de la bete, donc sur sa
+     * surface, et non sur son centre.
+     */
+    @Nullable
+    public static EntityHitResult findEntityHit(Player owner, Vec3 from, Vec3 to,
+                                                java.util.function.Predicate<Entity> extra) {
         AABB box = new AABB(from, to).inflate(1.0);
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(owner, from, to, box,
+        return ProjectileUtil.getEntityHitResult(owner, from, to, box,
                 e -> !e.isSpectator() && e.isPickable() && e != owner && extra.test(e),
                 from.distanceToSqr(to));
-        return hit != null ? hit.getEntity() : null;
     }
 }

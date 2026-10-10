@@ -193,9 +193,19 @@ public final class MdRays {
          * <p>Elle nait a l'instant <b>donne</b> — celui du tick de son rayon — et non a celui de
          * l'horloge du client : les deux se confondent en jeu, mais c'est ce qui permet de derouler
          * la vie d'un rayon dans un test, ou il n'y a aucun client a interroger.
+         *
+         * <p>Et elle ne sort JAMAIS du rayon : la distance tiree se rabat sur la longueur quand
+         * celle-ci est plus courte que dix blocs. Le joueur a vu le defaut sur la bombe a electrons
+         * — « le laser lui va bien moins loin, mais les particules du rad intensify se propagent
+         * comme si le laser avait sa taille complete » : le rayon s'arretait bien sur le bloc
+         * touche, et ses etincelles, elles, continuaient leur chemin dans le vide, jusqu'a dix
+         * blocs devant lui. Un rayon long ne bouge pas : c'est la meme etincelle, quelque part
+         * dans ses dix premiers blocs.
          */
         void sowSpark(long nowMs) {
-            double along = RANDOM.nextDouble() * SPARK_DISTANCE / length;
+            if (length <= 0) return;
+            double reach = Math.min(SPARK_DISTANCE, length);
+            double along = RANDOM.nextDouble() * reach / length;
             Vec3 pos = new Vec3(from[0] + (to[0] - from[0]) * along,
                     from[1] + (to[1] - from[1]) * along,
                     from[2] + (to[2] - from[2]) * along);

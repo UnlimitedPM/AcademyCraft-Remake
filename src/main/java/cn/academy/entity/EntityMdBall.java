@@ -23,6 +23,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.PacketDistributor;
@@ -269,8 +270,9 @@ public class EntityMdBall extends Entity {
      * @param ignoreInvulnerability vrai pour une salve : sept billes partent dans le meme tick,
      *                              et sans cela la premiere mangerait l'invulnerabilite des six
      *                              autres — c'est le {@code hurtResistantTime = -1} de l'original
+     * @return le bout du rayon, une fois arrete par ce qu'il a touche
      */
-    public void shoot(Player owner, Vec3 dest, float attack, boolean ignoreInvulnerability) {
+    public Vec3 shoot(Player owner, Vec3 dest, float attack, boolean ignoreInvulnerability) {
         Vec3 from = muzzle();
         Vec3 to = dest;
 
@@ -281,12 +283,21 @@ public class EntityMdBall extends Entity {
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, owner));
         if (wall.getType() == HitResult.Type.BLOCK) to = wall.getLocation();
 
-        Entity target = TargetingUtil.findEntityAlong(owner, from, to,
+        // Et ce qu'il TOUCHE l'arrete de la meme facon. Sans cela le rayon se dessinait jusqu'au
+        // bout de la portee, DERRIERE la bete : le joueur : « si je vise un monstre, la laser se
+        // propage avec sa taille complete plutot qu'une taille reduite, ce qui fait que plus le
+        // monstre est proche de moi et plus c'est dur de le toucher puisque les laser vont
+        // derriere lui ». Le point d'impact tombe sur la boite de la bete, donc le trait s'arrete
+        // a sa surface et non a son centre.
+        EntityHitResult hit = TargetingUtil.findEntityHit(owner, from, to,
                 e -> !(e instanceof EntityMdBall));
-
-        if (target != null) strike(owner, target, attack, ignoreInvulnerability);
+        if (hit != null) {
+            to = hit.getLocation();
+            strike(owner, hit.getEntity(), attack, ignoreInvulnerability);
+        }
 
         flash(from, to);
+        return to;
     }
 
     /**

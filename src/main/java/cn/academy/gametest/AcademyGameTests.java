@@ -6967,6 +6967,96 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le rayon de la bombe a electrons s'arrete SUR ce qu'il touche, et pas derriere.
+     *
+     * <p>Le joueur : « si je vise un monstre, la laser se propage avec sa taille complete plutot
+     * qu'une taille reduite, ce qui fait que plus le monstre est proche de moi et plus c'est dur de
+     * le toucher puisque les laser vont derriere lui ». Le mur, lui, arretait deja le trait : c'est
+     * la bete touchee qui ne l'arretait pas, faute de connaitre son <b>point d'impact</b> — le rayon
+     * se dessinait jusqu'au bout de la portee visee, quel que soit ce qu'il rencontrait en chemin.
+     *
+     * <p>Le test mesure les trois bouts du rayon, depuis une bille posee dans l'axe du regard :
+     * <b>rien</b> devant, et il va au bout de ses quinze blocs ; une <b>bete</b> a trois blocs, et il
+     * s'arrete sur elle, donc avant ; un <b>mur</b> a deux blocs, la bete retiree pour que ce soit
+     * bien lui qui arrete. Sans les trois, les deux raccourcissements se confondraient.
+     */
+    @GameTest(template = "empty")
+    public static void laBombeAElectronsArreteSonRayon(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int height = 230;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Le couloir se creuse par le MONDE, en coordonnees absolues : c'est ce que lit le lancer
+        // de rayon, et `helper.setBlock` attend des coordonnees relatives a la structure — un mur
+        // pose par lui tombe ailleurs, et le rayon le traverse sans le voir.
+        clearCorridor(helper, abs, 20);
+        for (int dz = 0; dz <= 20; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 3; dy++) {
+                    level.setBlock(helper.absolutePos(eyes.offset(dx, dy, dz)),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "viserayon");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var ball = new cn.academy.entity.EntityMdBall(level, player,
+                cn.academy.ability.meltdowner.MdBallVisuals.LIFE_TICKS, 6f);
+        ball.moveTo(player.getX(), player.getY(), player.getZ());
+        level.addFreshEntity(ball);
+
+        // Le rayon part de la GUEULE de la bille, et non de l'oeil : c'est de la qu'il faut
+        // mesurer, sinon les deux centimetres d'ecart suffiraient a faire mentir la premiere
+        // assertion.
+        net.minecraft.world.phys.Vec3 gueule = ball.muzzle();
+        net.minecraft.world.phys.Vec3 look = player.getViewVector(1f);
+        net.minecraft.world.phys.Vec3 loin = gueule.add(look.scale(
+                cn.academy.ability.meltdowner.ElectronBombSkill.RANGE));
+
+        // 1. RIEN devant : le rayon va au bout de sa portee. La portee se mesure sur le MEME vecteur
+        // que celui vise — le regard d'un faux joueur n'est pas unitaire au bit pres, et quinze
+        // blocs font alors 14,9999.
+        var bout = ball.shoot(player, loin, 0f, false);
+        assertClose(helper, loin.distanceTo(gueule), bout.distanceTo(gueule),
+                "dans le vide, le rayon va au bout de ses quinze blocs");
+        assertTrue(helper, bout.distanceTo(gueule) > 14.9,
+                "quinze blocs, quoi qu'il arrive : " + bout.distanceTo(gueule));
+
+        // 2. UNE BETE a trois blocs, pile dans l'axe.
+        var bete = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        net.minecraft.world.phys.Vec3 surLaLigne = gueule.add(look.scale(3));
+        bete.moveTo(surLaLigne.x, abs.getY(), surLaLigne.z, 0f, 0f);
+        level.addFreshEntity(bete);
+
+        bout = ball.shoot(player, loin, 0f, false);
+        assertTrue(helper, bout.distanceTo(gueule) < 3.0,
+                "sur une bete a trois blocs, le rayon s'arrete sur elle : bout a "
+                        + bout.distanceTo(gueule) + " blocs, soit " + bout);
+        assertTrue(helper, bout.distanceTo(gueule) > 2.0,
+                "et pas avant : le point d'impact est sur sa surface, pas devant elle");
+
+        // 3. UN MUR a deux blocs — la bete s'en va, pour que ce soit bien lui qui arrete. Le mur
+        // est pose par le MONDE, en absolu : c'est la seule facon dont le rayon le voit.
+        bete.discard();
+        BlockPos mur = BlockPos.containing(gueule.add(look.scale(2)));
+        level.setBlock(mur, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+
+        bout = ball.shoot(player, loin, 0f, false);
+        assertTrue(helper, bout.distanceTo(gueule) < 2.5,
+                "un mur arrete le rayon de la meme facon : bout a " + bout.distanceTo(gueule)
+                        + " blocs, soit " + bout);
+
+        level.setBlock(mur, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        ball.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,
