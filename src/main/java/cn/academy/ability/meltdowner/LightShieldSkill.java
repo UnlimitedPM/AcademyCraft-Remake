@@ -10,7 +10,8 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.entity.projectile.ThrownTrident;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -195,16 +196,19 @@ public class LightShieldSkill extends Skill {
      * mais elle restait la, alors que rien de ce qui touche un bouclier de plasma ne devrait y
      * survivre.
      *
-     * <p>Seules les <b>fleches</b> y passent, et non tous les projectiles : un trident lance est un
-     * {@code AbstractArrow} lui aussi, et le detruire ferait perdre son arme au tireur, ce que le
-     * joueur n'a pas demande et que le bouclier du jeu ne fait pas non plus. Une fleche spectrale ou
-     * enduite y passe, en revanche : c'est la meme entite.
+     * <p>Le test est celui de <b>l'entite</b>, et non d'une liste : tout ce qui est un
+     * {@code AbstractArrow} y passe — la fleche ordinaire, la spectrale, l'enduite, et toutes celles
+     * des autres mods —, ce qui est exactement ce que le joueur a demande : « je veux que toutes les
+     * fleches se fassent bruler ». La seule exception est le <b>trident</b>, aussi un
+     * {@code AbstractArrow} : « mais pas un trident non plus ». Le detruire ferait perdre son arme au
+     * tireur, ce que le bouclier du jeu ne fait pas davantage.
      *
      * <p>Le gresillement est celui d'un feu qu'on eteint, et il se joue <b>cote serveur</b> — c'est
      * le seul chemin qui marche pour un son, voir {@code EntityMdBall.flash}.
      */
     private static void melt(Player player, DamageSource source) {
-        if (!(source.getDirectEntity() instanceof Arrow arrow)) return;
+        if (!(source.getDirectEntity() instanceof AbstractArrow arrow)) return;
+        if (arrow instanceof ThrownTrident) return;
         arrow.discard();
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.6f, 1.4f);
