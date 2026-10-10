@@ -6883,11 +6883,13 @@ public final class AcademyGameTests {
      * <p>L'experience est poussee a fond pour abreger : passe 80 %, la bille ne vit plus que
      * cinq ticks et tire au troisieme, au lieu d'une seconde pleine.
      *
-     * <p>La cible est posee <b>douze</b> blocs devant, et c'est un detail qui compte : la bille
-     * se tient a un ecart tire au hasard, jusqu'a 1,3 bloc de cote, et c'est de <b>la</b> que
-     * part le rayon. Plus la cible est loin, plus ce decalage se resserre sur le regard — a
-     * douze blocs il ne reste que la moitie d'un bloc, et la cible est donc touchee quel que
-     * soit le tirage. Plus pres, le test dependrait du hasard.
+     * <p>La cible est posee <b>trois</b> blocs devant, et c'est tout le point du test : la bille se
+     * tient a un ecart tire au hasard, jusqu'a 1,3 bloc de cote, et c'est de la que part le rayon.
+     * Tant que ce rayon visait le <b>point</b> du regard, une cible aussi proche se retrouvait a cote
+     * de lui, et le trait continuait derriere elle — le defaut que le joueur a signale : « plus le
+     * monstre est proche de moi et plus c'est dur de le toucher puisque les laser vont derriere
+     * lui ». Depuis que le tir vise la <b>bete</b>, l'ecart de la bille ne peut plus la faire
+     * manquer, et trois blocs le prouvent.
      */
     @GameTest(template = "empty")
     public static void laBombeAElectronsLacheUneBilleQuiTireSonRayon(GameTestHelper helper) {
@@ -6913,16 +6915,15 @@ public final class AcademyGameTests {
         var player = ownPlayer(helper, "bomber");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
 
-        // La cible se pose exactement la ou le regard touche, et ce n'est pas un caprice : la
-        // bille nait a un ecart tire au hasard — jusqu'a 1,3 bloc de cote — et son rayon part de
-        // LA. Posee ailleurs, la cible serait touchee ou manquee selon ce tirage. La ou le regard
-        // touche, la ligne de la bille y aboutit toujours.
-        var aim = cn.academy.ability.TargetingUtil.findImpactPoint(player,
-                cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+        // La cible se pose TROIS blocs devant les yeux, et pas au bout de la portee : c'est a cette
+        // distance que l'ecart de la bille la faisait manquer quand le tir visait le point du
+        // regard. Elle est donc le temoin du defaut.
+        net.minecraft.world.phys.Vec3 devant = player.getEyePosition(1f)
+                .add(player.getViewVector(1f).scale(3));
 
         var zombie = new net.minecraft.world.entity.monster.Zombie(
                 net.minecraft.world.entity.EntityType.ZOMBIE, level);
-        zombie.moveTo(aim.x, abs.getY(), aim.z, 0f, 0f);
+        zombie.moveTo(devant.x, abs.getY(), devant.z, 0f, 0f);
         level.addFreshEntity(zombie);
         float before = zombie.getHealth();
 
@@ -6941,13 +6942,13 @@ public final class AcademyGameTests {
         assertTrue(helper, ball.position().distanceTo(player.position()) > 0.5,
                 "qui flotte a cote de son porteur, pas dans ses pieds : " + ball.position());
 
-        // Le tir part de la BILLE, pas de l'oeil : la cible doit donc etre dans sa ligne, de la
-        // bille jusqu'ou le regard touche. On la verifie avant de tirer, sans quoi un echec ne
+        // Le tir part de la BILLE, pas de l'oeil, et il vise la BETE : on refait donc ici la meme
+        // visee que la competence, pour verifier la ligne avant de tirer — sans quoi un echec ne
         // dirait pas si c'est le tir ou la ligne qui est en faute.
         net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(
                 ball.getX(), ball.getY() + player.getEyeHeight(), ball.getZ());
-        net.minecraft.world.phys.Vec3 to = cn.academy.ability.TargetingUtil.findImpactPoint(
-                player, cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+        net.minecraft.world.phys.Vec3 to = zombie.position()
+                .add(0, zombie.getBbHeight() / 2, 0);
         var seen = cn.academy.ability.TargetingUtil.findEntityAlong(player, from, to,
                 e -> !(e instanceof cn.academy.entity.EntityMdBall));
         assertTrue(helper, seen == zombie, "la cible est dans la ligne de la bille : vu "

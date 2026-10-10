@@ -248,10 +248,28 @@ public class EntityMdBall extends Entity {
 
     /**
      * Le tir de la bombe a electrons : un rayon vers ce que le porteur regarde.
+     *
+     * <p>Et ce qu'il regarde est une <b>bete</b> quand il y en a une : le tir vise alors la bete
+     * elle-meme, et non le point que son regard touche. La nuance est tout : la bille flotte jusqu'a
+     * 1,3 bloc <b>de cote</b>, donc son rayon part d'a cote et rejoignait le point de l'oeil en
+     * <b>diagonale</b>. Plus la bete etait proche, plus elle se retrouvait a cote de ce rayon : le
+     * trait continuait derriere elle, et il fallait la viser de loin. Le joueur : « si je vise un
+     * monstre, la laser se propage avec sa taille complete plutot qu'une taille reduite, ce qui fait
+     * que plus le monstre est proche de moi et plus c'est dur de le toucher puisque les laser vont
+     * derriere lui ». En visant la bete, la diagonale aboutit DANS sa boite, quel que soit l'ecart
+     * de la bille — et le rayon s'y arrete, voir {@link #shoot}.
+     *
+     * <p>S'il n'y a pas de bete, rien ne change : le tir rejoint le point du regard, et c'est le mur
+     * qui l'arrete — ce que le joueur avait deja valide.
      */
     private void fire(Player spawner) {
-        shoot(spawner, TargetingUtil.findImpactPoint(spawner,
-                cn.academy.ability.meltdowner.ElectronBombSkill.RANGE), damage, false);
+        Entity vue = TargetingUtil.findEntityInSight(spawner,
+                cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+        Vec3 dest = vue != null
+                ? vue.position().add(0, vue.getBbHeight() / 2, 0)
+                : TargetingUtil.findImpactPoint(spawner,
+                        cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+        shoot(spawner, dest, damage, false);
     }
 
     /**
