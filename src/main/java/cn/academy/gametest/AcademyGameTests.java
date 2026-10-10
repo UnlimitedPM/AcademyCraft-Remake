@@ -2544,10 +2544,16 @@ public final class AcademyGameTests {
                 .setValue(net.minecraft.world.level.block.DoorBlock.FACING,
                         net.minecraft.core.Direction.SOUTH)
                 .setValue(half, lower);
-        helper.setBlock(bas, basse);
-        helper.setBlock(bas.above(), basse.setValue(half, upper));
-        lookAt(player, helper.absolutePos(bas));
+        var haute = basse.setValue(half, upper);
 
+        // PREMIER TEMPS, par la HAUTE. C'est la que le jeu cassait la moitie restante TOUT SEUL, et
+        // avec son butin : le joueur : « si j'arrache a partir du bloc du bas, la porte fait dropper
+        // une porte et je peux quand meme lancer la porte, ce qui la duplique ».
+        ramasserPortesTombees(helper, helper.absolutePos(bas));
+        helper.setBlock(bas, basse);
+        helper.setBlock(bas.above(), haute);
+        lookAt(player, helper.absolutePos(bas.above()));
+        long tombeesAvant = droppedDoors(helper, helper.absolutePos(bas));
         skill.onStart(player, data);
 
         assertTrue(helper, helper.getLevel().getBlockState(helper.absolutePos(bas)).isAir(),
@@ -2555,14 +2561,43 @@ public final class AcademyGameTests {
         assertTrue(helper, helper.getLevel().getBlockState(helper.absolutePos(bas.above())).isAir(),
                 "et la haute avec elle, sans rester plantee dans le mur");
 
-        var carrier = helper.getLevel().getEntitiesOfClass(
-                        cn.academy.entity.EntityMagManipBlock.class,
-                        new net.minecraft.world.phys.AABB(helper.absolutePos(bas)).inflate(4.0))
-                .stream().findFirst().orElse(null);
+        var parLaHaute = carried(helper, player);
+        assertTrue(helper, parLaHaute != null, "le bloc porte existe");
+        assertFalse(helper, parLaHaute.isRemoved(),
+                "et il vit encore quand l'acte se termine : il n'a pas deja lache son bloc");
+        assertValue(helper, tombeesAvant, droppedDoors(helper, helper.absolutePos(bas)),
+                "et pas une porte de plus par terre : c'est le defaut que le joueur a vu — "
+                        + tombees(helper, helper.absolutePos(bas)));
+        assertValue(helper, -1, parLaHaute.companionDy(), "il tient la haute, la basse sous elle");
+        assertValue(helper, upper, parLaHaute.getBlockState().getValue(half), "lui, la haute");
+        assertValue(helper, lower, parLaHaute.getCompanion().getValue(half), "son jumeau, la basse");
+        parLaHaute.discard();
+
+        // SECOND TEMPS, par la BASSE — et celui-la, on le suit jusqu'au bout : il se pose, et la
+        // porte se retrouve entiere.
+        ramasserPortesTombees(helper, helper.absolutePos(bas));
+        helper.setBlock(bas, basse);
+        helper.setBlock(bas.above(), haute);
+        lookAt(player, helper.absolutePos(bas));
+        long tombeesAvantLeBas = droppedDoors(helper, helper.absolutePos(bas));
+        skill.onStart(player, data);
+
+        assertTrue(helper, helper.getLevel().getBlockState(helper.absolutePos(bas)).isAir(),
+                "la moitie basse est partie, par le bas cette fois");
+        assertTrue(helper, helper.getLevel().getBlockState(helper.absolutePos(bas.above())).isAir(),
+                "et la haute avec elle");
+        assertValue(helper, tombeesAvantLeBas, droppedDoors(helper, helper.absolutePos(bas)),
+                "et rien n'est tombe non plus dans ce sens-la — "
+                        + tombees(helper, helper.absolutePos(bas)));
+
+        var carrier = carried(helper, player);
         assertTrue(helper, carrier != null, "le bloc porte existe");
+        assertFalse(helper, carrier.isRemoved(),
+                "et il vit encore quand l'acte se termine");
         assertValue(helper, 1, carrier.companionDy(), "et il emporte son jumeau, un bloc au-dessus");
+        assertValue(helper, lower, carrier.getBlockState().getValue(half), "lui, la basse");
         assertValue(helper, upper, carrier.getCompanion().getValue(half),
-                "le jumeau est la moitie haute");
+                "et le jumeau est la moitie haute");
 
         // Et il le repose avec lui : la porte se retrouve entiere, la ou les deux tiennent.
         for (int tick = 0; tick < 60 && !carrier.isRemoved(); tick++) {
@@ -2587,6 +2622,56 @@ public final class AcademyGameTests {
         assertValue(helper, 2, moities, "la porte a ses deux moities, ni une de perdue ni une en trop");
 
         helper.succeed();
+    }
+
+    /** Le bloc que ce faux joueur tient — il en porte un seul a la fois. */
+    private static cn.academy.entity.EntityMagManipBlock carried(GameTestHelper helper,
+                                                                 net.minecraft.world.entity.Entity player) {
+        return helper.getLevel().getEntitiesOfClass(cn.academy.entity.EntityMagManipBlock.class,
+                        player.getBoundingBox().inflate(6.0))
+                .stream().filter(block -> block.getOwner() == player).findFirst().orElse(null);
+    }
+
+    /**
+     * Les portes en fer tombees en objet autour d'un point, avec leur age — de quoi lire un vrai
+     * depotoir d'un reste d'execution precedente.
+     */
+    private static String tombees(GameTestHelper helper, BlockPos near) {
+        return helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        new net.minecraft.world.phys.AABB(near).inflate(6.0))
+                .stream().filter(item -> item.getItem().is(net.minecraft.world.item.Items.IRON_DOOR))
+                .map(item -> item.blockPosition() + " age " + item.tickCount).toList().toString();
+    }
+
+    /**
+     * Enleve de la chambre les portes tombees en objet.
+     *
+     * <p>Le monde des tests est sauvegarde : un essai precedent laisse sa porte par terre, et elle
+     * finit par glisser hors de la zone mesuree — la mesure en differentiel deviendrait alors
+     * negative. La chambre est donc videe AVANT chaque temps.
+     */
+    private static void ramasserPortesTombees(GameTestHelper helper, BlockPos near) {
+        for (net.minecraft.world.entity.item.ItemEntity item : helper.getLevel()
+                .getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        new net.minecraft.world.phys.AABB(near).inflate(6.0))) {
+            if (item.getItem().is(net.minecraft.world.item.Items.IRON_DOOR)) item.discard();
+        }
+    }
+
+    /**
+     * Combien de portes en fer sont tombees en objet autour d'un point.
+     *
+     * <p>C'est la mesure qui compte pour le defaut que le joueur a vu : quand la moitie HAUTE d'une
+     * porte s'en va la premiere, le jeu s'apercoit que la basse est seule, la casse lui-meme — et
+     * en lache le butin. La porte se retrouvait donc DEUX fois dans le monde, une dans la main et
+     * une par terre. Elle se lit en DIFFERENTIEL, jamais en absolu : le monde des tests est
+     * sauvegarde, et des objets d'executions precedentes trainent encore par terre.
+     */
+    private static long droppedDoors(GameTestHelper helper, BlockPos near) {
+        return helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        new net.minecraft.world.phys.AABB(near).inflate(6.0))
+                .stream().filter(item -> item.getItem().is(net.minecraft.world.item.Items.IRON_DOOR))
+                .count();
     }
 
     /**

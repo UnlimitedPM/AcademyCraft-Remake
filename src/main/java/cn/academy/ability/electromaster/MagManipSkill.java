@@ -172,7 +172,27 @@ public class MagManipSkill extends Skill {
             if (second != null) {
                 companion = player.level().getBlockState(second);
                 companionDy = second.getY() - aimed.getY();
-                player.level().removeBlock(second, false);
+                // LA BASSE PART LA PREMIERE, la haute ensuite, et avec l'indicateur 35 — celui du jeu
+                // lui-meme quand il enleve une porte derriere lui : 1 (prevenir les voisins) + 2
+                // (prevenir les clients) + 32 (ne rien laisser tomber).
+                //
+                // L'ORDRE est tout : le jeu ne verifie la validite d'une porte que vers le BAS. Sa
+                // moitie basse demande « y a-t-il encore une moitie haute au-dessus de moi ? »,
+                // tandis que la haute, elle, ne demande rien — elle accepte de vivre seule. Enlever
+                // donc la haute en premier laissait la basse orpheline, le jeu s'en apercevait, et
+                // il la cassait LUI-MEME, AVEC SON BUTIN : la porte se retrouvait deux fois dans le
+                // monde, une dans la main et une par terre. Le joueur : « si j'arrache a partir du
+                // bloc du bas, la porte fait dropper une porte et je peux quand meme lancer la
+                // porte, ce qui la duplique ». En enlevant la basse d'abord, plus personne ne se
+                // retrouve seul : la haute part proprement juste apres.
+                boolean lowerHalf = state.getValue(net.minecraft.world.level.block.DoorBlock.HALF)
+                        == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+                BlockPos lower = lowerHalf ? aimed : second;
+                BlockPos upper = lower.above();
+                player.level().setBlock(lower,
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 35);
+                player.level().setBlock(upper,
+                        net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 35);
             }
             player.level().removeBlock(aimed, false);
             position = Vec3.atCenterOf(aimed);
