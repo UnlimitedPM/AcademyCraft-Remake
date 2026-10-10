@@ -154,8 +154,8 @@ public class ArcGenSkill extends Skill {
             // l'original, invisible autrement (voir CreeperCharge).
             CreeperCharge.tryCharge(living, random.nextFloat());
             // Et il change le villageois en sorciere, comme la foudre du jeu (voir
-            // WitchConversion) : la, la regle est celle de vanilla, et elle est certaine.
-            WitchConversion.tryConvert(living);
+            // WitchConversion) : la, le taux est celui du creeper, et le tirage est le sien.
+            WitchConversion.tryConvert(living, random.nextFloat());
             if (random.nextFloat() < igniteChance(data)) {
                 living.setSecondsOnFire(IGNITE_TICKS / 20);
             }

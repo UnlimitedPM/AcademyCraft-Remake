@@ -16,16 +16,20 @@ import java.lang.reflect.Method;
  * foudre du jeu.
  *
  * <p>Le joueur : « je voudrais la meme chose avec les villageois pour qu'ils deviennent des
- * sorcieres comme c'est le cas dans minecraft vanilla ». C'est la contrepartie du creeper charge
- * (voir {@link CreeperCharge}) : chez le jeu, les deux naissent du meme endroit — la foudre qui
- * tombe sur une bete — et comme le port ne lance pas de vrai eclair, il doit le faire lui-meme.
+ * sorcieres comme c'est le cas dans minecraft vanilla » — puis, une fois la chose en jeu : « oui
+ * effectivement je voudrais avec le taux de 30 % ». C'est la contrepartie du creeper charge (voir
+ * {@link CreeperCharge}) : chez le jeu, les deux naissent du meme endroit — la foudre qui tombe sur
+ * une bete — et comme le port ne lance pas de vrai eclair, il doit le faire lui-meme.
  *
  * <p>La regle est celle de vanilla, reprise instruction par instruction de
  * {@code Villager.thunderHit}, <b>relu au bytecode du jeu livre</b> :
  *
  * <ul>
- *   <li><b>toujours</b>, et pas trois chances sur dix comme le creeper : vanilla ne tire aucun
- *       nombre au sort, un villageois foudroye devient une sorciere, un point c'est tout ;</li>
+ *   <li><b>trois chances sur dix</b>, comme le creeper — et c'est la le seul endroit ou le port
+ *       s'ecarte du jeu : <b>vanilla ne tire aucun nombre au sort</b>, un villageois foudroye
+ *       devient une sorciere a coup sur. Le joueur a demande le taux du creeper apres avoir vu la
+ *       conversion fonctionner, et la borne est la meme que la sienne : stricte, donc 0,3 pile ne
+ *       passe pas ;</li>
  *   <li>la difficulte <b>paisible</b> l'empeche — c'est la premiere ligne de vanilla ;</li>
  *   <li>seuls les <b>villageois</b> : ni le marchand ambulant (un {@code WanderingTrader} est un
  *       {@code AbstractVillager}, pas un {@code Villager}), ni le villageois zombie ;</li>
@@ -67,6 +71,9 @@ public final class WitchConversion {
      */
     private static final String[] POI_RELEASE_NAMES = {"releaseAllPois", "m_35524_"};
 
+    /** Trois chances sur dix : le meme chiffre que le creeper, et la meme borne stricte. */
+    public static final float CHANCE = 0.3f;
+
     private static Method poiRelease;
     private static boolean looked;
 
@@ -74,12 +81,17 @@ public final class WitchConversion {
     }
 
     /**
-     * Change ce villageois en sorciere, si c'est un villageois vivant et si le jeu le veut bien.
+     * Change ce villageois en sorciere, si le tirage passe, si c'est un villageois vivant, et si le
+     * jeu le veut bien.
      *
      * @param target la bete que la competence vient de frapper
+     * @param roll   le tirage, entre 0 et 1 (chaque competence tient son propre hasard)
      * @return vrai quand la conversion a eu lieu
      */
-    public static boolean tryConvert(LivingEntity target) {
+    public static boolean tryConvert(LivingEntity target, float roll) {
+        if (roll >= CHANCE) {
+            return false;
+        }
         if (!(target instanceof Villager villager) || !villager.isAlive()) {
             return false;
         }

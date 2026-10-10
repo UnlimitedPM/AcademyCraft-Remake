@@ -7337,16 +7337,17 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Un villageois touche par l'eclair devient une sorciere, comme sous la foudre du jeu.
+     * Un villageois touche par l'eclair devient parfois une sorciere, comme sous la foudre du jeu.
      *
      * <p>Le joueur : « je voudrais la meme chose avec les villageois pour qu'ils deviennent des
-     * sorcieres comme c'est le cas dans minecraft vanilla ». La ou le creeper a trois chances sur
-     * dix — la regle de l'original —, la sorciere est CERTAINE : vanilla ne tire aucun nombre au
-     * sort, et c'est sa regle que le port suit.
+     * sorcieres comme c'est le cas dans minecraft vanilla » — puis, la chose vue en jeu : « oui
+     * effectivement je voudrais avec le taux de 30 % ». C'est donc le meme chiffre que le creeper,
+     * avec la meme borne STRICTE : 0,3 pile ne passe pas.
      *
-     * <p>Le test tient les bornes de la conversion, relues au bytecode du jeu livre : un villageois
-     * ordinaire y passe, un ENFANT aussi (vanilla ne pose aucune question d'age), le NOM et le
-     * « sans IA » suivent, et le marchand ambulant n'y passe PAS — un {@code WanderingTrader} est un
+     * <p>Vanilla, lui, ne tire aucun nombre au sort et convertit a coup sur : c'est le seul endroit
+     * ou le port s'en ecarte, et c'est une demande du joueur. Tout le reste est sa regle, relue au
+     * bytecode du jeu livre : un ENFANT y passe (aucune question d'age), le NOM et le « sans IA »
+     * suivent, et le marchand ambulant n'y passe PAS — un {@code WanderingTrader} est un
      * {@code AbstractVillager}, pas un {@code Villager}. Une seconde conversion du meme villageois
      * ne fait rien : il n'est plus la.
      */
@@ -7373,16 +7374,23 @@ public final class AcademyGameTests {
         marchand.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 3.5);
         level.addFreshEntity(marchand);
 
-        assertFalse(helper, WitchConversion.tryConvert(marchand),
-                "un marchand ambulant n'est pas un villageois : il n'y passe pas");
+        // La borne des trois dixiemes, d'abord : STRICTE, comme celle du creeper.
+        assertFalse(helper, WitchConversion.tryConvert(villageois, WitchConversion.CHANCE),
+                "trois dixiemes PILE ne passent pas");
+        assertFalse(helper, villageois.isRemoved(), "et le villageois reste la");
+        assertValue(helper, 0, sorcieresDe(level, at).size(), "et aucune sorciere n'est nee");
+        assertFalse(helper, WitchConversion.tryConvert(villageois, 0.9f),
+                "un tirage au-dessus de la borne ne fait rien non plus");
+
+        assertFalse(helper, WitchConversion.tryConvert(marchand, 0f),
+                "un marchand ambulant n'est pas un villageois : meme un bon tirage n'y fait rien");
         assertFalse(helper, marchand.isRemoved(), "et il reste la");
 
-        assertTrue(helper, WitchConversion.tryConvert(villageois), "un villageois y passe");
+        assertTrue(helper, WitchConversion.tryConvert(villageois, 0.29f),
+                "juste en dessous de la borne, un villageois y passe");
         assertTrue(helper, villageois.isRemoved(), "et il quitte la place");
 
-        var sorcieres = level.getEntitiesOfClass(
-                net.minecraft.world.entity.monster.Witch.class,
-                new net.minecraft.world.phys.AABB(at).inflate(4.0));
+        var sorcieres = sorcieresDe(level, at);
         assertValue(helper, 1, sorcieres.size(), "une sorciere est nee");
         var sorciere = sorcieres.get(0);
         var nom = sorciere.getCustomName() == null ? "aucun" : sorciere.getCustomName().getString();
@@ -7390,23 +7398,25 @@ public final class AcademyGameTests {
         assertTrue(helper, sorciere.isNoAi(), "et son « sans IA »");
         assertTrue(helper, sorciere.isPersistenceRequired(),
                 "et elle demande a ne pas etre oubliee au loin");
-        assertFalse(helper, WitchConversion.tryConvert(villageois),
+        assertFalse(helper, WitchConversion.tryConvert(villageois, 0f),
                 "un villageois qui n'est plus la ne se convertit pas deux fois");
 
-        assertTrue(helper, WitchConversion.tryConvert(enfant),
+        assertTrue(helper, WitchConversion.tryConvert(enfant, 0f),
                 "un enfant y passe aussi : vanilla ne pose aucune question d'age");
-        assertValue(helper, 2, level.getEntitiesOfClass(
-                        net.minecraft.world.entity.monster.Witch.class,
-                        new net.minecraft.world.phys.AABB(at).inflate(4.0)).size(),
-                "deux sorcieres, une par villageois");
+        assertValue(helper, 2, sorcieresDe(level, at).size(), "deux sorcieres, une par villageois");
 
-        for (var bete : level.getEntitiesOfClass(
-                net.minecraft.world.entity.monster.Witch.class,
-                new net.minecraft.world.phys.AABB(at).inflate(4.0))) {
+        for (var bete : sorcieresDe(level, at)) {
             bete.discard();
         }
         marchand.discard();
         helper.succeed();
+    }
+
+    /** Les sorcieres nees autour d'un point : de quoi les compter et les prendre. */
+    private static java.util.List<net.minecraft.world.entity.monster.Witch> sorcieresDe(
+            ServerLevel level, BlockPos near) {
+        return level.getEntitiesOfClass(net.minecraft.world.entity.monster.Witch.class,
+                new net.minecraft.world.phys.AABB(near).inflate(4.0));
     }
 
     /**
