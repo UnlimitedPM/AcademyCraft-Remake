@@ -8,6 +8,7 @@ import cn.academy.ImagFusorBlockEntity;
 import cn.academy.MetalFormerBlockEntity;
 import cn.academy.ability.develop.DevelopProgress.DevState;
 import cn.academy.ability.electromaster.CreeperCharge;
+import cn.academy.ability.electromaster.WitchConversion;
 import cn.academy.ModBlocks;
 import cn.academy.ModFluids;
 import cn.academy.ModItems;
@@ -7332,6 +7333,79 @@ public final class AcademyGameTests {
         charged.discard();
         borderline.discard();
         bystander.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Un villageois touche par l'eclair devient une sorciere, comme sous la foudre du jeu.
+     *
+     * <p>Le joueur : « je voudrais la meme chose avec les villageois pour qu'ils deviennent des
+     * sorcieres comme c'est le cas dans minecraft vanilla ». La ou le creeper a trois chances sur
+     * dix — la regle de l'original —, la sorciere est CERTAINE : vanilla ne tire aucun nombre au
+     * sort, et c'est sa regle que le port suit.
+     *
+     * <p>Le test tient les bornes de la conversion, relues au bytecode du jeu livre : un villageois
+     * ordinaire y passe, un ENFANT aussi (vanilla ne pose aucune question d'age), le NOM et le
+     * « sans IA » suivent, et le marchand ambulant n'y passe PAS — un {@code WanderingTrader} est un
+     * {@code AbstractVillager}, pas un {@code Villager}. Une seconde conversion du meme villageois
+     * ne fait rien : il n'est plus la.
+     */
+    @GameTest(template = "empty")
+    public static void laFoudreChangeLeVillageoisEnSorciere(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var at = helper.absolutePos(new BlockPos(2, 2, 2));
+
+        var villageois = new net.minecraft.world.entity.npc.Villager(
+                net.minecraft.world.entity.EntityType.VILLAGER, level);
+        villageois.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        villageois.setCustomName(net.minecraft.network.chat.Component.literal("Georges"));
+        villageois.setNoAi(true);
+        level.addFreshEntity(villageois);
+
+        var enfant = new net.minecraft.world.entity.npc.Villager(
+                net.minecraft.world.entity.EntityType.VILLAGER, level);
+        enfant.moveTo(at.getX() + 3.5, at.getY(), at.getZ() + 0.5);
+        enfant.setBaby(true);
+        level.addFreshEntity(enfant);
+
+        var marchand = new net.minecraft.world.entity.npc.WanderingTrader(
+                net.minecraft.world.entity.EntityType.WANDERING_TRADER, level);
+        marchand.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 3.5);
+        level.addFreshEntity(marchand);
+
+        assertFalse(helper, WitchConversion.tryConvert(marchand),
+                "un marchand ambulant n'est pas un villageois : il n'y passe pas");
+        assertFalse(helper, marchand.isRemoved(), "et il reste la");
+
+        assertTrue(helper, WitchConversion.tryConvert(villageois), "un villageois y passe");
+        assertTrue(helper, villageois.isRemoved(), "et il quitte la place");
+
+        var sorcieres = level.getEntitiesOfClass(
+                net.minecraft.world.entity.monster.Witch.class,
+                new net.minecraft.world.phys.AABB(at).inflate(4.0));
+        assertValue(helper, 1, sorcieres.size(), "une sorciere est nee");
+        var sorciere = sorcieres.get(0);
+        var nom = sorciere.getCustomName() == null ? "aucun" : sorciere.getCustomName().getString();
+        assertValue(helper, "Georges", nom, "elle garde le nom de l'ancien");
+        assertTrue(helper, sorciere.isNoAi(), "et son « sans IA »");
+        assertTrue(helper, sorciere.isPersistenceRequired(),
+                "et elle demande a ne pas etre oubliee au loin");
+        assertFalse(helper, WitchConversion.tryConvert(villageois),
+                "un villageois qui n'est plus la ne se convertit pas deux fois");
+
+        assertTrue(helper, WitchConversion.tryConvert(enfant),
+                "un enfant y passe aussi : vanilla ne pose aucune question d'age");
+        assertValue(helper, 2, level.getEntitiesOfClass(
+                        net.minecraft.world.entity.monster.Witch.class,
+                        new net.minecraft.world.phys.AABB(at).inflate(4.0)).size(),
+                "deux sorcieres, une par villageois");
+
+        for (var bete : level.getEntitiesOfClass(
+                net.minecraft.world.entity.monster.Witch.class,
+                new net.minecraft.world.phys.AABB(at).inflate(4.0))) {
+            bete.discard();
+        }
+        marchand.discard();
         helper.succeed();
     }
 

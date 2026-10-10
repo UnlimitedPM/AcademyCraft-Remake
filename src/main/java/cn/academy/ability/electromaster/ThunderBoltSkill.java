@@ -125,6 +125,9 @@ public class ThunderBoltSkill extends Skill {
             // La foudre charge parfois le creeper qu'elle touche (voir CreeperCharge) : c'est
             // l'EMDamageHelper de l'original, ou les deux competences a arc passaient.
             CreeperCharge.tryCharge(living, player.getRandom().nextFloat());
+            // Et elle change le villageois en sorciere, comme la foudre du jeu : meme endroit chez
+            // vanilla, mais une regle certaine (voir WitchConversion).
+            WitchConversion.tryConvert(living);
             if (data.getSkillExp(this) > SLOW_EXP && isSlowed(player)) {
                 // 40 ticks d'engourdissement, comme l'original (2 secondes).
                 living.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
@@ -135,8 +138,10 @@ public class ThunderBoltSkill extends Skill {
             effective = true;
             around.hurt(skillDamage(player), scaled(aoeDamage(data)));
             // La propagation charge elle aussi ce qu'elle embrase : l'original passait ses
-            // voisines par le meme aide que sa cible.
+            // voisines par le meme aide que sa cible. Et les villageoises prises dans l'arc
+            // deviennent des sorcieres, comme sous la foudre du jeu.
             CreeperCharge.tryCharge(around, player.getRandom().nextFloat());
+            WitchConversion.tryConvert(around);
             // Un arc par voisine : l'original reliait le point d'impact a chacune, d'une duree
             // tiree au hasard entre 15 et 25 ticks.
             sendArc(player, cn.academy.ability.client.arc.ArcPattern.AOE.name(), impact,

@@ -153,6 +153,9 @@ public class ArcGenSkill extends Skill {
             // L'arc peut charger un creeper : c'est l'autre moitie de l'EMDamageHelper de
             // l'original, invisible autrement (voir CreeperCharge).
             CreeperCharge.tryCharge(living, random.nextFloat());
+            // Et il change le villageois en sorciere, comme la foudre du jeu (voir
+            // WitchConversion) : la, la regle est celle de vanilla, et elle est certaine.
+            WitchConversion.tryConvert(living);
             if (random.nextFloat() < igniteChance(data)) {
                 living.setSecondsOnFire(IGNITE_TICKS / 20);
             }
