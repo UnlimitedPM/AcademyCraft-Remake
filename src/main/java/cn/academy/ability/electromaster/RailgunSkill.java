@@ -19,13 +19,14 @@ import java.util.List;
  * railgun. Il faut <b>lancer une piece</b> — clic droit avec l'objet {@code coin} — et tirer pendant
  * qu'elle <b>retombe</b>, plus de sept dixiemes de son vol (voir {@link CoinToss#READY}) : la piece
  * est alors consommee par le tir. L'autre voie de l'original est le <b>fer</b> — un lingot ou un bloc
- * en main —, egalement consomme. Sans l'un ou l'autre, l'appui ne fait <b>rien du tout</b>, pas meme
- * payer.
+ * en main —, egalement consomme. Le <b>cuivre</b> s'y est ajoute a la demande du joueur : « il faut
+ * aussi rajouter le cuivre pour le railgun ». Sans l'un ou l'autre, l'appui ne fait <b>rien du
+ * tout</b>, pas meme payer.
  *
  * <h2>Les deux voies ne partent pas au meme moment</h2>
  *
  * <p>La <b>piece</b> part a l'appui, tout de suite : c'est un QTE, et sa fenetre ne dure que le temps
- * du vol. Le <b>fer</b>, lui, demande de garder la touche <b>vingt ticks</b> — une seconde — avant que
+ * du vol. Le <b>fer</b> — et le cuivre avec lui —, lui, demande de garder la touche <b>vingt ticks</b> — une seconde — avant que
  * le coup ne parte, et relacher avant l'echeance ne tire rien du tout. C'est le {@code chargeTicks =
  * 20} du {@code Delegate} de l'original, un decompte cote client que le port n'avait pas repris : le
  * joueur l'a remarque aussitot — « si je lance le railgun avec un lingot ou un bloc de fer
@@ -139,15 +140,29 @@ public class RailgunSkill extends Skill {
     }
 
     /**
-     * Ce que le tir admet comme munition dans la main : le fer de l'original, tel quel.
+     * Ce que le tir admet comme munition dans la main : du fer, et — depuis que le joueur l'a
+     * demande — du cuivre.
      *
-     * <p>{@code acceptedItems} valait le lingot et le bloc de fer, et rien d'autre — pas de fer en
-     * poudre, pas de minerai. C'est le « ferraillage » de la competence : ce qu'on a sous la main
-     * quand on n'a pas de piece.
+     * <p>{@code acceptedItems} de l'original valait le lingot et le bloc de fer, et rien d'autre :
+     * pas de fer en poudre, pas de minerai. C'est le « ferraillage » de la competence, ce qu'on a
+     * sous la main quand on n'a pas de piece. Le joueur : « il faut aussi rajouter le cuivre pour le
+     * railgun » — le cuivre est un metal de la meme famille, et il se tire comme le fer : le lingot,
+     * et tous les blocs de cuivre <b>travaille</b>, variantes comprises (taille, escalier, dalle,
+     * oxyde, cire).
+     *
+     * <p>Le cuivre <b>non travaille</b> est ecarte, exactement comme pour l'aimantation : ni le
+     * minerai, ni le cuivre brut. Et la reconnaissance du cuivre travaille est celle de
+     * {@code MetalTargets}, partagee avec l'aimantation — les deux competences ne peuvent donc pas
+     * diverger sur ce qu'est « du cuivre ».
      */
     public static boolean isAccepted(net.minecraft.world.item.ItemStack stack) {
-        return stack.is(net.minecraft.world.item.Items.IRON_INGOT)
-                || stack.is(net.minecraft.world.item.Items.IRON_BLOCK);
+        if (stack.is(net.minecraft.world.item.Items.IRON_INGOT)
+                || stack.is(net.minecraft.world.item.Items.IRON_BLOCK)
+                || stack.is(net.minecraft.world.item.Items.COPPER_INGOT)) {
+            return true;
+        }
+        return stack.getItem() instanceof net.minecraft.world.item.BlockItem item
+                && MetalTargets.isWorkedCopper(item.getBlock());
     }
 
     /**

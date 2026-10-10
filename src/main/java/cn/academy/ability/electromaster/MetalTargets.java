@@ -137,8 +137,12 @@ public final class MetalTargets {
      * <p>Deux familles en sont ecartees, et c'est voulu : le cuivre <b>brut</b> et le <b>minerai</b> de
      * cuivre, qui sont du metal non travaille et rejoignent le minerai de fer parmi les blocs qui
      * demandent soixante pour cent d'experience. Voir {@link #NEW_WEAK_METALS}.
+     *
+     * <p>Et elle est <b>publique</b> parce que le railgun s'en sert aussi : le joueur a demande
+     * qu'on « rajoute le cuivre pour le railgun », et sa munition de cuivre se reconnait par cette
+     * meme regle — les deux competences ne peuvent donc pas diverger sur ce qu'est « du cuivre ».
      */
-    private static boolean isWorkedCopper(Block block) {
+    public static boolean isWorkedCopper(Block block) {
         ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         if (id == null) return false;
         String name = id.getPath();

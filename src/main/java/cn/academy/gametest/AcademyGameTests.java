@@ -3295,17 +3295,19 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Le railgun ne part pas les mains vides : sa piece, ou du fer.
+     * Le railgun ne part pas les mains vides : sa piece, du fer, ou du cuivre.
      *
      * <p>C'est tout le rituel de l'original, et il tient en trois regles. Sans munition, l'appui ne
      * fait <b>rien</b> — pas un coup, pas un point depense. Une piece encore dans sa <b>montee</b> ne
      * sert a rien non plus : il faut qu'elle soit retombee, a plus de sept dixiemes de son vol, et
-     * c'est la fenetre de tir. Et le tir <b>consomme</b> sa munition, piece ou lingot.
+     * c'est la fenetre de tir. Et le tir <b>consomme</b> sa munition, piece, lingot ou bloc.
      *
-     * <p>Les deux voies sont ici : la piece lancee par l'objet, et le fer en main. Toute la decision
-     * vit dans {@code RailgunSkill.hasAmmo} et {@code EntityCoinThrowing}, donc ce que ce test
-     * verifie vraiment, c'est que le paquet et l'effet passent bien par la — voir
-     * {@code ActivateSkillPacket}, qui appelle {@code canStart} avant de rien facturer.
+     * <p>Les deux voies sont ici : la piece lancee par l'objet, et le metal en main — le fer de
+     * l'original, et le cuivre que le joueur a demande d'ajouter : « il faut aussi rajouter le cuivre
+     * pour le railgun ». Toute la decision vit dans {@code RailgunSkill.hasAmmo} et
+     * {@code EntityCoinThrowing}, donc ce que ce test verifie vraiment, c'est que le paquet et
+     * l'effet passent bien par la — voir {@code ActivateSkillPacket}, qui appelle {@code canStart}
+     * avant de rien facturer.
      */
     @GameTest(template = "empty")
     public static void leRailgunNePartQueSurSaMunition(GameTestHelper helper) {
@@ -3347,6 +3349,47 @@ public final class AcademyGameTests {
         assertValue(helper, 2, player.getMainHandItem().getCount(), "un lingot est consomme");
         assertTrue(helper, cow.getHealth() < before,
                 "et le tir a porte : la vache perd des points");
+
+        // 2 bis. LE CUIVRE, depuis que le joueur l'a demande : « il faut aussi rajouter le cuivre
+        // pour le railgun ». Le lingot, le bloc, et les variantes travaillees avec eux ; le cuivre
+        // brut et le minerai, non — ce n'est pas du metal travaille, comme pour l'aimantation.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.COPPER_INGOT));
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "le lingot de cuivre est une munition admise");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.COPPER_BLOCK));
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "le bloc de cuivre aussi");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.CUT_COPPER_STAIRS));
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "et une variante taillee avec lui : c'est la regle de nom de l'aimantation");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.RAW_COPPER));
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "le cuivre brut, non : ce n'est pas du metal travaille");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.COPPER_ORE));
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "ni le minerai de cuivre");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.RAW_IRON));
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "ni le fer brut : l'original ne l'avait pas non plus");
+
+        // Et il se consomme comme le fer — un vrai tir, une cible devant, un lingot en moins.
+        data.setControlPoint(data.getMaxControlPoint());
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.COPPER_INGOT, 2));
+        var cow2 = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(3, 262, 11));
+        lookAt(player, helper.absolutePos(new BlockPos(3, 262, 11)));
+        float before2 = cow2.getHealth();
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, 1, player.getMainHandItem().getCount(),
+                "un lingot de cuivre est consomme");
+        assertTrue(helper, cow2.getHealth() < before2,
+                "et le tir a porte la aussi");
 
         // 3. LA PIECE : jetee par l'objet, elle ne sert a rien tant qu'elle monte.
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
