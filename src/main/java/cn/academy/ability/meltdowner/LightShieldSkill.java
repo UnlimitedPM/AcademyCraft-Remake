@@ -50,14 +50,23 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
  * pas de rouge. Derriere, en revanche, le joueur encaisse tout, exactement comme avant.
  *
  * <p>Et une fleche arretée de face <b>fond dans le bouclier</b> au lieu de retomber intacte : voir
- * {@link #melt}. C'est la aussi une demande du joueur.
+ * {@link #melt}. Le joueur a demande la meme chose pour celles qui passent <b>devant</b> lui sans le
+ * toucher : voir {@link #meltAround}, qui balaie chaque tick la portee du bouclier.
+ *
+ * <p>L'eventail, enfin, est celui de l'original dans les trois cas — frapper, fondre, proteger :
+ * soixante degres de part et d'autre, mesures a plat. Le joueur a confirme : « la protection est
+ * trop large : ramene-la a l'eventail de l'original (±60°) ».
  */
 public class LightShieldSkill extends Skill {
 
     /** Rayon du bouclier, en blocs, comme l'original. */
     private static final double REACH = 3.0;
 
-    /** Demi-angle du bouclier : l'original ne frappait que devant, sur 60 degres. */
+    /**
+     * Demi-angle du bouclier : l'original frappait sur soixante degres, et c'est aussi ce qu'il
+     * protegeait — sa {@code isEntityReachable} servait aux deux. Le port n'a plus qu'un chiffre pour
+     * les trois usages : frapper, fondre les fleches, et refuser les coups.
+     */
     private static final double HALF_ANGLE = 60.0;
 
     public LightShieldSkill() {
@@ -151,6 +160,7 @@ public class LightShieldSkill extends Skill {
         // 1e-6 par tick, comme l'original : un bouclier se gagne surtout en absorbant.
         data.addSkillExp(this, 1e-6f);
         damageAround(player, data);
+        meltAround(player);
         return true;
     }
 
@@ -182,7 +192,9 @@ public class LightShieldSkill extends Skill {
         if (!data.isCharging(this)) return false;
         if (!comesFromTheFront(player, event.getSource())) return false;
         if (!data.perform(cpPerHit(data), overloadPerHit(data))) return false;
-        melt(player, event.getSource());
+        if (melts(event.getSource().getDirectEntity())) {
+            melt(player, (AbstractArrow) event.getSource().getDirectEntity());
+        }
         data.addSkillExp(this, 0.001f);
         return true;
     }
@@ -206,32 +218,54 @@ public class LightShieldSkill extends Skill {
      * <p>Le gresillement est celui d'un feu qu'on eteint, et il se joue <b>cote serveur</b> — c'est
      * le seul chemin qui marche pour un son, voir {@code EntityMdBall.flash}.
      */
-    private static void melt(Player player, DamageSource source) {
-        if (!(source.getDirectEntity() instanceof AbstractArrow arrow)) return;
-        if (arrow instanceof ThrownTrident) return;
+    private static void melt(Player player, AbstractArrow arrow) {
         arrow.discard();
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.6f, 1.4f);
     }
 
+    /** Vrai pour tout ce qui doit fondre : toute fleche, mais pas un trident. */
+    private static boolean melts(Entity entity) {
+        return entity instanceof AbstractArrow arrow && !(arrow instanceof ThrownTrident);
+    }
+
     /**
-     * Vrai si le coup vient du cote que le joueur regarde.
+     * Les fleches qui passent <b>devant</b> le bouclier fondent, meme sans le toucher.
      *
-     * <p>C'est un demi-plan, et non le cone de {@link #isInFront} : le bouclier <b>frappe</b> sur
-     * soixante degres, comme l'original, mais il <b>protege</b> tout ce qui vient de devant. Le
-     * joueur : « du cote ou on regarde bien sur, on peut quand meme se faire toucher par
-     * l'arriere ». Le plan se lit a plat, comme pour le cone : regarder le ciel ne doit pas rendre
-     * invulnerable a ce qui monte des pieds.
+     * <p>Le joueur : « si je vois une fleche passer devant moi mais que je suis pas vraiment dans la
+     * ligne de mire, elle passe et c'est tout [...] je voudrais faire en sorte que ca le detruise
+     * meme 1 bloc plus loin que mon bouclier ». Le disque se dessine un bloc devant les yeux —
+     * {@code ShieldVisuals.DISTANCE} — et la zone qui fond va jusqu'a {@link #REACH} blocs, donc
+     * deux blocs au-dela du disque, dans le meme eventail que le reste : ce qui passe dans le dos ne
+     * fond pas.
+     *
+     * <p>Ce balayage ne coute rien de plus que l'entretien : il ne frappe personne, et une fleche
+     * detruite n'est pas un ennemi qu'on blesse. C'est l'entretien de chaque tick qui borne tout ca.
+     */
+    private static void meltAround(Player player) {
+        AABB area = player.getBoundingBox().inflate(REACH);
+        for (AbstractArrow arrow : player.level().getEntitiesOfClass(AbstractArrow.class, area,
+                LightShieldSkill::melts)) {
+            if (!isInFront(player, arrow.position())) continue;
+            melt(player, arrow);
+        }
+    }
+
+    /**
+     * Vrai si le coup vient du cote que le joueur regarde : l'eventail de l'original, ±60° a plat.
+     *
+     * <p>C'est le meme chiffre que celui des degats de contact et de la fonte des fleches, parce que
+     * c'est le meme chez l'original : sa {@code isEntityReachable} servait a la fois a choisir qui le
+     * bouclier frappait et a decider si un coup etait absorbe. Le port avait ouvert la protection a
+     * un demi-plan de 180° ; le joueur l'a trouve bizarre et a demande le retour aux 60°.
+     *
+     * <p>Le plan se lit a plat, comme pour le cone : regarder le ciel ne doit pas rendre invulnerable
+     * a ce qui monte des pieds.
      */
     private static boolean comesFromTheFront(Player player, DamageSource source) {
         Entity attacker = source.getEntity();
         Vec3 from = attacker != null ? attacker.position() : source.getSourcePosition();
-        if (from == null) return false;
-
-        Vec3 to = from.subtract(player.position());
-        if (to.x * to.x + to.z * to.z < 1.0E-6) return true;
-        Vec3 look = player.getLookAngle();
-        return look.x * to.x + look.z * to.z > 0;
+        return from != null && isInFront(player, from);
     }
 
     /** Inflige les degats de contact a ce qui touche le bouclier. */
@@ -249,13 +283,23 @@ public class LightShieldSkill extends Skill {
         }
     }
 
-    /** Vrai si la cible est dans le demi-angle devant le joueur, comme l'original. */
-    private static boolean isInFront(Player player, LivingEntity target) {
+    /**
+     * Vrai si cette position est dans le demi-angle devant le joueur, comme l'original.
+     *
+     * <p>C'est l'{@code isEntityReachable} du vrai mod, au chiffre pres : un angle mesure a plat,
+     * entre le regard et la direction de la cible. Elle sert aux trois usages du bouclier.
+     */
+    private static boolean isInFront(Player player, Vec3 where) {
         Vec3 look = player.getLookAngle();
-        Vec3 to = target.position().subtract(player.position());
+        Vec3 to = where.subtract(player.position());
         double flat = to.x * to.x + to.z * to.z;
         if (flat < 1.0E-6) return true;
         double angle = Math.toDegrees(Math.atan2(look.x * to.z - look.z * to.x, look.x * to.x + look.z * to.z));
         return Math.abs(angle) <= HALF_ANGLE;
+    }
+
+    /** La meme chose pour une bete : c'est la meme regle, celle de l'original. */
+    private static boolean isInFront(Player player, LivingEntity target) {
+        return isInFront(player, target.position());
     }
 }

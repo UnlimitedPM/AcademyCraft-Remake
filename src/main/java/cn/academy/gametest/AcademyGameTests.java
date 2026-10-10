@@ -7155,6 +7155,39 @@ public final class AcademyGameTests {
         assertFalse(helper, flecheDeDos.isRemoved(),
                 "et celle-la ne fond pas : elle continue sa route");
 
+        // Une fleche qui PASSE devant, sans le toucher, fond aussi : le balayage du maintien va
+        // jusqu'a la portee du bouclier — « je voudrais faire en sorte que ca le detruise meme 1 bloc
+        // plus loin que mon bouclier ». Celle qui passe dans le dos, non.
+        data.setControlPoint(data.getMaxControlPoint());
+        var flecheQuiPasse = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        flecheQuiPasse.moveTo(abs.getX() + 0.5, abs.getY() + 1.5, abs.getZ() + 2.5, 0f, 0f);
+        level.addFreshEntity(flecheQuiPasse);
+        var flecheDerriereQuiPasse = new net.minecraft.world.entity.projectile.Arrow(
+                net.minecraft.world.entity.EntityType.ARROW, level);
+        flecheDerriereQuiPasse.moveTo(abs.getX() + 0.5, abs.getY() + 1.5, abs.getZ() - 2.5, 0f, 0f);
+        level.addFreshEntity(flecheDerriereQuiPasse);
+
+        assertTrue(helper, shield.onHoldTick(player, data, 0), "le maintien tient");
+        assertTrue(helper, flecheQuiPasse.isRemoved(),
+                "une fleche qui passe devant le bouclier fond, meme sans le toucher");
+        assertFalse(helper, flecheDerriereQuiPasse.isRemoved(),
+                "celle qui passe dans le dos, non");
+
+        // Et un coup de FLANC passe : l'eventail est revenu a celui de l'original, soixante degres
+        // de part et d'autre du regard. Le joueur : « la protection est trop large : ramene-la a
+        // l'eventail de l'original (±60°) ».
+        var deFlanc = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        deFlanc.moveTo(abs.getX() + 3.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        level.addFreshEntity(deFlanc);
+        var tirDeFlanc = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().mobAttack(deFlanc), 10f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(tirDeFlanc);
+        assertFalse(helper, tirDeFlanc.isCanceled(),
+                "un coup de flanc n'est plus refuse : l'eventail est celui de l'original");
+        deFlanc.discard();
+
         // Bouclier referme : il ne reste rien.
         data.cancelCharge(shield);
         var apres = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
@@ -7165,6 +7198,7 @@ public final class AcademyGameTests {
         devant.discard();
         derriere.discard();
         flecheDeDos.discard();
+        flecheDerriereQuiPasse.discard();
         helper.succeed();
     }
 
