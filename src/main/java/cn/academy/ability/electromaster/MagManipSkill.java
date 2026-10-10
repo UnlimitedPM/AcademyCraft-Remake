@@ -180,6 +180,22 @@ public class MagManipSkill extends Skill {
             ItemStack stack = player.getMainHandItem();
             BlockItem item = (BlockItem) stack.getItem();
             state = item.getBlock().defaultBlockState();
+            // Une porte tiree de l'INVENTAIRE est une porte ENTIERE, elle aussi. Le joueur : « si
+            // je le fais avec la porte qui vient directement de mon inventaire la ce n'est pas
+            // bon » — et c'est le meme sujet a l'envers : le jeu pose DEUX blocs a partir d'UN
+            // objet de porte, alors que le pouvoir tenait une moitie basse toute seule et la
+            // reposait telle quelle, une porte sans haut que le jeu n'aurait jamais posee.
+            //
+            // L'orientation vient du joueur, comme au poser : sans cela la porte regardait
+            // toujours au nord, quel que soit le sens dans lequel on la tenait.
+            if (state.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                state = state.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+                                net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
+                        .setValue(net.minecraft.world.level.block.DoorBlock.FACING, player.getDirection());
+                companion = state.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+                        net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER);
+                companionDy = 1;
+            }
             position = player.getEyePosition(1f);
             if (!player.getAbilities().instabuild) stack.shrink(1);
         }

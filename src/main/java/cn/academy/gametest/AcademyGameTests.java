@@ -2589,6 +2589,83 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Une porte tiree de l'INVENTAIRE donne elle aussi deux blocs.
+     *
+     * <p>Le joueur, apres avoir vu la porte posee s'arracher en entier : « par contre, si je le fais
+     * avec la porte qui vient directement de mon inventaire la ce n'est pas bon ». C'est le meme
+     * sujet a l'envers : le jeu pose deux blocs a partir d'UN objet de porte, alors que le pouvoir
+     * tenait une moitie basse toute seule, et la reposait telle quelle.
+     */
+    @GameTest(template = "empty")
+    public static void unePorteEnFerDeLInventaireDonneDeuxBlocs(GameTestHelper helper) {
+        var skill = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        var door = net.minecraft.world.level.block.Blocks.IRON_DOOR;
+        var half = net.minecraft.world.level.block.DoorBlock.HALF;
+        var lower = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+        var upper = net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, 160);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + 161, floor.getZ());
+
+        for (int dz = 0; dz <= 8; dz++) {
+            for (int dx = -1; dx <= 5; dx++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "mag-manip-door-item");
+        // Le regard AU CIEL : rien ne doit s'arracher devant, c'est bien l'objet qui part.
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, -90f);
+        // Et un sol : la porte tenue part du niveau du regard et TOMBE, et a cette altitude il n'y a
+        // que du vide sous le faux joueur. Le bloc reste d'une execution a l'autre, et c'est voulu.
+        helper.setBlock(eyes.offset(0, -2, 0), net.minecraft.world.level.block.Blocks.STONE);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 2);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_DOOR));
+
+        skill.onStart(player, data);
+
+        assertTrue(helper, player.getMainHandItem().isEmpty(), "l'objet de porte a ete consomme");
+        var carrier = helper.getLevel().getEntitiesOfClass(
+                        cn.academy.entity.EntityMagManipBlock.class,
+                        new net.minecraft.world.phys.AABB(
+                                player.getEyePosition(1f).x - 2, player.getEyePosition(1f).y - 2,
+                                player.getEyePosition(1f).z - 2, player.getEyePosition(1f).x + 2,
+                                player.getEyePosition(1f).y + 2, player.getEyePosition(1f).z + 2))
+                .stream().findFirst().orElse(null);
+        assertTrue(helper, carrier != null, "le bloc tenu existe");
+        assertValue(helper, 1, carrier.companionDy(), "et il tient la porte en entier");
+        assertValue(helper, lower, carrier.getBlockState().getValue(half), "lui, la moitie basse");
+        assertValue(helper, upper, carrier.getCompanion().getValue(half), "et son jumeau, la haute");
+
+        // Et il la repose entiere : deux moities, pas une.
+        for (int tick = 0; tick < 60 && !carrier.isRemoved(); tick++) {
+            carrier.tick();
+        }
+        assertTrue(helper, carrier.isRemoved(), "le couple s'est pose");
+
+        int moities = 0;
+        // Le balayage descend SOUS les yeux : la porte tenue part du niveau du regard et tombe au
+        // niveau des pieds, deux blocs plus bas.
+        for (BlockPos pos : BlockPos.betweenClosed(helper.absolutePos(eyes.offset(-3, -4, -3)),
+                helper.absolutePos(eyes.offset(9, 6, 9)))) {
+            if (helper.getLevel().getBlockState(pos).getBlock() == door) moities++;
+        }
+        assertValue(helper, 2, moities, "la porte posee a ses deux moities, pas une seule (trouve "
+                + moities + " ; porteur pose a " + carrier.blockPosition() + ", regard "
+                + player.getXRot() + ")");
+
+        helper.succeed();
+    }
+
     /** Les entites metalliques, qui se lisent aussi dans les registres. */
     @GameTest(template = "empty")
     public static void lesEntitesMetalliquesSontCellesDeLOriginal(GameTestHelper helper) {
