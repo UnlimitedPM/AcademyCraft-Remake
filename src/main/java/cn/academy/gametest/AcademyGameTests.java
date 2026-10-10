@@ -7058,6 +7058,83 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le bouclier de lumiere refuse les coups EN ENTIER, mais seulement de face.
+     *
+     * <p>Le joueur, apres avoir vu le bouclier de l'original : « la maintenant le "bouclier" n'a
+     * plus ou moins RIEN d'un bouclier puisque on se prend quand meme tous les coups. J'aimerais que
+     * tant qu'on a ce bouclier d'active, on ne prenne pas de degats (du genre que ca ne se montre
+     * meme pas qu'on ait ete touche) et du cote ou on regarde bien sur, on peut quand meme se faire
+     * toucher par l'arriere ». C'est un ecart assume avec l'original, qui n'absorbait qu'une part
+     * du coup.
+     *
+     * <p>Le refus se fait sur {@code LivingAttackEvent}, comme le renvoi de vecteur : c'est le tout
+     * premier crochet du coup, et l'annuler en fait sortir la methode sur-le-champ — pas de degats,
+     * pas de recul, pas de rouge. C'est donc le DRAPEAU de l'evenement que le test regarde, et non
+     * les points de vie : c'est lui qui dit si le joueur a ete touche, ne serait-ce qu'a l'ecran.
+     */
+    @GameTest(template = "empty")
+    public static void leBouclierRefuseLesCoupsDeFace(GameTestHelper helper) {
+        var shield = cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 90);
+
+        var player = ownPlayer(helper, "shielder");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(shield.getCategory(), 2);
+        data.learnSkill(shield);
+        data.setControlPoint(data.getMaxControlPoint());
+        shield.onStart(player, data);
+        data.beginCharge(shield);
+        assertTrue(helper, data.isCharging(shield), "le bouclier est tenu");
+
+        // Le regard va vers +Z (lacet zero) : la bete de DEVANT est en +Z, celle de derriere en -Z.
+        var devant = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        devant.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 3.5, 0f, 0f);
+        level.addFreshEntity(devant);
+        var derriere = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        derriere.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() - 3.5, 0f, 0f);
+        level.addFreshEntity(derriere);
+
+        double reserve = data.getControlPoint();
+        var deFace = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().mobAttack(devant), 10f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(deFace);
+        assertTrue(helper, deFace.isCanceled(),
+                "un coup de face ne passe pas du tout : rien a l'ecran non plus");
+        assertTrue(helper, reserve - data.getControlPoint() > 40f,
+                "et il se paie en reserve : " + (reserve - data.getControlPoint()) + " CP");
+
+        var deDos = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().mobAttack(derriere), 10f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(deDos);
+        assertFalse(helper, deDos.isCanceled(),
+                "le meme coup, mais de dos, passe : c'est ce que le joueur a demande");
+
+        // Ce qui n'a PAS d'auteur n'a pas de cote : la lave, le feu, une chute ne sont pas des
+        // coups portes, et le bouclier ne s'en mele pas.
+        var lave = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().lava(), 4f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(lave);
+        assertFalse(helper, lave.isCanceled(), "la lave n'a pas de cote : elle passe");
+
+        // Bouclier referme : il ne reste rien.
+        data.cancelCharge(shield);
+        var apres = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                player.damageSources().mobAttack(devant), 10f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(apres);
+        assertFalse(helper, apres.isCanceled(), "sans maintien, le coup passe");
+
+        devant.discard();
+        derriere.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,

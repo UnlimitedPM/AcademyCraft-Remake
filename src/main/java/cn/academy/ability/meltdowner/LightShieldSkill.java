@@ -2,14 +2,16 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 
 /**
  * Competence tenue, portage de LightShield : un bouclier qui absorbe les coups et
@@ -23,11 +25,25 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *
  * <h2>Deux echelles</h2>
  *
- * Les <b>degats</b> absorbes, les <b>degats</b> de contact et le <b>surcout</b> sont
- * repris tels quels de l'original. Les <b>couts en CP</b>, eux, sont ramenes a l'echelle
- * de la reserve du port (100 points, la ou l'original en avait 2800 a ce niveau) : la
- * duree de maintien qui en resulte est la meme, une centaine de ticks sur une reserve
- * pleine, bornee par {@code MAX_TIME}.
+ * Les <b>degats</b> de contact et le <b>surcout</b> sont repris tels quels de l'original. Les
+ * <b>couts en CP</b>, eux, sont ramenes a l'echelle de la reserve du port (100 points, la ou
+ * l'original en avait 2800 a ce niveau).
+ *
+ * <h2>Ce que le port change, sur demande</h2>
+ *
+ * L'original bornait le maintien dans le temps ({@code MAX_TIME}) et n'<b>absorbait</b> qu'une
+ * part du coup : quinze a cinquante points, au plus une fois toutes les dix-huit ticks. Le joueur
+ * a demande autre chose, en deux temps : « j'aimerais que tant qu'on a des cp, on puisse garder le
+ * bouclier actif (qu'il ne soit pas limite avec du temps) », puis « la maintenant le "bouclier" n'a
+ * plus ou moins RIEN d'un bouclier puisque on se prend quand meme tous les coups. J'aimerais que
+ * tant qu'on a ce bouclier d'active, on ne prenne pas de degats (du genre que ca ne se montre meme
+ * pas qu'on ait ete touche) et du cote ou on regarde bien sur, on peut quand meme se faire toucher
+ * par l'arriere ».
+ *
+ * <p>Donc : <b>aucune duree maximale</b> — c'est la reserve qui borne, par l'entretien de chaque
+ * tick et par le prix de chaque coup refuse —, et <b>le coup de face ne passe pas du tout</b>,
+ * refus sur {@code LivingAttackEvent} comme le renvoi de vecteur : pas de degats, pas de recul,
+ * pas de rouge. Derriere, en revanche, le joueur encaisse tout, exactement comme avant.
  */
 public class LightShieldSkill extends Skill {
 
@@ -37,15 +53,16 @@ public class LightShieldSkill extends Skill {
     /** Demi-angle du bouclier : l'original ne frappait que devant, sur 60 degres. */
     private static final double HALF_ANGLE = 60.0;
 
-    /** Une absorption toutes les 18 ticks au plus, comme {@code ACTION_INTERVAL}. */
-    private static final int ACTION_INTERVAL = 18;
-
     public LightShieldSkill() {
         super("light_shield", 2);
     }
 
     /**
-     * Duree maximale du maintien : {@code MAX_TIME} de l'original, de 120 a 180 ticks.
+     * Duree de <b>reference</b> : {@code MAX_TIME} de l'original, de 120 a 180 ticks.
+     *
+     * <p>Elle ne borne plus le maintien — le joueur a demande que seuls les CP l'arretent — mais
+     * elle compte encore la recharge : sans elle, un bouclier tenu un quart d'heure imposerait une
+     * demi-heure d'attente, ce qui n'etait pas demande et punirait l'usage qu'il vient de decrire.
      */
     public float maxTime(AbilityData data) {
         return lerp(120f, 180f, data.getSkillExp(this));
@@ -65,11 +82,6 @@ public class LightShieldSkill extends Skill {
     @Override
     public float getTickUpkeep(AbilityData data, int ticks) {
         return holdCpCost(data);
-    }
-
-    /** Degats absorbes par coup : de 15 a 50, comme l'original. */
-    public float absorbDamage(AbilityData data) {
-        return lerp(15f, 50f, data.getSkillExp(this));
     }
 
     /** Degats infliges a ce qui touche le bouclier : de 2 a 6, comme l'original. */
@@ -102,23 +114,19 @@ public class LightShieldSkill extends Skill {
     /**
      * Recharge : de deux fois la duree tenue a une fois, selon l'experience.
      *
-     * L'original la posait a la fin du maintien, avec le nombre de ticks tenus. D'ou
-     * l'interet de garder le compteur lisible apres la fin : la recharge en depend.
+     * <p>L'original la posait a la fin du maintien, avec le nombre de ticks tenus. Le bouclier
+     * n'ayant plus de duree maximale, ce compte est <b>plafonne</b> a {@link #maxTime} : tenir plus
+     * longtemps que l'ancien maximum ne creuse pas une attente demesuree.
      */
     @Override
     public int getCooldownTicks(AbilityData data) {
-        int held = data.getChargeTicks(this);
+        int held = Math.min(data.getChargeTicks(this), (int) maxTime(data));
         return (int) lerp(2f * held, held, data.getSkillExp(this));
     }
 
     @Override
     public boolean isHeld() {
         return true;
-    }
-
-    @Override
-    public int getMaxHoldTicks(AbilityData data) {
-        return (int) maxTime(data);
     }
 
     @Override
@@ -146,29 +154,49 @@ public class LightShieldSkill extends Skill {
     }
 
     /**
-     * Absorbe une part des degats subis.
+     * Le coup de <b>face</b> ne passe pas du tout : pas de degats, pas de recul, pas de rouge.
      *
-     * Portage de {@code handleAttacked} : au plus une absorption toutes les 18 ticks,
-     * et seulement si la reserve peut payer le coup. Le bouclier doit etre tenu — c'est
-     * tout l'objet de cette competence.
+     * <p>Le refus est fait ici, sur {@code LivingAttackEvent}, et non dans {@code onDamaged} : c'est
+     * le tout premier crochet de {@code LivingEntity.hurt}, l'annuler en fait sortir la methode
+     * sur-le-champ. C'est la meme raison que pour le renvoi de vecteur, et la meme demande du
+     * joueur : « que ca ne se montre meme pas qu'on ait ete touche ». Une reduction partielle, elle,
+     * se ferait dans {@code onDamaged} — le port n'en fait plus, le bouclier refuse ou laisse tout
+     * passer.
+     *
+     * <p>Le coup se paie quand meme, en CP et en surcout : c'est ce prix, avec l'entretien de chaque
+     * tick, qui borne le bouclier maintenant qu'il n'a plus de duree. S'il ne peut pas payer, le coup
+     * passe — et l'entretien du tick suivant fera tomber le bouclier de toute facon.
+     *
+     * <p>Ce qui n'a <b>pas d'auteur</b> — la lave, le feu, une chute — n'a pas de cote : le bouclier
+     * ne s'en mele pas. Devant ou derriere n'a de sens que pour un coup porte par quelqu'un.
      */
     @Override
-    public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
-        if (!data.isCharging(this)) return event.getAmount();
-
-        int held = data.getChargeTicks(this);
-        int mark = data.getHoldMark(this);
-        if (mark >= 0 && held - mark <= ACTION_INTERVAL) return event.getAmount();
-
-        // L'original appelait ici ctx.consume avec ses deux arguments dans l'ordre
-        // inverse (les CP en premier) : le joueur aurait gagne 50 points de surcout
-        // pour 5 CP, donc une surcharge immediate par coup absorbe. Le port suit
-        // l'intention — le surcout de 5 a 3, les CP de 30 a 50 — et non la coquille.
-        if (!data.perform(cpPerHit(data), overloadPerHit(data))) return event.getAmount();
-
-        data.setHoldMark(this, held);
+    public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
+        if (!data.isCharging(this)) return false;
+        if (!comesFromTheFront(player, event.getSource())) return false;
+        if (!data.perform(cpPerHit(data), overloadPerHit(data))) return false;
         data.addSkillExp(this, 0.001f);
-        return Math.max(0f, event.getAmount() - absorbDamage(data));
+        return true;
+    }
+
+    /**
+     * Vrai si le coup vient du cote que le joueur regarde.
+     *
+     * <p>C'est un demi-plan, et non le cone de {@link #isInFront} : le bouclier <b>frappe</b> sur
+     * soixante degres, comme l'original, mais il <b>protege</b> tout ce qui vient de devant. Le
+     * joueur : « du cote ou on regarde bien sur, on peut quand meme se faire toucher par
+     * l'arriere ». Le plan se lit a plat, comme pour le cone : regarder le ciel ne doit pas rendre
+     * invulnerable a ce qui monte des pieds.
+     */
+    private static boolean comesFromTheFront(Player player, DamageSource source) {
+        Entity attacker = source.getEntity();
+        Vec3 from = attacker != null ? attacker.position() : source.getSourcePosition();
+        if (from == null) return false;
+
+        Vec3 to = from.subtract(player.position());
+        if (to.x * to.x + to.z * to.z < 1.0E-6) return true;
+        Vec3 look = player.getLookAngle();
+        return look.x * to.x + look.z * to.z > 0;
     }
 
     /** Inflige les degats de contact a ce qui touche le bouclier. */

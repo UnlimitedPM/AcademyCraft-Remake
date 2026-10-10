@@ -131,14 +131,24 @@ class SkillCurvesTest {
         var shield = cn.academy.ability.meltdowner.MeltdownerCategory.LIGHT_SHIELD;
 
         // Le bouclier est une competence tenue, plus une passive : c'est ce qui lui rend
-        // sa duree, sa recharge et son surcout.
+        // sa recharge et son surcout.
         assertTrue(shield.isHeld(), "le bouclier se tient");
         assertFalse(shield.isPassive(), "ce n'est plus une passive");
-        assertEquals(120, shield.getMaxHoldTicks(new AbilityData()), "MAX_TIME au depart");
-        assertEquals(180, shield.getMaxHoldTicks(atExperience(shield, 1f)), "MAX_TIME au maximum");
+
+        // AUCUNE duree maximale, sur demande du joueur : « j'aimerais que tant qu'on a des cp, on
+        // puisse garder le bouclier actif (qu'il ne soit pas limite avec du temps) ». Ce sont donc
+        // la reserve et l'entretien qui le bornent — zero, comme le veut le contrat de
+        // getMaxHoldTicks.
+        assertEquals(0, shield.getMaxHoldTicks(new AbilityData()),
+                "le bouclier ne s'arrete plus au bout d'un temps");
+
+        // La recharge, elle, est PLAFONNEE a l'ancien MAX_TIME : tenir un quart d'heure ne doit pas
+        // imposer une demi-heure d'attente, ce que le joueur n'a pas demande.
+        assertEquals(shield.getCooldownTicks(atExperience(shield, 0f, 120)),
+                shield.getCooldownTicks(atExperience(shield, 0f, 600)),
+                "au-dela de MAX_TIME, la recharge ne grandit plus");
 
         // Bornes des courbes, toutes reprises de l'original...
-        assertBounds("degats absorbes", 15f, 50f, shield::absorbDamage, shield);
         assertBounds("degats de contact", 2f, 6f, shield::touchDamage, shield);
         assertBounds("surcout d'ouverture", 110f, 60f, shield::getOverloadCost, shield);
         assertBounds("surcout par coup", 5f, 3f, shield::overloadPerHit, shield);
