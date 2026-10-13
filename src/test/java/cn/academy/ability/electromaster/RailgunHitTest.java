@@ -84,17 +84,18 @@ class RailgunHitTest {
         assertEquals(perp, RailgunHit.hitDistance(perp, 0.0, 20.0, DX, DY, DZ, 3.0, 50.0), 1e-9,
                 "et il rend la meme distance perpendiculaire, donc la meme attenuation");
 
-        // La longueur, elle aussi, se donne : c'est ce qui separe le faisceau qu'on VOIT (trente
-        // blocs, la longueur du dessin) de celui qui frappe (cinquante, le maxIncrement).
-        assertEquals(-1.0, RailgunHit.hitDistance(0.0, 0.0, 35.0, DX, DY, DZ, 3.0, 30.0), 1e-9,
-                "au-dela de la longueur donnee, la cible est hors de portee");
-        assertTrue(RailgunHit.hitDistance(0.0, 0.0, 35.0, DX, DY, DZ, 3.0, 50.0) >= 0.0,
-                "et dans les cinquante blocs de l'original, elle est dans le faisceau");
+        // La longueur, elle aussi, se donne — et c'est elle qui separe les deux tirs : le railgun
+        // porte a cinquante (le maxIncrement de l'original), le meltdowner a quarante, la ou le
+        // joueur l'a ramene.
+        assertTrue(RailgunHit.hitDistance(0.0, 0.0, 35.0, DX, DY, DZ, 3.0, 40.0) >= 0.0,
+                "a trente-cinq blocs, la cible est dans les quarante du meltdowner");
+        assertEquals(-1.0, RailgunHit.hitDistance(0.0, 0.0, 45.0, DX, DY, DZ, 3.0, 40.0), 1e-9,
+                "et a quarante-cinq, elle est hors de portee");
 
-        // L'attenuation suit la longueur DONNEE, elle aussi : sans cela, un faisceau court ne
+        // L'attenuation suit la longueur DONNEE, elle aussi : sans cela, un faisceau plus court ne
         // tomberait jamais a ses deux dixiemes.
-        assertEquals(1.0, RailgunHit.damageFactor(0.0, 30.0), 1e-9, "plein tarif dans l'axe");
-        assertEquals(0.2, RailgunHit.damageFactor(30.0, 30.0), 1e-9, "deux dixiemes au bout");
-        assertEquals(0.2, RailgunHit.damageFactor(90.0, 30.0), 1e-9, "et cela ne descend pas plus bas");
+        assertEquals(1.0, RailgunHit.damageFactor(0.0, 40.0), 1e-9, "plein tarif dans l'axe");
+        assertEquals(0.2, RailgunHit.damageFactor(40.0, 40.0), 1e-9, "deux dixiemes au bout");
+        assertEquals(0.2, RailgunHit.damageFactor(90.0, 40.0), 1e-9, "et cela ne descend pas plus bas");
     }
 }

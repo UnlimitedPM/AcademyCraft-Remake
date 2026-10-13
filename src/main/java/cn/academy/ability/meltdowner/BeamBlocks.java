@@ -60,4 +60,27 @@ public final class BeamBlocks {
     public static List<double[]> offsets(double radius) {
         return offsets(radius, new Random());
     }
+
+    /**
+     * Jusqu'ou va une colonne : <b>le fond du tunnel est arrondi</b>.
+     *
+     * <p>L'original faisait un mur plat : toutes ses colonnes marchaient la meme longueur, et le
+     * tunnel finissait donc sur une paroi bien droite. Le joueur l'a vu : « fait en sorte que le fond
+     * ait une forme un peu arrondie, la maintenant ca fait vraiment mur plat au bout du tunnel ».
+     *
+     * <p>Le fond suit donc une <b>calotte spherique</b> du rayon du faisceau : la colonne de l'axe
+     * creuse toute la longueur, celle du bord s'arrete un rayon plus tot, et entre les deux la
+     * profondeur suit une racine — c'est ce qui arrondit le creux sans en faire une pointe. Un rayon
+     * large creuse donc un fond plus profonde et plus doux qu'un rayon etroit, ce qui est aussi ce
+     * qu'on attend d'un faisceau plus gros.
+     *
+     * @param radius le rayon du faisceau, en blocs
+     * @param offset la distance de la colonne a l'axe, en blocs — elle peut depasser le rayon, la
+     *               fluctuation du bord elargissant le disque point par point
+     * @param length la portee du tir : la profondeur de la colonne de l'axe
+     */
+    public static double reach(double radius, double offset, double length) {
+        double rim = Math.sqrt(Math.max(0.0, radius * radius - offset * offset));
+        return length - radius + rim;
+    }
 }

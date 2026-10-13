@@ -20,8 +20,11 @@ import java.util.Random;
  * un peu plus de trois degres. C'est repris tel quel, comme le reste : c'est ce que le joueur a
  * vu pendant cinq ans, et le redresser serait une retouche, pas un portage.
  *
- * <p>La ou le faisceau est plus court qu'il ne frappe : il s'arrete a trente blocs, alors que ses
- * degats portent a cinquante. L'original aussi.
+ * <p>La ou le faisceau mentait sur sa portee : l'original le dessinait sur trente blocs alors que ses
+ * degats portaient a cinquante. Le port avait repris cet ecart — et le joueur, avec un faisceau qui
+ * frappait bien plus loin qu'on ne le voyait : « c'est pas logique visuellement ». Le dessin fait
+ * donc maintenant toute la portee de la competence, et le quarante est le meme des deux cotes (voir
+ * {@link MeltdownerSkill#LENGTH}).
  *
  * <h2>L'essaim</h2>
  *
@@ -39,8 +42,17 @@ import java.util.Random;
  */
 public final class MeltdownerVisuals {
 
-    /** La longueur du faisceau, en blocs : le {@code length} de l'original, trente. */
-    public static final double BEAM_LENGTH = 30.0;
+    /**
+     * La longueur du faisceau, en blocs : <b>quarante</b>, comme sa portee de degats.
+     *
+     * <p>Le {@code length} de l'original valait trente, alors que ses degats portaient a cinquante :
+     * le faisceau s'eteignait donc vingt blocs avant ce qu'il touchait, et c'est cet ecart que le
+     * joueur a trouve illogique — « fait en sorte que le meltdowner soit une taille plus grande
+     * visuellement, parce que la c'est pas logique visuellement ». Le dessin fait maintenant toute la
+     * portee, et un test tient les deux nombres ensemble : toucher a l'un sans l'autre casserait
+     * cette promesse-la.
+     */
+    public static final double BEAM_LENGTH = 40.0;
 
     /**
      * Le dezoom de la charge, en degres de champ de vision a son maximum.

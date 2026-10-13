@@ -218,17 +218,18 @@ class MdRaysTest {
     @Test
     @DisplayName("le faisceau du meltdowner est le plus gros des rayons")
     void leFaisceauDuMeltdownerEstLePlusGros() {
-        // Les nombres de MDRayRender : un coeur de 17 cm, une gaine de 22, une lueur d'un bloc et
-        // demi a 80 % d'opacite — cinq fois celle du petit rayon, et la plus opaque des cinq. Il a
-        // ses propres textures, `mdray`, et non celles du petit rayon.
-        //
-        // Le joueur l'a trouve « un peu trop fonce » et le port l'a monte a 90 : il n'a pas vu la
-        // difference, donc le chiffre de l'original est revenu — c'est celui-ci qui fait foi.
+        // Les nombres de MDRayRender etaient ceux de l'original : un coeur de 17 cm, une gaine de 22,
+        // une lueur d'un bloc et demi a 80 % d'opacite. Le joueur, dont le faisceau frappe un
+        // cylindre de deux a trois blocs de rayon, les a trouves trop maigres — « une taille plus
+        // grande visuellement, parce que la c'est pas logique visuellement » — et trop opaques :
+        // « rends le bandeau du meltdowner un peu plus transparent ». Le faisceau est donc double en
+        // epaisseur, et sa lueur — le bandeau — est devenue plus large ET plus douce. C'est la seule
+        // chose qui ne vient pas de l'original ici, et elle est voulue.
         assertEquals("mdray", MdRayKind.MELTDOWNER.name());
-        assertEquals(0.17, MdRayKind.MELTDOWNER.innerRadius(), 1e-6);
-        assertEquals(0.22, MdRayKind.MELTDOWNER.outerRadius(), 1e-6);
-        assertEquals(1.5, MdRayKind.MELTDOWNER.glowWidth(), 1e-6);
-        assertEquals(0.8, MdRayKind.MELTDOWNER.glowAlpha(), 1e-6);
+        assertEquals(0.34, MdRayKind.MELTDOWNER.innerRadius(), 1e-6);
+        assertEquals(0.46, MdRayKind.MELTDOWNER.outerRadius(), 1e-6);
+        assertEquals(2.8, MdRayKind.MELTDOWNER.glowWidth(), 1e-6);
+        assertEquals(0.55, MdRayKind.MELTDOWNER.glowAlpha(), 1e-6);
         assertEquals(MdRayKind.MELTDOWNER, MdRayKind.byName("mdray"));
 
         // Sa vie : cinquante ticks, deux secondes et demie, dont les sept derniers dixiemes

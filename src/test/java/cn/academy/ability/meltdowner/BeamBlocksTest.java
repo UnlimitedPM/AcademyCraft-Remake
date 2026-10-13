@@ -79,6 +79,36 @@ class BeamBlocksTest {
     }
 
     @Test
+    @DisplayName("le fond du tunnel est arrondi, et l'axe creuse toute la portee")
+    void leFondEstArrondi() {
+        double radius = GRAND;
+        double length = 40.0;
+
+        // La colonne de l'axe creuse toute la portee : c'est elle qui fait la pointe du tunnel.
+        assertEquals(length, BeamBlocks.reach(radius, 0.0, length), 1e-9);
+        // Et celle du bord s'arrete un rayon plus tot : c'est ce qui arrondit le fond au lieu d'y
+        // laisser le mur plat de l'original, que le joueur a vu (« ca fait vraiment mur plat au bout
+        // du tunnel »).
+        assertEquals(length - radius, BeamBlocks.reach(radius, radius, length), 1e-9,
+                "le bord s'arrete un rayon avant la pointe");
+
+        // Entre les deux, la profondeur suit une racine et ne remonte jamais : c'est ce qui fait une
+        // calotte plutot qu'un escalier.
+        double precedent = Double.MAX_VALUE;
+        for (double offset = 0.0; offset <= radius; offset += 0.1) {
+            double reach = BeamBlocks.reach(radius, offset, length);
+            assertTrue(reach < precedent, "la profondeur ne remonte jamais, a " + offset);
+            assertTrue(reach >= length - radius - 1e-9, "et elle ne passe pas sous le bord");
+            precedent = reach;
+        }
+
+        // Une colonne que la fluctuation du bord a poussee AU-DELA du rayon ne descend pas plus bas
+        // pour autant : la racine est bornee a zero, et non negative.
+        assertEquals(length - radius, BeamBlocks.reach(radius, radius * 1.1, length), 1e-9);
+        assertEquals(length - radius, BeamBlocks.reach(radius, radius * 4, length), 1e-9);
+    }
+
+    @Test
     @DisplayName("un faisceau plus large fait plus de colonnes, et la graine decide du bord")
     void leRayonFaitLeNombreDeColonnes() {
         List<double[]> petit = BeamBlocks.offsets(PETIT, new Random(3));

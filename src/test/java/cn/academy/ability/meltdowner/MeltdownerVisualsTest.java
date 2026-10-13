@@ -16,9 +16,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * seme. Ni l'un ni l'autre ne se relit ailleurs — le faisceau se voit une seconde et demie en jeu,
  * et l'essaim est un nuage qu'aucun oeil ne compte.
  *
- * <p>Les nombres sont ceux de l'original, et l'un d'eux surprend assez pour valoir un test a lui
- * seul : ses deux bouts ne prennent pas la meme origine, et le faisceau penche donc de plus d'un
- * bloc sur sa longueur.
+ * <p>Les nombres sont ceux de l'original, sauf la longueur du dessin : l'original peignait trente
+ * blocs et frappait cinquante, et le joueur a trouve cet ecart illogique. Le dessin fait donc
+ * maintenant toute la portee, et un test tient les deux nombres ensemble.
+ *
+ * <p>Et l'un des nombres de l'original surprend assez pour valoir un test a lui seul : ses deux bouts
+ * ne prennent pas la meme origine, et le faisceau penche donc de plus d'un bloc sur sa longueur.
  */
 class MeltdownerVisualsTest {
 
@@ -38,12 +41,24 @@ class MeltdownerVisualsTest {
         assertEquals(71.62, from.y, EPSILON, "a hauteur d'yeux");
         assertEquals(1.0, from.z, EPSILON, "et un bloc devant");
 
-        // La pointe : les PIEDS, trente blocs plus loin. L'original prenait bien ses deux points
+        // La pointe : les PIEDS, toute la portee plus loin. L'original prenait bien ses deux points
         // sur deux origines differentes.
         Vec3 to = MeltdownerVisuals.beamTo(feet, look, MeltdownerVisuals.BEAM_LENGTH);
         assertEquals(0, to.x, EPSILON);
         assertEquals(70, to.y, EPSILON, "aux pieds, et non aux yeux");
-        assertEquals(30.0, to.z, EPSILON, "trente blocs plus loin");
+        assertEquals(MeltdownerVisuals.BEAM_LENGTH, to.z, EPSILON, "toute la portee plus loin");
+    }
+
+    @Test
+    @DisplayName("le dessin fait la portee des degats : le faisceau ne ment plus")
+    void leDessinFaitLaPorteeDesDegats() {
+        // L'original dessinait trente blocs et frappait cinquante ; le port avait repris cet ecart, et
+        // le joueur a trouve ca illogique — « c'est pas logique visuellement ». Les deux nombres sont
+        // donc le MEME, et ce test les tient ensemble : toucher a l'un sans l'autre casserait cette
+        // promesse-la, et personne ne s'en apercevrait avant de tirer dans le vide.
+        assertEquals(40.0, MeltdownerVisuals.BEAM_LENGTH, EPSILON, "le quarante du joueur");
+        assertEquals(MeltdownerSkill.LENGTH, MeltdownerVisuals.BEAM_LENGTH, EPSILON,
+                "le dessin fait exactement la portee du tir");
     }
 
     @Test
@@ -60,8 +75,8 @@ class MeltdownerVisualsTest {
         Vec3 to = MeltdownerVisuals.beamTo(Vec3.ZERO, look, MeltdownerVisuals.BEAM_LENGTH);
 
         assertEquals(eyeHeight, from.y - to.y, EPSILON, "toute la hauteur des yeux");
-        assertEquals(29.0, to.z - from.z, EPSILON,
-                "trente blocs, moins celui dont le depart est avance");
+        assertEquals(MeltdownerVisuals.BEAM_LENGTH - 1.0, to.z - from.z, EPSILON,
+                "toute la portee, moins le bloc dont le depart est avance");
     }
 
     @Test

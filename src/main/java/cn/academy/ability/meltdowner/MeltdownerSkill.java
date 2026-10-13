@@ -41,13 +41,18 @@ public class MeltdownerSkill extends Skill {
     public static final int TICKS_TOLE = 100;
 
     /**
-     * La portee du tir : les <b>cinquante blocs</b> du {@code maxIncrement} de l'original.
+     * La portee du tir : <b>quarante blocs</b>, et non les cinquante de l'original.
      *
-     * <p>Le <b>dessin</b>, lui, s'arrete a trente ({@code MeltdownerVisuals.BEAM_LENGTH}) : c'est
-     * l'original qui veut ca, et c'est deja le cas du railgun, dont les cinquante blocs viennent du
-     * meme endroit.
+     * <p>Cinquante est bien le {@code maxIncrement} de l'original, mais le joueur l'a trouve de trop :
+     * « 50 blocs c'est peut-etre un peu trop (deja que le vrai mod etait completement bugue a ce
+     * niveau-la) ». C'est donc le seul ecart assume de cette portee : le rayon du cylindre, ses
+     * degats, son energie et son creusement restent ceux de l'original, mot pour mot.
+     *
+     * <p>Le <b>dessin</b> fait maintenant la meme longueur — {@code MeltdownerVisuals.BEAM_LENGTH},
+     * qui valait trente — parce que le joueur ne trouve pas logique qu'un faisceau frappe plus loin
+     * qu'on ne le voit.
      */
-    public static final double LENGTH = 50.0;
+    public static final double LENGTH = 40.0;
 
     /**
      * Le rayon du faisceau : de <b>deux a trois blocs</b> selon l'experience, le {@code lerpf(2, 3,
@@ -345,10 +350,12 @@ public class MeltdownerSkill extends Skill {
      *       creuse donc moins profond, comme chez lui.</li>
      * </ul>
      *
-     * <p>Deux details qui ne sont pas de l'original, et qui sont dits : un bloc <b>indestructible</b>
-     * (durete negative, la bedrock) arrete sa colonne au lieu d'etre ignore — sinon le faisceau
-     * creuserait derriere ; et rien n'est lache au sol, la ou l'original laissait tomber un bloc sur
-     * vingt (les quatre autres competences du port qui creusent ne lachent rien non plus).
+     * <p>Trois details qui ne sont pas de l'original, et qui sont dits : le fond du tunnel est
+     * <b>arrondi</b> au lieu d'etre plat (voir {@link BeamBlocks#reach}) ; un bloc
+     * <b>indestructible</b> (durete negative, la bedrock) arrete sa colonne au lieu d'etre ignore —
+     * sinon le faisceau creuserait derriere ; et rien n'est lache au sol, la ou l'original laissait
+     * tomber un bloc sur vingt (les quatre autres competences du port qui creusent ne lachent rien
+     * non plus).
      *
      * <p>Le tout est gate par {@code Config.destroyBlocks}, le {@code generic.destroyBlocks} de la
      * 1.12.2, et chaque bloc passe par {@code BlockEvent.BreakEvent} : ce qu'une protection de serveur
@@ -376,8 +383,15 @@ public class MeltdownerSkill extends Skill {
                     net.minecraft.util.Mth.floor(start.x), net.minecraft.util.Mth.floor(start.y),
                     net.minecraft.util.Mth.floor(start.z), look.x, look.y, look.z);
 
+            // Le fond du tunnel est ARRONDI : chaque colonne s'arrete au bord d'une calotte
+            // spherique du rayon du faisceau. Celle de l'axe creuse donc toute la longueur, celles du
+            // bord s'arretent un rayon plus tot — l'original, lui, faisait un mur bien plat, et le
+            // joueur l'a vu : « fait en sorte que le fond ait une forme un peu arrondie, la maintenant
+            // ca fait vraiment mur plat au bout du tunnel ».
+            double reach = BeamBlocks.reach(radius(data), Math.hypot(offset[0], offset[1]), LENGTH);
+
             float left = each;
-            for (int step = 0; step <= LENGTH && left > 0; step++) {
+            for (int step = 0; step <= reach && left > 0; step++) {
                 net.minecraft.core.BlockPos pos = plotter.next();
                 net.minecraft.world.level.block.state.BlockState state =
                         player.level().getBlockState(pos);
