@@ -41,18 +41,18 @@ public class MeltdownerSkill extends Skill {
     public static final int TICKS_TOLE = 100;
 
     /**
-     * La portee du tir : <b>quarante blocs</b>, et non les cinquante de l'original.
+     * La portee du tir : <b>trente-huit blocs</b>, et non les cinquante de l'original.
      *
      * <p>Cinquante est bien le {@code maxIncrement} de l'original, mais le joueur l'a trouve de trop :
-     * « 50 blocs c'est peut-etre un peu trop (deja que le vrai mod etait completement bugue a ce
-     * niveau-la) ». C'est donc le seul ecart assume de cette portee : le rayon du cylindre, ses
-     * degats, son energie et son creusement restent ceux de l'original, mot pour mot.
+     * « 50 bloc c'est peut etre un peu trop (deja que le vrai mod etait completement bugue a ce
+     * niveau-la) », puis « fait en sorte que ce soit 38 bloc et non pas 40 ». C'est donc le seul ecart
+     * assume de cette portee : le rayon du cylindre, ses degats, son energie et son creusement restent
+     * ceux de l'original, mot pour mot.
      *
-     * <p>Le <b>dessin</b> fait maintenant la meme longueur — {@code MeltdownerVisuals.BEAM_LENGTH},
-     * qui valait trente — parce que le joueur ne trouve pas logique qu'un faisceau frappe plus loin
-     * qu'on ne le voit.
+     * <p>Le <b>dessin</b> fait la meme longueur — {@code MeltdownerVisuals.BEAM_LENGTH}, qui valait
+     * trente — parce que le joueur veut voir le faisceau atteindre le fond de ce qu'il creuse.
      */
-    public static final double LENGTH = 40.0;
+    public static final double LENGTH = 38.0;
 
     /**
      * Le rayon du faisceau : de <b>deux a trois blocs</b> selon l'experience, le {@code lerpf(2, 3,

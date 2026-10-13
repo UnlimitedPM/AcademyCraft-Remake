@@ -187,31 +187,29 @@ public record MdRayKind(String name,
     /**
      * Le faisceau du meltdowner, {@code EntityMDRay} : le tir charge de la categorie.
      *
-     * <p>C'est le plus <b>gros</b> des rayons du plasma — une lueur de 2,8 blocs, un coeur de 34 cm et
-     * une gaine de 46 — et celui qui vit le plus longtemps : cinquante ticks, deux secondes et demie,
-     * dont les sept derniers dixiemes s'effacent. Il a ses propres textures, {@code mdray}, et non
-     * celles du petit rayon.
+     * <p>C'est le plus <b>gros</b> des rayons du plasma — un coeur de 17 cm, une gaine de 22 et une
+     * lueur d'un bloc et demi — et celui qui vit le plus longtemps : cinquante ticks, deux secondes et
+     * demie, dont les sept derniers dixiemes s'effacent. Il a ses propres textures, {@code mdray}, et
+     * non celles du petit rayon.
      *
-     * <p>Ses <b>dimensions</b> ne sont plus celles de l'original, et c'est la seule chose qui change
-     * ici : {@code MDRayRender} lui donnait un coeur de 17 cm, une gaine de 22 et une lueur d'un bloc
-     * et demi a 80 % d'opacite. Le joueur, dont le faisceau frappe un cylindre de deux a trois blocs
-     * de rayon, l'a trouve trop maigre — « fait en sorte que le meltdowner soit une taille plus grande
-     * visuellement, parce que la c'est pas logique visuellement » — puis, du meme souffle, « rends le
-     * bandeau du meltdowner un peu plus transparent ». Le faisceau est donc <b>double</b> en epaisseur
-     * (coeur 34 cm, gaine 46) et sa <b>lueur</b> — le bandeau qui tourne avec la camera — passe d'un
-     * bloc et demi a 2,8, mais son opacite tombe de 80 a 55 % : plus large, plus doux.
+     * <p>Ses <b>dimensions</b> sont donc celles de {@code MDRayRender}, au centimetre pres : le port
+     * les avait un temps doublees, et le joueur a remis les choses au point — « je ne t'ai pas demande
+     * de rendre le faisceau plus grand, je voulais juste qu'il soit plus long ». La longueur, elle, ne
+     * se decide pas ici : c'est {@code MeltdownerVisuals.BEAM_LENGTH}.
      *
-     * <p>Tout le reste est de l'original, au chiffre pres : sa vie de cinquante ticks, ses sept
-     * dixiemes d'effacement, une etincelle huit ticks sur dix posee au hasard le long de lui-meme, et
-     * il nait sur son tireur — il se recolle donc a sa main, comme le pre-rayon de la salve et par le
-     * meme drapeau. Quant a son son, c'est celui de la competence, {@code md.meltdowner} : c'est la
-     * competence qui le joue, au relachement, comme l'original.
+     * <p>Une seule chose n'est plus de l'original : l'<b>opacite de sa lueur</b>, 80 % chez lui et 55
+     * ici, et c'est sa demande, mot pour mot — « rends le bandeau du meltdowner un peu plus
+     * transparent ». Tout le reste de ses nombres est celui de {@code MDRayRender} : sa vie de
+     * cinquante ticks, ses sept dixiemes d'effacement, une etincelle huit ticks sur dix posee au hasard
+     * le long de lui-meme, et il nait sur son tireur — il se recolle donc a sa main, comme le pre-rayon
+     * de la salve et par le meme drapeau. Quant a son son, c'est celui de la competence,
+     * {@code md.meltdowner} : c'est la competence qui le joue, au relachement, comme l'original.
      */
     public static final MdRayKind MELTDOWNER = new MdRayKind("mdray",
             texture("mdray", "blend_in"), texture("mdray", "tile"), texture("mdray", "blend_out"),
-            2.8, 0.55f,
-            0.34, new Tint(216, 248, 216, 230),
-            0.46, new Tint(106, 242, 106, 50),
+            1.5, 0.55f,
+            0.17, new Tint(216, 248, 216, 230),
+            0.22, new Tint(106, 242, 106, 50),
             50, 200, 700, 300,
             0.8, "md.meltdowner", 0.5f, true, 0.0);
 

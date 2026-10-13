@@ -82,15 +82,21 @@ class BeamBlocksTest {
     @DisplayName("le fond du tunnel est arrondi, et l'axe creuse toute la portee")
     void leFondEstArrondi() {
         double radius = GRAND;
-        double length = 40.0;
+        double length = 38.0;
+        double depth = radius * BeamBlocks.DOME_DEPTH;
 
         // La colonne de l'axe creuse toute la portee : c'est elle qui fait la pointe du tunnel.
         assertEquals(length, BeamBlocks.reach(radius, 0.0, length), 1e-9);
-        // Et celle du bord s'arrete un rayon plus tot : c'est ce qui arrondit le fond au lieu d'y
+        // Et celle du bord s'arrete le bol entier plus tot : c'est ce qui arrondit le fond au lieu d'y
         // laisser le mur plat de l'original, que le joueur a vu (« ca fait vraiment mur plat au bout
         // du tunnel »).
-        assertEquals(length - radius, BeamBlocks.reach(radius, radius, length), 1e-9,
-                "le bord s'arrete un rayon avant la pointe");
+        assertEquals(length - depth, BeamBlocks.reach(radius, radius, length), 1e-9,
+                "le bord s'arrete au fond du bol");
+
+        // Le bol est plus PROFOND que large — trois rayons pour un rayon — et c'est la demande
+        // explicite du joueur, apres un premier arrondi juge « clairement pas asser forte ».
+        assertEquals(3.0, BeamBlocks.DOME_DEPTH, 1e-9);
+        assertTrue(depth > 2 * radius, "le bol descend plus bas que la largeur du faisceau");
 
         // Entre les deux, la profondeur suit une racine et ne remonte jamais : c'est ce qui fait une
         // calotte plutot qu'un escalier.
@@ -98,14 +104,25 @@ class BeamBlocksTest {
         for (double offset = 0.0; offset <= radius; offset += 0.1) {
             double reach = BeamBlocks.reach(radius, offset, length);
             assertTrue(reach < precedent, "la profondeur ne remonte jamais, a " + offset);
-            assertTrue(reach >= length - radius - 1e-9, "et elle ne passe pas sous le bord");
+            assertTrue(reach >= length - depth - 1e-9, "et elle ne passe pas sous le bord");
             precedent = reach;
         }
 
+        // La pente au bord est quasi verticale : le bol descend beaucoup plus sur son dernier dixieme
+        // de rayon que sur son premier — c'est ce qui le recolle a la paroi du tunnel sans arete.
+        double debut = BeamBlocks.reach(radius, 0.0, length) - BeamBlocks.reach(radius, 0.1, length);
+        double fin = BeamBlocks.reach(radius, radius - 0.1, length)
+                - BeamBlocks.reach(radius, radius, length);
+        assertTrue(fin > debut * 3, "le bol se creuse de plus en plus : " + fin + " contre " + debut);
+
         // Une colonne que la fluctuation du bord a poussee AU-DELA du rayon ne descend pas plus bas
         // pour autant : la racine est bornee a zero, et non negative.
-        assertEquals(length - radius, BeamBlocks.reach(radius, radius * 1.1, length), 1e-9);
-        assertEquals(length - radius, BeamBlocks.reach(radius, radius * 4, length), 1e-9);
+        assertEquals(length - depth, BeamBlocks.reach(radius, radius * 1.1, length), 1e-9);
+        assertEquals(length - depth, BeamBlocks.reach(radius, radius * 4, length), 1e-9);
+
+        // Et un rayon nul ne creuse pas de bol du tout : sans ce garde, la division par zero rendrait
+        // un fond absurde.
+        assertEquals(length, BeamBlocks.reach(0.0, 0.0, length), 1e-9);
     }
 
     @Test

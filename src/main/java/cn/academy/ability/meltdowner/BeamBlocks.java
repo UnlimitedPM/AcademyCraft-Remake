@@ -33,6 +33,18 @@ public final class BeamBlocks {
     public static final double WOBBLE_MIN = 0.9;
     public static final double WOBBLE_MAX = 1.1;
 
+    /**
+     * La profondeur du bol du fond, en <b>rayons</b> de faisceau.
+     *
+     * <p>Le bol ne peut pas etre plus LARGE que le faisceau — il a exactement sa largeur — mais il peut
+     * etre plus <b>profond</b> qu'il n'est large, et c'est alors une demi-<b>ellipse</b> et non une
+     * demi-sphere. C'est ce chiffre-la qui dose l'arrondi, et il a fallu le monter : le premier
+     * portage donnait un bol profond de son seul rayon, soit deux a trois blocs sur un tunnel de
+     * trente-huit, et le joueur, en jeu : « la forme arrondi au fond du tunnel est bien presente mais
+     * clairement pas asser forte ». A trois rayons, le bol fait donc six a neuf blocs de creux.
+     */
+    public static final double DOME_DEPTH = 3.0;
+
     private BeamBlocks() {
     }
 
@@ -65,14 +77,14 @@ public final class BeamBlocks {
      * Jusqu'ou va une colonne : <b>le fond du tunnel est arrondi</b>.
      *
      * <p>L'original faisait un mur plat : toutes ses colonnes marchaient la meme longueur, et le
-     * tunnel finissait donc sur une paroi bien droite. Le joueur l'a vu : « fait en sorte que le fond
-     * ait une forme un peu arrondie, la maintenant ca fait vraiment mur plat au bout du tunnel ».
+     * tunnel finissait donc sur une paroi bien droite. Le joueur l'a vu deux fois : « fait en sorte que
+     * le fond ait une forme un peu arrondie, la maintenant ca fait vraiment mur plat au bout du
+     * tunnel », puis, le premier arrondi fait, « clairement pas asser forte ».
      *
-     * <p>Le fond suit donc une <b>calotte spherique</b> du rayon du faisceau : la colonne de l'axe
-     * creuse toute la longueur, celle du bord s'arrete un rayon plus tot, et entre les deux la
-     * profondeur suit une racine — c'est ce qui arrondit le creux sans en faire une pointe. Un rayon
-     * large creuse donc un fond plus profonde et plus doux qu'un rayon etroit, ce qui est aussi ce
-     * qu'on attend d'un faisceau plus gros.
+     * <p>Le fond suit donc une demi-<b>ellipse</b> : la colonne de l'axe creuse toute la longueur,
+     * celle du bord s'arrete {@link #DOME_DEPTH} rayons plus tot, et entre les deux la profondeur suit
+     * une racine — c'est ce qui arrondit le creux sans en faire une pointe. Au bord, la pente est
+     * <b>verticale</b> : le bol rejoint donc la paroi du tunnel en douceur, sans arete.
      *
      * @param radius le rayon du faisceau, en blocs
      * @param offset la distance de la colonne a l'axe, en blocs — elle peut depasser le rayon, la
@@ -80,7 +92,10 @@ public final class BeamBlocks {
      * @param length la portee du tir : la profondeur de la colonne de l'axe
      */
     public static double reach(double radius, double offset, double length) {
-        double rim = Math.sqrt(Math.max(0.0, radius * radius - offset * offset));
-        return length - radius + rim;
+        if (radius <= 0.0) return length;
+
+        double depth = radius * DOME_DEPTH;
+        double inside = 1.0 - (offset * offset) / (radius * radius);
+        return length - depth + depth * Math.sqrt(Math.max(0.0, inside));
     }
 }

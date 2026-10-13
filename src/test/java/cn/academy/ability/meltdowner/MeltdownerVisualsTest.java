@@ -56,7 +56,7 @@ class MeltdownerVisualsTest {
         // le joueur a trouve ca illogique — « c'est pas logique visuellement ». Les deux nombres sont
         // donc le MEME, et ce test les tient ensemble : toucher a l'un sans l'autre casserait cette
         // promesse-la, et personne ne s'en apercevrait avant de tirer dans le vide.
-        assertEquals(40.0, MeltdownerVisuals.BEAM_LENGTH, EPSILON, "le quarante du joueur");
+        assertEquals(38.0, MeltdownerVisuals.BEAM_LENGTH, EPSILON, "les trente-huit du joueur");
         assertEquals(MeltdownerSkill.LENGTH, MeltdownerVisuals.BEAM_LENGTH, EPSILON,
                 "le dessin fait exactement la portee du tir");
     }
