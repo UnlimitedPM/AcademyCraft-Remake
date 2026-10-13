@@ -20,8 +20,10 @@ import net.minecraftforge.network.PacketDistributor;
  * ({@code md_marktick} et {@code md_markrate}), donc elle survit a un rechargement de chunk et
  * n'a pas besoin d'une seconde donnee a maintenir.
  *
- * <p>L'original l'accompagnait de particules chez le client ; le port n'en a jamais portees, et
- * le joueur voit donc le resultat (la cible tombe plus vite) sans la fumee.
+ * <p>L'original l'accompagnait de particules chez le client, et le port aussi : la cible marquee
+ * fume, un essaim de plasma pose sur son corps — voir {@code RadiationMarksEffect}, qui se joue chez
+ * ceux qui VOIENT la cible, la ou le paquet de la marque les annonce. Cette javadoc a longtemps dit
+ * le contraire : elle etait fausse.
  */
 public final class RadiationMarks {
 
