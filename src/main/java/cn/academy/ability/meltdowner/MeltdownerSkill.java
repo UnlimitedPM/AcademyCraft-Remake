@@ -3,15 +3,15 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Skill;
-import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.md.MdRayKind;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.List;
 import net.minecraftforge.network.PacketDistributor;
 
 /** Active skill, port of original Meltdowner: sustained plasma beam, single-target hitscan damage. */
@@ -120,16 +120,14 @@ public class MeltdownerSkill extends Skill {
     }
 
     /**
-     * Facteur de charge : <b>2,4</b> juste au minimum, <b>2,8</b> a pleine charge.
-     *
-     * <p>C'est lui qui fait toute la difference entre un tir rapide et un tir tenu :
-     * il multiplie les degats, la recharge et le gain d'experience de la meme facon.
+     * Facteur de charge des <b>degats</b> : <b>2,4</b> juste au minimum, <b>2,8</b> a pleine charge.
      *
      * <p>L'original valait 0,8 a 1,2, et le port le suivait. Le joueur l'a fait monter d'un coup :
      * « je veux changer le facteur de charge de 0.8 - 1.2 a 2.4 - 2.8, parce que la maintenant par
-     * rapport au railgun elle manque cruellement de degats ». Les trois consequences sont assumees —
-     * degats, recharge ET experience montent avec lui —, et il aplatit aussi la difference entre un
-     * tir rapide et un tir tenu, qui passe d'une fois et demie a un sixieme.
+     * rapport au railgun elle manque cruellement de degats » — puis, voyant que la recharge et
+     * l'experience montaient avec lui : « fait en sorte de remettre sont temps de chargement comme
+     * avant et sont gain d'exp aussi ». Seul ce facteur-ci a donc bouge ; la recharge et l'experience
+     * se lisent sur {@link #cooldownRate}, qui garde les chiffres du vrai mod.
      */
     public float timeRate(AbilityData data) {
         int ticks = Math.min(data.getChargeTicks(this), TICKS_MAX);
@@ -137,41 +135,56 @@ public class MeltdownerSkill extends Skill {
     }
 
     /**
+     * Le facteur de <b>recharge</b> et d'<b>experience</b> : 0,8 a 1,2, celui de l'original.
+     *
+     * <p>C'est le {@link #timeRate} d'avant la demande du joueur, garde tel quel pour ces deux
+     * courbes : elles etaient trop lourdes une fois multipliees par le facteur des degats — trente-six
+     * secondes d'attente au depart de l'experience, et une experience triplee.
+     */
+    public float cooldownRate(AbilityData data) {
+        int ticks = Math.min(data.getChargeTicks(this), TICKS_MAX);
+        return lerp(0.8f, 1.2f, (ticks - TICKS_MIN) / (float) (TICKS_MAX - TICKS_MIN));
+    }
+
+    /**
      * Degats repris de l'original : de 18 a 50 selon l'experience, le tout multiplie par
-     * le facteur de charge. Un tir tenu au maximum fait donc moitie plus mal qu'un tir
-     * relache tout juste passe.
+     * le facteur de charge des degats. Un tir tenu au maximum fait donc moitie plus mal qu'un
+     * tir relache tout juste passe.
      *
      * <p>Les deux bouts, chiffres : au depart de l'experience un tir minimal fait <b>43,2</b>
      * (2,4 x 18) et un tir tenu <b>50,4</b> (2,8 x 18) ; a l'experience maximale, <b>120</b> et
-     * <b>140</b>. C'est un rayon qui ne touche qu'<b>une</b> cible — la premiere du regard, a 20
-     * blocs — et qui ne perce rien. La marque de radiation, elle, multiplie encore ce total de 1,4 a
-     * 1,8 (voir {@link RadiationIntensifySkill}) : 140 deviennent 252.
+     * <b>140</b>. La marque de radiation, elle, multiplie encore ce total de 1,4 a 1,8 (voir
+     * {@link RadiationIntensifySkill}) : 140 deviennent 252.
+     *
+     * <p>Et depuis la demande du joueur — « fait en sorte qu'il frappe tous les monstres qui passe
+     * dans le rayon et pas uniquement 1 seul monstre » —, ce total n'est plus pour UNE cible : il
+     * s'applique a <b>chacun</b> des vivants que le rayon traverse. Voir {@link #onActivate}.
      */
     public float damage(AbilityData data) {
         return timeRate(data) * lerp(18f, 50f, data.getSkillExp(this));
     }
 
     /**
-     * Experience : 0,002 de base, multiplie par le facteur de charge comme dans
-     * l'original — tenir son tir fait donc progresser plus vite.
+     * Experience : 0,002 de base, multiplie par le facteur de la recharge — celui de l'original, que
+     * le joueur a demande de retrouver : « et sont gain d'exp aussi ».
      */
     @Override
     public float getExpGain(AbilityData data) {
-        return timeRate(data) * 0.002f;
+        return cooldownRate(data) * 0.002f;
     }
 
     /**
      * Recharge reprise de l'original : 15 a 7 secondes selon l'experience, multipliees par le
-     * facteur de charge. Tenir le tir le plus longtemps le rend plus puissant mais le rend aussi
-     * plus long a revenir.
+     * facteur de la recharge — celui du vrai mod, 0,8 a 1,2 : <b>12 a 18 secondes</b> au depart de
+     * l'experience, <b>5,6 a 8,4</b> a la fin.
      *
-     * <p>Le facteur etant passe de 0,8-1,2 a 2,4-2,8 sur demande du joueur, la recharge a fait le
-     * meme bond : <b>36 a 42 secondes</b> au depart de l'experience, <b>16,8 a 19,6</b> a la fin.
-     * C'est le prix du facteur, et il se paie la.
+     * <p>Elle a suivi le facteur des degats le temps d'une version — jusqu'a trente-six secondes —,
+     * et le joueur l'a fait redescendre : « fait en sorte de remettre sont temps de chargement comme
+     * avant ». Les deux facteurs sont donc separes.
      */
     @Override
     public int getCooldownTicks(AbilityData data) {
-        return (int) (timeRate(data) * 20 * lerp(15f, 7f, data.getSkillExp(this)));
+        return (int) (cooldownRate(data) * 20 * lerp(15f, 7f, data.getSkillExp(this)));
     }
 
     /**
@@ -199,6 +212,14 @@ public class MeltdownerSkill extends Skill {
         return lerp(200f, 170f, data.getSkillExp(this));
     }
 
+    /**
+     * Le tir : le faisceau, et tout ce qu'il traverse.
+     *
+     * <p>L'original ne frappait qu'<b>une</b> cible, la premiere du regard. Le joueur a demande autre
+     * chose : « fait en sorte qu'il frappe tous les monstres qui passe dans le rayon et pas uniquement
+     * 1 seul monstre ». Le rayon est donc parcouru d'un bout a l'autre — vingt blocs, ou jusqu'au
+     * premier mur — et chaque vivant qu'il coupe encaisse les degats, du plus proche au plus loin.
+     */
     @Override
     public void onActivate(Player player, AbilityData data) {
         // La seule competence du port qui se declare dans la categorie des joueurs :
@@ -209,10 +230,44 @@ public class MeltdownerSkill extends Skill {
 
         beam(player);
 
-        Entity target = TargetingUtil.findEntityInSight(player, RANGE);
-        if (!(target instanceof LivingEntity living)) return;
+        for (LivingEntity living : inTheBeam(player)) {
+            living.hurt(skillDamage(player), scaled(damage(data)));
+        }
+    }
 
-        living.hurt(skillDamage(player), scaled(damage(data)));
+    /**
+     * Tout ce que le faisceau traverse, du plus proche au plus loin.
+     *
+     * <p>Le rayon part des yeux et va jusqu'a {@link #RANGE} blocs, ou jusqu'au premier mur : c'est
+     * la ligne du regard, et un mur arrete la lumiere comme il arrete les rayons des autres
+     * competences du port.
+     *
+     * <p>Chaque vivant dont la boite est <b>coupee</b> par ce segment est touche : c'est
+     * {@code AABB.clip} qui le dit, donc pas de faux positif sur une bete posee a cote. Le tri final
+     * fait partir les coups du plus proche au plus loin, comme un vrai faisceau qui avance.
+     */
+    private static List<LivingEntity> inTheBeam(Player player) {
+        Vec3 from = player.getEyePosition(1f);
+        Vec3 to = from.add(player.getViewVector(1f).scale(RANGE));
+
+        net.minecraft.world.phys.BlockHitResult wall = player.level().clip(
+                new net.minecraft.world.level.ClipContext(from, to,
+                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                        net.minecraft.world.level.ClipContext.Fluid.NONE, player));
+        if (wall.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            to = wall.getLocation();
+        }
+
+        List<LivingEntity> touched = new java.util.ArrayList<>();
+        for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class,
+                new net.minecraft.world.phys.AABB(from, to).inflate(1.0),
+                e -> e != player && e.isPickable() && !e.isSpectator())) {
+            if (living.getBoundingBox().inflate(0.3).clip(from, to).isPresent()) {
+                touched.add(living);
+            }
+        }
+        touched.sort(java.util.Comparator.comparingDouble(l -> l.position().distanceToSqr(from)));
+        return touched;
     }
 
     /**

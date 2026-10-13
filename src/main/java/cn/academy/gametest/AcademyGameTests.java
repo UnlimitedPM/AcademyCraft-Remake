@@ -7311,6 +7311,92 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le meltdowner frappe TOUT ce que son rayon traverse.
+     *
+     * <p>L'original ne touchait que la premiere cible du regard. Le joueur : « fait en sorte qu'il
+     * frappe tous les monstres qui passe dans le rayon et pas uniquement 1 seul monstre ». Trois betes
+     * sont donc posees sur la ligne, et un MUR ferme le rayon avant la quatrieme : celle-la doit rester
+     * intacte, sans quoi rien ne dirait que le rayon s'arrete quelque part.
+     */
+    @GameTest(template = "empty")
+    public static void leMeltdownerFrappeToutSonRayon(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
+        ServerLevel level = helper.getLevel();
+        int height = 290;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Le couloir se creuse par le MONDE, en absolu : c'est ce que lit le rayon.
+        clearCorridor(helper, abs, 32);
+        for (int dz = 0; dz <= 32; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 3; dy++) {
+                    level.setBlock(helper.absolutePos(eyes.offset(dx, dy, dz)),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "meltdowner-beam");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        // Le monde des tests est sauvegarde et une execution ratee laisse ses betes : elles marchent,
+        // donc elles peuvent sortir du couloir nettoye et se mettre sur la ligne. On les enleve avant.
+        for (var trainee : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class,
+                new net.minecraft.world.phys.AABB(
+                        abs.getX() - 2, abs.getY() - 2, abs.getZ() - 1,
+                        abs.getX() + 3, abs.getY() + 4, abs.getZ() + 33))) {
+            trainee.discard();
+        }
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 3);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0f);
+        data.setControlPoint(data.getMaxControlPoint());
+        data.setOverload(0f);
+
+        // Les betes se posent SUR LE REGARD du moment : le faux joueur est partage et un autre test
+        // peut lui avoir laisse un lacet — voir leMeltdownerTireAuBoutDeSaCharge.
+        var oeil = player.getEyePosition(1f);
+        var look = player.getViewVector(1f);
+        var betes = new java.util.ArrayList<net.minecraft.world.entity.monster.Zombie>();
+        var avant = new float[4];
+        for (int i = 0; i < 4; i++) {
+            var bete = new net.minecraft.world.entity.monster.Zombie(
+                    net.minecraft.world.entity.EntityType.ZOMBIE, level);
+            var vise = oeil.add(look.scale(6 + 4 * i));
+            bete.moveTo(vise.x, abs.getY(), vise.z, 0f, 0f);
+            level.addFreshEntity(bete);
+            betes.add(bete);
+            avant[i] = bete.getHealth();
+        }
+
+        // Un MUR juste apres la troisieme : le rayon s'y arrete, donc la quatrieme est epargnee.
+        BlockPos mur = BlockPos.containing(oeil.add(look.scale(16)));
+        level.setBlock(mur, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
+
+        // Le tir directement, sans charge : c'est onActivate qui decide de ce qu'il touche.
+        skill.onActivate(player, data);
+
+        for (int i = 0; i < 3; i++) {
+            assertTrue(helper, betes.get(i).getHealth() < avant[i],
+                    "la bete " + (i + 1) + " du rayon encaisse : " + betes.get(i).getHealth()
+                            + " contre " + avant[i]);
+        }
+        assertValue(helper, avant[3], betes.get(3).getHealth(),
+                "et celle qui est derriere le mur reste intacte");
+
+        level.setBlock(mur, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+        for (var bete : betes) {
+            bete.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,

@@ -113,18 +113,22 @@ class SkillCurvesTest {
         assertEquals(0, vecAccel.getMinChargeTicks(new AbilityData()), "vec_accel part toujours");
         assertEquals(20, vecAccel.getMaxChargeTicks(new AbilityData()), "MAX_CHARGE");
 
-        // Facteur de charge du meltdowner : 2,4 a une seconde, 2,8 a deux. C'est le double de
-        // l'original en gros, sur demande du joueur — il trouvait la competence trop faible a cote du
-        // railgun —, et ca tire aussi la recharge et l'experience vers le haut.
+        // Facteur de charge du meltdowner : 2,4 a une seconde, 2,8 a deux, pour les DEGATS seulement.
+        // C'est le double de l'original, sur demande du joueur — il trouvait la competence trop faible
+        // a cote du railgun.
         assertEquals(2.4f, meltdowner.timeRate(atExperience(meltdowner, 0f, 20)), 0.0001f);
         assertEquals(2.8f, meltdowner.timeRate(atExperience(meltdowner, 0f, 40)), 0.0001f,
                 "deux secondes de charge valent un sixieme de plus qu'une");
 
-        // Et il multiplie aussi la recharge : tenir son tir se paie en attente. Le facteur double a
-        // donc double la facture : douze secondes au depart deviennent trente-six, et 8,4 a la fin
-        // deviennent 19,6.
-        assertEquals(720, meltdowner.getCooldownTicks(atExperience(meltdowner, 0f, 20)));
-        assertEquals(392, meltdowner.getCooldownTicks(atExperience(meltdowner, 1f, 40)));
+        // La RECHARGE et l'EXPERIENCE, elles, ont garde le facteur du vrai mod : le joueur a demande
+        // « de remettre sont temps de chargement comme avant et sont gain d'exp aussi ».
+        assertEquals(0.8f, meltdowner.cooldownRate(atExperience(meltdowner, 0f, 20)), 0.0001f);
+        assertEquals(1.2f, meltdowner.cooldownRate(atExperience(meltdowner, 0f, 40)), 0.0001f);
+
+        // Donc la recharge est celle de l'original : douze secondes au depart de l'experience pour un
+        // tir minimal, 8,4 pour un tir tenu au maximum.
+        assertEquals(240, meltdowner.getCooldownTicks(atExperience(meltdowner, 0f, 20)));
+        assertEquals(168, meltdowner.getCooldownTicks(atExperience(meltdowner, 1f, 40)));
 
         // Vitesse de vec_accel : sin(0,4) x 2,5 a l'appui, sin(1) x 2,5 a pleine charge.
         assertEquals(Math.sin(0.4) * 2.5, vecAccel.speed(new AbilityData()), 0.0001);

@@ -441,10 +441,11 @@ class PortedSkillsTest {
             Map.entry("electromaster.thunder_bolt", 0.003f),
             Map.entry("electromaster.thunder_clap", 0.003f),
             Map.entry("meltdowner.electron_bomb", 0.005f),
-            // 0,002 multiplie par le facteur de charge, qui vaut 2,8 a pleine charge : le joueur l'a
-            // fait monter de 0,8-1,2 a 2,4-2,8 (voir MeltdownerSkill.timeRate), donc le gain monte
-            // avec lui — l'original multipliait deja par ce facteur.
-            Map.entry("meltdowner.meltdowner", 0.0056f),
+            // 0,002 multiplie par le facteur de la recharge, 1,2 a pleine charge : le facteur des
+            // DEGATS est monte a 2,4-2,8 sur demande du joueur, mais le gain d'experience est reste
+            // celui de l'original — « fait en sorte de remettre sont temps de chargement comme avant
+            // et sont gain d'exp aussi ».
+            Map.entry("meltdowner.meltdowner", 0.0024f),
             // un tir, avec ou sans bille
             Map.entry("meltdowner.ray_barrage", 0.005f),
             // rien au paquet : c'est le saut qui paie, au bloc parcouru, et lui seul connait la
