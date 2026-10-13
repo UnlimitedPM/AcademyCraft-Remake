@@ -50,17 +50,25 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
  * pas de rouge. Derriere, en revanche, le joueur encaisse tout, exactement comme avant.
  *
  * <p>Et une fleche arretée de face <b>fond dans le bouclier</b> au lieu de retomber intacte : voir
- * {@link #melt}. Le joueur a demande la meme chose pour celles qui passent <b>devant</b> lui sans le
- * toucher : voir {@link #meltAround}, qui balaie chaque tick la portee du bouclier.
+ * {@link #melt}. Un balayage qui detruisait aussi les fleches passant devant lui a existe le temps
+ * d'une version : le joueur l'a fait retirer — « le balayage des fleches avec les 3 blocs devant moi,
+ * remets-le comme avant » —, donc seules celles qui LE touchent fondent.
  *
- * <p>L'eventail, enfin, est celui de l'original dans les trois cas — frapper, fondre, proteger :
- * soixante degres de part et d'autre, mesures a plat. Le joueur a confirme : « la protection est
- * trop large : ramene-la a l'eventail de l'original (±60°) ».
+ * <p>L'eventail est celui de l'original : soixante degres de part et d'autre du regard, mesures a
+ * plat, pour frapper comme pour proteger — « la protection est trop large : ramene-la a l'eventail de
+ * l'original (±60°) ». Sa <b>portee</b>, elle, est plus courte que la sienne : voir {@link #REACH}.
  */
 public class LightShieldSkill extends Skill {
 
-    /** Rayon du bouclier, en blocs, comme l'original. */
-    private static final double REACH = 3.0;
+    /**
+     * Rayon d'action du bouclier : <b>1,5 bloc</b>.
+     *
+     * <p>L'original en demandait trois — son {@code WorldUtils.getEntities(player, 3, ...)} — et c'est
+     * un ecart assume : le joueur, qui trouvait le champ d'action bizarre, a choisi « la portee
+     * d'action : 3 blocs -> 1,5 bloc ». C'est la seule chose qui bouge : les degats de contact touchent
+     * donc plus pres qu'avant, dans l'eventail de soixante degres qui, lui, reste celui de l'original.
+     */
+    private static final double REACH = 1.5;
 
     /**
      * Demi-angle du bouclier : l'original frappait sur soixante degres, et c'est aussi ce qu'il
@@ -160,7 +168,6 @@ public class LightShieldSkill extends Skill {
         // 1e-6 par tick, comme l'original : un bouclier se gagne surtout en absorbant.
         data.addSkillExp(this, 1e-6f);
         damageAround(player, data);
-        meltAround(player);
         return true;
     }
 
@@ -227,28 +234,6 @@ public class LightShieldSkill extends Skill {
     /** Vrai pour tout ce qui doit fondre : toute fleche, mais pas un trident. */
     private static boolean melts(Entity entity) {
         return entity instanceof AbstractArrow arrow && !(arrow instanceof ThrownTrident);
-    }
-
-    /**
-     * Les fleches qui passent <b>devant</b> le bouclier fondent, meme sans le toucher.
-     *
-     * <p>Le joueur : « si je vois une fleche passer devant moi mais que je suis pas vraiment dans la
-     * ligne de mire, elle passe et c'est tout [...] je voudrais faire en sorte que ca le detruise
-     * meme 1 bloc plus loin que mon bouclier ». Le disque se dessine un bloc devant les yeux —
-     * {@code ShieldVisuals.DISTANCE} — et la zone qui fond va jusqu'a {@link #REACH} blocs, donc
-     * deux blocs au-dela du disque, dans le meme eventail que le reste : ce qui passe dans le dos ne
-     * fond pas.
-     *
-     * <p>Ce balayage ne coute rien de plus que l'entretien : il ne frappe personne, et une fleche
-     * detruite n'est pas un ennemi qu'on blesse. C'est l'entretien de chaque tick qui borne tout ca.
-     */
-    private static void meltAround(Player player) {
-        AABB area = player.getBoundingBox().inflate(REACH);
-        for (AbstractArrow arrow : player.level().getEntitiesOfClass(AbstractArrow.class, area,
-                LightShieldSkill::melts)) {
-            if (!isInFront(player, arrow.position())) continue;
-            melt(player, arrow);
-        }
     }
 
     /**

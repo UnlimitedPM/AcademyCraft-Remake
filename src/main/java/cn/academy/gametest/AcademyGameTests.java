@@ -7155,9 +7155,10 @@ public final class AcademyGameTests {
         assertFalse(helper, flecheDeDos.isRemoved(),
                 "et celle-la ne fond pas : elle continue sa route");
 
-        // Une fleche qui PASSE devant, sans le toucher, fond aussi : le balayage du maintien va
-        // jusqu'a la portee du bouclier — « je voudrais faire en sorte que ca le detruise meme 1 bloc
-        // plus loin que mon bouclier ». Celle qui passe dans le dos, non.
+        // Une fleche qui PASSE devant, sans le toucher, ne fond PAS : le balayage qui le faisait a
+        // existe le temps d'une version, et le joueur l'a fait retirer — « le balayage des fleches
+        // avec les 3 blocs devant moi, remets-le comme avant ». Seules celles qui le touchent
+        // fondent, et c'est l'assertion du dessus qui le dit.
         data.setControlPoint(data.getMaxControlPoint());
         var flecheQuiPasse = new net.minecraft.world.entity.projectile.Arrow(
                 net.minecraft.world.entity.EntityType.ARROW, level);
@@ -7169,10 +7170,10 @@ public final class AcademyGameTests {
         level.addFreshEntity(flecheDerriereQuiPasse);
 
         assertTrue(helper, shield.onHoldTick(player, data, 0), "le maintien tient");
-        assertTrue(helper, flecheQuiPasse.isRemoved(),
-                "une fleche qui passe devant le bouclier fond, meme sans le toucher");
+        assertFalse(helper, flecheQuiPasse.isRemoved(),
+                "une fleche qui passe devant, sans le toucher, ne fond pas");
         assertFalse(helper, flecheDerriereQuiPasse.isRemoved(),
-                "celle qui passe dans le dos, non");
+                "ni celle qui passe dans le dos");
 
         // Et un coup de FLANC passe : l'eventail est revenu a celui de l'original, soixante degres
         // de part et d'autre du regard. Le joueur : « la protection est trop large : ramene-la a
@@ -7198,6 +7199,7 @@ public final class AcademyGameTests {
         devant.discard();
         derriere.discard();
         flecheDeDos.discard();
+        flecheQuiPasse.discard();
         flecheDerriereQuiPasse.discard();
         helper.succeed();
     }
