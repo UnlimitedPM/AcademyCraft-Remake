@@ -58,15 +58,8 @@ class MeltdownerVisualsTest {
         // promesse-la, et personne ne s'en apercevrait avant de tirer dans le vide.
         assertEquals(38.0, MeltdownerVisuals.BEAM_LENGTH, EPSILON, "les trente-huit du joueur");
         assertEquals(MeltdownerSkill.LENGTH, MeltdownerVisuals.BEAM_LENGTH, EPSILON,
-                "les tubes font exactement la portee du tir");
-
-        // Mais sa LUEUR a son propre nombre, et il n'a pas bouge : les trente blocs de l'original,
-        // quand les tubes sont passes a trente-huit. C'est une entorse assumee — chez l'original la
-        // lueur couvrait exactement le rayon — et le joueur a demande les deux choses separement.
-        assertEquals(30.0, MeltdownerVisuals.GLOW_LENGTH, EPSILON, "la lueur de l'original");
-        assertEquals(MeltdownerVisuals.GLOW_LENGTH,
-                cn.academy.ability.client.md.MdRayKind.MELTDOWNER.glowLength(), EPSILON,
-                "et c'est ce nombre-la que le genre du faisceau porte");
+                "et le dessin fait exactement la portee du tir, lueur comprise : le port a essaye "
+                        + "de la faire plus courte, et le joueur l'a refuse");
     }
 
     @Test

@@ -57,14 +57,6 @@ import net.minecraft.resources.ResourceLocation;
  * c'est lui qui recole a la main de son tireur un rayon marque vrai, et laisse les autres ou
  * ils sont nes.
  *
- * <p>Le dernier nombre, {@code glowLength}, est nouveau, et c'est le seul qui n'a pas d'equivalent
- * chez l'original : la longueur de sa <b>lueur</b>, quand elle doit s'arreter avant le rayon lui-meme.
- * Zero veut dire « la meme que le rayon », et c'est ce que font tous les genres sauf un : le
- * <b>meltdowner</b> garde les trente blocs de l'original, quand ses tubes vont maintenant jusqu'a
- * trente-huit — le joueur : « le ruban va un peu trop loin par rapport a dans le vrai mod, peut-etre
- * que c'est du au fait que le laser est plus long qu'avant, mais j'aimerais que ce ne soit pas le
- * cas ». C'est donc sa lueur seule qui garde l'ancienne longueur, et ses tubes qui vont plus loin.
- *
  * <h2>La lueur peut depasser la pointe</h2>
  *
  * <p>Le dernier nombre, {@code glowEndFix}, est le {@code endFix} de {@code RendererRayGlow} de
@@ -88,8 +80,7 @@ public record MdRayKind(String name,
                         double sparkRate,
                         String sound, float soundVolume,
                         boolean viewOptimize,
-                        double glowEndFix,
-                        double glowLength) {
+                        double glowEndFix) {
 
     /** Une couleur telle que l'original la donnait : quatre nombres de 0 a 255. */
     public record Tint(int r, int g, int b, int a) {
@@ -133,7 +124,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             14, 200, 400, 500,
-            1.0, "md.ray_small", 0.8f, false, 0.0, 0.0);
+            1.0, "md.ray_small", 0.8f, false, 0.0);
 
     /**
      * La salve de rayons, {@code EntityMdRayBarrage} : la gerbe qui part d'une bille de silicium.
@@ -156,7 +147,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             50, 100, 300, 500,
-            0.0, "md.ray_small", 0.5f, false, 0.0, 0.0);
+            0.0, "md.ray_small", 0.5f, false, 0.0);
 
     /**
      * Le pre-rayon : le trait qui annonce la salve, avant qu'elle ne parte.
@@ -181,7 +172,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 230),
             0.052, new Tint(106, 242, 106, 50),
             50, 200, 400, 500,
-            0.0, "md.ray_small", 0.8f, true, 0.3, 0.0);
+            0.0, "md.ray_small", 0.8f, true, 0.3);
 
     /** Et le meme, quand rien n'a ete trouve : trente ticks d'eclair, et c'est tout. */
     public static final MdRayKind BARRAGE_PRE_MISS = new MdRayKind("mdray_barrage_pre_miss",
@@ -191,7 +182,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 230),
             0.052, new Tint(106, 242, 106, 50),
             30, 200, 400, 500,
-            0.0, "md.ray_small", 0.8f, true, 0.3, 0.0);
+            0.0, "md.ray_small", 0.8f, true, 0.3);
 
     /**
      * Le faisceau du meltdowner, {@code EntityMDRay} : le tir charge de la categorie.
@@ -224,8 +215,7 @@ public record MdRayKind(String name,
             0.17, new Tint(216, 248, 216, 230),
             0.22, new Tint(106, 242, 106, 50),
             50, 200, 700, 300,
-            0.8, "md.meltdowner", 0.5f, true, 0.0,
-            cn.academy.ability.meltdowner.MeltdownerVisuals.GLOW_LENGTH);
+            0.8, "md.meltdowner", 0.5f, true, 0.0);
 
     /**
      * Le <b>railgun</b>, {@code EntityRailgunFX} : le tir tendu de l'electromaster.
@@ -262,7 +252,7 @@ public record MdRayKind(String name,
             0.09, new Tint(241, 240, 222, 200),
             0.13, new Tint(236, 170, 93, 60),
             50, 150, 1000, 800,
-            0.0, "", 0.0f, true, 0.3, 0.0);
+            0.0, "", 0.0f, true, 0.3);
 
     /**
      * La vie d'un rayon <b>tenu</b> : les {@code 233333} ticks de l'original, soit trois heures.
@@ -298,7 +288,7 @@ public record MdRayKind(String name,
             0.03, new Tint(216, 248, 216, 230),
             0.045, new Tint(106, 242, 106, 50),
             HELD_TICKS, 200, 400, 300,
-            0.0, "md.mine_loop", 0.3f, true, 0.0, 0.0);
+            0.0, "md.mine_loop", 0.3f, true, 0.0);
 
     /**
      * Le rayon minier de l'expert, {@code EntityMineRayExpert} : le meme, une taille au-dessus.
@@ -320,7 +310,7 @@ public record MdRayKind(String name,
             0.045, new Tint(216, 248, 216, 180),
             0.056, new Tint(106, 242, 106, 50),
             HELD_TICKS, 200, 400, 300,
-            0.0, "md.mine_loop", 0.3f, true, 0.0, 0.0);
+            0.0, "md.mine_loop", 0.3f, true, 0.0);
 
     /**
      * Le rayon minier de la chance, {@code EntityMineRayLuck} : le rayon de l'expert, mais dore.
@@ -342,7 +332,7 @@ public record MdRayKind(String name,
             0.04, new Tint(241, 229, 247, 230),
             0.05, new Tint(205, 166, 232, 50),
             HELD_TICKS, 200, 400, 300,
-            0.0, "md.mine_loop", 0.3f, true, 0.0, 0.0);
+            0.0, "md.mine_loop", 0.3f, true, 0.0);
 
     /** La duree du rayon, en millisecondes : cinquante par tick, comme l'original. */
     public long lifeMs() {

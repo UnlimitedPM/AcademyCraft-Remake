@@ -64,6 +64,15 @@ public final class MdRenderType {
      * — il donnait a ses cylindres la ligne blanche du milieu de {@code railgun.png}, qui ne
      * change donc pas leur couleur — mais aucune image du plasma n'a de ligne blanche : mieux
      * vaut le programme de couleur, qui fait exactement ce qu'on lui demande.
+     * <p>Et ses <b>faces arriere sont ecartees</b> : c'est le culling que l'original avait, lui, sans
+     * rien demander — son {@code RendererRayCylinder} ne le desactivait jamais, et ses deux maillages
+     * sont tailles pour (leur normale sort du tube). Le port l'avait eteint, et c'est ce qui faisait
+     * ressortir l'interieur du coeur aux deux bouts : le joueur voyait « la face arriere de l'ogive
+     * (le plat) [...] en blanc et pas en vert comme le reste ».*
+     *
+     * <p>Seuls les <b>tubes</b> sont concernes. Les rubans de lueur et les etincelles ont leur propre
+     * type, sans culling, parce qu'un ruban se regarde des deux cotes : la lueur de l'original
+     * desactivait d'ailleurs le culling autour d'elle, ce qu'elle avait de quoi faire.
      */
     public static RenderType flat() {
         if (flat == null) {
@@ -74,7 +83,7 @@ public final class MdRenderType {
                                     GameRenderer::getPositionColorShader))
                             .setTransparencyState(blending())
                             .setWriteMaskState(noDepthWrite())
-                            .setCullState(new RenderStateShard.CullStateShard(false))
+                            .setCullState(new RenderStateShard.CullStateShard(true))
                             .createCompositeState(true));
         }
         return flat;

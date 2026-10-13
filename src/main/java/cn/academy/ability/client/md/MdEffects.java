@@ -174,15 +174,17 @@ public class MdEffects {
         VertexConsumer tubes = buffers.getBuffer(MdRenderType.flat());
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
-        // Chaque ogive a la longueur de SON rayon, comme chez l'original : sa « tete » est un maillage
-        // unitaire echelle par la largeur du tube, donc une ogive de rayon et de longueur egales. Le
-        // port les avait faites de la meme longueur aux deux tubes, et l'ogive du coeur ressortait
-        // alors de celle de la gaine : « il y a une petite partie qui passe legerement au travers de
-        // l'autre ogive ».
+        // Les deux ogives ont la MEME longueur — celle de la gaine, la plus large : c'est l'etat que
+        // le joueur a valide (« pour les ogives, c'est bon maintenant »), et il n'est PAS celui de
+        // l'original. Chez lui, chaque ogive suivait la longueur de son propre rayon (son maillage est
+        // unitaire et mis a l'echelle par la largeur du tube), et l'ogive du coeur, plus courte,
+        // s'arretait alors dans celle de la gaine : deux cones de pentes differentes, donc deux
+        // pointes a deux endroits. Le joueur l'a refuse deux fois, donc la longueur est partagee.
         //
-        // Et le coeur a son ogive un peu plus COURTE, deux pour cent : c'est le `cylinderIn.headFix =
+        // Le coeur la garde seulement deux pour cent plus courte : c'est le `cylinderIn.headFix =
         // 0.98` de l'original, qui evitait deja, chez lui, que le blanc affleure le vert.
-        double capIn = inner * HEAD_FIX;
+        double cap = outer;
+        double capIn = cap * HEAD_FIX;
 
         // L'ORDRE est celui de l'original — `RendererRayComposite` ajoute la lueur, puis le COEUR,
         // puis la GAINE — donc la gaine se peint en dernier et passe par-dessus le coeur, qu'elle
@@ -193,8 +195,8 @@ public class MdEffects {
         head(tubes, pose, camera, from, u, v, axis, -1.0, inner, capIn, kind.inner(), alpha);
         head(tubes, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
         cylinder(tubes, pose, camera, from, to, u, v, outer, kind.outer(), alpha);
-        head(tubes, pose, camera, from, u, v, axis, -1.0, outer, outer, kind.outer(), alpha);
-        head(tubes, pose, camera, to, u, v, axis, 1.0, outer, outer, kind.outer(), alpha);
+        head(tubes, pose, camera, from, u, v, axis, -1.0, outer, cap, kind.outer(), alpha);
+        head(tubes, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
     }
 
     /** La lueur d'un rayon : ses trois morceaux, poses bout a bout. */
@@ -216,15 +218,16 @@ public class MdEffects {
         // sienne — d'ou le carre de l'opacite, et son tremblement entre 0,9 et 1.
         float glow = (float) (kind.glowAlpha() * alpha * ray.glowAlpha(now));
 
-        // La lueur peut s'arreter AVANT la pointe du rayon : c'est le `glowLength` de son genre, et le
-        // meltdowner est le seul a s'en servir — ses tubes vont a trente-huit blocs pour atteindre le
-        // fond de ce qu'ils creusent, et sa lueur garde les trente de l'original.
-        double[] end = add(from, axis, MdRays.glowLength(kind, length(from, to)));
-
-        // Et ce bout-la n'est pas toujours sa pointe : son dernier morceau peut la depasser — c'est
-        // l'`endFix` de l'original, que le pre-rayon de la salve reprend pour couvrir la bille de
+        // Le bout de la lueur est celui du rayon : chez l'original, {@code RendererRayGlow} prenait
+        // toute sa longueur, sans nombre a lui. Le port a essaye de lui en donner un — la faire
+        // s'arreter plus tot, a trente, quand les tubes vont a trente-huit — et le joueur a vu le
+        // resultat : « le ruban ne va pas du tout au 38 bloc ». Une lueur trop courte se voit, et
+        // elle est revenue a la longueur du rayon.
+        //
+        // Ce bout-la n'est pas toujours sa pointe pour autant : son dernier morceau peut la depasser —
+        // c'est l'`endFix` de l'original, que le pre-rayon de la salve reprend pour couvrir la bille de
         // silicium entiere. Voir `MdRayKind.glowEndFix`.
-        double[] tip = add(end, axis, kind.glowEndFix());
+        double[] tip = add(to, axis, kind.glowEndFix());
 
         double[] in = add(from, axis, span);
         double[] out = add(tip, axis, -span);
