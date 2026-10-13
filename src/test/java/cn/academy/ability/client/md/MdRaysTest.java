@@ -216,6 +216,25 @@ class MdRaysTest {
     }
 
     @Test
+    @DisplayName("la lueur peut s'arreter avant les tubes, et jamais les depasser")
+    void laLueurPeutEtrePlusCourte() {
+        // Le meltdowner : ses tubes vont a trente-huit blocs, sa lueur s'arrete a trente — c'est le
+        // seul genre qui a une longueur de lueur a lui, et c'est une demande du joueur.
+        assertEquals(30.0, MdRays.glowLength(MdRayKind.MELTDOWNER, 38.0), 1e-9);
+
+        // Les autres n'ont pas de nombre a eux : leur lueur suit leur rayon, comme chez l'original, ou
+        // `RendererRayGlow` prenait toute la longueur du rayon.
+        assertEquals(38.0, MdRays.glowLength(MdRayKind.SMALL, 38.0), 1e-9);
+        assertEquals(15.0, MdRays.glowLength(MdRayKind.MINE_BASIC, 15.0), 1e-9);
+
+        // Et un rayon plus COURT que la lueur demandee la garde courte : c'est ce qui se passe dans les
+        // deux premiers dixiemes de seconde, ou le rayon pousse encore. Sans cette borne, sa lueur
+        // depasserait sa propre pointe.
+        assertEquals(12.0, MdRays.glowLength(MdRayKind.MELTDOWNER, 12.0), 1e-9);
+        assertEquals(0.0, MdRays.glowLength(MdRayKind.MELTDOWNER, 0.0), 1e-9);
+    }
+
+    @Test
     @DisplayName("le faisceau du meltdowner est le plus gros des rayons")
     void leFaisceauDuMeltdownerEstLePlusGros() {
         // Tous les nombres de MDRayRender : un coeur de 17 cm, une gaine de 22, une lueur d'un bloc et
@@ -227,6 +246,8 @@ class MdRaysTest {
         assertEquals(0.22, MdRayKind.MELTDOWNER.outerRadius(), 1e-6);
         assertEquals(1.5, MdRayKind.MELTDOWNER.glowWidth(), 1e-6);
         assertEquals(0.8, MdRayKind.MELTDOWNER.glowAlpha(), 1e-6);
+        assertEquals(30.0, MdRayKind.MELTDOWNER.glowLength(), 1e-6,
+                "mais sa LUEUR garde les trente blocs de l'original");
         assertEquals(MdRayKind.MELTDOWNER, MdRayKind.byName("mdray"));
 
         // Sa vie : cinquante ticks, deux secondes et demie, dont les sept derniers dixiemes

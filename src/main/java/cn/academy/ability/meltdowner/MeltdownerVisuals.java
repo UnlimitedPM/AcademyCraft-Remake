@@ -22,8 +22,10 @@ import java.util.Random;
  *
  * <p>La ou le faisceau mentait sur sa portee : l'original le dessinait sur trente blocs alors que ses
  * degats portaient a cinquante. Le port avait repris cet ecart — et le joueur : « je voulais juste qu'il
- * soit plus long pour atteindre le fond de la ou il creuse ». Le dessin fait donc maintenant toute la
- * portee de la competence, et le meme nombre est des deux cotes (voir {@link MeltdownerSkill#LENGTH}).
+ * soit plus long pour atteindre le fond de la ou il creuse ». Ses <b>tubes</b> font donc maintenant toute
+ * la portee de la competence (voir {@link MeltdownerSkill#LENGTH}), et sa <b>lueur</b>, elle, garde les
+ * trente blocs de l'original (voir {@link #GLOW_LENGTH}) : deux nombres separes, parce que le joueur a
+ * demande l'un sans l'autre.
  *
  * <h2>L'essaim</h2>
  *
@@ -42,15 +44,29 @@ import java.util.Random;
 public final class MeltdownerVisuals {
 
     /**
-     * La longueur du faisceau, en blocs : <b>trente-huit</b>, comme sa portee de degats.
+     * La longueur des TUBES du faisceau, en blocs : <b>trente-huit</b>, comme sa portee de degats.
      *
      * <p>Le {@code length} de l'original valait trente, alors que ses degats portaient a cinquante :
      * le faisceau s'eteignait donc vingt blocs avant ce qu'il touchait. Le joueur : « je voulais juste
-     * qu'il soit plus long pour atteindre le fond de la ou il creuse ». Le dessin fait donc toute la
-     * portee — et pas une epaisseur de plus : l'agrandir n'a jamais ete demande, et un test tient les
-     * deux longueurs ensemble pour que l'une ne reparte pas sans l'autre.
+     * qu'il soit plus long pour atteindre le fond de la ou il creuse » — les tubes vont donc jusqu'au
+     * fond du trou. Et pas une epaisseur de plus : l'agrandir n'a jamais ete demande. La <b>lueur</b>,
+     * elle, a son propre nombre, et il n'a pas change : voir {@link #GLOW_LENGTH}.
      */
     public static final double BEAM_LENGTH = 38.0;
+
+    /**
+     * La longueur de la LUEUR, en blocs : les <b>trente</b> de l'original, et elle ne bouge plus.
+     *
+     * <p>C'est une entorse assumee a la regle de l'original, ou la lueur couvrait exactement son rayon
+     * ({@code RendererRayGlow} prend toute la longueur du rayon, sans nombre a elle). Les tubes sont
+     * passes a trente-huit, a la demande du joueur, pour qu'ils atteignent le fond de ce qu'ils
+     * creusent ; mais lui : « le ruban va un peu trop loin par rapport a dans le vrai mod, peut-etre que
+     * c'est du au fait que le laser est plus long qu'avant, mais j'aimerais que ce ne soit pas le cas ».
+     *
+     * <p>D'ou ces deux nombres separes : les tubes font {@link #BEAM_LENGTH}, la lueur fait celle-ci, et
+     * `MdRayKind.MELTDOWNER` la porte telle quelle — c'est le seul genre de rayon dans ce cas.
+     */
+    public static final double GLOW_LENGTH = 30.0;
 
     /**
      * Le dezoom de la charge, en degres de champ de vision a son maximum.

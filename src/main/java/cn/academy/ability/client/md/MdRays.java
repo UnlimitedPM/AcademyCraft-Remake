@@ -52,6 +52,23 @@ public final class MdRays {
     public static final double SPARK_SPEED = 0.015;
 
     /**
+     * La longueur de la LUEUR d'un rayon, qui peut s'arreter avant les tubes.
+     *
+     * <p>Chez l'original, la lueur couvrait exactement le rayon : {@code RendererRayGlow} prenait toute
+     * sa longueur, sans nombre a elle. Un seul genre s'en ecarte ici, le meltdowner, dont les tubes
+     * sont passes a trente-huit blocs pour atteindre le fond de ce qu'ils creusent pendant que sa
+     * lueur garde les trente blocs de l'original — voir {@code MdRayKind.glowLength}. Un genre qui
+     * n'en demande pas la voit rendre la longueur du rayon, sans que rien ne change pour lui.
+     *
+     * <p>Elle est bornee par le rayon lui-meme : un rayon neuf, qui n'a pas encore fini de pousser,
+     * est plus court que la lueur qu'on lui demande, et sa lueur doit le suivre et non le depasser.
+     */
+    public static double glowLength(MdRayKind kind, double rayLength) {
+        double own = kind.glowLength();
+        return own > 0.0 ? Math.min(own, rayLength) : rayLength;
+    }
+
+    /**
      * Un rayon vivant.
      *
      * <p>Ses deux bouts sont figes — un rayon du meltdowner ne poursuit rien — et sa longueur

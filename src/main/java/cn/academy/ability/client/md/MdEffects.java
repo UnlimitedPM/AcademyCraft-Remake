@@ -59,6 +59,15 @@ public class MdEffects {
     /** Quatre marches pour un bout arrondi, comme la « tete » de l'original. */
     private static final int CAP_STEPS = 4;
 
+    /**
+     * De combien l'ogive du COEUR est plus courte que son rayon.
+     *
+     * <p>C'est le {@code cylinderIn.headFix = 0.98} de l'original, et il servait deja a la meme chose
+     * chez lui : que l'ogive blanche n'affleure pas celle de la gaine. Le port ne l'avait pas repris,
+     * donc le blanc touchait le vert au bout — ce que le joueur a vu avant ce chiffre.
+     */
+    private static final double HEAD_FIX = 0.98;
+
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
@@ -165,24 +174,27 @@ public class MdEffects {
         VertexConsumer tubes = buffers.getBuffer(MdRenderType.flat());
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
-        // La longueur de l'ogive est la MEME pour les deux tubes — celle de la gaine, la plus large.
-        // La prendre au rayon de chacun les faisait finir deux points differents : l'ogive du coeur,
-        // plus courte, s'arretait dans celle de la gaine. Le joueur : « au niveau du debut et de la
-        // fin du laser, la forme arrondie du laser n'a pas la meme forme arrondie du deuxieme
-        // faisceau lumineux (le vert transparent la), normalement il devient de plus en plus mince ».
-        // Avec une longueur commune, les deux cones s'effilent ensemble et finissent au meme point.
-        double cap = outer;
-        cylinder(tubes, pose, camera, from, to, u, v, outer, kind.outer(), alpha);
-        head(tubes, pose, camera, from, u, v, axis, -1.0, outer, cap, kind.outer(), alpha);
+        // Chaque ogive a la longueur de SON rayon, comme chez l'original : sa « tete » est un maillage
+        // unitaire echelle par la largeur du tube, donc une ogive de rayon et de longueur egales. Le
+        // port les avait faites de la meme longueur aux deux tubes, et l'ogive du coeur ressortait
+        // alors de celle de la gaine : « il y a une petite partie qui passe legerement au travers de
+        // l'autre ogive ».
+        //
+        // Et le coeur a son ogive un peu plus COURTE, deux pour cent : c'est le `cylinderIn.headFix =
+        // 0.98` de l'original, qui evitait deja, chez lui, que le blanc affleure le vert.
+        double capIn = inner * HEAD_FIX;
+
+        // L'ORDRE est celui de l'original — `RendererRayComposite` ajoute la lueur, puis le COEUR,
+        // puis la GAINE — donc la gaine se peint en dernier et passe par-dessus le coeur, qu'elle
+        // teinte de son vert. Le port les avait dans l'autre sens, et le joueur voyait un blanc trop
+        // cru aux deux bouts : « la face arriere de l'ogive (le plat) est visible en blanc et pas en
+        // vert comme le reste ».
         cylinder(tubes, pose, camera, from, to, u, v, inner, kind.inner(), alpha);
-        // L'ogive de DEPART est arrondie comme celle de l'original : sa tete suivait une racine, ce
-        // qui fait une ogive plutot qu'un tuyau coupe. Le coeur passe en dernier, donc il reste
-        // visible par-dessus la gaine.
-        head(tubes, pose, camera, from, u, v, axis, -1.0, inner, cap, kind.inner(), alpha);
-        // Et celle de l'ARRIVEE, qui manquait tout a fait : le port ne coiffait que le depart, donc
-        // le faisceau s'ouvrait au loin sur deux disques coupes net, l'un dans l'autre.
-        head(tubes, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
-        head(tubes, pose, camera, to, u, v, axis, 1.0, inner, cap, kind.inner(), alpha);
+        head(tubes, pose, camera, from, u, v, axis, -1.0, inner, capIn, kind.inner(), alpha);
+        head(tubes, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
+        cylinder(tubes, pose, camera, from, to, u, v, outer, kind.outer(), alpha);
+        head(tubes, pose, camera, from, u, v, axis, -1.0, outer, outer, kind.outer(), alpha);
+        head(tubes, pose, camera, to, u, v, axis, 1.0, outer, outer, kind.outer(), alpha);
     }
 
     /** La lueur d'un rayon : ses trois morceaux, poses bout a bout. */
@@ -204,10 +216,15 @@ public class MdEffects {
         // sienne — d'ou le carre de l'opacite, et son tremblement entre 0,9 et 1.
         float glow = (float) (kind.glowAlpha() * alpha * ray.glowAlpha(now));
 
-        // Le bout de la lueur n'est pas toujours la pointe du rayon : son dernier morceau peut la
-        // depasser — c'est l'`endFix` de l'original, que le pre-rayon de la salve reprend pour
-        // couvrir la bille de silicium entiere. Voir `MdRayKind.glowEndFix`.
-        double[] tip = add(to, axis, kind.glowEndFix());
+        // La lueur peut s'arreter AVANT la pointe du rayon : c'est le `glowLength` de son genre, et le
+        // meltdowner est le seul a s'en servir — ses tubes vont a trente-huit blocs pour atteindre le
+        // fond de ce qu'ils creusent, et sa lueur garde les trente de l'original.
+        double[] end = add(from, axis, MdRays.glowLength(kind, length(from, to)));
+
+        // Et ce bout-la n'est pas toujours sa pointe : son dernier morceau peut la depasser — c'est
+        // l'`endFix` de l'original, que le pre-rayon de la salve reprend pour couvrir la bille de
+        // silicium entiere. Voir `MdRayKind.glowEndFix`.
+        double[] tip = add(end, axis, kind.glowEndFix());
 
         double[] in = add(from, axis, span);
         double[] out = add(tip, axis, -span);
