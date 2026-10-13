@@ -120,14 +120,20 @@ public class MeltdownerSkill extends Skill {
     }
 
     /**
-     * Facteur de charge de l'original : 0,8 juste au minimum, 1,2 a pleine charge.
+     * Facteur de charge : <b>2,4</b> juste au minimum, <b>2,8</b> a pleine charge.
      *
      * <p>C'est lui qui fait toute la difference entre un tir rapide et un tir tenu :
      * il multiplie les degats, la recharge et le gain d'experience de la meme facon.
+     *
+     * <p>L'original valait 0,8 a 1,2, et le port le suivait. Le joueur l'a fait monter d'un coup :
+     * « je veux changer le facteur de charge de 0.8 - 1.2 a 2.4 - 2.8, parce que la maintenant par
+     * rapport au railgun elle manque cruellement de degats ». Les trois consequences sont assumees —
+     * degats, recharge ET experience montent avec lui —, et il aplatit aussi la difference entre un
+     * tir rapide et un tir tenu, qui passe d'une fois et demie a un sixieme.
      */
     public float timeRate(AbilityData data) {
         int ticks = Math.min(data.getChargeTicks(this), TICKS_MAX);
-        return lerp(0.8f, 1.2f, (ticks - TICKS_MIN) / (float) (TICKS_MAX - TICKS_MIN));
+        return lerp(2.4f, 2.8f, (ticks - TICKS_MIN) / (float) (TICKS_MAX - TICKS_MIN));
     }
 
     /**
@@ -135,11 +141,11 @@ public class MeltdownerSkill extends Skill {
      * le facteur de charge. Un tir tenu au maximum fait donc moitie plus mal qu'un tir
      * relache tout juste passe.
      *
-     * <p>Les deux bouts, chiffres : au depart de l'experience un tir minimal fait <b>14,4</b>
-     * (0,8 x 18) et un tir tenu <b>21,6</b> (1,2 x 18) ; a l'experience maximale, <b>40</b> et
-     * <b>60</b>. C'est un rayon qui ne touche qu'<b>une</b> cible — la premiere du regard, a 20
+     * <p>Les deux bouts, chiffres : au depart de l'experience un tir minimal fait <b>43,2</b>
+     * (2,4 x 18) et un tir tenu <b>50,4</b> (2,8 x 18) ; a l'experience maximale, <b>120</b> et
+     * <b>140</b>. C'est un rayon qui ne touche qu'<b>une</b> cible — la premiere du regard, a 20
      * blocs — et qui ne perce rien. La marque de radiation, elle, multiplie encore ce total de 1,4 a
-     * 1,8 (voir {@link RadiationIntensifySkill}) : 60 deviennent 108.
+     * 1,8 (voir {@link RadiationIntensifySkill}) : 140 deviennent 252.
      */
     public float damage(AbilityData data) {
         return timeRate(data) * lerp(18f, 50f, data.getSkillExp(this));
@@ -155,9 +161,13 @@ public class MeltdownerSkill extends Skill {
     }
 
     /**
-     * Recharge reprise de l'original : 15 a 7 secondes selon l'experience, multipliees
-     * par le facteur de charge. Tenir le tir le plus longtemps le rend plus puissant
-     * mais le rend aussi plus long a revenir.
+     * Recharge reprise de l'original : 15 a 7 secondes selon l'experience, multipliees par le
+     * facteur de charge. Tenir le tir le plus longtemps le rend plus puissant mais le rend aussi
+     * plus long a revenir.
+     *
+     * <p>Le facteur etant passe de 0,8-1,2 a 2,4-2,8 sur demande du joueur, la recharge a fait le
+     * meme bond : <b>36 a 42 secondes</b> au depart de l'experience, <b>16,8 a 19,6</b> a la fin.
+     * C'est le prix du facteur, et il se paie la.
      */
     @Override
     public int getCooldownTicks(AbilityData data) {

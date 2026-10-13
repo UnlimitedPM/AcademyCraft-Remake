@@ -7242,6 +7242,17 @@ public final class AcademyGameTests {
         var player = ownPlayer(helper, "meltdowner-hold");
         player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
 
+        // Le monde des tests est sauvegarde, et une execution ratee laisse sa bete derriere elle :
+        // celle-la marche, donc elle peut sortir du couloir nettoye par clearCorridor et se retrouver
+        // DEVANT la notre — c'est alors elle que le tir frappe, et le test accuse la competence.
+        // Vecu le 13/10. On enleve donc toutes les betes du couloir avant de poser la notre.
+        for (var trainee : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class,
+                new net.minecraft.world.phys.AABB(
+                        abs.getX() - 2, abs.getY() - 2, abs.getZ() - 1,
+                        abs.getX() + 3, abs.getY() + 4, abs.getZ() + 21))) {
+            trainee.discard();
+        }
+
         var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
         data.setCategoryLevel(skill.getCategory(), 3);
@@ -7252,7 +7263,12 @@ public final class AcademyGameTests {
 
         var bete = new net.minecraft.world.entity.monster.Zombie(
                 net.minecraft.world.entity.EntityType.ZOMBIE, level);
-        bete.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 8.5, 0f, 0f);
+        // La cible se pose exactement la ou le REGARD touche, et pas dans l'axe +Z : le faux joueur
+        // est partage, et un autre test peut lui avoir laisse un lacet — mesure le 13/10 : six degres,
+        // ce qui suffit a sortir une bete posee a huit blocs de la ligne de mire. Le regard, lui, est
+        // celui du moment, donc la ligne est bonne quelle que soit la rotation qu'on lui a laissee.
+        var vise = player.getEyePosition(1f).add(player.getViewVector(1f).scale(8));
+        bete.moveTo(vise.x, abs.getY(), vise.z, 0f, 0f);
         level.addFreshEntity(bete);
         float before = bete.getHealth();
 
@@ -7270,6 +7286,15 @@ public final class AcademyGameTests {
                     "la charge tient au tick " + tick);
         }
         assertValue(helper, before, bete.getHealth(), "et rien n'est parti avant l'heure");
+
+        // La cible est bien dans le regard, et c'est ELLE qu'on vise : sans ca, un echec ne dirait pas
+        // si c'est le tir ou la ligne qui est en faute.
+        var vue = cn.academy.ability.TargetingUtil.findEntityInSight(player,
+                cn.academy.ability.meltdowner.ElectronBombSkill.RANGE);
+        assertTrue(helper, vue == bete, "la bete est dans le regard : vu "
+                + (vue == null ? "rien" : vue.getName().getString()) + " ; bete a "
+                + bete.position() + ", joueur a " + player.position() + ", regard "
+                + player.getViewVector(1f));
 
         // Le tick de la fin : le tir part, et la charge se referme derriere lui.
         data.setControlPoint(data.getMaxControlPoint());

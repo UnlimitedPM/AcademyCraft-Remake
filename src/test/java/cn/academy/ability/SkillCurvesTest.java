@@ -87,9 +87,10 @@ class SkillCurvesTest {
         var meltdowner = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
         // Le meltdowner multiplie ses degats par son facteur de charge : les deux
         // bornes de sa courbe se lisent donc a une seconde et a deux secondes de tir.
-        assertEquals(14.4f, meltdowner.damage(atExperience(meltdowner, 0f, 20)), 0.0001f,
+        // Le facteur vaut 2,4 a 2,8 depuis que le joueur l'a fait monter — voir timeRate.
+        assertEquals(43.2f, meltdowner.damage(atExperience(meltdowner, 0f, 20)), 0.0001f,
                 "degats de meltdowner au depart");
-        assertEquals(60f, meltdowner.damage(atExperience(meltdowner, 1f, 40)), 0.0001f,
+        assertEquals(140f, meltdowner.damage(atExperience(meltdowner, 1f, 40)), 0.0001f,
                 "degats de meltdowner au maximum");
 
         // Le depose au loin ne blesse pas ce qu'il vise mais ce qu'il traverse : c'est la ligne
@@ -112,14 +113,18 @@ class SkillCurvesTest {
         assertEquals(0, vecAccel.getMinChargeTicks(new AbilityData()), "vec_accel part toujours");
         assertEquals(20, vecAccel.getMaxChargeTicks(new AbilityData()), "MAX_CHARGE");
 
-        // Facteur de charge du meltdowner : 0,8 a une seconde, 1,2 a deux.
-        assertEquals(0.8f, meltdowner.timeRate(atExperience(meltdowner, 0f, 20)), 0.0001f);
-        assertEquals(1.2f, meltdowner.timeRate(atExperience(meltdowner, 0f, 40)), 0.0001f,
-                "deux secondes de charge valent moitie plus qu'une");
+        // Facteur de charge du meltdowner : 2,4 a une seconde, 2,8 a deux. C'est le double de
+        // l'original en gros, sur demande du joueur — il trouvait la competence trop faible a cote du
+        // railgun —, et ca tire aussi la recharge et l'experience vers le haut.
+        assertEquals(2.4f, meltdowner.timeRate(atExperience(meltdowner, 0f, 20)), 0.0001f);
+        assertEquals(2.8f, meltdowner.timeRate(atExperience(meltdowner, 0f, 40)), 0.0001f,
+                "deux secondes de charge valent un sixieme de plus qu'une");
 
-        // Et il multiplie aussi la recharge : tenir son tir se paie en attente.
-        assertEquals(240, meltdowner.getCooldownTicks(atExperience(meltdowner, 0f, 20)));
-        assertEquals(168, meltdowner.getCooldownTicks(atExperience(meltdowner, 1f, 40)));
+        // Et il multiplie aussi la recharge : tenir son tir se paie en attente. Le facteur double a
+        // donc double la facture : douze secondes au depart deviennent trente-six, et 8,4 a la fin
+        // deviennent 19,6.
+        assertEquals(720, meltdowner.getCooldownTicks(atExperience(meltdowner, 0f, 20)));
+        assertEquals(392, meltdowner.getCooldownTicks(atExperience(meltdowner, 1f, 40)));
 
         // Vitesse de vec_accel : sin(0,4) x 2,5 a l'appui, sin(1) x 2,5 a pleine charge.
         assertEquals(Math.sin(0.4) * 2.5, vecAccel.speed(new AbilityData()), 0.0001);
