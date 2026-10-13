@@ -315,10 +315,23 @@ public class MdEffects {
                 double[] d0 = ring(u, v, Math.PI * 2 * i / SIDES);
                 double[] d1 = ring(u, v, Math.PI * 2 * (i + 1) / SIDES);
 
-                tubeVertex(out, pose, camera, c0, d0, r0, tint, alpha);
-                tubeVertex(out, pose, camera, c0, d1, r0, tint, alpha);
-                tubeVertex(out, pose, camera, c1, d1, r1, tint, alpha);
-                tubeVertex(out, pose, camera, c1, d0, r1, tint, alpha);
+                // L'ogive de l'ARRIVEE pousse dans le sens du rayon, celle du DEPART dans le sens
+                // inverse : la meme suite de sommets donne donc, aux deux bouts, des faces opposees.
+                // Depuis que les tubes ecartent leurs faces arriere, il faut en tenir compte, sans
+                // quoi l'ogive du depart disparait — le joueur : « la maintenant l'ogive n'est meme
+                // plus la ». C'est celle du depart, celle qui coiffe le cote du tireur, que le
+                // culling prenait pour une face arriere.
+                if (way > 0) {
+                    tubeVertex(out, pose, camera, c0, d0, r0, tint, alpha);
+                    tubeVertex(out, pose, camera, c0, d1, r0, tint, alpha);
+                    tubeVertex(out, pose, camera, c1, d1, r1, tint, alpha);
+                    tubeVertex(out, pose, camera, c1, d0, r1, tint, alpha);
+                } else {
+                    tubeVertex(out, pose, camera, c0, d0, r0, tint, alpha);
+                    tubeVertex(out, pose, camera, c1, d0, r1, tint, alpha);
+                    tubeVertex(out, pose, camera, c1, d1, r1, tint, alpha);
+                    tubeVertex(out, pose, camera, c0, d1, r0, tint, alpha);
+                }
             }
         }
     }
