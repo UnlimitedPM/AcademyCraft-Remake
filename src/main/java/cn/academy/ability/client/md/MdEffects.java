@@ -165,17 +165,24 @@ public class MdEffects {
         VertexConsumer tubes = buffers.getBuffer(MdRenderType.flat());
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
+        // La longueur de l'ogive est la MEME pour les deux tubes — celle de la gaine, la plus large.
+        // La prendre au rayon de chacun les faisait finir deux points differents : l'ogive du coeur,
+        // plus courte, s'arretait dans celle de la gaine. Le joueur : « au niveau du debut et de la
+        // fin du laser, la forme arrondie du laser n'a pas la meme forme arrondie du deuxieme
+        // faisceau lumineux (le vert transparent la), normalement il devient de plus en plus mince ».
+        // Avec une longueur commune, les deux cones s'effilent ensemble et finissent au meme point.
+        double cap = outer;
         cylinder(tubes, pose, camera, from, to, u, v, outer, kind.outer(), alpha);
-        // Le bout de depart du GROS tube est arrondi lui aussi, et c'est l'original qui le faisait :
-        // son rendu de cylindre posait une tete a chaque bout, pour la gaine comme pour le coeur.
-        // Le port n'en avait donne qu'au coeur, donc la gaine s'ouvrait sur un tuyau coupe — ce que
-        // le joueur a vu : « le laser un peu plus gros n'a pas de boule au debut ».
-        head(tubes, pose, camera, from, u, v, axis, outer, kind.outer(), alpha);
+        head(tubes, pose, camera, from, u, v, axis, -1.0, outer, cap, kind.outer(), alpha);
         cylinder(tubes, pose, camera, from, to, u, v, inner, kind.inner(), alpha);
-        // Le bout de depart est arrondi : la tete de l'original suivait une racine, ce qui
-        // fait une ogive plutot qu'un tuyau coupe. Le coeur passe en dernier, donc il reste
+        // L'ogive de DEPART est arrondie comme celle de l'original : sa tete suivait une racine, ce
+        // qui fait une ogive plutot qu'un tuyau coupe. Le coeur passe en dernier, donc il reste
         // visible par-dessus la gaine.
-        head(tubes, pose, camera, from, u, v, axis, inner, kind.inner(), alpha);
+        head(tubes, pose, camera, from, u, v, axis, -1.0, inner, cap, kind.inner(), alpha);
+        // Et celle de l'ARRIVEE, qui manquait tout a fait : le port ne coiffait que le depart, donc
+        // le faisceau s'ouvrait au loin sur deux disques coupes net, l'un dans l'autre.
+        head(tubes, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
+        head(tubes, pose, camera, to, u, v, axis, 1.0, inner, cap, kind.inner(), alpha);
     }
 
     /** La lueur d'un rayon : ses trois morceaux, poses bout a bout. */
@@ -265,18 +272,24 @@ public class MdEffects {
      * Le bout arrondi d'un tube : des anneaux qui retrecissent en racine de la distance.
      *
      * <p>C'est la courbe de la « tete » de l'original, {@code y = racine(x)} : le rayon est
-     * donc plein au ras du tube et s'effile jusqu'au point, sur une longueur d'un rayon.
+     * donc plein au ras du tube et s'effile jusqu'au point, sur une longueur qui lui est DONNEE —
+     * l'ogive du meme rayon aurait deux longueurs differentes pour les deux tubes du meme rayon, et
+     * c'est ce que le joueur ne voulait pas voir.
+     *
+     * @param way {@code -1} pour coiffer le DEPART du tube, {@code 1} pour coiffer son ARRIVEE
+     * @param radius le rayon de la tete, au ras du tube
+     * @param cap la longueur de l'ogive, la meme pour les deux tubes
      */
     private static void head(VertexConsumer out, PoseStack.Pose pose, Vec3 camera, double[] at,
-                             double[] u, double[] v, double[] axis, double radius,
-                             MdRayKind.Tint tint, float alpha) {
+                             double[] u, double[] v, double[] axis, double way, double radius,
+                             double cap, MdRayKind.Tint tint, float alpha) {
         for (int step = 0; step < CAP_STEPS; step++) {
             double t0 = step / (double) CAP_STEPS;
             double t1 = (step + 1) / (double) CAP_STEPS;
             double r0 = radius * Math.sqrt(1.0 - t0);
             double r1 = radius * Math.sqrt(1.0 - t1);
-            double[] c0 = add(at, axis, -radius * t0);
-            double[] c1 = add(at, axis, -radius * t1);
+            double[] c0 = add(at, axis, way * cap * t0);
+            double[] c1 = add(at, axis, way * cap * t1);
 
             for (int i = 0; i < SIDES; i++) {
                 double[] d0 = ring(u, v, Math.PI * 2 * i / SIDES);

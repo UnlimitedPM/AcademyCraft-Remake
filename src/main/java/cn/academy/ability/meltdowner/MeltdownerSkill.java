@@ -8,7 +8,10 @@ import cn.academy.ability.electromaster.RailgunHit;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.boss.EnderDragonPart;
+import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
@@ -265,8 +268,15 @@ public class MeltdownerSkill extends Skill {
 
         beam(player);
 
-        for (LivingEntity living : inTheBeam(player, data)) {
-            living.hurt(skillDamage(player), scaled(damage(data) * (float) fade(player, living)));
+        for (Entity target : inTheBeam(player, data)) {
+            float amount = scaled(damage(data) * (float) fade(player, target));
+            // Le dragon de l'End ne se blesse que par ses PARTIES : c'est par elles que passe tout ce
+            // qui le touche dans le jeu, son corps n'etant pas selectionnable. Le reste est normal.
+            if (target instanceof EnderDragonPart part) {
+                part.hurt(skillDamage(player), amount);
+            } else if (target instanceof LivingEntity living) {
+                living.hurt(skillDamage(player), amount);
+            }
         }
         digBeam(player, data);
     }
@@ -280,38 +290,78 @@ public class MeltdownerSkill extends Skill {
      * il faut obligatoirement que les monstres touche le meltdowner, alors que dans le vrai mod,
      * non ».
      *
-     * <p>La longueur est celle de l'original, {@link #LENGTH} : cinquante blocs, quand le dessin du
-     * rayon s'arrete a trente. C'est deja le cas du railgun, et c'est le meme {@code maxIncrement}.
+     * <p>Et il traverse la meme longueur que le tir, {@link #LENGTH}, trente-huit blocs : le DESSIN
+     * fait maintenant la meme longueur, donc le faisceau ne ment plus sur ce qu'il atteint.
+     *
+     * <p>Le <b>dragon de l'End</b> demandait une troisieme regle, et deux raisons : son corps n'est
+     * <b>pas selectionnable</b> — son {@code isPickable} rend faux, verifie dans le bytecode de
+     * Minecraft — et ses parties ne sont pas des {@code LivingEntity}. Le joueur : « je ne peux pas
+     * taper l'enderdragon avec cette attaque ». Ses parties sont donc prises, mais <b>une seule par
+     * dragon</b> : c'est par elles que passe tout ce qui le blesse dans le jeu, et en toucher sept
+     * d'un coup multiplierait les degats par sept.
      */
-    private List<LivingEntity> inTheBeam(Player player, AbilityData data) {
+    private List<Entity> inTheBeam(Player player, AbilityData data) {
         Vec3 from = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);
         double radius = radius(data);
 
-        List<LivingEntity> touched = new java.util.ArrayList<>();
+        List<Entity> touched = new java.util.ArrayList<>();
         net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(
                 from, from.add(look.scale(LENGTH))).inflate(radius * RailgunHit.WIDEN + 1.0);
         for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != player && e.isPickable() && !e.isSpectator())) {
-            Vec3 to = centre(living).subtract(from);
-            if (RailgunHit.hitDistance(to.x, to.y, to.z, look.x, look.y, look.z,
-                    radius, LENGTH) >= 0) {
+            if (inTheCylinder(from, look, radius, centre(living))) {
                 touched.add(living);
             }
         }
-        touched.sort(java.util.Comparator.comparingDouble(l -> l.position().distanceToSqr(from)));
+
+        // Les parties du dragon, la plus proche de l'axe pour chaque dragon.
+        java.util.Map<EnderDragon, EnderDragonPart> parts = new java.util.LinkedHashMap<>();
+        java.util.Map<EnderDragon, Double> distances = new java.util.HashMap<>();
+        for (EnderDragonPart part : player.level().getEntitiesOfClass(EnderDragonPart.class, box,
+                Entity::isPickable)) {
+            Vec3 to = centre(part).subtract(from);
+            double perpendicular = RailgunHit.hitDistance(to.x, to.y, to.z,
+                    look.x, look.y, look.z, radius, LENGTH);
+            if (perpendicular < 0) continue;
+            EnderDragon dragon = part.parentMob;
+            Double previous = distances.get(dragon);
+            if (previous == null || perpendicular < previous) {
+                parts.put(dragon, part);
+                distances.put(dragon, perpendicular);
+            }
+        }
+        touched.addAll(parts.values());
+
+        // Et le corps du dragon lui-meme, pour le cas ou aucune partie n'est dans le faisceau : mieux
+        // vaut le toucher la que de le manquer tout a fait.
+        for (EnderDragon dragon : player.level().getEntitiesOfClass(EnderDragon.class, box)) {
+            if (!parts.containsKey(dragon) && inTheCylinder(from, look, radius, centre(dragon))) {
+                touched.add(dragon);
+            }
+        }
+
+        touched.sort(java.util.Comparator.comparingDouble(e -> e.position().distanceToSqr(from)));
         return touched;
     }
 
+    /** Une cible est-elle dans le cylindre du tir ? */
+    private static boolean inTheCylinder(Vec3 from, Vec3 look, double radius, Vec3 centre) {
+        Vec3 to = centre.subtract(from);
+        return RailgunHit.hitDistance(to.x, to.y, to.z,
+                look.x, look.y, look.z, radius, LENGTH) >= 0;
+    }
+
     /**
-     * Le centre d'une bete, et non ses pieds.
+     * Le centre d'une cible, et non ses pieds.
      *
      * <p>C'est un ecart avec l'original, qui prenait {@code posX, posY, posZ} — donc les pieds — pour
      * mesurer la distance a l'axe. Un golem de fer de deux blocs et demi voyait ainsi sa tete sortir du
-     * cylindre, alors que c'est son corps qui le traverse. Le centre est ce que le joueur voit.
+     * cylindre, alors que c'est son corps qui le traverse. Le centre est ce que le joueur voit, et
+     * c'est aussi lui qui donne le bon point pour un dragon, dont la boite fait huit blocs de haut.
      */
-    private static Vec3 centre(LivingEntity living) {
-        return living.position().add(0, living.getBbHeight() / 2, 0);
+    private static Vec3 centre(Entity entity) {
+        return entity.position().add(0, entity.getBbHeight() / 2, 0);
     }
 
     /**
@@ -319,13 +369,14 @@ public class MeltdownerSkill extends Skill {
      * l'original.
      *
      * <p>Le {@code startDamage} de l'original valait son tarif plein au depart et n'en gardait plus
-     * que <b>vingt pour cent</b> au bout de cinquante blocs. La distance qui compte est celle a
+     * que <b>vingt pour cent</b> au bout de sa portee — les cinquante blocs de l'original, nos
+     * trente-huit. La distance qui compte est celle a
      * l'AXE, comme pour le railgun : un mur de flanc n'amortit rien de plus qu'un mur de face.
      */
-    private static double fade(Player player, LivingEntity living) {
+    private static double fade(Player player, Entity target) {
         Vec3 from = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);
-        Vec3 to = centre(living).subtract(from);
+        Vec3 to = centre(target).subtract(from);
         double along = to.x * look.x + to.y * look.y + to.z * look.z;
         double offX = to.x - look.x * along;
         double offY = to.y - look.y * along;

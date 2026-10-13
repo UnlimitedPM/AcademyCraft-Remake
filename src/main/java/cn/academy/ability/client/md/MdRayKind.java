@@ -197,17 +197,21 @@ public record MdRayKind(String name,
      * de rendre le faisceau plus grand, je voulais juste qu'il soit plus long ». La longueur, elle, ne
      * se decide pas ici : c'est {@code MeltdownerVisuals.BEAM_LENGTH}.
      *
-     * <p>Une seule chose n'est plus de l'original : l'<b>opacite de sa lueur</b>, 80 % chez lui et 55
-     * ici, et c'est sa demande, mot pour mot — « rends le bandeau du meltdowner un peu plus
-     * transparent ». Tout le reste de ses nombres est celui de {@code MDRayRender} : sa vie de
-     * cinquante ticks, ses sept dixiemes d'effacement, une etincelle huit ticks sur dix posee au hasard
-     * le long de lui-meme, et il nait sur son tireur — il se recolle donc a sa main, comme le pre-rayon
-     * de la salve et par le meme drapeau. Quant a son son, c'est celui de la competence,
-     * {@code md.meltdowner} : c'est la competence qui le joue, au relachement, comme l'original.
+     * <p>Tout, ici, est de {@code MDRayRender} : ses dimensions (coeur de 17 cm, gaine de 22, lueur
+     * d'un bloc et demi), sa vie de cinquante ticks, ses sept dixiemes d'effacement, une etincelle
+     * huit ticks sur dix posee au hasard le long de lui-meme, et il nait sur son tireur — il se
+     * recolle donc a sa main, comme le pre-rayon de la salve et par le meme drapeau. Quant a son son,
+     * c'est celui de la competence, {@code md.meltdowner} : c'est la competence qui le joue, au
+     * relachement, comme l'original.
+     *
+     * <p>Son opacite a fait un aller-retour : le joueur l'a trouvee trop dense, le port l'a baissee a
+     * 55, puis le joueur a demande son chiffre de nouveau — « remet le ruban a son oppaciter normal
+     * (80 % si je me souviens bien) ». C'est donc bien 80, comme l'original, et la memoire du joueur
+     * etait bonne.
      */
     public static final MdRayKind MELTDOWNER = new MdRayKind("mdray",
             texture("mdray", "blend_in"), texture("mdray", "tile"), texture("mdray", "blend_out"),
-            1.5, 0.55f,
+            1.5, 0.8f,
             0.17, new Tint(216, 248, 216, 230),
             0.22, new Tint(106, 242, 106, 50),
             50, 200, 700, 300,

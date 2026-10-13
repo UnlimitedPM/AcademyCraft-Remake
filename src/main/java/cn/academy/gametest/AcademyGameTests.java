@@ -7428,6 +7428,81 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le meltdowner BLESSE le dragon de l'End.
+     *
+     * <p>Le joueur : « je ne sais pas trop pourquoi mais je ne peux pas taper l'enderdragon avec cette
+     * attaque ». Deux raisons, et aucune n'etait un oubli de sa part : le corps du dragon n'est pas
+     * <b>selectionnable</b> — son {@code isPickable} rend faux, verifie dans le bytecode de Minecraft —
+     * et ses <b>parties</b> ne sont pas des {@code LivingEntity}, or c'est sur ces deux listes-la que
+     * le cylindre du tir se construisait. Le dragon etait donc traverse sans rien sentir, quand tous
+     * les autres monstres encaissaient.
+     *
+     * <p>Le test le pose dans l'axe, son <b>centre</b> sur la ligne : c'est un dragon entier, avec ses
+     * sept parties. Le tir ne doit en toucher qu'UNE par dragon — la plus proche de l'axe — sans quoi
+     * les degats seraient multiplies par le nombre de morceaux.
+     */
+    @GameTest(template = "empty")
+    public static void leMeltdownerBlesseLEnderDragon(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
+        ServerLevel level = helper.getLevel();
+        int height = 310;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Un couloir plus HAUT que les autres : la boite du dragon fait huit blocs, et son centre est
+        // pose dans l'axe — ses pieds tombent donc quatre blocs sous la ligne de mire.
+        clearCorridor(helper, abs, 24);
+        for (int dz = 0; dz <= 24; dz++) {
+            for (int dx = -4; dx <= 4; dx++) {
+                for (int dy = -6; dy <= 5; dy++) {
+                    level.setBlock(helper.absolutePos(eyes.offset(dx, dy, dz)),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "meltdowner-dragon");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 3);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0f);
+        data.setControlPoint(data.getMaxControlPoint());
+        data.setOverload(0f);
+
+        // Le dragon est pose SANS qu'un tick passe : ses ailes ne battent donc pas, il ne sort pas du
+        // couloir, et le tir se juge sur ce que le test a pose. Son centre se calcule sur la hauteur de
+        // sa boite, comme le fait le cylindre de la competence.
+        var oeil = player.getEyePosition(1f);
+        var look = player.getViewVector(1f);
+        var vise = oeil.add(look.scale(12));
+        var dragon = new net.minecraft.world.entity.boss.enderdragon.EnderDragon(
+                net.minecraft.world.entity.EntityType.ENDER_DRAGON, level);
+        dragon.moveTo(vise.x, vise.y - dragon.getBbHeight() / 2, vise.z, 0f, 0f);
+        level.addFreshEntity(dragon);
+        float avant = dragon.getHealth();
+
+        skill.onActivate(player, data);
+
+        assertTrue(helper, dragon.getHealth() < avant,
+                "le dragon de l'End encaisse le rayon : " + dragon.getHealth() + " contre " + avant);
+
+        // Et UNE SEULE fois : sept parties dans le faisceau ne doivent pas faire sept coups. Le
+        // compte est large (trois fois les degats d'un tir), car le dragon peut encaisser moins que
+        // le tarif plein selon ses regles a lui — ce qui se verifie ici, c'est qu'il n'encaisse pas
+        // sept fois.
+        float perdu = avant - dragon.getHealth();
+        assertTrue(helper, perdu < 3f * skill.damage(data),
+                "un coup par dragon, et non un par partie : " + perdu + " points");
+
+        dragon.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,
