@@ -38,6 +38,11 @@ import org.joml.Vector3f;
  * prolonge, une qui l'efface. Sans elles, la lueur commencerait et finirait par un coup de
  * ciseaux, ce qui se voit tout de suite sur un rayon de quinze blocs.
  *
+ * <p>Et il se dessine <b>avant</b> les deux tubes, donc sous eux : le rayon garde son trait net au
+ * milieu et la lueur ne deborde que sur ses bords. Le port les dessinait dans l'autre sens, et le
+ * joueur a demande l'inverse — « que je voie les lasers en premier ». Les tubes d'abord dans le monde
+ * voudraient dire la lueur par-dessus, et c'est elle qu'on voyait alors, en entier.
+ *
  * <p>Le tout garde le test de profondeur du monde : un rayon ne se voit pas a travers une
  * montagne, et c'est voulu — le joueur l'avait signale sur son propre tir.
  */
@@ -147,6 +152,16 @@ public class MdEffects {
         double[] v = cross(axis, u);
         if (v == null) return;
 
+        // LA LUEUR PASSE EN DESSOUS DES DEUX TUBES, et c'est un changement : le ruban se dessinait le
+        // dernier, donc par-dessus eux, et on le voyait en entier — une bande blanche qui avalait le
+        // faisceau. Le joueur : « j'aimerais que le ruban se forme avant les rayons, de sorte qu'il
+        // passe en dessous pour ne voir que les contours et pas en entier ». C'est ce que fait l'ordre
+        // ci-dessous, et rien d'autre : les effets n'ecrivent pas la profondeur (voir MdRenderType),
+        // donc c'est l'ordre des tampons qui decide qui passe devant — un tampon par image, et le
+        // premier cree est le premier peint. Le ruban d'abord, donc, et les tubes se peignent
+        // par-dessus lui : il n'en reste que les deux bords, de part et d'autre du rayon.
+        glowBoards(buffers, pose, camera, ray, from, to, axis, width, alpha, now);
+
         VertexConsumer tubes = buffers.getBuffer(MdRenderType.flat());
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
@@ -161,8 +176,6 @@ public class MdEffects {
         // fait une ogive plutot qu'un tuyau coupe. Le coeur passe en dernier, donc il reste
         // visible par-dessus la gaine.
         head(tubes, pose, camera, from, u, v, axis, inner, kind.inner(), alpha);
-
-        glowBoards(buffers, pose, camera, ray, from, to, axis, width, alpha, now);
     }
 
     /** La lueur d'un rayon : ses trois morceaux, poses bout a bout. */
