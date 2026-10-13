@@ -174,17 +174,16 @@ public class MdEffects {
         VertexConsumer tubes = buffers.getBuffer(MdRenderType.flat());
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
-        // Chaque ogive est aussi LONGUE QUE LARGE : c'est ce qui donne aux deux la meme pente, et donc
-        // un blanc PARALLELE au vert sur toute la longueur de l'ogive, a cinq centimetres sous lui. Le
-        // joueur : « etant donne que l'ogive transparente n'est pas de la meme taille que l'ogive
-        // blanche, a certains endroits on voit le blanc au lieu du vert [...] sur la base de l'ogive on
-        // voit du blanc, et la c'est certainement du a l'angle qui n'a pas la meme direction ». Il
-        // avait raison, et c'est la seule facon de le corriger : avec une longueur COMMUNE, l'ogive du
-        // coeur est plus raide que celle de la gaine et traverse donc le vert pres de la base.
+        // LES DEUX OGIVES DU DEPART SONT DANS LE FAISCEAU, pas devant : leur POINTE est a l'origine du
+        // rayon, leur base un rayon plus loin, et les tubes commencent la. C'est la disposition de
+        // l'original, mot pour mot (RendererRayCylinder.draw : l'ogive part de zero, le cylindre est
+        // translate d'une largeur, et le bout est coiffe de l'autre cote), et elle a une raison qui se
+        // voit : les deux bases ne sont plus dans le meme plan, donc au ras de l'ogive il n'y a plus
+        // que du vert. Le joueur : « la je vois du vert blanc quand je regarde sur la base de l'ogive ».
         //
-        // Le coeur la garde seulement deux pour cent plus courte : c'est le `cylinderIn.headFix =
-        // 0.98` de l'original, qui evitait deja, chez lui, que le blanc affleure le vert. Sa pointe
-        // s'arrete donc un peu avant celle de la gaine, et le bout du faisceau est vert.
+        // Chaque ogive est aussi longue que large — le maillage de l'original est unitaire, mis a
+        // l'echelle par la largeur du tube — et le coeur la garde deux pour cent plus courte, son
+        // `cylinderIn.headFix = 0.98`.
         double cap = outer;
         double capIn = inner * HEAD_FIX;
 
@@ -193,11 +192,13 @@ public class MdEffects {
         // teinte de son vert. Le port les avait dans l'autre sens, et le joueur voyait un blanc trop
         // cru aux deux bouts : « la face arriere de l'ogive (le plat) est visible en blanc et pas en
         // vert comme le reste ».
-        cylinder(tubes, pose, camera, from, to, u, v, inner, kind.inner(), alpha);
-        head(tubes, pose, camera, from, u, v, axis, -1.0, inner, capIn, kind.inner(), alpha);
+        cylinder(tubes, pose, camera, add(from, axis, inner), to, u, v, inner, kind.inner(), alpha);
+        head(tubes, pose, camera, add(from, axis, inner), u, v, axis, -1.0, inner, capIn,
+                kind.inner(), alpha);
         head(tubes, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
-        cylinder(tubes, pose, camera, from, to, u, v, outer, kind.outer(), alpha);
-        head(tubes, pose, camera, from, u, v, axis, -1.0, outer, cap, kind.outer(), alpha);
+        cylinder(tubes, pose, camera, add(from, axis, outer), to, u, v, outer, kind.outer(), alpha);
+        head(tubes, pose, camera, add(from, axis, outer), u, v, axis, -1.0, outer, cap,
+                kind.outer(), alpha);
         head(tubes, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
     }
 
