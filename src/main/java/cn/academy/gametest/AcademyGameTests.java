@@ -7205,6 +7205,87 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le meltdowner TIRE au bout de sa tolerance, au lieu de s'abandonner.
+     *
+     * <p>Le joueur : « si je reste appuyer sur la touche, je peux la charger a l'infini alors que dans
+     * le vrai mod, si on reste juste appuyer, au bout d'un moment ca annule la competence, a la place,
+     * je veux que ca la lance a la fin ». Le compteur de charge du port est plafonne a {@code TICKS_MAX}
+     * — c'est la charge UTILE, celle qui dose les degats — donc le moment de l'original n'arrivait
+     * jamais. Le compte de la touche tenue vit desormais dans la marque de maintien, et c'est lui qui
+     * tire.
+     *
+     * <p>Le test tient les deux cotes : un tick avant la fin, rien n'est parti et la charge tient
+     * encore ; au tick de la fin, le tir part — la cible perd des points — et la charge se referme,
+     * recharge comprise, comme un vrai relachement.
+     */
+    @GameTest(template = "empty")
+    public static void leMeltdownerTireAuBoutDeSaCharge(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
+        ServerLevel level = helper.getLevel();
+        int height = 250;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Le couloir se creuse par le MONDE, en absolu : c'est ce que lit le rayon, et helper.setBlock
+        // attend des coordonnees relatives a la structure — voir laBombeAElectronsArreteSonRayon.
+        clearCorridor(helper, abs, 24);
+        for (int dz = 0; dz <= 24; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 3; dy++) {
+                    level.setBlock(helper.absolutePos(eyes.offset(dx, dy, dz)),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "meltdowner-hold");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 3);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 1f);
+        data.setControlPoint(data.getMaxControlPoint());
+        data.setOverload(0f);
+
+        var bete = new net.minecraft.world.entity.monster.Zombie(
+                net.minecraft.world.entity.EntityType.ZOMBIE, level);
+        bete.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 8.5, 0f, 0f);
+        level.addFreshEntity(bete);
+        float before = bete.getHealth();
+
+        data.beginCharge(skill);
+        skill.onStart(player, data);
+        assertTrue(helper, data.isCharging(skill), "la charge est ouverte");
+
+        // Jusqu'a un tick de la fin : la charge tient, et rien n'est parti. La reserve est remplie a
+        // chaque tick, comme le ferait la regeneration : c'est elle qui borne la duree en jeu, mais ce
+        // n'est pas elle que ce test regarde.
+        for (int tick = 1; tick < cn.academy.ability.meltdowner.MeltdownerSkill.TICKS_TOLE; tick++) {
+            data.setControlPoint(data.getMaxControlPoint());
+            assertTrue(helper, skill.onChargeTick(player, data, Math.min(tick,
+                            cn.academy.ability.meltdowner.MeltdownerSkill.TICKS_MAX)),
+                    "la charge tient au tick " + tick);
+        }
+        assertValue(helper, before, bete.getHealth(), "et rien n'est parti avant l'heure");
+
+        // Le tick de la fin : le tir part, et la charge se referme derriere lui.
+        data.setControlPoint(data.getMaxControlPoint());
+        assertFalse(helper, skill.onChargeTick(player, data,
+                        cn.academy.ability.meltdowner.MeltdownerSkill.TICKS_MAX),
+                "au tick de la fin, la charge se referme");
+        assertTrue(helper, bete.getHealth() < before,
+                "et le tir est parti : " + bete.getHealth() + " contre " + before);
+        assertFalse(helper, data.isCharging(skill), "la charge est finie");
+        assertTrue(helper, data.getCooldown(skill) > 0, "et la recharge est posee");
+
+        bete.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,

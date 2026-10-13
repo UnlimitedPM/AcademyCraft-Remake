@@ -1,6 +1,7 @@
 package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
+import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.md.MdRayKind;
@@ -25,11 +26,18 @@ public class MeltdownerSkill extends Skill {
     public static final int TICKS_MAX = 40;
 
     /**
-     * Limite de securite de l'original : au-dela, la charge s'abandonne d'elle-meme.
+     * Au bout de combien de ticks de touche TENUE la charge se clot : {@code TICKS_TOLE} de
+     * l'original, ou la charge s'abandonnait d'elle-meme.
      *
-     * Elle n'aurait pas du etre atteinte — la charge est plafonnee a {@code TICKS_MAX} —
-     * mais l'original la gardait, et une charge abandonnee vaut mieux qu'une charge qui
-     * consomme sans fin.
+     * <p>Ce moment n'arrivait jamais dans le port : {@code AbilityData.tickCharges} plafonne le
+     * compteur a {@code TICKS_MAX} (c'est la charge UTILE, celle qui dose les degats), donc rien ne
+     * terminait plus la charge, qui durait tant que la reserve suivait. Le joueur l'a vu : « si je
+     * reste appuyer sur la touche, je peux la charger a l'infini alors que dans le vrai mod, si on
+     * reste juste appuyer, au bout d'un moment ca annule la competence, a la place, je veux que ca la
+     * lance a la fin ».
+     *
+     * <p>Donc, ici : le tir PART. Rien d'autre ne change — c'est la charge la plus longue possible,
+     * donc un tir a pleine puissance, avec la recharge qui va avec.
      */
     public static final int TICKS_TOLE = 100;
 
@@ -79,11 +87,35 @@ public class MeltdownerSkill extends Skill {
         // `overloadKeep` de son contexte) : sans cela, la reserve redescendrait pendant
         // qu'on charge et le tir finirait par ne plus rien couter.
         data.setHeldOverload(this, data.getOverload());
+        // Et le compte de la touche tenue repart de zero : c'est lui, et non le compteur de charge,
+        // qui sait depuis combien de temps on appuie — voir onChargeTick.
+        data.setHoldMark(this, 0);
     }
 
+    /**
+     * Un tick de charge : l'entretien, et le compte de la touche tenue.
+     *
+     * <p>Le compteur de la charge est plafonne a {@code TICKS_MAX} par
+     * {@code AbilityData.tickCharges} — c'est la <b>charge utile</b>, celle qui dose les degats — donc
+     * il ne peut pas dire depuis combien de temps la touche est enfoncee. C'est la marque de maintien
+     * qui compte, remise a zero a l'ouverture ({@link #onStart}), et c'est elle qui decide du tir de
+     * cloture : voir {@link #TICKS_TOLE}.
+     *
+     * <p>Ce tir passe par {@code AbilityEvents.endHeld}, comme un vrai relachement : la recharge est
+     * lue avant que le compteur ne soit oublie, l'effet de fin passe, et le client est prevenu — sans
+     * quoi son animation continuerait toute seule.
+     */
     @Override
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
-        if (chargeTicks > TICKS_TOLE) return false;
+        int held = data.getHoldMark(this) + 1;
+        if (held >= TICKS_TOLE) {
+            onActivate(player, data);
+            if (player instanceof ServerPlayer server) {
+                AbilityEvents.endHeld(server, data, this);
+            }
+            return false;
+        }
+        data.setHoldMark(this, held);
         return data.consumeControlPoint(getTickUpkeep(data, chargeTicks));
     }
 
@@ -102,6 +134,12 @@ public class MeltdownerSkill extends Skill {
      * Degats repris de l'original : de 18 a 50 selon l'experience, le tout multiplie par
      * le facteur de charge. Un tir tenu au maximum fait donc moitie plus mal qu'un tir
      * relache tout juste passe.
+     *
+     * <p>Les deux bouts, chiffres : au depart de l'experience un tir minimal fait <b>14,4</b>
+     * (0,8 x 18) et un tir tenu <b>21,6</b> (1,2 x 18) ; a l'experience maximale, <b>40</b> et
+     * <b>60</b>. C'est un rayon qui ne touche qu'<b>une</b> cible — la premiere du regard, a 20
+     * blocs — et qui ne perce rien. La marque de radiation, elle, multiplie encore ce total de 1,4 a
+     * 1,8 (voir {@link RadiationIntensifySkill}) : 60 deviennent 108.
      */
     public float damage(AbilityData data) {
         return timeRate(data) * lerp(18f, 50f, data.getSkillExp(this));
