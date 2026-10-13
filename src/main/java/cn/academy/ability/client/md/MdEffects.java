@@ -174,17 +174,19 @@ public class MdEffects {
         VertexConsumer tubes = buffers.getBuffer(MdRenderType.flat());
         double outer = kind.outerRadius() * width;
         double inner = kind.innerRadius() * width;
-        // Les deux ogives ont la MEME longueur — celle de la gaine, la plus large : c'est l'etat que
-        // le joueur a valide (« pour les ogives, c'est bon maintenant »), et il n'est PAS celui de
-        // l'original. Chez lui, chaque ogive suivait la longueur de son propre rayon (son maillage est
-        // unitaire et mis a l'echelle par la largeur du tube), et l'ogive du coeur, plus courte,
-        // s'arretait alors dans celle de la gaine : deux cones de pentes differentes, donc deux
-        // pointes a deux endroits. Le joueur l'a refuse deux fois, donc la longueur est partagee.
+        // Chaque ogive est aussi LONGUE QUE LARGE : c'est ce qui donne aux deux la meme pente, et donc
+        // un blanc PARALLELE au vert sur toute la longueur de l'ogive, a cinq centimetres sous lui. Le
+        // joueur : « etant donne que l'ogive transparente n'est pas de la meme taille que l'ogive
+        // blanche, a certains endroits on voit le blanc au lieu du vert [...] sur la base de l'ogive on
+        // voit du blanc, et la c'est certainement du a l'angle qui n'a pas la meme direction ». Il
+        // avait raison, et c'est la seule facon de le corriger : avec une longueur COMMUNE, l'ogive du
+        // coeur est plus raide que celle de la gaine et traverse donc le vert pres de la base.
         //
         // Le coeur la garde seulement deux pour cent plus courte : c'est le `cylinderIn.headFix =
-        // 0.98` de l'original, qui evitait deja, chez lui, que le blanc affleure le vert.
+        // 0.98` de l'original, qui evitait deja, chez lui, que le blanc affleure le vert. Sa pointe
+        // s'arrete donc un peu avant celle de la gaine, et le bout du faisceau est vert.
         double cap = outer;
-        double capIn = cap * HEAD_FIX;
+        double capIn = inner * HEAD_FIX;
 
         // L'ORDRE est celui de l'original — `RendererRayComposite` ajoute la lueur, puis le COEUR,
         // puis la GAINE — donc la gaine se peint en dernier et passe par-dessus le coeur, qu'elle
