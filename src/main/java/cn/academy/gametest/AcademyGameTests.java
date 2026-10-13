@@ -7311,12 +7311,19 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Le meltdowner frappe TOUT ce que son rayon traverse.
+     * Le meltdowner frappe TOUT ce que son rayon traverse, et il CREUSE ce qu'il rencontre.
      *
-     * <p>L'original ne touchait que la premiere cible du regard. Le joueur : « fait en sorte qu'il
-     * frappe tous les monstres qui passe dans le rayon et pas uniquement 1 seul monstre ». Trois betes
-     * sont donc posees sur la ligne, et un MUR ferme le rayon avant la quatrieme : celle-la doit rester
-     * intacte, sans quoi rien ne dirait que le rayon s'arrete quelque part.
+     * <p>L'original ne touchait pas une cible mais un <b>cylindre</b> : le joueur l'a demande deux
+     * fois — « fait en sorte qu'il frappe tous les monstres qui passe dans le rayon et pas uniquement
+     * 1 seul monstre », puis « pour tuer il faut obligatoirement que les monstres touchent le
+     * meltdowner, alors que dans le vrai mod non ». Quatre betes sont donc posees sur la ligne, dont
+     * une <b>derriere un mur</b>, et deux autres <b>a cote</b> de l'axe : celle du bord encaisse,
+     * celle du large est epargnee.
+     *
+     * <p>Le mur, lui, ne protege plus rien : le faisceau le <b>creuse</b> — c'est la seconde demande
+     * du joueur, « si je tape un mur avec, c'est cense faire un gros trou dedans » — et la bete qui
+     * etait derriere est touchee elle aussi. Le mur doit donc avoir disparu a la fin, ce qui est la
+     * preuve du trou.
      */
     @GameTest(template = "empty")
     public static void leMeltdownerFrappeToutSonRayon(GameTestHelper helper) {
@@ -7327,10 +7334,12 @@ public final class AcademyGameTests {
         BlockPos abs = aboveTestArea(helper, floor, height);
         BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
 
-        // Le couloir se creuse par le MONDE, en absolu : c'est ce que lit le rayon.
-        clearCorridor(helper, abs, 32);
-        for (int dz = 0; dz <= 32; dz++) {
-            for (int dx = -2; dx <= 2; dx++) {
+        // Le couloir se creuse par le MONDE, en absolu : c'est ce que lit le rayon. Il est large, car
+        // le rayon l'est devenu : les betes posees de flanc doivent se tenir dans le vide, sinon elles
+        // suffoqueraient et leurs degats ne voudraient plus rien dire.
+        clearCorridor(helper, abs, 34);
+        for (int dz = 0; dz <= 34; dz++) {
+            for (int dx = -7; dx <= 7; dx++) {
                 for (int dy = -1; dy <= 3; dy++) {
                     level.setBlock(helper.absolutePos(eyes.offset(dx, dy, dz)),
                             net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
@@ -7345,8 +7354,8 @@ public final class AcademyGameTests {
         // donc elles peuvent sortir du couloir nettoye et se mettre sur la ligne. On les enleve avant.
         for (var trainee : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class,
                 new net.minecraft.world.phys.AABB(
-                        abs.getX() - 2, abs.getY() - 2, abs.getZ() - 1,
-                        abs.getX() + 3, abs.getY() + 4, abs.getZ() + 33))) {
+                        abs.getX() - 8, abs.getY() - 2, abs.getZ() - 1,
+                        abs.getX() + 9, abs.getY() + 4, abs.getZ() + 35))) {
             trainee.discard();
         }
 
@@ -7362,8 +7371,12 @@ public final class AcademyGameTests {
         // peut lui avoir laisse un lacet — voir leMeltdownerTireAuBoutDeSaCharge.
         var oeil = player.getEyePosition(1f);
         var look = player.getViewVector(1f);
+        // Le cote du regard : le disque du faisceau s'etend le long de cet axe.
+        var cote = look.cross(new net.minecraft.world.phys.Vec3(0, 1, 0)).normalize();
+
         var betes = new java.util.ArrayList<net.minecraft.world.entity.monster.Zombie>();
-        var avant = new float[4];
+        var avant = new float[6];
+        // Les quatre premieres sont DANS l'axe, de six en six blocs : la quatrieme est derriere le mur.
         for (int i = 0; i < 4; i++) {
             var bete = new net.minecraft.world.entity.monster.Zombie(
                     net.minecraft.world.entity.EntityType.ZOMBIE, level);
@@ -7373,21 +7386,39 @@ public final class AcademyGameTests {
             betes.add(bete);
             avant[i] = bete.getHealth();
         }
+        // La cinquieme rase le bord du cylindre : elle doit encaisser sans que le rayon passe sur
+        // elle. La sixieme en est franchement dehors, et doit donc etre epargnee — sans elle, rien ne
+        // dirait que le rayon a une largeur plutot que d'attraper la moitie du monde.
+        for (int i = 0; i < 2; i++) {
+            var bete = new net.minecraft.world.entity.monster.Zombie(
+                    net.minecraft.world.entity.EntityType.ZOMBIE, level);
+            var vise = oeil.add(look.scale(10)).add(cote.scale(i == 0 ? 1.5 : 3.0));
+            bete.moveTo(vise.x, abs.getY(), vise.z, 0f, 0f);
+            level.addFreshEntity(bete);
+            betes.add(bete);
+            avant[4 + i] = bete.getHealth();
+        }
 
-        // Un MUR juste apres la troisieme : le rayon s'y arrete, donc la quatrieme est epargnee.
+        // Un MUR juste apres la troisieme, et devant la quatrieme.
         BlockPos mur = BlockPos.containing(oeil.add(look.scale(16)));
         level.setBlock(mur, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
 
         // Le tir directement, sans charge : c'est onActivate qui decide de ce qu'il touche.
         skill.onActivate(player, data);
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 4; i++) {
             assertTrue(helper, betes.get(i).getHealth() < avant[i],
                     "la bete " + (i + 1) + " du rayon encaisse : " + betes.get(i).getHealth()
                             + " contre " + avant[i]);
         }
-        assertValue(helper, avant[3], betes.get(3).getHealth(),
-                "et celle qui est derriere le mur reste intacte");
+        assertTrue(helper, betes.get(4).getHealth() < avant[4],
+                "et celle qui rase le bord du cylindre aussi : " + betes.get(4).getHealth()
+                        + " contre " + avant[4]);
+        assertValue(helper, avant[5], betes.get(5).getHealth(),
+                "mais celle qui est franchement a cote est epargnee");
+        assertTrue(helper, level.getBlockState(mur).isAir(),
+                "et le mur a ete creuse : " + level.getBlockState(mur).getBlock()
+                        + " a la place du vide");
 
         level.setBlock(mur, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         for (var bete : betes) {

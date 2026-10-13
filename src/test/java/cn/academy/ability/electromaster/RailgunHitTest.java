@@ -69,4 +69,32 @@ class RailgunHitTest {
         assertEquals(50.0, RailgunHit.LENGTH, 1e-9);
         assertEquals(2.0, RailgunHit.RADIUS, 1e-9);
     }
+
+    @Test
+    @DisplayName("le rayon et la longueur se donnent : c'est le meltdowner qui les fait varier")
+    void leRayonEtLaLongueurSeDonnent() {
+        // Le meltdowner tire un faisceau plus LARGE que le railgun, et de deux a trois blocs selon
+        // l'experience. La cible qui compte est celle qui rase le bord : a deux blocs et demi de
+        // l'axe, elle est manquee par le railgun et touchee par le meltdowner au sommet.
+        double perp = 2.5;
+        assertEquals(-1.0, RailgunHit.hitDistance(perp, 0.0, 20.0, DX, DY, DZ), 1e-9,
+                "a deux blocs et demi de l'axe, le railgun manque : son rayon vaut deux");
+        assertTrue(RailgunHit.hitDistance(perp, 0.0, 20.0, DX, DY, DZ, 3.0, 50.0) >= 0.0,
+                "mais le meltdowner au sommet l'attrape : son rayon vaut trois");
+        assertEquals(perp, RailgunHit.hitDistance(perp, 0.0, 20.0, DX, DY, DZ, 3.0, 50.0), 1e-9,
+                "et il rend la meme distance perpendiculaire, donc la meme attenuation");
+
+        // La longueur, elle aussi, se donne : c'est ce qui separe le faisceau qu'on VOIT (trente
+        // blocs, la longueur du dessin) de celui qui frappe (cinquante, le maxIncrement).
+        assertEquals(-1.0, RailgunHit.hitDistance(0.0, 0.0, 35.0, DX, DY, DZ, 3.0, 30.0), 1e-9,
+                "au-dela de la longueur donnee, la cible est hors de portee");
+        assertTrue(RailgunHit.hitDistance(0.0, 0.0, 35.0, DX, DY, DZ, 3.0, 50.0) >= 0.0,
+                "et dans les cinquante blocs de l'original, elle est dans le faisceau");
+
+        // L'attenuation suit la longueur DONNEE, elle aussi : sans cela, un faisceau court ne
+        // tomberait jamais a ses deux dixiemes.
+        assertEquals(1.0, RailgunHit.damageFactor(0.0, 30.0), 1e-9, "plein tarif dans l'axe");
+        assertEquals(0.2, RailgunHit.damageFactor(30.0, 30.0), 1e-9, "deux dixiemes au bout");
+        assertEquals(0.2, RailgunHit.damageFactor(90.0, 30.0), 1e-9, "et cela ne descend pas plus bas");
+    }
 }

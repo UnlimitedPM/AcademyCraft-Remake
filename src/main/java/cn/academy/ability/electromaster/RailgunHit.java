@@ -64,17 +64,31 @@ public final class RailgunHit {
      */
     public static double hitDistance(double toX, double toY, double toZ,
                                      double directionX, double directionY, double directionZ) {
+        return hitDistance(toX, toY, toZ, directionX, directionY, directionZ, RADIUS, LENGTH);
+    }
+
+    /**
+     * La meme chose, avec un rayon et une longueur DONNES.
+     *
+     * <p>C'est le meltdowner qui les fait varier : son rayon va de deux a trois blocs selon
+     * l'experience, sa portee est la meme que celle du railgun — les cinquante blocs du
+     * {@code maxIncrement} de l'original — et sa longueur de DAMAGE depasse donc la longueur de son
+     * dessin (trente blocs), exactement comme chez l'original.
+     */
+    public static double hitDistance(double toX, double toY, double toZ,
+                                     double directionX, double directionY, double directionZ,
+                                     double radius, double length) {
         // Le long du tir : negatif, la cible est derriere le canon ; au-dela de la longueur, elle
         // est hors de portee. C'est le `maxIncrement` de l'original.
         double along = toX * directionX + toY * directionY + toZ * directionZ;
-        if (along < 0.0 || along > LENGTH) return -1.0;
+        if (along < 0.0 || along > length) return -1.0;
 
         // Et la distance au droit de l'axe : c'est elle qui a un plafond — le rayon.
         double offX = toX - directionX * along;
         double offY = toY - directionY * along;
         double offZ = toZ - directionZ * along;
         double perpendicular = Math.sqrt(offX * offX + offY * offY + offZ * offZ);
-        return perpendicular > RADIUS * WIDEN ? -1.0 : perpendicular;
+        return perpendicular > radius * WIDEN ? -1.0 : perpendicular;
     }
 
     /**
@@ -84,7 +98,12 @@ public final class RailgunHit {
      * ({@code dist = min(maxIncrement, ...)}) : au-dela, l'attenuation ne descend plus.
      */
     public static double damageFactor(double perpendicular) {
-        double beyond = Math.min(perpendicular, LENGTH) / LENGTH;
+        return damageFactor(perpendicular, LENGTH);
+    }
+
+    /** La meme chose, avec la longueur DONNEE : voir {@link #hitDistance(double, double, double, double, double, double, double, double)}. */
+    public static double damageFactor(double perpendicular, double length) {
+        double beyond = Math.min(perpendicular, length) / length;
         return FULL + (AT_END - FULL) * beyond;
     }
 }

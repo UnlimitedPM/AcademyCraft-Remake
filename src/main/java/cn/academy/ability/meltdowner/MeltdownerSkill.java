@@ -4,6 +4,7 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.md.MdRayKind;
+import cn.academy.ability.electromaster.RailgunHit;
 import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,8 +17,6 @@ import net.minecraftforge.network.PacketDistributor;
 
 /** Active skill, port of original Meltdowner: sustained plasma beam, single-target hitscan damage. */
 public class MeltdownerSkill extends Skill {
-
-    private static final double RANGE = 20;
 
     /** Le tir ne part pas en dessous d'une seconde de charge : {@code TICKS_MIN}. */
     public static final int TICKS_MIN = 20;
@@ -40,6 +39,37 @@ public class MeltdownerSkill extends Skill {
      * donc un tir a pleine puissance, avec la recharge qui va avec.
      */
     public static final int TICKS_TOLE = 100;
+
+    /**
+     * La portee du tir : les <b>cinquante blocs</b> du {@code maxIncrement} de l'original.
+     *
+     * <p>Le <b>dessin</b>, lui, s'arrete a trente ({@code MeltdownerVisuals.BEAM_LENGTH}) : c'est
+     * l'original qui veut ca, et c'est deja le cas du railgun, dont les cinquante blocs viennent du
+     * meme endroit.
+     */
+    public static final double LENGTH = 50.0;
+
+    /**
+     * Le rayon du faisceau : de <b>deux a trois blocs</b> selon l'experience, le {@code lerpf(2, 3,
+     * exp)} de l'original.
+     *
+     * <p>C'est lui qui fait du tir un cylindre et non une ligne : le joueur — « pour tuer, il faut
+     * obligatoirement que les monstres touche le meltdowner, alors que dans le vrai mod, non ».
+     */
+    public float radius(AbilityData data) {
+        return lerp(2f, 3f, data.getSkillExp(this));
+    }
+
+    /**
+     * L'energie de creusement : de 300 a 700 selon l'experience, multipliee par le facteur des degats.
+     *
+     * <p>Elle paie les blocs : chacun coute sa <b>durete</b>. Un mur de pierre part, l'obsidienne
+     * demande plus qu'un tir n'en donne, et elle est partagee entre les colonnes du disque — donc un
+     * rayon plus large creuse moins profond, comme chez l'original.
+     */
+    public float energy(AbilityData data) {
+        return timeRate(data) * lerp(300f, 700f, data.getSkillExp(this));
+    }
 
     public MeltdownerSkill() {
         super("meltdowner", 3);
@@ -230,44 +260,142 @@ public class MeltdownerSkill extends Skill {
 
         beam(player);
 
-        for (LivingEntity living : inTheBeam(player)) {
-            living.hurt(skillDamage(player), scaled(damage(data)));
+        for (LivingEntity living : inTheBeam(player, data)) {
+            living.hurt(skillDamage(player), scaled(damage(data) * (float) fade(player, living)));
         }
+        digBeam(player, data);
     }
 
     /**
      * Tout ce que le faisceau traverse, du plus proche au plus loin.
      *
-     * <p>Le rayon part des yeux et va jusqu'a {@link #RANGE} blocs, ou jusqu'au premier mur : c'est
-     * la ligne du regard, et un mur arrete la lumiere comme il arrete les rayons des autres
-     * competences du port.
+     * <p>Ce n'est pas une ligne, c'est un <b>cylindre</b> : l'original demandait a son
+     * {@code RangedRayDamage} toutes les betes dont la distance a l'axe du tir restait sous le rayon
+     * du faisceau — deux a trois blocs selon l'experience — et le joueur l'a rappele : « pour tuer,
+     * il faut obligatoirement que les monstres touche le meltdowner, alors que dans le vrai mod,
+     * non ».
      *
-     * <p>Chaque vivant dont la boite est <b>coupee</b> par ce segment est touche : c'est
-     * {@code AABB.clip} qui le dit, donc pas de faux positif sur une bete posee a cote. Le tri final
-     * fait partir les coups du plus proche au plus loin, comme un vrai faisceau qui avance.
+     * <p>La longueur est celle de l'original, {@link #LENGTH} : cinquante blocs, quand le dessin du
+     * rayon s'arrete a trente. C'est deja le cas du railgun, et c'est le meme {@code maxIncrement}.
      */
-    private static List<LivingEntity> inTheBeam(Player player) {
+    private List<LivingEntity> inTheBeam(Player player, AbilityData data) {
         Vec3 from = player.getEyePosition(1f);
-        Vec3 to = from.add(player.getViewVector(1f).scale(RANGE));
-
-        net.minecraft.world.phys.BlockHitResult wall = player.level().clip(
-                new net.minecraft.world.level.ClipContext(from, to,
-                        net.minecraft.world.level.ClipContext.Block.COLLIDER,
-                        net.minecraft.world.level.ClipContext.Fluid.NONE, player));
-        if (wall.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
-            to = wall.getLocation();
-        }
+        Vec3 look = player.getViewVector(1f);
+        double radius = radius(data);
 
         List<LivingEntity> touched = new java.util.ArrayList<>();
-        for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class,
-                new net.minecraft.world.phys.AABB(from, to).inflate(1.0),
+        net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(
+                from, from.add(look.scale(LENGTH))).inflate(radius * RailgunHit.WIDEN + 1.0);
+        for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != player && e.isPickable() && !e.isSpectator())) {
-            if (living.getBoundingBox().inflate(0.3).clip(from, to).isPresent()) {
+            Vec3 to = centre(living).subtract(from);
+            if (RailgunHit.hitDistance(to.x, to.y, to.z, look.x, look.y, look.z,
+                    radius, LENGTH) >= 0) {
                 touched.add(living);
             }
         }
         touched.sort(java.util.Comparator.comparingDouble(l -> l.position().distanceToSqr(from)));
         return touched;
+    }
+
+    /**
+     * Le centre d'une bete, et non ses pieds.
+     *
+     * <p>C'est un ecart avec l'original, qui prenait {@code posX, posY, posZ} — donc les pieds — pour
+     * mesurer la distance a l'axe. Un golem de fer de deux blocs et demi voyait ainsi sa tete sortir du
+     * cylindre, alors que c'est son corps qui le traverse. Le centre est ce que le joueur voit.
+     */
+    private static Vec3 centre(LivingEntity living) {
+        return living.position().add(0, living.getBbHeight() / 2, 0);
+    }
+
+    /**
+     * Ce qu'il reste des degats a cette distance : le rayon <b>s'attenue</b>, comme celui de
+     * l'original.
+     *
+     * <p>Le {@code startDamage} de l'original valait son tarif plein au depart et n'en gardait plus
+     * que <b>vingt pour cent</b> au bout de cinquante blocs. La distance qui compte est celle a
+     * l'AXE, comme pour le railgun : un mur de flanc n'amortit rien de plus qu'un mur de face.
+     */
+    private static double fade(Player player, LivingEntity living) {
+        Vec3 from = player.getEyePosition(1f);
+        Vec3 look = player.getViewVector(1f);
+        Vec3 to = centre(living).subtract(from);
+        double along = to.x * look.x + to.y * look.y + to.z * look.z;
+        double offX = to.x - look.x * along;
+        double offY = to.y - look.y * along;
+        double offZ = to.z - look.z * along;
+        return RailgunHit.damageFactor(Math.sqrt(offX * offX + offY * offY + offZ * offZ), LENGTH);
+    }
+
+    /**
+     * Le trou : le faisceau creuse les blocs qu'il traverse, tant qu'il a de l'energie.
+     *
+     * <p>Portage de la seconde moitie de {@code RangedRayDamage.perform}, et le joueur l'a demande
+     * tel quel : « si je tape un mur avec, c'est cense faire un gros trou dedans ». Le principe est
+     * celui de l'original :
+     *
+     * <ul>
+     *   <li>un <b>disque</b> de colonnes, de la largeur du faisceau, donne la forme du trou — voir
+     *       {@link BeamBlocks} ;</li>
+     *   <li>chaque colonne est ensuite parcourue le long du tir par un {@code Plotter}, et le bloc
+     *       qu'elle rencontre part si l'energie restante couvre sa <b>durete</b>
+     *       ({@code getDestroySpeed}), qui est alors consommee ;</li>
+     *   <li>l'energie totale ({@link #energy}) est partagee entre les colonnes : un rayon plus large
+     *       creuse donc moins profond, comme chez lui.</li>
+     * </ul>
+     *
+     * <p>Deux details qui ne sont pas de l'original, et qui sont dits : un bloc <b>indestructible</b>
+     * (durete negative, la bedrock) arrete sa colonne au lieu d'etre ignore — sinon le faisceau
+     * creuserait derriere ; et rien n'est lache au sol, la ou l'original laissait tomber un bloc sur
+     * vingt (les quatre autres competences du port qui creusent ne lachent rien non plus).
+     *
+     * <p>Le tout est gate par {@code Config.destroyBlocks}, le {@code generic.destroyBlocks} de la
+     * 1.12.2, et chaque bloc passe par {@code BlockEvent.BreakEvent} : ce qu'une protection de serveur
+     * refuse ne part pas.
+     */
+    private void digBeam(Player player, AbilityData data) {
+        if (!cn.academy.Config.destroyBlocks) return;
+        if (player.level().isClientSide) return;
+
+        Vec3 from = player.getEyePosition(1f);
+        Vec3 look = player.getViewVector(1f);
+        // Les deux axes du disque : la largeur du regard, puis sa hauteur. Un tir vertical n'a pas de
+        // largeur — il n'y a alors rien a creuser, et on le dit plutot que de diviser par zero.
+        Vec3 right = look.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1.0E-6) return;
+        right = right.normalize();
+        Vec3 up = right.cross(look).normalize();
+
+        List<double[]> columns = BeamBlocks.offsets(radius(data));
+        float each = energy(data) / Math.max(1, columns.size());
+
+        for (double[] offset : columns) {
+            Vec3 start = from.add(right.scale(offset[0])).add(up.scale(offset[1]));
+            cn.academy.util.Plotter plotter = new cn.academy.util.Plotter(
+                    net.minecraft.util.Mth.floor(start.x), net.minecraft.util.Mth.floor(start.y),
+                    net.minecraft.util.Mth.floor(start.z), look.x, look.y, look.z);
+
+            float left = each;
+            for (int step = 0; step <= LENGTH && left > 0; step++) {
+                net.minecraft.core.BlockPos pos = plotter.next();
+                net.minecraft.world.level.block.state.BlockState state =
+                        player.level().getBlockState(pos);
+                if (state.isAir()) continue;
+
+                float hardness = state.getDestroySpeed(player.level(), pos);
+                if (hardness < 0) break;
+                if (hardness > left) continue;
+
+                if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                        new net.minecraftforge.event.level.BlockEvent.BreakEvent(
+                                player.level(), pos, state, player))) {
+                    continue;
+                }
+                left -= hardness;
+                player.level().removeBlock(pos, false);
+            }
+        }
     }
 
     /**
