@@ -44,7 +44,7 @@ class MdRayViewTest {
     @Test
     @DisplayName("le pre-rayon se recolle a la main de son tireur, comme l'eclair")
     void lePreRayonSeRecolleALaMainDeSonTireur() {
-        double[][] placed = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, true, ABOVE);
+        double[][] placed = MdRayView.place(MdRayKind.MELTDOWNER, EYE, TARGET, true, ABOVE);
 
         // Les nombres de l'original, dans le repere du rayon — le long de lui, dans sa hauteur,
         // puis sur son cote — et ils sont ceux des eclairs, puisque c'est le meme `ArcView` qui
@@ -57,7 +57,7 @@ class MdRayViewTest {
     @Test
     @DisplayName("vu de l'exterieur, le meme rayon part de la main qui pend")
     void vuDeLExterieurIlPartDeLaMainQuiPend() {
-        double[][] placed = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, false, ABOVE);
+        double[][] placed = MdRayView.place(MdRayKind.MELTDOWNER, EYE, TARGET, false, ABOVE);
 
         // Le decalage de la vue externe, celui de l'eclair d'un autre joueur : 0,8 bloc plus bas,
         // soit 0,82 au-dessus des pieds — la ou la main se rejoint au corps.
@@ -67,14 +67,42 @@ class MdRayViewTest {
     }
 
     @Test
+    @DisplayName("le pre-rayon de la salve se dessine EXACTEMENT sur le viseur")
+    void lePreRayonSeDessineSurLeViseur() {
+        // Le joueur : « le laser par defaut ne va pas exactement sur mon viseur quand je tire dans
+        // le vide ». Le rayon partait de la main — vingt-cinq centimetres sous les yeux, vingt sur
+        // le cote — puis rejoignait ce qui etait vise : aligne sur rien. Contre un mur a trois
+        // blocs, invisible ; dans le vide, ou le trait fait vingt blocs, flagrant.
+        for (MdRayKind kind : new MdRayKind[] { MdRayKind.BARRAGE_PRE_HIT, MdRayKind.BARRAGE_PRE_MISS }) {
+            assertTrue(kind.onSight(), kind.name() + " est un trait de visee");
+
+            for (boolean firstPerson : new boolean[] { true, false }) {
+                double[][] placed = MdRayView.place(kind, EYE, TARGET, firstPerson, ABOVE);
+
+                // Le depart reste SUR l'axe du regard : meme hauteur, meme cote, et seulement
+                // vingt centimetres en avant. C'est ce qui met le trait pile sur le viseur.
+                assertEquals(EYE[0], placed[0][0], EPSILON, "rien sur le cote");
+                assertEquals(EYE[1], placed[0][1], EPSILON, "et rien en hauteur");
+                assertEquals(EYE[2] + 0.2, placed[0][2], EPSILON, "vingt centimetres en avant");
+                assertArrayEquals(TARGET, placed[1], EPSILON, "la pointe est toujours visee");
+            }
+        }
+
+        // Et les autres rayons gardent le decalage de la main : le faisceau du meltdowner, celui
+        // qu'on regarde le plus, part toujours du cote qui tient.
+        assertFalse(MdRayKind.MELTDOWNER.onSight(), "le faisceau du meltdowner n'est pas un viseur");
+        assertFalse(MdRayKind.MINE_BASIC.onSight());
+    }
+
+    @Test
     @DisplayName("la pointe du rayon reste sur ce qu'il vise")
     void laPointeDuRayonResteSurCeQuilVise() {
         // Le rendu des rayons de l'original ne decalait que le DEPART — « Don't fix end to get
         // accurate pointing direction » — et c'est ce que le joueur a demande : le pre-rayon
         // finit sur la bille de silicium, et la gerbe part de la bille elle-meme. Avec la pointe
         // decalee avec le depart, les deux ne se rejoignaient plus.
-        double[][] own = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, true, ABOVE);
-        double[][] other = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, false, ABOVE);
+        double[][] own = MdRayView.place(MdRayKind.MELTDOWNER, EYE, TARGET, true, ABOVE);
+        double[][] other = MdRayView.place(MdRayKind.MELTDOWNER, EYE, TARGET, false, ABOVE);
 
         assertArrayEquals(TARGET, own[1], EPSILON, "la pointe ne bouge pas d'un millimetre");
         assertArrayEquals(TARGET, other[1], EPSILON, "et pas davantage vu de l'exterieur");
@@ -89,8 +117,8 @@ class MdRayViewTest {
     void lesDeuxVuesNePosentPasLeRayonAuMemeEndroit() {
         // Le point du joueur : le rayon tombait sur l'axe qui va de la camera a son personnage,
         // et il le voyait donc naitre dans sa tete. Les deux vues doivent bien se distinguer.
-        double[][] own = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, true, ABOVE);
-        double[][] other = MdRayView.place(MdRayKind.BARRAGE_PRE_HIT, EYE, TARGET, false, ABOVE);
+        double[][] own = MdRayView.place(MdRayKind.MELTDOWNER, EYE, TARGET, true, ABOVE);
+        double[][] other = MdRayView.place(MdRayKind.MELTDOWNER, EYE, TARGET, false, ABOVE);
 
         assertTrue(other[0][1] < own[0][1], "la vue externe pose le rayon plus bas");
         assertFalse(java.util.Arrays.equals(own[0], other[0]));

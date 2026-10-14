@@ -36,6 +36,24 @@ public final class ArcView {
     /** Vu autrement — vue externe, ou l'eclair d'un autre joueur : jusqu'a sa main. */
     public static final double[] THIRD_PERSON = { 0.15, -0.8, 0.23 };
 
+    /**
+     * Pour un RAYON qui doit se dessiner exactement sur le viseur de son tireur : rien sur le
+     * cote, rien en hauteur, et un rien en avant.
+     *
+     * <p>L'optimisation de vue existe pour que le rayon ne naisse pas dans la camera, ou il
+     * remplirait l'ecran. Mais elle le decalait AUSSI sur le cote et vers le bas — la ou la main se
+     * trouve — et un rayon ne peut alors plus etre aligne sur le viseur : il part d'un point qui
+     * n'est pas sur l'axe du regard, puis rejoint ce qui est vise. Sur un mur a trois blocs cela ne
+     * se voit pas ; dans le vide, ou le trait fait ses vingt blocs, le joueur l'a vu : « le laser
+     * par defaut ne va pas exactement sur mon viseur quand je tire dans le vide ».
+     *
+     * <p>Reste donc l'avance seule, le long du rayon : un point de l'axe est encore sur l'axe, donc
+     * le trait se dessine pile sur le viseur, et il commence assez loin de l'oeil pour ne pas
+     * remplir l'ecran. Le nombre est celui du cote de la vue interne — vingt centimetres — ce qui
+     * est bien plus loin que la planche de proximite de la camera.
+     */
+    public static final double[] ON_SIGHT = { 0.2, 0.0, 0.0 };
+
     private ArcView() {}
 
     /**

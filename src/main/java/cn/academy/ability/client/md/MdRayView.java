@@ -75,10 +75,15 @@ public final class MdRayView {
      * est rendu tel quel. Les autres passent par {@link ArcView#fixStart}, qui ne bouge que le
      * depart : la pointe reste sur ce qui a ete vise, et c'est ce qui la garde sur la bille d'ou
      * la gerbe part juste apres.
+     *
+     * <p>Et le decalage n'est pas le meme pour tous : ceux qui doivent se dessiner <b>sur le
+     * viseur</b> — voir {@link MdRayKind#onSight} — n'ont que l'avance le long du rayon, sinon le
+     * trait partirait d'un point qui n'est pas sur l'axe du regard.
      */
     static double[][] place(MdRayKind kind, double[] from, double[] to, boolean ownFirstPerson,
                             double[] above) {
         if (!kind.viewOptimize()) return new double[][] { from, to };
+        if (kind.onSight()) return ArcView.fixStart(from, to, above, ArcView.ON_SIGHT);
         return ArcView.fixStart(from, to, above,
                 ownFirstPerson ? ArcView.FIRST_PERSON : ArcView.THIRD_PERSON);
     }
