@@ -2379,6 +2379,23 @@ public final class AcademyGameTests {
         return helper.absolutePos(relative).above(height);
     }
 
+    /**
+     * Les tests de CREUSEMENT n'ont rien a dire quand le joueur a coupe la casse.
+     *
+     * <p>Le reglage {@code destroyBlocks} de la config eteint d'un coup tout ce que les competences
+     * cassent : le meltdowner ne perce plus ses murs, les ondes ne ramassent plus le sol, les ailes ne
+     * brisent plus rien. Un test qui l'ignore tombe alors pour une raison qui n'a rien a voir avec le
+     * code, et la porte reste rouge tant que le joueur garde son reglage — ce qui est arrive le 14/10,
+     * ou il l'avait coupe exprès. Ces tests passent donc leur tour dans ce cas-la, et le disent.
+     *
+     * @return vrai quand la casse est coupee, et que l'appelant doit donc s'arreter la
+     */
+    private static boolean casseCoupee(GameTestHelper helper) {
+        if (cn.academy.Config.destroyBlocks) return false;
+        helper.succeed();
+        return true;
+    }
+
     /** Niveau d'une categorie pour un joueur, ou 0 s'il n'a pas la capacite. */
     private static int levelOf(net.minecraft.world.entity.player.Player player,
                                cn.academy.ability.Category category) {
@@ -4263,6 +4280,7 @@ public final class AcademyGameTests {
      */
     @GameTest(template = "empty")
     public static void lOndeDeChocEffondreLeSolDevantElle(GameTestHelper helper) {
+        if (casseCoupee(helper)) return;
         var shock = cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK;
         ServerLevel level = helper.getLevel();
         BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 240);
@@ -4400,6 +4418,7 @@ public final class AcademyGameTests {
      */
     @GameTest(template = "empty")
     public static void lOndeDeChocRamasseLeSolMeubleALaMaitrise(GameTestHelper helper) {
+        if (casseCoupee(helper)) return;
         var shock = cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK;
         BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 320);
         int base = 320;
@@ -4547,6 +4566,7 @@ public final class AcademyGameTests {
      */
     @GameTest(template = "empty")
     public static void lOndeDirigeeRamasseALaMaitrise(GameTestHelper helper) {
+        if (casseCoupee(helper)) return;
         var blast = cn.academy.ability.vecmanip.VecmanipCategory.DIRECTED_BLASTWAVE;
         // 370 et non 400 : la structure de test part de y = -60, et le monde s'arrete a
         // 320. Plus haut, `setBlock` ne fait rien et `getBlockState` rend de l'air — le
@@ -5158,6 +5178,7 @@ public final class AcademyGameTests {
      */
     @GameTest(template = "empty")
     public static void lesAilesMaladroitesCassentCeQuEllesTrouvent(GameTestHelper helper) {
+        if (casseCoupee(helper)) return;
         var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
         int height = 260;
         BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), height);
@@ -7416,9 +7437,13 @@ public final class AcademyGameTests {
                         + " contre " + avant[4]);
         assertValue(helper, avant[5], betes.get(5).getHealth(),
                 "mais celle qui est franchement a cote est epargnee");
-        assertTrue(helper, level.getBlockState(mur).isAir(),
-                "et le mur a ete creuse : " + level.getBlockState(mur).getBlock()
-                        + " a la place du vide");
+        // Le mur n'est creuse que si la casse n'est pas coupee dans les reglages du jeu : voir
+        // casseCoupee. Le reste du test, lui, ne depend pas de ce reglage.
+        if (cn.academy.Config.destroyBlocks) {
+            assertTrue(helper, level.getBlockState(mur).isAir(),
+                    "et le mur a ete creuse : " + level.getBlockState(mur).getBlock()
+                            + " a la place du vide");
+        }
 
         level.setBlock(mur, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
         for (var bete : betes) {
