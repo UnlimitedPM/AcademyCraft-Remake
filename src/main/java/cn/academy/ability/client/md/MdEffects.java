@@ -193,20 +193,20 @@ public class MdEffects {
         cylinder(tubes, pose, camera, add(from, axis, inner), to, u, v, inner, kind.inner(), alpha);
         cylinder(tubes, pose, camera, add(from, axis, outer), to, u, v, outer, kind.outer(), alpha);
 
-        // PUIS LES OGIVES, dans l'autre sens : la gaine d'abord, le COEUR EN DERNIER. Les deux bouts
-        // sont donc du blanc franc et non du blanc teinte de vert, et c'est le seul endroit ou le coeur
-        // repasse devant. Le joueur, apres avoir vu la version ou la gaine passait par-dessus les deux :
-        // « c'est l'ogive blanche (celle du dedans) qui est trop foncee ». Une ogive est petite, et les
-        // vingt pour cent de vert d'une gaine suffisent a l'eteindre.
-        head(tubes, pose, camera, add(from, axis, outer), u, v, axis, -1.0, outer, cap,
+        // PUIS LES OGIVES, avec un type de rendu a elles : elles n'ecartent pas leurs faces arriere,
+        // parce qu'un cone cull est une coquille vide et que le joueur l'a vu — « l'ogive blanche est
+        // encore trop foncee ». Et elles se peignent la gaine d'abord, le COEUR en dernier, pour que le
+        // blanc des deux bouts soit franc.
+        VertexConsumer ogives = buffers.getBuffer(MdRenderType.caps());
+        head(ogives, pose, camera, add(from, axis, outer), u, v, axis, -1.0, outer, cap,
                 kind.outer(), alpha);
-        head(tubes, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
-        head(tubes, pose, camera, add(from, axis, inner), u, v, axis, -1.0, inner, capIn,
+        head(ogives, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
+        head(ogives, pose, camera, add(from, axis, inner), u, v, axis, -1.0, inner, capIn,
                 kind.inner(), alpha);
         // L'ogive du coeur est deux pour cent plus courte que celle de la gaine (le
         // `cylinderIn.headFix = 0.98` de l'original) : sa pointe s'arrete donc un peu avant la verte,
         // et le tout dernier bout du faisceau reste vert.
-        head(tubes, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
+        head(ogives, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
     }
 
     /** La lueur d'un rayon : ses trois morceaux, poses bout a bout. */

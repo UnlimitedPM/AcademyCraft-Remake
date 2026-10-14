@@ -48,6 +48,9 @@ public final class MdRenderType {
     /** Et celui des tubes, construit a la premiere image : il n'y a rien a y mettre. */
     private static RenderType flat;
 
+    /** Et celui des OGIVES, qui n'ecartent pas leurs faces arriere : voir {@link #caps()}. */
+    private static RenderType caps;
+
     private MdRenderType() {
     }
 
@@ -87,6 +90,32 @@ public final class MdRenderType {
                             .createCompositeState(true));
         }
         return flat;
+    }
+
+    /**
+     * Le type des OGIVES : le meme que celui des tubes, mais SANS ecarter les faces arriere.
+     *
+     * <p>Le culling fait merveille sur un tube — il n'en montre que la moitie proche, et c'est ainsi
+     * qu'on le voit — mais il <b>vide un cone</b> : d'une ogive, il ne reste qu'une coquille ouverte,
+     * et le joueur l'apercoit tout de suite : « l'ogive blanche est encore trop foncee ». Ses deux
+     * faces sont donc peintes, et l'ogive parait pleine.
+     *
+     * <p>Les ogives sont peintes APRES les tubes, et le coeur apres la gaine : c'est ce qui les
+     * laisse blanches au lieu de les teinter de vert.
+     */
+    public static RenderType caps() {
+        if (caps == null) {
+            caps = RenderType.create("academy_md_caps", DefaultVertexFormat.POSITION_COLOR,
+                    VertexFormat.Mode.QUADS, 256, false, true,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(new RenderStateShard.ShaderStateShard(
+                                    GameRenderer::getPositionColorShader))
+                            .setTransparencyState(blending())
+                            .setWriteMaskState(noDepthWrite())
+                            .setCullState(new RenderStateShard.CullStateShard(false))
+                            .createCompositeState(true));
+        }
+        return caps;
     }
 
     private static RenderType create(ResourceLocation texture) {
