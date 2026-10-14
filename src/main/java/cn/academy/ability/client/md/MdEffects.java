@@ -235,17 +235,20 @@ public class MdEffects {
         double[] in = add(from, axis, span);
         double[] out = add(tip, axis, -span);
 
-        board(buffers, pose, camera, kind.glowIn(), from, in, axis, half, glow);
+        // Ce qui doit rester vide au milieu du ruban : le RAYON lui-meme, qui passe devant.
+        double hollow = kind.outerRadius() * width;
+
+        board(buffers, pose, camera, kind.glowIn(), from, in, axis, half, hollow, glow);
         if (length(from, out) > 0) {
-            board(buffers, pose, camera, kind.glowTile(), in, out, axis, half, glow);
+            board(buffers, pose, camera, kind.glowTile(), in, out, axis, half, hollow, glow);
         }
-        board(buffers, pose, camera, kind.glowOut(), out, tip, axis, half, glow);
+        board(buffers, pose, camera, kind.glowOut(), out, tip, axis, half, hollow, glow);
     }
 
-    /** Un morceau de lueur : un ruban qui tourne avec la camera. */
+    /** Un morceau de lueur : un ruban qui tourne avec la camera, fendu en deux. */
     private static void board(MultiBufferSource buffers, PoseStack.Pose pose, Vec3 camera,
                               ResourceLocation texture, double[] from, double[] to, double[] axis,
-                              double half, float alpha) {
+                              double half, double hollow, float alpha) {
         if (alpha <= 0f) return;
 
         // La largeur du ruban est perpendiculaire a l'axe ET au regard : il se presente donc
@@ -254,11 +257,36 @@ public class MdEffects {
         double[] side = view == null ? null : cross(axis, view);
         if (side == null) return;
 
+        // LE RUBAN EST FENDU EN DEUX, et c'est le seul ecart a l'original de tout ce fichier : chez lui
+        // un seul ruban large traversait le rayon, et sa moitie centrale — celle qui est DERRIERE les
+        // tubes — ne se voyait pas. Ici les tubes sont translucides et n'ecrivent pas la profondeur :
+        // cette moitie se voyait donc A TRAVERS eux, et le joueur l'a repere tout seul — « sur le rond
+        // de l'ogive, il y a un endroit vers la moitie du rond ou on voit plus la couleur de l'ogive en
+        // dessous que celle du dessus [...] je pense que c'est a cause du ruban qui se trouve derriere ».
+        // On ne peint donc que ce qui DEPASSE du rayon : l'interieur est de trop, et c'est aussi ce que
+        // le rayon cache de toute facon.
+        double clipped = Math.min(hollow, half);
+        if (clipped >= half) return;
+        float edge = (float) ((half - clipped) / (half * 2.0));
+
         VertexConsumer out = buffers.getBuffer(MdRenderType.of(texture));
-        vertex(out, pose, camera, from, side, half, 0f, 0f, alpha);
-        vertex(out, pose, camera, from, side, -half, 0f, 1f, alpha);
-        vertex(out, pose, camera, to, side, -half, 1f, 1f, alpha);
-        vertex(out, pose, camera, to, side, half, 1f, 0f, alpha);
+        strip(out, pose, camera, from, to, side, clipped, half, edge, 0f, alpha);
+        strip(out, pose, camera, from, to, side, -half, -clipped, 1f, 1f - edge, alpha);
+    }
+
+    /**
+     * Une moitie de ruban : un quadrilatere entre deux decalages de largeur, d'un bout a l'autre.
+     *
+     * <p>Le {@code v} suit la largeur, du bord vers le milieu : c'est ce qui fait que la texture
+     * continue d'etre posee comme sur le ruban entier, alors qu'il n'en reste que les bords.
+     */
+    private static void strip(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
+                              double[] from, double[] to, double[] side,
+                              double near, double far, float vNear, float vFar, float alpha) {
+        vertex(out, pose, camera, from, side, far, 0f, vFar, alpha);
+        vertex(out, pose, camera, from, side, near, 0f, vNear, alpha);
+        vertex(out, pose, camera, to, side, near, 1f, vNear, alpha);
+        vertex(out, pose, camera, to, side, far, 1f, vFar, alpha);
     }
 
     /** Un coin de ruban, texte. */
