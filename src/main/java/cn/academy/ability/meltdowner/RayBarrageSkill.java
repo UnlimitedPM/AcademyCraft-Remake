@@ -70,6 +70,17 @@ public class RayBarrageSkill extends Skill {
     /** Demi-angle en tangage : la portee entiere. Le cone est deux fois plus haut que large. */
     public static final double HALF_PITCH = CONE_RANGE;
 
+    /**
+     * Combien de fois la salve frappe chaque tete.
+     *
+     * <p>L'original n'attaquait qu'UNE fois par cible : ses vingt-cinq a trente rayons visibles
+     * sont une entite de <b>client</b> — {@code EntityMdRayBarrage} porte {@code @SideOnly(Side.CLIENT)}
+     * et n'a pas une seule ligne de degats. Le joueur a donc demande que la salve frappe comme une
+     * salve : « une salve = N rayons ». Trois coups font 30 a 54 points par tete, ce qui tue un
+     * zombie des l'experience minimale, la ou les 10 a 18 d'un seul coup ne faisaient que l'entamer.
+     */
+    public static final int HITS_PER_TARGET = 3;
+
     public RayBarrageSkill() {
         super("ray_barrage", 4);
     }
@@ -229,11 +240,14 @@ public class RayBarrageSkill extends Skill {
             if (to.length() > RANGE) continue;
             if (!inCone(look, to)) continue;
 
-            // `hurtResistantTime = -1` de l'original : tout le monde encaisse, y compris ce
-            // qui vient d'etre frappe.
-            target.invulnerableTime = 0;
-            target.hurt(skillDamage(player),
-                    scaled(scatteredDamage(data)));
+            // La salve frappe PLUSIEURS FOIS chaque tete — voir HITS_PER_TARGET. `invulnerableTime`
+            // est remis a zero AVANT CHAQUE coup : le premier le passe a dix, et sans ce rappel les
+            // deux autres seraient purement ignores.
+            for (int i = 0; i < HITS_PER_TARGET; i++) {
+                target.invulnerableTime = 0;
+                target.hurt(skillDamage(player),
+                        scaled(scatteredDamage(data)));
+            }
             RadiationMarks.mark(target, data);
         }
     }

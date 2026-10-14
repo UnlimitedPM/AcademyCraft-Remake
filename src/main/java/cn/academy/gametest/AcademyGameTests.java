@@ -3619,20 +3619,32 @@ public final class AcademyGameTests {
         // Le cone ne demande pas que le regard touche la cible : il part de l'oeil du
         // lanceur et s'ouvre sur 55 degres, donc une bete au sol y est meme si le trait
         // passe au-dessus d'elle.
+        //
+        // Et il frappe PLUSIEURS FOIS chaque tete : un golem de fer, qui en a cent, dit donc
+        // combien de coups la salve donne — la ou la vache, qui en a dix, mourrait des le premier.
+        var golem = new net.minecraft.world.entity.animal.IronGolem(
+                net.minecraft.world.entity.EntityType.IRON_GOLEM, level);
+        golem.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 8.5, 0f, 0f);
+        level.addFreshEntity(golem);
+        float golemBefore = golem.getHealth();
+
         float before = target.getHealth();
         skill.onActivate(player, data);
 
         assertTrue(helper, ball.isHit(), "la bille trouvee doit exploser");
         assertTrue(helper, target.getHealth() < before,
                 "et la salve doit faucher ce qui est dans le cone");
-        // Une vache a dix points de vie : la salve au minimum en fait exactement dix, donc
-        // elle y passe. C'est ce qui rend l'assertion precise — une salve qui ne ferait
-        // que cinq points la laisserait vivante.
+        // Une vache a dix points de vie : un seul coup de la salve suffit a l'abattre, donc
+        // elle y passe — c'est ce qui rend l'assertion precise.
         assertFalse(helper, target.isAlive(),
-                "10 points a l'experience minimale, sur une bete qui en a 10");
+                "un coup de la salve, dix points a l'experience minimale, sur une bete qui en a 10");
+        assertClose(helper, cn.academy.ability.meltdowner.RayBarrageSkill.HITS_PER_TARGET
+                        * skill.scatteredDamage(data), golemBefore - golem.getHealth(),
+                "la salve frappe trois fois chaque tete : le golem perd trois fois 10 points");
 
         ball.discard();
         target.discard();
+        golem.discard();
         helper.succeed();
     }
 

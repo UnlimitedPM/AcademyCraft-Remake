@@ -626,7 +626,16 @@ class SkillCurvesTest {
 
         // Les deux versions de la competence.
         assertBounds("degats du tir simple", 25f, 60f, barrage::plainDamage, barrage);
-        assertBounds("degats de la salve", 10f, 18f, barrage::scatteredDamage, barrage);
+        assertBounds("degats de la salve, par coup", 10f, 18f, barrage::scatteredDamage, barrage);
+
+        // Et la salve frappe plusieurs fois chaque tete : l'original n'attaquait qu'une fois, ses
+        // vingt-cinq a trente rayons visibles etant une entite de CLIENT sans degats. Trois coups
+        // font donc 30 a 54 points par tete, ce que le joueur a demande — « une salve = N rayons ».
+        assertEquals(3, cn.academy.ability.meltdowner.RayBarrageSkill.HITS_PER_TARGET,
+                "trois coups par tete");
+        assertBounds("degats de la salve, par tete", 30f, 54f,
+                data -> cn.academy.ability.meltdowner.RayBarrageSkill.HITS_PER_TARGET
+                        * barrage.scatteredDamage(data), barrage);
         assertBounds("surcout de la salve", 300f, 140f, barrage::getOverloadCost, barrage);
         assertCooldownBounds("recharge de la salve", barrage, 100, 40);
         // 450 a 380 CP chez l'original, divises par 28.
