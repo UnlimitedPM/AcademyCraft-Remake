@@ -256,6 +256,19 @@ public class JetEngineSkill extends Skill {
         Vec3 target = data.getHoldPoint(this);
         if (start == null || target == null) return false;
 
+        // La chute reste gratuite PENDANT tout le vol, et pas seulement au depart.
+        //
+        // Le drapeau se leve apres deux ticks passes sans tomber — c'est ce qui laisse un
+        // atterrissage a cheval sur deux blocs se poser tranquillement. Or un vol ne tombe jamais :
+        // sa chute est remise a zero a chaque tick. Pose une seule fois au relachement, le drapeau
+        // se levait donc EN PLEIN VOL des que le porteur etait deja en train de tomber au
+        // lancement — sauter d'une falaise, puis viser un mur — et la chute qui suivait l'arret
+        // se payait. C'est ce que le joueur a vu : « il arrive que le jeu considere que je me suis
+        // arrete sur le mur, et donc que par la suite je prends quand meme les degats de chutes ».
+        // Le rappeler a chaque tick garde la protection neuve jusqu'a l'atterrissage, celui qui
+        // suit l'arret sur le mur compris.
+        data.protectFromFall();
+
         // Le rayon part de la position du tick precedent, comme le `lastTickPos` de l'original.
         Vec3 previous = new Vec3(player.xo, player.yo, player.zo);
         Vec3 next = pathPosition(start, target, flightTick);

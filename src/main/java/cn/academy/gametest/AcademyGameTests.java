@@ -7829,6 +7829,11 @@ public final class AcademyGameTests {
         assertTrue(helper, data.isProtectedFromFall(),
                 "et la chute qui suit le vol est gratuite, comme apres une teleportation");
 
+        // Le porteur etait DEJA en train de tomber au lancement : c'est le cas qui se payait. La
+        // protection se leve apres deux ticks sans tomber, et un vol ne tombe jamais (sa chute est
+        // remise a zero a chaque tick) — posee une seule fois, elle disparaissait donc en plein vol.
+        data.tickFallProtection(true);
+
         net.minecraft.world.phys.Vec3 start = data.getHoldOrigin(skill);
         net.minecraft.world.phys.Vec3 target = data.getHoldPoint(skill);
         assertTrue(helper, start != null && target != null, "les deux bouts sont poses");
@@ -7836,15 +7841,22 @@ public final class AcademyGameTests {
                 "la visee s'arrete sur la face du mur : " + target.distanceTo(start));
 
         // Le vol, tick apres tick : il doit s'arreter tout seul, et bien avant la fin de sa vie.
+        // Chaque tick rejoue aussi ce que la protection lit en jeu — le porteur ne tombe pas,
+        // puisque le vol remet sa chute a zero — sinon le test ne dirait rien de la protection.
         int tick = 11;
         boolean volant = true;
         while (volant && tick <= 10 + cn.academy.ability.meltdowner.JetEngineSkill.LIFETIME) {
             volant = skill.onHoldTick(player, data, tick);
+            data.tickFallProtection(player.fallDistance > 0f);
             tick++;
         }
         assertFalse(helper, volant, "le vol s'arrete sur le mur");
         assertTrue(helper, tick <= 20,
                 "et il s'arrete tot, sur la face : tick " + tick);
+
+        // Et la chute qui suit cet arret reste gratuite : c'est tout l'objet du rappel.
+        assertTrue(helper, data.isProtectedFromFall(),
+                "la protection tient jusqu'a l'atterrissage qui suit l'arret sur le mur");
 
         // Le porteur est sur la face AVANT du mur, et pas dedans ni derriere : la face est a
         // `mur` blocs du depart, et le mur occupe le bloc suivant.
