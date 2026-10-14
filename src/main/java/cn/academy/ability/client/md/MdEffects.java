@@ -227,10 +227,16 @@ public class MdEffects {
         // resultat : « le ruban ne va pas du tout au 38 bloc ». Une lueur trop courte se voit, et
         // elle est revenue a la longueur du rayon.
         //
-        // Ce bout-la n'est pas toujours sa pointe pour autant : son dernier morceau peut la depasser —
-        // c'est l'`endFix` de l'original, que le pre-rayon de la salve reprend pour couvrir la bille de
-        // silicium entiere. Voir `MdRayKind.glowEndFix`.
-        double[] tip = add(to, axis, kind.glowEndFix());
+        // Et il lui faut UNE OGIVE DE PLUS que le rayon : celui-ci coiffe son bout d'un cone qui
+        // depasse sa pointe d'un rayon, et ce bout-la restait donc sans lueur du tout — plus fonce que
+        // le reste du faisceau, ce que le joueur a vu : « je crois que la couleur de l'ogive est un peu
+        // trop foncee par rapport au reste du laser ». La lueur va donc jusqu'a la POINTE de l'ogive.
+        //
+        // Elle peut aussi depasser la pointe du rayon d'elle-meme : c'est l'`endFix` de l'original, que
+        // le pre-rayon de la salve reprend pour couvrir la bille de silicium entiere. Voir
+        // `MdRayKind.glowEndFix`.
+        double cap = kind.outerRadius() * width;
+        double[] tip = add(to, axis, kind.glowEndFix() + cap);
 
         double[] in = add(from, axis, span);
         double[] out = add(tip, axis, -span);
