@@ -217,6 +217,9 @@ class MineRaysTest {
         assertEquals("textures/effects/md_particle.png", MdSparks.PLAIN.getPath());
         assertEquals("textures/effects/md_particle_luck.png", MdSparks.LUCK.getPath());
 
+        // C'est le point de decision des DEUX sortes d'etincelles d'un rayon minier : celles de son
+        // regard, et celles du bloc qu'il mine. Le rayon de la chance crache donc son violet partout
+        // sur la demande du joueur, la ou l'original ne l'habillait que sur son regard.
         assertEquals(MdSparks.LUCK, MineRayEffect.sparkTexture(MdRayKind.MINE_LUCK));
         assertEquals(MdSparks.PLAIN, MineRayEffect.sparkTexture(MdRayKind.MINE_BASIC));
         assertEquals(MdSparks.PLAIN, MineRayEffect.sparkTexture(MdRayKind.MINE_EXPERT));

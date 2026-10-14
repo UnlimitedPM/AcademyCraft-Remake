@@ -118,7 +118,7 @@ public final class MineRayEffect {
         }
 
         sowLookSpark(player, wanted);
-        sowBlockSparks(player, (MineRaySkill) skill);
+        sowBlockSparks(player, (MineRaySkill) skill, wanted);
     }
 
     /**
@@ -194,10 +194,16 @@ public final class MineRayEffect {
     }
 
     /**
-     * L'image des etincelles de ce rayon.
+     * L'image des etincelles de ce rayon : celles qu'il seme le long de son regard, et celles
+     * qu'il crache sur le bloc qu'il mine.
      *
-     * <p>La bille de plasma pour tout le monde, l'etoile de la chance pour le seul rayon de la
-     * chance : c'est la seule difference de tout le plasma, et elle se lit ici.
+     * <p>La bille de plasma verte pour les deux rayons ordinaires, l'etincelle violette pour le
+     * seul rayon de la chance : c'est la seule difference de tout le plasma, et elle se lit ici.
+     *
+     * <p>L'original n'habillait que ses etincelles de <b>rayon</b> — ses etincelles de bloc
+     * gardaient la bille verte pour les trois, sa texture par competence n'etant jamais posee.
+     * Le rayon de la chance crache donc maintenant son violet sur ses blocs aussi : c'est une
+     * demande du joueur, et c'est ce que ce point de decision unique rend.
      */
     public static ResourceLocation sparkTexture(MdRayKind kind) {
         return kind == MdRayKind.MINE_LUCK ? MdSparks.LUCK : MdSparks.PLAIN;
@@ -247,8 +253,12 @@ public final class MineRayEffect {
      * qu'elle arrete ne fait rien du tout, chez l'original comme ici. La durete negative — la
      * roche-mere, l'eau — en fait partie : le rayon n'en viendra jamais a bout, mais il la
      * mord, et c'est ce qu'on voit.
+     *
+     * <p>Leur image est celle du rayon — voir {@link #sparkTexture} — et non la bille verte de
+     * tout le monde comme dans l'original : le rayon de la chance crache donc du violet sur ses
+     * blocs comme sur son regard, sur la demande du joueur.
      */
-    private static void sowBlockSparks(Player player, MineRaySkill mine) {
+    private static void sowBlockSparks(Player player, MineRaySkill mine, MdRayKind kind) {
         BlockPos pos = MineRaySkill.aimedBlock(player, mine.range());
         if (pos == null) return;
 
@@ -258,7 +268,7 @@ public final class MineRayEffect {
         for (int i = 0; i < BLOCK_SPARKS; i++) {
             Vec3 at = new Vec3(pos.getX() + offset(), pos.getY() + offset(),
                     pos.getZ() + offset());
-            MdSparks.spawn(at, spread(BLOCK_SPARK_SPEED), BLOCK_SPARK_GRAVITY, MdSparks.PLAIN);
+            MdSparks.spawn(at, spread(BLOCK_SPARK_SPEED), BLOCK_SPARK_GRAVITY, sparkTexture(kind));
         }
     }
 
