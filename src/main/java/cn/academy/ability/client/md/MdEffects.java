@@ -56,21 +56,6 @@ public class MdEffects {
     /** Dix cotes par tube : assez pour que la section ronde se lise, et rien de plus. */
     private static final int SIDES = 10;
 
-    /**
-     * La part de la largeur du ruban que prennent ses morceaux d'entree et de sortie.
-     *
-     * <p>L'original leur donnait toute la LARGEUR du ruban — un bloc et demi pour le meltdowner — et le
-     * port faisait comme lui. Mais le faut du faisceau est une OGIVE, et une ogive fait un rayon : elle
-     * tombait donc dans le dernier dixieme du fondu, la ou la lueur est deja eteinte, et le bout du
-     * faisceau paraissait plus fonce que le reste. Le joueur : « je crois que la couleur de l'ogive est
-     * un peu trop foncer par rapport au reste du laser ». Les deux morceaux sont donc raccourcis, et
-     * l'ogive se retrouve dans la partie ALLUMEE du fondu.
-     *
-     * <p>C'est le chiffre a tourner si le bout du faisceau est encore trop sombre : plus il est petit,
-     * plus la lueur reste allumee tard.
-     */
-    private static final double FADE_PART = 0.4;
-
     /** Quatre marches pour un bout arrondi, comme la « tete » de l'original. */
     private static final int CAP_STEPS = 4;
 
@@ -229,6 +214,11 @@ public class MdEffects {
         // donc la largeur annoncee, et non son double. Le port la passait telle quelle et la lueur
         // de tous les rayons etait deux fois trop large : invisible sur les petits rayons, et tres
         // visible sur le faisceau du meltdowner, dont la lueur d'un bloc et demi en faisait trois.
+        // La LARGEUR des morceaux d'entree et de sortie, qui est aussi leur longueur : c'est l'original,
+        // qui passait le meme nombre a ses trois morceaux. Le port les a essayes plus COURTS pour
+        // eclaircir l'ogive du bout — celle-ci tombant tout au fond du fondu — et le joueur a vu le
+        // contraire : « tu as rendu le ruban pire qu'avant ». Le fondu est donc revenu a ce qu'il etait,
+        // et le bout du faisceau doit s'eclaircir autrement.
         double span = kind.glowWidth() * width;
         double half = span / 2;
 
@@ -242,19 +232,12 @@ public class MdEffects {
         // resultat : « le ruban ne va pas du tout au 38 bloc ». Une lueur trop courte se voit, et
         // elle est revenue a la longueur du rayon.
         //
-        // Et il lui faut UNE OGIVE DE PLUS que le rayon : celui-ci coiffe son bout d'un cone qui
-        // depasse sa pointe d'un rayon, et ce bout-la restait donc sans lueur du tout — plus fonce que
-        // le reste du faisceau, ce que le joueur a vu : « je crois que la couleur de l'ogive est un peu
-        // trop foncee par rapport au reste du laser ». La lueur va donc jusqu'a la POINTE de l'ogive.
-        //
-        // Elle peut aussi depasser la pointe du rayon d'elle-meme : c'est l'`endFix` de l'original, que
-        // le pre-rayon de la salve reprend pour couvrir la bille de silicium entiere. Voir
-        // `MdRayKind.glowEndFix`.
-        double cap = kind.outerRadius() * width;
-        double[] tip = add(to, axis, kind.glowEndFix() + cap);
+        // Il peut aussi depasser la pointe du rayon : c'est l'`endFix` de l'original, que le pre-rayon
+        // de la salve reprend pour couvrir la bille de silicium entiere. Voir `MdRayKind.glowEndFix`.
+        double[] tip = add(to, axis, kind.glowEndFix());
 
-        double[] in = add(from, axis, span * FADE_PART);
-        double[] out = add(tip, axis, -span * FADE_PART);
+        double[] in = add(from, axis, span);
+        double[] out = add(tip, axis, -span);
 
         // Ce qui doit rester vide au milieu du ruban : le RAYON lui-meme, qui passe devant.
         double hollow = kind.outerRadius() * width;
