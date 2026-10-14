@@ -246,20 +246,17 @@ public class MdEffects {
         double[] in = add(from, axis, span);
         double[] out = add(tip, axis, -span);
 
-        // Ce qui doit rester vide au milieu du ruban : le RAYON lui-meme, qui passe devant.
-        double hollow = kind.outerRadius() * width;
-
-        board(buffers, pose, camera, kind.glowIn(), from, in, axis, half, hollow, glow);
+        board(buffers, pose, camera, kind.glowIn(), from, in, axis, half, glow);
         if (length(from, out) > 0) {
-            board(buffers, pose, camera, kind.glowTile(), in, out, axis, half, hollow, glow);
+            board(buffers, pose, camera, kind.glowTile(), in, out, axis, half, glow);
         }
-        board(buffers, pose, camera, kind.glowOut(), out, tip, axis, half, hollow, glow);
+        board(buffers, pose, camera, kind.glowOut(), out, tip, axis, half, glow);
     }
 
-    /** Un morceau de lueur : un ruban qui tourne avec la camera, fendu en deux. */
+    /** Un morceau de lueur : un ruban qui tourne avec la camera. */
     private static void board(MultiBufferSource buffers, PoseStack.Pose pose, Vec3 camera,
                               ResourceLocation texture, double[] from, double[] to, double[] axis,
-                              double half, double hollow, float alpha) {
+                              double half, float alpha) {
         if (alpha <= 0f) return;
 
         // La largeur du ruban est perpendiculaire a l'axe ET au regard : il se presente donc
@@ -268,36 +265,11 @@ public class MdEffects {
         double[] side = view == null ? null : cross(axis, view);
         if (side == null) return;
 
-        // LE RUBAN EST FENDU EN DEUX, et l'ordre de la texture avec : le pic de la lueur tombe sur le
-        // BORD du rayon et le fondu s'en va vers l'exterieur. Sans cela, le ruban n'aurait que la moitie
-        // faible de sa texture la ou on le voit, et il aurait l'air transparent — ce que le joueur a vu
-        // apres la premiere version, qui ne peignait que ce qui depasse : « la maintenant le rayon vert
-        // semi transparent rend transparent le ruban ». C'est le seul ecart a l'original de tout ce
-        // fichier : chez lui un seul ruban large traversait le rayon, et sa moitie centrale, celle qui
-        // est DERRIERE les tubes, ne se voyait pas — ici les tubes sont translucides et n'ecrivent pas
-        // la profondeur, donc elle se voyait A TRAVERS eux.
-        double clipped = Math.min(hollow, half);
-        if (clipped >= half) return;
-
         VertexConsumer out = buffers.getBuffer(MdRenderType.of(texture));
-        strip(out, pose, camera, from, to, side, clipped, half, 0.5f, 0f, alpha);
-        strip(out, pose, camera, from, to, side, -half, -clipped, 1f, 0.5f, alpha);
-    }
-
-    /**
-     * Une moitie de ruban : un quadrilatere entre deux decalages de largeur, d'un bout a l'autre.
-     *
-     * <p>Le {@code v} suit la largeur : le bord du rayon prend le MILIEU de la texture — sa partie
-     * lumineuse — et le bord exterieur prend son bord, qui s'efface. C'est ce qui fait de la lueur une
-     * couronne posee contre le rayon plutot qu'une bande pale.
-     */
-    private static void strip(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
-                              double[] from, double[] to, double[] side,
-                              double near, double far, float vNear, float vFar, float alpha) {
-        vertex(out, pose, camera, from, side, far, 0f, vFar, alpha);
-        vertex(out, pose, camera, from, side, near, 0f, vNear, alpha);
-        vertex(out, pose, camera, to, side, near, 1f, vNear, alpha);
-        vertex(out, pose, camera, to, side, far, 1f, vFar, alpha);
+        vertex(out, pose, camera, from, side, half, 0f, 0f, alpha);
+        vertex(out, pose, camera, from, side, -half, 0f, 1f, alpha);
+        vertex(out, pose, camera, to, side, -half, 1f, 1f, alpha);
+        vertex(out, pose, camera, to, side, half, 1f, 0f, alpha);
     }
 
     /** Un coin de ruban, texte. */
