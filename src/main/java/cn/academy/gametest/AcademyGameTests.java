@@ -7528,6 +7528,109 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le rayon minier et les betes : il frappe ce qu'il trouve devant lui, et ne mine plus rien
+     * derriere.
+     *
+     * <p>Deux comportements demandes par le joueur — « si avec le mine ray basique on vise un
+     * monstre, que ca le tape … et que quand on tape une entite, ca ne mine pas les bloc qui sont
+     * deriere elle » — et deux ajouts a l'original, dont le trace traversait les betes
+     * ({@code EntitySelectors.nothing}) sans jamais les blesser. Le rayon frappe donc ce qu'il
+     * croise : un point pour celui de base, deux pour l'expert, trois pour celui de la chance.
+     *
+     * <p>Le test se fait en trois temps, et le premier donne son sens au deuxieme : sans bete
+     * devant, le rayon perce bien <b>ce</b> bloc-la, donc la pierre intacte de la deuxieme partie
+     * dit quelque chose. Le troisieme temps verifie que le minage n'a pas ete oublie mais seulement
+     * suspendu : la bete ecartee, le rayon reprend son bloc la ou il en etait.
+     */
+    @GameTest(template = "empty")
+    public static void leRayonMinierFrappeLaBeteAuLieuDeMinerDerriere(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.MINE_RAY_BASIC;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        ServerLevel level = helper.getLevel();
+        int height = 70;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+
+        // Le monde des tests est partage et sauvegarde : on nettoie le couloir avant d'y poser quoi
+        // que ce soit, sinon la pierre d'une execution precedente serait accrochee a la place.
+        for (int dz = 0; dz <= 6; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "rayon-minier");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 180f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 3);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0f);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        // Un mur de pierre a trois blocs, et le regard pile dessus.
+        BlockPos mur = eyes.offset(0, 0, 3);
+        helper.setBlock(mur, stone);
+        lookAt(player, helper.absolutePos(mur));
+
+        // Rien devant : le rayon perce. C'est la preuve que le rayon sait casser CE bloc-la, sans
+        // quoi la deuxieme partie ne dirait rien.
+        assertTrue(helper, cn.academy.ability.meltdowner.MineRaySkill.aimedEntity(player, skill.range()) == null,
+                "aucune bete dans le rayon au depart");
+        skill.onStart(player, data);
+        for (int tick = 1; tick <= 20; tick++) {
+            data.setControlPoint(data.getMaxControlPoint());
+            skill.onHoldTick(player, data, tick);
+        }
+        assertTrue(helper, helper.getBlockState(mur).isAir(),
+                "sans bete devant, le rayon perce la pierre : " + helper.getBlockState(mur));
+
+        // La meme pierre, la meme place, mais quelqu'un devant. C'est une momie, et non un zombie :
+        // elle ne craint pas le jour qui luit sur le couloir.
+        helper.setBlock(mur, stone);
+        var oeil = player.getEyePosition(1f);
+        var vise = oeil.add(player.getViewVector(1f).scale(1.5));
+        var bete = new net.minecraft.world.entity.monster.Husk(
+                net.minecraft.world.entity.EntityType.HUSK, level);
+        bete.moveTo(vise.x, vise.y - bete.getBbHeight() / 2, vise.z, 0f, 0f);
+        level.addFreshEntity(bete);
+        float santeAvant = bete.getHealth();
+
+        assertTrue(helper, cn.academy.ability.meltdowner.MineRaySkill.aimedEntity(player, skill.range()) == bete,
+                "le rayon vise la bete, et non la pierre derriere elle");
+
+        skill.onStart(player, data);
+        for (int tick = 21; tick <= 40; tick++) {
+            data.setControlPoint(data.getMaxControlPoint());
+            skill.onHoldTick(player, data, tick);
+        }
+        assertTrue(helper, bete.getHealth() < santeAvant,
+                "la bete encaisse le rayon : " + bete.getHealth() + " contre " + santeAvant);
+        assertTrue(helper, helper.getBlockState(mur).is(stone),
+                "et la pierre derriere elle est intacte : " + helper.getBlockState(mur));
+
+        // La bete s'ecarte : le rayon reprend son minage la ou il en etait, sans redemander la
+        // durete entiere de la pierre.
+        bete.discard();
+        for (int tick = 41; tick <= 80; tick++) {
+            data.setControlPoint(data.getMaxControlPoint());
+            skill.onHoldTick(player, data, tick);
+        }
+        assertTrue(helper, helper.getBlockState(mur).isAir(),
+                "la bete partie, le rayon perce la pierre qu'il n'avait pas oubliee : "
+                        + helper.getBlockState(mur));
+
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(gone -> gone.forgetSkill(skill));
+        helper.succeed();
+    }
+
+    /**
      * Le missile a electrons : il accumule ses billes, puis en envoie une sur le plus proche.
      *
      * <p>Le test appelle les ticks du maintien directement — c'est la forme que le serveur utilise,

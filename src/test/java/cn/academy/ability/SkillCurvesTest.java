@@ -393,6 +393,13 @@ class SkillCurvesTest {
         assertCooldownBounds("recharge du rayon expert", expert, 60, 30);
         assertEquals(0.0005f, basic.expPerBlock(), 0.00001f);
         assertEquals(0.0003f, expert.expPerBlock(), 0.00001f);
+
+        // Les degats sur une bete : un point, deux, trois — c'est une demande du joueur, et un
+        // ajout a l'original, dont le rayon traversait les betes sans les toucher. Le chiffre suit
+        // l'ordre des rayons, comme le reste de leurs nombres.
+        assertEquals(1f, basic.entityDamage(), 0.0001f, "un point pour le rayon de base");
+        assertEquals(2f, expert.entityDamage(), 0.0001f, "deux pour l'expert");
+        assertEquals(3f, luck.entityDamage(), 0.0001f, "trois pour celui de la chance");
     }
 
     private static void assertCooldownBounds(String what, Skill skill, int min, int max) {

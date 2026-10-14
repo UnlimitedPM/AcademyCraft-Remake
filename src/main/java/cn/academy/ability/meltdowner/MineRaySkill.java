@@ -10,6 +10,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraftforge.registries.RegistryObject;
 import net.minecraft.world.Containers;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -44,12 +46,30 @@ public abstract class MineRaySkill extends Skill {
     /** Durete minimale retiree par tick, pour que le rayon perce toujours quelque chose. */
     private static final float MINIMUM_SPEED = 0.05f;
 
+    /**
+     * Les betes qu'un rayon minier arrete : le meme filtre des deux cotes, serveur et client.
+     *
+     * <p>{@code TargetingUtil.findEntityHit} s'occupe deja du tireur, des spectateurs et de ce qui
+     * n'est pas selectionnable ; il ne reste donc qu'a demander ce qui VIT.
+     */
+    public static final java.util.function.Predicate<Entity> LIVING =
+            e -> e instanceof LivingEntity;
+
     protected MineRaySkill(String name, int level) {
         super(name, level);
     }
 
     /** Portee du rayon, en blocs. */
     public abstract double range();
+
+    /**
+     * Degats faits a une bete qui se trouve dans le rayon : un point pour celui de base, deux pour
+     * l'expert, trois pour celui de la chance.
+     *
+     * <p>C'est une demande du joueur, et un ajout : l'original ne blessait rien du tout, son trace
+     * traversait les betes.
+     */
+    public abstract float entityDamage();
 
     /** Niveau de pioche que le rayon vaut, au sens de la 1.12.2 : 2 en fer, 5 tout. */
     public abstract int tier();
@@ -110,6 +130,20 @@ public abstract class MineRaySkill extends Skill {
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
         if (!data.consumeControlPoint(getTickUpkeep(data, heldTicks))) return false;
 
+        // Une BETE dans le rayon avant le bloc : le rayon la frappe, et il ne mine rien derriere
+        // elle. C'est une demande du joueur — « que quand on tape une entite, ca ne mine pas les
+        // bloc qui sont deriere elle » — et un ecart a l'original, dont le trace traversait les
+        // betes ({@code EntitySelectors.nothing}).
+        //
+        // Le minage n'est pas OUBLIE pour autant : il est seulement suspendu. La cible et ce qu'il
+        // en reste restent en place, donc le rayon reprend ou il en etait quand la bete s'ecarte,
+        // au lieu de redemander la durete entiere du bloc.
+        LivingEntity struck = aimedEntity(player, range());
+        if (struck != null) {
+            struck.hurt(skillDamage(player), entityDamage());
+            return true;
+        }
+
         BlockPos target = aimedBlock(player, range());
         if (target == null) {
             forgetTarget(data);
@@ -150,6 +184,31 @@ public abstract class MineRaySkill extends Skill {
     /** Oublie le bloc vise, pour que le prochain reparte de sa durete entiere. */
     private void forgetTarget(AbilityData data) {
         data.setHoldBlock(this, null);
+    }
+
+    /**
+     * La bete visee par un rayon, ou {@code null} s'il n'y en a pas avant le bloc.
+     *
+     * <p>Le plus proche des deux gagne : une bete derriere un mur ne compte pas, et un mur derriere
+     * une bete non plus. C'est ce qui fait que le rayon frappe la bete qu'on voit, et qu'il reprend
+     * son minage des qu'elle a bouge.
+     */
+    @Nullable
+    public static LivingEntity aimedEntity(Player player, double range) {
+        Vec3 eye = player.getEyePosition(1.0f);
+        Vec3 end = eye.add(player.getViewVector(1.0f).scale(range));
+
+        net.minecraft.world.phys.EntityHitResult hit =
+                cn.academy.ability.TargetingUtil.findEntityHit(player, eye, end, LIVING);
+        if (hit == null) return null;
+
+        BlockHitResult block = player.level().clip(
+                new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        if (block.getType() == HitResult.Type.BLOCK
+                && block.getLocation().distanceToSqr(eye) < hit.getLocation().distanceToSqr(eye)) {
+            return null;
+        }
+        return (LivingEntity) hit.getEntity();
     }
 
     /**

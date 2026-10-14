@@ -208,9 +208,18 @@ public final class MineRayEffect {
         return beamEnd(player, from, 1f);
     }
 
-    /** Le meme, avec les temps partiels du rendu — le regard tourne entre deux ticks. */
+    /**
+     * Le meme, avec les temps partiels du rendu — le regard tourne entre deux ticks.
+     *
+     * <p>Et il s'arrete sur la bete que le rayon frappe : le serveur ne mine plus rien derriere
+     * elle, le dessin ne doit donc pas la traverser. Le regard avance avec les temps partiels, la
+     * coupure aussi, sinon le rayon clignoterait d'une image a l'autre.
+     */
     private static Vec3 beamEnd(Player player, Vec3 from, float partialTick) {
-        return from.add(player.getViewVector(partialTick).scale(BEAM_LENGTH));
+        Vec3 end = from.add(player.getViewVector(partialTick).scale(BEAM_LENGTH));
+        net.minecraft.world.phys.EntityHitResult hit =
+                cn.academy.ability.TargetingUtil.findEntityHit(player, from, end, MineRaySkill.LIVING);
+        return hit == null ? end : hit.getLocation();
     }
 
     /**
@@ -224,8 +233,10 @@ public final class MineRayEffect {
     private static void sowLookSpark(Player player, MdRayKind kind) {
         if (RANDOM.nextDouble() >= sparkChance(kind)) return;
 
-        Vec3 at = player.getEyePosition(1f)
-                .add(player.getViewVector(1f).scale(RANDOM.nextDouble() * SPARK_REACH));
+        Vec3 eye = player.getEyePosition(1f);
+        // La bete arrete les etincelles comme le rayon : on n'en crache pas derriere elle.
+        double reach = Math.min(SPARK_REACH, eye.distanceTo(beamEnd(player, eye)));
+        Vec3 at = eye.add(player.getViewVector(1f).scale(RANDOM.nextDouble() * reach));
         MdSparks.spawn(at, spread(SPARK_SPEED), 0.0, sparkTexture(kind));
     }
 

@@ -26,6 +26,11 @@ public class MineRayBasicSkill extends MineRaySkill {
     }
 
     @Override
+    public float entityDamage() {
+        return 1f;
+    }
+
+    @Override
     public float speed(AbilityData data) {
         return lerp(0.2f, 0.4f, data.getSkillExp(this));
     }
