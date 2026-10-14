@@ -21,6 +21,23 @@ class JetEngineVisualsTest {
     private static final double EPSILON = 1e-6;
 
     @Test
+    @DisplayName("la marque recule sous ce qu'on vise quand on vise en l'air")
+    void laMarqueReculeSousLePlafond() {
+        // L'onde est un carre HORIZONTAL qui monte : posee sur la face du dessous d'un plafond,
+        // elle entrait dans le bloc. Le point de la marque recule donc, le long du regard, de ce
+        // que l'onde monte au plus — et seulement vers le haut.
+        assertEquals(3.6 * 0.3, JetEngineVisuals.RISE_MAX, EPSILON, "un metre huit au plus");
+        assertEquals(JetEngineVisuals.RISE_MAX, JetEngineVisuals.markBackoff(1.0), EPSILON,
+                "droit vers le haut : toute la montee, et la marque arrive au plafond");
+        assertEquals(JetEngineVisuals.RISE_MAX / 2, JetEngineVisuals.markBackoff(0.5), EPSILON,
+                "a mi-hauteur, la moitie");
+        assertEquals(0.0, JetEngineVisuals.markBackoff(0.0), EPSILON,
+                "droit devant : l'impact est deja du bon cote d'un mur");
+        assertEquals(0.0, JetEngineVisuals.markBackoff(-1.0), EPSILON,
+                "vers le bas : c'est le sol qui porte la marque, la descendre la ferait flotter");
+    }
+
+    @Test
     @DisplayName("le cycle d'une onde vaut 3,6 seconde, et les trois ondes se relaient par tiers")
     void lesTroisOndesSeRelayent() {
         assertEquals(3.6, JetEngineVisuals.CYCLE, EPSILON);

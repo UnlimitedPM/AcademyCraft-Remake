@@ -90,7 +90,12 @@ public final class JetEngineEffect {
         if (markAt == null) markTicks = 0;
         else markTicks++;
 
-        markAt = TargetingUtil.findImpactPoint(player, JetEngineSkill.AIM_RANGE);
+        // Le point vise, recule d'un rien vers le tireur quand on vise en l'air : l'onde est un
+        // carre horizontal qui monte, donc posee sur la face d'un plafond elle entrait dans le
+        // bloc. Voir JetEngineVisuals.markBackoff.
+        Vec3 look = player.getViewVector(1f);
+        Vec3 impact = TargetingUtil.findImpactPoint(player, JetEngineSkill.AIM_RANGE);
+        markAt = impact.subtract(look.scale(JetEngineVisuals.markBackoff(look.y)));
     }
 
     /** Le vol, annonce par le serveur : le bouclier, et la trainee de plasma. */

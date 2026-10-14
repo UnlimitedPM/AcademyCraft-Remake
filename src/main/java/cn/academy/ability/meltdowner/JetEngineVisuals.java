@@ -39,6 +39,14 @@ public final class JetEngineVisuals {
     /** Hauteur gagnee par seconde, en blocs : trente centimetres. */
     public static final double RISE_PER_SECOND = 0.3;
 
+    /**
+     * Ce qu'une onde monte au plus : tout son cycle a cette vitesse, soit un metre huit.
+     *
+     * <p>C'est la hauteur a laquelle elle atteint le plafond qu'elle vise — voir
+     * {@link #markBackoff}.
+     */
+    public static final double RISE_MAX = CYCLE * RISE_PER_SECOND;
+
     /** Duree du fondu d'entree, puis du fondu de sortie, en secondes. */
     public static final double FADE_IN = 1.6;
     public static final double FADE_OUT = 1.6;
@@ -85,6 +93,26 @@ public final class JetEngineVisuals {
      */
     public static boolean showsMark(String skill, boolean sustained) {
         return sustained && SKILL.equals(skill);
+    }
+
+    /**
+     * De combien reculer le point de la marque, le long du regard, pour qu'elle reste du bon cote
+     * de ce qu'on vise.
+     *
+     * <p>L'onde est un carre <b>horizontal</b>, et elle monte. Posee sur la face du dessous d'un
+     * plafond, elle entrait donc dans le bloc — c'est ce que le joueur a vu : « quand je vise un
+     * plafond, la maintenant les vagues vertes qui montre vers ou on se dirige se mette dans le
+     * bloc qu'on vise au lieu de se mettre en dessous ». On recule le point de ce que l'onde monte
+     * au plus, ce qui la laisse juste sous la face visee, et <b>seulement quand on vise en
+     * l'air</b> : droit devant, l'impact est deja du bon cote d'un mur, et vers le bas c'est le sol
+     * qui porte la marque — la descendre la ferait flotter au-dessus du sol.
+     *
+     * @param lookY la composante verticale du regard, de -1 (droit vers le bas) a 1 (droit vers le
+     *              haut)
+     * @return la distance a retirer le long du regard, en blocs
+     */
+    public static double markBackoff(double lookY) {
+        return RISE_MAX * Math.max(0.0, lookY);
     }
 
     /**
