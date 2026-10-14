@@ -9,8 +9,14 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.PacketDistributor;
+
+import javax.annotation.Nullable;
 
 /**
  * Reacteur, portage de {@code JetEngine} : viser un point a douze blocs, et s'y faire
@@ -37,8 +43,30 @@ import net.minecraftforge.network.PacketDistributor;
  * A chaque tick du vol, l'original lancait un rayon entre la position precedente et la
  * nouvelle, et frappait le premier <b>vivant</b> rencontre pour 7 a 20 points. Traverser
  * une foule fait donc mal a tout le monde, et traverser une barque ne fait rien.
+ * * <h2>Ce qu'on ne traverse plus</h2>
  *
- * <h2>Paiement</h2>
+ * Les <b>blocs</b>, eux. L'original posait ses positions sans regarder par ou il passait, et
+ * c'est le bug que le joueur a retrouve tel quel : « si je vise un mur ou un plafond et qu'il
+ * n'y a pas de bloc derriere, je passe au travers ». La visee s'arrete pourtant bien sur la face
+ * — c'est ce que rend {@code getDest} de l'original, et ce que rend
+ * {@link TargetingUtil#findImpactPoint} — mais le vol continue sept ticks de plus, tout droit, et
+ * rien ne l'empechait donc de finir de l'autre cote d'un mur d'un bloc. Le vol s'arrete maintenant
+ * sur la face du premier bloc qu'il rencontre : viser un mur s'acheve sur le mur, et une cible
+ * dans l'air garde son elan.
+ *
+ * <h2>La chute qui suit</h2>
+ *
+ * Elle est gratuite, comme pour les quatre teleportations, l'acceleration de vecteur et la
+ * fermeture des ailes : le vol pose son porteur n'importe ou, donc il se tuait lui-meme en
+ * s'envoyant. C'est le meme « ne pas prendre de degats de chute apres la competence » que le
+ * joueur a demande ailleurs, avec les deux ticks de l'atterrissage qui vont avec — voir
+ * {@link AbilityData#protectFromFall}.
+ *
+ * <h2>Le bruitage</h2>
+ *
+ * Le son de l'acceleration de vecteur, en attendant mieux : le joueur l'a demande comme
+ * remplacement pour l'instant, donc c'est {@code vecmanip.vec_accel} qui sonne au depart du vol.
+ * * <h2>Paiement</h2>
  *
  * L'original payait au relachement (170 a 140 CP, 60 a 50 de surcout). Le port paie a
  * l'appui, comme toute competence tenue — le vol en herite donc meme si le joueur relache
@@ -74,6 +102,23 @@ public class JetEngineSkill extends Skill {
     /** Vitesse posee a chaque tick : la cible divisee par le temps de vol. */
     public static Vec3 flightVelocity(Vec3 start, Vec3 target) {
         return target.subtract(start).scale(1.0 / FLIGHT_TIME);
+    }
+
+    /**
+     * La face du premier bloc que le trajet du tick rencontre, ou {@code null} si la voie est
+     * libre.
+     *
+     * <p>C'est ce qui manquait au vol : l'original posait sa position sans rien regarder, donc un
+     * mur d'un bloc etait traverse des que la visee portait au-dela — le client, lui, resolvait
+     * ensuite la collision en poussant son porteur du cote ou il restait de la place, ce qui le
+     * faisait ressortir de l'autre cote. Pure geometrie : le serveur et le client s'en servent
+     * tous les deux, avec leur propre monde, et tombent donc d'accord au bloc pres.
+     */
+    @Nullable
+    public static Vec3 blockStop(Level level, Entity traveller, Vec3 previous, Vec3 next) {
+        BlockHitResult hit = level.clip(new ClipContext(previous, next,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, traveller));
+        return hit.getType() == HitResult.Type.BLOCK ? hit.getLocation() : null;
     }
 
     /** Degats de ce qu'on traverse : de 7 a 20 selon l'experience. */
@@ -145,6 +190,14 @@ public class JetEngineSkill extends Skill {
         data.setHoldPoint(this, TargetingUtil.findImpactPoint(player, AIM_RANGE));
         data.setHoldMark(this, heldTicks);
 
+        // La chute qui suit le vol est gratuite, comme apres les quatre teleportations : le vol
+        // pose son porteur n'importe ou, et il se tuait donc lui-meme en s'envoyant. Le drapeau
+        // couvre la fin du vol ET l'atterrissage, deux ticks poses compris.
+        data.protectFromFall();
+
+        // Le bruitage du depart — le son de l'acceleration de vecteur, en attendant mieux.
+        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_VEC_ACCEL, 0.35f);
+
         // 0,004 pour le vol, comme l'original. L'experience d'usage d'une competence tenue
         // se verse depuis son effet : le paquet ne voit pas ce qui s'est passe.
         data.addSkillExp(this, 0.004f);
@@ -167,7 +220,7 @@ public class JetEngineSkill extends Skill {
      *
      * Le repere de temps distingue les deux temps : tant qu'il n'y en a pas, la touche est
      * seulement tenue ; une fois pose, le tick du vol se compte a partir de lui, et le vol
-     * se termine au-dela de {@link #LIFETIME}.
+     * se termine au-dela de {@link #LIFETIME} — ou sur le premier bloc rencontre.
      */
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
@@ -177,8 +230,7 @@ public class JetEngineSkill extends Skill {
         int flightTick = heldTicks - releasedAt;
         if (flightTick > LIFETIME) return false;
 
-        fly(player, data, flightTick);
-        return true;
+        return fly(player, data, flightTick);
     }
 
     /**
@@ -194,15 +246,36 @@ public class JetEngineSkill extends Skill {
      * position ne s'interpole pas : la copie cliente sautait a chaque tick, et la vitesse posee
      * etait effacee par le teleport — le porteur s'arretait net sur sa cible au lieu de la
      * depasser, et gardait zero elan en sortant.
+     *
+     * <p>Rend faux quand le vol s'arrete : sur le premier bloc rencontre — voir
+     * {@link #blockStop} — ou a la fin de sa vie. Le porteur garde alors son elan, comme a la fin
+     * normale du vol.
      */
-    private void fly(Player player, AbilityData data, int flightTick) {
+    private boolean fly(Player player, AbilityData data, int flightTick) {
         Vec3 start = data.getHoldOrigin(this);
         Vec3 target = data.getHoldPoint(this);
-        if (start == null || target == null) return;
+        if (start == null || target == null) return false;
 
         // Le rayon part de la position du tick precedent, comme le `lastTickPos` de l'original.
         Vec3 previous = new Vec3(player.xo, player.yo, player.zo);
         Vec3 next = pathPosition(start, target, flightTick);
+
+        // Le premier bloc rencontre : on s'arrete sur sa face, sans le traverser. C'est le bug du
+        // vrai mod — viser un mur d'un bloc le traversait — et il se voit des qu'il n'y a rien
+        // derriere pour repousser le porteur.
+        //
+        // Le segment juge est celui de la TRAJECTOIRE, et non les `xo/yo/zo` du porteur : ces
+        // derniers sont ecrits par `setPos`, donc ils peuvent valoir la position qu'on vient de
+        // poser — un segment de longueur nulle, qui ne toucherait jamais rien. La trajectoire, elle,
+        // est la meme des deux cotes, ce qui fait tomber serveur et client d'accord au bloc pres.
+        Vec3 before = pathPosition(start, target, Math.max(0, flightTick - 1));
+        Vec3 stop = blockStop(player.level(), player, before, next);
+        if (stop != null) {
+            player.setPos(stop.x, stop.y, stop.z);
+            player.hurtMarked = true;
+            player.fallDistance = 0f;
+            return false;
+        }
 
         // L'original faisait descendre son porteur de sa monture au premier tick de vol.
         if (player.isPassenger()) player.stopRiding();
@@ -222,5 +295,6 @@ public class JetEngineSkill extends Skill {
                     scaled(flightDamage(data)));
             RadiationMarks.mark(living, data);
         }
+        return true;
     }
 }

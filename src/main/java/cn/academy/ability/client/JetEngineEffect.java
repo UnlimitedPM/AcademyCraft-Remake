@@ -114,6 +114,18 @@ public final class JetEngineEffect {
         // physique, un porteur au sol perdrait la moitie de son elan a la friction, et le
         // reacteur ne ressemblerait plus a ce qu'il est.
         Vec3 at = JetEngineSkill.pathPosition(flightStart, flightTarget, flightTick);
+
+        // Le premier bloc rencontre arrete le vol, comme chez le serveur : les deux posent la
+        // position, donc ils doivent s'arreter au meme bloc. Sans cela le client traverserait un
+        // mur que le serveur lui refuse, et la correction n'arriverait qu'a l'image suivante —
+        // c'est exactement ce qui faisait ressortir le porteur de l'autre cote d'un mur d'un bloc.
+        Vec3 stop = JetEngineSkill.blockStop(player.level(), player, player.position(), at);
+        if (stop != null) {
+            player.setPos(stop.x, stop.y, stop.z);
+            flightTick = -1;
+            return;
+        }
+
         player.setPos(at.x, at.y, at.z);
         // La quantite de mouvement est reposee a chaque tick, et rien ne l'efface a la fin :
         // c'est elle qui fait depasser la cible, et qui porte encore apres le quinzieme tick.

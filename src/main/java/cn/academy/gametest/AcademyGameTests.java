@@ -7711,7 +7711,11 @@ public final class AcademyGameTests {
         // sont creuses a la main, sinon la visee du relachement s'arrete au premier bloc et la
         // cible se confond avec le depart. Le monde des tests est sauvegarde, donc on nettoie
         // aussi ce qu'une execution ratee y a laisse.
-        for (int dz = -3; dz <= 15; dz++) {
+        //
+        // Le couloir va jusqu'a trente blocs, et pas quinze : le vol depasse sa cible de presque
+        // toute la distance visee, donc il va jusqu'a vingt-deux blocs. Trop court, il finirait
+        // sur le mur du fond — ce que le vol ne traverse plus, et ce que l'autre test verifie.
+        for (int dz = -3; dz <= 30; dz++) {
             for (int dx = -3; dx <= 3; dx++) {
                 for (int dy = -2; dy <= 3; dy++) {
                     level.setBlockAndUpdate(abs.offset(dx, dy, dz),
@@ -7770,6 +7774,89 @@ public final class AcademyGameTests {
         assertClose(helper, velocity.length(), player.getDeltaMovement().length(),
                 "le porteur garde son elan en sortant");
 
+        helper.succeed();
+    }
+
+    /**
+     * Le vol du reacteur ne traverse plus les murs.
+     *
+     * <p>C'est le bug que le joueur a retrouve tel quel dans l'original : « si je vise un mur ou un
+     * plafond et qu'il n'y a pas de bloc derriere, je passe au travers ». La visee, elle, s'arretait
+     * bien sur la face du mur — c'est le vol qui ne s'y arretait pas : il continuait sept ticks de
+     * plus, tout droit, et posait son porteur de l'autre cote.
+     *
+     * <p>Le test vise donc un mur d'un bloc, avec de l'air derriere lui : sans l'arret sur la face,
+     * le porteur finirait a 1,875 fois la distance visee, donc dans l'air de l'autre cote. C'est ce
+     * que la derniere assertion refuse — et la protection de chute est posee au meme moment que le
+     * vol, ce que le test verifie aussi.
+     */
+    @GameTest(template = "empty")
+    public static void leVolDuReacteurNeTraversePasLesMurs(GameTestHelper helper) {
+        var skill = cn.academy.ability.meltdowner.MeltdownerCategory.JET_ENGINE;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 195);
+
+        // Un couloir court, avec de l'air tout du long : le mur du fond est pose a la main.
+        for (int dz = -3; dz <= 25; dz++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dy = -2; dy <= 3; dy++) {
+                    level.setBlockAndUpdate(abs.offset(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+
+        // Le mur : huit blocs devant les yeux, donc DANS la portee de la visee — le vol vise sa
+        // face, et rien ne l'arrete ensuite sinon le bloc lui-meme.
+        int mur = 8;
+        for (int dx = -3; dx <= 3; dx++) {
+            for (int dy = -2; dy <= 3; dy++) {
+                level.setBlockAndUpdate(abs.offset(dx, dy, mur),
+                        net.minecraft.world.level.block.Blocks.STONE.defaultBlockState());
+            }
+        }
+
+        var player = ownPlayer(helper, "jet_wall");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+
+        assertFalse(helper, data.isProtectedFromFall(), "rien n'est encore pose");
+        assertTrue(helper, skill.onRelease(player, data, 10), "le relachement lance le vol");
+        assertTrue(helper, data.isProtectedFromFall(),
+                "et la chute qui suit le vol est gratuite, comme apres une teleportation");
+
+        net.minecraft.world.phys.Vec3 start = data.getHoldOrigin(skill);
+        net.minecraft.world.phys.Vec3 target = data.getHoldPoint(skill);
+        assertTrue(helper, start != null && target != null, "les deux bouts sont poses");
+        assertTrue(helper, target.distanceTo(start) < 9.0,
+                "la visee s'arrete sur la face du mur : " + target.distanceTo(start));
+
+        // Le vol, tick apres tick : il doit s'arreter tout seul, et bien avant la fin de sa vie.
+        int tick = 11;
+        boolean volant = true;
+        while (volant && tick <= 10 + cn.academy.ability.meltdowner.JetEngineSkill.LIFETIME) {
+            volant = skill.onHoldTick(player, data, tick);
+            tick++;
+        }
+        assertFalse(helper, volant, "le vol s'arrete sur le mur");
+        assertTrue(helper, tick <= 20,
+                "et il s'arrete tot, sur la face : tick " + tick);
+
+        // Le porteur est sur la face AVANT du mur, et pas dedans ni derriere : la face est a
+        // `mur` blocs du depart, et le mur occupe le bloc suivant.
+        double face = abs.getZ() + mur;
+        double z = player.getZ();
+        assertTrue(helper, z < face + 0.05,
+                "le porteur ne traverse pas : z=" + z + " contre la face a " + face);
+        assertTrue(helper, z > face - 1.5,
+                "et il est bien arrive au mur : z=" + z);
+
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(gone -> gone.forgetSkill(skill));
         helper.succeed();
     }
 
