@@ -268,28 +268,28 @@ public class MdEffects {
         double[] side = view == null ? null : cross(axis, view);
         if (side == null) return;
 
-        // LE RUBAN EST FENDU EN DEUX, et c'est le seul ecart a l'original de tout ce fichier : chez lui
-        // un seul ruban large traversait le rayon, et sa moitie centrale — celle qui est DERRIERE les
-        // tubes — ne se voyait pas. Ici les tubes sont translucides et n'ecrivent pas la profondeur :
-        // cette moitie se voyait donc A TRAVERS eux, et le joueur l'a repere tout seul — « sur le rond
-        // de l'ogive, il y a un endroit vers la moitie du rond ou on voit plus la couleur de l'ogive en
-        // dessous que celle du dessus [...] je pense que c'est a cause du ruban qui se trouve derriere ».
-        // On ne peint donc que ce qui DEPASSE du rayon : l'interieur est de trop, et c'est aussi ce que
-        // le rayon cache de toute facon.
+        // LE RUBAN EST FENDU EN DEUX, et l'ordre de la texture avec : le pic de la lueur tombe sur le
+        // BORD du rayon et le fondu s'en va vers l'exterieur. Sans cela, le ruban n'aurait que la moitie
+        // faible de sa texture la ou on le voit, et il aurait l'air transparent — ce que le joueur a vu
+        // apres la premiere version, qui ne peignait que ce qui depasse : « la maintenant le rayon vert
+        // semi transparent rend transparent le ruban ». C'est le seul ecart a l'original de tout ce
+        // fichier : chez lui un seul ruban large traversait le rayon, et sa moitie centrale, celle qui
+        // est DERRIERE les tubes, ne se voyait pas — ici les tubes sont translucides et n'ecrivent pas
+        // la profondeur, donc elle se voyait A TRAVERS eux.
         double clipped = Math.min(hollow, half);
         if (clipped >= half) return;
-        float edge = (float) ((half - clipped) / (half * 2.0));
 
         VertexConsumer out = buffers.getBuffer(MdRenderType.of(texture));
-        strip(out, pose, camera, from, to, side, clipped, half, edge, 0f, alpha);
-        strip(out, pose, camera, from, to, side, -half, -clipped, 1f, 1f - edge, alpha);
+        strip(out, pose, camera, from, to, side, clipped, half, 0.5f, 0f, alpha);
+        strip(out, pose, camera, from, to, side, -half, -clipped, 1f, 0.5f, alpha);
     }
 
     /**
      * Une moitie de ruban : un quadrilatere entre deux decalages de largeur, d'un bout a l'autre.
      *
-     * <p>Le {@code v} suit la largeur, du bord vers le milieu : c'est ce qui fait que la texture
-     * continue d'etre posee comme sur le ruban entier, alors qu'il n'en reste que les bords.
+     * <p>Le {@code v} suit la largeur : le bord du rayon prend le MILIEU de la texture — sa partie
+     * lumineuse — et le bord exterieur prend son bord, qui s'efface. C'est ce qui fait de la lueur une
+     * couronne posee contre le rayon plutot qu'une bande pale.
      */
     private static void strip(VertexConsumer out, PoseStack.Pose pose, Vec3 camera,
                               double[] from, double[] to, double[] side,
