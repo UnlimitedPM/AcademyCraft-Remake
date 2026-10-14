@@ -187,19 +187,26 @@ public class MdEffects {
         double cap = outer;
         double capIn = inner * HEAD_FIX;
 
-        // L'ORDRE est celui de l'original — `RendererRayComposite` ajoute la lueur, puis le COEUR,
-        // puis la GAINE — donc la gaine se peint en dernier et passe par-dessus le coeur, qu'elle
-        // teinte de son vert. Le port les avait dans l'autre sens, et le joueur voyait un blanc trop
-        // cru aux deux bouts : « la face arriere de l'ogive (le plat) est visible en blanc et pas en
-        // vert comme le reste ».
+        // LES TUBES : le coeur d'abord, la gaine ensuite. C'est l'ordre de l'original
+        // (`RendererRayComposite` ajoute la lueur, puis le COEUR, puis la GAINE), et c'est la gaine qui
+        // teinte le coeur de son vert — ce qu'on veut d'un faisceau.
         cylinder(tubes, pose, camera, add(from, axis, inner), to, u, v, inner, kind.inner(), alpha);
-        head(tubes, pose, camera, add(from, axis, inner), u, v, axis, -1.0, inner, capIn,
-                kind.inner(), alpha);
-        head(tubes, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
         cylinder(tubes, pose, camera, add(from, axis, outer), to, u, v, outer, kind.outer(), alpha);
+
+        // PUIS LES OGIVES, dans l'autre sens : la gaine d'abord, le COEUR EN DERNIER. Les deux bouts
+        // sont donc du blanc franc et non du blanc teinte de vert, et c'est le seul endroit ou le coeur
+        // repasse devant. Le joueur, apres avoir vu la version ou la gaine passait par-dessus les deux :
+        // « c'est l'ogive blanche (celle du dedans) qui est trop foncee ». Une ogive est petite, et les
+        // vingt pour cent de vert d'une gaine suffisent a l'eteindre.
         head(tubes, pose, camera, add(from, axis, outer), u, v, axis, -1.0, outer, cap,
                 kind.outer(), alpha);
         head(tubes, pose, camera, to, u, v, axis, 1.0, outer, cap, kind.outer(), alpha);
+        head(tubes, pose, camera, add(from, axis, inner), u, v, axis, -1.0, inner, capIn,
+                kind.inner(), alpha);
+        // L'ogive du coeur est deux pour cent plus courte que celle de la gaine (le
+        // `cylinderIn.headFix = 0.98` de l'original) : sa pointe s'arrete donc un peu avant la verte,
+        // et le tout dernier bout du faisceau reste vert.
+        head(tubes, pose, camera, to, u, v, axis, 1.0, inner, capIn, kind.inner(), alpha);
     }
 
     /** La lueur d'un rayon : ses trois morceaux, poses bout a bout. */
