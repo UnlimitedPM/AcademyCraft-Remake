@@ -344,22 +344,6 @@ public record MdRayKind(String name,
         return this == BARRAGE;
     }
 
-    /**
-     * Ce rayon doit-il se dessiner EXACTEMENT sur le viseur de son tireur ?
-     *
-     * <p>Vrai pour le pre-rayon de la salve, et pour lui seul : c'est un trait de visee, il ne
-     * represente rien qui parte de la main, et le joueur l'a demande — « le laser par defaut ne va
-     * pas exactement sur mon viseur quand je tire dans le vide ». Les autres rayons gardent le
-     * decalage de la main, celui de l'original.
-     *
-     * <p>Voir {@code ArcView.ON_SIGHT} pour le decalage que cela demande, et
-     * {@link #viewOptimize()} pour le drapeau qui l'active en premier lieu : un rayon qui n'est
-     * pas optimise se dessine deja exactement ou il a ete annonce, et n'a donc pas besoin de ceci.
-     */
-    public boolean onSight() {
-        return this == BARRAGE_PRE_HIT || this == BARRAGE_PRE_MISS;
-    }
-
     /** Le genre qui porte ce nom, ou le petit rayon si le nom est inconnu. */
     public static MdRayKind byName(String name) {
         for (MdRayKind kind : all()) {
