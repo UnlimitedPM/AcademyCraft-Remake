@@ -48,6 +48,14 @@ public record CGuiHist(String id, int[] color, DoubleSupplier value, Supplier<St
     /** La hauteur qu'un histogramme prend dans le panneau d'infos, une fois mis a l'echelle. */
     static final double ADVANCE = BOX * BOX_SCALE;
 
+    /**
+     * Ce que sa boite remonte sous le curseur : le {@code blank(-30)} de l'original.
+     *
+     * <p>Les cinquante-cinq unites du haut de son image sont vides ; les remonter moitie moins que
+     * leur vraie hauteur suffit a coller le dessin au curseur au lieu de laisser un trou.
+     */
+    static final double BOX_LIFT = 30;
+
     /** La couleur du tampon : {@code 0xff25c4ff} chez l'original. */
     private static final int ENERGY_COLOR = 0x25C4FF;
 

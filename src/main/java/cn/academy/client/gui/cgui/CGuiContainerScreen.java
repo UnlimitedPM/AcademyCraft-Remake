@@ -113,7 +113,6 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     protected CWidget property(String key, String value) {
         CWidget line = new CWidget("line" + (int) infoY);
         line.transform.x = 6;
-        line.transform.y = infoY;
         line.transform.width = 90;
         line.transform.height = 8;
 
@@ -138,14 +137,28 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         amount.text.color(255, 255, 255);
         line.add(amount);
 
-        info.add(line);
-        infoY += 8;
+        element(line);
         return amount;
     }
 
     /** Un peu de blanc entre deux renseignements. */
     protected void blank(double height) {
         infoY += height;
+    }
+
+    /**
+     * Pose un element du panneau, puis avance le curseur : c'est l'{@code element()} de l'original.
+     *
+     * <p>Le y du widget, c'est le curseur ; ce qu'il fait avancer, c'est sa hauteur <b>une fois mise
+     * a l'echelle</b> — un histogramme de 210 unites dessine a quatre dixiemes n'en prend que 84. Le
+     * poser soi-meme sans passer par ici, c'est se tromper de vingt pixels : c'est ce qui est arrive
+     * au premier jet, ou la boite tombait sur la legende qui la suit.
+     */
+    private CWidget element(CWidget widget) {
+        widget.transform.y = infoY;
+        infoY += widget.transform.height * widget.transform.scale;
+        info.add(widget);
+        return widget;
     }
 
     /**
@@ -177,9 +190,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
             box.add(row);
         }
 
-        blank(-30);
-        info.add(box);
-        blank(CGuiHist.ADVANCE);
+        blank(-CGuiHist.BOX_LIFT);
+        element(box);
 
         for (int i = 0; i < elems.length; i++) {
             CWidget.TextBox value = legend(elems[i]);
@@ -195,7 +207,6 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     private CWidget.TextBox legend(CGuiHist elem) {
         CWidget line = new CWidget("hist" + (int) infoY);
         line.transform.x = 6;
-        line.transform.y = infoY;
         line.transform.width = 90;
         line.transform.height = 8;
 
@@ -232,8 +243,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         value.text.heightAlign = "CENTER";
         line.add(value);
 
-        info.add(line);
-        infoY += 8;
+        element(line);
         return value.text;
     }
 

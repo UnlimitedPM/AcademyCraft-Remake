@@ -127,16 +127,28 @@ public final class CGuiView {
     }
 
     public void draw(GuiGraphics graphics, double mouseX, double mouseY) {
-        // Le melange, a la main. L'original l'activait lui aussi — GL_BLEND, source sur un moins
-        // source — et il le FAUT : les textures du mod sont BLANCHES et c'est leur canal alpha qui
-        // porte tout le dessin. Mesure sur les fichiers : `line.png` plafonne a 71 sur 255,
-        // `parent_background.png` est un noir a moitie (128), `blend_quad.png` un halo qui s'efface
-        // de 255 a 7. Sans melange, tout sort en blanc opaque : un trait fin devient une barre
-        // pleine, et il ne reste plus aucune nuance entre les deux.
+        blend();
+        drawWidget(graphics, root, mouseX, mouseY);
+    }
+
+    /**
+     * Le melange, a poser avant <b>chaque</b> texture.
+     *
+     * <p>L'original l'activait lui aussi — GL_BLEND, source sur un moins source — et il le FAUT : les
+     * textures du mod sont BLANCHES et c'est leur canal alpha qui porte tout le dessin. Mesure sur
+     * les fichiers : `line.png` plafonne a 71 sur 255, `parent_background.png` est un noir a moitie
+     * (128), `blend_quad.png` un halo qui s'efface de 255 a 7. Sans melange, tout sort en blanc
+     * opaque : un trait fin devient une barre pleine, et il ne reste plus aucune nuance.
+     *
+     * <p>Et il faut le reposer chaque fois, parce que `GuiGraphics` COUPE le melange a la fin de
+     * chaque {@code blit} — verifie dans son code compile. L'activer une seule fois au debut du
+     * dessin ne tient donc pas : la premiere texture de page le coupe, et tout ce qui suit — le halo
+     * du panneau, ses deux bandes — se dessine en blanc opaque. C'est exactement ce que le joueur a
+     * vu avant ce correctif.
+     */
+    private static void blend() {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-
-        drawWidget(graphics, root, mouseX, mouseY);
     }
 
     /** Un widget, puis ses enfants — l'ordre du fichier, qui est celui du dessin. */
@@ -203,8 +215,9 @@ public final class CGuiView {
         CWidget.Frame frame = widget.frame;
         double margin = frame.margin;
 
-        ResourceLocation blend = ResourceLocation.tryParse(frame.blend);
-        if (blend != null) {
+        blend();
+        ResourceLocation halo = ResourceLocation.tryParse(frame.blend);
+        if (halo != null) {
             double[] xs = { x - margin, x, x + w, x + w + margin };
             double[] ys = { y - margin, y, y + h, y + h + margin };
 
@@ -219,7 +232,7 @@ public final class CGuiView {
                     int y1 = (int) Math.round(ys[row + 1]);
                     if (x1 <= x0 || y1 <= y0) continue;
 
-                    graphics.blit(blend, x0, y0, x1 - x0, y1 - y0,
+                    graphics.blit(halo, x0, y0, x1 - x0, y1 - y0,
                             col * QUAD, row * QUAD, QUAD, QUAD, TEXTURE, TEXTURE);
                 }
             }
@@ -231,6 +244,7 @@ public final class CGuiView {
             int lx = (int) Math.round(x - frame.lineMargin);
             int lw = (int) Math.round(w + frame.lineMargin * 2);
 
+            blend();
             graphics.blit(line, lx, (int) Math.round(y + frame.topY), lw,
                     (int) Math.round(frame.topHeight), 0f, 0f, 1, 1, 1, 1);
             graphics.blit(line, lx, (int) Math.round(y + h - frame.bottomInset), lw,
@@ -248,6 +262,7 @@ public final class CGuiView {
         // La texture entiere, etiree sur le rectangle : le fichier ne decoupe jamais ses images.
         // Passer 1 pour la taille de texture revient a demander ses coordonnees de zero a un, sans
         // avoir a connaitre ses dimensions — les pages des machines font 352 sur 374, les icones 48.
+        blend();
         graphics.blit(texture, x, y, w, h, 0f, 0f, 1, 1, 1, 1);
         graphics.setColor(1f, 1f, 1f, 1f);
     }

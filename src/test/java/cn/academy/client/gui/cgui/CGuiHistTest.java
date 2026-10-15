@@ -77,6 +77,10 @@ class CGuiHistTest {
         assertEquals(210, CGuiHist.BOX, EPS);
         assertEquals(0.4, CGuiHist.BOX_SCALE, EPS);
         assertEquals(84, CGuiHist.ADVANCE, EPS, "84 pixels dans le panneau, et non 210");
+        assertEquals(CGuiHist.BOX * CGuiHist.BOX_SCALE, CGuiHist.ADVANCE, EPS,
+                "c'est la regle qu'applique element() : sa hauteur une fois mise a l'echelle");
+        assertEquals(30, CGuiHist.BOX_LIFT, EPS,
+                "et le blank(-30) de l'original, qui la remonte sous le curseur");
         assertEquals(16, CGuiHist.BAR_WIDTH, EPS);
         assertEquals(120, CGuiHist.BAR_HEIGHT, EPS);
         assertEquals(56, CGuiHist.BAR_X, EPS, "la premiere barre");
