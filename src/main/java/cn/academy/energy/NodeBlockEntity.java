@@ -63,9 +63,6 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     /** Duree, en ticks, entre deux synchronisations de l'etat visuel du bloc. */
     private static final int SYNC_INTERVAL = 10;
 
-    /** Ce qu'un nom ou un mot de passe de noeud peut faire de caracteres, comme le champ de l'ecran. */
-    private static final int MAX_NAME = 16;
-
     /**
      * Duree, en ticks, entre deux recherches de Matrix.
      *
@@ -243,7 +240,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
 
     /** Le nom, tel que le joueur vient de le valider. */
     public void setNodeName(String value) {
-        String clean = clean(value);
+        String clean = ConfigText.clean(value);
         if (nodeName.equals(clean)) return;
         nodeName = clean;
         setChanged();
@@ -252,24 +249,11 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
 
     /** Le mot de passe, vide si le joueur l'efface. */
     public void setPassword(String value) {
-        String clean = clean(value);
+        String clean = ConfigText.clean(value);
         if (password.equals(clean)) return;
         password = clean;
         setChanged();
         pushToClient(level);
-    }
-
-    /**
-     * Nettoie ce qu'un joueur a tape.
-     *
-     * Le champ de l'ecran s'arrete de lui-meme a seize caracteres, mais rien n'oblige un client
-     * modifie a s'y tenir : c'est donc ici, sur le serveur, que la limite compte. Les espaces des
-     * deux bouts partent — un nom qui commence par une espace ne se lit pas dans le panneau.
-     */
-    private static String clean(String value) {
-        if (value == null) return "";
-        String trimmed = value.trim();
-        return trimmed.length() <= MAX_NAME ? trimmed : trimmed.substring(0, MAX_NAME);
     }
 
     // ------------------------------------------------------------------

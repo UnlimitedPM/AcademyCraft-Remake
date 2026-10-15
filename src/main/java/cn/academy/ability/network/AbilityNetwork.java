@@ -156,5 +156,11 @@ public class AbilityNetwork {
                 cn.academy.energy.network.NodeConfigPacket::encode,
                 cn.academy.energy.network.NodeConfigPacket::decode,
                 cn.academy.energy.network.NodeConfigPacket::handle);
+        // Et la meme chose pour le Matrix, dont le reseau porte un nom et un mot de passe : creer,
+        // renommer, changer le mot de passe — les trois messages de l'original.
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.MatrixConfigPacket.class,
+                cn.academy.energy.network.MatrixConfigPacket::encode,
+                cn.academy.energy.network.MatrixConfigPacket::decode,
+                cn.academy.energy.network.MatrixConfigPacket::handle);
     }
 }

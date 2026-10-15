@@ -81,7 +81,12 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
                 level.setBlock(target, state.setValue(PART, p), 3);
             }
         }
-    }
+        // Le poseur est retenu, comme sur le noeud : lui seul creera le reseau, le renommera et
+        // changera son mot de passe.
+        if (placer instanceof Player player
+                && level.getBlockEntity(pos) instanceof MatrixBlockEntity matrix) {
+            matrix.setPlacer(player);
+        }    }
 
     /**
      * Position de la partie d'ancrage ({@code B_F_R}) du multi-bloc, vue depuis
@@ -108,6 +113,11 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
             BlockPos anchor = anchorOf(pos, state);
             if (level.getBlockEntity(anchor) instanceof MatrixBlockEntity matrix) {
+                // Un Matrix sans poseur n'appartient a personne : celui qui l'ouvre le premier devient
+                // son proprietaire. Sans cette ligne, un Matrix pose avant que le port ne retienne le
+                // poseur — ou pose par une commande — n'aurait jamais de reseau a lui.
+                if (matrix.getPlacer().isEmpty()) matrix.setPlacer(player);
+
                 NetworkHooks.openScreen(serverPlayer, matrix, buf -> buf.writeBlockPos(anchor));
             }
         }

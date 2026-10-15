@@ -1,76 +1,135 @@
 package cn.academy;
 
+import cn.academy.client.gui.cgui.CGuiContainerScreen;
+import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * Ecran du Matrix sans fil : les quatre emplacements a gauche, l'etat du reseau
- * a droite.
+ * Ecran du Matrix sans fil : ses quatre emplacements, et le reseau qu'il porte.
  *
- * Rendu procedural, comme {@link SolarGenScreen}, en attendant une texture.
+ * <p>La page de l'inventaire, comme les autres machines — l'original appelait
+ * {@code InventoryPage("matrix")}, soit {@code page_inv} avec le fond du Matrix. Et quatre
+ * emplacements aux positions de {@code ContainerMatrix} : trois plaques de contrainte et un coeur.
+ *
+ * <h2>Un panneau a deux formes</h2>
+ *
+ * <p>C'est la premiere machine dont le panneau <b>change de forme</b>. Un Matrix sans nom de reseau
+ * n'en a pas encore : il propose alors de le creer — deux champs vides et un bouton « INIT ». Une
+ * fois le reseau ne, les memes champs montrent son nom et son mot de passe, et se modifient. C'est ce
+ * que l'original rebatissait apres chaque reponse du serveur, et c'est ce que fait {@code rebuild()}
+ * ici : le panneau se rebatit au moment ou l'etat change, et pas avant.
+ *
+ * <p>Le reste du panneau suit l'original : un histogramme de la charge sur la capacite, puis le
+ * poseur, la portee et la bande passante.
+ *
+ * <h2>Ce qui reste dehors</h2>
+ *
+ * <p>Le mot de passe du reseau n'ouvre encore rien : le noeud du port cherche son Matrix tout seul et
+ * ne demande rien a personne. Le champ existe, se garde et se montre — mais la regle qui ferait
+ * entrer un noeud dans un reseau protege reste a ecrire, et elle changera le raccordement de tout le
+ * monde.
  */
-public class MatrixScreen extends AbstractContainerScreen<MatrixMenu> {
+public class MatrixScreen extends CGuiContainerScreen<MatrixMenu> {
 
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int SLOT_BG = 0xFF8B8B8B;
-    private static final int TEXT = 0x404040;
-    private static final int OK = 0x2E7D32;
-    private static final int OFF = 0x9E2B25;
+    /** Ce qu'un Matrix sans poseur affiche a sa place. */
+    private static final String NONE = "-";
+
+    /** Le champ du poseur, et les deux du reseau : relus a chaque image. */
+    private CWidget ownerField;
+    private CWidget ssidField;
+    private CWidget passwordField;
+
+    /** Ce que le panneau montrait quand il a ete bati : c'est ce qui dit s'il faut le rebatir. */
+    private boolean shownInitialized;
+    private boolean shownOwner;
+    private int shownCapacity;
 
     public MatrixScreen(MatrixMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
-        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        int x = (width - imageWidth) / 2;
-        int y = (height - imageHeight) / 2;
+    protected void build(CGuiContainerScreen<MatrixMenu> screen) {
+        inventoryPage("matrix");
 
-        graphics.fill(x, y, x + imageWidth, y + imageHeight, PANEL);
+        histogram(CGuiHist.capacity(menu::load, menu.getCapacity()));
 
-        // Fond des quatre emplacements du Matrix.
-        for (int slot = 0; slot < 3; slot++) {
-            slotBackground(graphics, x + 53 + slot * 18, y + 35);
-        }
-        slotBackground(graphics, x + 125, y + 35);
-    }
+        seplineInfo();
+        ownerField = property(label("prop.owner"), NONE).child("value");
+        property(label("prop.range"), Integer.toString(menu.getRange()));
+        property(label("prop.bandwidth"), menu.getBandwidth() + " IF/T");
 
-    private void slotBackground(GuiGraphics graphics, int x, int y) {
-        graphics.fill(x - 1, y - 1, x + 17, y + 17, SLOT_BG);
-        graphics.fill(x, y, x + 16, y + 16, 0xFF373737);
-    }
+        // L'etat du moment : c'est lui qui dit a frame() si le panneau est encore d'actualite.
+        shownInitialized = menu.initialized();
+        shownOwner = menu.isOwner();
+        shownCapacity = menu.getCapacity();
 
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-    }
+        if (shownInitialized) {
+            sepline("wireless_info");
 
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title, 8, 6, TEXT, false);
+            // Le nom du reseau se change chez son poseur, et se lit chez les autres. Le mot de passe,
+            // lui, ne se montre qu'a lui — masque, chez les autres.
+            ssidField = property(label("prop.ssid"), menu.ssid(), shownOwner ? menu::rename : null);
+            if (shownOwner) sepline("change_pass");
 
-        boolean working = menu.isWorking();
-        graphics.drawString(font, working ? "Actif" : "Inactif", 8, 20,
-                working ? OK : OFF, false);
+            passwordField = property(label("prop.password"), menu.password(),
+                    shownOwner ? menu::repassword : null);
+            CWidget hidden = passwordField.child("value");
+            if (hidden != null && hidden.text != null) hidden.text.doesEcho = true;
+        } else if (shownOwner) {
+            sepline("wireless_init");
 
-        if (working) {
-            graphics.drawString(font, "Coeur " + menu.getCoreLevel() + " / 3", 8, 44, TEXT, false);
-            graphics.drawString(font, "Portee " + menu.getRange() + " blocs", 8, 55, TEXT, false);
-            graphics.drawString(font, menu.getCapacity() + " noeuds max", 8, 66, TEXT, false);
-            graphics.drawString(font, menu.getBandwidth() + " / tick", 8, 77, TEXT, false);
+            // Deux champs vides : le nom qu'on va donner au reseau, et son mot de passe. Valider l'un
+            // ou l'autre cree le reseau, comme le bouton — l'original les laissait sans rien faire,
+            // mais un champ qui accepte la touche Entree pour ne rien faire est un piege.
+            ssidField = property(label("prop.ssid"), "", value -> createNetwork());
+            passwordField = property(label("prop.password"), "", value -> createNetwork(), true);
+            blank(1);
+            button("INIT", this::createNetwork);
         } else {
-            graphics.drawString(font, "Coeur + 3 plaques", 8, 44, TEXT, false);
-            graphics.drawString(font, "requis", 8, 55, TEXT, false);
+            sepline("wireless_noinit");
+        }
+    }
+
+    private static String label(String key) {
+        return Component.translatable("ac.gui.common." + key).getString();
+    }
+
+    /** Ce que le bouton INIT fait : ce que les deux champs portent devient le reseau. */
+    private void createNetwork() {
+        menu.initNetwork(content(ssidField), content(passwordField));
+    }
+
+    private static String content(CWidget field) {
+        return field == null || field.text == null ? "" : field.text.content;
+    }
+
+    @Override
+    protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
+        // Le panneau se rebatit quand la machine change de forme : un reseau qui vient de naitre
+        // remplace les deux champs vides et le bouton par son nom et son mot de passe. La capacite en
+        // fait partie, parce qu'elle est le maximum de l'histogramme et qu'un coeur insere la change.
+        if (menu.initialized() != shownInitialized || menu.isOwner() != shownOwner
+                || menu.getCapacity() != shownCapacity) {
+            rebuild();
+            return;
         }
 
-        graphics.drawString(font, "Tampon " + menu.getBuffer(), 96, 55, TEXT, false);
+        // Les valeurs se relisent tant qu'on ne les ecrit pas : c'est ainsi qu'une modification
+        // acceptee par le serveur finit par se voir, sans que l'ecran ait a la deviner.
+        refresh(ownerField, menu.owner().isEmpty() ? NONE : menu.owner());
+        if (shownInitialized) {
+            refresh(ssidField, menu.ssid());
+            refresh(passwordField, menu.password());
+        }
+    }
 
-        graphics.drawString(font, playerInventoryTitle, 8, inventoryLabelY, TEXT, false);
+    /** Reecrit la valeur d'un champ, sauf s'il a le clavier — on ne corrige pas ce qu'on tape. */
+    private void refresh(CWidget field, String value) {
+        if (field == null || field.text == null || isFocused(field)) return;
+        field.text.content = value;
     }
 }

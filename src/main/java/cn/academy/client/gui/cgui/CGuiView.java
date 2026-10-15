@@ -197,6 +197,15 @@ public final class CGuiView {
     private void drawWidget(GuiGraphics graphics, CWidget widget, double mouseX, double mouseY) {
         if (!widget.transform.doesDraw || !widget.transform.enabled) return;
 
+        // Un bouton s'allume sous le curseur. C'est le seul retour qu'il donne — il n'a pas de fond —
+        // et c'est ce que l'original faisait dans son FrameEvent : quatre cinquiemes d'intensite au
+        // repos, pleine lumiere sous la souris. Un widget qui se clique et qui porte du texte est un
+        // bouton ; les onglets, eux, s'allument par leur image et ne sont pas touches.
+        if (widget.text != null && clicks.containsKey(widget)) {
+            int lum = widget.isPointWithin(mouseX, mouseY) ? 255 : 204;
+            widget.text.color(lum, lum, lum);
+        }
+
         int x = (int) Math.round(widget.absX);
         int y = (int) Math.round(widget.absY);
         int w = (int) Math.round(widget.absW);

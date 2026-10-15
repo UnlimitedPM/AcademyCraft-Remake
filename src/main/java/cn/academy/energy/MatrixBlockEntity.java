@@ -27,6 +27,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.items.ItemStackHandler;
@@ -108,6 +109,30 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
 
     /** Melange les noeuds avant l'equilibrage, comme le {@code shuffle} d'origine. */
     private final Random shuffleRandom = new Random();
+
+    /**
+     * Le nom du reseau, vide tant que personne ne l'a cree.
+     *
+     * <p>C'est le {@code WirelessNet.getSSID} de l'original, et il porte a lui seul l'etat du
+     * Matrix : un SSID, c'est un reseau, et un Matrix sans SSID n'en a pas encore. C'est ce qui fait
+     * que l'ecran propose de le creer au lieu de le montrer.
+     */
+    private String ssid = "";
+
+    /** Le mot de passe du reseau : vide, tout le monde peut s'y raccorder. */
+    private String password = "";
+
+    /** Qui a pose le Matrix : lui seul cree le reseau, le renomme et change son mot de passe. */
+    private String placer = "";
+
+    /** Combien de noeuds le reseau porte, sur {@link #getCapacity()}. */
+    private int load;
+
+    /** Ce que le client a deja recu : ces quatre-la ne passent par aucun emplacement de donnee. */
+    private String pushedSsid = "";
+    private String pushedPassword = "";
+    private String pushedPlacer = "";
+    private int pushedLoad = -1;
 
     public MatrixBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MATRIX.get(), pos, state);
@@ -206,6 +231,112 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
     }
 
     // ------------------------------------------------------------------
+    // L'identite du reseau
+    // ------------------------------------------------------------------
+
+    /** Le nom du reseau, vide tant qu'il n'a pas ete cree. */
+    public String getSsid() {
+        return ssid;
+    }
+
+    /** Son mot de passe — celui qui le lit est deja passe par {@link #isOwner}. */
+    public String getPassword() {
+        return password;
+    }
+
+    /** Le nom de celui qui a pose le Matrix, vide tant que personne ne l'a pose. */
+    public String getPlacer() {
+        return placer;
+    }
+
+    /** Combien de noeuds le reseau porte. */
+    public int getLoad() {
+        return load;
+    }
+
+    /** Vrai quand le reseau a recu son nom : avant, l'ecran propose de le creer. */
+    public boolean isInitialized() {
+        return !ssid.isEmpty();
+    }
+
+    /** Vrai si ce joueur est celui qui a pose le Matrix : lui seul decide du reseau. */
+    public boolean isOwner(String playerName) {
+        return !placer.isEmpty() && placer.equals(playerName);
+    }
+
+    /** Retient qui a pose le Matrix. Le premier poseur gagne : le reseau ne change plus de main. */
+    public void setPlacer(Player player) {
+        if (!placer.isEmpty() || player == null) return;
+        placer = player.getGameProfile().getName();
+        setChanged();
+        pushToClient(level);
+    }
+
+    /**
+     * Cree le reseau : c'est le bouton « INIT » de l'original, qui n'existait qu'une fois.
+     *
+     * <p>Un SSID vide ne cree rien : sans nom, il n'y a pas de reseau, et l'ecran continuerait de
+     * proposer le bouton. C'est aussi ce qui distingue « pas encore cree » de « cree ».
+     */
+    public void initNetwork(String newSsid, String newPassword) {
+        String clean = ConfigText.clean(newSsid);
+        if (clean.isEmpty()) return;
+        ssid = clean;
+        password = ConfigText.clean(newPassword);
+        needsRelink = true;
+        setChanged();
+        pushToClient(level);
+    }
+
+    /** Le nouveau nom du reseau, une fois le reseau cree. */
+    public void setSsid(String value) {
+        String clean = ConfigText.clean(value);
+        if (clean.isEmpty() || ssid.equals(clean)) return;
+        ssid = clean;
+        setChanged();
+        pushToClient(level);
+    }
+
+    /** Et son nouveau mot de passe, vide pour l'enlever. */
+    public void setPassword(String value) {
+        String clean = ConfigText.clean(value);
+        if (password.equals(clean)) return;
+        password = clean;
+        setChanged();
+        pushToClient(level);
+    }
+
+    /** La charge, et rien d'autre : c'est {@link #refreshLinks} qui la connait. */
+    private void setLoad(int value) {
+        if (load == value) return;
+        load = value;
+        setChanged();
+        pushToClient(level);
+    }
+
+    /**
+     * Envoie au client ce que l'ecran montre et qui ne passe par aucun emplacement de donnee.
+     *
+     * <p>Le niveau du coeur, le nombre de plaques et le tampon traversent par des emplacements de
+     * donnee, parce que l'inventaire n'est pas une chose qu'on lit a distance. Le nom du reseau, son
+     * mot de passe, le poseur et la charge n'en ont pas : ils voyagent donc par la mise a jour de
+     * bloc, et seulement quand l'un des quatre a bouge.
+     */
+    private void pushToClient(Level level) {
+        if (level == null || level.isClientSide) return;
+        if (ssid.equals(pushedSsid) && password.equals(pushedPassword)
+                && placer.equals(pushedPlacer) && load == pushedLoad) {
+            return;
+        }
+
+        pushedSsid = ssid;
+        pushedPassword = password;
+        pushedPlacer = placer;
+        pushedLoad = load;
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
+    }
+
+    // ------------------------------------------------------------------
     // Tick
     // ------------------------------------------------------------------
 
@@ -259,6 +390,9 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
             NodeBlockEntity node = nodeAt(level, nodePos);
             if (node != null) node.setConnected(true);
         }
+
+        // Ce qui reste raccorde apres ce tri : c'est la charge que l'ecran montre sur la capacite.
+        setLoad(valid.size());
     }
 
     /**
@@ -298,6 +432,10 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
         super.saveAdditional(tag);
         tag.put("inventory", inventory.serializeNBT());
         tag.putDouble("buffer", buffer);
+        tag.putString("ssid", ssid);
+        tag.putString("password", password);
+        tag.putString("placer", placer);
+        tag.putInt("load", load);
     }
 
     @Override
@@ -305,6 +443,10 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
         super.load(tag);
         inventory.deserializeNBT(tag.getCompound("inventory"));
         buffer = tag.getDouble("buffer");
+        ssid = tag.getString("ssid");
+        password = tag.getString("password");
+        placer = tag.getString("placer");
+        load = tag.getInt("load");
         needsRelink = true;
     }
 

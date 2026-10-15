@@ -527,6 +527,50 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Le reseau d'un Matrix : son nom, son mot de passe, son poseur — et la regle du premier poseur.
+     *
+     * C'est ce que l'ecran montre en deux formes : un Matrix sans nom de reseau n'en a pas encore, et
+     * propose de le creer ; une fois cree, il affiche son nom et son mot de passe. Les deux vivent
+     * donc dans le bloc, doivent survivre a une sauvegarde, et n'appartiennent qu'a un seul joueur.
+     */
+    @GameTest(template = "empty")
+    public static void matrixKeepsItsNetwork(GameTestHelper helper) {
+        MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));
+
+        assertFalse(helper, matrix.isInitialized(), "aucun reseau avant l'initialisation");
+        assertValue(helper, "", matrix.getSsid(), "nom de reseau par defaut");
+
+        // Un nom vide ne cree rien : sans nom, il n'y a pas de reseau, et l'ecran continuerait de
+        // proposer le bouton.
+        matrix.initNetwork("   ", "secret");
+        assertFalse(helper, matrix.isInitialized(), "un nom vide ne cree pas de reseau");
+
+        // Et les espaces des deux bouts partent, comme pour le nom d'un noeud.
+        matrix.initNetwork("  Maison  ", "secret");
+        assertTrue(helper, matrix.isInitialized(), "le reseau est cree");
+        assertValue(helper, "Maison", matrix.getSsid(), "le nom est nettoye");
+
+        var owner = ownPlayer(helper, "PoseurDuMatrix");
+        matrix.setPlacer(owner);
+        matrix.setSsid("Atelier");
+
+        var reloaded = new MatrixBlockEntity(helper.absolutePos(new BlockPos(1, 1, 1)),
+                helper.getBlockState(new BlockPos(1, 1, 1)));
+        reloaded.load(matrix.saveWithoutMetadata());
+
+        assertValue(helper, "Atelier", reloaded.getSsid(), "nom apres rechargement");
+        assertValue(helper, "secret", reloaded.getPassword(), "mot de passe apres rechargement");
+
+        assertTrue(helper, reloaded.isOwner("PoseurDuMatrix"), "le poseur est proprietaire");
+        assertFalse(helper, reloaded.isOwner("QuelquUnDAutre"), "un autre joueur non");
+
+        // Le reseau ne change plus de main : le premier poseur reste le proprietaire.
+        reloaded.setPlacer(ownPlayer(helper, "QuelquUnDAutre"));
+        assertTrue(helper, reloaded.isOwner("PoseurDuMatrix"), "le premier poseur gagne");
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void matrixNeedsACoreAndThreePlates(GameTestHelper helper) {
         MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));

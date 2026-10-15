@@ -216,6 +216,52 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         return view != null && view.focused() == widget;
     }
 
+    /**
+     * Un bouton : du texte au milieu du panneau, qui s'allume sous le curseur et fait ce qu'on lui dit.
+     *
+     * <p>C'est le {@code button} de l'original, et il n'a <b>pas de fond</b> : sa largeur est celle de
+     * son texte, cinquante unites au minimum, et son seul retour visuel est sa luminosite — quatre
+     * cinquiemes au repos, pleine sous le curseur. C'est peu, et c'est ce que l'original faisait ;
+     * l'allumage, lui, se fait au dessin, dans {@link CGuiView}.
+     */
+    protected void button(String text, Runnable action) {
+        CWidget widget = new CWidget("button");
+        widget.transform.alignWidth = "CENTER";
+        widget.transform.width = Math.max(50, font.width(text) + 5);
+        widget.transform.height = 8;
+
+        widget.text = new CWidget.TextBox();
+        widget.text.content = text;
+        widget.text.align = "CENTER";
+        widget.text.heightAlign = "CENTER";
+
+        element(widget);
+        if (view != null) view.onClick(widget, action);
+    }
+
+    /**
+     * Rebatit le panneau d'infos, et lui seul.
+     *
+     * <p>C'est ce que l'original appelait {@code infoPage.reset()} : certaines machines
+     * <b>changent de forme</b> — le Matrix ne montre ses deux champs de reseau qu'une fois le reseau
+     * cree — et un panneau dont les lignes dependent de l'etat ne peut pas etre bati une fois pour
+     * toutes a l'ouverture. Les pages, elles, ne bougent pas : elles ne sont pas touchees.
+     *
+     * <p>Le placement est refait dans la foulee : les widgets qui viennent de naitre n'ont pas encore
+     * de position a l'ecran, et les dessiner avant de les poser les poserait tous au coin.
+     */
+    protected void rebuild() {
+        info.children().clear();
+        readings.clear();
+        infoY = 10;
+        build(this);
+        CGuiContainerLayout.info(info, infoY);
+
+        if (view != null) {
+            view.place(leftPos, topPos, CGuiContainerLayout.WIDTH, CGuiContainerLayout.HEIGHT);
+        }
+    }
+
     /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
     protected CWidget widget(String name) {
         return view == null ? null : view.find(name);
