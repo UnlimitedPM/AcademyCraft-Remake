@@ -917,6 +917,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         surface.texture.green = 0;
         surface.texture.blue = 0;
         surface.texture.alpha = 0;
+
+        // Le contenu prend la BOITE DE LA PAGE. Sans cela il n'a ni largeur ni hauteur — c'est le
+        // defaut d'un widget neuf — et ses textes, qui s'accrochent au CENTRE de leur parent, se
+        // posaient alors sur le coin haut-gauche de la page : ceux dont le y est negatif, c'est-a-dire
+        // le nom, le niveau et la DESCRIPTION, tombaient au-dessus du bord et ne se voyaient pas. Le
+        // joueur l'a dit ainsi : « quand je click sur un pouvoir, je n'ai pas la description ».
+        content.transform.width = PAGE_WIDTH;
+        content.transform.height = PAGE_HEIGHT;
+        content.transform.alignWidth = "LEFT";
+        content.transform.alignHeight = "TOP";
         surface.add(content);
 
         page.add(surface);

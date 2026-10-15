@@ -1,11 +1,9 @@
 package cn.academy.client.gui.cgui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -323,41 +321,17 @@ public final class CGuiView {
         // L'axe des ordonnees du jeu descend, celui du repere tourne descend aussi : l'angle se
         // donne donc tel quel, sans le retourner.
         graphics.pose().mulPose(Axis.ZP.rotation((float) Math.atan2(dy, dx)));
+        // Le demi-pixel d'epaisseur, dans le repere tourne : c'est le CENTRE du trait qui doit tomber
+        // sur l'axe qui joint les deux noeuds, et non son bord. Arrondi, ce decalage posait le trait a
+        // cheval sur deux pixels, ce qui se voyait en marches d'escalier sur les diagonales.
+        graphics.pose().translate(0.0d, -width / 2.0d, 0.0d);
         graphics.pose().scale(stretch, squash, 1f);
 
-        blitSmooth(graphics, texture, whole, wholeWidth, line);
+        graphics.setColor(line.red / 255f, line.green / 255f, line.blue / 255f, line.alpha / 255f);
+        blend();
+        graphics.blit(texture, 0, 0, whole, wholeWidth, 0f, 0f, 1, 1, 1, 1);
+        graphics.setColor(1f, 1f, 1f, 1f);
         graphics.pose().popPose();
-    }
-
-    /**
-     * Un quad de texture LISSEE : mipmaps et filtrage lineaire.
-     *
-     * <p>Aucun dessin de vanilla ne fait cela : le jeu dessine ses interfaces au plus proche voisin.
-     * L'original, lui, chargeait {@code line.png} et les images des noeuds par {@code
-     * preloadMipmapTexture}, ce qui les lissait. C'est toute la difference que le joueur voyait sur
-     * les diagonales : les pixels doux du bord du trait se posaient juste, au lieu de former des
-     * marches d'escalier.
-     *
-     * <p>Le decalage de la demi-epaisseur se fait ici, dans le repere tourne du trait : c'est le
-     * CENTRE du quad qui doit tomber sur l'axe, et non son bord.
-     */
-    private static void blitSmooth(GuiGraphics graphics, ResourceLocation texture, int width,
-                                   int height, CWidget.Line line) {
-        RenderType type = CGuiShaders.smooth(texture);
-        graphics.pose().pushPose();
-        graphics.pose().translate(0.0d, -height / 2.0d, 0.0d);
-        Matrix4f matrix = graphics.pose().last().pose();
-        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
-        float red = line.red / 255f;
-        float green = line.green / 255f;
-        float blue = line.blue / 255f;
-        float alpha = line.alpha / 255f;
-        buffer.vertex(matrix, 0f, height, 0f).color(red, green, blue, alpha).uv(0f, 1f).endVertex();
-        buffer.vertex(matrix, width, height, 0f).color(red, green, blue, alpha).uv(1f, 1f).endVertex();
-        buffer.vertex(matrix, width, 0f, 0f).color(red, green, blue, alpha).uv(1f, 0f).endVertex();
-        buffer.vertex(matrix, 0f, 0f, 0f).color(red, green, blue, alpha).uv(0f, 0f).endVertex();
-        graphics.pose().popPose();
-        graphics.bufferSource().endBatch(type);
     }
 
     /**

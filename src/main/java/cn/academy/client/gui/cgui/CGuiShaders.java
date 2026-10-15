@@ -159,6 +159,24 @@ public final class CGuiShaders {
      * vu sur les diagonales : les pixels doux du bord du trait se posaient sur la grille au lieu de
      * se fondre.
      *
+     * <p>MIS DE COTE, ET POURQUOI. Le double {@code true} de l'etat de texture demandait des mipmaps,
+     * et ce sont {@code TextureUtil.prepareImage} et {@code AbstractTexture.setFilter} qui les
+     * fabriquent : ils REOUVRENT tous les niveaux avec des donnees nulles. La texture du trait se
+     * vidait donc au premier dessin, et les traits disparaissaient pour de bon. Le joueur l'a vu
+     * tout de suite : « je ne vois meme plus les lignes blanches entre les pouvoirs ». Le dessin du
+     * trait est revenu a {@code graphics.blit}, qui ne touche pas a la texture. Si un jour on veut
+     * vraiment le lissage de l'original, il faudra recharger l'image AVEC ses mipmaps, comme le
+     * faisait son {@code preloadMipmapTexture}, et non compter sur l'etat de texture.
+     *
+     * <p>MIS DE COTE, ET POURQUOI. Le double {@code true} de l'etat de texture demandait des mipmaps,
+     * et ce sont {@code TextureUtil.prepareImage} et {@code AbstractTexture.setFilter} qui les
+     * fabriquent : ils REOUVRENT tous les niveaux avec des donnees nulles. La texture du trait se
+     * vidait donc au premier dessin, et les traits disparaissaient pour de bon. Le joueur l'a vu tout
+     * de suite : « je ne vois meme plus les lignes blanches entre les pouvoirs ». Le dessin du trait
+     * est revenu a {@code graphics.blit}, qui ne touche pas a la texture. Si un jour on veut vraiment
+     * le lissage de l'original, il faudra recharger l'image AVEC ses mipmaps, comme le faisait son
+     * {@code preloadMipmapTexture}, et non compter sur l'etat de texture.
+     *
      * <p>Le type se garde par texture, comme les deux autres : c'est la texture qui porte le filtre.
      */
     public static RenderType smooth(ResourceLocation texture) {
@@ -167,7 +185,7 @@ public final class CGuiShaders {
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
                                 GameRenderer::getPositionTexColorShader))
-                        .setTextureState(new RenderStateShard.TextureStateShard(key, true, true))
+                        .setTextureState(new RenderStateShard.TextureStateShard(key, false, false))
                         .setTransparencyState(blending())
                         .setWriteMaskState(noDepthWrite())
                         .setCullState(new RenderStateShard.CullStateShard(false))

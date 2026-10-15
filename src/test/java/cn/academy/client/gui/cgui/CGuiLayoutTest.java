@@ -18,6 +18,56 @@ class CGuiLayoutTest {
 
     private static final double EPS = 1e-9;
 
+    /**
+     * Un texte sans boite s'accroche au centre de son parent : il faut donc que le parent AIT une
+     * boite.
+     *
+     * <p>C'est ce qui a cache la surface du developeur au joueur. Son contenu est un widget neuf,
+     * donc large et haut de ZERO, et ses textes se posaient alors sur son coin : ceux qui sont
+     * au-dessus du centre — le nom, le niveau et la description — tombaient au-dessus du bord de la
+     * page, et le joueur n'a rien vu. Il l'a dit ainsi : « quand je click sur un pouvoir, je n'ai pas
+     * la description ». Le parent doit donc prendre la boite de la page, et c'est ce que ceci fige :
+     * la meme chaine de widgets ne tombe pas au meme endroit selon que le parent a une boite ou non.
+     */
+    @Test
+    @DisplayName("un parent sans boite pose ses enfants sur son coin, pas sur son centre")
+    void unParentSansBoitePerdSesEnfants() {
+        CWidget page = new CWidget("page");
+        page.transform.width = 400;
+        page.transform.height = 187;
+
+        CWidget boxed = new CWidget("boxed");
+        boxed.transform.width = 400;
+        boxed.transform.height = 187;
+        boxed.add(texteSansBoite(-58));
+
+        CWidget empty = new CWidget("empty");
+        empty.add(texteSansBoite(-58));
+
+        page.add(boxed);
+        page.add(empty);
+        CGuiLayout.place(page, 0, 0, 400, 187, 1.0);
+
+        CWidget dansLaBoite = boxed.children().get(0);
+        assertEquals(200, dansLaBoite.absX, EPS, "le centre en largeur de la page");
+        assertEquals(93.5 - 58, dansLaBoite.absY, EPS, "le centre en hauteur, moins les 58 unites");
+
+        CWidget dansLeVide = empty.children().get(0);
+        assertEquals(0, dansLeVide.absX, EPS, "sans boite, le texte reste sur le bord");
+        assertEquals(-58, dansLeVide.absY, EPS, "et passe donc au-dessus du haut de la page");
+    }
+
+    /** Une ligne de texte centree : c'est la boite vide qui la fait s'accrocher au centre. */
+    private static CWidget texteSansBoite(double y) {
+        CWidget text = new CWidget("text");
+        text.transform.width = 0;
+        text.transform.height = 0;
+        text.transform.y = y;
+        text.transform.alignWidth = "CENTER";
+        text.transform.alignHeight = "CENTER";
+        return text;
+    }
+
     @Test
     @DisplayName("une barre qui monte prend le BAS de son image, et celle qui descend le HAUT")
     void laBarrePrendLeBonMorceau() {
