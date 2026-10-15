@@ -48,7 +48,14 @@ public class SolarGenScreen extends CGuiContainerScreen<SolarGenMenu> {
     @Override
     protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
         CWidget anim = widget("anim_frame");
-        if (anim == null || anim.texture == null) return;
+        if (anim == null) return;
+
+        // Le fichier de l'original ne lui donne aucune image : il dessinait son quad a la main, sans
+        // passer par un composant. On lui en pose donc une ici si elle manque — sans quoi le widget
+        // existe mais ne dessine rien, et le soleil ne se voit pas.
+        if (anim.texture == null) {
+            anim.texture = new CWidget.DrawTexture();
+        }
 
         anim.texture.texture = EFFECT;
         anim.texture.v0 = switch (menu.sky()) {
