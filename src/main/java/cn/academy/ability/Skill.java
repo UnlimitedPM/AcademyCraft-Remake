@@ -125,6 +125,32 @@ public abstract class Skill {
     }
 
     /**
+     * La description de la competence : ce qu'elle fait, en une ou deux phrases.
+     *
+     * <p>Elle vit a cote de son nom, dans les memes fichiers de langue, et c'est <b>derive</b> de la
+     * cle du nom plutot que fabrique a part : les cursus generiques se nomment dans leur propre
+     * dossier — {@code generic} — et une cle construite a la main les aurait cherches du cote de la
+     * categorie qui les accueille, ou il n'y a rien.
+     *
+     * <p>C'est le {@code skill.getDescription} de l'original, que son ecran affichait au-dessus des
+     * conditions, dans une surface ouverte au clic.
+     */
+    public String getDescriptionKey() {
+        String display = getDisplayKey();
+        return display.endsWith(NAME_SUFFIX)
+                ? display.substring(0, display.length() - NAME_SUFFIX.length()) + DESC_SUFFIX
+                : display + DESC_SUFFIX;
+    }
+
+    public Component getDescription() {
+        return Component.translatable(getDescriptionKey());
+    }
+
+    /** Le suffixe des cles de nom, et celui des cles de description. */
+    private static final String NAME_SUFFIX = ".name";
+    private static final String DESC_SUFFIX = ".desc";
+
+    /**
      * L'icone qui represente la competence : celle de l'arbre et de l'ecran des prereglages.
      *
      * <p>Elle vit avec les autres images du mod, sous le nom de sa categorie puis le sien :

@@ -112,6 +112,11 @@ class PortedSkillsTest {
             // La seule qui demande deux parentes : savoir marquer, et savoir traverser.
             Map.entry("teleporter.flesh_ripping",
                     List.of("teleporter.mark_teleport", "teleporter.penetrate_teleport")),
+            // ET LE SAUT PART DE LA LOCALISATION : `shiftTP.setParent(locTP, 0.5f)` dans CatTeleporter
+            // de l'original. Le port l'avait OUBLIE — la competence se retrouvait racine de l'arbre,
+            // donc dessinee sans trait vers son parent, et c'est le joueur qui l'a vu avant ce test :
+            // « il n'y a pas de trait qui relie le location teleport au shift teleport ».
+            Map.entry("teleporter.shift_tp", List.of("teleporter.location_teleport")),
             Map.entry("meltdowner.light_shield", List.of("meltdowner.electron_bomb")),
             Map.entry("meltdowner.rad_intensify", List.of("meltdowner.electron_bomb")),
             Map.entry("meltdowner.scatter_bomb", List.of("meltdowner.electron_bomb")),

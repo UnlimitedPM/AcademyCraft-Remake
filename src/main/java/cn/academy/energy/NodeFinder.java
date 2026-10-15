@@ -54,6 +54,21 @@ public final class NodeFinder {
         return found != null && data.linkUser(found.getBlockPos(), pos);
     }
 
+    /**
+     * Le nom du noeud auquel une machine est raccordee, ou {@code null} si elle ne l'est pas.
+     *
+     * <p>C'est ce que la console du developeur ecrit sous « Current Node: ». Le nom est celui que
+     * le joueur a donne au noeud (voir {@code NodeBlockEntity.getNodeName}) : sans noeud il n'y a
+     * rien a dire, et l'ecran ecrit « Not Connected ».
+     */
+    @Nullable
+    public static String nodeName(ServerLevel level, BlockPos machinePos) {
+        BlockPos nodePos = ImagNetworkData.get(level).nodeOf(machinePos);
+        if (nodePos == null) return null;
+        NodeBlockEntity node = nodeAt(level, nodePos);
+        return node == null ? null : node.getNodeName();
+    }
+
     /** Detache une machine de son noeud, quel qu'il soit. */
     public static void detach(ServerLevel level, BlockPos pos) {
         ImagNetworkData.get(level).unlinkUser(pos);

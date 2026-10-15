@@ -1,12 +1,15 @@
 package cn.academy.client.gui.cgui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Matrix4f;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -303,7 +306,12 @@ public final class CGuiView {
         double length = Math.sqrt(dx * dx + dy * dy);
         if (length < 1) return;
 
-        int thickness = Math.max(1, (int) Math.round(line.thickness * scale));
+        // L'epaisseur aussi a sa partie fractionnaire : arrondie, elle decalait le trait d'un
+        // demi-pixel et le bord du quad se voyait en marches d'escalier sur les diagonales, ce que le
+        // joueur a vu. Le quad se dessine sur une epaisseur entiere, et la pose le ramene a la bonne.
+        double width = Math.max(1.0d, line.thickness * scale);
+        int wholeWidth = Math.max(1, (int) Math.floor(width));
+        float squash = (float) (width / wholeWidth);
         // La longueur a sa partie fractionnaire : le trait qui pousse avancait donc d'un pixel entier a
         // la fois, et le joueur l'a vu — « parfois les lignes blanches augmentent d'un pixel en trop ».
         // Le quad se dessine sur sa longueur entiere, et l'echelle de la pose etire ce qu'il reste.
@@ -315,14 +323,41 @@ public final class CGuiView {
         // L'axe des ordonnees du jeu descend, celui du repere tourne descend aussi : l'angle se
         // donne donc tel quel, sans le retourner.
         graphics.pose().mulPose(Axis.ZP.rotation((float) Math.atan2(dy, dx)));
-        graphics.pose().scale(stretch, 1f, 1f);
+        graphics.pose().scale(stretch, squash, 1f);
 
-        graphics.setColor(line.red / 255f, line.green / 255f, line.blue / 255f, line.alpha / 255f);
-        blend();
-        graphics.blit(texture, 0, -thickness / 2, whole, thickness,
-                0f, 0f, 1, 1, 1, 1);
-        graphics.setColor(1f, 1f, 1f, 1f);
+        blitSmooth(graphics, texture, whole, wholeWidth, line);
         graphics.pose().popPose();
+    }
+
+    /**
+     * Un quad de texture LISSEE : mipmaps et filtrage lineaire.
+     *
+     * <p>Aucun dessin de vanilla ne fait cela : le jeu dessine ses interfaces au plus proche voisin.
+     * L'original, lui, chargeait {@code line.png} et les images des noeuds par {@code
+     * preloadMipmapTexture}, ce qui les lissait. C'est toute la difference que le joueur voyait sur
+     * les diagonales : les pixels doux du bord du trait se posaient juste, au lieu de former des
+     * marches d'escalier.
+     *
+     * <p>Le decalage de la demi-epaisseur se fait ici, dans le repere tourne du trait : c'est le
+     * CENTRE du quad qui doit tomber sur l'axe, et non son bord.
+     */
+    private static void blitSmooth(GuiGraphics graphics, ResourceLocation texture, int width,
+                                   int height, CWidget.Line line) {
+        RenderType type = CGuiShaders.smooth(texture);
+        graphics.pose().pushPose();
+        graphics.pose().translate(0.0d, -height / 2.0d, 0.0d);
+        Matrix4f matrix = graphics.pose().last().pose();
+        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
+        float red = line.red / 255f;
+        float green = line.green / 255f;
+        float blue = line.blue / 255f;
+        float alpha = line.alpha / 255f;
+        buffer.vertex(matrix, 0f, height, 0f).color(red, green, blue, alpha).uv(0f, 1f).endVertex();
+        buffer.vertex(matrix, width, height, 0f).color(red, green, blue, alpha).uv(1f, 1f).endVertex();
+        buffer.vertex(matrix, width, 0f, 0f).color(red, green, blue, alpha).uv(1f, 0f).endVertex();
+        buffer.vertex(matrix, 0f, 0f, 0f).color(red, green, blue, alpha).uv(0f, 0f).endVertex();
+        graphics.pose().popPose();
+        graphics.bufferSource().endBatch(type);
     }
 
     /**

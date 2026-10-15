@@ -111,6 +111,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double BUTTON_SCALE = 0.5;
     private static final double BUTTON_Y = 30.0;
 
+    /** La largeur dans laquelle la description d'une competence se coupe : celle de l'original. */
+    private static final int DESCRIPTION_WIDTH = 200;
+
     /** L'icone d'une surface : le meme disque, mais plus grand. */
     private static final String SURFACE_BACK = "academy:textures/guis/developer/skill_back.png";
     private static final double SURFACE_BACK_SIZE = 50.0;
@@ -312,10 +315,18 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         CWidget machine = panel == null ? null : panel.child("panel_machine");
         if (machine == null) return;
 
+        // « Current Node: » : la ligne du noeud, celle que l'original dessinait sous la barre
+        // d'energie. Le port la cachait entierement, si bien que le joueur ne savait pas a quoi sa
+        // machine etait raccordee â€” il l'a reclamee deux fois. Le libelle est dans la page ; c'est
+        // le nom du noeud, connu du seul serveur, qui manquait.
         CWidget wireless = machine.child("button_wireless");
-        if (wireless != null) wireless.transform.doesDraw = false;
-        CWidget wirelessText = machine.child("text_wireless");
-        if (wirelessText != null) wirelessText.transform.doesDraw = false;
+        CWidget node = wireless == null ? null : wireless.child("text_nodename");
+        if (node != null && node.text != null) {
+            String name = menu.getNodeName();
+            node.text.content = name.isEmpty()
+                    ? Component.translatable("academy.developer.not_connected").getString()
+                    : name;
+        }
 
         if (menu.isPortable()) {
             machine.transform.doesDraw = false;
@@ -656,20 +667,37 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      */
     private void openSkill(Skill skill) {
         AbilityData data = ClientAbilityData.get();
+        boolean learned = data.isSkillLearned(skill);
+
         CWidget content = new CWidget("skill");
         content.add(surfaceIcon(skill));
 
-        double y = -42;
+        double y = learned ? -46 : -58;
         content.add(text(skillName(skill), y, 255, 255, 255));
         y += 14;
 
-        if (data.isSkillLearned(skill)) {
+        if (learned) {
             content.add(text(Component.translatable("academy.developer.skill_exp",
                     (int) (data.getSkillExp(skill) * 100)).getString(), y, 161, 225, 255));
+            y += 14;
         } else {
             content.add(text(Component.translatable("academy.developer.not_learned").getString(),
                     y, 255, 85, 85));
-            y += 12;
+            y += 13;
+        }
+
+        // LA DESCRIPTION, DANS LES DEUX CAS. L'original ne la montrait qu'une fois la competence
+        // apprise : pour une competence qu'on ne connait pas encore, il n'affichait que ce qui manque.
+        // Le joueur a demande l'inverse — « quand on click sur une competence on est cense voir une
+        // petite description qui apparait pour avoir une idee de ce que fait le pouvoir » — et c'est
+        // plus utile avant qu'apres : c'est au moment de la choisir qu'on veut savoir ce qu'elle fait.
+        for (String line : wrap(skill.getDescription().getString(), DESCRIPTION_WIDTH)) {
+            content.add(text(line, y, 200, 200, 200));
+            y += 10;
+        }
+
+        if (!learned) {
+            y += 6;
             for (LearningCondition condition : skill.getConditions()) {
                 if (condition.accepts(data, skill, menu.getDeveloperType())) continue;
                 content.add(text(condition.describe(skill).getString(), y, 255, 88, 88));
@@ -677,12 +705,37 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             }
             y += 4;
             content.add(text(cost(skill), y, 170, 170, 170));
-            y += 18;
             if (canLearn(skill)) {
-                content.add(button(() -> click(DeveloperMenu.skillButton(skill))));
+                content.add(button(() -> click(DeveloperMenu.skillButton(skill)), BUTTON_Y));
             }
         }
         open(content);
+    }
+
+    /**
+     * Coupe une phrase en lignes qui tiennent dans la largeur donnee.
+     *
+     * <p>C'est le {@code drawSeperated} de l'original, qui decoupait la description a deux cents unites
+     * et la dessinait ligne a ligne. Le moteur n'a pas de texte multiligne — une boite porte une ligne —
+     * donc l'ecran coupe lui-meme et pose une boite par ligne. La coupe se fait sur les espaces, jamais
+     * au milieu d'un mot, et mesure avec la vraie police : c'est la seule facon de savoir ou une ligne
+     * deborde vraiment.
+     */
+    private List<String> wrap(String content, int maxWidth) {
+        List<String> lines = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+
+        for (String word : content.split(" ")) {
+            String candidate = current.length() == 0 ? word : current + " " + word;
+            if (current.length() > 0 && font.width(candidate) > maxWidth) {
+                lines.add(current.toString());
+                current = new StringBuilder(word);
+            } else {
+                current = new StringBuilder(candidate);
+            }
+        }
+        if (current.length() > 0) lines.add(current.toString());
+        return lines;
     }
 
     /** La surface de la montee de niveau : ce que le palier suivant coute, et de quoi le payer. */
@@ -706,7 +759,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (menu.getEnergyStored() >= menu.getCostFor(index)) {
             // Le bouton de la montee de niveau porte l'identifiant de sa CATEGORIE : c'est ainsi que le
             // menu les distingue des competences, qui commencent a cent.
-            content.add(button(() -> click(index)));
+            content.add(button(() -> click(index), BUTTON_Y));
         }
         open(content);
     }
@@ -729,7 +782,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         content.add(text(Component.translatable("academy.developer.reset.tooltip").getString(),
                 y, 200, 200, 200));
         y += 18;
-        content.add(button(() -> click(DeveloperMenu.RESET_BUTTON)));
+        content.add(button(() -> click(DeveloperMenu.RESET_BUTTON), BUTTON_Y));
         open(content);
     }
 
@@ -769,13 +822,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * survole pas, blanc quand on le survole. Cliquer ferme la surface et fait ce qu'il a a faire — dans
      * cet ordre, pour que l'action parte sur un ecran encore en place.
      */
-    private CWidget button(Runnable action) {
+    private CWidget button(Runnable action, double y) {
         CWidget widget = new CWidget("button");
         widget.transform.width = BUTTON_WIDTH;
         widget.transform.height = BUTTON_HEIGHT;
         widget.transform.scale = BUTTON_SCALE;
         widget.transform.x = 0;
-        widget.transform.y = BUTTON_Y;
+        widget.transform.y = y;
         widget.transform.alignWidth = "CENTER";
         widget.transform.alignHeight = "CENTER";
 

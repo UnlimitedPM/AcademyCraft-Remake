@@ -69,6 +69,13 @@ public class TeleporterCategory extends Category {
         // port a deux parentes.
         LOCATION_TELEPORT.setParent(PENETRATE_TELEPORT, 0.8f);
         LOCATION_TELEPORT.addDependency(MARK_TELEPORT, 0.8f);
+
+        // ET SHIFT PART DE LOCATION : c'est l'original qui le dit — `shiftTP.setParent(locTP, 0.5f)`
+        // dans CatTeleporter — et le port l'avait OUBLIE. La faute ne se voyait pas dans le code :
+        // shift_teleport se retrouvait racine de l'arbre, donc dessine sans trait vers son parent, et
+        // le joueur l'a vu avant le test : « il n'y a pas de trait qui relie le location teleport au
+        // shift teleport ». Un test fige maintenant la parente de chaque competence.
+        SHIFT_TELEPORT.setParent(LOCATION_TELEPORT, 0.5f);
         // La fluctuation d'espace descend du saut, et l'original la liait SANS seuil : l'avoir
         // appris suffisait. Elle ne fait rien toute seule — elle augmente les coups critiques de
         // toutes les autres teleportations (voir TeleportCrits).

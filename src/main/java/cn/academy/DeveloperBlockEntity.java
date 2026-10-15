@@ -108,6 +108,15 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
 
     private boolean linked;
 
+    /**
+     * Le nom du noeud raccorde, celui que la console affiche sous « Current Node: ».
+     *
+     * <p>Vide quand il n'y a pas de noeud. Il voyage avec le reste de l'etat parce que c'est le
+     * SERVEUR qui sait a quoi la machine est accrochee : le client, lui, ne voit que le bloc, et
+     * c'est ce nom qu'il affiche â€” le joueur l'a reclame deux fois.
+     */
+    private String linkedNodeName = "";
+
     private int searchCounter;
     private int syncCounter;
 
@@ -137,8 +146,13 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         if (++dev.searchCounter >= NODE_SEARCH_INTERVAL) {
             dev.searchCounter = 0;
             boolean nowLinked = NodeFinder.ensureLinked(server, pos);
-            if (nowLinked != dev.linked) {
+            String nowName = nowLinked ? NodeFinder.nodeName(server, pos) : null;
+            String name = nowName == null ? "" : nowName;
+            // Le noeud peut aussi changer de nom sans que le lien change : un noeud renomme doit
+            // se voir tout de suite, donc c'est le nom qui decide de la synchronisation.
+            if (nowLinked != dev.linked || !name.equals(dev.linkedNodeName)) {
                 dev.linked = nowLinked;
+                dev.linkedNodeName = name;
                 dev.setChanged();
             }
         }
@@ -364,6 +378,11 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         return linked;
     }
 
+    @Override
+    public String getLinkedNodeName() {
+        return linkedNodeName;
+    }
+
     // ------------------------------------------------------------------
     // EnergyReceiver
     // ------------------------------------------------------------------
@@ -402,6 +421,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         tag.putInt("category", categoryId);
         tag.putInt("skill", skillId);
         tag.putBoolean("linked", linked);
+        tag.putString("linked_node_name", linkedNodeName);
         if (student != null) tag.putUUID("student", student);
         if (studentName != null) tag.putString("student_name", studentName);
     }
@@ -414,6 +434,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         categoryId = tag.getInt("category");
         skillId = tag.contains("skill") ? tag.getInt("skill") : -1;
         linked = tag.getBoolean("linked");
+        linkedNodeName = tag.contains("linked_node_name") ? tag.getString("linked_node_name") : "";
         student = tag.hasUUID("student") ? tag.getUUID("student") : null;
         studentRef = null;
         studentName = tag.contains("student_name") ? tag.getString("student_name") : null;

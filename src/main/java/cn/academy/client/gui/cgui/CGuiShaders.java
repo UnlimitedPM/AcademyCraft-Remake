@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -148,6 +149,33 @@ public final class CGuiShaders {
         quad(graphics, type, size / 2, alpha);
         return true;
     }
+
+    /**
+     * Un type de rendu qui LISSE la texture : mipmaps et filtrage lineaire.
+     *
+     * <p>Le programme est celui de vanilla â€” seule la maniere de lire la texture change. L'original
+     * chargeait ses images par {@code preloadMipmapTexture}, donc mipmappees et filtrees ; le port les
+     * passait par {@code graphics.blit}, donc au plus proche voisin. C'est l'escalier que le joueur a
+     * vu sur les diagonales : les pixels doux du bord du trait se posaient sur la grille au lieu de
+     * se fondre.
+     *
+     * <p>Le type se garde par texture, comme les deux autres : c'est la texture qui porte le filtre.
+     */
+    public static RenderType smooth(ResourceLocation texture) {
+        return SMOOTH_TYPES.computeIfAbsent(texture, key -> RenderType.create("cgui_smooth",
+                DefaultVertexFormat.POSITION_COLOR_TEX, VertexFormat.Mode.QUADS, 256, false, true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getPositionTexColorShader))
+                        .setTextureState(new RenderStateShard.TextureStateShard(key, true, true))
+                        .setTransparencyState(blending())
+                        .setWriteMaskState(noDepthWrite())
+                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .createCompositeState(false)));
+    }
+
+    /** Les types lisses, un par texture : le filtre est pose sur la texture elle-meme. */
+    private static final Map<ResourceLocation, RenderType> SMOOTH_TYPES = new HashMap<>();
 
     /**
      * Un type de rendu qui dessine une texture avec un programme a nous.

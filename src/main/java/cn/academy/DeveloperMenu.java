@@ -303,6 +303,15 @@ public class DeveloperMenu extends AbstractContainerMenu {
         return developer != null && developer.isLinked();
     }
 
+    /**
+     * Le nom du noeud auquel la machine est raccordee, vide s'il n'y en a pas.
+     *
+     * <p>Un objet portable n'en a jamais : c'est une machine posee qui se raccorde a un noeud.
+     */
+    public String getNodeName() {
+        return developer == null ? "" : developer.getLinkedNodeName();
+    }
+
     /** Vrai si cet ecran est celui de l'objet portable, et non d'une machine. */
     public boolean isPortable() {
         return portable;

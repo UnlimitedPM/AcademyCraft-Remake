@@ -2,13 +2,18 @@ package cn.academy.ability;
 
 import cn.academy.client.gui.cgui.CGuiDocument;
 import cn.academy.client.gui.cgui.CWidget;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -201,6 +206,88 @@ class SkillTreeLayoutTest {
         for (String figure : figures) {
             assertEquals("brain_course=30,110 brain_course_advanced=115,110"
                     + " mind_course=205,110", figure);
+        }
+    }
+
+    /**
+     * La parente d'une categorie, sous la meme forme lisible que la figure : {@code "nom=parent"}, et
+     * un tiret pour une racine.
+     */
+    private static String parents(Category category) {
+        StringBuilder out = new StringBuilder();
+        for (Skill skill : category.getSkills()) {
+            if (out.length() > 0) out.append(' ');
+            Skill parent = skill.getParent();
+            out.append(skill.getName()).append('=').append(parent == null ? "-" : parent.getName());
+        }
+        return out.toString();
+    }
+
+    @Test
+    @DisplayName("chaque competence part de celle dont l'original la faisait partir")
+    void parentsAreTheOriginals() {
+        // LE TEST QUI MANQUAIT, ET QUI AURAIT VU LA FAUTE. Le port avait oublie
+        // `shiftTP.setParent(locTP, 0.5f)` : shift_teleport se retrouvait racine de l'arbre, donc
+        // dessine sans trait vers son parent — et c'est le joueur qui l'a vu avant le test : « il n'y a
+        // pas de trait qui relie le location teleport au shift teleport ». La parente se lit maintenant
+        // ici, categorie par categorie, dans l'ordre d'enregistrement.
+        String courses = " brain_course=- brain_course_advanced=brain_course"
+                + " mind_course=brain_course_advanced";
+
+        assertEquals("arc_gen=- charging=arc_gen mag_movement=arc_gen mag_manip=mag_movement"
+                        + " mine_detect=mag_manip body_intensify=arc_gen thunder_bolt=arc_gen"
+                        + " railgun=thunder_bolt thunder_clap=thunder_bolt" + courses,
+                parents(cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE));
+
+        assertEquals("electron_bomb=- rad_intensify=electron_bomb scatter_bomb=electron_bomb"
+                        + " light_shield=electron_bomb meltdowner=scatter_bomb"
+                        + " mine_ray_basic=meltdowner ray_barrage=meltdowner jet_engine=meltdowner"
+                        + " mine_ray_expert=mine_ray_basic mine_ray_luck=mine_ray_expert"
+                        + " electron_missile=jet_engine" + courses,
+                parents(cn.academy.ability.meltdowner.MeltdownerCategory.INSTANCE));
+
+        assertEquals("threatening_teleport=- dim_folding_theorem=threatening_teleport"
+                        + " penetrate_teleport=threatening_teleport mark_teleport=threatening_teleport"
+                        + " flesh_ripping=mark_teleport location_teleport=penetrate_teleport"
+                        + " shift_tp=location_teleport space_fluct=shift_tp flashing=shift_tp"
+                        + courses,
+                parents(cn.academy.ability.teleporter.TeleporterCategory.INSTANCE));
+
+        assertEquals("dir_shock=- ground_shock=dir_shock vec_accel=dir_shock"
+                        + " vec_deviation=vec_accel dir_blast=ground_shock storm_wing=vec_accel"
+                        + " blood_retro=dir_blast vec_reflection=vec_deviation"
+                        + " plasma_cannon=storm_wing" + courses,
+                parents(cn.academy.ability.vecmanip.VecmanipCategory.INSTANCE));
+    }
+
+    /** Le fichier de langue du port, tel que le client le lit. */
+    private static JsonObject language() {
+        String path = "assets/academy/lang/en_us.json";
+        try (InputStream in = SkillTreeLayoutTest.class.getClassLoader().getResourceAsStream(path)) {
+            assertNotNull(in, "le fichier " + path + " doit exister");
+            return JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8))
+                    .getAsJsonObject();
+        } catch (Exception e) {
+            throw new IllegalStateException("Le fichier " + path + " est illisible", e);
+        }
+    }
+
+    @Test
+    @DisplayName("chaque competence a son nom et sa description dans les langues")
+    void everySkillIsNamedAndDescribed() {
+        // Une cle manquante ne casse rien : le client affiche la cle elle-meme, en petit et en anglais
+        // de machine — `ac.ability.electromaster.railgun.desc` en travers de la surface. C'est laid, et
+        // cela ne se voit qu'en jeu ; d'ou ce test, qui relit le fichier de langue comme le client.
+        JsonObject lang = language();
+
+        for (Category category : categories()) {
+            for (Skill skill : category.getSkills()) {
+                String who = category.getName() + "." + skill.getName();
+                assertTrue(lang.has(skill.getDisplayKey()), who + " n'a pas de nom");
+                assertTrue(lang.has(skill.getDescriptionKey()), who + " n'a pas de description");
+                assertFalse(lang.get(skill.getDescriptionKey()).getAsString().isBlank(),
+                        who + " a une description vide");
+            }
         }
     }
 }

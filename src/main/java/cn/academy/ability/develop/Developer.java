@@ -66,4 +66,14 @@ public interface Developer {
      * L'ecran s'en sert pour dire au joueur ce qu'il doit brancher.
      */
     boolean isLinked();
+
+    /**
+     * Le nom du noeud raccorde, ou une chaine vide s'il n'y en a pas.
+     *
+     * <p>L'ecran l'ecrit sous « Current Node: ». L'objet portable n'a pas de noeud : ce defaut lui
+     * suffit, et c'est au bloc de le renseigner depuis son tick serveur.
+     */
+    default String getLinkedNodeName() {
+        return "";
+    }
 }
