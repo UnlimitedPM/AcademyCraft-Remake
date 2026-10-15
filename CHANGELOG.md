@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.1 - le developpeur ouvre la porte / the developer opens the door
+
+Tout le 0.1.0, plus ce que le tester en vrai a fait sortir. Rien n'a ete retire.
+
+### English
+
+All of 0.1.0, plus what testing it as a real player brought out. Nothing was removed.
+
+- **A first ability can be obtained now.** The port had no way in: the developer opened on an empty tree, and the only door was a debug command nobody knows. Its **LEARN** button gives a first ability outright, without waiting for the machine's energy — with an **induction factor** in the inventory, that factor decides the kind and is consumed; without one, the kind is drawn at random. `/learn` in chat does exactly the same thing.
+- **The developer's console** says what the original's says: Academy OS booting, the failure, the verdict, and the command to type.
+- **Two interface engine fixes**, both of which were hiding something the player could not see: a button that overflows its parent is clickable now — the LEARN button never was, because it is twice as wide as its panel — and a text is only drawn in a box that has a size, so every line of a skill's page (its name, its experience, its conditions, its cost) was invisible.
+- **The README explains how to play**: how to get an ability, where to put the skills you learn, and which keys do what — left click, right click, R and F for the four slots, C for presets, N for the preset editor, V to turn the ability on and off, F4 for the debug panel, Left Alt for the terminal.
+- **Tests**: 157 in-game tests and around 825 unit tests, two of which pin the new click rule.
+
+### Francais
+
+Tout le 0.1.0, plus ce que le tester en vrai a fait sortir. Rien n'a ete retire.
+
+- **Une premiere aptitude s'obtient maintenant.** Le port n'avait aucune porte d'entree : le developpeur s'ouvrait sur un arbre vide, et la seule commande etait une commande de debogage que personne ne connait. Son bouton **LEARN** donne la premiere aptitude tout de suite, sans attendre l'energie de la machine — avec un **facteur d'induction** dans l'inventaire, c'est lui qui decide du type et il est consomme ; sans facteur, le type est tire au sort. La commande `/learn` fait exactement la meme chose.
+- **La console du developpeur** dit ce que dit celle de l'original : le demarrage d'Academy OS, l'echec, le verdict, et la commande a taper.
+- **Deux corrections du moteur d'interface**, qui cachaient toutes les deux quelque chose que le joueur ne pouvait pas voir : un bouton qui deborde de son parent se clique maintenant — celui de LEARN ne se cliquait pas, il fait deux fois la largeur de son panneau — et un texte ne se dessine que dans une boite qui a une taille, donc toutes les lignes d'une page de competence (son nom, son experience, ses conditions, son cout) etaient invisibles.
+- **Le README explique comment jouer** : obtenir une aptitude, ranger les competences apprises, et ce que fait chaque touche — clic gauche, clic droit, R et F pour les quatre emplacements, C pour les presets, N pour l'editeur, V pour allumer et eteindre, F4 pour le panneau de debogage, Alt gauche pour le terminal.
+- **Des tests** : 157 tests en jeu et environ 825 tests unitaires, dont deux qui figent la nouvelle regle du clic.
+
 ## 0.1.0 - premiere version de test / first test build
 
 ### English
