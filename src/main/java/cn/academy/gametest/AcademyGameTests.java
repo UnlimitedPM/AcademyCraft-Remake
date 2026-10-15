@@ -375,6 +375,73 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Le nom, le mot de passe et le poseur d'un noeud survivent au rechargement.
+     *
+     * C'est ce que l'ecran du noeud affiche en clair sous « Trans. Range » : trois
+     * renseignements qui vivaient dans l'original et que le port n'avait pas, faute de
+     * quoi que ce soit pour les montrer. Ils appartiennent au bloc, pas au menu : ils
+     * doivent donc se retrouver a l'identique apres un aller-retour en sauvegarde.
+     */
+    @GameTest(template = "empty")
+    public static void wirelessNodeKeepsItsIdentity(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        // Un noeud qui vient d'etre pose s'appelle « Unnamed », comme dans l'original, et n'a
+        // pas encore de mot de passe : c'est ce que l'interface montre a l'ouverture.
+        assertValue(helper, "Unnamed", node.getNodeName(), "nom par defaut");
+        assertValue(helper, "", node.getPassword(), "mot de passe par defaut");
+
+        var owner = ownPlayer(helper, "PoseurDuNoeud");
+        node.setPlacer(owner);
+        // Les espaces des deux bouts partent : un nom qui commence par une espace ne se lit pas
+        // dans un panneau de cent unites.
+        node.setNodeName("  Cuisine  ");
+        node.setPassword("secret");
+
+        assertValue(helper, "Cuisine", node.getNodeName(), "le nom est nettoye");
+
+        var reloaded = new cn.academy.energy.NodeBlockEntity(helper.absolutePos(rel),
+                helper.getBlockState(rel));
+        reloaded.load(node.saveWithoutMetadata());
+
+        assertValue(helper, "Cuisine", reloaded.getNodeName(), "nom apres rechargement");
+        assertValue(helper, "secret", reloaded.getPassword(), "mot de passe apres rechargement");
+        assertValue(helper, owner.getGameProfile().getName(), reloaded.getPlacer(),
+                "poseur apres rechargement");
+        helper.succeed();
+    }
+
+    /**
+     * Seul le poseur peut se dire proprietaire du noeud, et le noeud ne change pas de main.
+     *
+     * C'est la regle que l'original appliquait dans ses deux gestionnaires de paquet, et
+     * c'est celle que reprend {@code NodeConfigPacket} : un nom ou un mot de passe n'est
+     * ecrit que si celui qui le demande a pose le noeud.
+     */
+    @GameTest(template = "empty")
+    public static void wirelessNodeBelongsToItsPlacer(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        assertFalse(helper, node.isOwner("PoseurDuNoeud"), "un noeud sans poseur n'appartient a personne");
+
+        var owner = ownPlayer(helper, "PoseurDuNoeud");
+        node.setPlacer(owner);
+
+        assertTrue(helper, node.isOwner("PoseurDuNoeud"), "le poseur est proprietaire");
+        assertFalse(helper, node.isOwner("QuelquUnDAutre"), "un autre joueur non");
+
+        // Le noeud ne change plus de main : le premier poseur reste le proprietaire, meme si un
+        // second venait a poser le bloc a sa place.
+        node.setPlacer(ownPlayer(helper, "QuelquUnDAutre"));
+        assertTrue(helper, node.isOwner("PoseurDuNoeud"), "le premier poseur reste le proprietaire");
+        helper.succeed();
+    }
+
     @GameTest(template = "empty")
     public static void wirelessNodeUpdatesItsBlockState(GameTestHelper helper) {
         BlockPos rel = new BlockPos(1, 1, 1);

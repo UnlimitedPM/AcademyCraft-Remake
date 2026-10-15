@@ -9,6 +9,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Le coeur du moteur CGui : un document, ses widgets, et les gestes qui vont avec.
@@ -48,9 +49,21 @@ public final class CGuiView {
      */
     private static final int UV_BASE = 1200;
 
+    /**
+     * Les deux couleurs d'un champ modifiable, celles de l'original : blanc au repos, bleu pendant
+     * qu'on le change. Le bleu dit que ce qui est ecrit n'est pas encore parti au serveur.
+     */
+    private static final int idleRed = 255;
+    private static final int idleGreen = 255;
+    private static final int idleBlue = 255;
+    private static final int editRed = 0x21;
+    private static final int editGreen = 0x80;
+    private static final int editBlue = 0xD8;
+
     private final Screen screen;
     private final CWidget root;
     private final Map<CWidget, Runnable> clicks = new IdentityHashMap<>();
+    private final Map<CWidget, Consumer<String>> confirms = new IdentityHashMap<>();
 
     private CWidget focused;
 
@@ -132,8 +145,27 @@ public final class CGuiView {
         if (box != null && box.text != null) box.text.content = "";
     }
 
-    /** Ce que la touche Entree fait dans le champ : c'est l'ecran qui decide. */
+    /** Ce que ce widget fait quand on valide son contenu : l'{@code ConfirmInputEvent} de l'original. */
+    public void onConfirm(CWidget box, Consumer<String> action) {
+        confirms.put(box, action);
+    }
+
     public void confirm(CWidget box) {
+        if (box == null) return;
+
+        // Le champ redevient blanc en se validant, comme chez l'original : c'est le signe que ce
+        // qu'il contient est parti au serveur et n'est plus une saisie en cours.
+        if (box.text != null) box.text.color(idleRed, idleGreen, idleBlue);
+
+        Consumer<String> action = confirms.get(box);
+        if (action != null) action.accept(box.text == null ? "" : box.text.content);
+
+        // Et il rend le clavier : sans cela, ce qui se tape ensuite s'ajouterait a la valeur
+        // qu'on vient d'envoyer. Le champ se vide en perdant le focus, et la machine le reprend
+        // a son compte a l'image suivante : c'est ainsi qu'on voit arriver la valeur acceptee
+        // par le serveur — nettoyee de ses espaces, ou refusee, auquel cas elle revient telle
+        // quelle.
+        focus(null);
     }
 
     public void draw(GuiGraphics graphics, double mouseX, double mouseY) {
@@ -373,6 +405,12 @@ public final class CGuiView {
                 return true;
             }
         }
+        // Un clic sur un champ editable lui donne le clavier : c'est ainsi que le noeud demande son
+        // nom et son mot de passe. L'original le faisait par le GainFocusEvent de son champ.
+        if (hit != null && hit.text != null && hit.text.allowEdit) {
+            if (hit != focused) focus(hit);
+            return true;
+        }
         if (hit != focused) focus(null);
         return hit != null;
     }
@@ -394,6 +432,9 @@ public final class CGuiView {
         if (focused != null && focused.text != null && focused.text.allowEdit
                 && focused.text.content.length() < 16 && codePoint >= ' ') {
             focused.text.content += codePoint;
+            // Le champ passe en bleu des qu'on le change : c'est la deuxieme couleur de l'original,
+            // et elle dit d'un coup d'oeil que cette valeur n'est pas encore validee.
+            focused.text.color(editRed, editGreen, editBlue);
             return true;
         }
         return false;

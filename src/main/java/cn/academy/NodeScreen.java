@@ -42,10 +42,17 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
     private static final int UNLINKED_FRAMES = 2;
     private static final int UNLINKED_HOLD_MS = 3000;
 
+    /** Ce qu'un noeud qui n'a pas de poseur affiche a sa place. */
+    private static final String NONE = "-";
+
     /** L'etat que l'ecran est en train d'animer, et ou il en est. */
     private boolean animatingLinked;
     private int frame;
     private double frameAt = Double.NaN;
+
+    /** Les deux champs que seul le poseur voit modifiables, ou rien pour les autres. */
+    private CWidget nameField;
+    private CWidget passwordField;
 
     public NodeScreen(NodeMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -53,7 +60,8 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
 
     /**
      * L'original : {@code InventoryPage("node")}, une animation posee par-dessus, puis un histogramme
-     * de l'energie et de la charge, un separateur, et la portee du signal.
+     * de l'energie et de la charge, un separateur, et quatre renseignements — la portee, le poseur,
+     * le nom et le mot de passe.
      */
     @Override
     protected void build(CGuiContainerScreen<NodeMenu> screen) {
@@ -65,8 +73,23 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
                 CGuiHist.capacity(menu::load, menu.capacity()));
 
         seplineInfo();
-        property(Component.translatable("ac.gui.common.prop.range").getString(),
-                Integer.toString(menu.range()));
+        property(label("prop.range"), Integer.toString(menu.range()));
+        property(label("prop.owner"), menu.owner().isEmpty() ? NONE : menu.owner());
+
+        // Le nom se modifie chez celui qui a pose le noeud, et se lit chez les autres. Le mot de
+        // passe, lui, ne se montre qu'a lui : chez les autres il vaut mieux ne rien dire du tout
+        // que d'ecrire a cote de quelqu'un le mot de passe de son reseau.
+        if (menu.isOwner()) {
+            nameField = property(label("prop.node_name"), menu.nodeName(), menu::rename);
+            passwordField = property(label("prop.password"), menu.password(),
+                    menu::repassword, true);
+        } else {
+            property(label("prop.node_name"), menu.nodeName());
+        }
+    }
+
+    private static String label(String key) {
+        return Component.translatable("ac.gui.common." + key).getString();
     }
 
     /**
@@ -124,6 +147,17 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
 
         // Et elle respire comme les fonds de page, d'une seule opacite pour toute l'image.
         anim.texture.alpha = breatheAlpha();
+
+        // Les deux champs du poseur se relisent tant qu'il ne les ecrit pas : c'est ainsi qu'une
+        // modification acceptee par le serveur finit par se voir, sans que l'ecran ait a la deviner.
+        refresh(nameField, menu.nodeName());
+        refresh(passwordField, menu.password());
+    }
+
+    /** Reecrit la valeur d'un champ, sauf s'il a le clavier — on ne corrige pas ce qu'on tape. */
+    private void refresh(CWidget field, String value) {
+        if (field == null || field.text == null || isFocused(field)) return;
+        field.text.content = value;
     }
 
     /** Ou commencent les images de l'etat. */

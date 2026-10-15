@@ -48,6 +48,9 @@ public class NodeMenu extends AbstractContainerMenu {
     private final NodeBlockEntity blockEntity;
     private final ContainerLevelAccess access;
 
+    /** Le nom de celui qui a ouvert l'ecran : c'est a lui qu'on demande s'il est le poseur. */
+    private final String playerName;
+
     public NodeMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
@@ -62,6 +65,7 @@ public class NodeMenu extends AbstractContainerMenu {
         super(ModMenus.NODE.get(), containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
+        this.playerName = playerInventory.player.getGameProfile().getName();
 
         addSlot(new SlotItemHandler(blockEntity.getInventory(), NodeBlockEntity.SLOT_CHARGE_IN,
                 CHARGE_IN_X, CHARGE_IN_Y));
@@ -116,6 +120,55 @@ public class NodeMenu extends AbstractContainerMenu {
      */
     public boolean isLinked() {
         return blockEntity.isConnected();
+    }
+
+    /** Le nom du noeud, celui que le Matrix lira et que l'interface montre. */
+    public String nodeName() {
+        return blockEntity.getNodeName();
+    }
+
+    /** Son mot de passe : l'ecran ne le montre qu'a son poseur, et masque. */
+    public String password() {
+        return blockEntity.getPassword();
+    }
+
+    /** Le nom de celui qui a pose le noeud. */
+    public String owner() {
+        return blockEntity.getPlacer();
+    }
+
+    /**
+     * Vrai si l'ecran doit laisser modifier le nom et le mot de passe.
+     *
+     * C'est la meme regle que celle de l'original — celui qui a pose le noeud, et personne d'autre —
+     * et elle est belle et bien <b>du serveur</b> : un client qui se dirait proprietaire ne
+     * convaincrait pas {@link cn.academy.energy.network.NodeConfigPacket}. Ici elle ne sert qu'a
+     * decider si les champs s'ecrivent.
+     */
+    public boolean isOwner() {
+        return blockEntity.isOwner(playerName);
+    }
+
+    /**
+     * Demande un nouveau nom au serveur.
+     *
+     * L'ecran ne l'ecrit pas lui-meme : le noeud appartient a son poseur, et c'est le serveur qui
+     * tranche. Le nom local ne change donc qu'une fois la reponse revenue — c'est ce qui empeche
+     * un ecran d'afficher une chose que le serveur a refusee.
+     */
+    public void rename(String name) {
+        send(false, name);
+    }
+
+    /** Et un nouveau mot de passe — vide pour l'enlever. */
+    public void repassword(String value) {
+        send(true, value);
+    }
+
+    private void send(boolean password, String value) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+                new cn.academy.energy.network.NodeConfigPacket(
+                        blockEntity.getBlockPos(), password, value));
     }
 
     // ------------------------------------------------------------------

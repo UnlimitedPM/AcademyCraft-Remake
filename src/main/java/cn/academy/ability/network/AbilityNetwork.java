@@ -149,5 +149,12 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, ThunderClapGroundPacket.class,
                 ThunderClapGroundPacket::encode, ThunderClapGroundPacket::decode,
                 ThunderClapGroundPacket::handle);
+        // Le nom et le mot de passe d'un noeud sans fil : le client les tape, le serveur les ecrit
+        // — et c'est lui qui decide, puisque le noeud appartient a celui qui l'a pose. Le canal est
+        // celui du mod, ou vivent deja les paquets du terminal, du media player et des presets.
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.NodeConfigPacket.class,
+                cn.academy.energy.network.NodeConfigPacket::encode,
+                cn.academy.energy.network.NodeConfigPacket::decode,
+                cn.academy.energy.network.NodeConfigPacket::handle);
     }
 }

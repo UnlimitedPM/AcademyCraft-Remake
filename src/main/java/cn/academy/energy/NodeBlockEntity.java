@@ -63,6 +63,9 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     /** Duree, en ticks, entre deux synchronisations de l'etat visuel du bloc. */
     private static final int SYNC_INTERVAL = 10;
 
+    /** Ce qu'un nom ou un mot de passe de noeud peut faire de caracteres, comme le champ de l'ecran. */
+    private static final int MAX_NAME = 16;
+
     /**
      * Duree, en ticks, entre deux recherches de Matrix.
      *
@@ -107,10 +110,36 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
      */
     private int load;
 
+    /**
+     * Le nom du noeud, celui que le Matrix et son proprietaire lisent.
+     *
+     * L'original partait de « Unnamed » : un noeud qui vient d'etre pose a donc un nom, et c'est
+     * celui-la que l'interface montre tant que personne ne l'a change.
+     */
+    private String nodeName = "Unnamed";
+
+    /**
+     * Et son mot de passe : c'est lui qui autorise le raccordement au reseau.
+     *
+     * Vide par defaut, comme chez l'original — un noeud sans mot de passe accepte tout le monde.
+     */
+    private String password = "";
+
+    /**
+     * Qui a pose le noeud.
+     *
+     * C'est l'original tout crache : seul le poseur peut renommer son noeud et lui donner un mot de
+     * passe ; les autres ne font que les lire. Le port n'avait aucune de ces trois choses parce que
+     * rien ne les montrait ; c'est l'ecran qui les rend utiles.
+     */
+    private String placer = "";
+
     /** Ce que le client a deja recu : sert a ne pas lui renvoyer deux fois la meme chose. */
     private double pushedEnergy = Double.NaN;
     private int pushedLoad = -1;
     private boolean pushedConnected;
+    private String pushedName = "";
+    private String pushedPassword = "";
 
     private int syncTicker;
 
@@ -181,6 +210,65 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     /** Combien de machines sont raccordees au noeud, sur {@link #getCapacity()}. */
     public int getLoad() {
         return load;
+    }
+
+    /** Le nom du noeud, tel qu'il s'affiche dans l'interface. */
+    public String getNodeName() {
+        return nodeName;
+    }
+
+    /** Son mot de passe — celui qui le lit est deja passe par {@link #isOwner}. */
+    public String getPassword() {
+        return password;
+    }
+
+    /** Le nom de celui qui a pose le noeud, vide tant que personne ne l'a pose. */
+    public String getPlacer() {
+        return placer;
+    }
+
+    /** Vrai si ce joueur est celui qui a pose le noeud : lui seul peut le configurer. */
+    public boolean isOwner(String playerName) {
+        return !placer.isEmpty() && placer.equals(playerName);
+    }
+
+    /** Retient qui a pose le noeud. Le premier poseur gagne : le noeud ne change plus de main. */
+    public void setPlacer(Player player) {
+        if (!placer.isEmpty() || player == null) return;
+        placer = player.getGameProfile().getName();
+        setChanged();
+        pushToClient(level);
+    }
+
+    /** Le nom, tel que le joueur vient de le valider. */
+    public void setNodeName(String value) {
+        String clean = clean(value);
+        if (nodeName.equals(clean)) return;
+        nodeName = clean;
+        setChanged();
+        pushToClient(level);
+    }
+
+    /** Le mot de passe, vide si le joueur l'efface. */
+    public void setPassword(String value) {
+        String clean = clean(value);
+        if (password.equals(clean)) return;
+        password = clean;
+        setChanged();
+        pushToClient(level);
+    }
+
+    /**
+     * Nettoie ce qu'un joueur a tape.
+     *
+     * Le champ de l'ecran s'arrete de lui-meme a seize caracteres, mais rien n'oblige un client
+     * modifie a s'y tenir : c'est donc ici, sur le serveur, que la limite compte. Les espaces des
+     * deux bouts partent — un nom qui commence par une espace ne se lit pas dans le panneau.
+     */
+    private static String clean(String value) {
+        if (value == null) return "";
+        String trimmed = value.trim();
+        return trimmed.length() <= MAX_NAME ? trimmed : trimmed.substring(0, MAX_NAME);
     }
 
     // ------------------------------------------------------------------
@@ -296,12 +384,17 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
      * quelque chose a bouge : sinon c'est un paquet par noeud toutes les demi-secondes, pour rien.
      */
     private void pushToClient(Level level) {
-        if (level.isClientSide) return;
-        if (energy == pushedEnergy && load == pushedLoad && connected == pushedConnected) return;
+        if (level == null || level.isClientSide) return;
+        if (energy == pushedEnergy && load == pushedLoad && connected == pushedConnected
+                && nodeName.equals(pushedName) && password.equals(pushedPassword)) {
+            return;
+        }
 
         pushedEnergy = energy;
         pushedLoad = load;
         pushedConnected = connected;
+        pushedName = nodeName;
+        pushedPassword = password;
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
     }
 
@@ -507,6 +600,9 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         tag.putDouble("energy", energy);
         tag.putBoolean("connected", connected);
         tag.putInt("load", load);
+        tag.putString("nodeName", nodeName);
+        tag.putString("password", password);
+        tag.putString("placer", placer);
     }
 
     @Override
@@ -516,6 +612,9 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         energy = clamp(tag.getDouble("energy"));
         connected = tag.getBoolean("connected");
         load = tag.getInt("load");
+        nodeName = tag.contains("nodeName") ? tag.getString("nodeName") : nodeName;
+        password = tag.getString("password");
+        placer = tag.getString("placer");
     }
 
     @Override

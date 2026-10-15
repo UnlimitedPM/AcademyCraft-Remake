@@ -7,7 +7,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -88,6 +90,22 @@ public class NodeBlock extends Block implements EntityBlock {
             NetworkHooks.openScreen(serverPlayer, node, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
+    }
+
+    /**
+     * Le poseur est retenu : lui seul pourra renommer le noeud et lui donner un mot de passe.
+     *
+     * L'original l'enregistrait de la meme facon, et c'est ce nom que l'interface compare pour
+     * savoir si elle montre un nom en lecture ou un nom modifiable.
+     */
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, LivingEntity placer,
+                            ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+        if (placer instanceof Player player
+                && level.getBlockEntity(pos) instanceof NodeBlockEntity node) {
+            node.setPlacer(player);
+        }
     }
 
     /**

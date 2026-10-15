@@ -10,6 +10,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * L'ecran d'une machine : le {@code ContainerUI} de l'original, pose sur un conteneur vanilla.
@@ -152,6 +153,55 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     /** Un peu de blanc entre deux renseignements. */
     protected void blank(double height) {
         infoY += height;
+    }
+
+    /**
+     * Une ligne d'information que le joueur peut changer : sa valeur s'ecrit, entre deux crochets.
+     *
+     * <p>C'est le {@code property(key, value, editCallback)} de l'original, crochets compris : ils
+     * disent d'un coup d'oeil que ce champ se clique. Tant qu'il n'a pas le clavier il montre la
+     * valeur de la machine ; des qu'il l'a, il se vide et attend une saisie — et c'est la touche
+     * Entree qui valide, ce qui appelle {@code onEdit}.
+     *
+     * <p>La valeur envoyee est celle du champ, telle quelle : a la machine de decider si elle
+     * l'accepte. Un nom de noeud, par exemple, n'est ecrit que si celui qui le demande l'a pose.
+     */
+    protected CWidget property(String key, String value, Consumer<String> onEdit) {
+        return property(key, value, onEdit, false);
+    }
+
+    /** Le meme, masque : c'est ainsi que se saisit un mot de passe. */
+    protected CWidget property(String key, String value, Consumer<String> onEdit,
+                               boolean password) {
+        CWidget amount = property(key, value);
+        if (onEdit == null) return amount;
+
+        amount.text.allowEdit = true;
+        amount.text.doesEcho = password;
+
+        amount.add(bracket("[", -4));
+        amount.add(bracket("]", amount.transform.width + 2));
+
+        if (view != null) view.onConfirm(amount, onEdit);
+        return amount;
+    }
+
+    /** Un crochet, de part et d'autre du champ : dix unites de large, comme chez l'original. */
+    private static CWidget bracket(String text, double x) {
+        CWidget out = new CWidget("bracket");
+        out.transform.x = x;
+        out.transform.width = 10;
+        out.transform.height = 8;
+        out.text = new CWidget.TextBox();
+        out.text.content = text;
+        out.text.heightAlign = "CENTER";
+        out.text.color(255, 255, 255);
+        return out;
+    }
+
+    /** Vrai si ce champ a le clavier : un champ qu'on est en train d'ecrire ne se reecrit pas. */
+    protected boolean isFocused(CWidget widget) {
+        return view != null && view.focused() == widget;
     }
 
     /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
