@@ -121,10 +121,17 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         });
 
         // Le panneau des reglages : deux lignes de seize dans une boite de trente-deux, que le fichier
-        // laisse toutes les deux a zero. Une liste les empile, et c'est ce que l'original faisait aussi.
+        // laisse toutes les deux a zero. Une liste les empile — et c'est justement pour cela qu'on
+        // leur rend un alignement en HAUT : celle du bas porte un `alignHeight=BOTTOM` d'origine, qui
+        // la repousse une seconde fois et la fait tomber seize unites plus bas, sous la barre de la
+        // liste blanche, au lieu de rester entre l'interrupteur et elle.
+        //
+        // La faute est dans le fichier de l'original, pas dans le moteur : un `y=16` sur une ligne
+        // deja calee en bas, dans une boite de deux fois sa hauteur, la pose a trente-deux.
         CWidget config = window.child("panel_config");
         config.list = new CWidget.ElementList();
         config.list.spacing = 0;
+        for (CWidget row : config.children()) row.transform.alignHeight = "TOP";
 
         onClick(config.child("element_switch").child("element_btn_switch"),
                 () -> press(AbilityInterfererMenu.BUTTON_TOGGLE));
