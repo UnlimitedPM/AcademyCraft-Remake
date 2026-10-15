@@ -504,6 +504,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // Le survol ne compte pas tant qu'une surface est ouverte : elle est modale, et un noeud ne doit
         // ni s'allumer ni repondre a travers son voile.
         boolean blocked = surface != null;
+        AbilityData data = ClientAbilityData.get();
 
         for (Node node : nodes) {
             node.widget.transform.x = node.skill.getGuiX() - dx * PARALLAX;
@@ -525,6 +526,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             if (disc != null) {
                 disc.icon = node.skill.getHintIcon().toString();
                 disc.drawScale = scale;
+                // L'anneau dit l'experience acquise, et l'icone grisee dit que la competence n'est pas
+                // encore apprise. Les deux tiennent dans le meme noeud, et c'est ce qui fait qu'on lit
+                // l'arbre d'un coup d'oeil : ce qui brille appartient au joueur, ce qui grisonne reste a
+                // prendre.
+                disc.drawFill = node.learned;
+                disc.fill = data.getSkillExp(node.skill);
+                disc.grey = !node.learned;
                 disc.backAlpha = alpha(node.dim * APPEAR_SPEED * dt);
                 disc.iconAlpha = alpha(node.dim * APPEAR_SPEED * (dt - APPEAR_STEP));
             }

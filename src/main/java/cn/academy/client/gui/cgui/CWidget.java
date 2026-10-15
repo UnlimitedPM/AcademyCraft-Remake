@@ -273,6 +273,16 @@ public class CWidget {
 
         public String icon;
 
+        /**
+         * Le masque du remplissage : il porte l'<b>angle</b>.
+         *
+         * <p>Sa composante rouge monte de zero a un sur un tour complet — mesure sur l'image : 52 a
+         * zero degre, 203 a cent quatre-vingts — et c'est le programme de l'anneau qui le compare au
+         * remplissage. C'est ce qui interdit de s'en passer : une valeur qui depend de l'angle ne se
+         * decoupe pas au rectangle.
+         */
+        public String mask = "academy:textures/guis/developer/skill_radial_mask.png";
+
         /** La taille du disque dessine, en unites. */
         public double size = 23.0;
 
@@ -281,6 +291,15 @@ public class CWidget {
 
         /** Et celle de l'icone, qui tient dedans. */
         public double iconSize = 14.0;
+
+        /** Vrai quand la competence est apprise : c'est ce qui fait apparaitre l'anneau de remplissage. */
+        public boolean drawFill;
+
+        /** Et son remplissage, de zero a un. */
+        public double fill;
+
+        /** L'icone en gris, pour ce qui n'est pas encore appris. */
+        public boolean grey;
 
         /** L'echelle du dessin seul : le survol grossit le noeud sans le deplacer. */
         public double drawScale = 1.0;
@@ -406,10 +425,14 @@ public class CWidget {
         Disc out = new Disc();
         out.back = source.back;
         out.ring = source.ring;
+        out.mask = source.mask;
         out.icon = source.icon;
         out.size = source.size;
         out.ringSize = source.ringSize;
         out.iconSize = source.iconSize;
+        out.drawFill = source.drawFill;
+        out.fill = source.fill;
+        out.grey = source.grey;
         out.drawScale = source.drawScale;
         out.backAlpha = source.backAlpha;
         out.iconAlpha = source.iconAlpha;

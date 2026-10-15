@@ -357,8 +357,19 @@ public final class CGuiView {
         centred(graphics, disc.ring, disc.ringSize, 51, 51, 51,
                 (int) Math.round(disc.backAlpha * 0.6));
 
+        // Le remplissage : la part d'experience acquise, dessinee par le programme de l'original — le
+        // seul dessin de l'interface qui ne s'obtienne pas avec des rectangles textures. Il se tait si
+        // le programme n'est pas la : voir CGuiShaders.
+        if (disc.drawFill) {
+            CGuiShaders.ring(graphics, disc.ring, disc.mask, disc.ringSize, disc.fill, disc.backAlpha);
+        }
+
         if (disc.icon != null) {
-            centred(graphics, disc.icon, disc.iconSize, 255, 255, 255, disc.iconAlpha);
+            boolean greyed = disc.grey
+                    && CGuiShaders.greyIcon(graphics, disc.icon, disc.iconSize, disc.iconAlpha);
+            if (!greyed) {
+                centred(graphics, disc.icon, disc.iconSize, 255, 255, 255, disc.iconAlpha);
+            }
         }
         graphics.pose().popPose();
     }
