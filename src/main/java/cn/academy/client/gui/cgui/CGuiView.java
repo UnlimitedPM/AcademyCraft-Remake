@@ -270,7 +270,7 @@ public final class CGuiView {
             drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
         }
         if (widget.disc != null) {
-            drawDisc(graphics, widget, x, y, w, h);
+            drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
         }
 
         for (CWidget child : widget.children()) {
@@ -301,19 +301,25 @@ public final class CGuiView {
         double dx = x1 - x0;
         double dy = y1 - y0;
         double length = Math.sqrt(dx * dx + dy * dy);
-        if (length <= 0) return;
+        if (length < 1) return;
 
         int thickness = Math.max(1, (int) Math.round(line.thickness * scale));
+        // La longueur a sa partie fractionnaire : le trait qui pousse avancait donc d'un pixel entier a
+        // la fois, et le joueur l'a vu — « parfois les lignes blanches augmentent d'un pixel en trop ».
+        // Le quad se dessine sur sa longueur entiere, et l'echelle de la pose etire ce qu'il reste.
+        int whole = (int) Math.floor(length);
+        float stretch = (float) (length / whole);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x0, y0, 0);
         // L'axe des ordonnees du jeu descend, celui du repere tourne descend aussi : l'angle se
         // donne donc tel quel, sans le retourner.
         graphics.pose().mulPose(Axis.ZP.rotation((float) Math.atan2(dy, dx)));
+        graphics.pose().scale(stretch, 1f, 1f);
 
         graphics.setColor(line.red / 255f, line.green / 255f, line.blue / 255f, line.alpha / 255f);
         blend();
-        graphics.blit(texture, 0, -thickness / 2, (int) Math.round(length), thickness,
+        graphics.blit(texture, 0, -thickness / 2, whole, thickness,
                 0f, 0f, 1, 1, 1, 1);
         graphics.setColor(1f, 1f, 1f, 1f);
         graphics.pose().popPose();
@@ -331,27 +337,61 @@ public final class CGuiView {
      * noeud le grossit ainsi d'un cinquieme <b>sans le deplacer</b>, parce que le centrage se fait
      * apres l'echelle.
      */
-    private static void drawDisc(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
+    private static void drawDisc(GuiGraphics graphics, CWidget widget, double x, double y, int w, int h) {
         CWidget.Disc disc = widget.disc;
         double scale = widget.absScale * disc.drawScale;
-        double centreX = x + w / 2.0;
-        double centreY = y + h / 2.0;
 
-        double back = disc.size * scale;
-        blit(graphics, disc.back, centreX - back / 2, centreY - back / 2, back, back,
-                255, 255, 255, disc.backAlpha);
+        // LE DEMI-PIXEL. Les positions du moteur sont entieres, et c'est ce qui faisait avancer l'arbre
+        // par sauts : un deplacement continu se pose sur des pixels entiers. Le remede est celui du
+        // texte : on translate d'abord au point exact, puis on dessine autour de lui. Tout ce qui suit
+        // se lit donc par rapport au CENTRE du noeud, et l'echelle du survol se pose autour de lui —
+        // c'est ce qui fait qu'il grossit sur place au lieu de partir vers le bas et la droite.
+        graphics.pose().pushPose();
+        graphics.pose().translate(x + w / 2.0, y + h / 2.0, 0);
+        graphics.pose().scale((float) scale, (float) scale, 1f);
+
+        centred(graphics, disc.back, disc.size, 255, 255, 255, disc.backAlpha);
 
         // Le cerne : un cinquieme de blanc et six dixiemes d'opacite, soit un gris fonce qui se fond
         // dans le panneau. C'est ce qui detache le disque du fond de l'arbre.
-        double ring = disc.ringSize * scale;
-        blit(graphics, disc.ring, centreX - ring / 2, centreY - ring / 2, ring, ring,
-                51, 51, 51, (int) Math.round(disc.backAlpha * 0.6));
+        centred(graphics, disc.ring, disc.ringSize, 51, 51, 51,
+                (int) Math.round(disc.backAlpha * 0.6));
 
         if (disc.icon != null) {
-            double icon = disc.iconSize * scale;
-            blit(graphics, disc.icon, centreX - icon / 2, centreY - icon / 2, icon, icon,
-                    255, 255, 255, disc.iconAlpha);
+            centred(graphics, disc.icon, disc.iconSize, 255, 255, 255, disc.iconAlpha);
         }
+        graphics.pose().popPose();
+    }
+
+    /** Une texture posee au milieu du repere courant. */
+    private static void centred(GuiGraphics graphics, String path, double size, int red, int green,
+                                int blue, int alpha) {
+        blit(graphics, path, -size / 2, -size / 2, size, size, red, green, blue, alpha);
+    }
+
+    /**
+     * Une image, avec sa fenetre.
+     *
+     * <p>La fenetre est donnee en <b>fractions</b> de l'image : zero a un pour l'image entiere, et un
+     * dixieme de large pour en montrer le dixieme. C'est ce qui permet de faire glisser une image dans
+     * son cadre sans jamais connaitre ses dimensions — le fond de l'arbre du developpeur s'en sert, et
+     * c'est ce qui donne son relief a cette zone-la.
+     *
+     * <p>Elle est publique parce qu'un ecran peut avoir a la dessiner lui-meme : le fond de l'arbre se
+     * pose <b>avant</b> les widgets, alors que tout ce que le moteur dessine vient apres eux.
+     */
+    public void drawImage(GuiGraphics graphics, String path, double x, double y, double w, double h,
+                          double u, double v, double windowWidth, double windowHeight) {
+        ResourceLocation texture = ResourceLocation.tryParse(path);
+        if (texture == null || w <= 0 || h <= 0) return;
+
+        blend();
+        graphics.blit(texture, (int) Math.round(x), (int) Math.round(y),
+                (int) Math.round(w), (int) Math.round(h),
+                (float) (u * UV_BASE), (float) (v * UV_BASE),
+                Math.max(1, (int) Math.round(windowWidth * UV_BASE)),
+                Math.max(1, (int) Math.round(windowHeight * UV_BASE)),
+                UV_BASE, UV_BASE);
     }
 
     /**

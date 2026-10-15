@@ -318,6 +318,36 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         }
     }
 
+    /**
+     * Le fond translucide de l'ecran.
+     *
+     * <p>Depuis 1.17 vanilla ne le dessine plus derriere un conteneur : son {@code render} appelle
+     * {@code renderBg} directement, donc c'est a l'ecran de le poser. L'original tenait en une ligne —
+     * {@code drawDefaultBackground} — et c'est exactement ce gris-la : deux noirs transparents
+     * superposes, l'un en haut de l'ecran, l'autre en bas.
+     *
+     * <p>Et une couche de plus, par-dessus, que <b>l'original n'avait pas</b>. Le joueur a compare :
+     * « le grand fond noir n'est pas assez sombre », et pour toutes les machines. La cause est
+     * probablement le flou de menu de cette version — le monde derriere n'est plus net comme en
+     * 1.12.2, et ce que les deux noirs laissent passer ne se lit donc pas de la meme facon. Que ce
+     * soit cela ou non, le remede est le meme, et il est volontaire : un quart de noir en plus. Il se
+     * retire en mettant {@code BACKDROP_EXTRA} a zero.
+     */
+    private static final int BACKDROP_EXTRA = 0x40000000;
+
+    /**
+     * Une image, avec sa fenetre : voir {@link CGuiView#drawImage}.
+     *
+     * <p>C'est pour ce qu'un ecran dessine <b>sous</b> ses widgets — le fond de l'arbre du developpeur,
+     * qui glisse doucement et que rien dans le document ne porte.
+     */
+    protected void drawImage(GuiGraphics graphics, String path, double x, double y, double w, double h,
+                             double u, double v, double windowWidth, double windowHeight) {
+        if (view != null) {
+            view.drawImage(graphics, path, x, y, w, h, u, v, windowWidth, windowHeight);
+        }
+    }
+
     /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
     protected CWidget widget(String name) {
         return view == null ? null : view.find(name);
@@ -519,6 +549,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         // L'original tenait en une ligne — drawDefaultBackground — et c'est exactement ce gris-la :
         // deux noirs transparents superposes, l'un en haut de l'ecran, l'autre en bas.
         super.renderBackground(graphics);
+        if (BACKDROP_EXTRA != 0) {
+            graphics.fill(0, 0, width, height, BACKDROP_EXTRA);
+        }
 
         // Puis le document, pose sur le conteneur et pas sur l'ecran : c'est ce qui met le fond de la
         // page et les slots dans le meme repere. Les deux trames se rejoignent a un demi-pixel.

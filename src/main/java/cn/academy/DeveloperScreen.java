@@ -4,6 +4,7 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.ClientAbilityData;
+import cn.academy.ability.develop.DevelopActionLevel;
 import cn.academy.ability.develop.LearningHelper;
 import cn.academy.ability.develop.condition.LearningCondition;
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
@@ -86,6 +87,18 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
     /** Le relief : tout l'arbre se decale de dix unites au plus, en sens inverse de la souris. */
     private static final double PARALLAX = 10.0;
+
+    /**
+     * Le fond de la zone de l'arbre.
+     *
+     * <p>L'image se dessine un centieme plus grande que la zone, et c'est <b>ce centieme</b> qui la fait
+     * glisser : le relief de l'arbre, c'est le rapport entre ces quelques dixiemes d'unite et les dix
+     * unites que parcourent les noeuds.
+     */
+    private static final String AREA_BACKDROP =
+            "academy:textures/guis/effect/effect_developer_background.png";
+    private static final double BACKDROP_SLIDE = 0.01;
+    private static final double BACKDROP_WINDOW = 1.0 / 1.01;
 
     /** La surface : un voile noir, ouvert et referme en un cinquieme de seconde. */
     private static final int VEIL_ALPHA = 178;
@@ -249,6 +262,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                             data.getCategoryLevel(category)).getString();
         }
 
+        // Le pourcentage d'experience. Le document porte « EXP 30% » : un texte d'exemple, que l'ecran
+        // doit remplacer — sinon il reste la, et c'est exactement ce que le joueur a vu : « la machine
+        // montre comme quoi je suis a 30% de mon niveau alors que dans le menu F4 je ne suis qu'a 3% ».
+        // Le chiffre est celui de la barre juste au-dessus, donc de l'avancement du niveau en cours.
+        CWidget exp = ability.child("text_exp");
+        if (exp != null && exp.text != null) {
+            exp.text.content = category == null ? ""
+                    : "EXP " + (int) (data.getLevelProgress(category) * 100) + "%";
+        }
+
         CWidget progress = ability.child("logo_progress");
         if (progress != null && progress.bar != null) {
             // L'original ne descend jamais jusqu'a zero : une barre vide garde un cheveu de
@@ -259,7 +282,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         CWidget upgrade = ability.child("btn_upgrade");
         if (upgrade != null) {
-            boolean open = category != null && menu.canLevelUp(category.getCategoryId());
+            // Le bouton ne se montre QUE quand la prochaine marche est a portee : pas au niveau
+            // maximal — il n'y a plus rien a monter — et pas non plus tant que le palier n'est pas
+            // plein. C'est ce que le joueur a decrit : « quand je suis niveau 5, je ne devrais pas voir
+            // le bouton LEARN [...] et pour les niveaux inferieurs, je dois le voir uniquement quand je
+            // suis a 100 % ». Le palier plein est demande a {@code AbilityData}, qui porte la meme regle
+            // que celle que le serveur appliquera au clic.
+            boolean open = category != null
+                    && data.getCategoryLevel(category) < DevelopActionLevel.MAX_LEVEL
+                    && data.canLevelUp(category);
             upgrade.transform.doesDraw = open;
             if (open) onClick(upgrade, this::openLevel);
         }
@@ -458,6 +489,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         double dx = clamp01(mouseX / Math.max(1, width)) - 0.5;
         double dy = clamp01(mouseY / Math.max(1, height)) - 0.5;
 
+        drawAreaBackdrop(graphics, dx, dy);
+        if (nodes.isEmpty()) return;
+
         // Le survol ne compte pas tant qu'une surface est ouverte : elle est modale, et un noeud ne doit
         // ni s'allumer ni repondre a travers son voile.
         boolean blocked = surface != null;
@@ -495,6 +529,36 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /** Une opacite de zero a 255, bornee. */
     private static int alpha(double fraction) {
         return (int) Math.round(clamp01(fraction) * 255);
+    }
+
+    /**
+     * Le fond de la zone de l'arbre.
+     *
+     * <p>C'est l'image de l'original — {@code effect_developer_background} — dessinee d'un centieme
+     * plus <b>grande</b> que la zone, et glissee dans cette marge au rythme de la souris. Elle ne bouge
+     * donc presque pas : juste assez pour que la zone paraisse posee devant quelque chose. Les noeuds,
+     * eux, se deplacent de dix unites, et c'est ce decalage entre les deux qui fait le relief.
+     *
+     * <p>Elle manquait, et le joueur s'en est apercu tout de suite : « l'image qu'il y a en fond
+     * derriere les competences n'est pas visible ». Sans elle, la zone de l'arbre n'est qu'un aplat.
+     */
+    private void drawAreaBackdrop(GuiGraphics graphics, double dx, double dy) {
+        CWidget area = widget("area");
+        if (area == null) return;
+
+        drawImage(graphics, AREA_BACKDROP, area.absX, area.absY, area.absW, area.absH,
+                slide(dx * BACKDROP_SLIDE), slide(dy * BACKDROP_SLIDE), BACKDROP_WINDOW,
+                BACKDROP_WINDOW);
+    }
+
+    /**
+     * Ou la fenetre s'ouvre dans l'image.
+     *
+     * <p>L'original ne la fait pas partir du bord : elle se pose a un demi-centieme du centre, ce qui
+     * laisse de quoi glisser d'un cote comme de l'autre. C'est son {@code scale()}.
+     */
+    private static double slide(double offset) {
+        return (offset - 0.5) * BACKDROP_WINDOW + 0.5;
     }
 
     private static double lerp(double from, double to, double progress) {
