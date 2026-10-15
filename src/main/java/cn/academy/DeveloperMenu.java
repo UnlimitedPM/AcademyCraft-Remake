@@ -65,6 +65,14 @@ public class DeveloperMenu extends AbstractContainerMenu {
      */
     public static final int RESET_BUTTON = 4096;
 
+    /**
+     * L'identifiant du bouton qui donne la PREMIERE aptitude.
+     *
+     * <p>Le bouton du niveau, lui, se deduit de la categorie du joueur — et il n'y en a pas
+     * encore. C'est donc un identifiant a part, comme celui du changement de categorie.
+     */
+    public static final int FIRST_CATEGORY_BUTTON = 4097;
+
     /** Le joueur, pour les conditions qui lisent ce qu'il a en main. */
     private final Player player;
 
@@ -188,6 +196,15 @@ public class DeveloperMenu extends AbstractContainerMenu {
         if (buttonId == RESET_BUTTON) {
             DevelopActionReset reset = DevelopActionReset.find(serverPlayer, getDeveloperType());
             return reset != null && developer.startDeveloping(serverPlayer, reset);
+        }
+
+        if (buttonId == FIRST_CATEGORY_BUTTON) {
+            // La premiere aptitude se decide avec l'inventaire : un facteur d'induction designe sa
+            // categorie, sinon le sort en donne une. C'est l'action elle-meme qui choisit, et elle
+            // reverifie au dernier moment que le joueur n'en a pas deja une.
+            cn.academy.ability.develop.DevelopActionFirstCategory first =
+                    cn.academy.ability.develop.DevelopActionFirstCategory.of(serverPlayer);
+            return first != null && developer.startDeveloping(serverPlayer, first);
         }
 
         if (buttonId < SKILL_BUTTON_BASE) {

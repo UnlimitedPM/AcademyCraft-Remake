@@ -15,8 +15,12 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
 /**
- * Temporary test command until the Developer/skill-tree learning UI is ported.
- * Usage: /academy learn <category>
+ * Les commandes d'aptitude : celle du joueur, et celles du debogage.
+ *
+ * <p>{@code /learn} est la porte d'entree : elle donne sa premiere aptitude a un joueur qui n'en a
+ * aucune, en lisant son inventaire comme le fait le developpeur — un facteur d'induction designe sa
+ * categorie, sinon le sort en donne une. {@code /academy learn <categorie>} reste pour les essais :
+ * elle force une categorie, sans rien demander au joueur.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public class AbilityCommands {
@@ -45,5 +49,24 @@ public class AbilityCommands {
                                     ctx.getSource().sendSuccess(() -> Component.literal("Learned " + catName), true);
                                     return 1;
                                 }))));
+
+        // La commande du JOUEUR, celle qui ouvre le mod : sans aptitude, elle en donne une. Elle lit
+        // l'inventaire comme le developpeur — un facteur designe sa categorie et disparait, sinon le
+        // sort en donne une — et elle previent le client, sans quoi l'affichage du joueur resterait
+        // vide jusqu'a la prochaine reconnexion.
+        dispatcher.register(Commands.literal("learn").executes(ctx -> {
+            ServerPlayer player = ctx.getSource().getPlayerOrException();
+            Category learned = cn.academy.ability.develop.DevelopActionFirstCategory.grantIfNone(player);
+            if (learned == null) {
+                ctx.getSource().sendFailure(Component.translatable("academy.developer.already_has"));
+                return 0;
+            }
+            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
+                    AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                            new SyncAbilityDataPacket(data)));
+            ctx.getSource().sendSuccess(() -> Component.translatable("academy.developer.learned",
+                    Component.translatable(learned.getDisplayKey())), false);
+            return 1;
+        }));
     }
 }

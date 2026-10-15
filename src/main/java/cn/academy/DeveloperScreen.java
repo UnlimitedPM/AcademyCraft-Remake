@@ -291,11 +291,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             // le bouton LEARN [...] et pour les niveaux inferieurs, je dois le voir uniquement quand je
             // suis a 100 % ». Le palier plein est demande a {@code AbilityData}, qui porte la meme regle
             // que celle que le serveur appliquera au clic.
-            boolean open = category != null
-                    && data.getCategoryLevel(category) < DevelopActionLevel.MAX_LEVEL
-                    && data.canLevelUp(category);
+            // Sans aptitude, ce meme bouton est celui qui en donne une : c'est l'action de montee de
+            // niveau de l'original, qui choisissait la categorie quand il n'y en avait pas encore.
+            boolean first = category == null;
+            boolean open = first || (data.getCategoryLevel(category) < DevelopActionLevel.MAX_LEVEL
+                    && data.canLevelUp(category));
             upgrade.transform.doesDraw = open;
-            if (open) onClick(upgrade, this::openLevel);
+            if (open) {
+                onClick(upgrade, first
+                        ? () -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON)
+                        : this::openLevel);
+            }
         }
     }
 
@@ -350,6 +356,32 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     }
 
     /**
+     * La console : ce que voit un joueur qui n'a encore aucune aptitude.
+     *
+     * <p>L'original ne montrait pas un arbre vide a ce moment-la : il posait une petite console a
+     * la place de l'arbre, avec le texte qui dit quoi faire et une commande {@code learn} a taper.
+     * Le port garde le texte et remplace la frappe par un bouton, parce qu'un bouton se clique — et
+     * les deux chemins sont dits : le facteur d'induction, ou le sort.
+     */
+    private void buildConsole(CWidget area) {
+        area.children().clear();
+
+        area.add(text(Component.translatable("academy.developer.console_title").getString(),
+                -30, 255, 255, 255));
+        area.add(text(Component.translatable("academy.developer.console_how").getString(),
+                -15, 200, 200, 200));
+        area.add(text(Component.translatable("academy.developer.console_factor").getString(),
+                -5, 200, 200, 200));
+
+        if (menu.isDeveloping()) {
+            area.add(text(Component.translatable("academy.developer.state.developing").getString(),
+                    16, 255, 216, 0));
+            return;
+        }
+        area.add(button(() -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON), 16));
+    }
+
+    /**
      * L'arbre : un noeud par competence, et un trait par parente.
      *
      * <p>Toutes les competences de la categorie ne s'y trouvent pas. Une competence n'apparait que si
@@ -358,6 +390,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * s'en servait exactement de meme : l'arbre s'ouvre au fur et a mesure.
      */
     private void buildTree(CWidget page) {
+        // Sans aucune aptitude, il n'y a pas d'arbre a montrer : la console prend la place, et
+        // c'est elle qui dit au joueur comment entrer dans le mod. Le passage se fait tout seul
+        // une fois la premiere aptitude apprise, puisque l'ecran reconstruit son arbre des que
+        // l'aptitude change.
+        CWidget console = widget("area");
+        if (console != null && category() == null) {
+            buildConsole(console);
+            return;
+        }
         nodes.clear();
 
         CWidget right = page.child("parent_right");

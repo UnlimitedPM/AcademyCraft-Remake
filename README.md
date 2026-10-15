@@ -29,6 +29,13 @@ The original drew its interfaces with LambdaLib2's own GUI engine, and the port 
 
 Nothing else to install. The port works on a server too, but it is a **test build**: keep a backup of your world.
 
+### How to play
+
+1. **Get an ability.** Open an **Ability Developer** (or the portable one) and press **LEARN**, or type **`/learn`** in chat: both do the same thing. If you carry an **induction factor**, it decides the kind and is consumed; without one, the kind is drawn at random. There are four: electromaster, meltdowner, teleporter, vecmanip.
+2. **Learn skills.** The developer and its skill tree show each category's skills, what they cost, what they need, and the LEARN button that teaches them. Using your skills fills the level bar, and a full bar unlocks the next level.
+3. **Put them on a key.** Open the **data terminal** (**Left Alt** by default) and its skill tree app: each learned skill can be placed on one of the four ability slots.
+4. **Use them.** The four slots are **left click**, **right click**, **R** and **F** by default. Some are used in one press, others work while held, and a few grow if you hold them longer (the railgun charges, the thunder clap gathers, the meltdowner builds up).
+5. **Everything else.** **C** cycles presets, **N** opens the preset editor, **V** turns your ability on and off, **F4** opens the debug console (skills, cooldowns, control points), and **Left Alt** opens the terminal. All of them can be changed in Minecraft's controls screen, under "AcademyCraft".
 ### What is in this first version
 
 | | |
@@ -89,6 +96,13 @@ L'original dessinait ses interfaces avec le moteur d'interface de LambdaLib2 ; l
 
 Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est une **version de test** : gardez une sauvegarde de votre monde.
 
+### Comment jouer
+
+1. **Obtenir une aptitude.** Ouvrez un **développeur d'aptitude** (ou le portable) et appuyez sur **LEARN**, ou tapez **`/learn`** dans le chat : les deux font la même chose. Si vous portez un **facteur d'induction**, c'est lui qui décide du type et il est consommé ; sans facteur, le type est tiré au hasard. Il y en a quatre : electromaster, meltdowner, teleporter, vecmanip.
+2. **Apprendre des compétences.** Le développeur et son arbre montrent les compétences de la catégorie, ce qu'elles coûtent, ce qu'elles demandent, et le bouton LEARN qui les enseigne. Utiliser ses compétences remplit la barre de niveau ; le palier plein ouvre le niveau suivant.
+3. **Les mettre sur une touche.** Ouvrez le **terminal de données** (**Alt gauche** par défaut) et son application d'arbre : chaque compétence apprise se range sur l'un des quatre emplacements d'aptitude.
+4. **Les utiliser.** Les quatre emplacements sont le **clic gauche**, le **clic droit**, **R** et **F** par défaut. Certaines partent en une pression, d'autres agissent tant qu'on maintient, et quelques-unes montent si on maintient plus longtemps (le railgun se charge, le thunder clap s'accumule, le meltdowner monte en puissance).
+5. **Le reste.** **C** fait défiler les presets, **N** ouvre l'éditeur de presets, **V** allume et éteint l'aptitude, **F4** ouvre la console de débogage (compétences, recharges, points de contrôle), et **Alt gauche** ouvre le terminal. Toutes se changent dans les commandes de Minecraft, catégorie « AcademyCraft ».
 ### Ce que contient cette première version
 
 Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, formeur de métal) ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès.
