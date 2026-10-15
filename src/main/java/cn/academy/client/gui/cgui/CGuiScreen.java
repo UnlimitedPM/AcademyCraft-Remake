@@ -151,6 +151,9 @@ public abstract class CGuiScreen extends Screen {
                             colour[2]));
                 }
             }
+            if (widget.bar != null) {
+                drawBar(graphics, widget, x, y, w, h);
+            }
             if (widget.outline != null) {
                 int colour = argb(widget.outline.alpha, widget.outline.red, widget.outline.green,
                         widget.outline.blue);
@@ -166,6 +169,41 @@ public abstract class CGuiScreen extends Screen {
         for (CWidget child : widget.children()) {
             drawWidget(graphics, child, mouseX, mouseY);
         }
+    }
+
+    /**
+     * Une barre de progression : la portion de sa texture qui correspond au remplissage, ou un
+     * aplat de sa couleur quand elle n'en a pas.
+     *
+     * <p>Le morceau a dessiner vient de {@link CGuiLayout#bar}, ou le calcul est pur et relu par un
+     * test : c'est le {@code switch} du composant de l'original, et il decide a la fois du
+     * rectangle et de la portion de texture — une barre qui monte prend le BAS de son image.
+     */
+    private static void drawBar(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
+        if (w <= 0 || h <= 0) return;
+
+        CGuiLayout.Bar bar = CGuiLayout.bar(widget.bar, w, h);
+        if (bar.w() <= 0 || bar.h() <= 0) return;
+
+        ResourceLocation texture = widget.bar.texture == null ? null
+                : ResourceLocation.tryParse(widget.bar.texture);
+        if (texture == null) {
+            int[] color = widget.bar.color;
+            graphics.fill(x + (int) Math.round(bar.x()), y + (int) Math.round(bar.y()),
+                    x + (int) Math.round(bar.x() + bar.w()),
+                    y + (int) Math.round(bar.y() + bar.h()),
+                    argb(color[3], color[0], color[1], color[2]));
+            return;
+        }
+
+        int[] color = widget.bar.color;
+        graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
+        graphics.blit(texture, x + (int) Math.round(bar.x()), y + (int) Math.round(bar.y()),
+                (int) Math.round(bar.w()), (int) Math.round(bar.h()),
+                (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
+                (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
+                TEXTURE, TEXTURE);
+        graphics.setColor(1f, 1f, 1f, 1f);
     }
 
     private static void drawTexture(GuiGraphics graphics, String path, int x, int y, int w, int h,

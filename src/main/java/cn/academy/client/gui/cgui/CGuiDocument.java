@@ -87,6 +87,7 @@ public final class CGuiDocument {
             case "DrawTexture" -> widget.texture = texture(element);
             case "Outline" -> widget.outline = outline(element);
             case "Tint" -> widget.tint = tint(element);
+            case "ProgressBar" -> widget.bar = progressBar(element);
             case "TextBox" -> widget.text = textBox(element);
             default -> {
                 // Un composant que le port n'a pas repris : celui des listes defilantes, des
@@ -130,6 +131,34 @@ public final class CGuiDocument {
         CWidget.Outline out = new CWidget.Outline();
         read(out, color(element, "color"));
         out.lineWidth = number(element, "lineWidth", 1);
+        return out;
+    }
+
+    /**
+     * Une barre de progression : sa texture, sa direction, et son remplissage.
+     *
+     * <p>Le fichier de la 1.12.2 la decrit ainsi — {@code illustrating}, {@code texture},
+     * {@code dir} — et le reste vient du code, comme le remplissage lui-meme : c'est la machine
+     * qui sait ou elle en est, pas la page.
+     */
+    private static CWidget.ProgressBar progressBar(Element element) {
+        CWidget.ProgressBar out = new CWidget.ProgressBar();
+        String texture = text(element, "texture");
+        if (texture != null && !texture.isEmpty()) out.texture = texture;
+        out.illustrating = flag(element, "illustrating", false);
+        out.progress = number(element, "progress", 0);
+
+        String dir = text(element, "dir");
+        if (dir != null) {
+            try {
+                out.dir = CWidget.ProgressBar.Direction.valueOf(dir.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                out.dir = CWidget.ProgressBar.Direction.RIGHT;
+            }
+        }
+
+        int[] color = color(element, "color");
+        if (color != null) out.color = color;
         return out;
     }
 

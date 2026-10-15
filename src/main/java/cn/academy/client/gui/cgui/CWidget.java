@@ -75,6 +75,45 @@ public class CWidget {
         public boolean affectTexture;
     }
 
+    /**
+     * Une barre de progression : la fenetre d'une texture, remplie d'un cote.
+     *
+     * <p>C'est le {@code ProgressBar} de LambdaLib2, au champ pres : sa texture, sa direction, son
+     * remplissage de zero a un, et sa couleur. Quand elle n'a pas de texture, c'est un aplat de
+     * cette couleur — le developpeur s'en sert ainsi.
+     *
+     * <p>{@code illustrating} est son mode de demonstration : la barre fait alors l'aller-retour
+     * toute seule, ce qui sert a regler une page sans avoir de machine sous la main.
+     */
+    public static final class ProgressBar {
+        public enum Direction { RIGHT, LEFT, UP, DOWN }
+
+        public String texture;
+        public Direction dir = Direction.RIGHT;
+
+        /** Le remplissage, de zero a un. */
+        public double progress;
+
+        public int[] color = { 255, 255, 255, 255 };
+        public boolean illustrating;
+    }
+
+    /**
+     * Une liste qui defile, par lignes entieres : le {@code ElementList} de LambdaLib2.
+     *
+     * <p>Elle ne se dessine pas elle-meme : elle <b>range</b> les enfants de son widget. Seuls
+     * ceux qui tiennent entierement dans sa boite se dessinent, a partir du rang
+     * {@link #progress}, et chacun part ou le precedent s'est arrete. C'est ce qui fait que les
+     * pages du mod — celle des machines sans fil, celle du brouilleur — n'ont qu'a empiler des
+     * elements pour obtenir une liste qui defile.
+     */
+    public static final class ElementList {
+        public double spacing;
+
+        /** Le rang de la premiere ligne visible. */
+        public int progress;
+    }
+
     /** Un bout de texte, que l'ecran peut changer, et qui peut devenir un champ de saisie. */
     public static final class TextBox {
         public String content = "";
@@ -116,6 +155,8 @@ public class CWidget {
     public Outline outline;
     public Tint tint;
     public TextBox text;
+    public ProgressBar bar;
+    public ElementList list;
 
     // --- Ou le widget tombe sur l'ecran, en pixels : pose par CGuiLayout, lu par le rendu. ---
 
@@ -188,9 +229,30 @@ public class CWidget {
         out.outline = copy(outline);
         out.tint = copy(tint);
         out.text = copy(text);
+        out.bar = copy(bar);
+        out.list = copy(list);
         for (CWidget child : children) {
             out.add(child.copy());
         }
+        return out;
+    }
+
+    private static ProgressBar copy(ProgressBar source) {
+        if (source == null) return null;
+        ProgressBar out = new ProgressBar();
+        out.texture = source.texture;
+        out.dir = source.dir;
+        out.progress = source.progress;
+        out.color = source.color.clone();
+        out.illustrating = source.illustrating;
+        return out;
+    }
+
+    private static ElementList copy(ElementList source) {
+        if (source == null) return null;
+        ElementList out = new ElementList();
+        out.spacing = source.spacing;
+        out.progress = source.progress;
         return out;
     }
 

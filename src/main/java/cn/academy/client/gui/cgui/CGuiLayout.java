@@ -45,8 +45,79 @@ public final class CGuiLayout {
         widget.absY = anchorY - t.pivotY * widget.absH;
         widget.absScale = scale;
 
+        if (widget.list != null) {
+            list(widget, scale);
+            return;
+        }
+
         for (CWidget child : widget.children()) {
             place(child, widget.absX, widget.absY, t.width, t.height, scale);
+        }
+    }
+
+    /**
+     * Le morceau de barre qu'une barre de progression remplit : son rectangle, puis la portion de
+     * texture qui va avec.
+     *
+     * <p>Le rectangle et les coordonnees de texture se calculent ensemble, et c'est tout l'esprit
+     * du composant : une barre qui monte ne dessine pas toute sa texture en la coupant, elle en
+     * dessine une <b>part</b>, du bon cote. Voir le {@code switch} de l'original, repris tel quel.
+     */
+    public record Bar(double x, double y, double w, double h, double u, double v,
+                      double uw, double vh) {}
+
+    /** Le morceau a dessiner pour cette barre, dans la boite du widget. */
+    public static Bar bar(CWidget.ProgressBar bar, double width, double height) {
+        double disp = Math.max(0.0, Math.min(1.0, bar.progress));
+
+        return switch (bar.dir) {
+            case RIGHT -> new Bar(0, 0, width * disp, height, 0, 0, disp, 1);
+            case LEFT -> new Bar(width * (1 - disp), 0, width * disp, height, 1 - disp, 0, disp, 1);
+            case UP -> new Bar(0, height * (1 - disp), width, height * disp, 0, 1 - disp, 1, disp);
+            case DOWN -> new Bar(0, 0, width, height * disp, 0, 0, 1, disp);
+        };
+    }
+
+    /**
+     * Combien de lignes de cette liste tiennent entierement dans sa boite, a partir de son rang.
+     *
+     * <p>C'est la boucle de {@code ElementList.updateList} : une ligne qui depasse, meme d'un
+     * pixel, ne se dessine pas du tout — le contraire d'un ecran qui la couperait. Le joueur ne
+     * voit donc jamais une ligne a moitie, et c'est ce qui donne son air a la page.
+     */
+    public static int visibleRows(double[] heights, double spacing, double boxHeight, int progress) {
+        double sum = 0;
+        for (int i = Math.max(0, progress); i < heights.length; i++) {
+            if (sum + heights[i] > boxHeight) return i - Math.max(0, progress);
+            sum += heights[i] + spacing;
+        }
+        return heights.length - Math.max(0, progress);
+    }
+
+    /** Le rangement d'une liste : ses lignes visibles, l'une sous l'autre. */
+    private static void list(CWidget widget, double scale) {
+        int count = widget.children().size();
+        double[] heights = new double[count];
+        for (int i = 0; i < count; i++) {
+            heights[i] = widget.children().get(i).transform.height;
+        }
+
+        int progress = Math.max(0, widget.list.progress);
+        int visible = visibleRows(heights, widget.list.spacing, widget.transform.height, progress);
+        double sum = 0;
+
+        for (int i = 0; i < count; i++) {
+            CWidget child = widget.children().get(i);
+            if (i < progress || i >= progress + visible) {
+                child.transform.doesDraw = false;
+            } else {
+                child.transform.doesDraw = true;
+                child.transform.x = 0;
+                child.transform.y = sum;
+                sum += heights[i] + widget.list.spacing;
+            }
+            place(child, widget.absX, widget.absY, widget.transform.width,
+                    widget.transform.height, scale);
         }
     }
 
