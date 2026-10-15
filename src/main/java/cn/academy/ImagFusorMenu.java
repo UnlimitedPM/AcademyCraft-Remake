@@ -30,17 +30,25 @@ import net.minecraftforge.items.SlotItemHandler;
  */
 public class ImagFusorMenu extends AbstractContainerMenu {
 
-    public static final int INPUT_X = 44;
-    public static final int OUTPUT_X = 96;
-    public static final int IMAG_INPUT_X = 44;
-    public static final int ENERGY_INPUT_X = 70;
-    public static final int IMAG_OUTPUT_X = 96;
+    /** L'entree, en haut a gauche : le {@code SlotCrystal(tile, SLOT_INPUT, 13, 49)} de l'original. */
+    public static final int INPUT_X = 13;
+    public static final int INPUT_Y = 49;
 
-    /** Ligne haute : entree et sortie. */
-    public static final int TOP_SLOT_Y = 26;
+    /** La sortie, en haut a droite. */
+    public static final int OUTPUT_X = 143;
+    public static final int OUTPUT_Y = 49;
 
-    /** Ligne basse : unites de phase, batterie, unites vides. */
-    public static final int BOTTOM_SLOT_Y = 52;
+    /** L'unite de phase pleine, en haut a gauche du bandeau. */
+    public static final int IMAG_INPUT_X = 13;
+    public static final int IMAG_INPUT_Y = 10;
+
+    /** L'unite vide, en haut a droite. */
+    public static final int IMAG_OUTPUT_X = 143;
+    public static final int IMAG_OUTPUT_Y = 10;
+
+    /** L'objet a recharger, au milieu du bas. */
+    public static final int ENERGY_INPUT_X = 42;
+    public static final int ENERGY_INPUT_Y = 80;
 
     private static final int MACHINE_SLOTS = ImagFusorBlockEntity.SLOT_COUNT;
 
@@ -68,9 +76,9 @@ public class ImagFusorMenu extends AbstractContainerMenu {
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
         addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_INPUT,
-                INPUT_X, TOP_SLOT_Y));
+                INPUT_X, INPUT_Y));
         addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_OUTPUT,
-                OUTPUT_X, TOP_SLOT_Y) {
+                OUTPUT_X, OUTPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
@@ -78,34 +86,37 @@ public class ImagFusorMenu extends AbstractContainerMenu {
         });
 
         addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_INPUT,
-                IMAG_INPUT_X, BOTTOM_SLOT_Y) {
+                IMAG_INPUT_X, IMAG_INPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(ModItems.MATTER_UNIT_PHASE.get());
             }
         });
         addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_ENERGY_INPUT,
-                ENERGY_INPUT_X, BOTTOM_SLOT_Y) {
+                ENERGY_INPUT_X, ENERGY_INPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
             }
         });
         addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_OUTPUT,
-                IMAG_OUTPUT_X, BOTTOM_SLOT_Y) {
+                IMAG_OUTPUT_X, IMAG_OUTPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
             }
         });
 
-        for (int row = 0; row < 3; row++) {
+        // Les slots du joueur, aux positions de l'original : la barre rapide en bas, puis les trois
+        // rangees de l'inventaire de bas en haut. C'est le `mapPlayerInventory` de TechUIContainer.
+        for (int i = 1; i < 4; i++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                int slot = (4 - i) * 9 + col;
+                addSlot(new Slot(playerInventory, slot, 6 + col * 18, 159 - i * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
         this.workCounter = new SyncedInt(blockEntity::getWorkCounter);
@@ -149,6 +160,16 @@ public class ImagFusorMenu extends AbstractContainerMenu {
 
     public boolean isLinkedToNode() {
         return blockEntity.isLinked();
+    }
+
+    /** Vrai quand une recette est engagee : c'est ce qui distingue « IDLE » d'un nombre. */
+    public boolean hasRecipe() {
+        return blockEntity.hasRecipe();
+    }
+
+    /** Et ce que cette recette reclame en phase liquide, en millibuckets. */
+    public int imagNeeded() {
+        return blockEntity.imagNeeded();
     }
 
     // ------------------------------------------------------------------

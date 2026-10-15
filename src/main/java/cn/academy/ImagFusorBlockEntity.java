@@ -311,6 +311,16 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         return isWorking() ? (double) workCounter / WORK_TICKS : 0.0d;
     }
 
+    /** Vrai si une recette est engagee : la page distingue « IDLE » d'un nombre. */
+    public boolean hasRecipe() {
+        return currentRecipe != null;
+    }
+
+    /** Et ce que cette recette reclame en phase liquide, en millibuckets. */
+    public int imagNeeded() {
+        return currentRecipe == null ? 0 : currentRecipe.liquid();
+    }
+
     public int getWorkCounter() {
         return workCounter;
     }
