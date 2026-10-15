@@ -24,8 +24,9 @@ import net.minecraftforge.items.SlotItemHandler;
  */
 public class WindgenBaseMenu extends AbstractContainerMenu {
 
-    public static final int SLOT_X = 80;
-    public static final int SLOT_Y = 53;
+    /** L'emplacement de l'objet a recharger : le {@code SlotIFItem(tile, 0, 42, 80)} de l'original. */
+    public static final int SLOT_X = 42;
+    public static final int SLOT_Y = 80;
 
     private static final int MACHINE_SLOTS = 1;
 
@@ -59,13 +60,16 @@ public class WindgenBaseMenu extends AbstractContainerMenu {
             }
         });
 
-        for (int row = 0; row < 3; row++) {
+        // Les slots du joueur, aux positions de l'original : la barre rapide en bas, puis les trois
+        // rangees de l'inventaire de bas en haut. C'est le `mapPlayerInventory` de TechUIContainer.
+        for (int i = 1; i < 4; i++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                int slot = (4 - i) * 9 + col;
+                addSlot(new Slot(playerInventory, slot, 6 + col * 18, 159 - i * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
         this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
@@ -97,6 +101,11 @@ public class WindgenBaseMenu extends AbstractContainerMenu {
 
     public boolean isLinkedToNode() {
         return linked.value() != 0;
+    }
+
+    /** L'altitude de la base : c'est elle qui fixe la production, comme sur le rotor. */
+    public int altitude() {
+        return blockEntity.getBlockPos().getY();
     }
 
     // ------------------------------------------------------------------
