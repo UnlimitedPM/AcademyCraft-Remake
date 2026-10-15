@@ -124,12 +124,13 @@ class CGuiDocumentTest {
         assertEquals(menu.absX + 375 * 0.24, element.child("btn_remove").absX, EPS);
         assertEquals(33.333333333333336 * 0.24, element.child("btn_teleport").absW, 1e-4);
 
-        // Et le panneau d'explications : le fichier l'ancre au bord DROIT de la racine, donc
-        // son x negatif de vingt-trois unites le pose cinq pixels a gauche du milieu de l'ecran.
-        // C'est ce que dit le fichier ; c'est l'ecran qui le deplacera contre la liste au moment
-        // de s'en servir, comme l'original le faisait de son cote.
+        // Et le panneau d'explications : le fichier l'ancre au bord DROIT de la racine. Son x
+        // negatif de vingt-trois unites met donc son BORD DROIT cinq pixels a gauche du milieu de
+        // l'ecran, ce qui pose son coin gauche quatre-vingt-six pixels plus loin. C'est ce que dit
+        // le fichier ; c'est l'ecran qui le deplacera contre la liste au moment de s'en servir,
+        // comme l'original le faisait de son cote.
         CWidget info = root.child("info");
-        assertEquals(320 - 23.33333333333331 * 0.24, info.absX, 1e-4);
+        assertEquals(320 - (335.83333333333326 + 23.33333333333331) * 0.24, info.absX, 1e-4);
         assertEquals(335.83333333333326 * 0.24, info.absW, 1e-4);
         assertTrue(info.absW > 0 && info.absH > 0, "et il a bien une taille");
     }

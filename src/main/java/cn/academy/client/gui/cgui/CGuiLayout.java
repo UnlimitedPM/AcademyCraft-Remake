@@ -10,10 +10,10 @@ package cn.academy.client.gui.cgui;
  * <h2>Les trois regles de CGui</h2>
  *
  * <p>Un widget s'accroche a un point de son parent — {@code alignWidth} et {@code alignHeight}
- * disent de quel bord part son {@code x} et son {@code y} — puis son <b>pivot</b> dit ou ce point
- * tombe dans le widget lui-meme. Le pivot vaut {@code 0, 0} partout dans ce fichier, donc le point
- * d'accroche est le coin haut-gauche ; mais la racine, elle, s'accroche au CENTRE de l'ecran,
- * ce qui est toute l'astuce du fichier : ses enfants se comptent depuis le milieu.
+ * disent de quel bord part son {@code x} et son {@code y} : rien a gauche, tout a droite, et la
+ * <b>moitie de l'espace libre</b> au centre — puis le {@code x} du fichier s'ajoute par-dessus. Le
+ * pivot du fichier ne joue pas ici : l'original ne s'en sert pas pour poser ses widgets, et les
+ * documents du mod le laissent a zero partout.
  *
  * <p>L'echelle, enfin, se <b>multiplie</b> le long de l'arbre : la racine divise tout par quatre
  * environ, et un enfant qui voudrait rapetisser encore le ferait depuis la.
@@ -36,14 +36,18 @@ public final class CGuiLayout {
         CWidget.Transform t = widget.transform;
         double scale = parentScale * t.scale;
 
-        double anchorX = parentX + anchor(t.x, parentW, t.alignWidth) * parentScale;
-        double anchorY = parentY + anchor(t.y, parentH, t.alignHeight) * parentScale;
-
         widget.absW = t.width * scale;
         widget.absH = t.height * scale;
-        widget.absX = anchorX - t.pivotX * widget.absW;
-        widget.absY = anchorY - t.pivotY * widget.absH;
         widget.absScale = scale;
+
+        // L'espace que le parent laisse libre, puis la part qu'en prend l'alignement : rien a
+        // gauche, la moitie au centre, tout a droite. C'est la formule de l'original, et c'est
+        // elle qui fait coincider le document et les slots quand le parent est le conteneur.
+        double spanX = parentW * parentScale - widget.absW;
+        double spanY = parentH * parentScale - widget.absH;
+
+        widget.absX = parentX + spanX * factor(t.alignWidth) + t.x * parentScale;
+        widget.absY = parentY + spanY * factor(t.alignHeight) + t.y * parentScale;
 
         if (widget.list != null) {
             list(widget, scale);
@@ -121,13 +125,13 @@ public final class CGuiLayout {
         }
     }
 
-    /** L'origine d'un cote : le bord demande, plus le decalage du fichier. */
-    private static double anchor(double value, double size, String align) {
-        if (align == null) return value;
+    /** Le cote de l'ancre, en fraction de l'espace libre : zero a gauche, la moitie au centre. */
+    static double factor(String align) {
+        if (align == null) return 0.0;
         return switch (align.toUpperCase(java.util.Locale.ROOT)) {
-            case "CENTER" -> size * 0.5 + value;
-            case "RIGHT", "BOTTOM" -> size + value;
-            default -> value;
+            case "CENTER" -> 0.5;
+            case "RIGHT", "BOTTOM" -> 1.0;
+            default -> 0.0;
         };
     }
 }

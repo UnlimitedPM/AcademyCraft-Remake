@@ -20,8 +20,9 @@ import net.minecraftforge.items.SlotItemHandler;
  */
 public class WindgenMainMenu extends AbstractContainerMenu {
 
-    public static final int SLOT_X = 80;
-    public static final int SLOT_Y = 35;
+    /** L'emplacement de l'helice : le {@code SlotFan(tile, 0, 78, 9)} de l'original. */
+    public static final int SLOT_X = 78;
+    public static final int SLOT_Y = 9;
 
     private static final int MACHINE_SLOTS = 1;
 
@@ -51,14 +52,23 @@ public class WindgenMainMenu extends AbstractContainerMenu {
             }
         });
 
-        for (int row = 0; row < 3; row++) {
+        // Les slots du joueur se comptent comme dans l'original : la barre rapide d'abord, en bas,
+        // puis les trois rangees de l'inventaire, de bas en haut. Les nombres viennent de
+        // `mapPlayerInventory`, et la barre rapide est en 163 parce que la page fait 187 de haut.
+        for (int i = 1; i < 4; i++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                int slot = (4 - i) * 9 + col;
+                addSlot(new Slot(playerInventory, slot, 6 + col * 18, 159 - i * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
+    }
+
+    /** L'altitude du rotor : toute sa production, et la seule chose que son ecran affiche. */
+    public int altitude() {
+        return blockEntity.getBlockPos().getY();
     }
 
     public boolean isFanInstalled() {

@@ -43,34 +43,16 @@ import java.util.List;
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         extends AbstractContainerScreen<T> {
 
-    /** Le conteneur : 176 + 31 et 166 + 20, pour que slots et documents partagent un coin. */
-    private static final int CONTAINER_WIDTH = 207;
-    private static final int CONTAINER_HEIGHT = 186;
-
-    /** La racine de l'original : 172 sur 187, posee a dix-huit unites a gauche des slots. */
-    private static final double ROOT_WIDTH = 172;
-    private static final double ROOT_HEIGHT = 187;
-    private static final double ROOT_X = -18;
-
-    /** Et la page, 176 sur 187 : centree dans la racine, elle tombe donc DEUX unites a gauche. */
-    private static final double PAGE_WIDTH = 176;
-    private static final double PAGE_HEIGHT = 187;
-
-    /** Les onglets : vingt-quatre unites, a l'echelle 0,7, a vingt unites a gauche, tous les 22. */
-    private static final double TAB_SCALE = 0.7;
-    private static final double TAB_STEP = 22;
-    private static final double TAB_X = -20;
-
-    /** Le fond du panneau d'infos, et le gris de ses lignes. */
-    private static final int INFO_FILL = 0x80000000;
-    private static final int INFO_TEXT = 0xFFFFFFFF;
-
     /** Une page d'ecran : son identifiant, et son arbre. */
     protected record Page(String id, CWidget window) {}
 
     private final CWidget root = new CWidget("root");
     private final CWidget info = new CWidget("info");
     private final List<Page> pages = new ArrayList<>();
+
+    /** Les fonds qui respirent : les widgets dont le nom commence par {@code ui_}, comme chez
+     * l'original, qui les faisait osciller entre 0,675 et 0,85 d'opacite. */
+    private final List<CWidget.DrawTexture> breathing = new ArrayList<>();
 
     private CGuiView view;
     private int current;
@@ -80,8 +62,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
     protected CGuiContainerScreen(T menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
-        this.imageWidth = CONTAINER_WIDTH;
-        this.imageHeight = CONTAINER_HEIGHT;
+        this.imageWidth = CGuiContainerLayout.WIDTH;
+        this.imageHeight = CGuiContainerLayout.HEIGHT;
     }
 
     /**
@@ -94,13 +76,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
     /** Ouvre une page a partir d'un document de l'original, par exemple {@code rework/page_solar}. */
     protected void page(String id, String document) {
-        CWidget window = CGuiDocument.read(document).copy();
-        window.transform.width = PAGE_WIDTH;
-        window.transform.height = PAGE_HEIGHT;
-        window.transform.alignWidth = "CENTER";
-        window.transform.alignHeight = "CENTER";
-        window.transform.doesDraw = false;
-        pages.add(new Page(id, window));
+        pages.add(new Page(id, CGuiContainerLayout.page(CGuiDocument.read(document).copy())));
     }
 
     /** La page d'inventaire d'une machine sans page propre : {@code page_inv} et son fond a elle. */
@@ -172,52 +148,44 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         super.init();
 
         view = new CGuiView(this, root);
-        root.transform.width = ROOT_WIDTH;
-        root.transform.height = ROOT_HEIGHT;
-        root.transform.x = ROOT_X;
-        root.transform.doesDraw = true;
+        CGuiContainerLayout.root(root);
 
         pages.clear();
+        breathing.clear();
         info.children().clear();
         infoY = 10;
         build(this);
 
-        // Le panneau d'infos, a sept unites du bord droit de la racine, comme chez l'original.
-        info.transform.x = ROOT_WIDTH + 7;
-        info.transform.y = 5;
-        info.transform.width = 100;
-        info.transform.height = Math.max(50, infoY + 8);
-        info.texture = new CWidget.DrawTexture();
-        info.texture.red = 0;
-        info.texture.green = 0;
-        info.texture.blue = 0;
-        info.texture.alpha = 128;
+        CGuiContainerLayout.info(info, infoY);
 
         // La racine porte les onglets puis les pages, dans cet ordre : l'original ajoutait le
         // bouton AVANT sa fenetre, donc la fenetre passe au-dessus du bouton.
         root.children().clear();
         for (int i = 0; i < pages.size(); i++) {
-            root.add(tab(pages.get(i), i));
-            root.add(pages.get(i).window());
+            Page page = pages.get(i);
+            root.add(tab(page, i));
+            root.add(page.window());
+            collectBreathing(page.window());
         }
         root.add(info);
 
         show(0);
     }
 
+    /** Les fonds de page qui respirent : ceux que l'original nommait {@code ui_quelquechose}. */
+    private void collectBreathing(CWidget widget) {
+        if (widget.texture != null && widget.name().startsWith("ui_")) {
+            breathing.add(widget.texture);
+        }
+        for (CWidget child : widget.children()) {
+            collectBreathing(child);
+        }
+    }
+
     /** L'onglet d'une page : une copie du bouton de l'original, avec l'icone de son identifiant. */
     private CWidget tab(Page page, int index) {
-        CWidget button = CGuiDocument.read("rework/pageselect").copy();
-        button.transform.width = 24;
-        button.transform.height = 24;
-        button.transform.alignWidth = "LEFT";
-        button.transform.alignHeight = "TOP";
-        button.transform.scale = TAB_SCALE;
-        button.transform.x = TAB_X;
-        button.transform.y = index * TAB_STEP;
-        if (button.texture != null) {
-            button.texture.texture = "academy:textures/guis/icons/icon_" + page.id() + ".png";
-        }
+        CWidget button = CGuiContainerLayout.tab(CGuiDocument.read("rework/pageselect").copy(),
+                index, page.id());
         view.onClick(button, () -> show(index));
         return button;
     }
@@ -235,13 +203,61 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (view == null) return;
 
-        // L'ancre de la racine : le coin des slots, plus le demi-pixel du calcul de l'original.
-        view.origin(leftPos - 0.5, topPos + 0.5);
+        // Le document se pose sur le conteneur, pas sur l'ecran : c'est ce qui met le fond de la
+        // page et les slots dans le meme repere. Les deux trames se rejoignent a un demi-pixel.
+        view.place(leftPos, topPos, CGuiContainerLayout.WIDTH, CGuiContainerLayout.HEIGHT);
 
         // Ce que la machine a a dire ce tick-la, puis le dessin de tout l'arbre.
-        view.place();
         frame(graphics, mouseX, mouseY);
+        breathe();
         view.draw(graphics, mouseX, mouseY);
+    }
+
+    /** Le souffle des fonds de page : une seule opacite pour tous, comme chez l'original. */
+    private void breathe() {
+        if (breathing.isEmpty()) return;
+
+        int alpha = CGuiContainerLayout.breatheAlpha(net.minecraft.Util.getMillis() / 1000.0);
+        for (CWidget.DrawTexture texture : breathing) {
+            texture.alpha = alpha;
+        }
+    }
+
+    /**
+     * Les slots ne se dessinent, ne se survolent et ne s'ouvrent que sur la page qui les concerne.
+     *
+     * <p>Vanilla dessine ses slots dans son propre {@code render}, et le port ne peut pas l'en
+     * empecher slot par slot — la methode qui les dessine est privee. Quand la page courante n'est
+     * pas celle de l'inventaire, on ne l'appelle donc pas du tout : il reste le fond, le document
+     * de l'original, et rien d'autre. Sans cela, une page qui ne montre pas l'inventaire laisserait
+     * quand meme ses 36 emplacements cliquables sous le curseur, et un clic dans le vide viderait
+     * l'inventaire du joueur.
+     */
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        if (inventoryShown()) {
+            super.render(graphics, mouseX, mouseY, partialTick);
+            return;
+        }
+        // Page sans inventaire : le fond assombri, le document de l'original, et rien d'autre.
+        // Le fond du conteneur de vanilla, lui, est prive : c'est renderBg qui dessine le notre.
+        super.renderBackground(graphics);
+        renderBg(graphics, partialTick, mouseX, mouseY);
+    }
+
+    /**
+     * Rien : les titres du conteneur sont deja dans les images du fichier de l'original, qui a
+     * l'inventaire du joueur et le nom de la machine. Vanilla, lui, les ecrirait une deuxieme fois.
+     */
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX,
+                                double dragY) {
+        if (!inventoryShown()) return false;
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     /** Ce que la machine met a jour avant chaque dessin : ses barres, ses valeurs. */
@@ -269,15 +285,5 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         if (view != null && view.keyPressed(keyCode)) return true;
         if (view != null && view.editing()) return true;
         return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    /** Le gris des lignes d'infos, pour les ecrans qui s'en servent. */
-    protected static int infoText() {
-        return INFO_TEXT;
-    }
-
-    /** Le fond du panneau : noir a moitie, comme le {@code BlendQuad} de l'original. */
-    protected static int infoFill() {
-        return INFO_FILL;
     }
 }

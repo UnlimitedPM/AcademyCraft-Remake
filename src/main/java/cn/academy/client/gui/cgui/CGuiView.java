@@ -20,15 +20,18 @@ import java.util.Map;
  *
  * <h2>Le repere</h2>
  *
- * <p>{@link #place} pose l'arbre a partir d'une origine, en pixels : l'ecran de competence la donne
- * en haut a gauche de l'ecran, et le conteneur la cale sur {@code guiLeft / guiTop} pour que le
- * document et les slots tombent dans le meme repere. C'est tout le mystere du {@code +31 / +20} de
- * l'original : les deux trames n'en font qu'une.
+ * <p>{@link #place} pose l'arbre dans un parent, en pixels : l'ecran de competence lui donne l'ecran
+ * entier, et le conteneur de machine son cadre — celui des slots, puisque c'est le seul repere que
+ * les deux ont en commun. C'est tout le mystere du {@code +31 / +20} de l'original : une seule
+ * trame pour les deux, et un demi-pixel qui tombe juste.
  */
 @OnlyIn(Dist.CLIENT)
 public final class CGuiView {
 
-    /** La taille des textures d'interface du mod, en pixels : elles font 48 de cote. */
+    /**
+     * La taille des textures de <b>barre</b>, en pixels : une barre echantillonne une portion de son
+     * image, donc il faut une base pour la compter. Les fonds de page, eux, ne decoupent rien.
+     */
     private static final int TEXTURE = 48;
 
     private final Screen screen;
@@ -36,10 +39,6 @@ public final class CGuiView {
     private final Map<CWidget, Runnable> clicks = new IdentityHashMap<>();
 
     private CWidget focused;
-
-    /** L'origine du repere, en pixels : le parent du widget racine. */
-    private double originX;
-    private double originY;
 
     public CGuiView(Screen screen, String document) {
         this.screen = screen;
@@ -64,18 +63,17 @@ public final class CGuiView {
         return focused;
     }
 
-    /**
-     * L'ancre du widget racine, en pixels : l'ecran de competence la pose au milieu de l'ecran, le
-     * conteneur de machine sur le coin de ses slots.
-     */
-    public void origin(double x, double y) {
-        this.originX = x;
-        this.originY = y;
+    /** Pose l'arbre en plein ecran : c'est ce que fait un ecran de competence. */
+    public void place() {
+        place(0, 0, screen.width, screen.height);
     }
 
-    /** Pose l'arbre. A appeler avant de lire la moindre position. */
-    public void place() {
-        CGuiLayout.place(root, originX, originY, 0, 0, 1.0);
+    /**
+     * Pose l'arbre dans un parent donne, en pixels : c'est ce que fait un ecran de machine, dont
+     * le parent est son conteneur. A appeler avant de lire la moindre position.
+     */
+    public void place(double parentX, double parentY, double parentW, double parentH) {
+        CGuiLayout.place(root, parentX, parentY, parentW, parentH, 1.0);
     }
 
     /** Le widget de ce nom, cherche dans tout l'arbre. */
@@ -182,7 +180,10 @@ public final class CGuiView {
 
         graphics.setColor(((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f,
                 (colour & 0xFF) / 255f, ((colour >>> 24) & 0xFF) / 255f);
-        graphics.blit(texture, x, y, w, h, 0f, 0f, TEXTURE, TEXTURE, TEXTURE, TEXTURE);
+        // La texture entiere, etiree sur le rectangle : le fichier ne decoupe jamais ses images.
+        // Passer 1 pour la taille de texture revient a demander ses coordonnees de zero a un, sans
+        // avoir a connaitre ses dimensions — les pages des machines font 352 sur 374, les icones 48.
+        graphics.blit(texture, x, y, w, h, 0f, 0f, 1, 1, 1, 1);
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 

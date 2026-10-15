@@ -1,60 +1,33 @@
 package cn.academy;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 /**
- * Ecran du rotor de l'eolienne : un emplacement pour l'helice et l'etat de la
- * zone balayee.
+ * Ecran du rotor de l'eolienne : le fond de la machine, l'emplacement de l'helice, et l'altitude.
  *
- * Rendu procedural, comme les autres ecrans du port, en attendant une texture.
+ * <p>C'est la premiere machine a passer sur le moteur CGui, celui des ecrans de l'original. Le
+ * cadre, les onglets, la page et le panneau d'infos viennent de {@link CGuiContainerScreen} ; tout
+ * ce qui reste ici tient en deux lignes, et c'est exactement ce que faisait l'original.
  */
-public class WindgenMainScreen extends AbstractContainerScreen<WindgenMainMenu> {
-
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int SLOT_BG = 0xFF8B8B8B;
-    private static final int HOLE = 0xFF373737;
-    private static final int TEXT = 0x404040;
-    private static final int OK = 0x2E7D32;
-    private static final int OFF = 0x9E2B25;
+public class WindgenMainScreen extends CGuiContainerScreen<WindgenMainMenu> {
 
     public WindgenMainScreen(WindgenMainMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
-        this.inventoryLabelY = this.imageHeight - 94;
     }
 
+    /**
+     * Le rotor n'a qu'une chose a dire : l'altitude a laquelle il tourne, qui est toute sa
+     * production. L'original tenait en une ligne — {@code ret.infoPage.property("altitude",
+     * tile.getPos.getY)} — et il n'y a rien a y ajouter : pas d'inventaire de machine au-dela de
+     * l'helice, pas de reseau, pas de barre. La page est celle de l'inventaire, avec le fond de la
+     * machine et son unique onglet.
+     */
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
-
-        int slotX = leftPos + WindgenMainMenu.SLOT_X;
-        int slotY = topPos + WindgenMainMenu.SLOT_Y;
-        graphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, SLOT_BG);
-        graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HOLE);
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title, 8, 6, TEXT, false);
-
-        boolean fan = menu.isFanInstalled();
-        graphics.drawString(font, fan ? "Helice installee" : "Helice absente", 8, 22, fan ? OK : OFF,
-                false);
-
-        boolean clear = menu.isNoObstacle();
-        graphics.drawString(font, clear ? "Pales degagees" : "Pales obstruees", 8, 34, clear ? OK : OFF,
-                false);
-
-        graphics.drawString(font, playerInventoryTitle, 8, inventoryLabelY, TEXT, false);
+    protected void build(CGuiContainerScreen<WindgenMainMenu> screen) {
+        inventoryPage("windmain");
+        property(Component.translatable("ac.gui.prop.altitude").getString(),
+                Integer.toString(menu.altitude()));
     }
 }
