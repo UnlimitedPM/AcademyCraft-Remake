@@ -1,84 +1,208 @@
 package cn.academy;
 
+import cn.academy.client.gui.cgui.CGuiContainerScreen;
+import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- * Ecran du brouilleur d'aptitudes : l'emplacement d'energie, l'etat, le rayon a
- * regler et le cout que cela represente.
+ * Ecran du brouilleur d'aptitudes : sa page, sa liste blanche, et ses deux reglages.
  *
- * Rendu procedural, comme les autres ecrans du port, en attendant une texture.
+ * <p>La page EST celle de l'inventaire : l'original appelait {@code InventoryPage(window)} sur
+ * {@code page_interfere}, donc son {@code ui_block} porte le fond de la machine et c'est lui qui
+ * accueille les emplacements. C'est la seule machine ou la liste blanche est dans la <b>page</b> et
+ * non dans le panneau d'infos.
  *
- * <h2>Pourquoi le cout est affiche en clair ici</h2>
+ * <h2>La liste blanche</h2>
  *
- * Le rayon se paie au carre : passer de 10 a 20 blocs quadruple la facture. Un
- * joueur qui ne verrait que le rayon ne comprendrait pas pourquoi sa machine
- * s'eteint toute seule. Le cout par tick est donc ecrit a cote, en clair.
+ * <p>Une zone de quatre lignes, ou chaque nom epargne prend la sienne : la liste defile par lignes
+ * entieres quand il y en a plus, et la ligne choisie s'allume. Les trois boutons de la page font le
+ * reste — celui du haut et celui du bas font defiler, celui qui ajoute fait naitre un champ de saisie
+ * sur le panneau (il prend le clavier, et il disparait des qu'on clique ailleurs), et celui qui
+ * retire enleve la ligne choisie.
+ *
+ * <p>Un nom voyage par le serveur — c'est un texte, pas un nombre — mais la liste, elle, revient par
+ * la mise a jour de bloc que la machine envoie dix fois par seconde : un nom ajoute s'y trouve une
+ * demi-seconde plus tard, et c'est ce qui fait vivre la liste a l'ecran.
+ *
+ * <h2>Ce qui reste dehors</h2>
+ *
+ * <p>L'onglet sans fil de l'original — choisir le noeud qui alimente la machine — n'est pas porte :
+ * elle trouve son noeud toute seule, comme les autres. Ce que le port ajoute a la place, dans le
+ * panneau, c'est ce que la machine fait : combien de joueurs elle brouille en ce moment, et ce que
+ * cela coute.
  */
-public class AbilityInterfererScreen extends AbstractContainerScreen<AbilityInterfererMenu> {
+public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfererMenu> {
 
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int SLOT_BG = 0xFF8B8B8B;
-    private static final int HOLE = 0xFF373737;
-    private static final int TEXT = 0x404040;
-    private static final int ENERGY = 0xFFE0A030;
-    private static final int OK = 0x2E7D32;
-    private static final int OFF = 0x9E2B25;
+    private static final String SWITCH_ON = "academy:textures/guis/button/button_switch_on.png";
+    private static final String SWITCH_OFF = "academy:textures/guis/button/button_switch_off.png";
 
-    private static final int BAR_X = 8;
-    private static final int BAR_Y = 20;
-    private static final int BAR_WIDTH = 10;
-    private static final int BAR_HEIGHT = 50;
+    /** Ce qu'une ligne de la liste montre : sept dixiemes, et pleine quand on la choisit. */
+    private static final int ROW_ALPHA = 178;
+    private static final int ROW_FOCUSED_ALPHA = 255;
 
-    private static final int ROW_1 = 22;
-    private static final int ROW_2 = 34;
-    private static final int ROW_3 = 46;
+    /** Le panneau de la liste, sa zone, et le modele de ligne dont chaque nom fait une copie. */
+    private CWidget listPanel;
+    private CWidget zone;
+    private CWidget rowTemplate;
 
-    private static final int BUTTON_WIDTH = 20;
-    private static final int BUTTON_HEIGHT = 16;
-    private static final int BUTTON_Y = 64;
+    /** Le nom que chaque ligne porte : c'est par lui que la ligne choisie se retrouve. */
+    private final Map<CWidget, String> rowNames = new IdentityHashMap<>();
 
-    public AbilityInterfererScreen(AbilityInterfererMenu menu, Inventory playerInventory, Component title) {
+    /** Le nom choisi, ou rien : c'est lui que le bouton « retirer » enleve. */
+    private String selected;
+
+    /** Ce que la liste montrait la derniere fois, pour ne la refaire que quand elle change. */
+    private List<String> shownWhitelist = List.of();
+
+    /** Le champ de saisie ne du bouton « ajouter », ou rien. */
+    private CWidget addField;
+
+    public AbilityInterfererScreen(AbilityInterfererMenu menu, Inventory playerInventory,
+                                   Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
-        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
-    protected void init() {
-        super.init();
+    protected void build(CGuiContainerScreen<AbilityInterfererMenu> screen) {
+        CWidget window = pageWindow("inv");
+        if (window == null) window = page("inv", "rework/page_interfere");
 
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> press(AbilityInterfererMenu.BUTTON_RANGE_DOWN))
-                .bounds(leftPos + 96, topPos + BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .tooltip(Tooltip.create(Component.literal("-" + AbilityInterfererBlockEntity.RANGE_STEP + " blocs")))
-                .build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> press(AbilityInterfererMenu.BUTTON_RANGE_UP))
-                .bounds(leftPos + 120, topPos + BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .tooltip(Tooltip.create(Component.literal("+" + AbilityInterfererBlockEntity.RANGE_STEP + " blocs")))
-                .build());
-        addRenderableWidget(Button.builder(Component.translatable("academy.interferer.action.toggle"),
-                        b -> press(AbilityInterfererMenu.BUTTON_TOGGLE))
-                .bounds(leftPos + 8, topPos + BUTTON_Y, 80, BUTTON_HEIGHT)
-                .build());
+        histogram(CGuiHist.energy(menu::getEnergyStored, menu.getMaxEnergyStored()));
+
+        // Ce que la machine fait, en deux lignes que l'original n'avait pas : le nombre de joueurs
+        // qu'elle brouille en ce moment, et ce que cela lui coute.
+        seplineInfo();
+        property(label("prop.affected"), Integer.toString(menu.getAffectedCount()));
+        property(label("prop.cost"), Integer.toString((int) menu.getCostPerTick()) + " IF/T");
+
+        wirePage(window);
+        fillRows(menu.whitelist());
+    }
+
+    private static String label(String key) {
+        return Component.translatable("ac.gui.common." + key).getString();
     }
 
     /**
-     * Libelle fixe pour le bouton d'allumage.
+     * Les gestes de la page : ses quatre boutons, l'interrupteur, et le pas du rayon.
      *
-     * Un libelle qui dependrait de l'etat ne se mettrait pas a jour : les widgets
-     * sont construits une fois, a l'ouverture de l'ecran. C'est le texte d'etat, lui
-     * redessine a chaque image, qui dit ce qu'il en est.
+     * <p>Appelee a chaque reconstruction du panneau, et c'est sans danger : elle retrouve la page qui
+     * existe deja, et les gestes sont ranges par widget — les refaire remplace les anciens.
      */
-    private Component toggleLabel() {
-        return Component.translatable("academy.interferer.action.toggle");
+    private void wirePage(CWidget window) {
+        listPanel = window.child("panel_whitelist");
+        zone = listPanel.child("zone_whitelist");
+        rowTemplate = zone.child("element");
+        if (rowTemplate != null) zone.remove(rowTemplate);
+
+        // Les lignes s'empilent dans la zone : le modele porte deja la bonne hauteur, il n'y avait
+        // qu'a le lui dire. C'est ce que l'original faisait en remplacant son ElementList.
+        zone.list = new CWidget.ElementList();
+        zone.list.spacing = 0;
+
+        onClick(listPanel.child("btn_up"), () -> zone.list.progress = Math.max(0, zone.list.progress - 1));
+        onClick(listPanel.child("btn_down"), this::progressNext);
+        onClick(listPanel.child("btn_add"), this::beginAdd);
+        onClick(listPanel.child("btn_remove"), () -> {
+            if (selected != null) menu.removeFromWhitelist(selected);
+        });
+
+        // Le panneau des reglages : deux lignes de seize dans une boite de trente-deux, que le fichier
+        // laisse toutes les deux a zero. Une liste les empile, et c'est ce que l'original faisait aussi.
+        CWidget config = window.child("panel_config");
+        config.list = new CWidget.ElementList();
+        config.list.spacing = 0;
+
+        onClick(config.child("element_switch").child("element_btn_switch"),
+                () -> press(AbilityInterfererMenu.BUTTON_TOGGLE));
+        onClick(config.child("element_range").child("element_btn_left"),
+                () -> press(AbilityInterfererMenu.BUTTON_RANGE_DOWN));
+        onClick(config.child("element_range").child("element_btn_right"),
+                () -> press(AbilityInterfererMenu.BUTTON_RANGE_UP));
     }
 
-    /** Les boutons de conteneur passent par le chemin vanilla : aucun paquet maison. */
+    /** Une ligne plus bas, sans aller au-dela de la fin de la liste. */
+    private void progressNext() {
+        int last = Math.max(0, zone.children().size() - 1);
+        zone.list.progress = Math.min(zone.list.progress + 1, last);
+    }
+
+    /**
+     * Refait les lignes de la liste : une par nom epargne.
+     *
+     * <p>Le nom choisi qui disparait de la liste cesse de l'etre : sans cela, le bouton « retirer »
+     * garderait le nom d'un joueur qui n'est plus la, et le retirerait deux fois.
+     */
+    private void fillRows(List<String> names) {
+        shownWhitelist = List.copyOf(names);
+
+        if (zone == null || rowTemplate == null) return;
+        zone.children().clear();
+        rowNames.clear();
+        if (selected != null && !names.contains(selected)) selected = null;
+
+        for (String name : names) {
+            CWidget row = rowTemplate.copy();
+            CWidget text = row.child("element_name");
+            if (text != null && text.text != null) text.text.content = name;
+
+            rowNames.put(row, name);
+            onClick(row, () -> selected = name);
+            zone.add(row);
+        }
+    }
+
+    /**
+     * Le bouton « ajouter » fait naitre un champ, comme l'original : il se pose sur le panneau, prend
+     * le clavier, et disparait des qu'on clique ailleurs — c'est ce que l'original appelait
+     * {@code LostFocusEvent}, et c'est le meme geste.
+     */
+    private void beginAdd() {
+        if (addField != null || listPanel == null) return;
+
+        CWidget field = new CWidget("add_name");
+        field.transform.x = 50;
+        field.transform.y = 5;
+        field.transform.width = 40;
+        field.transform.height = 10;
+
+        // Un blanc a moitie transparent : un DrawTexture sans image ne dessine qu'une couleur, et
+        // c'est exactement ce que l'original posait derriere son champ.
+        field.texture = new CWidget.DrawTexture();
+        field.texture.red = 255;
+        field.texture.green = 255;
+        field.texture.blue = 255;
+        field.texture.alpha = 50;
+
+        field.text = new CWidget.TextBox();
+        field.text.allowEdit = true;
+
+        listPanel.add(field);
+        onConfirm(field, name -> {
+            menu.addToWhitelist(name);
+            endAdd();
+        });
+
+        addField = field;
+        focus(field);
+    }
+
+    /** Ce que le champ d'ajout porte devient la liste. */
+    private void endAdd() {
+        if (addField == null) return;
+        if (listPanel != null) listPanel.remove(addField);
+        addField = null;
+        focus(null);
+    }
+
+    /** Un bouton du menu : allumer, et pousser le rayon d'un pas. */
     private void press(int buttonId) {
         if (minecraft != null && minecraft.gameMode != null) {
             minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
@@ -86,52 +210,37 @@ public class AbilityInterfererScreen extends AbstractContainerScreen<AbilityInte
     }
 
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
+    protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
+        // La liste se refait quand son contenu change : un nom ajoute revient du serveur une
+        // demi-seconde plus tard, par la mise a jour de bloc de la machine.
+        List<String> names = menu.whitelist();
+        if (!names.equals(shownWhitelist)) fillRows(names);
 
-        int slotX = leftPos + AbilityInterfererMenu.SLOT_X;
-        int slotY = topPos + AbilityInterfererMenu.SLOT_Y;
-        graphics.fill(slotX - 1, slotY - 1, slotX + 17, slotY + 17, SLOT_BG);
-        graphics.fill(slotX, slotY, slotX + 16, slotY + 16, HOLE);
-
-        int barX = leftPos + BAR_X;
-        int barY = topPos + BAR_Y;
-        graphics.fill(barX, barY, barX + BAR_WIDTH, barY + BAR_HEIGHT, HOLE);
-        int max = Math.max(1, menu.getMaxEnergyStored());
-        int filled = (int) (BAR_HEIGHT * ((float) menu.getEnergyStored() / max));
-        graphics.fill(barX, barY + BAR_HEIGHT - filled, barX + BAR_WIDTH, barY + BAR_HEIGHT, ENERGY);
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-
-        if (isHovering(BAR_X, BAR_Y, BAR_WIDTH, BAR_HEIGHT, mouseX, mouseY)) {
-            graphics.renderTooltip(font, Component.literal(
-                    menu.getEnergyStored() + " / " + menu.getMaxEnergyStored() + " Imag"), mouseX, mouseY);
-        } else {
-            renderTooltip(graphics, mouseX, mouseY);
+        // Et la ligne choisie s'allume : c'est ce qui dit au joueur laquelle le bouton retirera.
+        for (Map.Entry<CWidget, String> entry : rowNames.entrySet()) {
+            CWidget row = entry.getKey();
+            if (row.texture != null) {
+                row.texture.alpha = entry.getValue().equals(selected) ? ROW_FOCUSED_ALPHA : ROW_ALPHA;
+            }
         }
-    }
 
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title, 8, 6, TEXT, false);
+        // L'interrupteur : son image dit l'etat, et sa lumiere le confirme — pleine lumiere quand il
+        // est allume, un peu moins des qu'il s'eteint.
+        CWidget button = widget("element_btn_switch");
+        if (button != null && button.texture != null) {
+            button.texture.texture = menu.isEnabled() ? SWITCH_ON : SWITCH_OFF;
+            int lum = menu.isEnabled() ? 255 : 153;
+            button.texture.red = lum;
+            button.texture.green = lum;
+            button.texture.blue = lum;
+        }
 
-        // L'etat passe avant tout : un brouilleur eteint, c'est justement ce que le
-        // joueur doit voir quand il se demande pourquoi plus rien ne repond.
-        graphics.drawString(font, Component.translatable(menu.isEnabled()
-                        ? "academy.interferer.state.on" : "academy.interferer.state.off"),
-                24, ROW_1, menu.isEnabled() ? OK : OFF, false);
+        CWidget range = widget("element_text_range");
+        if (range != null && range.text != null) {
+            range.text.content = Integer.toString(menu.getRange());
+        }
 
-        graphics.drawString(font, menu.getRange() + " blocs", 24, ROW_2, TEXT, false);
-        graphics.drawString(font, (long) menu.getCostPerTick() + " / tick", 24, ROW_3,
-                menu.canPay() ? TEXT : OFF, false);
-
-        graphics.drawString(font, menu.getAffectedCount() + " joueurs", 24, 58, TEXT, false);
-        graphics.drawString(font, menu.isLinkedToNode() ? "Noeud: raccorde" : "Noeud: aucun",
-                100, ROW_1, TEXT, false);
-
-        graphics.drawString(font, playerInventoryTitle, 8, inventoryLabelY, TEXT, false);
+        // Le champ d'ajout s'en va des qu'il n'a plus le clavier.
+        if (addField != null && !isFocused(addField)) endAdd();
     }
 }

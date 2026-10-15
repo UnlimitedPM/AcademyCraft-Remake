@@ -154,6 +154,8 @@
   "ac.gui.common.sep.change_pass": "Change Password",
   "ac.gui.common.sep.wireless_init": "Wireless Network Initialization",
   "ac.gui.common.sep.wireless_noinit": "Wireless Network Not Initialized",
+  "ac.gui.common.prop.affected": "Affected",
+  "ac.gui.common.prop.cost": "Cost",
   "ac.gui.uiedit.elements": "Elements",
   "ac.gui.uiedit.elm.cpbar": "CP Indicator",
   "ac.gui.uiedit.elm.keyhint": "Control Hint",

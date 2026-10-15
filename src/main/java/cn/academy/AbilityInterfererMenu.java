@@ -30,8 +30,8 @@ public class AbilityInterfererMenu extends AbstractContainerMenu {
     public static final int BUTTON_RANGE_DOWN = 1;
     public static final int BUTTON_RANGE_UP = 2;
 
-    public static final int SLOT_X = 134;
-    public static final int SLOT_Y = 22;
+    public static final int SLOT_X = 139;
+    public static final int SLOT_Y = 25;
 
     private static final int MACHINE_SLOTS = 1;
 
@@ -67,13 +67,8 @@ public class AbilityInterfererMenu extends AbstractContainerMenu {
             }
         });
 
-        for (int row = 0; row < 3; row++) {
-            for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
-            }
-        }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
         this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
@@ -136,6 +131,38 @@ public class AbilityInterfererMenu extends AbstractContainerMenu {
 
     public boolean isLinkedToNode() {
         return linked.value() != 0;
+    }
+
+    /**
+     * La liste blanche, telle que la machine la porte.
+     *
+     * <p>Elle ne passe par aucun emplacement de donnee — ce sont des noms, pas des nombres — mais
+     * par la mise a jour de bloc, que la machine envoie dix fois par seconde : un nom ajoute s'y
+     * trouve une demi-seconde plus tard, et c'est ce qui fait vivre la liste a l'ecran.
+     */
+    public java.util.List<String> whitelist() {
+        return blockEntity.getWhitelist();
+    }
+
+    /** Le nom de celui qui a pose la machine : lui seul ecrit sa liste blanche. */
+    public String owner() {
+        return blockEntity.getPlacer() == null ? "" : blockEntity.getPlacer();
+    }
+
+    /** Ajoute un nom a la liste blanche, par le serveur. */
+    public void addToWhitelist(String name) {
+        send(name, false);
+    }
+
+    /** Et l'en retire. */
+    public void removeFromWhitelist(String name) {
+        send(name, true);
+    }
+
+    private void send(String name, boolean remove) {
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+                new cn.academy.energy.network.InterfererWhitelistPacket(
+                        blockEntity.getBlockPos(), name, remove));
     }
 
     /** Vrai si le tampon peut payer un cycle au rayon courant. */

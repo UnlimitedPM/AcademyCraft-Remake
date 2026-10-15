@@ -102,6 +102,36 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         return window;
     }
 
+    /**
+     * La fenetre d'une page deja ouverte, ou {@code null}.
+     *
+     * <p>C'est pour les machines qui ont quelque chose a poser <b>sur</b> leur page — des boutons, une
+     * liste. Leur {@code build} repasse par la a chaque reconstruction du panneau, et recreer la page
+     * en laisserait une deuxieme, jamais posee dans l'arbre et pourtant bien presente : la liste
+     * qu'on y aurait accrochee ne se verrait pas.
+     */
+    protected CWidget pageWindow(String id) {
+        for (Page page : pages) {
+            if (page.id().equals(id)) return page.window();
+        }
+        return null;
+    }
+
+    /** Ce qu'un widget de la page fait quand on clique dessus : l'{@code LeftClickEvent} de l'original. */
+    protected void onClick(CWidget widget, Runnable action) {
+        if (view != null) view.onClick(widget, action);
+    }
+
+    /** Et ce qu'il fait quand on valide ce qu'il contient. */
+    protected void onConfirm(CWidget widget, Consumer<String> action) {
+        if (view != null) view.onConfirm(widget, action);
+    }
+
+    /** Le champ qui prend le clavier, ou {@code null} pour le rendre. */
+    protected void focus(CWidget widget) {
+        if (view != null) view.focus(widget);
+    }
+
     /** La page courante, celle que les slots concernent. */
     protected Page current() {
         return pages.isEmpty() ? null : pages.get(current);
@@ -254,7 +284,18 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         info.children().clear();
         readings.clear();
         infoY = 10;
+
+        // Ce que la machine rebatit, c'est son PANNEAU ; ses pages, elle les recree au passage parce
+        // que c'est ainsi que son build est ecrit. Celles-la ne sont jamais posees dans l'arbre, donc
+        // personne ne les voit — mais elles s'accumuleraient dans la liste a chaque reconstruction.
+        int before = pages.size();
+
         build(this);
+
+        while (pages.size() > before) {
+            pages.remove(pages.size() - 1);
+        }
+
         CGuiContainerLayout.info(info, infoY);
 
         if (view != null) {

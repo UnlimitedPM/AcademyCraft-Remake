@@ -162,5 +162,11 @@ public class AbilityNetwork {
                 cn.academy.energy.network.MatrixConfigPacket::encode,
                 cn.academy.energy.network.MatrixConfigPacket::decode,
                 cn.academy.energy.network.MatrixConfigPacket::handle);
+        // Et la liste blanche du brouilleur : la seule chose de cette machine qu'un identifiant de
+        // bouton ne peut pas porter, parce que c'est un nom de joueur et non un nombre.
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.InterfererWhitelistPacket.class,
+                cn.academy.energy.network.InterfererWhitelistPacket::encode,
+                cn.academy.energy.network.InterfererWhitelistPacket::decode,
+                cn.academy.energy.network.InterfererWhitelistPacket::handle);
     }
 }

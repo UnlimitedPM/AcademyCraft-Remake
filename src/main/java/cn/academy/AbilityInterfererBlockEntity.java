@@ -1,7 +1,9 @@
 package cn.academy;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -10,6 +12,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import cn.academy.ability.AbilityCapability;
+import cn.academy.energy.ConfigText;
 import cn.academy.energy.EnergyReceiver;
 import cn.academy.energy.NodeFinder;
 import net.minecraft.core.BlockPos;
@@ -102,6 +105,15 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     @Nullable
     private String placer;
 
+    /**
+     * Les joueurs que la machine epargne, en plus de celui qui l'a posee.
+     *
+     * <p>C'est la liste blanche de l'original, ou le poseur ajoutait lui-meme les noms qu'il voulait
+     * proteger. Le port la garde telle quelle, avec une difference : son poseur y est toujours, meme
+     * s'il ne s'y est pas inscrit — celui qui a pose la machine ne peut pas etre la premiere victime
+     * de sa propre machine.
+     */
+    private final List<String> whitelist = new ArrayList<>();
     private boolean linked;
 
     /** Joueurs actuellement brouilles par cette machine, pour pouvoir les relacher. */
@@ -204,7 +216,42 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
 
     private boolean isProtected(Player player) {
         if (player.isCreative()) return true;
-        return placer != null && placer.equals(player.getGameProfile().getName());
+        return isWhitelisted(player.getGameProfile().getName());
+    }
+
+    /**
+     * Vrai si ce nom est epargne : celui qui a pose la machine, ou l'un des noms de sa liste.
+     *
+     * <p>Le poseur y est meme quand il ne s'est pas inscrit, et c'est une difference avec l'original :
+     * sa liste partait vide, donc celui qui posait une machine pouvait s'etourdir tout seul.
+     */
+    public boolean isWhitelisted(String name) {
+        if (name == null || name.isEmpty()) return false;
+        return name.equals(placer) || whitelist.contains(name);
+    }
+
+    /** La liste blanche, dans l'ordre ou elle a ete ecrite. */
+    public List<String> getWhitelist() {
+        return List.copyOf(whitelist);
+    }
+
+    /**
+     * Ajoute un nom a la liste blanche.
+     *
+     * <p>Un nom vide, ou deja present, ne fait rien : la liste est un ensemble de gens, et deux fois
+     * le meme nom n'aurait pas de sens a l'ecran.
+     */
+    public void addToWhitelist(String name) {
+        String clean = ConfigText.clean(name);
+        if (clean.isEmpty() || whitelist.contains(clean)) return;
+        whitelist.add(clean);
+        setChanged();
+    }
+
+    /** Et l'en retire, s'il y est. */
+    public void removeFromWhitelist(String name) {
+        if (!whitelist.remove(name)) return;
+        setChanged();
     }
 
     /** Detache la source d'un joueur. */
@@ -379,6 +426,12 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
         tag.putInt("range", range);
         tag.putBoolean("linked", linked);
         if (placer != null) tag.putString("placer", placer);
+
+        // La liste blanche part en liste de textes : c'est ce que NBT sait porter, et cela la rend
+        // lisible dans une sauvegarde autant que dans une mise a jour de bloc.
+        net.minecraft.nbt.ListTag names = new net.minecraft.nbt.ListTag();
+        for (String name : whitelist) names.add(net.minecraft.nbt.StringTag.valueOf(name));
+        tag.put("whitelist", names);
     }
 
     @Override
@@ -393,6 +446,10 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
         if (range == 0) range = MIN_RANGE;
         linked = tag.getBoolean("linked");
         placer = tag.contains("placer") ? tag.getString("placer") : null;
+
+        whitelist.clear();
+        net.minecraft.nbt.ListTag names = tag.getList("whitelist", net.minecraft.nbt.Tag.TAG_STRING);
+        for (int i = 0; i < names.size(); i++) whitelist.add(names.getString(i));
     }
 
     @Override

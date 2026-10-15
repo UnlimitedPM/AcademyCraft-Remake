@@ -6289,6 +6289,43 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * La liste blanche du brouilleur : elle garde, elle epargne, et elle survit au rechargement.
+     *
+     * C'est le seul reglage de cette machine qui ne soit pas un nombre, et celui qui decide qui elle
+     * brouille : il faut donc qu'il tienne — en memoire, dans une sauvegarde, et contre les doublons.
+     */
+    @GameTest(template = "empty")
+    public static void interfererWhitelistProtectsItsNames(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
+        var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
+
+        // Le poseur est epargne meme s'il ne s'est pas inscrit : c'est une difference avec l'original,
+        // dont la liste partait vide — celui qui posait la machine pouvait s'etourdir tout seul.
+        machine.setPlacer(ownPlayer(helper, "PoseurDuBrouilleur"));
+        assertTrue(helper, machine.isWhitelisted("PoseurDuBrouilleur"), "le poseur est epargne");
+        assertFalse(helper, machine.isWhitelisted("QuelquUnDAutre"), "un inconnu ne l'est pas");
+
+        // Et les espaces des deux bouts partent, comme pour un nom de noeud.
+        machine.addToWhitelist("  Ami  ");
+        assertTrue(helper, machine.isWhitelisted("Ami"), "un nom ajoute est nettoye et epargne");
+        assertValue(helper, java.util.List.of("Ami"), machine.getWhitelist(), "la liste porte le nom");
+
+        machine.addToWhitelist("Ami");
+        assertValue(helper, 1, machine.getWhitelist().size(), "deux fois le meme nom ne compte qu'une");
+
+        var reloaded = new AbilityInterfererBlockEntity(helper.absolutePos(rel),
+                helper.getBlockState(rel));
+        reloaded.load(machine.saveWithoutMetadata());
+        assertValue(helper, java.util.List.of("Ami"), reloaded.getWhitelist(),
+                "liste apres rechargement");
+
+        reloaded.removeFromWhitelist("Ami");
+        assertFalse(helper, reloaded.isWhitelisted("Ami"), "un nom retire ne protege plus");
+        helper.succeed();
+    }
+
     /** Le poseur n'est jamais brouille par sa propre machine. */
     @GameTest(template = "empty")
     public static void interfererNeverJamsItsOwner(GameTestHelper helper) {
