@@ -1,6 +1,7 @@
 package cn.academy.client.gui.cgui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
@@ -260,9 +261,116 @@ public final class CGuiView {
             }
         }
 
+        // Le trait passe avant le noeud qu'il relie : l'original le dessinait APRES, mais avec un
+        // test de profondeur qui l'ecartait la ou le noeud se trouve — donc, a l'arrivee, la meme
+        // image. Les deux bouts du trait s'arretent d'ailleurs a douze unites et demie du centre de
+        // chaque noeud, c'est-a-dire en dehors du disque qui en fait onze et demie : ils ne se
+        // croisent jamais, et l'ordre ne se voit pas.
+        if (widget.line != null) {
+            drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
+        }
+        if (widget.disc != null) {
+            drawDisc(graphics, widget, x, y, w, h);
+        }
+
         for (CWidget child : widget.children()) {
             drawWidget(graphics, child, mouseX, mouseY);
         }
+    }
+
+    /**
+     * Un trait de l'arbre : un quad texture, pose de travers.
+     *
+     * <p>Le premier bout du trait est l'origine du dessin, qui est simplement translate la ; le quad
+     * est ensuite tourne de l'angle qui va vers le second bout. La texture est posee dans le sens de
+     * la <b>longueur</b> (son {@code u} suit le trait, son {@code v} le traverse), et elle couvre
+     * exactement la part dessinee : le trait qui pousse etire donc son motif au lieu de le decouper,
+     * ce que fait l'original et ce qui se voit — le trait part du noeud et file vers son parent.
+     */
+    private static void drawLine(GuiGraphics graphics, CWidget widget, double originX,
+                                 double originY, double scale) {
+        CWidget.Line line = widget.line;
+        ResourceLocation texture = ResourceLocation.tryParse(line.texture);
+        if (texture == null) return;
+
+        double x0 = originX + line.x0 * scale;
+        double y0 = originY + line.y0 * scale;
+        double x1 = x0 + (line.x1 - line.x0) * scale * line.progress;
+        double y1 = y0 + (line.y1 - line.y0) * scale * line.progress;
+
+        double dx = x1 - x0;
+        double dy = y1 - y0;
+        double length = Math.sqrt(dx * dx + dy * dy);
+        if (length <= 0) return;
+
+        int thickness = Math.max(1, (int) Math.round(line.thickness * scale));
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(x0, y0, 0);
+        // L'axe des ordonnees du jeu descend, celui du repere tourne descend aussi : l'angle se
+        // donne donc tel quel, sans le retourner.
+        graphics.pose().mulPose(Axis.ZP.rotation((float) Math.atan2(dy, dx)));
+
+        graphics.setColor(line.red / 255f, line.green / 255f, line.blue / 255f, line.alpha / 255f);
+        blend();
+        graphics.blit(texture, 0, -thickness / 2, (int) Math.round(length), thickness,
+                0f, 0f, 1, 1, 1, 1);
+        graphics.setColor(1f, 1f, 1f, 1f);
+        graphics.pose().popPose();
+    }
+
+    /**
+     * Un noeud de l'arbre : le disque, son cerne, et l'icone de la competence.
+     *
+     * <p>Les trois sont <b>centres sur la boite</b> du widget, et non poses a son coin : la boite en
+     * fait seize et le disque vingt-trois, donc le disque deborde de trois unites et demie de chaque
+     * cote. C'est la regle de cet arbre — un noeud se dessine autour de sa place, pas a partir d'elle
+     * — et c'est elle qui decide aussi de l'ecart minimum entre deux noeuds.
+     *
+     * <p>L'echelle du dessin est celle du widget multipliee par {@code drawScale} : le survol d'un
+     * noeud le grossit ainsi d'un cinquieme <b>sans le deplacer</b>, parce que le centrage se fait
+     * apres l'echelle.
+     */
+    private static void drawDisc(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
+        CWidget.Disc disc = widget.disc;
+        double scale = widget.absScale * disc.drawScale;
+        double centreX = x + w / 2.0;
+        double centreY = y + h / 2.0;
+
+        double back = disc.size * scale;
+        blit(graphics, disc.back, centreX - back / 2, centreY - back / 2, back, back,
+                255, 255, 255, disc.backAlpha);
+
+        // Le cerne : un cinquieme de blanc et six dixiemes d'opacite, soit un gris fonce qui se fond
+        // dans le panneau. C'est ce qui detache le disque du fond de l'arbre.
+        double ring = disc.ringSize * scale;
+        blit(graphics, disc.ring, centreX - ring / 2, centreY - ring / 2, ring, ring,
+                51, 51, 51, (int) Math.round(disc.backAlpha * 0.6));
+
+        if (disc.icon != null) {
+            double icon = disc.iconSize * scale;
+            blit(graphics, disc.icon, centreX - icon / 2, centreY - icon / 2, icon, icon,
+                    255, 255, 255, disc.iconAlpha);
+        }
+    }
+
+    /**
+     * Une texture, posee a une place et dans une couleur donnees.
+     *
+     * <p>Le melange se repose avant chaque appel : {@code GuiGraphics} le coupe a la fin de chaque
+     * {@code blit}, et c'est lui qui porte tout le dessin des images du mod.
+     */
+    private static void blit(GuiGraphics graphics, String path, double x, double y, double w,
+                             double h, int red, int green, int blue, int alpha) {
+        if (alpha <= 0 || w <= 0 || h <= 0) return;
+        ResourceLocation texture = ResourceLocation.tryParse(path);
+        if (texture == null) return;
+
+        graphics.setColor(red / 255f, green / 255f, blue / 255f, alpha / 255f);
+        blend();
+        graphics.blit(texture, (int) Math.round(x), (int) Math.round(y),
+                (int) Math.round(w), (int) Math.round(h), 0f, 0f, 1, 1, 1, 1);
+        graphics.setColor(1f, 1f, 1f, 1f);
     }
 
     /**

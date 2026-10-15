@@ -6,500 +6,830 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.ability.develop.LearningHelper;
 import cn.academy.ability.develop.condition.LearningCondition;
-import net.minecraft.ChatFormatting;
+import cn.academy.client.gui.cgui.CGuiContainerScreen;
+import cn.academy.client.gui.cgui.CWidget;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
- * Ecran du developpeur d'aptitudes.
+ * L'ecran du developpeur d'aptitudes : l'arbre des competences de l'original.
  *
- * Une liste de ce qu'on peut y apprendre : chaque categorie, puis les competences
- * qu'elle contient. Un bouton par ligne lance l'apprentissage correspondant.
+ * <h2>Ce qui a change, et pourquoi</h2>
  *
- * <h2>Pourquoi une liste qui defile</h2>
+ * Le port avait un ecran a lui : la liste plate des categories, une ligne par competence, un bouton
+ * pour apprendre. Il apprenait, il marchait, et il ne ressemblait a rien de ce que l'original montre
+ * — la ou l'original dessine un <b>arbre</b> : chaque competence a sa place, reliee par un trait a
+ * celle dont elle depend, son icone au milieu d'un disque, et son experience qui remplira un anneau
+ * autour d'elle.
  *
- * Le port compte quatre categories et onze competences, soit quinze lignes : elles
- * ne tiennent pas sous une barre de progression et un inventaire. La zone de liste
- * garde donc une hauteur fixe et defile a la molette, plutot que de faire grandir
- * le panneau — un panneau de trois cents pixels deborderait de l'ecran a la plupart
- * des echelles d'interface.
+ * <p>Cet ecran-ci lit la page de l'original telle quelle — {@code page_developer}, quatre cents
+ * unites de large sur cent quatre-vingt-sept — et n'invente donc plus sa mise en page.
  *
- * La hauteur fixe a un second merite : <b>la geometrie ne depend pas de ce que le
- * joueur a appris</b>. Le serveur et le client placent donc leurs emplacements au
- * meme endroit sans avoir a se mettre d'accord sur autre chose que le registre.
+ * <h2>Pas d'inventaire, et c'est voulu</h2>
  *
- * <h2>Les lignes sont dessinees a la main</h2>
+ * L'original ne montre pas l'inventaire du joueur sur cet ecran, et le port fait pareil : la page
+ * occupe toute la place, on n'y range rien, on n'y depose rien. Le conteneur reste pourtant un
+ * conteneur — c'est lui qui porte l'energie, l'etat de l'apprentissage et les boutons, par le chemin
+ * vanilla des boutons de menu, sans un paquet a nous — mais l'ecran ne s'en sert que pour lire.
  *
- * Pas d'objet bouton par ligne : un bouton est un element d'interface a position
- * fixe, et il faudrait le deplacer a chaque cran de molette. Les lignes sont donc
- * dessinees, et le clic est calcule a partir de la meme position que le dessin, ce
- * qui rend les deux impossibles a desynchroniser. Le clic part ensuite par le
- * chemin vanilla des boutons de conteneur, comme {@code DeveloperMenu} l'attend.
+ * <h2>L'arbre se dessine au fil du temps</h2>
  *
- * <h2>Griser n'est pas interdire</h2>
+ * Chaque noeud apparait en fondu, decale de son rang, et le trait qui le relie a son parent pousse du
+ * noeud vers lui. La souris ecarte tout l'arbre d'un dixieme de la distance qui la separe du centre,
+ * ce qui donne au fond un relief de quelques unites. Rien n'est fige a l'ouverture : tout se
+ * recalcule a chaque image.
  *
- * Une ligne grisee l'est d'apres l'etat que le client connait ; le serveur
- * revalide tout au clic. Le client ne decide donc jamais de ce qui est appris — il
- * evite seulement de proposer l'impossible.
+ * <h2>Ce qui reste a faire</h2>
+ *
+ * L'anneau d'experience d'une competence apprise, et l'icone grisee de celles qui ne le sont pas : les
+ * deux sont l'oeuvre de deux petits programmes d'origine, dont le port n'a pas encore l'emploi. En
+ * attendant, un noeud montre son disque, son cerne et son icone — et la progression se lit sur les
+ * barres des deux panneaux de gauche.
  */
-public class DeveloperScreen extends AbstractContainerScreen<DeveloperMenu> {
+public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
-    private static final int PANEL = 0xFFC6C6C6;
-    private static final int LIST_BG = 0xFFA8A8A8;
-    private static final int HOLE = 0xFF373737;
-    private static final int TEXT = 0x404040;
-    private static final int DIM = 0xFF707070;
-    private static final int ENERGY = 0xFFE0A030;
-    private static final int PROGRESS = 0xFF4CAF50;
-    private static final int OK = 0x2E7D32;
-    private static final int OFF = 0x9E2B25;
-    private static final int LEARNED = 0x2E7D32;
-    private static final int BUTTON_ON = 0xFF6FA8DC;
+    /** La page de l'original, en unites de conception. */
+    private static final double PAGE_WIDTH = 400;
+    private static final double PAGE_HEIGHT = 187;
 
-    private static final int LIST_TOP = 18;
-    private static final int LIST_BOTTOM = 88;
-    private static final int LIST_LEFT = 22;
-    private static final int LIST_RIGHT = 174;
-    private static final int LIST_HEIGHT = LIST_BOTTOM - LIST_TOP;
-
-    private static final int ROW_HEIGHT = 12;
-    private static final int CATEGORY_X = 26;
-    private static final int SKILL_X = 32;
-    private static final int STATE_X = 74;
-    private static final int LEVEL_X = 104;
-    private static final int BAR_X_ROW = 124;
-    private static final int BAR_WIDTH_ROW = 28;
-    private static final int BAR_HEIGHT_ROW = 6;
-    private static final int BUTTON_X = 156;
-    private static final int BUTTON_WIDTH = 16;
-    private static final int BUTTON_HEIGHT = 10;
-
-    private static final int ENERGY_X = 8;
-    private static final int ENERGY_WIDTH = 10;
+    /** La page, et les trois morceaux du document que l'ecran modifie. */
+    private static final String PAGE = "dev";
+    private static final String AREA = "parent_right/area";
+    private static final String ABILITY_PANEL = "parent_left/panel_ability";
+    private static final String MACHINE_PANEL = "parent_left/panel_machine";
 
     /**
-     * Le bouton de changement de categorie, en haut a droite.
+     * La boite d'un noeud, et le trait qui le relie a son parent.
      *
-     * Il n'est pas dans la liste : la liste est la meme pour tout le monde, alors que ce
-     * bouton n'apparait que si la main du joueur le permet. Une ligne de plus selon
-     * l'inventaire ferait glisser toutes celles du dessous, c'est-a-dire la position des
-     * emplacements du serveur et du client a la fois.
+     * <p>Le trait s'arrete a {@code 12,2} du centre de chaque noeud alors que le disque en fait
+     * {@code 11,5} : il ne mord donc jamais dessus, et c'est pour cela que l'ordre de leur dessin ne
+     * se voit pas.
      */
-    private static final int RESET_X = 124;
-    private static final int RESET_Y = 4;
-    private static final int RESET_WIDTH = 48;
-    private static final int RESET_HEIGHT = 12;
+    private static final double NODE_BOX = 16.0;
+    private static final double LINK_INSET = 12.2;
+    private static final double LINK_WIDTH = 5.5;
+    private static final double LINK_FADE = 5.0;
 
-    private static final int BAR_X = 24;
-    private static final int BAR_Y = 96;
-    private static final int BAR_WIDTH = 136;
-    private static final int BAR_HEIGHT = 8;
+    /** L'apparition : un fondu par noeud, decale de son rang de huit centiemes de seconde. */
+    private static final double APPEAR_STEP = 0.08;
+    private static final double APPEAR_SPEED = 10.0;
 
-    /** Une ligne de la liste : une categorie, ou une de ses competences. */
-    private record Row(int categoryId, int skillId) {
+    /** Le survol : un cinquieme de plus, atteint en un dixieme de seconde. */
+    private static final double HOVER_SCALE = 1.2;
+    private static final double HOVER_TRANSIT = 0.1;
 
-        boolean isCategory() {
-            return skillId < 0;
-        }
-    }
+    /** Le relief : tout l'arbre se decale de dix unites au plus, en sens inverse de la souris. */
+    private static final double PARALLAX = 10.0;
 
-    private final List<Row> rows = new ArrayList<>();
+    /** La surface : un voile noir, ouvert et referme en un cinquieme de seconde. */
+    private static final int VEIL_ALPHA = 178;
+    private static final double VEIL_FADE = 0.2;
 
-    /** Defilement courant, en pixels. */
-    private int scroll;
+    /** Le bouton de l'original : son image, sa taille dessinee, et ses deux teintes. */
+    private static final String BUTTON_TEXTURE = "academy:textures/guis/developer/button.png";
+    private static final double BUTTON_WIDTH = 64.0;
+    private static final double BUTTON_HEIGHT = 32.0;
+    private static final double BUTTON_SCALE = 0.5;
+    private static final double BUTTON_Y = 30.0;
 
-    /** Ligne sous la souris, ou {@code null}. Recalculee a chaque image. */
-    private Row hovered;
-
-    public DeveloperScreen(DeveloperMenu menu, Inventory playerInventory, Component title) {
-        super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 202;
-        this.inventoryLabelY = this.imageHeight - 94;
-    }
-
-    @Override
-    protected void init() {
-        super.init();
-        buildRows();
-        scroll = 0;
-    }
+    /** L'icone d'une surface : le meme disque, mais plus grand. */
+    private static final String SURFACE_BACK = "academy:textures/guis/developer/skill_back.png";
+    private static final double SURFACE_BACK_SIZE = 50.0;
+    private static final double SURFACE_ICON_SIZE = 27.0;
 
     /**
-     * La liste des lignes, toujours la meme : toutes les categories, puis toutes
-     * leurs competences. Rien n'est masque selon la progression, sinon la geometrie
-     * dependrait de l'etat du joueur et les deux cotes pourraient ne plus tomber
-     * d'accord sur la place des emplacements.
-     */
-    private void buildRows() {
-        rows.clear();
-        for (int categoryId = 0; categoryId < menu.getCategoryCount(); categoryId++) {
-            Category category = menu.getCategory(categoryId);
-            if (category == null) continue;
-            rows.add(new Row(categoryId, -1));
-            for (Skill skill : category.getSkills()) {
-                rows.add(new Row(categoryId, skill.getId()));
-            }
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Rendu
-    // ------------------------------------------------------------------
-
-    @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        graphics.fill(leftPos, topPos, leftPos + imageWidth, topPos + imageHeight, PANEL);
-
-        drawEnergyBar(graphics);
-        drawList(graphics, mouseX, mouseY);
-        drawProgressBar(graphics);
-        drawResetButton(graphics);
-    }
-
-    /**
-     * Le bouton de changement de categorie : gris quand il ne peut rien faire, et la
-     * ligne s'explique au survol.
-     */
-    private void drawResetButton(GuiGraphics graphics) {
-        int x = leftPos + RESET_X;
-        int y = topPos + RESET_Y;
-        boolean open = menu.canReset();
-        graphics.fill(x, y, x + RESET_WIDTH, y + RESET_HEIGHT, HOLE);
-        if (open) {
-            graphics.fill(x + 1, y + 1, x + RESET_WIDTH - 1, y + RESET_HEIGHT - 1, BUTTON_ON);
-        }
-        graphics.drawString(font, Component.translatable("academy.developer.reset"), x + 4, y + 2,
-                open ? 0xFFFFFFFF : 0xFF909090, false);
-    }
-
-    private void drawEnergyBar(GuiGraphics graphics) {
-        int x = leftPos + ENERGY_X;
-        int y = topPos + LIST_TOP;
-        graphics.fill(x, y, x + ENERGY_WIDTH, y + LIST_HEIGHT, HOLE);
-        int max = Math.max(1, menu.getMaxEnergyStored());
-        int filled = (int) (LIST_HEIGHT * Math.min(1.0f, (float) menu.getEnergyStored() / max));
-        graphics.fill(x, y + LIST_HEIGHT - filled, x + ENERGY_WIDTH, y + LIST_HEIGHT, ENERGY);
-    }
-
-    private void drawProgressBar(GuiGraphics graphics) {
-        int x = leftPos + BAR_X;
-        int y = topPos + BAR_Y;
-        graphics.fill(x, y, x + BAR_WIDTH, y + BAR_HEIGHT, HOLE);
-        int done = (int) (BAR_WIDTH * menu.getProgress());
-        graphics.fill(x, y, x + done, y + BAR_HEIGHT, PROGRESS);
-    }
-
-    private void drawList(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.fill(leftPos + LIST_LEFT, topPos + LIST_TOP,
-                leftPos + LIST_RIGHT, topPos + LIST_BOTTOM, LIST_BG);
-
-        hovered = null;
-        int top = topPos + LIST_TOP;
-        for (int i = 0; i < rows.size(); i++) {
-            int y = top + i * ROW_HEIGHT - scroll;
-            // Les lignes hors de la zone ne sont pas dessinees : c'est toute la
-            // decoupe. Rien n'est dessine en dehors du cadre, donc rien ne depasse.
-            if (y + ROW_HEIGHT <= top || y >= top + LIST_HEIGHT) continue;
-
-            Row row = rows.get(i);
-            boolean overRow = mouseY >= y && mouseY < y + ROW_HEIGHT
-                    && mouseX >= leftPos + LIST_LEFT && mouseX < leftPos + LIST_RIGHT;
-            if (overRow) hovered = row;
-
-            if (row.isCategory()) {
-                drawCategoryRow(graphics, row, y);
-            } else {
-                drawSkillRow(graphics, row, y);
-            }
-        }
-
-        drawScrollBar(graphics);
-    }
-
-    private void drawCategoryRow(GuiGraphics graphics, Row row, int y) {
-        Category category = menu.getCategory(row.categoryId());
-        int level = menu.getCategoryLevel(row.categoryId());
-        boolean active = menu.isDeveloping() && menu.getDevelopingCategory() == row.categoryId()
-                && menu.getDevelopingSkill() < 0;
-        boolean maxed = level >= menu.getMaxLevel();
-
-        graphics.drawString(font, category == null ? "?" : category.getName(),
-                leftPos + CATEGORY_X, y + 2, active ? OK : TEXT, false);
-        graphics.drawString(font, level + "/" + menu.getMaxLevel(),
-                leftPos + LEVEL_X, y + 2, level > 0 ? OK : DIM, false);
-
-        // Le palier du niveau en cours. Sans lui, le bouton refuserait de faire monter
-        // la categorie sans que rien n'explique pourquoi : le joueur croirait la
-        // machine cassee, alors qu'il lui manque seulement d'avoir utilise ses
-        // competences.
-        if (!maxed) {
-            float progress = menu.getLevelProgress(row.categoryId());
-            drawBar(graphics, y, progress, menu.canLevelUp(row.categoryId()) ? OK : BUTTON_ON);
-        }
-
-        drawPlus(graphics, y, !maxed && menu.canLevelUp(row.categoryId()) && !menu.isDeveloping());
-    }
-
-    private void drawSkillRow(GuiGraphics graphics, Row row, int y) {
-        Skill skill = menu.getSkill(row.categoryId(), row.skillId());
-        if (skill == null) return;
-
-        AbilityData data = ClientAbilityData.get();
-        boolean learned = data.isSkillLearned(skill);
-        boolean learnable = LearningHelper.canLearn(data, skill, menu.getDeveloperType());
-        boolean active = menu.isDeveloping() && menu.getDevelopingCategory() == row.categoryId()
-                && menu.getDevelopingSkill() == row.skillId();
-
-        int colour = active ? OK : learned ? LEARNED : learnable ? TEXT : DIM;
-        graphics.drawString(font, skill.getName(), leftPos + SKILL_X, y + 2, colour, false);
-        graphics.drawString(font, "niv. " + skill.getLevel(), leftPos + STATE_X, y + 2, DIM, false);
-
-        // L'experience de la competence : c'est elle qui remplit le palier du niveau,
-        // donc c'est elle que le joueur doit voir pour comprendre ou il en est.
-        if (learned || learnable) {
-            drawBar(graphics, y, data.getSkillExp(skill), learned ? LEARNED : BUTTON_ON);
-        }
-
-        // L'apprentissage n'est propose que s'il a un sens. La ligne reste visible,
-        // avec sa raison de ne pas l'etre dans l'infobulle.
-        drawPlus(graphics, y, learnable && !learned && !menu.isDeveloping());
-    }
-
-    /**
-     * La barre d'une ligne : le palier d'une categorie, ou l'experience d'une
-     * competence.
+     * Un noeud de l'arbre, et de quoi l'animer.
      *
-     * Les deux occupent la meme colonne, pour que l'oeil compare des choses
-     * comparables : ce qui est rempli ici est ce qui ouvre la suite la-bas.
+     * <p>{@code dim} est l'opacite que l'original donne a une competence selon son etat : pleine si
+     * elle est apprise, sept dixiemes si celle dont elle depend l'est — elle est alors a portee — et
+     * un quart sinon, c'est-a-dire a peine visible. Toute la progression se lit la, sans un mot.
      */
-    private void drawBar(GuiGraphics graphics, int y, float ratio, int colour) {
-        int x = leftPos + BAR_X_ROW;
-        int barY = y + 3;
-        graphics.fill(x, barY, x + BAR_WIDTH_ROW, barY + BAR_HEIGHT_ROW, HOLE);
-        int filled = (int) (BAR_WIDTH_ROW * Math.max(0f, Math.min(1f, ratio)));
-        if (filled > 0) {
-            graphics.fill(x, barY, x + filled, barY + BAR_HEIGHT_ROW, colour);
+    private static final class Node {
+        final Skill skill;
+        final CWidget widget;
+        final boolean learned;
+        final double dim;
+        final double born;
+        boolean hovered;
+        double since;
+
+        Node(Skill skill, CWidget widget, boolean learned, double dim, double born) {
+            this.skill = skill;
+            this.widget = widget;
+            this.learned = learned;
+            this.dim = dim;
+            this.born = born;
+            this.since = born;
         }
     }
 
-    /** La case « + » d'une ligne, dessinee pareil partout. */
-    private void drawPlus(GuiGraphics graphics, int y, boolean actionable) {
-        int x = leftPos + BUTTON_X;
-        int boxY = y + (ROW_HEIGHT - BUTTON_HEIGHT) / 2;
-        graphics.fill(x, boxY, x + BUTTON_WIDTH, boxY + BUTTON_HEIGHT, HOLE);
-        if (actionable) {
-            graphics.fill(x + 1, boxY + 1, x + BUTTON_WIDTH - 1, boxY + BUTTON_HEIGHT - 1, BUTTON_ON);
-        }
-        graphics.drawString(font, "+", x + 5, boxY + 1,
-                actionable ? 0xFFFFFFFF : 0xFF909090, false);
+    private final List<Node> nodes = new ArrayList<>();
+
+    /** Ce que l'arbre montre, sous forme de phrase comparable : voir {@link #signature()}. */
+    private String signature = "";
+
+    /** L'instant d'ouverture, en secondes : c'est l'origine de tous les fondus. */
+    private double opened;
+
+    /** La surface ouverte, s'il y en a une, et son propre fondu. */
+    @Nullable
+    private CWidget surface;
+    private double surfaceSince;
+    private boolean surfaceClosing;
+
+    public DeveloperScreen(DeveloperMenu menu, Inventory inventory, Component title) {
+        super(menu, inventory, title);
+        // La page de l'original n'est pas un cadre de machine : elle fait quatre cents unites de large,
+        // et c'est elle qui decide de la taille de l'ecran.
+        this.imageWidth = (int) PAGE_WIDTH;
+        this.imageHeight = (int) PAGE_HEIGHT;
     }
 
-    private void drawScrollBar(GuiGraphics graphics) {
-        int max = maxScroll();
-        if (max <= 0) return;
+    /** La page occupe toute la place : elle ne se pose pas au milieu d'un cadre de machine. */
+    @Override
+    protected void layoutRoot(CWidget root) {
+        root.transform.width = PAGE_WIDTH;
+        root.transform.height = PAGE_HEIGHT;
+        root.transform.x = 0;
+        root.transform.y = 0;
+        root.transform.scale = 1.0;
+        root.transform.alignWidth = "LEFT";
+        root.transform.alignHeight = "TOP";
+        root.transform.doesDraw = true;
+    }
 
-        int x = leftPos + LIST_RIGHT - 2;
-        int top = topPos + LIST_TOP;
-        graphics.fill(x, top, x + 2, top + LIST_HEIGHT, HOLE);
-        int content = rows.size() * ROW_HEIGHT;
-        int barHeight = Math.max(8, LIST_HEIGHT * LIST_HEIGHT / Math.max(1, content));
-        int barTop = top + (LIST_HEIGHT - barHeight) * scroll / max;
-        graphics.fill(x, barTop, x + 2, barTop + barHeight, BUTTON_ON);
+    /** Un onglet de page se poserait a gauche du cadre, hors de la page : il n'y en a pas. */
+    @Override
+    protected boolean showsTabs() {
+        return false;
+    }
+
+    /** Et le panneau d'infos se poserait dessus : la page dit deja tout ce qu'elle a a dire. */
+    @Override
+    protected boolean showsInfo() {
+        return false;
     }
 
     // ------------------------------------------------------------------
-    // Interaction
+    // Construction
     // ------------------------------------------------------------------
 
-    private int maxScroll() {
-        return Math.max(0, rows.size() * ROW_HEIGHT - LIST_HEIGHT);
-    }
-
+    /**
+     * La page, ses deux panneaux de gauche, et l'arbre.
+     *
+     * <p>Elle est construite ici, dans le {@code build} du conteneur, et c'est le seul endroit ou elle
+     * peut l'etre : c'est la que les pages naissent, avant que l'ecran ne montre la premiere. La
+     * Developer ne rebatit jamais son panneau — elle n'en a pas — donc la reconstruction qui
+     * retirerait les pages nees apres coup ne la concerne pas.
+     */
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (delta != 0) {
-            int amount = (int) (-delta * ROW_HEIGHT * 2);
-            scroll = Math.max(0, Math.min(maxScroll(), scroll + amount));
-            return true;
-        }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+    protected void build(CGuiContainerScreen<DeveloperMenu> screen) {
+        CWidget page = page(PAGE, "rework/page_developer");
+        page.transform.width = PAGE_WIDTH;
+        page.transform.height = PAGE_HEIGHT;
+        page.transform.x = 0;
+        page.transform.y = 0;
+        page.transform.alignWidth = "LEFT";
+        page.transform.alignHeight = "TOP";
+
+        opened = now();
+        buildAbilityPanel(page);
+        buildMachinePanel(page);
+        buildTree(page);
+
+        // La bobine magnetique change l'ecran : l'original ne montrait plus l'arbre du tout et laissait
+        // la place a la console du changement d'aptitude. Le port pose la meme question, sous forme de
+        // surface, et c'est ce que le joueur tient en main qui decide — comme chez l'original.
+        if (holdsCoil()) openReset();
     }
 
-    @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Le bouton de changement de categorie d'abord : il n'est sur aucune ligne.
-        if (button == 0 && menu.canReset()) {
-            int x = leftPos + RESET_X;
-            int y = topPos + RESET_Y;
-            if (mouseX >= x && mouseX < x + RESET_WIDTH
-                    && mouseY >= y && mouseY < y + RESET_HEIGHT) {
-                develop(DeveloperMenu.RESET_BUTTON);
-                return true;
-            }
-        }
-
-        if (button == 0 && hovered != null && isActionable(hovered)) {
-            int x = leftPos + BUTTON_X;
-            int y = rowY(hovered) + (ROW_HEIGHT - BUTTON_HEIGHT) / 2;
-            if (mouseX >= x && mouseX < x + BUTTON_WIDTH && mouseY >= y && mouseY < y + BUTTON_HEIGHT) {
-                develop(buttonIdOf(hovered));
-                return true;
-            }
-        }
-        return super.mouseClicked(mouseX, mouseY, button);
-    }
-
-    /** La position verticale d'une ligne, en coordonnees d'ecran. */
-    private int rowY(Row row) {
-        return topPos + LIST_TOP + rows.indexOf(row) * ROW_HEIGHT - scroll;
-    }
-
-    /** La souris est-elle sur le bouton de changement de categorie ? */
-    private boolean isOverResetButton(double mouseX, double mouseY) {
-        int x = leftPos + RESET_X;
-        int y = topPos + RESET_Y;
-        return mouseX >= x && mouseX < x + RESET_WIDTH
-                && mouseY >= y && mouseY < y + RESET_HEIGHT;
-    }
-
-    private boolean isActionable(Row row) {
-        if (menu.isDeveloping()) return false;
-        if (row.isCategory()) {
-            return menu.getCategoryLevel(row.categoryId()) < menu.getMaxLevel();
-        }
-        Skill skill = menu.getSkill(row.categoryId(), row.skillId());
-        if (skill == null) return false;
-        AbilityData data = ClientAbilityData.get();
-        return !data.isSkillLearned(skill)
-                && LearningHelper.canLearn(data, skill, menu.getDeveloperType());
-    }
-
-    private int buttonIdOf(Row row) {
-        if (row.isCategory()) return row.categoryId();
-        Skill skill = menu.getSkill(row.categoryId(), row.skillId());
-        return skill == null ? -1 : DeveloperMenu.skillButton(skill);
+    /** La bobine magnetique en main : c'est elle qui demande a changer d'aptitude. */
+    private boolean holdsCoil() {
+        return minecraft != null && minecraft.player != null
+                && minecraft.player.getMainHandItem().is(ModItems.MAGNETIC_COIL.get());
     }
 
     /**
-     * Les boutons de conteneur passent par le chemin vanilla : aucun paquet
-     * maison, le clic est route vers {@code DeveloperMenu.clickMenuButton}.
+     * Le panneau de gauche : l'aptitude du joueur, son niveau, son experience.
+     *
+     * <p>La barre dit l'avancement du niveau en cours — celle qui ne monte qu'en se servant de ses
+     * aptitudes — et le bouton de droite ne se montre que quand le palier est plein et que la machine
+     * sait enseigner la suite.
      */
-    private void develop(int buttonId) {
-        if (buttonId < 0) return;
-        if (minecraft != null && minecraft.gameMode != null) {
-            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
+    private void buildAbilityPanel(CWidget page) {
+        CWidget panel = page.child("parent_left");
+        CWidget ability = panel == null ? null : panel.child("panel_ability");
+        if (ability == null) return;
+
+        Category category = category();
+        AbilityData data = ClientAbilityData.get();
+
+        CWidget logo = ability.child("logo_ability");
+        if (logo != null) {
+            if (logo.texture == null) logo.texture = new CWidget.DrawTexture();
+            logo.texture.texture = category == null ? null : categoryIcon(category);
+        }
+
+        CWidget name = ability.child("text_abilityname");
+        if (name != null && name.text != null) {
+            name.text.content = category == null ? "N/A"
+                    : Component.translatable(category.getDisplayKey()).getString();
+        }
+
+        CWidget level = ability.child("text_level");
+        if (level != null && level.text != null) {
+            level.text.content = category == null ? ""
+                    : Component.translatable("academy.developer.level",
+                            data.getCategoryLevel(category)).getString();
+        }
+
+        CWidget progress = ability.child("logo_progress");
+        if (progress != null && progress.bar != null) {
+            // L'original ne descend jamais jusqu'a zero : une barre vide garde un cheveu de
+            // remplissage, et c'est ce qui la rend lisible. C'est son minimum de deux centiemes.
+            progress.bar.progress = category == null ? 0.0
+                    : Math.max(0.02, data.getLevelProgress(category));
+        }
+
+        CWidget upgrade = ability.child("btn_upgrade");
+        if (upgrade != null) {
+            boolean open = category != null && menu.canLevelUp(category.getCategoryId());
+            upgrade.transform.doesDraw = open;
+            if (open) onClick(upgrade, this::openLevel);
         }
     }
 
-    // ------------------------------------------------------------------
-    // Textes
-    // ------------------------------------------------------------------
+    /**
+     * Le panneau de la machine : sa charge, et la part du reseau qu'elle accepte.
+     *
+     * <p>Un developpeur portable n'en a pas : il ne tire rien d'un reseau, donc son panneau se cache et
+     * la bande de gauche change d'image — c'est ce que fait l'original, et l'image
+     * {@code ui_developerleft_skilltree} n'existe que pour cela.
+     *
+     * <p>La ligne du noeud sans fil reste cachee : le nom du noeud auquel la machine est reliee vit sur
+     * le serveur, et rien ne le fait encore descendre jusqu'ici. Mieux vaut ne rien montrer qu'un nom
+     * faux.
+     */
+    private void buildMachinePanel(CWidget page) {
+        CWidget panel = page.child("parent_left");
+        CWidget machine = panel == null ? null : panel.child("panel_machine");
+        if (machine == null) return;
 
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title, 8, 6, TEXT, false);
-        graphics.drawString(font, statusText(), BAR_X, BAR_Y + BAR_HEIGHT + 4,
-                menu.getState() == cn.academy.ability.develop.DevelopProgress.DevState.FAILED ? OFF : TEXT, false);
-        graphics.drawString(font, playerInventoryTitle, 8, inventoryLabelY, TEXT, false);
-    }
+        CWidget wireless = machine.child("button_wireless");
+        if (wireless != null) wireless.transform.doesDraw = false;
+        CWidget wirelessText = machine.child("text_wireless");
+        if (wirelessText != null) wirelessText.transform.doesDraw = false;
 
-    /** Message d'etat, dans la langue du joueur. */
-    private Component statusText() {
-        cn.academy.ability.develop.DevelopProgress.DevState state = menu.getState();
-        if (state == cn.academy.ability.develop.DevelopProgress.DevState.DEVELOPING) {
-            return Component.translatable("academy.developer.state.developing")
-                    .append(" : " + (long) (menu.getProgress() * 100) + " %");
-        }
-        return Component.translatable("academy.developer.state."
-                + state.name().toLowerCase(Locale.ROOT));
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-
-        if (isOverResetButton(mouseX, mouseY)) {
-            List<Component> lines = new ArrayList<>();
-            lines.add(Component.translatable("academy.developer.reset"));
-            lines.add(Component.translatable("academy.developer.reset.tooltip")
-                    .withStyle(ChatFormatting.GRAY));
-            if (menu.canReset()) {
-                lines.add(Component.translatable("academy.developer.cost",
-                        menu.getResetStimulations(),
-                        (long) menu.getDeveloperType().getTotalCost(menu.getResetStimulations())));
+        if (menu.isPortable()) {
+            machine.transform.doesDraw = false;
+            CWidget left = panel.child("ui_left");
+            if (left != null && left.texture != null) {
+                left.texture.texture = "academy:textures/guis/ui/ui_developerleft_skilltree.png";
             }
-            graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
             return;
         }
 
-        if (hovered != null) {
-            List<Component> lines = tooltipFor(hovered);
-            if (!lines.isEmpty()) {
-                graphics.renderComponentTooltip(font, lines, mouseX, mouseY);
-                return;
-            }
+        CWidget power = machine.child("progress_power");
+        if (power != null && power.bar != null) {
+            int max = Math.max(1, menu.getMaxEnergyStored());
+            power.bar.progress = Math.max(0.0,
+                    Math.min(1.0, (double) menu.getEnergyStored() / max));
         }
-        renderTooltip(graphics, mouseX, mouseY);
+        CWidget rate = machine.child("progress_syncrate");
+        if (rate != null && rate.bar != null) {
+            rate.bar.progress = menu.getDeveloperType().getSyncRate();
+        }
     }
 
-    /** Ce que dit une ligne au survol : son prix, ou pourquoi elle est bloquee. */
-    private List<Component> tooltipFor(Row row) {
-        List<Component> lines = new ArrayList<>();
+    /**
+     * L'arbre : un noeud par competence, et un trait par parente.
+     *
+     * <p>Toutes les competences de la categorie ne s'y trouvent pas. Une competence n'apparait que si
+     * elle vaut la peine d'etre montree — si le joueur a le niveau pour elle, s'il l'a deja apprise, ou
+     * si celle dont elle depend est apprise. C'est {@link LearningHelper} qui en decide, et l'original
+     * s'en servait exactement de meme : l'arbre s'ouvre au fur et a mesure.
+     */
+    private void buildTree(CWidget page) {
+        nodes.clear();
 
-        if (row.isCategory()) {
-            Category category = menu.getCategory(row.categoryId());
-            int index = row.categoryId();
-            lines.add(Component.literal(category == null ? "?" : category.getName()));
+        CWidget right = page.child("parent_right");
+        CWidget area = right == null ? null : right.child("area");
+        if (area == null) return;
+        area.children().clear();
 
-            if (menu.getCategoryLevel(index) >= menu.getMaxLevel()) {
-                lines.add(Component.translatable("academy.developer.maxed").withStyle(ChatFormatting.GRAY));
-                return lines;
-            }
-            if (!menu.canLevelUp(index)) {
-                // La raison exacte du refus, en clair : c'est la seule chose qui
-                // manque au joueur pour comprendre ce qu'il doit faire.
-                lines.add(Component.translatable("academy.developer.progress",
-                        (int) (menu.getLevelProgress(index) * 100)).withStyle(ChatFormatting.RED));
-            }
-            lines.add(Component.translatable("academy.developer.cost",
-                    menu.getStimulationsFor(index), (long) menu.getCostFor(index)));
-            return lines;
+        Category category = category();
+        if (category == null) {
+            area.add(message("academy.developer.no_category"));
+            signature = signature();
+            return;
         }
-
-        Skill skill = menu.getSkill(row.categoryId(), row.skillId());
-        if (skill == null) return lines;
-
-        lines.add(skill.getDisplayName());
-        lines.add(Component.translatable("academy.developer.cost", skill.getLearningStims(),
-                (long) menu.getDeveloperType().getTotalCost(skill.getLearningStims())));
 
         AbilityData data = ClientAbilityData.get();
-        if (data.isSkillLearned(skill)) {
-            int percent = (int) (data.getSkillExp(skill) * 100f);
-            lines.add(Component.translatable("academy.developer.skill_exp", percent)
-                    .withStyle(percent >= 100 ? ChatFormatting.GREEN : ChatFormatting.GRAY));
-            return lines;
-        }
+        int index = 0;
+        for (Skill skill : category.getSkills()) {
+            if (!LearningHelper.canBePotentiallyLearned(data, skill)) continue;
 
-        // La raison exacte du blocage : l'ecran ne rejoue pas les regles, il demande
-        // a la meme condition que le serveur laquelle ne passe pas.
-        LearningCondition blocker = LearningHelper.firstBlocker(data, skill,
-                menu.getDeveloperType());
-        if (blocker != null) {
-            lines.add(blocker.describe(skill).copy().withStyle(ChatFormatting.RED));
+            boolean learned = data.isSkillLearned(skill);
+            Node node = new Node(skill, node(skill.getName()), learned,
+                    dim(data, skill, learned), APPEAR_STEP * index);
+            area.add(node.widget);
+            onClick(node.widget, () -> openSkill(skill));
+
+            // Le trait vers le parent : il part du noeud et vise le centre de l'autre, en s'arretant a
+            // douze unites et demie de chacun des deux.
+            Skill parent = skill.getParent();
+            if (parent != null) node.widget.line = link(skill, parent);
+
+            nodes.add(node);
+            index++;
         }
-        return lines;
+        signature = signature();
     }
 
+    /** L'opacite d'un noeud : voir {@link Node}. */
+    private static double dim(AbilityData data, Skill skill, boolean learned) {
+        if (learned) return 1.0;
+        Skill parent = skill.getParent();
+        return parent == null || data.isSkillLearned(parent) ? 0.7 : 0.25;
+    }
+
+    private static CWidget node(String name) {
+        CWidget node = new CWidget("skill_" + name);
+        node.transform.width = NODE_BOX;
+        node.transform.height = NODE_BOX;
+        node.transform.alignWidth = "LEFT";
+        node.transform.alignHeight = "TOP";
+        node.transform.scale = 1.0;
+        node.disc = new CWidget.Disc();
+        return node;
+    }
+
+    /**
+     * Le trait qui relie une competence a celle dont elle depend, dans les unites de son noeud.
+     *
+     * <p>Le repere est celui de la boite du noeud : son centre est donc a huit unites, et le vecteur
+     * vers le parent se lit directement dans les coordonnees de l'arbre — celles que les classes de
+     * categorie ont reprises de l'original. Les deux bouts reculent de {@code 12,2} le long de ce
+     * vecteur, et c'est ce qui laisse les deux disques degages.
+     */
+    private static CWidget.Line link(Skill skill, Skill parent) {
+        double dx = parent.getGuiX() - skill.getGuiX();
+        double dy = parent.getGuiY() - skill.getGuiY();
+        double norm = Math.sqrt(dx * dx + dy * dy);
+        double half = NODE_BOX / 2;
+
+        CWidget.Line line = new CWidget.Line();
+        line.thickness = LINK_WIDTH;
+        line.progress = 0;
+        line.x0 = half;
+        line.y0 = half;
+        line.x1 = half;
+        line.y1 = half;
+        if (norm <= 0) return line;
+
+        double ux = dx / norm * LINK_INSET;
+        double uy = dy / norm * LINK_INSET;
+        line.x0 = dx + half - ux;
+        line.y0 = dy + half - uy;
+        line.x1 = half + ux;
+        line.y1 = half + uy;
+        return line;
+    }
+
+    /** Le peu qui se dit quand le joueur n'a encore aucune aptitude. */
+    private static CWidget message(String key) {
+        CWidget box = new CWidget("message");
+        box.transform.width = 200;
+        box.transform.height = 12;
+        box.transform.alignWidth = "CENTER";
+        box.transform.alignHeight = "CENTER";
+        box.text = new CWidget.TextBox();
+        box.text.content = Component.translatable(key).getString();
+        box.text.align = "CENTER";
+        box.text.heightAlign = "CENTER";
+        return box;
+    }
+
+    /** L'icone d'une categorie : celle de ses pages, sous {@code guis/icons}. */
+    private static String categoryIcon(Category category) {
+        return AcademyCraft.MOD_ID + ":textures/guis/icons/icon_" + category.getName() + ".png";
+    }
+
+    /**
+     * L'aptitude du joueur.
+     *
+     * <p>L'original n'en connaissait qu'une : le joueur choisissait son pouvoir, et l'arbre etait le
+     * sien. Le port laisse un joueur connaitre plusieurs categories, donc il faut bien en designer une
+     * — c'est la plus avancee, celle ou il a le plus monte, et c'est celle que l'ecran montre. Un
+     * joueur qui n'en a aucune voit la phrase qui le dit.
+     */
+    @Nullable
+    private Category category() {
+        return ClientAbilityData.get().getHighestCategory();
+    }
+
+    // ------------------------------------------------------------------
+    // Animation
+    // ------------------------------------------------------------------
+
+    /**
+     * Ce qui bouge a chaque image : le relief, le survol, les fondus, et le trait qui pousse.
+     *
+     * <p>Les positions se posent ici, apres que le placement les a lues — les noeuds sont donc dessines
+     * avec la place de l'image precedente, en retard d'une image. Cela ne se voit pas : un soixantieme
+     * de seconde, sur un deplacement de dix unites au total. L'echelle du survol, elle, se lit au
+     * dessin et s'applique donc tout de suite.
+     */
     @Override
-    public boolean isPauseScreen() {
-        return false;
+    protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
+        refresh();
+        animateSurface();
+        if (nodes.isEmpty()) return;
+
+        double time = now();
+        // Le relief se lit sur l'ecran entier, pas sur la zone de l'arbre : c'est ce que faisait
+        // l'original, et c'est ce qui fait que le fond bouge meme quand la souris est sur le panneau.
+        double dx = clamp01(mouseX / Math.max(1, width)) - 0.5;
+        double dy = clamp01(mouseY / Math.max(1, height)) - 0.5;
+
+        // Le survol ne compte pas tant qu'une surface est ouverte : elle est modale, et un noeud ne doit
+        // ni s'allumer ni repondre a travers son voile.
+        boolean blocked = surface != null;
+
+        for (Node node : nodes) {
+            node.widget.transform.x = node.skill.getGuiX() - dx * PARALLAX;
+            node.widget.transform.y = node.skill.getGuiY() - dy * PARALLAX;
+
+            boolean hovered = !blocked && node.widget.isPointWithin(mouseX, mouseY);
+            if (hovered != node.hovered) {
+                node.hovered = hovered;
+                node.since = time;
+            }
+
+            double transit = clamp01((time - node.since) / HOVER_TRANSIT);
+            double scale = node.hovered
+                    ? lerp(1.0, HOVER_SCALE, transit)
+                    : lerp(HOVER_SCALE, 1.0, transit);
+
+            double dt = Math.max(0, time - opened - node.born);
+            CWidget.Disc disc = node.widget.disc;
+            if (disc != null) {
+                disc.icon = node.skill.getHintIcon().toString();
+                disc.drawScale = scale;
+                disc.backAlpha = alpha(node.dim * APPEAR_SPEED * dt);
+                disc.iconAlpha = alpha(node.dim * APPEAR_SPEED * (dt - APPEAR_STEP));
+            }
+            if (node.widget.line != null) {
+                node.widget.line.progress = clamp01(LINK_FADE * dt);
+                node.widget.line.alpha = alpha(LINK_FADE * dt * node.dim);
+            }
+        }
+    }
+
+    /** Une opacite de zero a 255, bornee. */
+    private static int alpha(double fraction) {
+        return (int) Math.round(clamp01(fraction) * 255);
+    }
+
+    private static double lerp(double from, double to, double progress) {
+        return from + (to - from) * progress;
+    }
+
+    private static double clamp01(double value) {
+        return Math.max(0, Math.min(1, value));
+    }
+
+    private static double now() {
+        return Util.getMillis() / 1000.0;
+    }
+
+    /**
+     * Ce que l'arbre montre, sous forme d'une phrase comparable.
+     *
+     * <p>L'original rebatissait tout son ecran apres un apprentissage, par un evenement. Le port
+     * regarde plutot ce qui a change : le niveau de la categorie, et quelles competences sont apprises.
+     * Tant que rien de tout cela ne bouge, l'arbre ne se refait pas — et des qu'une competence
+     * s'ouvre, un noeud de plus apparait et son fondu repart pour lui.
+     */
+    private String signature() {
+        Category category = category();
+        if (category == null) return "-";
+        AbilityData data = ClientAbilityData.get();
+
+        StringBuilder out = new StringBuilder(category.getName());
+        out.append('/').append(data.getCategoryLevel(category)).append('/');
+        for (Skill skill : category.getSkills()) {
+            out.append(data.isSkillLearned(skill) ? '+' : '-');
+        }
+        return out.toString();
+    }
+
+    /** Rebatit l'arbre si ce qu'il montre a change. */
+    private void refresh() {
+        String current = signature();
+        if (current.equals(signature)) return;
+
+        CWidget page = pageWindow(PAGE);
+        if (page == null) return;
+
+        buildTree(page);
+        // Les noeuds qui viennent de naitre n'ont pas encore de place : sans ce repose, ils se
+        // dessineraient tous au coin, le temps d'une image.
+        reflow();
+        // Et si une surface est ouverte, le nouvel arbre se cache a son tour : il prendrait sinon le
+        // clic destine au voile, et se dessinerait par-dessus.
+        hideTree(surface != null);
+    }
+
+    // ------------------------------------------------------------------
+    // Les surfaces : apprendre, monter de niveau, changer d'aptitude
+    // ------------------------------------------------------------------
+
+    /**
+     * La surface d'une competence : son icone, son nom, et de quoi l'apprendre.
+     *
+     * <p>C'est le {@code skillViewArea} de l'original : un voile noir sur tout l'ecran, l'icone au
+     * milieu, et dessous ce qu'il faut savoir. Une competence deja apprise y montre son experience ;
+     * une autre montre ce qui manque — les conditions non remplies, dites par elles-memes — et le
+     * bouton qui l'apprend.
+     *
+     * <p>Le bouton ne se montre que si l'apprentissage est <b>possible</b>. L'original, lui, le montrait
+     * toujours et repondait par une phrase quand il refusait ; ici les raisons sont deja ecrites au-dessus
+     * de lui, donc un bouton qui refuse n'apprendrait rien au joueur, et ne rien montrer est plus clair.
+     */
+    private void openSkill(Skill skill) {
+        AbilityData data = ClientAbilityData.get();
+        CWidget content = new CWidget("skill");
+        content.add(surfaceIcon(skill));
+
+        double y = -42;
+        content.add(text(skillName(skill), y, 255, 255, 255));
+        y += 14;
+
+        if (data.isSkillLearned(skill)) {
+            content.add(text(Component.translatable("academy.developer.skill_exp",
+                    (int) (data.getSkillExp(skill) * 100)).getString(), y, 161, 225, 255));
+        } else {
+            content.add(text(Component.translatable("academy.developer.not_learned").getString(),
+                    y, 255, 85, 85));
+            y += 12;
+            for (LearningCondition condition : skill.getConditions()) {
+                if (condition.accepts(data, skill, menu.getDeveloperType())) continue;
+                content.add(text(condition.describe(skill).getString(), y, 255, 88, 88));
+                y += 11;
+            }
+            y += 4;
+            content.add(text(cost(skill), y, 170, 170, 170));
+            y += 18;
+            if (canLearn(skill)) {
+                content.add(button(() -> click(DeveloperMenu.skillButton(skill))));
+            }
+        }
+        open(content);
+    }
+
+    /** La surface de la montee de niveau : ce que le palier suivant coute, et de quoi le payer. */
+    private void openLevel() {
+        Category category = category();
+        if (category == null) return;
+        int index = category.getCategoryId();
+
+        CWidget content = new CWidget("level");
+        content.add(surfaceIcon(null));
+
+        double y = -42;
+        content.add(text(Component.translatable("academy.developer.level_up",
+                Component.translatable(category.getDisplayKey())).getString(), y, 255, 255, 255));
+        y += 14;
+        content.add(text(costText(index), y, 170, 170, 170));
+        y += 16;
+        content.add(text(Component.translatable("academy.developer.level_question").getString(),
+                y, 200, 200, 200));
+        y += 18;
+        if (menu.getEnergyStored() >= menu.getCostFor(index)) {
+            // Le bouton de la montee de niveau porte l'identifiant de sa CATEGORIE : c'est ainsi que le
+            // menu les distingue des competences, qui commencent a cent.
+            content.add(button(() -> click(index)));
+        }
+        open(content);
+    }
+
+    /**
+     * La surface du changement d'aptitude : la seule qui se demande en tenant la bobine magnetique.
+     *
+     * <p>L'original ne montrait pas l'arbre du tout dans ce cas, il montrait une console a commandes.
+     * Le port pose la question, ce qui revient au meme pour le joueur — la console viendra si elle
+     * manque.
+     */
+    private void openReset() {
+        CWidget content = new CWidget("reset");
+        content.add(surfaceIcon(null));
+
+        double y = -42;
+        content.add(text(Component.translatable("academy.developer.reset").getString(), y,
+                255, 255, 255));
+        y += 14;
+        content.add(text(Component.translatable("academy.developer.reset.tooltip").getString(),
+                y, 200, 200, 200));
+        y += 18;
+        content.add(button(() -> click(DeveloperMenu.RESET_BUTTON)));
+        open(content);
+    }
+
+    /**
+     * Pourquoi le bouton ne se montre pas.
+     *
+     * <p>Le serveur revalide de toute facon : ce qui se verifie ici ne decide de rien, il evite
+     * seulement de proposer une action qui sera refusee — c'est la meme regle que pour les lignes de
+     * l'ancien ecran. Le client ne decide pas de ce qui s'apprend, il evite de mentir.
+     */
+    private boolean canLearn(Skill skill) {
+        AbilityData data = ClientAbilityData.get();
+        if (menu.getEnergyStored() < menu.getCostFor(skill.getCategory().getCategoryId())) return false;
+        if (skill.getLevel() > data.getCategoryLevel(skill.getCategory())) return false;
+        return LearningHelper.canLearn(data, skill, menu.getDeveloperType());
+    }
+
+    private String cost(Skill skill) {
+        return costText(skill.getCategory().getCategoryId());
+    }
+
+    private String costText(int index) {
+        return Component.translatable("academy.developer.cost", menu.getStimulationsFor(index),
+                (int) menu.getCostFor(index)).getString();
+    }
+
+    /** Le nom d'une competence, avec son niveau : c'est ainsi que l'original le presentait. */
+    private static String skillName(Skill skill) {
+        return Component.translatable(skill.getDisplayKey()).getString()
+                + " (LV " + skill.getLevel() + ")";
+    }
+
+    /**
+     * Le bouton de l'original : son image, mise a l'echelle, et rien dessus.
+     *
+     * <p>Sa teinte <b>remplace</b> la couleur de l'image, et c'est tout son retour : gris quand on ne le
+     * survole pas, blanc quand on le survole. Cliquer ferme la surface et fait ce qu'il a a faire — dans
+     * cet ordre, pour que l'action parte sur un ecran encore en place.
+     */
+    private CWidget button(Runnable action) {
+        CWidget widget = new CWidget("button");
+        widget.transform.width = BUTTON_WIDTH;
+        widget.transform.height = BUTTON_HEIGHT;
+        widget.transform.scale = BUTTON_SCALE;
+        widget.transform.x = 0;
+        widget.transform.y = BUTTON_Y;
+        widget.transform.alignWidth = "CENTER";
+        widget.transform.alignHeight = "CENTER";
+
+        widget.texture = new CWidget.DrawTexture();
+        widget.texture.texture = BUTTON_TEXTURE;
+        widget.tint = new CWidget.Tint();
+        widget.tint.affectTexture = true;
+        widget.tint.idle = new int[] { 255, 255, 255, 153 };
+        widget.tint.hover = new int[] { 255, 255, 255, 255 };
+
+        onClick(widget, () -> {
+            action.run();
+            beginClose();
+        });
+        return widget;
+    }
+
+    /** Le disque d'une surface : le fond, et l'icone par-dessus quand il y en a une. */
+    private static CWidget surfaceIcon(@Nullable Skill skill) {
+        CWidget icon = centred("icon", SURFACE_BACK_SIZE, SURFACE_BACK_SIZE);
+        icon.texture = new CWidget.DrawTexture();
+        icon.texture.texture = SURFACE_BACK;
+        if (skill == null) return icon;
+
+        CWidget glyph = centred("glyph", SURFACE_ICON_SIZE, SURFACE_ICON_SIZE);
+        glyph.texture = new CWidget.DrawTexture();
+        glyph.texture.texture = skill.getHintIcon().toString();
+        icon.add(glyph);
+        return icon;
+    }
+
+    /**
+     * Un bout de texte centre sur la page.
+     *
+     * <p>Sa boite est <b>vide</b> : le moteur centre alors le texte sur son point d'accroche, et c'est
+     * ce qui permet de poser une ligne au milieu de l'ecran sans lui donner de largeur.
+     */
+    private static CWidget text(String content, double y, int red, int green, int blue) {
+        CWidget box = new CWidget("text");
+        box.transform.width = 0;
+        box.transform.height = 0;
+        box.transform.y = y;
+        box.transform.alignWidth = "CENTER";
+        box.transform.alignHeight = "CENTER";
+        box.text = new CWidget.TextBox();
+        box.text.content = content;
+        box.text.align = "CENTER";
+        box.text.heightAlign = "CENTER";
+        box.text.color(red, green, blue);
+        return box;
+    }
+
+    private static CWidget centred(String name, double width, double height) {
+        CWidget widget = new CWidget(name);
+        widget.transform.width = width;
+        widget.transform.height = height;
+        widget.transform.alignWidth = "CENTER";
+        widget.transform.alignHeight = "CENTER";
+        return widget;
+    }
+
+    /**
+     * Ouvre une surface sur la page.
+     *
+     * <p>Elle s'y pose en <b>dernier</b>, donc au-dessus de tout le reste. Et tant qu'elle est ouverte,
+     * l'arbre ne se dessine plus : le moteur donne un clic au widget le plus <b>ancien</b> de ses freres,
+     * c'est-a-dire a celui du fond, et un noeud prendrait le clic destine a la surface. L'original
+     * laissait son arbre visible sous un voile a sept dixiemes ; ici il s'efface, et c'est le prix de
+     * cette regle-la.
+     */
+    private void open(CWidget content) {
+        CWidget page = pageWindow(PAGE);
+        if (page == null) return;
+
+        closeSurface();
+
+        surface = new CWidget("surface");
+        surface.transform.width = PAGE_WIDTH;
+        surface.transform.height = PAGE_HEIGHT;
+        surface.transform.x = 0;
+        surface.transform.y = 0;
+        surface.transform.alignWidth = "LEFT";
+        surface.transform.alignHeight = "TOP";
+        surface.texture = new CWidget.DrawTexture();
+        surface.texture.red = 0;
+        surface.texture.green = 0;
+        surface.texture.blue = 0;
+        surface.texture.alpha = 0;
+        surface.add(content);
+
+        page.add(surface);
+        onClick(surface, this::beginClose);
+        reflow();
+
+        surfaceSince = now();
+        surfaceClosing = false;
+        hideTree(true);
+    }
+
+    /** Referme la surface, en la faisant d'abord s'effacer. */
+    private void beginClose() {
+        if (surface == null || surfaceClosing) return;
+        surfaceClosing = true;
+        surfaceSince = now();
+    }
+
+    private void closeSurface() {
+        CWidget page = pageWindow(PAGE);
+        if (surface != null && page != null) page.remove(surface);
+        surface = null;
+        surfaceClosing = false;
+        hideTree(false);
+    }
+
+    /** L'arbre se cache tant qu'une surface est ouverte : voir {@link #open}. */
+    private void hideTree(boolean hidden) {
+        for (Node node : nodes) {
+            node.widget.transform.doesDraw = !hidden;
+        }
+    }
+
+    /** Le fondu de la surface : elle monte a sept dixiemes, et redescend quand on la referme. */
+    private void animateSurface() {
+        if (surface == null || surface.texture == null) return;
+
+        double progress = clamp01((now() - surfaceSince) / VEIL_FADE);
+        double alpha = surfaceClosing ? 1 - progress : progress;
+        surface.texture.alpha = (int) Math.round(alpha * VEIL_ALPHA);
+
+        if (surfaceClosing && progress >= 1) closeSurface();
+    }
+
+    // ------------------------------------------------------------------
+    // Les boutons du conteneur
+    // ------------------------------------------------------------------
+
+    /**
+     * Envoie un bouton au conteneur.
+     *
+     * <p>C'est le chemin vanilla des boutons de menu, celui qu'utilisait deja l'ancien ecran : aucun
+     * paquet a nous, et le serveur revalide tout ce qu'on lui demande.
+     */
+    private void click(int buttonId) {
+        if (minecraft != null && minecraft.gameMode != null) {
+            minecraft.gameMode.handleInventoryButtonClick(menu.containerId, buttonId);
+        }
     }
 }

@@ -213,6 +213,82 @@ public class CWidget {
         public double bottomHeight = 8;
     }
 
+    /**
+     * Un trait texture entre deux points : le lien d'un noeud vers celui dont il depend.
+     *
+     * <p>C'est le seul morceau du moteur qui se dessine <b>de travers</b>. Le trait du fichier
+     * n'est pas horizontal : il part d'un noeud et vise un autre, et ces deux points ne sont
+     * jamais alignes. Le quad est donc tourne autour de son premier bout, et sa texture est
+     * posee dans le sens de la longueur.
+     *
+     * <p>Ses deux bouts sont donnes <b>dans les unites du widget</b>, comme le reste du moteur,
+     * et le remplissage est anime : le trait pousse du premier bout vers le second, sa texture
+     * etiree sur ce qu'il en reste. C'est ce que fait l'original, et c'est ce qui fait qu'un
+     * arbre s'ouvre en se dessinant plutot que de s'afficher d'un coup.
+     */
+    public static final class Line {
+        public String texture = "academy:textures/guis/developer/line.png";
+
+        /** Les deux bouts, dans les unites du widget qui porte le trait. */
+        public double x0;
+        public double y0;
+        public double x1;
+        public double y1;
+
+        /** L'epaisseur, perpendiculaire au trait. */
+        public double thickness = 5.5;
+
+        /** La part dessinee, de zero a un : la poussee de l'animation. */
+        public double progress = 1.0;
+
+        public int red = 255;
+        public int green = 255;
+        public int blue = 255;
+        public int alpha = 255;
+    }
+
+    /**
+     * Un noeud de l'arbre : un fond rond, un anneau, une icone, et un remplissage.
+     *
+     * <p>Quatre couches, dans cet ordre, et chacune a son role : le fond porte le disque plein
+     * avec ses coins transparents, l'anneau sombre se pose un peu plus large pour cerner le
+     * disque, l'icone dit la competence, et le remplissage mange l'anneau au fur et a mesure que
+     * la competence progresse.
+     *
+     * <p>Les trois tailles viennent des images elles-memes, pas du fichier : le disque fait
+     * vingt-trois unites alors que la boite du widget en fait seize, l'anneau en fait trente et
+     * une, et l'icone quatorze. Les trois sont donc <b>centrees sur la boite</b>, et l'anneau
+     * deborde de quatre unites de chaque cote. C'est ce qui faisait deja deborder le trait de
+     * parente (voir {@link Line}), et ce qui a decide du seuil du test qui verifie qu'aucun
+     * noeud n'en recouvre un autre.
+     *
+     * <p>{@code drawScale} est l'echelle du <b>dessin</b>, et elle est distincte de celle du
+     * widget : le survol d'un noeud le fait grossir d'un cinquieme sans que sa place dans l'arbre
+     * bouge d'un pixel. La confondre avec {@code transform.scale} ferait glisser le noeud — et,
+     * avec lui, le trait qui le relie a son parent, qui se calcule a partir de la meme place.
+     */
+    public static final class Disc {
+        public String back = "academy:textures/guis/developer/skill_back.png";
+        public String ring = "academy:textures/guis/developer/skill_outline.png";
+
+        public String icon;
+
+        /** La taille du disque dessine, en unites. */
+        public double size = 23.0;
+
+        /** Et celle de l'anneau, qui deborde donc du disque. */
+        public double ringSize = 31.0;
+
+        /** Et celle de l'icone, qui tient dedans. */
+        public double iconSize = 14.0;
+
+        /** L'echelle du dessin seul : le survol grossit le noeud sans le deplacer. */
+        public double drawScale = 1.0;
+
+        public int backAlpha = 255;
+        public int iconAlpha = 255;
+    }
+
     private final String name;
     private final List<CWidget> children = new ArrayList<>();
 
@@ -224,6 +300,8 @@ public class CWidget {
     public ProgressBar bar;
     public ElementList list;
     public Frame frame;
+    public Line line;
+    public Disc disc;
 
     // --- Ou le widget tombe sur l'ecran, en pixels : pose par CGuiLayout, lu par le rendu. ---
 
@@ -298,9 +376,43 @@ public class CWidget {
         out.text = copy(text);
         out.bar = copy(bar);
         out.list = copy(list);
+        out.line = copy(line);
+        out.disc = copy(disc);
         for (CWidget child : children) {
             out.add(child.copy());
         }
+        return out;
+    }
+
+    private static Line copy(Line source) {
+        if (source == null) return null;
+        Line out = new Line();
+        out.texture = source.texture;
+        out.x0 = source.x0;
+        out.y0 = source.y0;
+        out.x1 = source.x1;
+        out.y1 = source.y1;
+        out.thickness = source.thickness;
+        out.progress = source.progress;
+        out.red = source.red;
+        out.green = source.green;
+        out.blue = source.blue;
+        out.alpha = source.alpha;
+        return out;
+    }
+
+    private static Disc copy(Disc source) {
+        if (source == null) return null;
+        Disc out = new Disc();
+        out.back = source.back;
+        out.ring = source.ring;
+        out.icon = source.icon;
+        out.size = source.size;
+        out.ringSize = source.ringSize;
+        out.iconSize = source.iconSize;
+        out.drawScale = source.drawScale;
+        out.backAlpha = source.backAlpha;
+        out.iconAlpha = source.iconAlpha;
         return out;
     }
 

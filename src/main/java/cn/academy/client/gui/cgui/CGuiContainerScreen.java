@@ -299,7 +299,22 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         CGuiContainerLayout.info(info, infoY);
 
         if (view != null) {
-            view.place(leftPos, topPos, CGuiContainerLayout.WIDTH, CGuiContainerLayout.HEIGHT);
+            view.place(leftPos, topPos, imageWidth, imageHeight);
+        }
+    }
+
+    /**
+     * Repose l'arbre dans le cadre, sans rien reconstruire.
+     *
+     * <p>A appeler quand un ecran a bouge des widgets <b>hors</b> de son {@code build} : les widgets
+     * qui viennent de naitre n'ont pas encore de place a l'ecran, et les dessiner avant de les poser
+     * les poserait tous au coin. {@link #rebuild()} le fait pour le panneau d'infos ; celui-ci le fait
+     * pour ce qu'un ecran ajoute a sa page, comme l'arbre du developpeur qui gagne un noeud des qu'une
+     * competence s'ouvre.
+     */
+    protected void reflow() {
+        if (view != null) {
+            view.place(leftPos, topPos, imageWidth, imageHeight);
         }
     }
 
@@ -443,7 +458,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         super.init();
 
         view = new CGuiView(this, root);
-        CGuiContainerLayout.root(root);
+        layoutRoot(root);
 
         pages.clear();
         breathing.clear();
@@ -452,18 +467,18 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         infoY = 10;
         build(this);
 
-        CGuiContainerLayout.info(info, infoY);
+        if (showsInfo()) CGuiContainerLayout.info(info, infoY);
 
         // La racine porte les onglets puis les pages, dans cet ordre : l'original ajoutait le
         // bouton AVANT sa fenetre, donc la fenetre passe au-dessus du bouton.
         root.children().clear();
         for (int i = 0; i < pages.size(); i++) {
             Page page = pages.get(i);
-            root.add(tab(page, i));
+            if (showsTabs()) root.add(tab(page, i));
             root.add(page.window());
             collectBreathing(page.window());
         }
-        root.add(info);
+        if (showsInfo()) root.add(info);
 
         show(0);
     }
@@ -507,7 +522,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
         // Puis le document, pose sur le conteneur et pas sur l'ecran : c'est ce qui met le fond de la
         // page et les slots dans le meme repere. Les deux trames se rejoignent a un demi-pixel.
-        view.place(leftPos, topPos, CGuiContainerLayout.WIDTH, CGuiContainerLayout.HEIGHT);
+        view.place(leftPos, topPos, imageWidth, imageHeight);
 
         // Ce que la machine a a dire ce tick-la, puis le dessin de tout l'arbre.
         frame(graphics, mouseX, mouseY);
@@ -535,6 +550,39 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         for (CWidget.DrawTexture texture : breathing) {
             texture.alpha = alpha;
         }
+    }
+
+    /**
+     * La geometrie de la racine : le cadre du document, accroche au conteneur.
+     *
+     * <p>C'est ce qui met le document sur les slots, et c'est donc la seule chose que les machines
+     * n'ont pas a changer. La Developer, elle, n'a pas de slots : sa page n'est pas un cadre de
+     * 207 sur 186 pose au milieu de l'ecran mais l'ecran entier, et sa racine se pose donc autrement.
+     */
+    protected void layoutRoot(CWidget root) {
+        CGuiContainerLayout.root(root);
+    }
+
+    /**
+     * Vrai si l'ecran montre les onglets de ses pages.
+     *
+     * <p>Chaque page a son onglet, colle au bord gauche du cadre, et c'est ainsi qu'une machine
+     * passe de son panneau a son inventaire. Un ecran qui n'a qu'une page et pas d'inventaire n'a
+     * rien a proposer a gauche de son cadre : la Developer, encore elle, ou cet onglet n'aurait meme
+     * pas d'icone a montrer.
+     */
+    protected boolean showsTabs() {
+        return true;
+    }
+
+    /**
+     * Vrai si l'ecran montre le panneau d'infos, a droite du cadre.
+     *
+     * <p>C'est le panneau noir ou se posent les lignes de {@code property} et les histogrammes. Une
+     * page qui porte deja tout ce qu'elle a a dire n'en veut pas : le panneau se poserait par-dessus.
+     */
+    protected boolean showsInfo() {
+        return true;
     }
 
     /**

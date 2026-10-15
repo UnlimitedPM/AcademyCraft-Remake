@@ -34,20 +34,36 @@ package cn.academy.ability.develop;
  */
 public enum DeveloperType {
 
-    PORTABLE(50.0d, 10_000.0d, 25, 750.0d),
-    NORMAL(100.0d, 50_000.0d, 20, 700.0d),
-    ADVANCED(300.0d, 200_000.0d, 15, 600.0d);
+    PORTABLE(50.0d, 10_000.0d, 25, 750.0d, 0.3d),
+    NORMAL(100.0d, 50_000.0d, 20, 700.0d, 0.7d),
+    ADVANCED(300.0d, 200_000.0d, 15, 600.0d, 1.0d);
 
     private final double bandwidth;
     private final double energy;
     private final int tps;
     private final double cps;
 
-    DeveloperType(double bandwidth, double energy, int tps, double cps) {
+    /**
+     * La part du reseau sans fil que la machine accepte, de zero a un.
+     *
+     * <p>C'est le {@code syncRate} de l'original, ses trois valeurs reprises telles quelles : un
+     * portable tire un tiers de ce qu'un developpeur avance tire, et c'est ce que sa jauge dit au
+     * joueur. Elle ne se deduit d'aucun autre nombre de cette classe — l'original la donnait a la
+     * main, un cran par qualite — donc elle se relit ici ou nulle part.
+     */
+    private final double syncRate;
+
+    DeveloperType(double bandwidth, double energy, int tps, double cps, double syncRate) {
         this.bandwidth = bandwidth;
         this.energy = energy;
         this.tps = tps;
         this.cps = cps;
+        this.syncRate = syncRate;
+    }
+
+    /** Voir {@link #syncRate} : la part du reseau que cette qualite accepte, de zero a un. */
+    public double getSyncRate() {
+        return syncRate;
     }
 
     public double getBandwidth() {

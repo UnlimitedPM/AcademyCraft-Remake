@@ -224,6 +224,11 @@
   "academy.preset.slots": "Keys of each preset",
   "academy.preset.none": "Nothing learned yet",
   "academy.developer.skill_exp": "Experience %s%%",
+  "academy.developer.level": "Level %s",
+  "academy.developer.not_learned": "Not learned",
+  "academy.developer.level_up": "Level up %s",
+  "academy.developer.level_question": "Spend the energy to reach the next level?",
+  "academy.developer.no_category": "You have no ability yet - ask a developer for one",
 
   "academy.learn.level": "Requires category level %s",
   "academy.learn.developer": "Requires a %s",
