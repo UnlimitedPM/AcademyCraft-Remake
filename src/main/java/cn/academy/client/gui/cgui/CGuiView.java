@@ -1,5 +1,6 @@
 package cn.academy.client.gui.cgui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
@@ -126,6 +127,15 @@ public final class CGuiView {
     }
 
     public void draw(GuiGraphics graphics, double mouseX, double mouseY) {
+        // Le melange, a la main. L'original l'activait lui aussi — GL_BLEND, source sur un moins
+        // source — et il le FAUT : les textures du mod sont BLANCHES et c'est leur canal alpha qui
+        // porte tout le dessin. Mesure sur les fichiers : `line.png` plafonne a 71 sur 255,
+        // `parent_background.png` est un noir a moitie (128), `blend_quad.png` un halo qui s'efface
+        // de 255 a 7. Sans melange, tout sort en blanc opaque : un trait fin devient une barre
+        // pleine, et il ne reste plus aucune nuance entre les deux.
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
         drawWidget(graphics, root, mouseX, mouseY);
     }
 
