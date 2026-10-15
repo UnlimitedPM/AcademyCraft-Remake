@@ -233,6 +233,9 @@ public abstract class CGuiScreen extends Screen {
         String content = empty && box.hint != null ? box.hint : box.content;
         if (content == null || content.isEmpty()) return;
 
+        // Un champ de mot de passe se dessine masque : le vrai texte ne sort jamais de l'ecran.
+        if (box.doesEcho && !empty) content = String.valueOf(box.echoChar).repeat(box.content.length());
+
         int colour = argb(box.alpha, box.red, box.green, box.blue);
         int textWidth = font.width(content);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {

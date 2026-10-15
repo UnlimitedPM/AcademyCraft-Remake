@@ -133,6 +133,17 @@ public class CWidget {
         /** Vrai quand le joueur peut y ecrire : c'est l'ecran qui l'allume et l'eteint. */
         public boolean allowEdit;
 
+        /**
+         * Le masque d'un champ de mot de passe : le vrai texte est garde tel quel, et c'est le
+         * <b>dessin</b> qui le remplace par ce caractere, autant de fois qu'il y a de lettres.
+         *
+         * <p>C'est l'{@code echoChar} de l'original, et l'onglet « sans fil » s'en sert pour son
+         * mot de passe : la valeur envoyee reste la bonne, mais personne ne la lit par-dessus
+         * l'epaule du joueur.
+         */
+        public char echoChar;
+        public boolean doesEcho;
+
         /** Et l'indice grise qui s'affiche tant que le champ est vide. */
         public String hint;
 
@@ -317,6 +328,8 @@ public class CWidget {
         out.alpha = source.alpha;
         out.heightAlign = source.heightAlign;
         out.allowEdit = source.allowEdit;
+        out.echoChar = source.echoChar;
+        out.doesEcho = source.doesEcho;
         out.hint = source.hint;
         return out;
     }

@@ -176,6 +176,9 @@ public final class CGuiDocument {
         CWidget.TextBox out = new CWidget.TextBox();
         out.content = text(element, "content") == null ? "" : text(element, "content");
         out.allowEdit = flag(element, "allowEdit", false);
+        out.doesEcho = flag(element, "doesEcho", false);
+        String echo = text(element, "echoChar");
+        if (echo != null && !echo.isEmpty()) out.echoChar = echo.charAt(0);
 
         String align = text(element, "heightAlign");
         if (align != null) out.heightAlign = align.toUpperCase(Locale.ROOT);
