@@ -20,7 +20,7 @@ license="GPLv3"
 # The modid of the mod
 modId="academy" #mandatory
 # The version number of the mod
-version="0.0.1" #mandatory
+version="${mod_version}" #mandatory
 # A display name for the mod
 displayName="AcademyCraft Remake" #mandatory
 # A URL to query for updates for this mod. See the JSON update specification https://docs.minecraftforge.net/en/latest/misc/updatechecker/
@@ -33,6 +33,10 @@ displayName="AcademyCraft Remake" #mandatory
 #credits="" #optional
 # A text field displayed in the mod UI
 authors="UnlimitedPM" #optional
+credits="Original AcademyCraft by WeAthFolD and Lambda Innovation, with LambdaLib2. / AcademyCraft d'origine par WeAthFolD et Lambda Innovation, avec LambdaLib2." #optional
+displayURL="https://github.com/UnlimitedPM/AcademyCraft-Remake" #optional
+issueTrackerURL="https://github.com/UnlimitedPM/AcademyCraft-Remake/issues" #optional
+logoFile="academy_logo.png" #optional
 # Display Test controls the display for your mod in the server connection screen
 # MATCH_VERSION means that your mod will cause a red X if the versions on client and server differ. This is the default behaviour and should be what you choose if you have server and client elements to your mod.
 # IGNORE_SERVER_VERSION means that your mod will not cause a red X if it's present on the server but not on the client. This is what you should use if you're a server only mod.
@@ -48,7 +52,7 @@ authors="UnlimitedPM" #optional
 #accessTransformers = []
 
 # The description text for the mod (multi line!) (#mandatory)
-description='''Remake du mod AcademyCraft mais en 1.20.1'''
+description='''AcademyCraft for Minecraft 1.20.1: abilities, an Imag energy network, machines and a skill tree. A port of the 1.12.2 classic. / AcademyCraft pour Minecraft 1.20.1 : aptitudes, reseau d'energie imag, machines et arbre de competences. Portage du classique 1.12.2.'''
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
 [[dependencies.academy]] #optional
     # the modid of the dependency

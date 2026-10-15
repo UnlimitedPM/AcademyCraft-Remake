@@ -65,3 +65,9 @@ Thumbs.db
 /src/main/resources/assets/academy/font/ac_gui.ttf
 /src/main/resources/assets/academy/font/ac_gui_*.json
 /src/main/resources/assets/academy/textures/font/ac_gui_*.png
+
+# Outils de dev locaux et fichiers de suivi qui ne doivent pas etre publies.
+local.properties
+arborescence.txt
+gate-*.log
+*tmp-*.log
