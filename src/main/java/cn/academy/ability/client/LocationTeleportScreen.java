@@ -312,7 +312,8 @@ public class LocationTeleportScreen extends Screen {
     private String refusal(LocationMark mark) {
         AbilityData data = data();
         Player player = player();
-        if (data == null || player == null) return "";
+        // La ligne qui ajoute n'a pas de marque : elle n'a donc rien a refuser.
+        if (mark == null || data == null || player == null) return "";
 
         LocationTeleportSkill skill = teleport();
         boolean cross = LocationTeleportSkill.crossDimension(player, mark);
@@ -330,7 +331,7 @@ public class LocationTeleportScreen extends Screen {
     private float price(LocationMark mark) {
         AbilityData data = data();
         Player player = player();
-        if (data == null || player == null) return 0f;
+        if (mark == null || data == null || player == null) return 0f;
 
         return teleport().cpCost(data, LocationTeleportSkill.distanceTo(player, mark),
                 LocationTeleportSkill.crossDimension(player, mark));
@@ -440,10 +441,10 @@ public class LocationTeleportScreen extends Screen {
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i);
             // La derniere ligne est celle du refus, quand il y en a un : elle se dit en rouge.
-            int colour = i == lines.size() - 1 && !refusal(markOf(index)).isEmpty()
-                    ? TEXT_BAD : TEXT;
+            boolean refused = i == lines.size() - 1
+                    && !refusal(markOf(index)).isEmpty();
             graphics.drawString(font, line, right - INFO_MARGIN - font.width(line),
-                    y + INFO_MARGIN + i * INFO_LINE, colour, false);
+                    y + INFO_MARGIN + i * INFO_LINE, refused ? TEXT_BAD : TEXT, false);
         }
     }
 
