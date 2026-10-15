@@ -140,6 +140,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     private boolean pushedConnected;
     private String pushedName = "";
     private String pushedPassword = "";
+    private String pushedPlacer = "";
 
     private int syncTicker;
 
@@ -386,7 +387,8 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     private void pushToClient(Level level) {
         if (level == null || level.isClientSide) return;
         if (energy == pushedEnergy && load == pushedLoad && connected == pushedConnected
-                && nodeName.equals(pushedName) && password.equals(pushedPassword)) {
+                && nodeName.equals(pushedName) && password.equals(pushedPassword)
+                && placer.equals(pushedPlacer)) {
             return;
         }
 
@@ -395,6 +397,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         pushedConnected = connected;
         pushedName = nodeName;
         pushedPassword = password;
+        pushedPlacer = placer;
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
     }
 

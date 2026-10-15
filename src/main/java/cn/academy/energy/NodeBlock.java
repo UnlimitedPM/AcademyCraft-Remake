@@ -87,6 +87,12 @@ public class NodeBlock extends Block implements EntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof NodeBlockEntity node) {
+            // Un noeud sans poseur n'appartient a personne : celui qui l'ouvre le premier devient son
+            // proprietaire. C'est le cas des noeuds poses avant que le port ne retienne le poseur, et
+            // de ceux qu'une commande ou un schema a poses sans joueur. Sans cette ligne, leur nom et
+            // leur mot de passe resteraient hors de portee pour toujours.
+            if (node.getPlacer().isEmpty()) node.setPlacer(player);
+
             NetworkHooks.openScreen(serverPlayer, node, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

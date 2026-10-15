@@ -50,8 +50,11 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
     private int frame;
     private double frameAt = Double.NaN;
 
-    /** Les deux champs que seul le poseur voit modifiables, ou rien pour les autres. */
+    /** Les trois champs du panneau : le poseur, le nom et le mot de passe. */
+    private CWidget ownerField;
+    private CWidget nameLine;
     private CWidget nameField;
+    private CWidget passwordLine;
     private CWidget passwordField;
 
     public NodeScreen(NodeMenu menu, Inventory playerInventory, Component title) {
@@ -74,18 +77,17 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
 
         seplineInfo();
         property(label("prop.range"), Integer.toString(menu.range()));
-        property(label("prop.owner"), menu.owner().isEmpty() ? NONE : menu.owner());
+        ownerField = property(label("prop.owner"), NONE).child("value");
 
-        // Le nom se modifie chez celui qui a pose le noeud, et se lit chez les autres. Le mot de
-        // passe, lui, ne se montre qu'a lui : chez les autres il vaut mieux ne rien dire du tout
-        // que d'ecrire a cote de quelqu'un le mot de passe de son reseau.
-        if (menu.isOwner()) {
-            nameField = property(label("prop.node_name"), menu.nodeName(), menu::rename);
-            passwordField = property(label("prop.password"), menu.password(),
-                    menu::repassword, true);
-        } else {
-            property(label("prop.node_name"), menu.nodeName());
-        }
+        // Le nom et le mot de passe se posent pour tout le monde, et c'est le droit d'ECRIRE qui se
+        // decide a chaque image. L'original, lui, les creait a l'ouverture ou pas du tout — mais son
+        // poseur etait connu depuis toujours, alors que celui du port arrive du serveur avec le reste
+        // du block entity. Un ecran qui trancherait une fois pour toutes resterait en lecture pour la
+        // session entiere si le poseur n'etait pas encore la.
+        nameLine = property(label("prop.node_name"), menu.nodeName(), menu::rename);
+        nameField = nameLine.child("value");
+        passwordLine = property(label("prop.password"), menu.password(), menu::repassword, true);
+        passwordField = passwordLine.child("value");
     }
 
     private static String label(String key) {
@@ -148,16 +150,36 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
         // Et elle respire comme les fonds de page, d'une seule opacite pour toute l'image.
         anim.texture.alpha = breatheAlpha();
 
-        // Les deux champs du poseur se relisent tant qu'il ne les ecrit pas : c'est ainsi qu'une
+        // Les champs du panneau se relisent tant qu'on ne les ecrit pas : c'est ainsi qu'une
         // modification acceptee par le serveur finit par se voir, sans que l'ecran ait a la deviner.
+        refresh(ownerField, menu.owner().isEmpty() ? NONE : menu.owner());
         refresh(nameField, menu.nodeName());
-        refresh(passwordField, menu.password());
+
+        // Le droit d'ecrire, lui, se decide a chaque image : le poseur peut arriver du serveur une
+        // demi-seconde apres l'ouverture. Chez les autres, le nom reste en lecture et le mot de passe
+        // ne s'affiche pas du tout — mieux vaut ne rien dire du mot de passe de quelqu'un d'autre que
+        // l'ecrire a cote de lui.
+        boolean owner = menu.isOwner();
+        setEditable(nameLine, nameField, owner);
+        passwordLine.transform.doesDraw = owner;
+        if (owner) refresh(passwordField, menu.password());
     }
 
     /** Reecrit la valeur d'un champ, sauf s'il a le clavier — on ne corrige pas ce qu'on tape. */
     private void refresh(CWidget field, String value) {
         if (field == null || field.text == null || isFocused(field)) return;
         field.text.content = value;
+    }
+
+    /** Le droit d'ecrire d'une ligne : le champ lui-meme, et les crochets qui l'annoncent. */
+    private static void setEditable(CWidget line, CWidget field, boolean editable) {
+        if (field == null || field.text == null) return;
+        field.text.allowEdit = editable;
+
+        if (line == null) return;
+        for (CWidget child : line.children()) {
+            if (child.name().equals("bracket")) child.transform.doesDraw = editable;
+        }
     }
 
     /** Ou commencent les images de l'etat. */

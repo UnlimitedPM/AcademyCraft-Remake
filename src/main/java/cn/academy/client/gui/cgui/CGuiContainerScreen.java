@@ -118,7 +118,12 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         return info;
     }
 
-    /** Une ligne d'information : un nom a gauche, une valeur a droite, comme l'original. */
+    /**
+     * Une ligne d'information : un nom a gauche, une valeur a droite, comme l'original.
+     *
+     * @return la <b>ligne</b> posee, et non son champ : c'est elle qu'on cache ou qu'on deplace,
+     *     et son champ se retrouve par {@code child("value")}
+     */
     protected CWidget property(String key, String value) {
         CWidget line = new CWidget("line" + (int) infoY);
         line.transform.x = 6;
@@ -147,7 +152,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         line.add(amount);
 
         element(line);
-        return amount;
+        return line;
     }
 
     /** Un peu de blanc entre deux renseignements. */
@@ -165,6 +170,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
      *
      * <p>La valeur envoyee est celle du champ, telle quelle : a la machine de decider si elle
      * l'accepte. Un nom de noeud, par exemple, n'est ecrit que si celui qui le demande l'a pose.
+     *
+     * @return la ligne posee, comme {@link #property(String, String)} ; son champ est son
+     *     {@code child("value")}, et ses crochets sont ses enfants nommes {@code bracket}
      */
     protected CWidget property(String key, String value, Consumer<String> onEdit) {
         return property(key, value, onEdit, false);
@@ -173,17 +181,21 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     /** Le meme, masque : c'est ainsi que se saisit un mot de passe. */
     protected CWidget property(String key, String value, Consumer<String> onEdit,
                                boolean password) {
-        CWidget amount = property(key, value);
-        if (onEdit == null) return amount;
+        CWidget line = property(key, value);
+        CWidget field = line.child("value");
+        if (onEdit == null || field == null || field.text == null) return line;
 
-        amount.text.allowEdit = true;
-        amount.text.doesEcho = password;
+        field.text.allowEdit = true;
+        field.text.doesEcho = password;
 
-        amount.add(bracket("[", -4));
-        amount.add(bracket("]", amount.transform.width + 2));
+        // Les crochets se posent dans la ligne, de part et d'autre du champ : trois unites a gauche
+        // du champ et deux a droite, comme l'original — ils debordent donc de la valeur, et c'est
+        // voulu, c'est ce qui les fait se voir.
+        line.add(bracket("[", field.transform.x - 4));
+        line.add(bracket("]", field.transform.x + field.transform.width + 2));
 
-        if (view != null) view.onConfirm(amount, onEdit);
-        return amount;
+        if (view != null) view.onConfirm(field, onEdit);
+        return line;
     }
 
     /** Un crochet, de part et d'autre du champ : dix unites de large, comme chez l'original. */
