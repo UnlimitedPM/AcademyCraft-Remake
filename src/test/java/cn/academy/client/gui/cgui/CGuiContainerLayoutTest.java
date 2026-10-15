@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
  * Les nombres du cadre des machines, verifies sans lancer un jeu.
@@ -95,7 +96,26 @@ class CGuiContainerLayoutTest {
         assertEquals(root.absX + 179, info.absX, EPS);
         assertEquals(root.absY + 5, info.absY, EPS);
         assertEquals(50, info.absH, EPS, "il a une hauteur plancher");
-        assertEquals(128, info.texture.alpha, "et un fond noir a moitie");
+        assertNull(info.texture, "sa boite ne porte aucune image");
+        assertNotNull(info.frame, "son fond vient du cadre souple");
+        assertEquals(4, info.frame.margin, EPS, "qui deborde de quatre unites");
+        assertEquals(128, info.frame.alpha, "et se teinte en noir a moitie");
+    }
+
+    @Test
+    @DisplayName("le cadre souple pose deux bandes claires, l'une au-dessus de la boite")
+    void leCadreSouple() {
+        CWidget.Frame frame = new CWidget.Frame();
+
+        // Les nombres de TechUI.BlendQuad : la bande du haut se pose 8,6 unites AU-DESSUS du bord,
+        // la bande du bas 2 unites au-dessus du sien, et toutes deux debordent de 3,2 unites.
+        assertEquals(-8.6, frame.topY, EPS);
+        assertEquals(12, frame.topHeight, EPS);
+        assertEquals(2, frame.bottomInset, EPS);
+        assertEquals(8, frame.bottomHeight, EPS);
+        assertEquals(3.2, frame.lineMargin, EPS);
+        assertEquals("academy:textures/guis/blend_quad.png", frame.blend);
+        assertEquals("academy:textures/guis/line.png", frame.line);
     }
 
     @Test

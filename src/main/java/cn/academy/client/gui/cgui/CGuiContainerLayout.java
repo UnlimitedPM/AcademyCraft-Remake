@@ -40,7 +40,6 @@ final class CGuiContainerLayout {
     static final double INFO_X = ROOT_WIDTH + 7;
     static final double INFO_Y = 5;
     static final double INFO_WIDTH = 100;
-    static final int INFO_FILL = 0x80000000;
 
     private CGuiContainerLayout() {}
 
@@ -90,7 +89,7 @@ final class CGuiContainerLayout {
         return button;
     }
 
-    /** Le panneau d'infos : un fond noir a moitie, pose par-dessus la page. */
+    /** Le panneau d'infos : il se pose a droite de la racine, et c'est son cadre qui le fonce. */
     static CWidget info(CWidget info, double contentHeight) {
         info.transform.x = INFO_X;
         info.transform.y = INFO_Y;
@@ -100,11 +99,12 @@ final class CGuiContainerLayout {
         info.transform.alignHeight = "TOP";
         info.transform.scale = 1.0;
         info.transform.doesDraw = true;
-        info.texture = new CWidget.DrawTexture();
-        info.texture.red = 0;
-        info.texture.green = 0;
-        info.texture.blue = 0;
-        info.texture.alpha = (INFO_FILL >>> 24);
+
+        // Son fond ne vient pas d'une image : c'est le cadre souple de l'original, qui pose un noir
+        // a moitie derriere la boite et deux bandes claires sur ses bords haut et bas. Le poser en
+        // plus d'un aplat noir le foncerait deux fois.
+        info.texture = null;
+        info.frame = new CWidget.Frame();
         return info;
     }
 

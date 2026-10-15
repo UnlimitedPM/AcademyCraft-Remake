@@ -158,6 +158,40 @@ public class CWidget {
         }
     }
 
+    /**
+     * Le cadre souple de l'original : le {@code BlendQuad} de {@code TechUI}.
+     *
+     * <p>Il se dessine <b>autour</b> de la boite du widget, avec un debord, et fait deux choses :
+     *
+     * <ul>
+     *   <li>neuf morceaux d'un halo ({@code blend_quad}) teintes en noir a moitie — le centre donne
+     *       le fond sombre translucide, les bords et les coins l'arrondissent et le font respirer
+     *       vers l'exterieur ;</li>
+     *   <li>deux bandes claires ({@code line}) par-dessus, l'une posee <b>au-dessus</b> de la boite
+     *       et l'autre vers son bas : ce sont les deux traits blancs du panneau.</li>
+     * </ul>
+     *
+     * <p>C'est le seul endroit du mod qui s'en sert, et c'est le panneau d'infos des machines. Les
+     * nombres sont ceux de l'original : quatre unites de debord, et les deux bandes a 8,6 unites
+     * au-dessus du bord haut et 2 au-dessus du bas.
+     */
+    public static final class Frame {
+        public String blend = "academy:textures/guis/blend_quad.png";
+        public double margin = 4;
+
+        /** Le noir a moitie : {@code Colors.monoBlend(0.0f, 0.5f)} chez l'original. */
+        public int alpha = 128;
+
+        public String line = "academy:textures/guis/line.png";
+
+        /** Le debord lateral des bandes, et leur place en hauteur. */
+        public double lineMargin = 3.2;
+        public double topY = -8.6;
+        public double topHeight = 12;
+        public double bottomInset = 2;
+        public double bottomHeight = 8;
+    }
+
     private final String name;
     private final List<CWidget> children = new ArrayList<>();
 
@@ -168,6 +202,7 @@ public class CWidget {
     public TextBox text;
     public ProgressBar bar;
     public ElementList list;
+    public Frame frame;
 
     // --- Ou le widget tombe sur l'ecran, en pixels : pose par CGuiLayout, lu par le rendu. ---
 

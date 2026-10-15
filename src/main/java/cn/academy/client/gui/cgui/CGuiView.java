@@ -34,6 +34,9 @@ public final class CGuiView {
      */
     private static final int TEXTURE = 48;
 
+    /** Le cote d'un morceau du halo : la texture en fait trois, une par cote et une au centre. */
+    private static final int QUAD = TEXTURE / 3;
+
     private final Screen screen;
     private final CWidget root;
     private final Map<CWidget, Runnable> clicks = new IdentityHashMap<>();
@@ -136,6 +139,9 @@ public final class CGuiView {
         int h = (int) Math.round(widget.absH);
 
         if (w > 0 && h > 0) {
+            if (widget.frame != null) {
+                drawFrame(graphics, widget, x, y, w, h);
+            }
             if (widget.texture != null) {
                 int colour = argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
                         widget.texture.blue);
@@ -170,6 +176,50 @@ public final class CGuiView {
 
         for (CWidget child : widget.children()) {
             drawWidget(graphics, child, mouseX, mouseY);
+        }
+    }
+
+    /**
+     * Le cadre souple : le halo en neuf morceaux, puis les deux bandes claires.
+     *
+     * <p>Le halo deborde de la boite — c'est lui qui arrondit les coins et pose le fond sombre
+     * translucide — et les bandes se dessinent par-dessus, l'une sous le bord haut, l'autre vers le
+     * bas. Le tout est repris de {@code TechUI.BlendQuad}, nombres compris.
+     */
+    private static void drawFrame(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
+        CWidget.Frame frame = widget.frame;
+        double margin = frame.margin;
+
+        ResourceLocation blend = ResourceLocation.tryParse(frame.blend);
+        if (blend != null) {
+            double[] xs = { x - margin, x, x + w, x + w + margin };
+            double[] ys = { y - margin, y, y + h, y + h + margin };
+
+            graphics.setColor(0f, 0f, 0f, frame.alpha / 255f);
+            for (int col = 0; col < 3; col++) {
+                for (int row = 0; row < 3; row++) {
+                    int x0 = (int) Math.round(xs[col]);
+                    int y0 = (int) Math.round(ys[row]);
+                    int x1 = (int) Math.round(xs[col + 1]);
+                    int y1 = (int) Math.round(ys[row + 1]);
+                    if (x1 <= x0 || y1 <= y0) continue;
+
+                    graphics.blit(blend, x0, y0, x1 - x0, y1 - y0,
+                            col * QUAD, row * QUAD, QUAD, QUAD, TEXTURE, TEXTURE);
+                }
+            }
+            graphics.setColor(1f, 1f, 1f, 1f);
+        }
+
+        ResourceLocation line = ResourceLocation.tryParse(frame.line);
+        if (line != null) {
+            int lx = (int) Math.round(x - frame.lineMargin);
+            int lw = (int) Math.round(w + frame.lineMargin * 2);
+
+            graphics.blit(line, lx, (int) Math.round(y + frame.topY), lw,
+                    (int) Math.round(frame.topHeight), 0f, 0f, 1, 1, 1, 1);
+            graphics.blit(line, lx, (int) Math.round(y + h - frame.bottomInset), lw,
+                    (int) Math.round(frame.bottomHeight), 0f, 0f, 1, 1, 1, 1);
         }
     }
 

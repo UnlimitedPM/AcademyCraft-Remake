@@ -203,7 +203,13 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (view == null) return;
 
-        // Le document se pose sur le conteneur, pas sur l'ecran : c'est ce qui met le fond de la
+        // Le fond translucide de l'ecran, d'abord. Depuis 1.17 vanilla ne le dessine plus derriere
+        // un conteneur : son render appelle renderBg directement, donc c'est a l'ecran de le poser.
+        // L'original tenait en une ligne — drawDefaultBackground — et c'est exactement ce gris-la :
+        // deux noirs transparents superposes, l'un en haut de l'ecran, l'autre en bas.
+        super.renderBackground(graphics);
+
+        // Puis le document, pose sur le conteneur et pas sur l'ecran : c'est ce qui met le fond de la
         // page et les slots dans le meme repere. Les deux trames se rejoignent a un demi-pixel.
         view.place(leftPos, topPos, CGuiContainerLayout.WIDTH, CGuiContainerLayout.HEIGHT);
 
@@ -239,9 +245,8 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
             super.render(graphics, mouseX, mouseY, partialTick);
             return;
         }
-        // Page sans inventaire : le fond assombri, le document de l'original, et rien d'autre.
-        // Le fond du conteneur de vanilla, lui, est prive : c'est renderBg qui dessine le notre.
-        super.renderBackground(graphics);
+        // Page sans inventaire : le document de l'original et rien d'autre — ni slots, ni survol.
+        // Le fond translucide vient de renderBg, comme dans l'autre branche.
         renderBg(graphics, partialTick, mouseX, mouseY);
     }
 
