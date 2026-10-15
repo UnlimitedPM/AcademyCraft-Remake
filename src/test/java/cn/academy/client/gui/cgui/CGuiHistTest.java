@@ -24,17 +24,30 @@ class CGuiHistTest {
         CGuiHist hist = CGuiHist.energy(() -> 3000.0, 6000.0);
 
         assertEquals("ac.gui.common.hist.energy", hist.id());
-        assertArrayEquals(new int[] { 0x25, 0xC4, 0xFF }, hist.color());
+        assertArrayEquals(new int[] { 0x25, 0xC4, 0xFF, 255 }, hist.color());
         assertEquals(0.5, hist.value().getAsDouble(), EPS, "la barre est a moitie");
         assertEquals("3000 IF", hist.desc().get());
     }
 
     @Test
+    @DisplayName("et une couleur a QUATRE cases : rouge, vert, bleu, opacite")
+    void quatreCases() {
+        // C'est le contrat du composant de barre, qui lit l'opacite a la quatrieme case. Une couleur
+        // a trois cases le faisait planter en plein dessin : Index 3 out of bounds for length 3.
+        for (CGuiHist hist : new CGuiHist[] { CGuiHist.energy(() -> 1.0, 2.0),
+                CGuiHist.buffer(() -> 1.0, 2.0), CGuiHist.liquid(() -> 1.0, 2.0),
+                CGuiHist.capacity(() -> 1.0, 2), CGuiHist.custom("IF", 0xFFB983FB, () -> 1.0, () -> "") }) {
+            assertEquals(4, hist.color().length, hist.id() + " : quatre cases, pas trois");
+            assertEquals(255, hist.color()[3], hist.id() + " : opaque, comme l'original");
+        }
+    }
+
+    @Test
     @DisplayName("le second tampon est plus clair, la phase liquide plus violette")
     void lesAutresCouleurs() {
-        assertArrayEquals(new int[] { 0x25, 0xF7, 0xFF }, CGuiHist.buffer(() -> 1.0, 2.0).color());
-        assertArrayEquals(new int[] { 0x76, 0x80, 0xDE }, CGuiHist.liquid(() -> 1.0, 2.0).color());
-        assertArrayEquals(new int[] { 0xFF, 0x6C, 0x00 }, CGuiHist.capacity(() -> 1.0, 2).color());
+        assertArrayEquals(new int[] { 0x25, 0xF7, 0xFF, 255 }, CGuiHist.buffer(() -> 1.0, 2.0).color());
+        assertArrayEquals(new int[] { 0x76, 0x80, 0xDE, 255 }, CGuiHist.liquid(() -> 1.0, 2.0).color());
+        assertArrayEquals(new int[] { 0xFF, 0x6C, 0x00, 255 }, CGuiHist.capacity(() -> 1.0, 2).color());
     }
 
     @Test
@@ -52,7 +65,7 @@ class CGuiHistTest {
         // « IF » n'est pas une cle de langue : le generateur de phase de l'original l'ecrivait en
         // dur, faute de frappe de son auteur, et une cle inconnue ressort telle quelle a l'ecran.
         assertEquals("IF", hist.id());
-        assertArrayEquals(new int[] { 0xB9, 0x83, 0xFB }, hist.color(),
+        assertArrayEquals(new int[] { 0xB9, 0x83, 0xFB, 255 }, hist.color(),
                 "0xffb983fb est en ARGB : le B9 est la composante ROUGE");
         assertEquals(0.25, hist.value().getAsDouble(), EPS);
         assertEquals("2000 mB", hist.desc().get());

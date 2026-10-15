@@ -24,6 +24,10 @@ import java.util.function.Supplier;
  * <p>Le nom est une <b>cle</b> de langue, et l'ecran la traduit au moment de l'afficher. Une cle qui
  * n'existe pas ressort telle quelle : c'est ainsi que l'element « IF » du generateur de phase, ecrit
  * en dur par l'original, s'affiche encore aujourd'hui sous ce nom-la.
+ *
+ * <p>La couleur est rangee comme le moteur range les siennes : <b>rouge, vert, bleu, alpha</b>, quatre
+ * cases. C'est ce que le composant de barre lit pour se dessiner, et lui en donner trois le fait
+ * planter — l'alpha se lit a la quatrieme place.
  */
 public record CGuiHist(String id, int[] color, DoubleSupplier value, Supplier<String> desc) {
 
@@ -58,32 +62,28 @@ public record CGuiHist(String id, int[] color, DoubleSupplier value, Supplier<St
 
     /** Le tampon d'une machine, lu en direct, sur sa taille. */
     public static CGuiHist energy(DoubleSupplier energy, double max) {
-        return new CGuiHist("ac.gui.common.hist.energy", new int[] { red(ENERGY_COLOR),
-                green(ENERGY_COLOR), blue(ENERGY_COLOR) },
+        return new CGuiHist("ac.gui.common.hist.energy", rgb(ENERGY_COLOR),
                 () -> energy.getAsDouble() / max,
                 () -> String.format("%.0f IF", energy.getAsDouble()));
     }
 
     /** Le meme, en plus clair : les pages qui montrent deux tampons les distinguent ainsi. */
     public static CGuiHist buffer(DoubleSupplier energy, double max) {
-        return new CGuiHist("ac.gui.common.hist.buffer", new int[] { red(BUFFER_COLOR),
-                green(BUFFER_COLOR), blue(BUFFER_COLOR) },
+        return new CGuiHist("ac.gui.common.hist.buffer", rgb(BUFFER_COLOR),
                 () -> energy.getAsDouble() / max,
                 () -> String.format("%.0f IF", energy.getAsDouble()));
     }
 
     /** Le contenu d'une cuve, en millibuckets. */
     public static CGuiHist liquid(DoubleSupplier amount, double max) {
-        return new CGuiHist("ac.gui.common.hist.liquid", new int[] { red(LIQUID_COLOR),
-                green(LIQUID_COLOR), blue(LIQUID_COLOR) },
+        return new CGuiHist("ac.gui.common.hist.liquid", rgb(LIQUID_COLOR),
                 () -> amount.getAsDouble() / max,
                 () -> String.format("%.0f mB", amount.getAsDouble()));
     }
 
     /** Une quantite sur son maximum, sans unite : « 12/40 ». */
     public static CGuiHist capacity(DoubleSupplier amount, int max) {
-        return new CGuiHist("ac.gui.common.hist.capacity", new int[] { red(CAPACITY_COLOR),
-                green(CAPACITY_COLOR), blue(CAPACITY_COLOR) },
+        return new CGuiHist("ac.gui.common.hist.capacity", rgb(CAPACITY_COLOR),
                 () -> amount.getAsDouble() / max,
                 () -> (int) amount.getAsDouble() + "/" + max);
     }
@@ -96,16 +96,21 @@ public record CGuiHist(String id, int[] color, DoubleSupplier value, Supplier<St
      */
     public static CGuiHist custom(String id, int color, DoubleSupplier value,
                                   Supplier<String> desc) {
-        return new CGuiHist(id, new int[] { red(color), green(color), blue(color) }, value, desc);
+        return new CGuiHist(id, rgb(color), value, desc);
     }
 
     /**
-     * Les trois morceaux d'une couleur, tels que le moteur les range.
+     * Les quatre morceaux d'une couleur, ranges comme le moteur les range : rouge, vert, bleu, et
+     * l'opacite — pleine, puisque les couleurs de l'original le sont.
      *
      * <p>Ils acceptent l'ARGB comme le RGB : les composantes se lisent a partir du bit 16, donc un
      * octet d'opacite devant ne gene pas. C'est ce qui permet de recopier les couleurs de l'original
      * telles quelles, {@code 0xff...} compris.
      */
+    private static int[] rgb(int colour) {
+        return new int[] { red(colour), green(colour), blue(colour), 255 };
+    }
+
     private static int red(int colour) {
         return (colour >> 16) & 0xFF;
     }

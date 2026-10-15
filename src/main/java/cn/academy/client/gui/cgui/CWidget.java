@@ -94,6 +94,13 @@ public class CWidget {
         /** Le remplissage, de zero a un. */
         public double progress;
 
+        /**
+         * La couleur, <b>en quatre cases</b> : rouge, vert, bleu, puis l'opacite.
+         *
+         * <p>C'est le contrat de tous les composants du moteur, et le dessin de la barre lit
+         * l'opacite a la quatrieme case : une couleur qui n'en a que trois le fait planter en plein
+         * rendu. {@link CGuiHist} en donne quatre.
+         */
         public int[] color = { 255, 255, 255, 255 };
         public boolean illustrating;
     }
