@@ -35,13 +35,16 @@ public class MetalFormerMenu extends AbstractContainerMenu {
     /** Identifiant de bouton : mode suivant. */
     public static final int BUTTON_MODE_NEXT = 1;
 
-    // Position des emplacements dans l'ecran. Les constantes sont publiques pour
-    // que MetalFormerScreen dessine ses fonds de casse au meme endroit, sans
-    // recopier les coordonnees.
-    public static final int IN_SLOT_X = 44;
-    public static final int OUT_SLOT_X = 116;
-    public static final int SLOT_Y = 30;
-    public static final int BATTERY_SLOT_Y = 60;
+    // Les positions de l'original, celles de son ContainerMetalFormer : l'entree a 13, la sortie a
+    // 143, et la batterie a 42 sous l'entree. Le cadre du document (172 sur 187) se pose sur le
+    // conteneur (207 sur 186), et c'est ce qui met chaque emplacement sur son trou ; des nombres
+    // inventes les poseraient a cote. L'ancien ecran procedural avait les siens, et c'est pour lui
+    // que ces constantes-la existaient.
+    public static final int IN_SLOT_X = 13;
+    public static final int OUT_SLOT_X = 143;
+    public static final int SLOT_Y = 49;
+    public static final int BATTERY_SLOT_X = 42;
+    public static final int BATTERY_SLOT_Y = 80;
 
     private static final int MACHINE_SLOTS = MetalFormerBlockEntity.SLOT_COUNT;
 
@@ -75,20 +78,24 @@ public class MetalFormerMenu extends AbstractContainerMenu {
                 return false;
             }
         });
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_BATTERY, IN_SLOT_X, BATTERY_SLOT_Y) {
+        addSlot(new SlotItemHandler(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_BATTERY, BATTERY_SLOT_X, BATTERY_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
             }
         });
 
-        for (int row = 0; row < 3; row++) {
+        // Les slots du joueur, aux positions de l'original : la barre rapide en bas, puis les trois
+        // rangees de l'inventaire de bas en haut. C'est le `mapPlayerInventory` de TechUIContainer,
+        // le meme calcul que le generateur solaire et le generateur de phase.
+        for (int i = 1; i < 4; i++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                int slot = (4 - i) * 9 + col;
+                addSlot(new Slot(playerInventory, slot, 6 + col * 18, 159 - i * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
         this.workCounter = new SyncedInt(blockEntity::getWorkCounter);
