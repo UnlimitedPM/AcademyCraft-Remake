@@ -370,31 +370,6 @@ public final class CGuiView {
     }
 
     /**
-     * Une image, avec sa fenetre.
-     *
-     * <p>La fenetre est donnee en <b>fractions</b> de l'image : zero a un pour l'image entiere, et un
-     * dixieme de large pour en montrer le dixieme. C'est ce qui permet de faire glisser une image dans
-     * son cadre sans jamais connaitre ses dimensions — le fond de l'arbre du developpeur s'en sert, et
-     * c'est ce qui donne son relief a cette zone-la.
-     *
-     * <p>Elle est publique parce qu'un ecran peut avoir a la dessiner lui-meme : le fond de l'arbre se
-     * pose <b>avant</b> les widgets, alors que tout ce que le moteur dessine vient apres eux.
-     */
-    public void drawImage(GuiGraphics graphics, String path, double x, double y, double w, double h,
-                          double u, double v, double windowWidth, double windowHeight) {
-        ResourceLocation texture = ResourceLocation.tryParse(path);
-        if (texture == null || w <= 0 || h <= 0) return;
-
-        blend();
-        graphics.blit(texture, (int) Math.round(x), (int) Math.round(y),
-                (int) Math.round(w), (int) Math.round(h),
-                (float) (u * UV_BASE), (float) (v * UV_BASE),
-                Math.max(1, (int) Math.round(windowWidth * UV_BASE)),
-                Math.max(1, (int) Math.round(windowHeight * UV_BASE)),
-                UV_BASE, UV_BASE);
-    }
-
-    /**
      * Une texture, posee a une place et dans une couleur donnees.
      *
      * <p>Le melange se repose avant chaque appel : {@code GuiGraphics} le coupe a la fin de chaque

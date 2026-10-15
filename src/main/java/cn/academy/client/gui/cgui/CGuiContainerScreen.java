@@ -335,19 +335,6 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
      */
     private static final int BACKDROP_EXTRA = 0x40000000;
 
-    /**
-     * Une image, avec sa fenetre : voir {@link CGuiView#drawImage}.
-     *
-     * <p>C'est pour ce qu'un ecran dessine <b>sous</b> ses widgets — le fond de l'arbre du developpeur,
-     * qui glisse doucement et que rien dans le document ne porte.
-     */
-    protected void drawImage(GuiGraphics graphics, String path, double x, double y, double w, double h,
-                             double u, double v, double windowWidth, double windowHeight) {
-        if (view != null) {
-            view.drawImage(graphics, path, x, y, w, h, u, v, windowWidth, windowHeight);
-        }
-    }
-
     /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
     protected CWidget widget(String name) {
         return view == null ? null : view.find(name);

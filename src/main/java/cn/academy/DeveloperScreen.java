@@ -354,6 +354,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (area == null) return;
         area.children().clear();
 
+        // Le fond de la zone, sur la zone elle-meme : voir {@link #drawAreaBackdrop} pour ce qu'il a
+        // fallu comprendre avant de le mettre la.
+        if (area.texture == null) area.texture = new CWidget.DrawTexture();
+        area.texture.texture = AREA_BACKDROP;
+        area.texture.u0 = slide(0);
+        area.texture.v0 = slide(0);
+        area.texture.u1 = area.texture.u0 + BACKDROP_WINDOW;
+        area.texture.v1 = area.texture.v0 + BACKDROP_WINDOW;
+
         Category category = category();
         if (category == null) {
             area.add(message("academy.developer.no_category"));
@@ -489,7 +498,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         double dx = clamp01(mouseX / Math.max(1, width)) - 0.5;
         double dy = clamp01(mouseY / Math.max(1, height)) - 0.5;
 
-        drawAreaBackdrop(graphics, dx, dy);
+        drawAreaBackdrop(dx, dy);
         if (nodes.isEmpty()) return;
 
         // Le survol ne compte pas tant qu'une surface est ouverte : elle est modale, et un noeud ne doit
@@ -532,23 +541,33 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     }
 
     /**
-     * Le fond de la zone de l'arbre.
+     * Fait glisser le fond de la zone de l'arbre dans son cadre.
      *
-     * <p>C'est l'image de l'original — {@code effect_developer_background} — dessinee d'un centieme
-     * plus <b>grande</b> que la zone, et glissee dans cette marge au rythme de la souris. Elle ne bouge
-     * donc presque pas : juste assez pour que la zone paraisse posee devant quelque chose. Les noeuds,
-     * eux, se deplacent de dix unites, et c'est ce decalage entre les deux qui fait le relief.
+     * <p>C'est l'image de l'original — {@code effect_developer_background} — un centieme plus
+     * <b>grande</b> que la zone : elle deborde donc de cette marge, et la fenetre s'y deplace au rythme
+     * de la souris. Elle ne bouge presque pas : juste assez pour que la zone paraisse posee devant
+     * quelque chose. Les noeuds, eux, se deplacent de dix unites, et c'est ce decalage entre les deux
+     * qui fait le relief.
      *
-     * <p>Elle manquait, et le joueur s'en est apercu tout de suite : « l'image qu'il y a en fond
-     * derriere les competences n'est pas visible ». Sans elle, la zone de l'arbre n'est qu'un aplat.
+     * <p>ELLE AVAIT DISPARU, ET LE JOUEUR L'A VU DEUX FOIS. D'abord parce qu'elle n'etait pas dessinee
+     * du tout ; ensuite parce qu'elle etait dessinee <b>avant tous les widgets</b>, donc sous le fond du
+     * panneau — une image noire a moitie — et sous les ornements du panneau de droite. Le joueur l'a
+     * dit a sa facon : « je me demande si ce n'est pas parce que l'effet de noir dans le fond passe par
+     * devant et qu'il le cache ». C'etait exactement cela, sauf que le noir en question n'est pas celui
+     * de l'ecran mais celui de la page.
+     *
+     * <p>Elle est maintenant posee <b>sur le widget de la zone</b>, comme l'original qui la dessinait
+     * depuis l'evenement d'image de cette meme zone. Le moteur dessine la texture d'un widget avant ses
+     * enfants : l'image se retrouve donc entre le fond de la page et les noeuds, a sa place exacte.
      */
-    private void drawAreaBackdrop(GuiGraphics graphics, double dx, double dy) {
+    private void drawAreaBackdrop(double dx, double dy) {
         CWidget area = widget("area");
-        if (area == null) return;
+        if (area == null || area.texture == null) return;
 
-        drawImage(graphics, AREA_BACKDROP, area.absX, area.absY, area.absW, area.absH,
-                slide(dx * BACKDROP_SLIDE), slide(dy * BACKDROP_SLIDE), BACKDROP_WINDOW,
-                BACKDROP_WINDOW);
+        area.texture.u0 = slide(dx * BACKDROP_SLIDE);
+        area.texture.v0 = slide(dy * BACKDROP_SLIDE);
+        area.texture.u1 = area.texture.u0 + BACKDROP_WINDOW;
+        area.texture.v1 = area.texture.v0 + BACKDROP_WINDOW;
     }
 
     /**
