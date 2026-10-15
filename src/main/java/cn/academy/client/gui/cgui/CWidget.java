@@ -55,6 +55,18 @@ public class CWidget {
 
         /** L'ordre de dessin, que le fichier porte mais que rien n'utilise ici. */
         public double zLevel;
+
+        /**
+         * La fenetre de la texture : de zero a un par defaut, c'est-a-dire l'image entiere.
+         *
+         * <p>C'est ce qui permet d'animer un cadre en decoupant une planche en plusieurs images :
+         * {@code effect_solar.png} en contient trois l'une sous l'autre, et l'ecran du generateur
+         * solaire n'en montre qu'une a la fois — celle de l'etat du ciel.
+         */
+        public double u0;
+        public double v0;
+        public double u1 = 1;
+        public double v1 = 1;
     }
 
     /** Un cerne, dessine sur les quatre bords du widget. */

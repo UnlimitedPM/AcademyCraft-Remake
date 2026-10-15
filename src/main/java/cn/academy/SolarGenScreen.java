@@ -1,47 +1,61 @@
 package cn.academy;
 
+import cn.academy.client.gui.cgui.CGuiContainerScreen;
+import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-/** Minimal procedural GUI (no custom texture yet): battery slot + energy bar. */
-public class SolarGenScreen extends AbstractContainerScreen<SolarGenMenu> {
+import java.util.Locale;
 
-    private static final int BAR_X = 70, BAR_Y = 20, BAR_WIDTH = 12, BAR_HEIGHT = 50;
+/**
+ * Ecran du generateur solaire : sa propre page, le cadre anime de l'etat du ciel, et son panneau.
+ *
+ * <p>C'est le premier ecran qui apporte une <b>planche animee</b> : l'original decoupait
+ * {@code effect_solar.png} en trois images l'une sous l'autre et montrait celle de l'etat du ciel —
+ * plein soleil, soleil voile, ou rien. Le moteur sait maintenant demander une fenetre de texture, ce
+ * qui servira aussi au noeud d'imagination et a ses dix images.
+ */
+public class SolarGenScreen extends CGuiContainerScreen<SolarGenMenu> {
+
+    /** La planche des trois images : plein soleil, arrete, soleil voile. */
+    private static final String EFFECT = "academy:textures/guis/effect/effect_solar.png";
 
     public SolarGenScreen(SolarGenMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 176;
-        this.imageHeight = 166;
     }
 
+    /**
+     * L'original : {@code InventoryPage(main)} sur le document {@code page_solar} — la page de la
+     * machine EST celle de l'inventaire — puis un histogramme du tampon, un separateur, et la vitesse
+     * de production.
+     */
     @Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        int x = (width - imageWidth) / 2;
-        int y = (height - imageHeight) / 2;
-        graphics.fill(x, y, x + imageWidth, y + imageHeight, 0xFFC6C6C6);
-        graphics.fill(x + 7, y + 17, x + imageWidth - 7, y + imageHeight - 96, 0xFF8B8B8B);
+    protected void build(CGuiContainerScreen<SolarGenMenu> screen) {
+        page("inv", "rework/page_solar");
 
-        int barX = x + BAR_X, barY = y + BAR_Y;
-        graphics.fill(barX, barY, barX + BAR_WIDTH, barY + BAR_HEIGHT, 0xFF404040);
-        int max = Math.max(1, menu.getMaxEnergyStored());
-        int filled = (int) (BAR_HEIGHT * ((float) menu.getEnergyStored() / max));
-        graphics.fill(barX, barY + BAR_HEIGHT - filled, barX + BAR_WIDTH, barY + BAR_HEIGHT, 0xFFE0A030);
+        histogram(CGuiHist.buffer(menu::getEnergyStored, menu.getMaxEnergyStored()));
+        seplineInfo();
+        property(Component.translatable("ac.gui.common.prop.gen_speed").getString(),
+                String.format(Locale.ROOT, "%.2fIF/T", menu.generation()));
     }
 
+    /**
+     * L'image du cadre, une fois par image : le tiers haut pour un ciel degage, celui du milieu quand
+     * rien ne produit, le dernier sous la pluie. C'est le {@code v} de l'original, au tiers pres.
+     */
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        renderTooltip(graphics, mouseX, mouseY);
-    }
+    protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
+        CWidget anim = widget("anim_frame");
+        if (anim == null || anim.texture == null) return;
 
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        graphics.drawString(font, title, 8, 6, 0x404040, false);
-        graphics.drawString(font, menu.getEnergyStored() + " / " + menu.getMaxEnergyStored() + " FE",
-                8, imageHeight - 96, 0x404040, false);
-        graphics.drawString(font, menu.isLinkedToNode() ? "Noeud: raccorde" : "Noeud: aucun",
-                8, imageHeight - 84, 0x404040, false);
+        anim.texture.texture = EFFECT;
+        anim.texture.v0 = switch (menu.sky()) {
+            case STRONG -> 0.0;
+            case STOPPED -> 1.0 / 3.0;
+            case WEAK -> 2.0 / 3.0;
+        };
+        anim.texture.v1 = anim.texture.v0 + 1.0 / 3.0;
     }
 }

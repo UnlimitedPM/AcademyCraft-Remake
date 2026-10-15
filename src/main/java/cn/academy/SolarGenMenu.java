@@ -33,20 +33,24 @@ public class SolarGenMenu extends AbstractContainerMenu {
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), SolarGenBlockEntity.SLOT_BATTERY, 80, 53) {
+        // L'emplacement de la batterie : le `SlotIFItem(tile, SLOT_BATTERY, 42, 81)` de l'original.
+        addSlot(new SlotItemHandler(blockEntity.getInventory(), SolarGenBlockEntity.SLOT_BATTERY, 42, 81) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
             }
         });
 
-        for (int row = 0; row < 3; row++) {
+        // Les slots du joueur, aux positions de l'original : la barre rapide en bas, puis les trois
+        // rangees de l'inventaire de bas en haut. C'est le `mapPlayerInventory` de TechUIContainer.
+        for (int i = 1; i < 4; i++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                int slot = (4 - i) * 9 + col;
+                addSlot(new Slot(playerInventory, slot, 6 + col * 18, 159 - i * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
         addDataSlot(new DataSlot() {
@@ -68,6 +72,16 @@ public class SolarGenMenu extends AbstractContainerMenu {
 
     public int getMaxEnergyStored() {
         return blockEntity.getMaxEnergyStored();
+    }
+
+    /** Ce que le generateur produit ce tick-la, en IF : la ligne « Gen. speed » du panneau. */
+    public double generation() {
+        return blockEntity.generation();
+    }
+
+    /** Et l'etat du ciel, qui choisit l'image du cadre anime de la page. */
+    public SolarGenBlockEntity.SolarStatus sky() {
+        return blockEntity.sky();
     }
 
     /**

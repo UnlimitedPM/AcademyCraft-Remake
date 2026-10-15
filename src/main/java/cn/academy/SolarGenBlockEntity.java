@@ -120,6 +120,25 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
         return isDay && level.canSeeSky(pos.above());
     }
 
+    /**
+     * L'etat du ciel, tel que la page l'anime : le {@code SolarStatus} de l'original.
+     *
+     * <p>Son image est une planche de trois morceaux, et c'est cet etat qui choisit lequel :
+     * {@code STRONG} le premier, {@code STOPPED} celui du milieu, {@code WEAK} le dernier.
+     */
+    public enum SolarStatus { STRONG, WEAK, STOPPED }
+
+    /** Ce que le generateur produit ce tick-la, en IF, pour l'afficher. */
+    public double generation() {
+        return level == null ? 0.0d : getGeneration(level, getBlockPos());
+    }
+
+    /** Et l'etat du ciel, qui choisit l'image du cadre. */
+    public SolarStatus sky() {
+        if (level == null || !canGenerate(level, getBlockPos())) return SolarStatus.STOPPED;
+        return level.isRaining() ? SolarStatus.WEAK : SolarStatus.STRONG;
+    }
+
     /** Ajoute a l'energie du tampon, sans jamais le depasser. */
     private void addEnergy(double amount) {
         energy = Math.min(BUFFER_SIZE, energy + amount);

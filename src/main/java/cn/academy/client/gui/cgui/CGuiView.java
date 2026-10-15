@@ -38,6 +38,16 @@ public final class CGuiView {
     /** Le cote d'un morceau du halo : la texture en fait trois, une par cote et une au centre. */
     private static final int QUAD = TEXTURE / 3;
 
+    /**
+     * La base des coordonnees de texture, pour compter les fractions d'une image.
+     *
+     * <p>Le moteur demande ses fenetres en fractions — zero a un pour l'image entiere, un tiers
+     * pour une planche de trois — et {@code blit} les veut en entiers : cette base est le denominateur
+     * commun. Mille deux cents se divise par trois, quatre, cinq, six, huit et dix, ce qui couvre les
+     * planches du mod ({@code effect_solar} en trois morceaux, le noeud d'imagination en dix).
+     */
+    private static final int UV_BASE = 1200;
+
     private final Screen screen;
     private final CWidget root;
     private final Map<CWidget, Runnable> clicks = new IdentityHashMap<>();
@@ -170,7 +180,7 @@ public final class CGuiView {
                 if (widget.texture.texture == null) {
                     graphics.fill(x, y, x + w, y + h, colour);
                 } else {
-                    drawTexture(graphics, widget.texture.texture, x, y, w, h, colour);
+                    drawTexture(graphics, widget.texture, x, y, w, h, colour);
                 }
             }
             if (widget.tint != null) {
@@ -252,18 +262,22 @@ public final class CGuiView {
         }
     }
 
-    private static void drawTexture(GuiGraphics graphics, String path, int x, int y, int w, int h,
-                                    int colour) {
-        ResourceLocation texture = ResourceLocation.tryParse(path);
+    private static void drawTexture(GuiGraphics graphics, CWidget.DrawTexture window, int x, int y,
+                                    int w, int h, int colour) {
+        ResourceLocation texture = ResourceLocation.tryParse(window.texture);
         if (texture == null) return;
 
         graphics.setColor(((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f,
                 (colour & 0xFF) / 255f, ((colour >>> 24) & 0xFF) / 255f);
-        // La texture entiere, etiree sur le rectangle : le fichier ne decoupe jamais ses images.
-        // Passer 1 pour la taille de texture revient a demander ses coordonnees de zero a un, sans
-        // avoir a connaitre ses dimensions — les pages des machines font 352 sur 374, les icones 48.
+        // La fenetre demandee, en fractions converties sur une base entiere : une image entiere fait
+        // zero a un, une planche de trois en prend un tiers. Le tout sans jamais avoir a connaitre les
+        // dimensions du fichier — les pages des machines font 352 sur 374, les icones 48.
         blend();
-        graphics.blit(texture, x, y, w, h, 0f, 0f, 1, 1, 1, 1);
+        graphics.blit(texture, x, y, w, h,
+                (float) (window.u0 * UV_BASE), (float) (window.v0 * UV_BASE),
+                Math.max(1, (int) Math.round((window.u1 - window.u0) * UV_BASE)),
+                Math.max(1, (int) Math.round((window.v1 - window.v0) * UV_BASE)),
+                UV_BASE, UV_BASE);
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 

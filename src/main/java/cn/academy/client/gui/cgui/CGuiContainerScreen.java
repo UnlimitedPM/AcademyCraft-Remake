@@ -146,6 +146,40 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         infoY += height;
     }
 
+    /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
+    protected CWidget widget(String name) {
+        return view == null ? null : view.find(name);
+    }
+
+    /**
+     * Un separateur : le titre d'une section, en petit et a demi efface.
+     *
+     * <p>C'est le {@code sepline} de l'original : une ligne a trois unites du bord, large de tout le
+     * panneau moins trois, trois unites de blanc avant elle, et le texte de la cle
+     * {@code ac.gui.common.sep.<id>} en blanc a soixante pour cent.
+     */
+    protected void seplineInfo() {
+        sepline("info");
+    }
+
+    protected void sepline(String id) {
+        CWidget line = new CWidget("sep_" + id);
+        line.transform.x = 3;
+        line.transform.width = CGuiContainerLayout.INFO_WIDTH - 3;
+        line.transform.height = 8;
+
+        CWidget title = new CWidget("title");
+        title.transform.width = CGuiContainerLayout.INFO_WIDTH - 3;
+        title.transform.height = 8;
+        title.text = new CWidget.TextBox();
+        title.text.content = Component.translatable("ac.gui.common.sep." + id).getString();
+        title.text.alpha = 153;
+        line.add(title);
+
+        blank(3);
+        element(line);
+    }
+
     /**
      * Pose un element du panneau, puis avance le curseur : c'est l'{@code element()} de l'original.
      *

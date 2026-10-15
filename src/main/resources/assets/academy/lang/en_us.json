@@ -137,6 +137,8 @@
   "ac.settings.prop.edit_ui": "Customize UI",
   "ac.settings.press_key": "Press a key...",
   "ac.settings.ok": "OK",
+  "ac.gui.common.sep.info": "Information",
+  "ac.gui.common.prop.gen_speed": "Gen. speed",
   "ac.gui.common.hist.energy": "ENERGY",
   "ac.gui.common.hist.buffer": "BUFFER",
   "ac.gui.common.hist.liquid": "LIQUID",
