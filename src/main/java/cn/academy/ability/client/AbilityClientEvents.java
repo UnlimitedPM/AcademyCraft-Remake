@@ -503,8 +503,17 @@ public class AbilityClientEvents {
 
             // Une competence qui ouvre un ecran ne part pas : c'est la liste des marques qui
             // decide, et c'est un clic dedans qui enverra quelque chose au serveur.
+            //
+            // Mais l'ecran ne s'ouvre que pour une aptitude utilisable. L'original ne l'ouvrait
+            // pas non plus dans ce cas — sa touche n'existait que pour un pouvoir allume — et le
+            // joueur l'a retrouve : « quand mes pouvoirs sont desactives, si j'appuie sur ma touche
+            // du location teleporte, ca m'ouvre quand meme le menu de teleportation ». Le refus est
+            // celui de `HoldRefusal.refusesScreen`, qui ne juge que l'allumage et le brouillage :
+            // une reserve trop courte doit encore ouvrir la liste, pour en montrer les prix.
             if (skill.opensScreen()) {
-                AbilityScreens.open(category, skill);
+                if (!HoldRefusal.refusesScreen(ClientAbilityData.get())) {
+                    AbilityScreens.open(category, skill);
+                }
                 return;
             }
             // Une competence A BASCULE se ferme au second appui : son maintien est un etat, pas

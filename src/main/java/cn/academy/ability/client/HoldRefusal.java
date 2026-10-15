@@ -55,4 +55,22 @@ public final class HoldRefusal {
         if (data.getControlPoint() < skill.getCpCost(data)) return true;
         return !handOk;
     }
+
+    /**
+     * Vrai si l'ECRAN d'une competence doit rester ferme : l'aptitude eteinte, ou brouillee.
+     *
+     * <p>C'est le refus de {@link #refusesStart} ampute de tout le reste, et la difference est
+     * voulue. Une recharge, une surcharge ou une reserve trop courte sont les refus d'un
+     * <b>effet</b> ; l'ecran, lui, doit justement pouvoir s'ouvrir pour dire ce qui manque —
+     * c'est tout son interet, et l'original laissait donc sa liste de marques s'ouvrir avec une
+     * reserve vide, chaque ligne annoncant son prix et son refus.
+     *
+     * <p>Ce qui reste, en revanche, est exactement ce que le joueur a signale : « quand mes
+     * pouvoirs sont desactives, si j'appuie sur ma touche du location teleporte, ca m'ouvre
+     * quand meme le menu de teleportation ». Une aptitude eteinte n'a pas d'ecran, comme elle n'a
+     * plus de barre de CP ni d'icones a l'ecran.
+     */
+    public static boolean refusesScreen(AbilityData data) {
+        return !data.isActivated() || data.isInterfered();
+    }
 }

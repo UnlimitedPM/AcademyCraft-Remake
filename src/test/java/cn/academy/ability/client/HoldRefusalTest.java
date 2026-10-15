@@ -59,6 +59,29 @@ class HoldRefusalTest {
         AbilityData data = ready();
         data.setActivated(false);
         assertTrue(HoldRefusal.refusesStart(SHIELD, data, true));
+        assertTrue(HoldRefusal.refusesScreen(data), "et l'ecran d'une competence reste ferme");
+    }
+
+    @Test
+    @DisplayName("l'ecran s'ouvre encore quand il a quelque chose a dire")
+    void lEcranSOuvrePourDireCeQuiManque() {
+        // Le refus d'ecran ne juge que l'allumage et le brouillage, et c'est voulu : une recharge,
+        // une surcharge ou une reserve trop courte sont les refus d'un EFFET. L'ecran, lui, doit
+        // pouvoir s'ouvrir pour dire ce qui manque et annoncer les prix — l'original laissait sa
+        // liste de marques s'ouvrir avec une reserve vide.
+        assertFalse(HoldRefusal.refusesScreen(ready()), "un joueur pret a son ecran");
+
+        AbilityData recharge = ready();
+        recharge.setCooldown(SHIELD, 40);
+        assertTrue(HoldRefusal.refusesStart(SHIELD, recharge, true));
+        assertFalse(HoldRefusal.refusesScreen(recharge), "mais il peut lire ses marques");
+
+        // Et une reserve vide non plus : c'est le cas qui compte le plus, parce que c'est
+        // justement celui ou le joueur a besoin de lire les prix et les refus de chaque marque.
+        AbilityData pauvre = ready();
+        pauvre.setControlPoint(0f);
+        assertFalse(HoldRefusal.refusesScreen(pauvre),
+                "il doit voir ce que chaque marque coute, meme sans de quoi payer");
     }
 
     @Test
