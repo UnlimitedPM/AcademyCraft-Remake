@@ -54,6 +54,11 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
      * l'original, qui les faisait osciller entre 0,675 et 0,85 d'opacite. */
     private final List<CWidget.DrawTexture> breathing = new ArrayList<>();
 
+    /** Les histogrammes du panneau d'infos : leur barre, leur texte, et d'ou ils lisent. */
+    private final List<Reading> readings = new ArrayList<>();
+
+    private record Reading(CWidget.ProgressBar bar, CWidget.TextBox text, CGuiHist source) {}
+
     private CGuiView view;
     private int current;
 
@@ -143,6 +148,95 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         infoY += height;
     }
 
+    /**
+     * Un histogramme : la boite de l'original, une barre par element, et leur legende.
+     *
+     * <p>Repris de {@code InfoArea.histogram}, nombres compris. La boite fait 210 unites dessinees a
+     * quatre dixiemes — soit 84 pixels — les barres seize de large et cent vingt de haut, posees a
+     * partir de 56 et tous les quarante. Un histogramme prend donc moins de place qu'il n'en
+     * dessine : c'est ce que fait son {@code blank(-30)}, et c'est ce qui colle la boite aux lignes
+     * qui la suivent au lieu de laisser un trou.
+     */
+    protected void histogram(CGuiHist... elems) {
+        CWidget box = new CWidget("histogram");
+        box.transform.width = CGuiHist.BOX;
+        box.transform.height = CGuiHist.BOX;
+        box.transform.scale = CGuiHist.BOX_SCALE;
+        box.texture = new CWidget.DrawTexture();
+        box.texture.texture = CGuiHist.TEXTURE;
+
+        for (int i = 0; i < elems.length; i++) {
+            CWidget row = new CWidget("bar" + i);
+            row.transform.width = CGuiHist.BAR_WIDTH;
+            row.transform.height = CGuiHist.BAR_HEIGHT;
+            row.transform.x = CGuiHist.BAR_X + i * CGuiHist.BAR_STEP;
+            row.transform.y = CGuiHist.BAR_Y;
+            row.bar = new CWidget.ProgressBar();
+            row.bar.dir = CWidget.ProgressBar.Direction.UP;
+            row.bar.color = elems[i].color();
+            box.add(row);
+        }
+
+        blank(-30);
+        info.add(box);
+        blank(CGuiHist.ADVANCE);
+
+        for (int i = 0; i < elems.length; i++) {
+            CWidget.TextBox value = legend(elems[i]);
+            readings.add(new Reading(box.children().get(i).bar, value, elems[i]));
+        }
+    }
+
+    /**
+     * La ligne de legende d'un element : le carre de sa couleur, son nom, et sa valeur.
+     *
+     * @return le champ de la valeur, que l'ecran reecrit a chaque image
+     */
+    private CWidget.TextBox legend(CGuiHist elem) {
+        CWidget line = new CWidget("hist" + (int) infoY);
+        line.transform.x = 6;
+        line.transform.y = infoY;
+        line.transform.width = 90;
+        line.transform.height = 8;
+
+        // Le carre, six unites de cote, pose trois unites a GAUCHE de la ligne : c'est le pos(-3)
+        // de l'original, qui le fait deborder du panneau.
+        CWidget icon = new CWidget("icon");
+        icon.transform.x = -3;
+        icon.transform.y = 1;
+        icon.transform.width = 6;
+        icon.transform.height = 6;
+        icon.texture = new CWidget.DrawTexture();
+        icon.texture.red = elem.color()[0];
+        icon.texture.green = elem.color()[1];
+        icon.texture.blue = elem.color()[2];
+        line.add(icon);
+
+        CWidget name = new CWidget("key");
+        name.transform.x = 4;
+        name.transform.width = 32;
+        name.transform.height = 8;
+        name.text = new CWidget.TextBox();
+        name.text.content = Component.translatable(elem.id()).getString();
+        name.text.align = "CENTER";
+        name.text.heightAlign = "CENTER";
+        line.add(name);
+
+        CWidget value = new CWidget("value");
+        value.transform.x = 40;
+        value.transform.width = 40;
+        value.transform.height = 8;
+        value.text = new CWidget.TextBox();
+        value.text.content = elem.desc().get();
+        value.text.align = "CENTER";
+        value.text.heightAlign = "CENTER";
+        line.add(value);
+
+        info.add(line);
+        infoY += 8;
+        return value.text;
+    }
+
     @Override
     protected void init() {
         super.init();
@@ -152,6 +246,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
         pages.clear();
         breathing.clear();
+        readings.clear();
         info.children().clear();
         infoY = 10;
         build(this);
@@ -216,7 +311,19 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         // Ce que la machine a a dire ce tick-la, puis le dessin de tout l'arbre.
         frame(graphics, mouseX, mouseY);
         breathe();
+        readHistograms();
         view.draw(graphics, mouseX, mouseY);
+    }
+
+    /** Relit les histogrammes : chaque barre se remplit, chaque valeur se reecrit. */
+    private void readHistograms() {
+        for (Reading reading : readings) {
+            // L'original ne descend jamais jusqu'a zero : une barre vide garde un cheveu de
+            // remplissage, et c'est ce qui la rend lisible.
+            reading.bar().progress = Math.max(0.03,
+                    Math.min(1.0, reading.source().value().getAsDouble()));
+            reading.text().content = reading.source().desc().get();
+        }
     }
 
     /** Le souffle des fonds de page : une seule opacite pour tous, comme chez l'original. */

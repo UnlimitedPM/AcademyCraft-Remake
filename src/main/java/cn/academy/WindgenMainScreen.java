@@ -27,7 +27,7 @@ public class WindgenMainScreen extends CGuiContainerScreen<WindgenMainMenu> {
     @Override
     protected void build(CGuiContainerScreen<WindgenMainMenu> screen) {
         inventoryPage("windmain");
-        property(Component.translatable("ac.gui.prop.altitude").getString(),
+        property(Component.translatable("ac.gui.common.prop.altitude").getString(),
                 Integer.toString(menu.altitude()));
     }
 }

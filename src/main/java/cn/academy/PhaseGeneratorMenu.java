@@ -21,11 +21,12 @@ import net.minecraftforge.items.SlotItemHandler;
  */
 public class PhaseGeneratorMenu extends AbstractContainerMenu {
 
-    public static final int LIQUID_IN_X = 44;
-    public static final int LIQUID_OUT_X = 116;
-    public static final int OUTPUT_X = 80;
-    public static final int TOP_SLOT_Y = 26;
-    public static final int OUTPUT_SLOT_Y = 54;
+    public static final int LIQUID_IN_X = 45;
+    public static final int LIQUID_OUT_X = 112;
+    public static final int OUTPUT_X = 42;
+    public static final int TOP_SLOT_Y = 12;
+    public static final int LIQUID_OUT_Y = 51;
+    public static final int OUTPUT_SLOT_Y = 80;
 
     private static final int MACHINE_SLOTS = PhaseGeneratorBlockEntity.SLOT_COUNT;
 
@@ -60,7 +61,7 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu {
             }
         });
         addSlot(new SlotItemHandler(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_LIQUID_OUT,
-                LIQUID_OUT_X, TOP_SLOT_Y) {
+                LIQUID_OUT_X, LIQUID_OUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
@@ -74,13 +75,16 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu {
             }
         });
 
-        for (int row = 0; row < 3; row++) {
+        // Les slots du joueur, aux positions de l'original : la barre rapide en bas, puis les trois
+        // rangees de l'inventaire de bas en haut. C'est le `mapPlayerInventory` de TechUIContainer.
+        for (int i = 1; i < 4; i++) {
             for (int col = 0; col < 9; col++) {
-                addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                int slot = (4 - i) * 9 + col;
+                addSlot(new Slot(playerInventory, slot, 6 + col * 18, 159 - i * 18));
             }
         }
         for (int col = 0; col < 9; col++) {
-            addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
         this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
