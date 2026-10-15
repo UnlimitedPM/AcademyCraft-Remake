@@ -27,6 +27,18 @@ public class TeleporterCategory extends Category {
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatTeleporter ; le port les rangeait
         // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.
+        // LA FIGURE DE L'ARBRE : les coordonnees de CatTeleporter de l'original, au chiffre pres.
+        // La menace est la racine ; les marques et les deplacements s'etagent vers la droite.
+        THREATENING_TELEPORT.setPosition(14, 42);
+        DIM_FOLDING_THEOREM.setPosition(50, 75);
+        PENETRATE_TELEPORT.setPosition(60, 46);
+        MARK_TELEPORT.setPosition(70, 16);
+        FLESH_RIPPING.setPosition(130, 12);
+        LOCATION_TELEPORT.setPosition(118, 50);
+        SHIFT_TELEPORT.setPosition(175, 47);
+        SPACE_FLUCTUATION.setPosition(160, 80);
+        FLASHING.setPosition(220, 20);
+
         addSkill(THREATENING_TELEPORT);
         addSkill(DIM_FOLDING_THEOREM);
         addSkill(PENETRATE_TELEPORT);

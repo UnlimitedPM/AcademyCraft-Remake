@@ -40,6 +40,13 @@ public final class GenericSkills {
         Skill advanced = new BrainCourseAdvanced();
         Skill mind = new MindCourse();
 
+        // Les trois se posent en bas de l'arbre, alignes a la meme hauteur, et ils sont au meme
+        // endroit dans les quatre categories : ce sont les curses, ils se suivent et ne dependent
+        // d'aucune competence de pouvoir. Les coordonnees sont celles de l'original.
+        brain.setPosition(30, 110);
+        advanced.setPosition(115, 110);
+        mind.setPosition(205, 110);
+
         category.addSkill(brain);
         category.addSkill(advanced);
         category.addSkill(mind);

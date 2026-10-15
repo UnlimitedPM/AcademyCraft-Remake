@@ -28,6 +28,18 @@ public class VecmanipCategory extends Category {
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatVecManip ; le port les rangeait
         // dans l'ordre ou elles avaient ete codees, ce qui melangeait les niveaux.
+        // LA FIGURE DE L'ARBRE : les coordonnees de CatVecManip de l'original, au chiffre pres —
+        // y compris celle de vec_deviation, que le port de reference avait commentee.
+        DIRECTED_SHOCK.setPosition(16, 45);
+        GROUNDSHOCK.setPosition(64, 85);
+        VEC_ACCEL.setPosition(76, 40);
+        VEC_DEVIATION.setPosition(145, 53);
+        DIRECTED_BLASTWAVE.setPosition(136, 80);
+        STORM_WING.setPosition(130, 20);
+        BLOOD_RETROGRADE.setPosition(204, 83);
+        VEC_REFLECTION.setPosition(210, 50);
+        PLASMA_CANNON.setPosition(175, 14);
+
         addSkill(DIRECTED_SHOCK);
         addSkill(GROUNDSHOCK);
         addSkill(VEC_ACCEL);

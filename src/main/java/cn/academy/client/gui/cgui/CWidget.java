@@ -349,6 +349,13 @@ public class CWidget {
         out.blue = source.blue;
         out.alpha = source.alpha;
         out.zLevel = source.zLevel;
+        // La fenetre suit la copie, sinon une planche decoupee perd son image : le gabarit d'une
+        // ligne animee se recopie sans sa case de depart et se dessine entier, ce qui ne se voit
+        // qu'a l'ecran et jamais a la lecture.
+        out.u0 = source.u0;
+        out.v0 = source.v0;
+        out.u1 = source.u1;
+        out.v1 = source.v1;
         return out;
     }
 

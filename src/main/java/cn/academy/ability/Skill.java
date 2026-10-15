@@ -138,6 +138,43 @@ public abstract class Skill {
     }
 
     // ------------------------------------------------------------------
+    // L'arbre : ou la competence se pose
+    // ------------------------------------------------------------------
+
+    /**
+     * La place de la competence dans l'arbre, en unites de la page.
+     *
+     * <p>Ce sont les {@code guiX}/{@code guiY} de l'original, et <b>rien ne les calcule</b> : son
+     * auteur les reglait a la main avec l'editeur de position — une touche de debogage qui
+     * affichait un champ par competence — puis recopiait les chiffres dans la classe de sa
+     * categorie. Le port reprend donc ses chiffres tels quels, et pas seulement par fidelite : ils
+     * disent la lecture de l'arbre, la progression allant vers la droite et vers le bas.
+     *
+     * <p>Le repere a pour origine le coin haut-gauche de la zone de l'arbre — la zone fait
+     * 257 sur 139 unites — et le point designe le <b>coin</b> d'une boite de seize unites, pas son
+     * centre. C'est le centre de cette boite que le dessin prend pour milieu, et le noeud s'etend
+     * alors sur vingt-trois unites : onze et demie de chaque cote. Deux competences d'une meme
+     * categorie sont donc toujours a plus de vingt-trois unites l'une de l'autre, sinon leurs
+     * cercles se recouvrent et l'arbre ne se lit plus.
+     */
+    private float guiX;
+    private float guiY;
+
+    /** Pose la competence dans l'arbre. Les unites sont celles de la page : voir {@link #getGuiX()}. */
+    public void setPosition(float x, float y) {
+        this.guiX = x;
+        this.guiY = y;
+    }
+
+    public float getGuiX() {
+        return guiX;
+    }
+
+    public float getGuiY() {
+        return guiY;
+    }
+
+    // ------------------------------------------------------------------
     // Apprentissage : conditions et dependances
     // ------------------------------------------------------------------
 

@@ -27,6 +27,19 @@ public class ElectromasterCategory extends Category {
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences
         // dans cet ordre-la. C'est celui de CatElectromaster, ou `ironSand` est commente par
         // son auteur — donc absent chez lui aussi.
+        // LA FIGURE DE L'ARBRE. Ce sont les coordonnees de CatElectromaster de l'original, au
+        // chiffre pres, y compris celles des deux competences que le port de reference avait
+        // laissees de cote (mag_manip et mine_detect). L'arc est la racine, tout part de lui.
+        ARC_GEN.setPosition(24, 46);
+        CHARGING.setPosition(55, 18);
+        MAG_MOVEMENT.setPosition(137, 35);
+        MAG_MANIP.setPosition(204, 33);
+        MINE_DETECT.setPosition(225, 12);
+        BODY_INTENSIFY.setPosition(97, 15);
+        THUNDER_BOLT.setPosition(86, 67);
+        RAILGUN.setPosition(164, 59);
+        THUNDER_CLAP.setPosition(204, 80);
+
         addSkill(ARC_GEN);
         addSkill(CHARGING);
         addSkill(MAG_MOVEMENT);

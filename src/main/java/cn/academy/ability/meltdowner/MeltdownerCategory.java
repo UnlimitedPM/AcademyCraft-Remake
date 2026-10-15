@@ -28,6 +28,20 @@ public class MeltdownerCategory extends Category {
         setColorStyle(126, 255, 132, 80);
         // L'ORDRE EST CELUI DE L'ORIGINAL, et il se voit : le menu F4 liste les competences dans
         // cet ordre-la, niveau par niveau. C'est celui de CatMeltdowner.
+        // LA FIGURE DE L'ARBRE : les coordonnees de CatMeltdowner de l'original, au chiffre pres.
+        // La bombe a electrons est la racine, et l'eventail part vers la droite.
+        ELECTRON_BOMB.setPosition(15, 45);
+        RADIATION_INTENSIFY.setPosition(35, 75);
+        SCATTER_BOMB.setPosition(70, 50);
+        LIGHT_SHIELD.setPosition(55, 15);
+        MELTDOWNER.setPosition(115, 40);
+        MINE_RAY_BASIC.setPosition(140, 70);
+        RAY_BARRAGE.setPosition(140, 10);
+        JET_ENGINE.setPosition(170, 32);
+        MINE_RAY_EXPERT.setPosition(172, 70);
+        MINE_RAY_LUCK.setPosition(205, 82);
+        ELECTRON_MISSILE.setPosition(210, 35);
+
         addSkill(ELECTRON_BOMB);
         addSkill(RADIATION_INTENSIFY);
         addSkill(SCATTER_BOMB);
