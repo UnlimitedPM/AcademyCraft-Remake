@@ -2071,6 +2071,44 @@ public final class AcademyGameTests {
     }
 
     /**
+     * La premiere aptitude : le seul apprentissage qui n'attende rien d'une machine.
+     *
+     * <p>Le joueur a vu « LEARN » ne rien faire. La cause n'etait pas le bouton mais l'energie : sa
+     * machine avait zero sur cinquante mille unites, donc le premier tick de l'apprentissage
+     * echouait et tout etait perdu — c'est le comportement de l'original, et il ferme la porte a cle
+     * a qui n'a pas encore de reseau. Les deux boutons LEARN et la commande {@code /learn} passent
+     * donc par {@code grantIfNone} : tout de suite, sans machine.
+     */
+    @GameTest(template = "empty")
+    public static void laPremiereAptitudeSeDonneSansEnergie(GameTestHelper helper) {
+        // Sans facteur : le sort en donne une, une seule fois.
+        var player = ownPlayer(helper, "debutant");
+        var ability = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .resolve().orElseThrow();
+        assertValue(helper, 0, ability.getHighestLevel(), "au depart, le joueur n'a aucune aptitude");
+
+        var first = cn.academy.ability.develop.DevelopActionFirstCategory.grantIfNone(player);
+        assertTrue(helper, first != null, "la premiere aptitude se donne tout de suite");
+        assertValue(helper, 1, ability.getCategoryLevel(first), "elle tombe au niveau un");
+        assertValue(helper, 1, ability.getHighestLevel(), "et c'est bien la sienne");
+        assertTrue(helper,
+                cn.academy.ability.develop.DevelopActionFirstCategory.grantIfNone(player) == null,
+                "une deuxieme fois, il n'y a plus rien a donner");
+
+        // Avec un facteur d'induction : c'est lui qui decide, et il disparait.
+        var inducted = ownPlayer(helper, "inducte");
+        inducted.getInventory().add(new ItemStack(ModItems.FACTOR_MELT.get()));
+        var fromFactor = cn.academy.FactorItem.otherCategoryIn(inducted, null);
+        assertTrue(helper, fromFactor != null, "le facteur doit porter une categorie");
+
+        var chosen = cn.academy.ability.develop.DevelopActionFirstCategory.grantIfNone(inducted);
+        assertValue(helper, fromFactor, chosen, "le facteur decide de la categorie");
+        assertTrue(helper, cn.academy.FactorItem.otherCategoryIn(inducted, null) == null,
+                "et il est consomme, comme dans l'original");
+        helper.succeed();
+    }
+
+    /**
      * Les prereglages : quatre touches, quatre prereglages, une donnee de joueur.
      *
      * <p>Le modele se relit en JUnit ; ce qui ne se lit qu'avec un jeu, c'est que la donnee

@@ -248,13 +248,20 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         CWidget logo = ability.child("logo_ability");
         if (logo != null) {
+            // Sans aptitude, il n'y a pas d'icone a montrer — et une texture absente se dessine en
+            // rectangle BLANC. Le joueur l'a vu et l'a dit : « l'image qui montre quel pouvoir on a
+            // est un carre blanc quand on n'a pas de pouvoir ».
+            logo.transform.doesDraw = category != null;
             if (logo.texture == null) logo.texture = new CWidget.DrawTexture();
             logo.texture.texture = category == null ? null : categoryIcon(category);
         }
 
         CWidget name = ability.child("text_abilityname");
         if (name != null && name.text != null) {
-            name.text.content = category == null ? "N/A"
+            // « N/A » ne disait rien a personne, et le joueur a reclame le bon texte : sans
+            // aptitude, on le dit, au lieu d'ecrire une abreviation d'anglais de bureau.
+            name.text.content = category == null
+                    ? Component.translatable("academy.developer.no_ability").getString()
                     : Component.translatable(category.getDisplayKey()).getString();
         }
 
@@ -365,6 +372,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      */
     private void buildConsole(CWidget area) {
         area.children().clear();
+        // La console dit aussi ce qu'elle montre : sans cela, `refresh` la rebatirait a chaque image.
+        signature = signature();
 
         area.add(text(Component.translatable("academy.developer.console_title").getString(),
                 -30, 255, 255, 255));
@@ -378,7 +387,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                     16, 255, 216, 0));
             return;
         }
-        area.add(button(() -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON), 16));
+        area.add(consoleButton(() -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON), 16));
+    }
+
+    /**
+     * Le bouton de la console : la meme image que celui des surfaces, son etiquette, et rien a
+     * fermer — il n'y a aucune surface ouverte sous lui.
+     */
+    private CWidget consoleButton(Runnable action, double y) {
+        CWidget widget = button(action, y, false);
+        widget.add(text("LEARN", 0, 255, 255, 255));
+        return widget;
     }
 
     /**
@@ -390,20 +409,22 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * s'en servait exactement de meme : l'arbre s'ouvre au fur et a mesure.
      */
     private void buildTree(CWidget page) {
+        // La zone se prend par la PAGE, et non par `widget("area")` : celui-ci passe par la vue, qui
+        // n'existe pas encore quand la page se construit. Le joueur voyait donc, a la place de la
+        // console, le vieux message « ask a developer for one » — la console ne s'affichait jamais.
+        CWidget right = page.child("parent_right");
+        CWidget area = right == null ? null : right.child("area");
+        if (area == null) return;
+
         // Sans aucune aptitude, il n'y a pas d'arbre a montrer : la console prend la place, et
         // c'est elle qui dit au joueur comment entrer dans le mod. Le passage se fait tout seul
-        // une fois la premiere aptitude apprise, puisque l'ecran reconstruit son arbre des que
-        // l'aptitude change.
-        CWidget console = widget("area");
-        if (console != null && category() == null) {
-            buildConsole(console);
+        // une fois la premiere aptitude apprise, puisque l'ecran rebatit des que l'aptitude change.
+        if (category() == null) {
+            buildConsole(area);
             return;
         }
         nodes.clear();
 
-        CWidget right = page.child("parent_right");
-        CWidget area = right == null ? null : right.child("area");
-        if (area == null) return;
         area.children().clear();
 
         // Le fond de la zone, sur la zone elle-meme : voir {@link #drawAreaBackdrop} pour ce qu'il a
@@ -681,6 +702,11 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         CWidget page = pageWindow(PAGE);
         if (page == null) return;
 
+        // Les deux panneaux de gauche portent l'aptitude du joueur : ils changent avec elle, et
+        // sans ce repose le panneau continuerait d'annoncer « No ability » apres la premiere
+        // aptitude, jusqu'a la prochaine ouverture de l'ecran.
+        buildAbilityPanel(page);
+        buildMachinePanel(page);
         buildTree(page);
         // Les noeuds qui viennent de naitre n'ont pas encore de place : sans ce repose, ils se
         // dessineraient tous au coin, le temps d'une image.
@@ -864,6 +890,14 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * cet ordre, pour que l'action parte sur un ecran encore en place.
      */
     private CWidget button(Runnable action, double y) {
+        return button(action, y, true);
+    }
+
+    /**
+     * @param close vrai si ce bouton ferme une surface ouverte, comme celui de l'original ; faux
+     *              pour celui de la console, qui ne ferme rien du tout
+     */
+    private CWidget button(Runnable action, double y, boolean close) {
         CWidget widget = new CWidget("button");
         widget.transform.width = BUTTON_WIDTH;
         widget.transform.height = BUTTON_HEIGHT;
@@ -882,7 +916,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         onClick(widget, () -> {
             action.run();
-            beginClose();
+            if (close) beginClose();
         });
         return widget;
     }

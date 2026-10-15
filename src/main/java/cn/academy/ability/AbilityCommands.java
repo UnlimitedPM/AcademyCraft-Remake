@@ -53,17 +53,15 @@ public class AbilityCommands {
         // La commande du JOUEUR, celle qui ouvre le mod : sans aptitude, elle en donne une. Elle lit
         // l'inventaire comme le developpeur — un facteur designe sa categorie et disparait, sinon le
         // sort en donne une — et elle previent le client, sans quoi l'affichage du joueur resterait
-        // vide jusqu'a la prochaine reconnexion.
+        // vide jusqu'a la prochaine reconnexion. Elle passe par le meme chemin que les deux boutons
+        // LEARN de l'ecran, pour qu'il n'y ait qu'une facon de donner cette premiere aptitude.
         dispatcher.register(Commands.literal("learn").executes(ctx -> {
             ServerPlayer player = ctx.getSource().getPlayerOrException();
-            Category learned = cn.academy.ability.develop.DevelopActionFirstCategory.grantIfNone(player);
+            Category learned = cn.academy.ability.develop.DevelopActionFirstCategory.grantAndSync(player);
             if (learned == null) {
                 ctx.getSource().sendFailure(Component.translatable("academy.developer.already_has"));
                 return 0;
             }
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
-                    AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                            new SyncAbilityDataPacket(data)));
             ctx.getSource().sendSuccess(() -> Component.translatable("academy.developer.learned",
                     Component.translatable(learned.getDisplayKey())), false);
             return 1;

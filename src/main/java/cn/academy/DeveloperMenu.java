@@ -200,11 +200,15 @@ public class DeveloperMenu extends AbstractContainerMenu {
 
         if (buttonId == FIRST_CATEGORY_BUTTON) {
             // La premiere aptitude se decide avec l'inventaire : un facteur d'induction designe sa
-            // categorie, sinon le sort en donne une. C'est l'action elle-meme qui choisit, et elle
-            // reverifie au dernier moment que le joueur n'en a pas deja une.
-            cn.academy.ability.develop.DevelopActionFirstCategory first =
-                    cn.academy.ability.develop.DevelopActionFirstCategory.of(serverPlayer);
-            return first != null && developer.startDeveloping(serverPlayer, first);
+            // categorie, sinon le sort en donne une. Elle se donne TOUT DE SUITE, et sans energie.
+            //
+            // C'est le seul endroit du mod qui n'attende rien de la machine, et c'est voulu : le
+            // joueur a vu « LEARN » ne rien faire, et la raison etait la — sa machine avait
+            // 0 sur 50000 unites, donc le premier tick de l'apprentissage echouait et tout etait
+            // perdu. Faire dependre l'entree dans le mod d'un reseau d'energie qu'un joueur neuf
+            // n'a pas encore construit, c'est fermer la porte a cle. C'est aussi ce que fait
+            // /learn, et les deux chemins doivent donner exactement la meme chose.
+            return cn.academy.ability.develop.DevelopActionFirstCategory.grantAndSync(serverPlayer) != null;
         }
 
         if (buttonId < SKILL_BUTTON_BASE) {

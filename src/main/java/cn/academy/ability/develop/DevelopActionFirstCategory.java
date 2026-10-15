@@ -5,7 +5,11 @@ import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.SyncAbilityDataPacket;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 
@@ -69,8 +73,7 @@ public class DevelopActionFirstCategory implements DevelopAction {
      * Donne la premiere aptitude tout de suite, sans machine et sans attente, et rend celle qui a
      * ete donnee.
      *
-     * <p>C'est ce que fait la commande {@code /learn}. Le developpeur, lui, passe par le
-     * deroulement normal : la machine chauffe, paie son energie, et l'aptitude tombe a la fin.
+     * <p>C'est ce que fait la commande {@code /learn}.
      *
      * @return la categorie apprise, ou {@code null} si le joueur en avait deja une
      */
@@ -83,6 +86,29 @@ public class DevelopActionFirstCategory implements DevelopAction {
         if (action == null) return null;
         action.onLearned(player);
         return action.getChosen();
+    }
+
+    /**
+     * La premiere aptitude, donnee au joueur ET annoncee a son client.
+     *
+     * <p>Sans cette annonce, l'affichage du joueur reste vide jusqu'a la resynchronisation
+     * periodique : l'ecran du developpeur continuerait de montrer la console quelques dixiemes de
+     * seconde apres que le pouvoir a ete donne.
+     *
+     * <p>Serveur seulement. C'est le chemin des deux boutons LEARN (celui de la console et celui du
+     * panneau) et de la commande {@code /learn} : trois portes, une seule facon de donner.
+     *
+     * @return la categorie apprise, ou {@code null} si le joueur en avait deja une
+     */
+    @Nullable
+    public static Category grantAndSync(ServerPlayer player) {
+        Category granted = grantIfNone(player);
+        if (granted == null) return null;
+
+        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
+                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                        new SyncAbilityDataPacket(data)));
+        return granted;
     }
 
     @Override
