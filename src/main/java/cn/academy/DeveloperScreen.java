@@ -114,6 +114,22 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /** La largeur dans laquelle la description d'une competence se coupe : celle de l'original. */
     private static final int DESCRIPTION_WIDTH = 200;
 
+    /**
+     * La boite d'une ligne de texte libre.
+     *
+     * <p>Elle n'est pas vide, et c'est tout son interet : le moteur n'ecrit un texte que dans une
+     * boite qui a une taille. Toutes les lignes des surfaces — le nom d'une competence, son
+     * experience, ses conditions, son cout — etaient posees dans des boites de zero sur zero, et
+     * n'etaient donc <b>jamais dessinees</b>.
+     */
+    private static final double TEXT_WIDTH = 240.0;
+    private static final double TEXT_HEIGHT = 12.0;
+
+    /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
+    private static final double CONSOLE_WIDTH = 240.0;
+    private static final double CONSOLE_LINE = 10.0;
+    private static final double CONSOLE_DY = -22.0;
+
     /** L'icone d'une surface : le meme disque, mais plus grand. */
     private static final String SURFACE_BACK = "academy:textures/guis/developer/skill_back.png";
     private static final double SURFACE_BACK_SIZE = 50.0;
@@ -365,29 +381,62 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /**
      * La console : ce que voit un joueur qui n'a encore aucune aptitude.
      *
-     * <p>L'original ne montrait pas un arbre vide a ce moment-la : il posait une petite console a
-     * la place de l'arbre, avec le texte qui dit quoi faire et une commande {@code learn} a taper.
-     * Le port garde le texte et remplace la frappe par un bouton, parce qu'un bouton se clique — et
-     * les deux chemins sont dits : le facteur d'induction, ou le sort.
+     * <p>L'original ne montrait pas un arbre vide a ce moment-la : il posait une petite console a la
+     * place de l'arbre — « Welcome to Academy OS », l'echec du demarrage, le verdict, et la commande
+     * a taper. Le port garde son texte mot pour mot et remplace la frappe par un bouton, parce qu'un
+     * bouton se clique — et la commande existe aussi pour de vrai, c'est {@code /learn}.
      */
     private void buildConsole(CWidget area) {
         area.children().clear();
         // La console dit aussi ce qu'elle montre : sans cela, `refresh` la rebatirait a chaque image.
         signature = signature();
 
-        area.add(text(Component.translatable("academy.developer.console_title").getString(),
-                -30, 255, 255, 255));
-        area.add(text(Component.translatable("academy.developer.console_how").getString(),
-                -15, 200, 200, 200));
-        area.add(text(Component.translatable("academy.developer.console_factor").getString(),
-                -5, 200, 200, 200));
+        List<String> lines = consoleText();
+        double top = CONSOLE_DY - (lines.size() - 1) * CONSOLE_LINE / 2.0;
+        for (int i = 0; i < lines.size(); i++) {
+            area.add(consoleLine(lines.get(i), top + i * CONSOLE_LINE));
+        }
 
+        double below = top + lines.size() * CONSOLE_LINE + 6;
         if (menu.isDeveloping()) {
             area.add(text(Component.translatable("academy.developer.state.developing").getString(),
-                    16, 255, 216, 0));
+                    below, 255, 216, 0));
             return;
         }
-        area.add(consoleButton(() -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON), 16));
+        area.add(consoleButton(() -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON), below));
+    }
+
+    /**
+     * Le texte de la console, concatene comme l'original le concatene.
+     *
+     * <p>Quatre cles, celles de l'original, et dans son ordre : le demarrage, l'echec qui se colle a
+     * la fin de la meme ligne, le verdict, et la commande a taper. L'invite {@code OS >} ferme la
+     * console — c'est la que l'original attendait sa frappe.
+     */
+    private List<String> consoleText() {
+        String name = minecraft == null || minecraft.player == null
+                ? "" : minecraft.player.getGameProfile().getName();
+        String all = Component.translatable("academy.skill_tree.console.init", name).getString()
+                + Component.translatable("academy.skill_tree.console.boot_failed").getString()
+                + Component.translatable("academy.skill_tree.console.invalid_cat").getString()
+                + Component.translatable("academy.skill_tree.console.learn_hint").getString()
+                + "OS > ";
+        return List.of(all.split("\n", -1));
+    }
+
+    /** Une ligne de la console, posee a gauche dans sa boite. */
+    private static CWidget consoleLine(String content, double y) {
+        CWidget line = new CWidget("console_line");
+        line.transform.width = CONSOLE_WIDTH;
+        line.transform.height = CONSOLE_LINE;
+        line.transform.y = y;
+        line.transform.alignWidth = "CENTER";
+        line.transform.alignHeight = "CENTER";
+        line.text = new CWidget.TextBox();
+        line.text.content = content;
+        line.text.align = "LEFT";
+        line.text.heightAlign = "CENTER";
+        return line;
     }
 
     /**
@@ -938,13 +987,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /**
      * Un bout de texte centre sur la page.
      *
-     * <p>Sa boite est <b>vide</b> : le moteur centre alors le texte sur son point d'accroche, et c'est
-     * ce qui permet de poser une ligne au milieu de l'ecran sans lui donner de largeur.
+     * <p>Sa boite n'est <b>pas</b> vide : le moteur n'ecrit un texte que dans une boite qui a une
+     * taille, et une boite de zero sur zero ne dessine donc rien du tout.
      */
     private static CWidget text(String content, double y, int red, int green, int blue) {
         CWidget box = new CWidget("text");
-        box.transform.width = 0;
-        box.transform.height = 0;
+        box.transform.width = TEXT_WIDTH;
+        box.transform.height = TEXT_HEIGHT;
         box.transform.y = y;
         box.transform.alignWidth = "CENTER";
         box.transform.alignHeight = "CENTER";

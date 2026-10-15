@@ -75,20 +75,27 @@ public abstract class CGuiScreen extends Screen {
         return null;
     }
 
-    /** Le widget le plus profond sous ce point, ou {@code null}. */
+    /** Le widget sous ce point, ou {@code null}. Voir {@code CGuiView.hitTest} pour la regle. */
     protected CWidget hitTest(double mouseX, double mouseY) {
         return hitTest(root, mouseX, mouseY);
     }
 
+    /**
+     * Le widget sous ce point : le DERNIER de l'arbre qui le contient, et lui seul.
+     *
+     * <p>Le {@code gtnTraverse} de LambdaLib2 : un widget est juge sur sa propre boite — pas sur
+     * celle de ses parents, qui peut etre plus petite que lui — et c'est celui du dessus qui prend
+     * le clic.
+     */
     private static CWidget hitTest(CWidget widget, double mouseX, double mouseY) {
-        if (!widget.transform.doesDraw) return null;
-        if (!widget.isPointWithin(mouseX, mouseY)) return null;
+        CWidget found = widget.transform.doesDraw && widget.isPointWithin(mouseX, mouseY)
+                ? widget : null;
 
         for (CWidget child : widget.children()) {
             CWidget deeper = hitTest(child, mouseX, mouseY);
-            if (deeper != null) return deeper;
+            if (deeper != null) found = deeper;
         }
-        return widget;
+        return found;
     }
 
     /** Ce que ce widget fait quand on clique dessus. */

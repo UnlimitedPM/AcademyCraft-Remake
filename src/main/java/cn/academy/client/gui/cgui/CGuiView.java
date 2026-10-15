@@ -119,20 +119,35 @@ public final class CGuiView {
         return null;
     }
 
-    /** Le widget le plus profond sous ce point, ou {@code null}. */
+    /** Le widget sous ce point, ou {@code null}. */
     public CWidget hitTest(double mouseX, double mouseY) {
         return hitTest(root, mouseX, mouseY);
     }
 
+    /**
+     * Le widget sous ce point : le DERNIER de l'arbre qui le contient.
+     *
+     * <p>C'est le {@code gtnTraverse} de LambdaLib2, et ses deux details comptent :
+     *
+     * <ul>
+     *   <li>un widget est juge sur <b>sa</b> boite, jamais sur celle de ses parents. Le bouton LEARN
+     *       du developpeur fait cent quatre-vingt-six unites de large dans un panneau qui en fait
+     *       cent quatre : il deborde, et le port — qui exigeait que chaque parent contienne aussi le
+     *       point — le rendait donc incliquable. Le joueur l'a dit : « appuyer sur le bouton ne fait
+     *       rien » ;</li>
+     *   <li>le dernier gagne, et non le premier : celui du dessus, comme a l'ecran, la ou le port
+     *       donnait le clic a celui du fond.</li>
+     * </ul>
+     */
     private static CWidget hitTest(CWidget widget, double mouseX, double mouseY) {
-        if (!widget.transform.doesDraw) return null;
-        if (!widget.isPointWithin(mouseX, mouseY)) return null;
+        CWidget found = widget.transform.doesDraw && widget.isPointWithin(mouseX, mouseY)
+                ? widget : null;
 
         for (CWidget child : widget.children()) {
             CWidget deeper = hitTest(child, mouseX, mouseY);
-            if (deeper != null) return deeper;
+            if (deeper != null) found = deeper;
         }
-        return widget;
+        return found;
     }
 
     /** Ce que ce widget fait quand on clique dessus. */
