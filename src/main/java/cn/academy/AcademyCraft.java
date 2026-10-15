@@ -136,6 +136,8 @@ public class AcademyCraft {
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.DEVELOPER.get(), DeveloperScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.PHASE_GENERATOR.get(), PhaseGeneratorScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.ABILITY_INTERFERER.get(), AbilityInterfererScreen::new);
+                net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.NODE.get(), NodeScreen::new);
+
                 // Les ecrans des applications du terminal vivent a part des menus :
                 // une application ne s'ouvre pas par un conteneur mais par la touche
                 // du terminal. Sans cette ligne, l'arbre de competences s'installe

@@ -4,6 +4,10 @@ import javax.annotation.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.EntityBlock;
@@ -14,6 +18,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Bloc de noeud sans fil, commun aux trois qualites.
@@ -65,6 +71,23 @@ public class NodeBlock extends Block implements EntityBlock {
         return (lvl, pos, st, be) -> {
             if (be instanceof NodeBlockEntity node) NodeBlockEntity.serverTick(lvl, pos, st, node);
         };
+    }
+
+    /**
+     * Le clic droit ouvre l'interface du noeud.
+     *
+     * L'original l'ouvrait depuis son item de bloc ; le port n'avait rien a montrer, donc rien a
+     * ouvrir. C'est l'ecran — la page de l'inventaire, son animation et son panneau — qui justifie
+     * cette methode.
+     */
+    @Override
+    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
+                                 InteractionHand hand, BlockHitResult hit) {
+        if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof NodeBlockEntity node) {
+            NetworkHooks.openScreen(serverPlayer, node, buf -> buf.writeBlockPos(pos));
+        }
+        return InteractionResult.sidedSuccess(level.isClientSide);
     }
 
     /**

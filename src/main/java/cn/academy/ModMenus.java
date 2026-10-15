@@ -38,6 +38,9 @@ public class ModMenus {
     public static final RegistryObject<MenuType<AbilityInterfererMenu>> ABILITY_INTERFERER =
             MENUS.register("ability_interferer", () -> IForgeMenuType.create(AbilityInterfererMenu::new));
 
+    public static final RegistryObject<MenuType<NodeMenu>> NODE =
+            MENUS.register("node", () -> IForgeMenuType.create(NodeMenu::new));
+
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);
     }

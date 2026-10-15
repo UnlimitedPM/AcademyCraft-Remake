@@ -79,18 +79,26 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
      */
     protected abstract void build(CGuiContainerScreen<T> screen);
 
-    /** Ouvre une page a partir d'un document de l'original, par exemple {@code rework/page_solar}. */
-    protected void page(String id, String document) {
-        pages.add(new Page(id, CGuiContainerLayout.page(CGuiDocument.read(document).copy())));
+    /**
+     * Ouvre une page a partir d'un document de l'original, par exemple {@code rework/page_solar}.
+     *
+     * @return la fenetre de la page, pour la machine qui a quelque chose a y poser elle-meme — le
+     *     noeud d'imagination lui ajoute son animation, que son document ne porte pas
+     */
+    protected CWidget page(String id, String document) {
+        CWidget window = CGuiContainerLayout.page(CGuiDocument.read(document).copy());
+        pages.add(new Page(id, window));
+        return window;
     }
 
     /** La page d'inventaire d'une machine sans page propre : {@code page_inv} et son fond a elle. */
-    protected void inventoryPage(String machine) {
-        page("inv", "rework/page_inv");
-        CWidget block = pages.get(pages.size() - 1).window().child("ui_block");
+    protected CWidget inventoryPage(String machine) {
+        CWidget window = page("inv", "rework/page_inv");
+        CWidget block = window.child("ui_block");
         if (block != null && block.texture != null) {
             block.texture.texture = "academy:textures/guis/ui/ui_" + machine + ".png";
         }
+        return window;
     }
 
     /** La page courante, celle que les slots concernent. */
@@ -374,10 +382,21 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     private void breathe() {
         if (breathing.isEmpty()) return;
 
-        int alpha = CGuiContainerLayout.breatheAlpha(net.minecraft.Util.getMillis() / 1000.0);
+        int alpha = breatheAlpha();
         for (CWidget.DrawTexture texture : breathing) {
             texture.alpha = alpha;
         }
+    }
+
+    /**
+     * L'opacite du souffle a cet instant, entre 172 et 216 sur 255.
+     *
+     * <p>Les fonds de page en respirent d'eux-memes, mais l'original en faisait aussi respirer
+     * l'animation du noeud, qui la multiplie a ses images. Une machine qui en a besoin la demande ici
+     * plutot que de refaire le calcul.
+     */
+    protected int breatheAlpha() {
+        return CGuiContainerLayout.breatheAlpha(net.minecraft.Util.getMillis() / 1000.0);
     }
 
     /**

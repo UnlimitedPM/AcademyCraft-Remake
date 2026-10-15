@@ -144,6 +144,7 @@
   "ac.gui.common.hist.liquid": "LIQUID",
   "ac.gui.common.hist.capacity": "CAPACITY",
   "ac.gui.common.prop.altitude": "Altitude",
+  "ac.gui.common.prop.range": "Trans. Range",
   "ac.gui.uiedit.elements": "Elements",
   "ac.gui.uiedit.elm.cpbar": "CP Indicator",
   "ac.gui.uiedit.elm.keyhint": "Control Hint",

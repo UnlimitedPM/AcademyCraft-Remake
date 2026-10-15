@@ -12,13 +12,19 @@ import java.util.Set;
 
 import cn.academy.ModBlockEntities;
 import cn.academy.ModItems;
+import cn.academy.NodeMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -48,7 +54,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * rapport a l'original, qui avait son propre systeme d'objets energetiques
  * ({@code IFItemManager}).
  */
-public class NodeBlockEntity extends BlockEntity implements EnergyNode {
+public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProvider {
 
     public static final int SLOT_CHARGE_IN = 0;
     public static final int SLOT_CHARGE_OUT = 1;
@@ -92,6 +98,19 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
 
     /** Client : vrai quand le noeud est raccorde a un Matrix (affichage seul). */
     private boolean connected;
+
+    /**
+     * Combien de generateurs et recepteurs sont raccordes : la « charge » du noeud.
+     *
+     * C'est le {@code NodeConn.getLoad} de l'original, et c'est sur sa capacite que l'ecran la
+     * montre. Le serveur la compte, le client la recoit avec le reste.
+     */
+    private int load;
+
+    /** Ce que le client a deja recu : sert a ne pas lui renvoyer deux fois la meme chose. */
+    private double pushedEnergy = Double.NaN;
+    private int pushedLoad = -1;
+    private boolean pushedConnected;
 
     private int syncTicker;
 
@@ -159,6 +178,11 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         return connected;
     }
 
+    /** Combien de machines sont raccordees au noeud, sur {@link #getCapacity()}. */
+    public int getLoad() {
+        return load;
+    }
+
     // ------------------------------------------------------------------
     // Tick
     // ------------------------------------------------------------------
@@ -176,6 +200,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         if (++node.syncTicker >= SYNC_INTERVAL) {
             node.syncTicker = 0;
             node.syncBlockState(level, pos);
+            node.pushToClient(level);
         }
 
         if (++node.linkTicker >= LINK_CHECK_INTERVAL) {
@@ -250,6 +275,34 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
             valid.sort(Comparator.comparingDouble(userPos -> pos.distSqr(userPos)));
             for (int i = capacity; i < valid.size(); i++) data.unlinkUser(valid.get(i));
         }
+
+        // Ce qui reste raccorde apres ce tri : c'est la charge que l'ecran montre sur la capacite.
+        setLoad(Math.min(valid.size(), capacity));
+    }
+
+    /** La charge, et la mise a jour du client si elle a bouge. */
+    private void setLoad(int value) {
+        if (load == value) return;
+        load = value;
+        setChanged();
+    }
+
+    /**
+     * Envoie au client ce que l'ecran affiche et qui n'est pas dans l'etat du bloc.
+     *
+     * L'energie et la charge vivent dans le block entity, pas dans l'etat du bloc : sans cette mise a
+     * jour, un joueur qui ouvre le noeud verrait les valeurs du chargement du chunk, et l'animation
+     * du raccordement — qui suit {@code connected} — ne partirait jamais. Le renvoi n'a lieu que si
+     * quelque chose a bouge : sinon c'est un paquet par noeud toutes les demi-secondes, pour rien.
+     */
+    private void pushToClient(Level level) {
+        if (level.isClientSide) return;
+        if (energy == pushedEnergy && load == pushedLoad && connected == pushedConnected) return;
+
+        pushedEnergy = energy;
+        pushedLoad = load;
+        pushedConnected = connected;
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
     }
 
     // ------------------------------------------------------------------
@@ -453,6 +506,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         tag.put("inventory", inventory.serializeNBT());
         tag.putDouble("energy", energy);
         tag.putBoolean("connected", connected);
+        tag.putInt("load", load);
     }
 
     @Override
@@ -461,6 +515,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
         inventory.deserializeNBT(tag.getCompound("inventory"));
         energy = clamp(tag.getDouble("energy"));
         connected = tag.getBoolean("connected");
+        load = tag.getInt("load");
     }
 
     @Override
@@ -471,5 +526,16 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode {
     @Override
     public CompoundTag getUpdateTag() {
         return saveWithoutMetadata();
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return new NodeMenu(containerId, playerInventory, this);
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return getBlockState().getBlock().getName();
     }
 }
