@@ -47,6 +47,9 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
     private static final int ROW_ALPHA = 178;
     private static final int ROW_FOCUSED_ALPHA = 255;
 
+    /** Le champ du prix, qui vire au rouge quand la machine ne peut pas le payer. */
+    private CWidget costField;
+
     /** Le panneau de la liste, sa zone, et le modele de ligne dont chaque nom fait une copie. */
     private CWidget listPanel;
     private CWidget zone;
@@ -77,10 +80,13 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         histogram(CGuiHist.energy(menu::getEnergyStored, menu.getMaxEnergyStored()));
 
         // Ce que la machine fait, en deux lignes que l'original n'avait pas : le nombre de joueurs
-        // qu'elle brouille en ce moment, et ce que cela lui coute.
+        // qu'elle brouille en ce moment, et ce que cela lui coute. Le prix vire au rouge quand le
+        // tampon ne peut pas le payer — c'est ce qui explique pourquoi l'interrupteur refuse de
+        // s'allumer, et sans quoi le bouton a l'air casse.
         seplineInfo();
         property(label("prop.affected"), Integer.toString(menu.getAffectedCount()));
-        property(label("prop.cost"), Integer.toString((int) menu.getCostPerTick()) + " IF/T");
+        costField = property(label("prop.cost"),
+                Integer.toString((int) menu.getCostPerTick()) + " IF/T").child("value");
 
         wirePage(window);
         fillRows(menu.whitelist());
@@ -122,6 +128,10 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
 
         onClick(config.child("element_switch").child("element_btn_switch"),
                 () -> press(AbilityInterfererMenu.BUTTON_TOGGLE));
+        // Et toute la ligne allume aussi : le bouton fait seize unites de cote, et le libelle qui le
+        // regarde ne servait a rien. Le document met le clic sur le bouton seul ; on l'elargit a la
+        // ligne, sans rien changer a ce qu'elle montre.
+        onClick(config.child("element_switch"), () -> press(AbilityInterfererMenu.BUTTON_TOGGLE));
         onClick(config.child("element_range").child("element_btn_left"),
                 () -> press(AbilityInterfererMenu.BUTTON_RANGE_DOWN));
         onClick(config.child("element_range").child("element_btn_right"),
@@ -238,6 +248,13 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         CWidget range = widget("element_text_range");
         if (range != null && range.text != null) {
             range.text.content = Integer.toString(menu.getRange());
+        }
+
+        // Le prix : rouge quand le tampon ne peut pas payer un cycle, blanc quand il peut. C'est la
+        // meme regle que celle qui refuse d'allumer la machine.
+        if (costField != null && costField.text != null) {
+            if (menu.canPay()) costField.text.color(255, 255, 255);
+            else costField.text.color(0x9E, 0x2B, 0x25);
         }
 
         // Le champ d'ajout s'en va des qu'il n'a plus le clavier.

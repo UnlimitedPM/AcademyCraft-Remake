@@ -215,22 +215,35 @@ public final class CGuiView {
             if (widget.frame != null) {
                 drawFrame(graphics, widget, x, y, w, h);
             }
+
+            // La teinte d'un widget, et ses deux facons — c'est le fichier qui choisit :
+            //
+            //   - `affectTexture` : elle REMPLACE la couleur du dessin. Une image dont l'alpha porte
+            //     tout le motif s'allume ainsi sous le curseur sans qu'un pixel de plus soit peint,
+            //     et c'est ce que l'original faisait en changeant la couleur de sa DrawTexture ;
+            //   - sinon : elle se pose par-dessus, en aplat.
+            //
+            // Le port peignait l'aplat dans les deux cas. Les boutons de la page du brouilleur se
+            // retrouvaient donc sous un carre blanc de 178 d'opacite, et leurs fleches ne se voyaient
+            // plus : le drapeau etait lu, et jamais ecoute.
+            int[] tint = null;
+            if (widget.tint != null) {
+                tint = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover : widget.tint.idle;
+            }
+
             if (widget.texture != null) {
-                int colour = argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
-                        widget.texture.blue);
+                int colour = tint != null && widget.tint.affectTexture
+                        ? argb(tint[3], tint[0], tint[1], tint[2])
+                        : argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
+                                widget.texture.blue);
                 if (widget.texture.texture == null) {
                     graphics.fill(x, y, x + w, y + h, colour);
                 } else {
                     drawTexture(graphics, widget.texture, x, y, w, h, colour);
                 }
             }
-            if (widget.tint != null) {
-                int[] colour = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover
-                        : widget.tint.idle;
-                if (colour[3] > 0) {
-                    graphics.fill(x, y, x + w, y + h, argb(colour[3], colour[0], colour[1],
-                            colour[2]));
-                }
+            if (widget.tint != null && !widget.tint.affectTexture && tint[3] > 0) {
+                graphics.fill(x, y, x + w, y + h, argb(tint[3], tint[0], tint[1], tint[2]));
             }
             if (widget.bar != null) {
                 drawBar(graphics, widget, x, y, w, h);
