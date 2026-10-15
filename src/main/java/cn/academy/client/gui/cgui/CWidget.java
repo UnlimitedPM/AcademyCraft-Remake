@@ -164,12 +164,14 @@ public class CWidget {
      * <p>Il se dessine <b>autour</b> de la boite du widget, avec un debord, et fait deux choses :
      *
      * <ul>
-     *   <li>neuf morceaux d'un halo ({@code blend_quad}) teintes en noir a moitie — le centre donne
-     *       le fond sombre translucide, les bords et les coins l'arrondissent et le font respirer
-     *       vers l'exterieur ;</li>
+     *   <li>huit morceaux d'un halo ({@code blend_quad}) teintes en noir a moitie : les bords et les
+     *       coins, qui arrondissent la boite et debordent de quatre unites ;</li>
      *   <li>deux bandes claires ({@code line}) par-dessus, l'une posee <b>au-dessus</b> de la boite
      *       et l'autre vers son bas : ce sont les deux traits blancs du panneau.</li>
      * </ul>
+     *
+     * <p>Le carre du centre n'est pas dessine : chez l'original il fait le fond sombre du panneau,
+     * mais le fond d'un widget est justement ce qu'il porte deja.
      *
      * <p>C'est le seul endroit du mod qui s'en sert, et c'est le panneau d'infos des machines. Les
      * nombres sont ceux de l'original : quatre unites de debord, et les deux bandes a 8,6 unites

@@ -96,10 +96,11 @@ class CGuiContainerLayoutTest {
         assertEquals(root.absX + 179, info.absX, EPS);
         assertEquals(root.absY + 5, info.absY, EPS);
         assertEquals(50, info.absH, EPS, "il a une hauteur plancher");
-        assertNull(info.texture, "sa boite ne porte aucune image");
-        assertNotNull(info.frame, "son fond vient du cadre souple");
-        assertEquals(4, info.frame.margin, EPS, "qui deborde de quatre unites");
-        assertEquals(128, info.frame.alpha, "et se teinte en noir a moitie");
+        assertNotNull(info.texture, "sa boite porte son fond");
+        assertEquals(128, info.texture.alpha, "un noir a moitie");
+        assertEquals(0, info.texture.red, "et vraiment noir : le halo, lui, ne fait que le bord");
+        assertNotNull(info.frame, "que le cadre souple arrondit");
+        assertEquals(4, info.frame.margin, EPS, "en debordant de quatre unites");
     }
 
     @Test

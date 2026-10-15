@@ -180,11 +180,14 @@ public final class CGuiView {
     }
 
     /**
-     * Le cadre souple : le halo en neuf morceaux, puis les deux bandes claires.
+     * Le cadre souple : le halo en huit morceaux, puis les deux bandes claires.
      *
-     * <p>Le halo deborde de la boite — c'est lui qui arrondit les coins et pose le fond sombre
-     * translucide — et les bandes se dessinent par-dessus, l'une sous le bord haut, l'autre vers le
-     * bas. Le tout est repris de {@code TechUI.BlendQuad}, nombres compris.
+     * <p>Le halo deborde de la boite — c'est lui qui arrondit les coins — et les bandes se dessinent
+     * par-dessus, l'une sous le bord haut, l'autre vers le bas. Le tout est repris de
+     * {@code TechUI.BlendQuad}, nombres compris.
+     *
+     * <p>Le carre du <b>centre</b> ne se dessine pas : chez l'original il fait le fond sombre du
+     * panneau, mais ici ce fond est celui du widget — l'ajouter le foncerait deux fois.
      */
     private static void drawFrame(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
         CWidget.Frame frame = widget.frame;
@@ -198,6 +201,8 @@ public final class CGuiView {
             graphics.setColor(0f, 0f, 0f, frame.alpha / 255f);
             for (int col = 0; col < 3; col++) {
                 for (int row = 0; row < 3; row++) {
+                    if (col == 1 && row == 1) continue;
+
                     int x0 = (int) Math.round(xs[col]);
                     int y0 = (int) Math.round(ys[row]);
                     int x1 = (int) Math.round(xs[col + 1]);

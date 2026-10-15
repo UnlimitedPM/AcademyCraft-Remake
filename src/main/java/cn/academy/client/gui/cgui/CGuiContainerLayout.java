@@ -41,6 +41,9 @@ final class CGuiContainerLayout {
     static final double INFO_Y = 5;
     static final double INFO_WIDTH = 100;
 
+    /** Le noir a moitie du panneau d'infos : {@code 0x80000000}. */
+    static final int INFO_FILL = 0x80000000;
+
     private CGuiContainerLayout() {}
 
     /** La racine : accrochee au centre de son parent, decalee de dix-huit unites a gauche. */
@@ -89,7 +92,7 @@ final class CGuiContainerLayout {
         return button;
     }
 
-    /** Le panneau d'infos : il se pose a droite de la racine, et c'est son cadre qui le fonce. */
+    /** Le panneau d'infos : un fond noir a moitie, puis le cadre souple par-dessus. */
     static CWidget info(CWidget info, double contentHeight) {
         info.transform.x = INFO_X;
         info.transform.y = INFO_Y;
@@ -100,10 +103,14 @@ final class CGuiContainerLayout {
         info.transform.scale = 1.0;
         info.transform.doesDraw = true;
 
-        // Son fond ne vient pas d'une image : c'est le cadre souple de l'original, qui pose un noir
-        // a moitie derriere la boite et deux bandes claires sur ses bords haut et bas. Le poser en
-        // plus d'un aplat noir le foncerait deux fois.
-        info.texture = null;
+        info.texture = new CWidget.DrawTexture();
+        info.texture.red = 0;
+        info.texture.green = 0;
+        info.texture.blue = 0;
+        info.texture.alpha = (INFO_FILL >>> 24);
+
+        // Et son cadre : le halo de l'original arrondit ses coins et deborde de quatre unites, mais
+        // son centre n'est PAS dessine — c'est ce fond-ci. Le poser aussi le foncerait deux fois.
         info.frame = new CWidget.Frame();
         return info;
     }
