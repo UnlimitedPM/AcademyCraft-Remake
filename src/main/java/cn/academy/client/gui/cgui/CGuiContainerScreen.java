@@ -521,6 +521,16 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (inventoryShown()) {
             super.render(graphics, mouseX, mouseY, partialTick);
+
+            // L'infobulle de l'objet survole : vanilla ne la dessine PAS pour un conteneur. Ce n'est
+            // pas une omission de notre part, c'est le fonctionnement de cette version — l'inventaire
+            // du jeu, lui, l'appelle a la main dans son propre render, et le port faisait de meme
+            // dans ses anciens ecrans. Sans cette ligne, on survole un objet sans jamais voir son nom,
+            // ni dans la machine, ni dans son propre inventaire.
+            //
+            // Elle doit venir APRES super.render : c'est ce dernier qui trouve l'emplacement survole
+            // et qui dessine les objets, donc c'est lui qui sait quoi montrer.
+            renderTooltip(graphics, mouseX, mouseY);
             return;
         }
         // Page sans inventaire : le document de l'original et rien d'autre — ni slots, ni survol.
