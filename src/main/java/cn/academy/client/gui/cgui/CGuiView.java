@@ -224,12 +224,25 @@ public final class CGuiView {
             widget.text.color(lum, lum, lum);
         }
 
-        int x = (int) Math.round(widget.absX);
-        int y = (int) Math.round(widget.absY);
+        // Les positions d'un widget sont FRACTIONNAIRES chez l'original : il dessine ses quads a la
+        // position exacte que sa pose lui donne (`x = tx + ... + transform.x * parentScale`), et la
+        // carte graphique etale alors le dessin sur les deux pixels voisins. Le port arrondissait au
+        // pixel le plus proche, ce qui fait glisser chaque element d'un demi-pixel dans un sens ou
+        // dans l'autre : le joueur l'a vu sur les carres d'une legende (« sureleves d'un a deux
+        // pixels a peine ») et sur les barres d'un histogramme (« legerement decalees vers la
+        // gauche »). La position exacte vit donc dans la POSE, et les nombres restent entiers
+        // en dessous — meme remede que pour les glyphes de la police.
+        double exactX = widget.absX;
+        double exactY = widget.absY;
+        int x = (int) Math.floor(exactX);
+        int y = (int) Math.floor(exactY);
         int w = (int) Math.round(widget.absW);
         int h = (int) Math.round(widget.absH);
 
         if (w > 0 && h > 0) {
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) (exactX - x), (float) (exactY - y), 0f);
+
             if (widget.frame != null) {
                 drawFrame(graphics, widget, x, y, w, h);
             }
@@ -276,6 +289,8 @@ public final class CGuiView {
             if (widget.text != null) {
                 drawText(graphics, widget, x, y, w, h);
             }
+
+            graphics.pose().popPose();
         }
 
         // Le trait passe avant le noeud qu'il relie : l'original le dessinait APRES, mais avec un

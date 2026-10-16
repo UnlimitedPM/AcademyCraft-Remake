@@ -135,12 +135,19 @@ public abstract class CGuiScreen extends Screen {
     protected void drawWidget(GuiGraphics graphics, CWidget widget, double mouseX, double mouseY) {
         if (!widget.transform.doesDraw || !widget.transform.enabled) return;
 
-        int x = (int) Math.round(widget.absX);
-        int y = (int) Math.round(widget.absY);
+        // Meme chose que CGuiView : la position exacte du widget vit dans la pose, pour que ses
+        // elements se posent ou l'original les posait, et non au pixel arrondi.
+        double exactX = widget.absX;
+        double exactY = widget.absY;
+        int x = (int) Math.floor(exactX);
+        int y = (int) Math.floor(exactY);
         int w = (int) Math.round(widget.absW);
         int h = (int) Math.round(widget.absH);
 
         if (w > 0 && h > 0) {
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) (exactX - x), (float) (exactY - y), 0f);
+
             if (widget.texture != null) {
                 int colour = argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
                         widget.texture.blue);
@@ -171,6 +178,8 @@ public abstract class CGuiScreen extends Screen {
             if (widget.text != null) {
                 drawText(graphics, widget, x, y, w, h);
             }
+
+            graphics.pose().popPose();
         }
 
         for (CWidget child : widget.children()) {
