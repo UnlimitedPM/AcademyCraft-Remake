@@ -33,6 +33,26 @@ public final class CGuiLayout {
      */
     public static void place(CWidget widget, double parentX, double parentY,
                              double parentW, double parentH, double parentScale) {
+        place(widget, parentX, parentY, parentW, parentH, parentScale, false);
+    }
+
+    /**
+     * Le meme, mais la <b>racine</b> se pose au pixel entier : c'est le cadre d'un conteneur.
+     *
+     * <p>La formule du document lui donne un demi-pixel — {@code (207 - 172) / 2 - 18 = -0,5} — et
+     * l'original le dessinait ainsi ; mais le cadre doit tomber juste sur les trous des emplacements
+     * du jeu, que vanilla dessine a des positions <b>entieres</b>. Le joueur l'a vu des que les
+     * elements ont pris leur position exacte : « le contenu a l'air d'etre bon, mais le conteneur
+     * n'est lui meme plus bon, il faudrait decaler le GUI entier un peu plus en bas a droite ». La
+     * racine est donc ramenee au pixel, et <b>tout ce qu'elle contient garde sa position exacte</b>.
+     */
+    public static void placeSnapped(CWidget root, double parentX, double parentY,
+                                    double parentW, double parentH, double parentScale) {
+        place(root, parentX, parentY, parentW, parentH, parentScale, true);
+    }
+
+    private static void place(CWidget widget, double parentX, double parentY,
+                              double parentW, double parentH, double parentScale, boolean snap) {
         CWidget.Transform t = widget.transform;
         double scale = parentScale * t.scale;
 
@@ -49,13 +69,18 @@ public final class CGuiLayout {
         widget.absX = parentX + spanX * factor(t.alignWidth) + t.x * parentScale;
         widget.absY = parentY + spanY * factor(t.alignHeight) + t.y * parentScale;
 
+        if (snap) {
+            widget.absX = Math.round(widget.absX);
+            widget.absY = Math.round(widget.absY);
+        }
+
         if (widget.list != null) {
             list(widget, scale);
             return;
         }
 
         for (CWidget child : widget.children()) {
-            place(child, widget.absX, widget.absY, t.width, t.height, scale);
+            place(child, widget.absX, widget.absY, t.width, t.height, scale, false);
         }
     }
 

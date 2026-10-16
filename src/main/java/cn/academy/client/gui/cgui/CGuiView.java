@@ -101,9 +101,13 @@ public final class CGuiView {
     /**
      * Pose l'arbre dans un parent donne, en pixels : c'est ce que fait un ecran de machine, dont
      * le parent est son conteneur. A appeler avant de lire la moindre position.
+     *
+     * <p>La racine — le CADRE du conteneur — se pose au pixel entier ({@link
+     * CGuiLayout#placeSnapped}) pour tomber juste sur les trous des emplacements vanilla ; tout ce
+     * qu'elle contient garde la position exacte que le document lui donne.
      */
     public void place(double parentX, double parentY, double parentW, double parentH) {
-        CGuiLayout.place(root, parentX, parentY, parentW, parentH, 1.0);
+        CGuiLayout.placeSnapped(root, parentX, parentY, parentW, parentH, 1.0);
     }
 
     /** Le widget de ce nom, cherche dans tout l'arbre. */
