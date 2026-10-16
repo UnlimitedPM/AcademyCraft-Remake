@@ -84,27 +84,33 @@ public final class AcademyFonts {
     private static final int MAX_CELL = 33;
 
     /**
+     * Le dessin de la police : GRAS, et ce n'est pas un caprice.
+     *
+     * <p>Le joueur a montre ses deux captures cote a cote, puis a dit la phrase qui tranche : « le
+     * texte doit etre plus large, presque en GRAS ». Le poids synthetique seul ne le donne pas —
+     * mesure de la densite au niveau de mipmap que la carte graphique echantillonne (de 0 a 255) :
+     * normal 36,8, normal + 0,45 44,8, normal + 0,9 55,6 — vingt-quatre pour cent d'encre de plus,
+     * et il ne les voit pas, parce qu'a dix pixels de cellule un trait de 0,2 pixel ne se lit pas.
+     * Le GRAS, lui, apporte des formes concues pour ca : 55,4 sans aucun trait ajoute, 67,2 a 0,6 et
+     * 74,4 a 0,9.
+     *
+     * <p>Ce n'est pas une invention du port : le mod a son propre {@code fontBold} —
+     * {@code new TrueTypeFont(font.font.deriveFont(Font.BOLD))}, enregistre sous le nom
+     * {@code AC_Bold} — et c'est le meme derive du meme fichier de police.
+     */
+    private static final int FONT_STYLE = java.awt.Font.BOLD;
+
+    /**
      * L'epaisseur ajoutee a chaque lettre, en unites de la gravure : zero n'ajoute rien.
      *
      * <p>Le trait de la lettre est trace une seconde fois, en contour, ce qui l'epaissit de sa
-     * largeur de chaque cote sans toucher a sa forme — c'est l'embellissement synthetique, et il
-     * tombe juste parce que la gravure est RAPETISSEE : la cellule fait quarante-quatre unites et
-     * l'ecran en demande huit a treize, donc un demi-pixel de contour ici ne fait qu'un huitieme de
-     * pixel la-bas. Mesure sur « Hamburgefonstiv », une fois la cellule ramenee a sa taille de
-     * dessin : +18 % d'encre a 0,5, +29 % a 0,8, +36 % a 1. Le joueur trouvait le texte du vrai mod
-     * plus epais que le notre (« il est pas assez epais ») ; c'est le seul chiffre a tourner si le
-     * trait parait encore maigre, ou s'il devient pateux.
+     * largeur de chaque cote sans toucher a sa forme. Mesure de la densite au niveau de mipmap
+     * echantillonne : le gras seul vaut 55,4, ce reglage a 0,6 le porte a 67,2 et a 0,9 a 74,4.
      *
-     * <p>Elle se compte en unites de GRAVURE, donc elle suit la taille de la gravure : a quarante-
-     * quatre la valeur d'origine etait 0,6, la meme epaisseur a l'ecran vaut 0,6 x 24 / 32 = 0,45
-     * avec une gravure de vingt-quatre. La regler sans regarder ce rapport change l'epaisseur deux
-     * fois.
-     *
-     * <p>Neuf dixiemes, apres la courbe de {@link #cover} : le joueur a vu la courbe seule (« la
-     * maintenant c'est vraiment vraiment beaucoup mieux, mais c'est pas encore aussi gros que dans
-     * le vrai ») et il restait ce pas-la. A la gravure de vingt-quatre, neuf dixiemes valent un
-     * et deux dixiemes a celle de trente-deux, soit environ quarante pour cent d'encre en plus par
-     * interpolation des mesures faites la-bas (+36 % a 1, +54 % a 1,5).
+     * <p>IL SE COMPTE EN UNITES DE GRAVURE, donc il suit la taille de la gravure : la valeur juste
+     * a quarante-quatre est celle d'ici multipliee par trente-deux sur vingt-quatre. Et il s'ajoute
+     * au {@link #FONT_STYLE gras} : les deux se reglent ensemble, l'un pour la FORME des lettres,
+     * l'autre pour leur epaisseur.
      */
     private static final double GLYPH_WEIGHT = 0.9;
 
@@ -538,12 +544,12 @@ public final class AcademyFonts {
             for (String family : FONT_FAMILIES) {
                 for (java.awt.Font candidate : installed) {
                     if (candidate.getName().equalsIgnoreCase(family)) {
-                        return new java.awt.Font(candidate.getName(), java.awt.Font.PLAIN,
+                        return new java.awt.Font(candidate.getName(), FONT_STYLE,
                                 SOURCE_FONT_SIZE);
                     }
                 }
             }
-            return new java.awt.Font(java.awt.Font.DIALOG, java.awt.Font.PLAIN, SOURCE_FONT_SIZE);
+            return new java.awt.Font(java.awt.Font.DIALOG, FONT_STYLE, SOURCE_FONT_SIZE);
         });
     }
 
