@@ -38,28 +38,32 @@ public final class AcademyFonts {
      *
      * <p>C'est la hauteur d'un caractere, son <b>cadratin</b>, et non la cellule du videau : l'avance
      * et le dessin se calculent tous les deux a partir d'elle, donc les lettres grandissent ensemble
-     * et l'espacement suit. La cellule du videau, elle, fait le quart plus que le cadratin (trente-
-     * trois unites pour vingt-quatre, la hauteur de ligne de la police) : s'en servir comme echelle
-     * rapetissait tout d'un quart, et c'est ce que le joueur a vu.
+     * et l'espacement suit. La cellule du videau, elle, fait un peu plus du tiers de plus que le
+     * cadratin (quarante-quatre unites pour trente-deux, la hauteur de ligne de la police) : s'en
+     * servir comme echelle rapetissait tout d'un quart, et c'est ce que le joueur a vu.
      *
-     * <p>A huit, mesure sur Microsoft YaHei : la hauteur de capitale vaut 6,1 px et un « H » avance
-     * de 6,3 px. La police du jeu, elle, fait 7 et 6 — donc un cran plus petit qu'elle, et c'est le
-     * joueur qui l'a voulu : il a vu le neuf a l'ecran et l'a trouve trop gros d'un cran. Le chiffre
-     * reste le seul a tourner, et les ecrans, eux, posent leurs lignes tous les dix a vingt pixels,
-     * donc un cran de moins ne les fait pas respirer.
+     * <p>A sept, mesure sur Microsoft YaHei : la cellule fait dix pixels, la hauteur de capitale
+     * 5,3 px et un « H » avance de 5,5 px. Dix est le chiffre de LambdaLib2 — {@code FontOption()}
+     * vaut dix, donc c'est ce qu'herite tout texte dont le document ne dit rien, et c'est aussi la
+     * cellule que l'original donnait a sa console de debogage. Le joueur l'a demande en deux temps :
+     * le texte etait plus gras et plus gros que celui du vrai mod, mesure sur la console F4 — « le
+     * vrai texte est legerement plus petit en hauteur », et son repere : onze et demi doit devenir
+     * onze. Un cran de moins sur la cellule, donc une unite de moins ici.
      */
-    public static final int GUI_SIZE = 8;
+    public static final int GUI_SIZE = 7;
 
     /**
      * La console de debogage (F4), en pixels.
      *
-     * <p>Huit, et c'est mesure : sur deux captures a la meme echelle d'interface, la meme ligne fait
-     * 298 pixels chez nous et 231 chez l'original 1.12.2, dont les barres rapides font exactement la
-     * meme taille. Le rapport vaut donc 0,775, et dix fois 0,775 font huit. La console de l'original
-     * est plus petite que son texte d'interface, et c'est normal : c'est un releve de debogage, pas
-     * une page.
+     * <p>Sept, comme le texte de l'interface, et c'est mesure deux fois : sur les deux captures du
+     * joueur, a la meme echelle d'interface, la meme ligne fait 298 pixels chez nous a la taille dix
+     * et 231 chez l'original 1.12.2, dont les barres rapides font exactement la meme taille (le
+     * rapport vaut 0,775, donc sept et trois quarts) ; et la source de l'original le dit aussi, son
+     * {@code DebugConsole.Text(String)} construisant un {@code FontOption(10)} — une cellule de dix
+     * pixels, qui est ce que demande la taille sept ici. Ce sont ses LIGNES qui sont plus serrees
+     * que celles de l'interface : dix pixels, la hauteur de sa cellule.
      */
-    private static final int CONSOLE_SIZE = 8;
+    private static final int CONSOLE_SIZE = 7;
 
     /**
      * La taille a laquelle les glyphes sont graves dans le videau, et la cellule qui les porte.
@@ -84,14 +88,30 @@ public final class AcademyFonts {
     private static final int MAX_SIZE = 24;
 
     /**
-     * La ligne de base, mesuree depuis le haut du texte : sept pixels.
+     * L'epaisseur ajoutee a chaque lettre, en unites de la gravure : zero n'ajoute rien.
      *
-     * <p>C'est celle de la police du jeu, qui pose ses capitales a un pixel du haut et son pied a
-     * sept. La cellule du videau est donc posee pour que la ligne de base tombe la, <b>a n'importe
-     * quelle taille</b> : le texte se place exactement ou {@code drawString} le placerait, et
-     * changer la taille ne le fait pas descendre dans son panneau.
+     * <p>Le trait de la lettre est trace une seconde fois, en contour, ce qui l'epaissit de sa
+     * largeur de chaque cote sans toucher a sa forme — c'est l'embellissement synthetique, et il
+     * tombe juste parce que la gravure est RAPETISSEE : la cellule fait quarante-quatre unites et
+     * l'ecran en demande huit a treize, donc un demi-pixel de contour ici ne fait qu'un huitieme de
+     * pixel la-bas. Mesure sur « Hamburgefonstiv », une fois la cellule ramenee a sa taille de
+     * dessin : +18 % d'encre a 0,5, +29 % a 0,8, +36 % a 1. Le joueur trouvait le texte du vrai mod
+     * plus epais que le notre (« il est pas assez epais ») ; c'est le seul chiffre a tourner si le
+     * trait parait encore maigre, ou s'il devient pateux.
      */
-    private static final int BASELINE = 7;
+    private static final double GLYPH_WEIGHT = 0.6;
+
+    /**
+     * La ligne de base, mesuree depuis le haut du texte : huit pixels.
+     *
+     * <p>C'est ce qui pose la CELLULE a l'aplomb de la ligne convenue, comme le fait l'original :
+     * son {@code TextBox} met le haut de sa cellule au y du widget (pour un alignement en haut), et
+     * sa console avance de la hauteur de cette cellule. Le port posait la ligne de base un pixel
+     * plus haut — sept —, ce que le joueur a vu tout de suite : « le texte est environ un pixel trop
+     * haut (pour le F4 par exemple) ». A dix pixels de cellule, huit fait tomber l'encre exactement
+     * ou l'original la mettait ; l'ecart maximal, sur une autre taille, vaut un demi-pixel.
+     */
+    private static final int BASELINE = 8;
 
     private static final Map<Integer, java.awt.Font> FONTS = new HashMap<>();
     private static final Map<Integer, java.awt.FontMetrics> METRICS = new HashMap<>();
@@ -389,6 +409,13 @@ public final class AcademyFonts {
         configure(draw, font);
         draw.setColor(java.awt.Color.WHITE);
         draw.drawString(text, 3, 1 + metrics.getAscent());
+        if (GLYPH_WEIGHT > 0) {
+            java.awt.font.GlyphVector vector =
+                    font.createGlyphVector(draw.getFontRenderContext(), text);
+            draw.setStroke(new java.awt.BasicStroke((float) GLYPH_WEIGHT,
+                    java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+            draw.draw(vector.getOutline(3, 1 + metrics.getAscent()));
+        }
         draw.dispose();
 
         NativeImage glyphPixels = nativeImage(image);
