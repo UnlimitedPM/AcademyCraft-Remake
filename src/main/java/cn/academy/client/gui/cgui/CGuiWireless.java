@@ -110,6 +110,11 @@ public final class CGuiWireless {
 
         CWidget window = screen.page(PAGE, DOCUMENT);
 
+        // Le logo du coin respire : c'est une ligne de l'original, `TechUI.breathe(widget.
+        // getWidget("icon_logo"))`, et c'est elle qui fait varier sa couleur. Le port ne faisait
+        // respirer que les fonds nommes `ui_`, donc celui-ci restait blanc.
+        screen.breathe(window.child("icon_logo"));
+
         // L'icone du coin dit ce qu'on cherche : un noeud pour une machine, un Matrix pour un noeud.
         // C'est la seule chose qui distingue les deux pages — chez l'original aussi, dont le
         // `nodePage` remplacait cette image et rien d'autre.

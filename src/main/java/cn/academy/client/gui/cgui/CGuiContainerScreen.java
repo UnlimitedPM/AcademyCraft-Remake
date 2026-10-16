@@ -640,6 +640,20 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     }
 
     /**
+     * Un widget de plus qui respire : c'est le {@code TechUI.breathe} de l'original, que la page
+     * « sans fil » appelle elle-meme sur son logo.
+     *
+     * <p>Le port ne faisait respirer que les fonds nommes {@code ui_}, la ou l'original les
+     * ramassait par ce nom. Mais son logo de connexion, lui, n'a pas ce nom : il le demandait a la
+     * main, et c'est pour cela que sa couleur variait — entre 0,675 et 0,85 d'opacite — tandis que
+     * le notre restait blanc. Le joueur l'a vu : « l'icone est blanche en permanence alors que dans
+     * le vrai mod la couleur varie (blanc clair, blanc fonce) ».
+     */
+    protected void breathe(CWidget widget) {
+        if (widget != null && widget.texture != null) breathing.add(widget.texture);
+    }
+
+    /**
      * La geometrie de la racine : le cadre du document, accroche au conteneur.
      *
      * <p>C'est ce qui met le document sur les slots, et c'est donc la seule chose que les machines
