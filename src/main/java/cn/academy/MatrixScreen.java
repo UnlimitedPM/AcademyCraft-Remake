@@ -89,8 +89,12 @@ public class MatrixScreen extends CGuiContainerScreen<MatrixMenu> {
             // Deux champs vides : le nom qu'on va donner au reseau, et son mot de passe. Valider l'un
             // ou l'autre cree le reseau, comme le bouton — l'original les laissait sans rien faire,
             // mais un champ qui accepte la touche Entree pour ne rien faire est un piege.
-            ssidField = property(label("prop.ssid"), "", value -> createNetwork());
-            passwordField = property(label("prop.password"), "", value -> createNetwork(), true);
+            //
+            // Le CHAMP, ici aussi : c'est lui qui porte ce qu'on tape. Garder la ligne faisait partir
+            // un nom vide, que le serveur refuse — donc un Matrix qu'on ne pouvait jamais nommer, ni
+            // ici ni par le bouton, qui lit les memes deux champs.
+            ssidField = field(property(label("prop.ssid"), "", value -> createNetwork()));
+            passwordField = field(property(label("prop.password"), "", value -> createNetwork(), true));
             blank(1);
             button("INIT", this::createNetwork);
         } else {
