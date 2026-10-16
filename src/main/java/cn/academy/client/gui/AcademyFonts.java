@@ -99,8 +99,14 @@ public final class AcademyFonts {
      * quatre la valeur d'origine etait 0,6, la meme epaisseur a l'ecran vaut 0,6 x 24 / 32 = 0,45
      * avec une gravure de vingt-quatre. La regler sans regarder ce rapport change l'epaisseur deux
      * fois.
+     *
+     * <p>Neuf dixiemes, apres la courbe de {@link #cover} : le joueur a vu la courbe seule (« la
+     * maintenant c'est vraiment vraiment beaucoup mieux, mais c'est pas encore aussi gros que dans
+     * le vrai ») et il restait ce pas-la. A la gravure de vingt-quatre, neuf dixiemes valent un
+     * et deux dixiemes a celle de trente-deux, soit environ quarante pour cent d'encre en plus par
+     * interpolation des mesures faites la-bas (+36 % a 1, +54 % a 1,5).
      */
-    private static final double GLYPH_WEIGHT = 0.45;
+    private static final double GLYPH_WEIGHT = 0.9;
 
     /**
      * La ligne de base, mesuree depuis le haut du texte : huit pixels.
