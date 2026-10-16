@@ -13,11 +13,17 @@ import net.minecraft.network.chat.Component;
 /**
  * L'onglet sans fil d'un ecran de machine.
  *
- * <p>L'original l'appelait {@code WirelessPage}, et il etait accroche a sept machines : le generateur
- * solaire, l'eolien, le generateur de phase, le formeur de metal, le fusor d'imag, le brouilleur
- * d'aptitude et le noeud lui-meme. Le port avait le document de la page — identique au bit pres — et
- * aucun ecran ne l'ouvrait : les machines trouvaient leur noeud toutes seules, sans que le joueur
- * puisse rien choisir.
+ * <p>L'original l'appelait {@code WirelessPage}, et il l'accrochait a <b>huit</b> machines : le
+ * generateur solaire, l'eolien, le generateur de phase, le formeur de metal, le fusor d'imag, le
+ * brouilleur d'aptitude — et, dans l'autre sens, le noeud sans fil, qui y choisit son <b>Matrix</b>.
+ * Le port avait le document de la page — identique au bit pres — et aucun ecran ne l'ouvrait : les
+ * machines trouvaient leur noeud toutes seules, et les noeuds trouvaient leur Matrix de meme.
+ *
+ * <h2>Deux sens, une page</h2>
+ *
+ * <p>Une machine cherche un noeud, un noeud cherche un Matrix : la page, sa liste et ses gestes sont
+ * les memes, et seule l'icone du coin le dit. C'est ce que faisaient {@code userPage} et
+ * {@code nodePage}, qui ne differaient que par cette image.
  *
  * <h2>Ce que l'ecran fait, et ce qu'il ne fait pas</h2>
  *
@@ -69,6 +75,9 @@ public final class CGuiWireless {
 
     private final CGuiContainerScreen<?> screen;
 
+    /** Vrai pour l'onglet d'un NOEUD : il cherche un Matrix, quand une machine cherche un noeud. */
+    private final boolean matrices;
+
     /** La zone des lignes, son gabarit, le cadre du noeud lie, et le champ de mot de passe. */
     @Nullable private CWidget zone;
     @Nullable private CWidget template;
@@ -79,8 +88,15 @@ public final class CGuiWireless {
     private String linked = "";
     private List<Row> shown = List.of();
 
+    /** L'onglet d'une machine : elle cherche le noeud qui l'alimente. */
     public CGuiWireless(CGuiContainerScreen<?> screen) {
+        this(screen, false);
+    }
+
+    /** L'onglet d'un noeud : il cherche le reseau qu'il rejoint. */
+    public CGuiWireless(CGuiContainerScreen<?> screen, boolean matrices) {
         this.screen = screen;
+        this.matrices = matrices;
     }
 
     /**
@@ -93,6 +109,17 @@ public final class CGuiWireless {
         open = this;
 
         CWidget window = screen.page(PAGE, DOCUMENT);
+
+        // L'icone du coin dit ce qu'on cherche : un noeud pour une machine, un Matrix pour un noeud.
+        // C'est la seule chose qui distingue les deux pages — chez l'original aussi, dont le
+        // `nodePage` remplacait cette image et rien d'autre.
+        if (matrices) {
+            CWidget logo = window.child("icon_logo");
+            if (logo != null && logo.texture != null) {
+                logo.texture.texture = ICONS + "icon_tomatrix.png";
+            }
+        }
+
         CWidget panel = window.child("panel_wireless");
         if (panel == null) return;
 

@@ -577,7 +577,7 @@ public final class CGuiView {
     public boolean click(double mouseX, double mouseY, int button) {
         if (button != 0) return false;
 
-        CWidget hit = hitTest(mouseX, mouseY);
+        CWidget hit = pick(mouseX, mouseY);
         for (CWidget widget = hit; widget != null; widget = parentOf(widget)) {
             Runnable action = clicks.get(widget);
             if (action != null) {
@@ -597,6 +597,34 @@ public final class CGuiView {
         // tout, et un clic sur un emplacement de machine doit rester a l'inventaire. Un ecran de
         // conteneur s'appuie sur ce faux pour savoir s'il doit passer le clic a vanilla.
         return false;
+    }
+
+    /**
+     * Le widget du dessus qui PEUT prendre ce clic : celui qui a une action, ou un champ qui s'ecrit.
+     *
+     * <p>Ce n'est pas la meme chose que {@link #hitTest} : un widget qui n'ecoute rien ne <b>prend</b>
+     * pas le clic, il le laisse passer a ce qu'il recouvre. C'est la regle de LambdaLib2 — un
+     * composant sans ecouteur ne recoit aucun evenement — et sans elle les <b>crochets</b> d'un champ
+     * du panneau d'infos avalaient le clic : ils se posent six unites par-dessus le champ qu'ils
+     * decorent, donc un clic juste a droite du libelle tombait sur le crochet, le champ ne prenait pas
+     * le clavier, et le joueur ne pouvait plus rien ecrire. Un champ vide est le cas ou cela se voit
+     * tout de suite : c'est la que le regard vise, et c'est aussi la que le champ commence.
+     */
+    private CWidget pick(double mouseX, double mouseY) {
+        return pick(root, mouseX, mouseY);
+    }
+
+    private CWidget pick(CWidget widget, double mouseX, double mouseY) {
+        boolean interactive = clicks.containsKey(widget)
+                || widget.text != null && widget.text.allowEdit;
+        CWidget found = interactive && widget.transform.doesDraw && widget.isPointWithin(mouseX, mouseY)
+                ? widget : null;
+
+        for (CWidget child : widget.children()) {
+            CWidget deeper = pick(child, mouseX, mouseY);
+            if (deeper != null) found = deeper;
+        }
+        return found;
     }
 
     private CWidget parentOf(CWidget widget) {

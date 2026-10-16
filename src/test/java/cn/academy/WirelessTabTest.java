@@ -5,6 +5,7 @@ import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import cn.academy.energy.NodeFinder;
 import cn.academy.energy.WirelessMachine;
+import cn.academy.energy.WirelessNode;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.junit.jupiter.api.DisplayName;
@@ -127,14 +128,18 @@ class WirelessTabTest {
         // (voir CGuiContainerLayout.tab) : c'est ce nom-la qui doit avoir son image.
         assertEquals("wireless", CGuiWireless.PAGE);
 
-        for (String icon : new String[] { "icon_wireless.png", "icon_inv.png" }) {
+        // Et la page elle-meme porte un logo qui dit ce qu'on cherche : un noeud pour une machine,
+        // un Matrix pour un noeud. C'est la seule difference entre les deux moities de l'onglet.
+        for (String icon : new String[] { "icon_wireless.png", "icon_inv.png", "icon_tonode.png",
+                "icon_tomatrix.png", "icon_connected.png", "icon_unconnected.png" }) {
             assertNotNull(WirelessTabTest.class.getClassLoader().getResourceAsStream(ICONS + icon),
                     ICONS + icon + " manque : l'onglet serait un carre vide");
         }
     }
 
     /**
-     * Les six machines dont l'original portait l'onglet, et qui le portent encore.
+     * Les six machines dont l'original portait l'onglet, et qui le portent encore — plus le noeud,
+     * qui en a l'autre moitie.
      *
      * <p>C'est le seul lien que rien d'autre ne verifie : l'ecran pose sa page, le serveur prend la
      * position du conteneur ouvert, et les deux se rejoignent par cette interface. Un conteneur qui
@@ -142,8 +147,8 @@ class WirelessTabTest {
      * d'erreur, pas de message, juste une liste qui ne se remplit jamais.
      */
     @Test
-    @DisplayName("les six machines de l'original se declarent WirelessMachine")
-    void lesSixMachinesDeLOriginal() {
+    @DisplayName("les sept porteurs de l'onglet se declarent au serveur")
+    void lesSeptPorteursDeLOnglet() {
         List<Class<?>> menus = List.of(SolarGenMenu.class, PhaseGeneratorMenu.class, WindgenBaseMenu.class,
                 MetalFormerMenu.class, ImagFusorMenu.class, AbilityInterfererMenu.class);
 
@@ -154,6 +159,14 @@ class WirelessTabTest {
                             .anyMatch(method -> method.getName().equals("machinePos")),
                     menu.getSimpleName() + " doit dire de quelle machine il parle");
         }
+
+        // Le noeud, lui, cherche un Matrix : c'est l'autre moitie de la meme page, et l'autre
+        // interface.
+        assertTrue(WirelessNode.class.isAssignableFrom(NodeMenu.class),
+                "NodeMenu doit se declarer WirelessNode");
+        assertTrue(Arrays.stream(NodeMenu.class.getMethods())
+                        .anyMatch(method -> method.getName().equals("nodePos")),
+                "NodeMenu doit dire de quel noeud il parle");
     }
 
     /** Le contenu de la zone de texte d'un widget, ou {@code null} s'il n'en a pas. */

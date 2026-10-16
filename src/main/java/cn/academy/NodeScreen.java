@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -23,8 +24,9 @@ import net.minecraft.world.entity.player.Inventory;
  * au dessin de ses images.
  *
  * <p>L'etat est lu sur le block entity, qui le recoit du serveur : le noeud cherche son Matrix tout
- * seul, donc l'ecran n'a aucune question a poser, contrairement a l'original qui interrogeait le
- * serveur toutes les deux secondes.
+ * seul, donc l'animation n'a aucune question a poser, contrairement a l'original qui interrogeait le
+ * serveur toutes les deux secondes. Ce qui <b>demande</b>, en revanche, c'est l'onglet sans fil : il
+ * montre les reseaux a portee et laisse le joueur en choisir un, comme l'original.
  */
 public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
 
@@ -88,6 +90,11 @@ public class NodeScreen extends CGuiContainerScreen<NodeMenu> {
         nameField = nameLine.child("value");
         passwordLine = property(label("prop.password"), menu.password(), menu::repassword, true);
         passwordField = passwordLine.child("value");
+
+        // Et l'onglet sans fil, pose en dernier : le moteur ouvre la premiere page posee, et un noeud
+        // doit s'ouvrir sur sa page d'inventaire. C'est ici qu'il choisit son reseau — l'autre moitie
+        // de l'onglet, celle que les machines n'ont pas.
+        new CGuiWireless(screen, true).install();
     }
 
     private static String label(String key) {

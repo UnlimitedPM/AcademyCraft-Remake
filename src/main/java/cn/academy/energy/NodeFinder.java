@@ -188,4 +188,98 @@ public final class NodeFinder {
         data.unlinkUser(machinePos);
         data.setRefused(machinePos, true);
     }
+
+    // ------------------------------------------------------------------
+    // L'onglet sans fil d'un NOEUD : le Matrix qu'il rejoint
+    // ------------------------------------------------------------------
+
+    /**
+     * Les reseaux qu'un noeud peut rejoindre, du plus proche au plus loin.
+     *
+     * <p>C'est le {@code hFindNetworks} de l'original : la recherche dans vingt blocs, filtree sur la
+     * <b>portee du noeud</b>, et le reseau deja rejoint retire de la liste — l'ecran le montre a part,
+     * dans son cadre « Connected ». Le nom d'un reseau est son SSID, et il compte comme « chiffre »
+     * quand son Matrix demande un mot de passe.
+     *
+     * <p>Un Matrix sans SSID n'est pas un reseau : il n'apparait donc pas (chez l'original non plus,
+     * ou le reseau nait de l'initialisation du Matrix).
+     */
+    public static List<Candidate> matrices(ServerLevel level, BlockPos nodePos) {
+        ImagNetworkData data = ImagNetworkData.get(level);
+        BlockPos linked = data.matrixOf(nodePos);
+        NodeBlockEntity node = nodeAt(level, nodePos);
+        double range = node == null ? SEARCH_RANGE : node.getRange();
+
+        List<Candidate> found = new ArrayList<>();
+        for (MatrixBlockEntity matrix : BlockEntityScan.around(level, nodePos, SEARCH_RANGE,
+                MatrixBlockEntity.class)) {
+            BlockPos pos = matrix.getBlockPos();
+            if (pos.equals(linked)) continue;
+            if (!matrix.isInitialized()) continue;
+            if (pos.distSqr(nodePos) > range * range) continue;
+
+            found.add(new Candidate(pos, matrix.getSsid(), !matrix.getPassword().isEmpty(),
+                    data.nodeCount(pos) < matrix.getCapacity()));
+        }
+        found.sort(Comparator.comparingDouble(candidate -> candidate.pos().distSqr(nodePos)));
+        return found;
+    }
+
+    /**
+     * Rejoint un reseau, avec le mot de passe qu'on a tape.
+     *
+     * <p>C'est le {@code addNode} du {@code WirelessNet} de l'original, dans son ordre : le mot de
+     * passe, la place libre dans le reseau, puis la portee du Matrix. Un noeud n'appartient qu'a un
+     * seul reseau, donc en rejoindre un detache du precedent.
+     */
+    public static LinkOutcome linkMatrix(ServerLevel level, BlockPos nodePos, BlockPos matrixPos,
+                                         String password) {
+        MatrixBlockEntity matrix = matrixAt(level, matrixPos);
+        if (matrix == null) return LinkOutcome.NOT_FOUND;
+
+        if (!matrix.getPassword().isEmpty() && !matrix.getPassword().equals(password)) {
+            return LinkOutcome.WRONG_PASSWORD;
+        }
+
+        ImagNetworkData data = ImagNetworkData.get(level);
+        boolean sameNetwork = matrixPos.equals(data.matrixOf(nodePos));
+        if (!sameNetwork && data.nodeCount(matrixPos) >= matrix.getCapacity()) {
+            return LinkOutcome.NO_ROOM;
+        }
+        if (!matrix.canReach(nodePos)) return LinkOutcome.OUT_OF_RANGE;
+
+        data.unlink(nodePos);
+        if (!data.link(matrixPos, nodePos)) return LinkOutcome.NO_ROOM;
+
+        // Un choix volontaire efface le refus qu'un detachement precedent avait laisse.
+        data.setRefused(nodePos, false);
+        return LinkOutcome.LINKED;
+    }
+
+    /**
+     * Detache un noeud de son reseau, et l'empeche de s'y raccrocher tout seul.
+     *
+     * <p>La marque est la meme que pour une machine : sans elle, le noeud chercherait son Matrix au
+     * tick suivant et le bouton de deconnexion n'aurait l'air de rien faire.
+     */
+    public static void unlinkMatrix(ServerLevel level, BlockPos nodePos) {
+        ImagNetworkData data = ImagNetworkData.get(level);
+        data.unlink(nodePos);
+        data.setRefused(nodePos, true);
+    }
+
+    /** Le SSID du reseau qu'un noeud a rejoint, ou {@code null}. */
+    @Nullable
+    public static String matrixName(ServerLevel level, BlockPos nodePos) {
+        BlockPos matrixPos = ImagNetworkData.get(level).matrixOf(nodePos);
+        if (matrixPos == null) return null;
+        MatrixBlockEntity matrix = matrixAt(level, matrixPos);
+        return matrix == null ? null : matrix.getSsid();
+    }
+
+    @Nullable
+    private static MatrixBlockEntity matrixAt(ServerLevel level, BlockPos pos) {
+        if (!level.isLoaded(pos)) return null;
+        return level.getBlockEntity(pos) instanceof MatrixBlockEntity matrix ? matrix : null;
+    }
 }

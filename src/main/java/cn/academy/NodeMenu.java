@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.energy.NodeBlock;
 import cn.academy.energy.NodeBlockEntity;
+import cn.academy.energy.WirelessNode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -33,7 +34,7 @@ import net.minecraftforge.items.SlotItemHandler;
  * <p>Le nom du noeud, son mot de passe et celui qui l'a pose : le port n'en a aucun des trois, et
  * s'en passe — le raccordement au Matrix se fait tout seul, du noeud vers le Matrix le plus proche.
  */
-public class NodeMenu extends AbstractContainerMenu {
+public class NodeMenu extends AbstractContainerMenu implements WirelessNode {
 
     /** L'emplacement du haut : l'unite qu'on vide dans le noeud ({@code SlotIFItem(tile, 0, 42, 10)}). */
     public static final int CHARGE_IN_X = 42;
@@ -50,6 +51,11 @@ public class NodeMenu extends AbstractContainerMenu {
 
     /** Le nom de celui qui a ouvert l'ecran : c'est a lui qu'on demande s'il est le poseur. */
     private final String playerName;
+
+    @Override
+    public BlockPos nodePos() {
+        return blockEntity.getBlockPos();
+    }
 
     public NodeMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));

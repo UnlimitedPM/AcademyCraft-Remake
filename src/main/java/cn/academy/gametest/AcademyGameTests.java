@@ -6778,6 +6778,175 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    // ------------------------------------------------------------------
+    // L'onglet sans fil d'un NOEUD : le reseau qu'il rejoint
+    //
+    // C'est l'autre moitie de la meme page — `nodePage` chez l'original, ou `userPage` cote
+    // machine — et les quatre memes contrats : le choix, le mot de passe, la place, le detachement.
+    // ------------------------------------------------------------------
+
+    /** Un noeud choisit son reseau, et non le plus proche : c'est toute la raison de l'onglet. */
+    @GameTest(template = "empty")
+    public static void wirelessTabLinksTheChosenNetwork(GameTestHelper helper) {
+        BlockPos nearRel = new BlockPos(1, 1, 0);
+        BlockPos farRel = new BlockPos(1, 1, 5);
+        BlockPos nodeRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        workingMatrix(helper, nearRel, "proche", "");
+        workingMatrix(helper, farRel, "loin", "");
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos nearAbs = helper.absolutePos(nearRel);
+        BlockPos farAbs = helper.absolutePos(farRel);
+
+        // La liste : les reseaux a portee du noeud, du plus proche au plus loin, et leur nom est
+        // leur SSID.
+        java.util.List<cn.academy.energy.NodeFinder.Candidate> candidates =
+                cn.academy.energy.NodeFinder.matrices(level, nodeAbs);
+        assertValue(helper, 2, candidates.size(), "reseaux joignables");
+        assertValue(helper, nearAbs, candidates.get(0).pos(), "le plus proche d'abord");
+        assertValue(helper, "proche", candidates.get(0).name(), "et on le nomme par son SSID");
+        assertFalse(helper, candidates.get(0).encrypted(), "aucun des deux n'est ferme");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, farAbs, ""),
+                "le raccordement au reseau choisi");
+        assertValue(helper, farAbs, ImagNetworkData.get(level).matrixOf(nodeAbs), "le reseau choisi");
+
+        // Et il sort de la liste : l'ecran le montre a part, dans son cadre « Connected ».
+        java.util.List<cn.academy.energy.NodeFinder.Candidate> after =
+                cn.academy.energy.NodeFinder.matrices(level, nodeAbs);
+        assertValue(helper, 1, after.size(), "un noeud n'appartient qu'a un reseau");
+        assertValue(helper, "proche", after.get(0).name(), "il ne reste que l'autre");
+        helper.succeed();
+    }
+
+    /** Un reseau ferme ne s'ouvre qu'a son mot de passe. */
+    @GameTest(template = "empty")
+    public static void wirelessTabAsksForTheNetworkPassword(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos matrixRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        workingMatrix(helper, matrixRel, "maison", "academy");
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos matrixAbs = helper.absolutePos(matrixRel);
+
+        // Le reseau se declare ferme : l'ecran allume la petite cle et montre son champ de saisie.
+        assertTrue(helper, cn.academy.energy.NodeFinder.matrices(level, nodeAbs).get(0).encrypted(),
+                "un reseau avec mot de passe doit l'annoncer");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.WRONG_PASSWORD,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, matrixAbs, "faux"),
+                "le mauvais mot de passe");
+        assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "un mauvais mot de passe ne rejoint rien");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, matrixAbs, "academy"),
+                "le bon mot de passe");
+        assertValue(helper, matrixAbs, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "le bon mot de passe rejoint");
+        helper.succeed();
+    }
+
+    /**
+     * Un detachement tient : sans cette memoire, le noeud retrouverait son Matrix au centieme tick
+     * et le bouton de deconnexion n'aurait l'air de rien faire.
+     */
+    @GameTest(template = "empty")
+    public static void wirelessTabKeepsADetachedNodeDetached(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos matrixRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        workingMatrix(helper, matrixRel, "maison", "");
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos matrixAbs = helper.absolutePos(matrixRel);
+        var node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, matrixAbs, ""),
+                "le choix de l'onglet");
+
+        cn.academy.energy.NodeFinder.unlinkMatrix(level, nodeAbs);
+        assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs), "le noeud est detache");
+
+        // La recherche automatique du noeud tourne tous les cent ticks : detache, il doit s'abstenir.
+        for (int i = 0; i < 100; i++) {
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+        assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "un noeud detache a la main doit le rester");
+        assertFalse(helper, node.isConnected(), "et il se sait seul");
+
+        // Un choix volontaire, lui, efface le refus : la recherche automatique reprend ses droits.
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, matrixAbs, ""),
+                "un second choix volontaire");
+        ImagNetworkData.get(level).unlink(nodeAbs);
+        for (int i = 0; i < 100; i++) {
+            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
+        }
+        assertValue(helper, matrixAbs, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "un choix volontaire efface le refus");
+        helper.succeed();
+    }
+
+    /** Un reseau plein reste dans la liste — mais il est annonce comme tel, et refuse. */
+    @GameTest(template = "empty")
+    public static void wirelessTabShowsNoRoomOnAFullNetwork(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos matrixRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        MatrixBlockEntity matrix = workingMatrix(helper, matrixRel, "maison", "");
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos matrixAbs = helper.absolutePos(matrixRel);
+
+        for (int i = 0; i < matrix.getCapacity(); i++) {
+            ImagNetworkData.get(level).link(matrixAbs, nodeAbs.offset(48, 0, i));
+        }
+
+        java.util.List<cn.academy.energy.NodeFinder.Candidate> candidates =
+                cn.academy.energy.NodeFinder.matrices(level, nodeAbs);
+        assertValue(helper, 1, candidates.size(), "un reseau plein reste joignable");
+        assertFalse(helper, candidates.get(0).room(), "mais il est annonce sans place");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.NO_ROOM,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, matrixAbs, ""),
+                "un reseau plein doit refuser");
+        assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "un reseau plein ne doit rien accepter");
+        helper.succeed();
+    }
+
+    /**
+     * Pose un Matrix en etat de marche — trois plaques et un coeur — et lui donne son reseau.
+     *
+     * <p>Sans coeur, un Matrix a une portee nulle et une capacite nulle : rien ne peut s'y raccorder,
+     * et ce n'est donc pas un reseau joignable. C'est le montage qu'il faut pour l'onglet d'un noeud.
+     */
+    private static MatrixBlockEntity workingMatrix(GameTestHelper helper, BlockPos rel, String ssid,
+                                                  String password) {
+        MatrixBlockEntity matrix = placeMatrix(helper, rel);
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE,
+                new ItemStack(ModItems.MAT_CORE_2.get()));
+        matrix.initNetwork(ssid, password);
+        return matrix;
+    }
+
     /** Pose un Matrix et rend son block entity, en verifiant qu'il existe. */
     private static MatrixBlockEntity placeMatrix(GameTestHelper helper, BlockPos rel) {
         helper.setBlock(rel, ModBlocks.MATRIX.get());

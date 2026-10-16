@@ -72,13 +72,17 @@ public class MatrixScreen extends CGuiContainerScreen<MatrixMenu> {
 
             // Le nom du reseau se change chez son poseur, et se lit chez les autres. Le mot de passe,
             // lui, ne se montre qu'a lui — masque, chez les autres.
-            ssidField = property(label("prop.ssid"), menu.ssid(), shownOwner ? menu::rename : null);
+            //
+            // On garde le CHAMP et non la ligne : c'est le champ qui porte le texte, donc lui qu'on
+            // relit quand le serveur accepte une modification. La ligne, elle, n'a pas de texte du
+            // tout — et s'en servir faisait disparaitre le mot de passe de l'ecran des qu'il etait
+            // valide, ce que le joueur a lu comme « je ne peux pas ecrire ».
+            ssidField = field(property(label("prop.ssid"), menu.ssid(), shownOwner ? menu::rename : null));
             if (shownOwner) sepline("change_pass");
 
-            passwordField = property(label("prop.password"), menu.password(),
-                    shownOwner ? menu::repassword : null);
-            CWidget hidden = passwordField.child("value");
-            if (hidden != null && hidden.text != null) hidden.text.doesEcho = true;
+            passwordField = field(property(label("prop.password"), menu.password(),
+                    shownOwner ? menu::repassword : null));
+            if (passwordField != null && passwordField.text != null) passwordField.text.doesEcho = true;
         } else if (shownOwner) {
             sepline("wireless_init");
 
@@ -92,6 +96,11 @@ public class MatrixScreen extends CGuiContainerScreen<MatrixMenu> {
         } else {
             sepline("wireless_noinit");
         }
+    }
+
+    /** Le champ d'une ligne du panneau : c'est lui qui porte le texte, pas la ligne. */
+    private static CWidget field(CWidget line) {
+        return line == null ? null : line.child("value");
     }
 
     private static String label(String key) {

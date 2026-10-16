@@ -398,6 +398,13 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         if (!(level instanceof ServerLevel server)) return;
         ImagNetworkData data = ImagNetworkData.get(server);
 
+        // Le joueur a detache ce noeud depuis son onglet sans fil : c'est un ordre, pas un accident,
+        // et il tient jusqu'a ce qu'il en choisisse un autre.
+        if (data.isRefused(pos) && data.matrixOf(pos) == null) {
+            setConnected(false);
+            return;
+        }
+
         BlockPos matrixPos = data.matrixOf(pos);
         if (matrixPos != null) {
             MatrixBlockEntity matrix = matrixAt(level, matrixPos);

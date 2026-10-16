@@ -48,17 +48,41 @@ public class WirelessNodesPacket {
         return nodes;
     }
 
-    /** Envoie l'etat courant de l'onglet de cette machine a ce joueur. */
-    public static void send(ServerPlayer player, BlockPos machinePos) {
+    /** Envoie l'etat de l'onglet d'une machine : le noeud qui l'alimente, et les noeuds joignables. */
+    public static void sendNodes(ServerPlayer player, BlockPos machinePos) {
         if (!(player.level() instanceof ServerLevel level)) return;
 
-        String linked = NodeFinder.nodeName(level, machinePos);
         List<Entry> entries = new ArrayList<>();
         for (NodeFinder.Candidate candidate : NodeFinder.candidates(level, machinePos)) {
-            entries.add(new Entry(candidate.pos(), candidate.name(), candidate.encrypted(),
-                    candidate.room()));
+            entries.add(entry(candidate));
         }
 
+        send(player, NodeFinder.nodeName(level, machinePos), entries);
+    }
+
+    /**
+     * Et l'etat de l'onglet d'un noeud : le reseau qu'il a rejoint, et les reseaux joignables.
+     *
+     * <p>Le nom d'un reseau est son SSID, et son cadre dit la meme chose que celui d'une machine :
+     * « Connected » et le nom, ou rien du tout.
+     */
+    public static void sendMatrices(ServerPlayer player, BlockPos nodePos) {
+        if (!(player.level() instanceof ServerLevel level)) return;
+
+        List<Entry> entries = new ArrayList<>();
+        for (NodeFinder.Candidate candidate : NodeFinder.matrices(level, nodePos)) {
+            entries.add(entry(candidate));
+        }
+
+        send(player, NodeFinder.matrixName(level, nodePos), entries);
+    }
+
+    private static Entry entry(NodeFinder.Candidate candidate) {
+        return new Entry(candidate.pos(), candidate.name(), candidate.encrypted(),
+                candidate.room());
+    }
+
+    private static void send(ServerPlayer player, String linked, List<Entry> entries) {
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new WirelessNodesPacket(linked, entries));
     }

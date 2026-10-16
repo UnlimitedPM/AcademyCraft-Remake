@@ -3,6 +3,8 @@ package cn.academy.client.gui.cgui;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -93,5 +95,60 @@ class CGuiClickTest {
         view.onClick(button, () -> clicked[0] = true);
         assertTrue(view.click(68, 22, 0), "le bouton, si");
         assertTrue(clicked[0], "et il a fait ce qu'il avait a faire");
+    }
+
+    /** Un champ du panneau d'infos, avec son libelle et ses deux crochets. */
+    private static CWidget line(String name, CWidget[] valueOut) {
+        CWidget line = box(name, 0, 0, 90, 8);
+
+        CWidget label = box("key", 0, 0, 40, 8);
+        label.text = new CWidget.TextBox();
+        label.text.content = "SSID";
+        line.add(label);
+
+        CWidget value = box("value", 46, 0, 40, 8);
+        value.text = new CWidget.TextBox();
+        value.text.allowEdit = true;
+        line.add(value);
+        valueOut[0] = value;
+
+        // Les crochets se posent six unites PAR-DESSUS le champ : c'est l'original, et c'est la
+        // tout le probleme — sur un champ vide, le regard vise justement ce bord-la.
+        line.add(box("bracket", 42, 0, 10, 8));
+        line.add(box("bracket", 88, 0, 10, 8));
+        return line;
+    }
+
+    @Test
+    @DisplayName("un champ prend le clic meme sous un crochet qui le recouvre")
+    void unChampSousUnCrochetPrendLeClic() {
+        CWidget root = box("root", 0, 0, 400, 187);
+        CWidget[] value = new CWidget[1];
+        root.add(line("line1", value));
+
+        CGuiView view = new CGuiView(null, root);
+
+        // Le crochet n'ecoute rien : il doit laisser passer le clic au champ qu'il decore. Sans
+        // cette regle le champ ne prenait pas le clavier, et le joueur ne pouvait plus rien ecrire.
+        assertTrue(view.click(48, 4, 0), "le clic doit etre pris par le champ");
+        assertSame(value[0], view.focused(), "et c'est le champ qui a le clavier");
+        assertTrue(view.charTyped('a'), "on doit pouvoir ecrire");
+        assertEquals("a", value[0].text.content, "et la lettre arrive dans le champ");
+    }
+
+    @Test
+    @DisplayName("un clic sur le libelle, lui, rend le clavier")
+    void unClicSurLeLibelleRendLeClavier() {
+        CWidget root = box("root", 0, 0, 400, 187);
+        CWidget[] value = new CWidget[1];
+        root.add(line("line1", value));
+
+        CGuiView view = new CGuiView(null, root);
+        assertTrue(view.click(48, 4, 0), "le champ prend le clavier");
+
+        // Le libelle n'est pas un champ : cliquer dessus ne doit rien ecrire, et doit rendre le
+        // clavier — c'est ce que fait l'original, dont le libelle n'ecoutait rien du tout.
+        assertTrue(!view.click(20, 4, 0), "un libelle n'a rien a faire");
+        assertTrue(view.focused() == null, "et il rend le clavier");
     }
 }
