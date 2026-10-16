@@ -243,24 +243,31 @@ public abstract class CGuiScreen extends Screen {
         // Un champ de mot de passe se dessine masque : le vrai texte ne sort jamais de l'ecran.
         if (box.doesEcho && !empty) content = String.valueOf(box.echoChar).repeat(box.content.length());
 
+        // La taille vient du widget, comme chez l'original : voir CGuiView, dont ce dessin est la
+        // copie d'origine (ce moteur-la attend sa fusion).
+        int size = cn.academy.client.gui.AcademyFonts
+            .sizeForCell(box.fontSize * widget.absScale);
+        int cell = cn.academy.client.gui.AcademyFonts.cellHeight(size);
+
         int colour = argb(box.alpha, box.red, box.green, box.blue);
-        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content);
+        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content, size);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
             case "RIGHT" -> x + w - textWidth;
             default -> x;
         };
         int textY = switch (box.heightAlign.toUpperCase(java.util.Locale.ROOT)) {
-            case "CENTER" -> y + (h - 8) / 2;
-            case "BOTTOM" -> y + h - 9;
+            case "CENTER" -> y + (h - cell) / 2;
+            case "BOTTOM" -> y + h - cell - 1;
             default -> y;
         };
 
-        cn.academy.client.gui.AcademyFonts.draw(graphics, font, content, textX, textY, colour, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, content, textX, textY, colour,
+            false, size);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {
-            graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + 9, colour);
+            graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + cell, colour);
         }
     }
 

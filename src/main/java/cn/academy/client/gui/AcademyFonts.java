@@ -60,11 +60,28 @@ public final class AcademyFonts {
      * une page.
      */
     private static final int CONSOLE_SIZE = 8;
-    private static final int SOURCE_FONT_SIZE = 24;
+
+    /**
+     * La taille a laquelle les glyphes sont graves dans le videau, et la cellule qui les porte.
+     *
+     * <p>Trente-deux et quarante-quatre : les nombres de LambdaLib2, dont le {@code TrueTypeFont}
+     * construit sa police systeme a trente-deux et fait sa cellule une fois et quatre dixiemes plus
+     * haute. C'est le rapport des deux qui donne son POIDS au trait : la cellule est ramenee a la
+     * hauteur demandee, donc une lettre dessinee a huit pixels nait d'une image de quarante-quatre
+     * — plus la gravure est grande devant le dessin, plus le trait est fin. Gravee a vingt-quatre,
+     * la meme lettre sortait un peu plus grasse, et c'est ce que le joueur a vu : « comme si
+     * c'etait ecrit en gras ». La hauteur d'un ligne reste la meme (trente-deux fois un et quatre
+     * dixiemes, comme avant vingt-quatre fois), donc rien d'autre ne bouge.
+     */
+    private static final int SOURCE_FONT_SIZE = 32;
     private static final int ATLAS_SIZE = 2048;
     private static final int CELL_SIZE = (int) (SOURCE_FONT_SIZE * 1.4f);
     private static final int CELLS_PER_ROW = ATLAS_SIZE / CELL_SIZE;
     private static final int MAX_GLYPHS = CELLS_PER_ROW * CELLS_PER_ROW;
+
+    /** Les bornes d'une taille : sous quatre la lettre n'existe plus, au-dessus de vingt-quatre elle deborde. */
+    private static final int MIN_SIZE = 4;
+    private static final int MAX_SIZE = 24;
 
     /**
      * La ligne de base, mesuree depuis le haut du texte : sept pixels.
@@ -98,6 +115,41 @@ public final class AcademyFonts {
 
     public static int width(Font ignored, Component text) {
         return width(text.getString(), GUI_SIZE);
+    }
+
+    /** La largeur d'un texte dessine a une taille donnee, en pixels. */
+    public static int width(Font ignored, String text, int size) {
+        return width(text, size);
+    }
+
+    public static int width(Font ignored, Component text, int size) {
+        return width(text.getString(), size);
+    }
+
+    /**
+     * La taille a demander pour dessiner une cellule de tel nombre de pixels.
+     *
+     * <p>C'est la traduction des documents — et de l'original — vers la taille de cette police. La
+     * bas, un {@code FontOption} de n dessine une cellule de n pixels : ses quads de glyphes font
+     * {@code option.fontSize} de cote. Ici, la taille est le CADRATIN de la police, qui fait un peu
+     * plus du tiers de plus que la cellule. Les pages du mod demandent donc 6, 8, 9, 10, 12 et 13,
+     * et c'est cette fonction qui les amene aux tailles d'ici.
+     */
+    public static int sizeForCell(double cellPixels) {
+        int size = (int) Math.round(cellPixels * SOURCE_FONT_SIZE / (double) CELL_SIZE);
+        return Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
+    }
+
+    /**
+     * La hauteur d'une cellule pour une taille donnee : c'est aussi la hauteur d'une ligne.
+     *
+     * <p>L'original avancait ses lignes de la taille de sa cellule ({@code option.fontSize}), et
+     * centrait ses textes sur elle. Sans elle, un texte centre dans une boite de huit unites
+     * tomberait deux pixels trop haut des qu'on lui demande une taille qui n'est pas celle de
+     * l'interface.
+     */
+    public static int cellHeight(int size) {
+        return box(size);
     }
 
     /**
@@ -138,7 +190,7 @@ public final class AcademyFonts {
      * La hauteur des CAPITALES, en pixels, pour une taille donnee.
      *
      * <p>C'est la mesure qui dit si le texte est lisible a cote de celui du jeu, et c'est elle qu'un
-     * test fige : elle vaut 6,8 px a la taille de l'interface, contre 7 pour la police de Minecraft.
+     * test fige : elle vaut 6,1 px a la taille de l'interface, contre 7 pour la police de Minecraft.
      * Exposee pour ce test, et parce que c'est la seule chose qu'un reglage de la taille fait varier
      * qui se voie.
      */
@@ -213,6 +265,17 @@ public final class AcademyFonts {
     public static int draw(GuiGraphics graphics, Font ignored, Component text, int x, int y,
                            int color, boolean shadow) {
         return drawText(graphics, text.getString(), x, y, color, shadow, GUI_SIZE);
+    }
+
+    /** Un texte a une taille donnee — celle d'un widget, qui vient de son document. */
+    public static int draw(GuiGraphics graphics, Font ignored, String text, int x, int y,
+                           int color, boolean shadow, int size) {
+        return drawText(graphics, text, x, y, color, shadow, size);
+    }
+
+    public static int draw(GuiGraphics graphics, Font ignored, Component text, int x, int y,
+                           int color, boolean shadow, int size) {
+        return drawText(graphics, text.getString(), x, y, color, shadow, size);
     }
 
     public static int drawConsole(GuiGraphics graphics, String text, int x, int y, int color) {

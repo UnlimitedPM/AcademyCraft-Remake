@@ -149,6 +149,17 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     }
 
     /**
+     * Les tailles du panneau d'infos, en pixels de cellule : celles de {@code TechUI.scala}.
+     *
+     * <p>Un separateur s'ecrit a six, un renseignement et la legende d'un histogramme a huit, un
+     * bouton a neuf — et c'est l'original, dont les {@code FontOption} donnent ces nombres-la. Le
+     * port les ecrivait tous a la taille de l'interface ; le joueur a vu la difference avant moi.
+     */
+    private static final double SEP_FONT = 6;
+    private static final double PROPERTY_FONT = 8;
+    private static final double BUTTON_FONT = 9;
+
+    /**
      * Une ligne d'information : un nom a gauche, une valeur a droite, comme l'original.
      *
      * @return la <b>ligne</b> posee, et non son champ : c'est elle qu'on cache ou qu'on deplace,
@@ -164,6 +175,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         name.transform.width = 40;
         name.transform.height = 8;
         name.text = new CWidget.TextBox();
+        name.text.fontSize = PROPERTY_FONT;
         name.text.content = key;
         name.text.align = "CENTER";
         name.text.heightAlign = "CENTER";
@@ -175,6 +187,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         amount.transform.width = 40;
         amount.transform.height = 8;
         amount.text = new CWidget.TextBox();
+        amount.text.fontSize = PROPERTY_FONT;
         amount.text.content = value;
         amount.text.align = "CENTER";
         amount.text.heightAlign = "CENTER";
@@ -235,6 +248,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         out.transform.width = 10;
         out.transform.height = 8;
         out.text = new CWidget.TextBox();
+        out.text.fontSize = PROPERTY_FONT;
         out.text.content = text;
         out.text.heightAlign = "CENTER";
         out.text.color(255, 255, 255);
@@ -258,10 +272,12 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         CWidget widget = new CWidget("button");
         widget.transform.alignWidth = "CENTER";
         widget.transform.width = Math.max(50,
-            cn.academy.client.gui.AcademyFonts.width(font, text) + 5);
+            cn.academy.client.gui.AcademyFonts.width(font, text,
+                cn.academy.client.gui.AcademyFonts.sizeForCell(BUTTON_FONT)) + 5);
         widget.transform.height = 8;
 
         widget.text = new CWidget.TextBox();
+        widget.text.fontSize = BUTTON_FONT;
         widget.text.content = text;
         widget.text.align = "CENTER";
         widget.text.heightAlign = "CENTER";
@@ -385,6 +401,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         title.transform.width = CGuiContainerLayout.INFO_WIDTH - 3;
         title.transform.height = 8;
         title.text = new CWidget.TextBox();
+        title.text.fontSize = SEP_FONT;
         title.text.content = Component.translatable("ac.gui.common.sep." + id).getString();
         title.text.alpha = 153;
         line.add(title);
@@ -475,6 +492,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         name.transform.width = 32;
         name.transform.height = 8;
         name.text = new CWidget.TextBox();
+        name.text.fontSize = PROPERTY_FONT;
         name.text.content = Component.translatable(elem.id()).getString();
         name.text.align = "CENTER";
         name.text.heightAlign = "CENTER";
@@ -485,6 +503,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         value.transform.width = 40;
         value.transform.height = 8;
         value.text = new CWidget.TextBox();
+        value.text.fontSize = PROPERTY_FONT;
         value.text.content = elem.desc().get();
         value.text.align = "CENTER";
         value.text.heightAlign = "CENTER";

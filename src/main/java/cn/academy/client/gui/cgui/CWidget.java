@@ -136,7 +136,18 @@ public class CWidget {
     /** Un bout de texte, que l'ecran peut changer, et qui peut devenir un champ de saisie. */
     public static final class TextBox {
         public String content = "";
-        public double fontSize = 43.0;
+
+        /**
+         * La hauteur de la cellule du texte, en pixels : c'est le {@code FontOption.fontSize} de
+         * l'original, et dix est SA valeur par defaut (celle de LambdaLib2, qu'un document qui ne
+         * dit rien heritait).
+         *
+         * <p>Le port y ecrivait quarante-trois, et ne s'en servait nulle part : le moteur dessinait
+         * tout le texte a la taille de l'interface, ce qui effacait la hierarchie des pages — un
+         * libelle a neuf, un renseignement a huit, un separateur a six. Le joueur l'a vu : « dans
+         * les machines, certains textes sont ecrits avec une taille encore differente ».
+         */
+        public double fontSize = 10.0;
 
         /** {@code LEFT}, {@code CENTER} ou {@code RIGHT}, dans la boite du widget. */
         public String align = "LEFT";

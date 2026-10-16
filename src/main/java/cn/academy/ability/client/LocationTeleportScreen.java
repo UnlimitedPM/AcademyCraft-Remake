@@ -154,7 +154,11 @@ public class LocationTeleportScreen extends CGuiScreen {
             line.transform.y = 20 + i * 42;
             line.text = new CWidget.TextBox();
             line.text.align = "RIGHT";
-            line.text.fontSize = 43;
+            // Quarante : le `textSize` du MessageTab de l'original, en unites du document — donc un
+            // peu moins de dix pixels une fois l'echelle de la racine (0,24) appliquee. Le port y
+            // avait laisse la hauteur de sa ligne (quarante-deux), ce qui ne se voyait pas tant que
+            // le moteur dessinait tout a la taille de l'interface.
+            line.text.fontSize = 40;
             line.text.heightAlign = "TOP";
             info.add(line);
         }

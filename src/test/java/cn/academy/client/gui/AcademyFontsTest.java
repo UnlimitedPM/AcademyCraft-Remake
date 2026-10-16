@@ -56,4 +56,28 @@ class AcademyFontsTest {
         assertTrue(height >= 5, "une capitale de " + height + " px est trop courte");
         assertTrue(height <= 9, "et une capitale de " + height + " px ne tiendrait pas dans les lignes");
     }
+
+    @Test
+    @DisplayName("la cellule d'un document se traduit en taille de police")
+    void laCelluleDesDocumentsSeTraduit() {
+        // Les pages du mod demandent des cellules de 6, 8, 9, 10, 12 et 13 pixels — c'est le
+        // `FontOption` de l'original, dont les quads de glyphes font exactement ce cote. La taille
+        // d'ici est le cadratin de la police, un peu plus du tiers plus grand que la cellule, et
+        // cette traduction est ce qui rend aux textes la hierarchie de leur page : sans elle, tous
+        // se dessinent a la taille de l'interface.
+        for (double cell : new double[]{6, 8, 9, 10, 12, 13}) {
+            int size = AcademyFonts.sizeForCell(cell);
+            int drawn = AcademyFonts.cellHeight(size);
+            assertTrue(Math.abs(drawn - cell) <= 1,
+                    "une cellule de " + cell + " px se dessine a " + drawn + " px (taille " + size + ")");
+        }
+
+        // Un document qui ne dit rien herite du defaut de LambdaLib2, dix : `FontOption()` vaut dix
+        // la-bas, et c'est ce defaut que le port avait note quarante-trois.
+        assertEquals(7, AcademyFonts.sizeForCell(10), "une cellule de dix vaut la taille sept");
+
+        // Les bornes, pour qu'un document abime ne fasse ni disparaitre le texte ni deborder la page.
+        assertTrue(AcademyFonts.sizeForCell(1) >= 4, "sous quatre, la lettre n'existe plus");
+        assertTrue(AcademyFonts.sizeForCell(400) <= 24, "et une cellule enorme reste bornee");
+    }
 }

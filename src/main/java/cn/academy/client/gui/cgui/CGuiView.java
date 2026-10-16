@@ -545,25 +545,33 @@ public final class CGuiView {
             content = String.valueOf(box.echoChar).repeat(box.content.length());
         }
 
+        // LA TAILLE VIENT DU WIDGET, comme chez l'original : son `FontOption` porte une cellule de
+        // n pixels, que l'echelle heritee des parents multiplie. Le port dessinait tout a la taille
+        // de l'interface, ce qui effacait la hierarchie des pages — « dans les machines, certains
+        // textes sont ecrits avec une taille encore differente » — et les quads de glyphes de
+        // l'original font EXACTEMENT `fontSize` de cote, donc la correspondance est directe.
+        int size = AcademyFonts.sizeForCell(box.fontSize * widget.absScale);
+        int cell = AcademyFonts.cellHeight(size);
+
         int colour = argb(box.alpha, box.red, box.green, box.blue);
         var font = screen.getMinecraft().font;
-        int textWidth = AcademyFonts.width(font, content);
+        int textWidth = AcademyFonts.width(font, content, size);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
             case "RIGHT" -> x + w - textWidth;
             default -> x;
         };
         int textY = switch (box.heightAlign.toUpperCase(java.util.Locale.ROOT)) {
-            case "CENTER" -> y + (h - 8) / 2;
-            case "BOTTOM" -> y + h - 9;
+            case "CENTER" -> y + (h - cell) / 2;
+            case "BOTTOM" -> y + h - cell - 1;
             default -> y;
         };
 
-        AcademyFonts.draw(graphics, font, content, textX, textY, colour, false);
+        AcademyFonts.draw(graphics, font, content, textX, textY, colour, false, size);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {
-            graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + 9, colour);
+            graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + cell, colour);
         }
     }
 
