@@ -42,11 +42,13 @@ public final class AcademyFonts {
      * trois unites pour vingt-quatre, la hauteur de ligne de la police) : s'en servir comme echelle
      * rapetissait tout d'un quart, et c'est ce que le joueur a vu.
      *
-     * <p>A neuf, mesure sur Microsoft YaHei : la hauteur de capitale vaut 6,8 px et un « H » avance
-     * de 7,1 px. La police du jeu, elle, fait 7 et 6 — c'est donc la taille du texte du jeu, et
-     * c'est ce que les ecrans attendent, eux qui posent leurs lignes tous les dix a vingt pixels.
+     * <p>A huit, mesure sur Microsoft YaHei : la hauteur de capitale vaut 6,1 px et un « H » avance
+     * de 6,3 px. La police du jeu, elle, fait 7 et 6 — donc un cran plus petit qu'elle, et c'est le
+     * joueur qui l'a voulu : il a vu le neuf a l'ecran et l'a trouve trop gros d'un cran. Le chiffre
+     * reste le seul a tourner, et les ecrans, eux, posent leurs lignes tous les dix a vingt pixels,
+     * donc un cran de moins ne les fait pas respirer.
      */
-    public static final int GUI_SIZE = 9;
+    public static final int GUI_SIZE = 8;
 
     /**
      * La console de debogage (F4), en pixels.
