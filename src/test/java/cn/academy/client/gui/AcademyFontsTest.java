@@ -23,14 +23,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AcademyFontsTest {
 
     @Test
-    @DisplayName("la largeur annoncee est la somme des avances, caractere par caractere")
+    @DisplayName("la largeur est la somme exacte des avances, arrondie une seule fois")
     void laLargeurEstLaSommeDesAvances() {
         assertEquals(0, AcademyFonts.width("", AcademyFonts.GUI_SIZE), "un texte vide ne fait rien");
 
-        // C'est ce que le dessin pose : une avance par caractere, arrondie a chaque fois. Une somme
-        // arrondie a la fin donnerait un texte centré un pixel a cote de sa boite.
-        assertEquals(4 * AcademyFonts.width("H", AcademyFonts.GUI_SIZE),
-                AcademyFonts.width("HHHH", AcademyFonts.GUI_SIZE), "quatre H font quatre fois un H");
+        // L'original n'arrondissait AUCUNE avance : il avancait de la valeur exacte de chaque lettre
+        // (x += info.width * scale, en flottants) et laissait la position fractionnaire au dessin.
+        // Le port arrondissait chaque avance a un pixel entier, ce qui perdait un demi-pixel par
+        // lettre : une ligne de trente caracteres sortait une dizaine de pixels plus courte que
+        // celle du vrai mod. C'est ce que le joueur a vu — « un peu plus etire vers la droite ».
+        double one = AcademyFonts.advance('H', AcademyFonts.GUI_SIZE);
+        assertEquals((int) Math.round(2 * one), AcademyFonts.width("HH", AcademyFonts.GUI_SIZE),
+                "deux H font deux avances exactes");
+        assertEquals((int) Math.round(4 * one), AcademyFonts.width("HHHH", AcademyFonts.GUI_SIZE),
+                "et quatre en font quatre, arrondies une seule fois au bout");
     }
 
     @Test
@@ -48,36 +54,29 @@ class AcademyFontsTest {
     @Test
     @DisplayName("les capitales sont aussi hautes que celles du jeu")
     void lesCapitalesSontAussiHautesQueCellesDuJeu() {
-        // La police du jeu fait sept pixels de capitale. C'est la mesure qui dit si le texte est
-        // lisible a cote du sien, et c'est elle que le reglage de taille fait bouger : la borne
-        // basse attrape le quart perdu (4,4 px), la haute une taille qui deborderait les pas de
-        // ligne des ecrans.
+        // La police du jeu fait sept pixels de capitale. La notre vaut 5,5 px a la cellule de
+        // l'interface — c'est la mesure qui dit si le texte est lisible a cote du sien, et c'est
+        // elle que le reglage de la cellule fait bouger : la borne basse attrape une cellule qui
+        // aurait perdu ses lettres, la haute une taille qui deborderait les pas de ligne des ecrans.
         int height = AcademyFonts.capitalHeight(AcademyFonts.GUI_SIZE);
         assertTrue(height >= 5, "une capitale de " + height + " px est trop courte");
         assertTrue(height <= 9, "et une capitale de " + height + " px ne tiendrait pas dans les lignes");
     }
 
     @Test
-    @DisplayName("la cellule d'un document se traduit en taille de police")
-    void laCelluleDesDocumentsSeTraduit() {
-        // Les pages du mod demandent des cellules de 6, 8, 9, 10, 12 et 13 pixels — c'est le
-        // `FontOption` de l'original, dont les quads de glyphes font exactement ce cote. La taille
-        // d'ici est le cadratin de la police, un peu plus du tiers plus grand que la cellule, et
-        // cette traduction est ce qui rend aux textes la hierarchie de leur page : sans elle, tous
-        // se dessinent a la taille de l'interface.
+    @DisplayName("la taille d'un texte EST la cellule, bornee des deux cotes")
+    void laCelluleEstLaTaille() {
+        // Les pages du mod demandent des cellules de 6, 8, 9, 10, 12 et 13 pixels : c'est deja
+        // l'unite de l'original, dont le `FontOption(n)` dessine des quads de n pixels de cote. Il
+        // n'y a donc rien a traduire, seulement de quoi borner un document abime.
         for (double cell : new double[]{6, 8, 9, 10, 12, 13}) {
-            int size = AcademyFonts.sizeForCell(cell);
-            int drawn = AcademyFonts.cellHeight(size);
-            assertTrue(Math.abs(drawn - cell) <= 1,
-                    "une cellule de " + cell + " px se dessine a " + drawn + " px (taille " + size + ")");
+            assertEquals((int) cell, AcademyFonts.cell(cell),
+                    "une cellule de " + cell + " px se dessine telle quelle");
         }
 
-        // Un document qui ne dit rien herite du defaut de LambdaLib2, dix : `FontOption()` vaut dix
-        // la-bas, et c'est ce defaut que le port avait note quarante-trois.
-        assertEquals(7, AcademyFonts.sizeForCell(10), "une cellule de dix vaut la taille sept");
-
-        // Les bornes, pour qu'un document abime ne fasse ni disparaitre le texte ni deborder la page.
-        assertTrue(AcademyFonts.sizeForCell(1) >= 4, "sous quatre, la lettre n'existe plus");
-        assertTrue(AcademyFonts.sizeForCell(400) <= 24, "et une cellule enorme reste bornee");
+        assertEquals(AcademyFonts.GUI_SIZE, AcademyFonts.cell(AcademyFonts.GUI_SIZE),
+                "la cellule de l'interface est deja la bonne unite");
+        assertTrue(AcademyFonts.cell(1) >= 5, "sous cinq pixels, la lettre n'existe plus");
+        assertTrue(AcademyFonts.cell(400) <= 33, "et au-dela on demanderait plus que la gravure");
     }
 }

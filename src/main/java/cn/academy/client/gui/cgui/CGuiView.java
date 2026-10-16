@@ -550,12 +550,11 @@ public final class CGuiView {
         // de l'interface, ce qui effacait la hierarchie des pages — « dans les machines, certains
         // textes sont ecrits avec une taille encore differente » — et les quads de glyphes de
         // l'original font EXACTEMENT `fontSize` de cote, donc la correspondance est directe.
-        int size = AcademyFonts.sizeForCell(box.fontSize * widget.absScale);
-        int cell = AcademyFonts.cellHeight(size);
+        int cell = AcademyFonts.cell(box.fontSize * widget.absScale);
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
         var font = screen.getMinecraft().font;
-        int textWidth = AcademyFonts.width(font, content, size);
+        int textWidth = AcademyFonts.width(font, content, cell);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
             case "RIGHT" -> x + w - textWidth;
@@ -567,7 +566,7 @@ public final class CGuiView {
             default -> y;
         };
 
-        AcademyFonts.draw(graphics, font, content, textX, textY, colour, false, size);
+        AcademyFonts.draw(graphics, font, content, textX, textY, colour, false, cell);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {

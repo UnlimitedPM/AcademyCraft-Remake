@@ -34,58 +34,53 @@ public final class AcademyFonts {
     };
 
     /**
-     * La hauteur du texte de l'interface, en pixels — LE seul chiffre a tourner pour le grossir.
+     * La hauteur de la CELLULE du texte de l'interface, en pixels — LE seul chiffre a tourner.
      *
-     * <p>C'est la hauteur d'un caractere, son <b>cadratin</b>, et non la cellule du videau : l'avance
-     * et le dessin se calculent tous les deux a partir d'elle, donc les lettres grandissent ensemble
-     * et l'espacement suit. La cellule du videau, elle, fait un peu plus du tiers de plus que le
-     * cadratin (quarante-quatre unites pour trente-deux, la hauteur de ligne de la police) : s'en
-     * servir comme echelle rapetissait tout d'un quart, et c'est ce que le joueur a vu.
+     * <p>C'est la hauteur que la lettre occupe a l'ecran, et c'est l'unite de l'original : son
+     * {@code FontOption(n)} dessine des quads de n pixels de cote, avance ses caracteres de
+     * {@code charWidth x n / charSize} et fait avancer ses lignes de n. La gravure du videau, elle,
+     * est faite a trente-trois : c'est le rapport des deux (un et quatre dixiemes) qui donne a la
+     * fois l'echelle des avances et l'epaisseur du trait.
      *
-     * <p>A sept, mesure sur Microsoft YaHei : la cellule fait dix pixels, la hauteur de capitale
-     * 5,3 px et un « H » avance de 5,5 px. Dix est le chiffre de LambdaLib2 — {@code FontOption()}
-     * vaut dix, donc c'est ce qu'herite tout texte dont le document ne dit rien, et c'est aussi la
-     * cellule que l'original donnait a sa console de debogage. Le joueur l'a demande en deux temps :
-     * le texte etait plus gras et plus gros que celui du vrai mod, mesure sur la console F4 — « le
-     * vrai texte est legerement plus petit en hauteur », et son repere : onze et demi doit devenir
-     * onze. Un cran de moins sur la cellule, donc une unite de moins ici.
+     * <p>Dix, pour deux raisons qui se rejoignent : c'est le defaut de LambdaLib2 —
+     * {@code new FontOption()} vaut dix, donc ce qu'herite tout texte dont le document ne dit rien —
+     * et c'est la cellule que l'original donne a sa console de debogage, son
+     * {@code DebugConsole.Text(String)} construisant un {@code FontOption(10)}. Mesure sur Microsoft
+     * YaHei : une capitale de 5,5 pixels, et un « H » qui avance de 5,8. Le joueur est arrive la en
+     * deux temps : « le texte est encore legerement plus gros, comme si c'etait ecrit en gras »,
+     * puis son propre repere — onze et demi doit devenir onze.
+     *
+     * <p>CE CHIFFRE EST LA CELLULE, et non le cadratin de la police, et c'est ce qui fait que la
+     * gravure, l'avance et le dessin parlent tous les trois du meme pixel. Calculee sur le cadratin
+     * — ce que le port faisait —, l'avance sortait de quatre pour cent plus COURTE que la lettre
+     * dessinee, qui est arrondie a la cellule : les lettres se tassaient l'une contre l'autre, et le
+     * joueur l'a vu du premier coup d'oeil — « dans le vrai mod, le texte a l'air d'etre un peu plus
+     * etire vers la droite, avec ces lettres un peu plus larges ».
      */
-    public static final int GUI_SIZE = 7;
-
-    /**
-     * La console de debogage (F4), en pixels.
-     *
-     * <p>Sept, comme le texte de l'interface, et c'est mesure deux fois : sur les deux captures du
-     * joueur, a la meme echelle d'interface, la meme ligne fait 298 pixels chez nous a la taille dix
-     * et 231 chez l'original 1.12.2, dont les barres rapides font exactement la meme taille (le
-     * rapport vaut 0,775, donc sept et trois quarts) ; et la source de l'original le dit aussi, son
-     * {@code DebugConsole.Text(String)} construisant un {@code FontOption(10)} — une cellule de dix
-     * pixels, qui est ce que demande la taille sept ici. Ce sont ses LIGNES qui sont plus serrees
-     * que celles de l'interface : dix pixels, la hauteur de sa cellule.
-     */
-    private static final int CONSOLE_SIZE = 7;
+    public static final int GUI_SIZE = 10;
 
     /**
      * La taille a laquelle les glyphes sont graves dans le videau, et la cellule qui les porte.
      *
-     * <p>Trente-deux et quarante-quatre : les nombres de LambdaLib2, dont le {@code TrueTypeFont}
-     * construit sa police systeme a trente-deux et fait sa cellule une fois et quatre dixiemes plus
-     * haute. C'est le rapport des deux qui donne son POIDS au trait : la cellule est ramenee a la
-     * hauteur demandee, donc une lettre dessinee a huit pixels nait d'une image de quarante-quatre
-     * — plus la gravure est grande devant le dessin, plus le trait est fin. Gravee a vingt-quatre,
-     * la meme lettre sortait un peu plus grasse, et c'est ce que le joueur a vu : « comme si
-     * c'etait ecrit en gras ». La hauteur d'un ligne reste la meme (trente-deux fois un et quatre
-     * dixiemes, comme avant vingt-quatre fois), donc rien d'autre ne bouge.
+     * <p>Vingt-quatre et trente-trois : les nombres que le mod se donne a lui-meme, dans son
+     * {@code ClientResources} — {@code TrueTypeFont.withFallback(Font.PLAIN, 24, "Microsoft YaHei",
+     * ...)} puis une cellule d'une fois et quatre dixiemes sa taille, comme le fait le constructeur
+     * du {@code TrueTypeFont} de LambdaLib2. (Son {@code defaultFont}, lui, grave a trente-deux :
+     * c'est un autre chemin, et l'AcademyCraft n'y passe pas.)
+     *
+     * <p>C'est le RAPPORT des deux qui compte, et il vaut un et quatre dixiemes dans les deux cas :
+     * une lettre dessinee sur une cellule de dix pixels nait d'une image de trente-trois, celle des
+     * nombres du mod.
      */
-    private static final int SOURCE_FONT_SIZE = 32;
+    private static final int SOURCE_FONT_SIZE = 24;
     private static final int ATLAS_SIZE = 2048;
     private static final int CELL_SIZE = (int) (SOURCE_FONT_SIZE * 1.4f);
     private static final int CELLS_PER_ROW = ATLAS_SIZE / CELL_SIZE;
     private static final int MAX_GLYPHS = CELLS_PER_ROW * CELLS_PER_ROW;
 
-    /** Les bornes d'une taille : sous quatre la lettre n'existe plus, au-dessus de vingt-quatre elle deborde. */
-    private static final int MIN_SIZE = 4;
-    private static final int MAX_SIZE = 24;
+    /** Les bornes d'une cellule : sous cinq pixels la lettre n'existe plus, au-dessus de trente-trois elle depasse la gravure. */
+    private static final int MIN_CELL = 5;
+    private static final int MAX_CELL = 33;
 
     /**
      * L'epaisseur ajoutee a chaque lettre, en unites de la gravure : zero n'ajoute rien.
@@ -98,8 +93,13 @@ public final class AcademyFonts {
      * dessin : +18 % d'encre a 0,5, +29 % a 0,8, +36 % a 1. Le joueur trouvait le texte du vrai mod
      * plus epais que le notre (« il est pas assez epais ») ; c'est le seul chiffre a tourner si le
      * trait parait encore maigre, ou s'il devient pateux.
+     *
+     * <p>Elle se compte en unites de GRAVURE, donc elle suit la taille de la gravure : a quarante-
+     * quatre la valeur d'origine etait 0,6, la meme epaisseur a l'ecran vaut 0,6 x 24 / 32 = 0,45
+     * avec une gravure de vingt-quatre. La regler sans regarder ce rapport change l'epaisseur deux
+     * fois.
      */
-    private static final double GLYPH_WEIGHT = 0.6;
+    private static final double GLYPH_WEIGHT = 0.45;
 
     /**
      * La ligne de base, mesuree depuis le haut du texte : huit pixels.
@@ -124,7 +124,7 @@ public final class AcademyFonts {
     private static boolean atlasDirty;
 
     private record GlyphKey(int codePoint, int size) {}
-    private record Glyph(int advance, int x, int y, int size) {}
+    private record Glyph(double advance, int x, int y, int size) {}
 
     private AcademyFonts() {
     }
@@ -147,40 +147,41 @@ public final class AcademyFonts {
     }
 
     /**
-     * La taille a demander pour dessiner une cellule de tel nombre de pixels.
+     * La taille a demander pour dessiner une cellule de tel nombre de pixels : c'est deja la bonne
+     * unite, il n'y a donc rien a traduire — seulement de quoi borner un document abime.
      *
-     * <p>C'est la traduction des documents — et de l'original — vers la taille de cette police. La
-     * bas, un {@code FontOption} de n dessine une cellule de n pixels : ses quads de glyphes font
-     * {@code option.fontSize} de cote. Ici, la taille est le CADRATIN de la police, qui fait un peu
-     * plus du tiers de plus que la cellule. Les pages du mod demandent donc 6, 8, 9, 10, 12 et 13,
-     * et c'est cette fonction qui les amene aux tailles d'ici.
+     * <p>Les pages du mod demandent 6, 8, 9, 10, 12 et 13 : le meme langage que l'original, dont le
+     * {@code FontOption(n)} dessine une cellule de n pixels. Sous cinq la lettre disparait, et
+     * au-dela de trente-trois on demanderait plus grand que la gravure elle-meme.
      */
-    public static int sizeForCell(double cellPixels) {
-        int size = (int) Math.round(cellPixels * SOURCE_FONT_SIZE / (double) CELL_SIZE);
-        return Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
+    public static int cell(double cellPixels) {
+        return Math.max(MIN_CELL, Math.min(MAX_CELL, (int) Math.round(cellPixels)));
     }
 
     /**
-     * La hauteur d'une cellule pour une taille donnee : c'est aussi la hauteur d'une ligne.
+     * L'avance total d'un texte, en pixels : la somme EXACTE de ses avances, arrondie une fois.
      *
-     * <p>L'original avancait ses lignes de la taille de sa cellule ({@code option.fontSize}), et
-     * centrait ses textes sur elle. Sans elle, un texte centre dans une boite de huit unites
-     * tomberait deux pixels trop haut des qu'on lui demande une taille qui n'est pas celle de
-     * l'interface.
-     */
-    public static int cellHeight(int size) {
-        return box(size);
-    }
-
-    /**
-     * L'avance total d'un texte, en pixels : la somme des avances de ses caracteres.
-     *
-     * <p>Le dessin se sert de la MEME fonction caractere par caractere : la largeur mesuree et la
-     * largeur dessinee ne peuvent donc pas diverger, ce qui compte pour tout ce qui se centre ou
-     * s'aligne a droite.
+     * <p>C'est ce que le dessin pose, caractere par caractere, et la somme n'est arrondie qu'au
+     * bout : la largeur mesuree et la largeur dessinee ne peuvent donc pas diverger, ce qui compte
+     * pour tout ce qui se centre ou s'aligne a droite.
      */
     static int width(String text, int size) {
-        int total = 0;
+        return (int) Math.round(exactWidth(text, size));
+    }
+
+    /**
+     * La somme exacte des avances d'un texte, sans arrondi.
+     *
+     * <p>L'original avancait de la valeur EXACTE de chaque avance — {@code x += info.width * scale},
+     * en flottants — et ne l'arrondissait nulle part. Le port arrondissait chaque avance a un pixel
+     * entier, ce qui perdait jusqu'a un demi-pixel PAR LETTRE : une ligne de trente caracteres
+     * sortait une dizaine de pixels plus courte que celle du vrai mod, et le joueur l'a vu tout de
+     * suite — « le texte a l'air d'etre un peu plus etire vers la droite, avec des lettres un peu
+     * plus larges ». Chaque caractere se pose donc a sa position exacte, arrondie au pixel le plus
+     * proche AU DESSIN.
+     */
+    static double exactWidth(String text, int size) {
+        double total = 0;
         for (int offset = 0; offset < text.length();) {
             int codePoint = text.codePointAt(offset);
             total += advance(codePoint, size);
@@ -190,31 +191,26 @@ public final class AcademyFonts {
     }
 
     /**
-     * L'avance d'un caractere : ce que la police en donne, ramene du cadratin source a la taille.
+     * L'avance d'un caractere, exacte : ce que la police en donne au cadratin de la gravure, ramene
+     * a la cellule demandee.
      *
-     * <p>Arrondie caractere par caractere, et non sur la somme : c'est l'avance qui est posee au
-     * dessin, donc c'est elle qu'il faut mesurer.
+     * <p>{@code charWidth} et non la largeur d'un texte d'un caractere : c'est la mesure que
+     * l'original lisait ({@code metrics.charWidth(ch)}), et les deux different d'un pixel sur les
+     * lettres qui depassent leur avance.
      */
-    private static int advance(int codePoint, int size) {
-        double source = metrics(SOURCE_FONT_SIZE)
-                .stringWidth(new String(Character.toChars(codePoint)));
-        return (int) Math.round(source * size / (double) SOURCE_FONT_SIZE);
-    }
-
-    /** La hauteur d'un caractere dessine : le cadratin, en pixels. */
-    private static int box(int size) {
-        return (int) Math.round(CELL_SIZE * size / (double) SOURCE_FONT_SIZE);
+    static double advance(int codePoint, int cell) {
+        double source = metrics(SOURCE_FONT_SIZE).charWidth(codePoint);
+        return source * cell / (double) CELL_SIZE;
     }
 
     /**
-     * La hauteur des CAPITALES, en pixels, pour une taille donnee.
+     * La hauteur des CAPITALES, en pixels, pour une cellule donnee.
      *
      * <p>C'est la mesure qui dit si le texte est lisible a cote de celui du jeu, et c'est elle qu'un
-     * test fige : elle vaut 6,1 px a la taille de l'interface, contre 7 pour la police de Minecraft.
-     * Exposee pour ce test, et parce que c'est la seule chose qu'un reglage de la taille fait varier
-     * qui se voie.
+     * test fige : elle vaut 5,5 px a la cellule de l'interface, contre 7 pour la police de
+     * Minecraft.
      */
-    static int capitalHeight(int size) {
+    static int capitalHeight(int cell) {
         java.awt.Font font = awtFont(SOURCE_FONT_SIZE);
         BufferedImage scratch = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = scratch.createGraphics();
@@ -222,11 +218,12 @@ public final class AcademyFonts {
         double source = font.createGlyphVector(graphics.getFontRenderContext(), "H")
                 .getVisualBounds().getHeight();
         graphics.dispose();
-        return (int) Math.round(source * size / (double) SOURCE_FONT_SIZE);
+        return (int) Math.round(source * cell / (double) CELL_SIZE);
     }
 
-    public static int lineHeight(int size) {
-        return size;
+    /** La hauteur d'une ligne pour une cellule donnee : c'est la cellule, comme chez l'original. */
+    public static int lineHeight(int cell) {
+        return cell;
     }
 
     /** La hauteur d'une ligne du texte de l'interface : c'est la taille, comme dans le jeu. */
@@ -298,8 +295,16 @@ public final class AcademyFonts {
         return drawText(graphics, text.getString(), x, y, color, shadow, size);
     }
 
+    /**
+     * La console de debogage (F4) : le meme texte que l'interface, et c'est mesure deux fois. Sur
+     * les deux captures du joueur, a la meme echelle d'interface, la meme ligne fait 298 pixels chez
+     * nous a la taille dix et 231 chez l'original 1.12.2, dont les barres rapides font exactement la
+     * meme taille (le rapport vaut 0,775) ; et la source de l'original le dit aussi, son
+     * {@code DebugConsole.Text(String)} construisant un {@code FontOption(10)}. Ce sont ses LIGNES
+     * qui sont serrees — dix pixels, la hauteur de sa cellule.
+     */
     public static int drawConsole(GuiGraphics graphics, String text, int x, int y, int color) {
-        return drawText(graphics, text, x, y, color, false, CONSOLE_SIZE);
+        return drawText(graphics, text, x, y, color, false, GUI_SIZE);
     }
 
     private static int drawText(GuiGraphics graphics, String text, int x, int y,
@@ -347,14 +352,17 @@ public final class AcademyFonts {
         float blue = tint[2];
         float alpha = tint[3];
 
-        int cursor = x;
-        int side = box(size);
+        int side = size;
         // La cellule est posee pour que la ligne de base tombe sur celle de la police du jeu, quelle
         // que soit la taille : c'est ce qui fait qu'un texte grossi grandit sur place au lieu de
-        // descendre dans son panneau.
+        // descendre dans son panneau. Le decalage se lit dans la gravure, donc il suit la cellule.
         int top = y + BASELINE - (int) Math.round(baselineInCell() * size
-                / (double) SOURCE_FONT_SIZE);
+                / (double) CELL_SIZE);
 
+        // Le curseur est EXACT et c'est le dessin qui arrondit : la position d'un caractere ne perd
+        // rien, et une ligne se termine exactement a la largeur annoncee. Arrondir l'avance de
+        // chaque lettre mangeait un demi-pixel par lettre, et le joueur l'a vu.
+        double exactCursor = x;
         for (int offset = 0; offset < text.length();) {
             int codePoint = text.codePointAt(offset);
             Glyph glyph = glyph(codePoint, size);
@@ -363,9 +371,9 @@ public final class AcademyFonts {
                         ((color >> 8) & 0xFF) / 255f * green,
                         (color & 0xFF) / 255f * blue,
                         ((color >>> 24) & 0xFF) / 255f * alpha);
-                graphics.blit(atlasLocation, cursor, top, side, side,
+                graphics.blit(atlasLocation, (int) Math.round(exactCursor), top, side, side,
                         glyph.x(), glyph.y(), CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
-                cursor += glyph.advance();
+                exactCursor += glyph.advance();
             }
             offset += Character.charCount(codePoint);
         }
@@ -388,8 +396,8 @@ public final class AcademyFonts {
         java.awt.Font font = awtFont(SOURCE_FONT_SIZE);
         java.awt.FontMetrics metrics = metrics(SOURCE_FONT_SIZE);
         String text = new String(Character.toChars(codePoint));
-        int advance = advance(codePoint, size);
-        if (advance == 0) {
+        double advance = advance(codePoint, size);
+        if (advance <= 0) {
             Glyph blank = new Glyph(0, 0, 0, 0);
             GLYPHS.put(key, blank);
             return blank;

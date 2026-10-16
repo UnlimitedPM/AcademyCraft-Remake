@@ -245,12 +245,10 @@ public abstract class CGuiScreen extends Screen {
 
         // La taille vient du widget, comme chez l'original : voir CGuiView, dont ce dessin est la
         // copie d'origine (ce moteur-la attend sa fusion).
-        int size = cn.academy.client.gui.AcademyFonts
-            .sizeForCell(box.fontSize * widget.absScale);
-        int cell = cn.academy.client.gui.AcademyFonts.cellHeight(size);
+        int cell = cn.academy.client.gui.AcademyFonts.cell(box.fontSize * widget.absScale);
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
-        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content, size);
+        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content, cell);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
             case "RIGHT" -> x + w - textWidth;
@@ -263,7 +261,7 @@ public abstract class CGuiScreen extends Screen {
         };
 
         cn.academy.client.gui.AcademyFonts.draw(graphics, font, content, textX, textY, colour,
-            false, size);
+            false, cell);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {

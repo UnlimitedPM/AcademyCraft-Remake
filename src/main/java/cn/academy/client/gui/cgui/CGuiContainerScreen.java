@@ -273,7 +273,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         widget.transform.alignWidth = "CENTER";
         widget.transform.width = Math.max(50,
             cn.academy.client.gui.AcademyFonts.width(font, text,
-                cn.academy.client.gui.AcademyFonts.sizeForCell(BUTTON_FONT)) + 5);
+                cn.academy.client.gui.AcademyFonts.cell(BUTTON_FONT)) + 5);
         widget.transform.height = 8;
 
         widget.text = new CWidget.TextBox();
