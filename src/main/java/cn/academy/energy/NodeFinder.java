@@ -196,9 +196,9 @@ public final class NodeFinder {
     /**
      * Les reseaux qu'un noeud peut rejoindre, du plus proche au plus loin.
      *
-     * <p>C'est le {@code hFindNetworks} de l'original : la recherche dans vingt blocs, filtree sur la
-     * <b>portee du noeud</b>, et le reseau deja rejoint retire de la liste — l'ecran le montre a part,
-     * dans son cadre « Connected ». Le nom d'un reseau est son SSID, et il compte comme « chiffre »
+     * <p>C'est le {@code hFindNetworks} de l'original : la recherche dans vingt blocs, filtree par
+     * {@link #canJoin} — donc sur la <b>portee du noeud</b> et sur celle du Matrix —, et le reseau deja
+     * rejoint retire de la liste. Le nom d'un reseau est son SSID, et il compte comme « chiffre »
      * quand son Matrix demande un mot de passe.
      *
      * <p>Un Matrix sans SSID n'est pas un reseau : il n'apparait donc pas (chez l'original non plus,
@@ -215,14 +215,32 @@ public final class NodeFinder {
                 MatrixBlockEntity.class)) {
             BlockPos pos = matrix.getBlockPos();
             if (pos.equals(linked)) continue;
-            if (!matrix.isInitialized()) continue;
-            if (pos.distSqr(nodePos) > range * range) continue;
+            if (!canJoin(nodePos, matrix, range)) continue;
 
             found.add(new Candidate(pos, matrix.getSsid(), !matrix.getPassword().isEmpty(),
                     data.nodeCount(pos) < matrix.getCapacity()));
         }
         found.sort(Comparator.comparingDouble(candidate -> candidate.pos().distSqr(nodePos)));
         return found;
+    }
+
+    /**
+     * Vrai si ce noeud peut rejoindre ce Matrix : un reseau doit exister, et les deux doivent
+     * s'atteindre.
+     *
+     * <p>C'est la regle des deux cotes de l'original — sa boite de recherche est la portee du NOEUD,
+     * puis le reseau verifie lui-meme que le noeud est dans SA portee — et c'est la seule definition,
+     * parce qu'elle sert aux deux chemins : l'onglet sans fil liste ce qu'elle accepte, et le
+     * raccordement automatique du noeud ne prend qu'elle. Separes, un noeud se liait a un reseau qu'il
+     * n'aurait jamais du voir : cherche dans la portee maximale theorique d'un Matrix, il se raccordait
+     * a un Matrix SANS reseau, des le premier tick. L'onglet cache ensuite le reseau deja rejoint —
+     * donc l'ecran paraissait ne rien trouver, alors que le noeud etait raccorde sans qu'on le lui ait
+     * demande.
+     */
+    public static boolean canJoin(BlockPos nodePos, MatrixBlockEntity matrix, double nodeRange) {
+        if (!matrix.isInitialized()) return false;
+        if (!matrix.canReach(nodePos)) return false;
+        return matrix.getBlockPos().distSqr(nodePos) <= nodeRange * nodeRange;
     }
 
     /**

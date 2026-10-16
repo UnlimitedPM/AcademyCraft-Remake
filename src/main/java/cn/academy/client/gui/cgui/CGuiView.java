@@ -10,8 +10,10 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -67,6 +69,18 @@ public final class CGuiView {
     private final CWidget root;
     private final Map<CWidget, Runnable> clicks = new IdentityHashMap<>();
     private final Map<CWidget, Consumer<String>> confirms = new IdentityHashMap<>();
+
+    /**
+     * Les champs ou le joueur a pose le clavier, et dont la saisie n'a pas encore ete validee.
+     *
+     * <p>Deux regles tiennent ensemble. Un champ ne se vide plus en prenant le clavier : l'original ne
+     * le fait pas (seule sa touche Suppr vide), et cliquer d'un champ a l'autre effacait donc le
+     * premier — « si je commence a ecrire dans le SSID puis que je clique sur Password, il supprime ce
+     * que j'avais ecrit ». Et un champ ou l'on vient d'ecrire ne se relit plus a chaque image : sans
+     * cela la machine reecrit sa valeur par-dessus la saisie des que le clavier passe a l'autre champ,
+     * ce qui l'efface par un second chemin, invisible celui-la.
+     */
+    private final Set<CWidget> edited = Collections.newSetFromMap(new IdentityHashMap<>());
 
     private CWidget focused;
 
@@ -160,11 +174,22 @@ public final class CGuiView {
         clicks.put(widget, action);
     }
 
-    /** Le champ qui prend le clavier, ou rien pour le rendre. */
+    /**
+     * Le champ qui prend le clavier, ou rien pour le rendre.
+     *
+     * <p>Le contenu n'est efface ni chez le champ qu'on quitte, ni chez celui qu'on prend : c'est le
+     * comportement de l'original, ou seul le clic pose le clavier, ou la touche Suppr vide a la
+     * demande, et ou le champ se remplit donc comme un formulaire — deux champs d'un meme formulaire
+     * (un nom de reseau et son mot de passe) gardent chacun sa saisie.
+     */
     public void focus(CWidget box) {
-        if (focused != null && focused.text != null) focused.text.content = "";
         focused = box;
-        if (box != null && box.text != null) box.text.content = "";
+        if (box != null) edited.add(box);
+    }
+
+    /** Vrai si le joueur a pose le clavier sur ce champ sans encore le valider. */
+    public boolean isEdited(CWidget box) {
+        return box != null && edited.contains(box);
     }
 
     /** Ce que ce widget fait quand on valide son contenu : l'{@code ConfirmInputEvent} de l'original. */
@@ -182,11 +207,11 @@ public final class CGuiView {
         Consumer<String> action = confirms.get(box);
         if (action != null) action.accept(box.text == null ? "" : box.text.content);
 
-        // Et il rend le clavier : sans cela, ce qui se tape ensuite s'ajouterait a la valeur
-        // qu'on vient d'envoyer. Le champ se vide en perdant le focus, et la machine le reprend
-        // a son compte a l'image suivante : c'est ainsi qu'on voit arriver la valeur acceptee
-        // par le serveur — nettoyee de ses espaces, ou refusee, auquel cas elle revient telle
-        // quelle.
+        // Et il rend le clavier : sans cela, ce qui se tape ensuite s'ajouterait a la valeur qu'on
+        // vient d'envoyer. Le champ cesse aussi d'etre « en cours d'ecriture », donc l'ecran le relit
+        // a l'image suivante et c'est la reponse du serveur qu'on voit : la valeur nettoyee, ou celle
+        // d'avant si elle a ete refusee.
+        edited.remove(box);
         focus(null);
     }
 
@@ -778,6 +803,14 @@ public final class CGuiView {
                 && !focused.text.content.isEmpty()) {
             focused.text.content = focused.text.content.substring(0,
                     focused.text.content.length() - 1);
+            return true;
+        }
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_DELETE) {
+            // La touche Suppr vide le champ entierement : c'est le seul geste de l'original qui
+            // efface un champ, et c'est celui dont on a besoin pour remplacer une valeur au lieu de
+            // l'effacer lettre par lettre.
+            focused.text.content = "";
+            focused.text.color(editRed, editGreen, editBlue);
             return true;
         }
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER

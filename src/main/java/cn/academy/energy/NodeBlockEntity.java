@@ -408,41 +408,44 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         BlockPos matrixPos = data.matrixOf(pos);
         if (matrixPos != null) {
             MatrixBlockEntity matrix = matrixAt(level, matrixPos);
-            if (matrix != null && matrix.canReach(pos)) {
+            if (matrix != null && NodeFinder.canJoin(pos, matrix, getRange())) {
                 setConnected(true);
                 return;
             }
-            // Le Matrix a ete casse, ou son coeur a ete retire : le lien ne
-            // veut plus rien dire.
+            // Le Matrix a ete casse, son coeur retire, son reseau efface, ou il est hors de la portee
+            // du noeud : le lien ne veut plus rien dire. Le detacher ici est ce qui repare les liens
+            // noues par l'ancienne regle (la portee maximale theorique d'un Matrix), qui liaient un
+            // noeud a un Matrix qu'il ne voyait meme pas.
             data.unlink(pos);
         }
 
         setConnected(false);
 
-        MatrixBlockEntity found = findMatrix(level, pos);
+        MatrixBlockEntity found = findMatrix(server, pos);
         if (found != null && data.link(found.getBlockPos(), pos)) {
             setConnected(true);
         }
     }
 
     /**
-     * Cherche le Matrix actif le plus proche dans lequel ce noeud peut entrer.
+     * Cherche le Matrix le plus proche que ce noeud peut rejoindre.
      *
-     * Le rayon de recherche est la portee maximale theorique d'un Matrix, car
-     * sa portee reelle depend du coeur insere, qu'on ne connait pas avant de
-     * l'avoir trouve. Le parcours se fait par chunk ("block entities du chunk") et
-     * non bloc par bloc : dans un rayon de 42 blocs cela fait au pire 36 chunks
-     * au lieu de 700 000 positions, et seuls les chunks deja charges sont lus.
+     * <p>La regle est celle de l'onglet sans fil ({@link NodeFinder#canJoin}) : reseau ne, Matrix a
+     * portee, noeud a portee. La boite de recherche est donc la PORTEE DU NOEUD, et non la portee
+     * maximale theorique d'un Matrix : un noeud basique ne voit pas plus loin que neuf blocs, et
+     * l'ancien rayon liait des noeuds a des Matrix qu'ils n'auraient jamais du voir.
+     *
+     * <p>Le parcours se fait par chunk (« block entities du chunk ») et non bloc par bloc : dans un
+     * rayon de neuf blocs cela fait au pire quatre chunks au lieu de trois mille positions, et seuls
+     * les chunks deja charges sont lus.
      *
      * @return le Matrix le plus proche compatible, ou {@code null}
      */
     @Nullable
-    private MatrixBlockEntity findMatrix(Level level, BlockPos pos) {
-        // Le rayon de recherche est la portee maximale theorique d'un Matrix, car
-        // sa portee reelle depend du coeur insere, qu'on ne connait pas avant de
-        // l'avoir trouve.
-        return BlockEntityScan.nearest(level, pos, MatrixBlockEntity.MAX_RANGE, MatrixBlockEntity.class,
-                matrix -> matrix.isWorking() && matrix.canReach(pos));
+    private MatrixBlockEntity findMatrix(ServerLevel level, BlockPos pos) {
+        double range = getRange();
+        return BlockEntityScan.nearest(level, pos, range, MatrixBlockEntity.class,
+                matrix -> NodeFinder.canJoin(pos, matrix, range));
     }
 
     @Nullable

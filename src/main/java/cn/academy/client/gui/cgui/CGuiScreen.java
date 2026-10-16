@@ -103,11 +103,15 @@ public abstract class CGuiScreen extends Screen {
         clicks.put(widget, action);
     }
 
-    /** Le champ qui prend le clavier, ou rien pour le rendre. */
+    /**
+     * Le champ qui prend le clavier, ou rien pour le rendre.
+     *
+     * <p>Le contenu n'est efface ni chez le champ qu'on quitte, ni chez celui qu'on prend : l'original
+     * ne vide un champ que par sa touche Suppr, et cliquer d'un champ a l'autre doit garder les deux
+     * saisies. L'autre moteur ({@link CGuiView}) suit la meme regle.
+     */
     protected void focus(CWidget box) {
-        if (focused != null && focused.text != null) focused.text.content = "";
         focused = box;
-        if (box != null && box.text != null) box.text.content = "";
     }
 
     protected CWidget focused() {

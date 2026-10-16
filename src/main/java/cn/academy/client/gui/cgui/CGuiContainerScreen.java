@@ -269,6 +269,18 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     }
 
     /**
+     * Vrai si ce champ porte une saisie que le joueur n'a pas encore validee.
+     *
+     * <p>C'est la meme idee que {@link #isFocused}, mais elle survit au clic qui la quitte : le champ
+     * ou l'on vient d'ecrire garde son texte jusqu'a ce qu'on le valide par Entree, et la relecture de
+     * chaque image ne doit pas repasser par-dessus (elle l'effacerait — c'est le deuxieme chemin par
+     * lequel une saisie disparaissait en passant a l'autre champ).</p>
+     */
+    protected boolean isEdited(CWidget widget) {
+        return view != null && view.isEdited(widget);
+    }
+
+    /**
      * Un bouton : du texte au milieu du panneau, qui s'allume sous le curseur et fait ce qu'on lui dit.
      *
      * <p>C'est le {@code button} de l'original, et il n'a <b>pas de fond</b> : sa largeur est celle de

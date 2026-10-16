@@ -140,9 +140,12 @@ public class MatrixScreen extends CGuiContainerScreen<MatrixMenu> {
         }
     }
 
-    /** Reecrit la valeur d'un champ, sauf s'il a le clavier — on ne corrige pas ce qu'on tape. */
+    /**
+     * Reecrit la valeur d'un champ, sauf s'il a le clavier ou s'il porte une saisie en cours : on ne
+     * corrige pas ce qu'on tape, et on ne l'efface pas non plus quand le clavier passe a l'autre champ.
+     */
     private void refresh(CWidget field, String value) {
-        if (field == null || field.text == null || isFocused(field)) return;
+        if (field == null || field.text == null || isFocused(field) || isEdited(field)) return;
         field.text.content = value;
     }
 }
