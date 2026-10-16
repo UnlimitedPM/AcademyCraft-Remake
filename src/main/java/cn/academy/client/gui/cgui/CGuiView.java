@@ -1,5 +1,6 @@
 package cn.academy.client.gui.cgui;
 
+import cn.academy.client.gui.AcademyFonts;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
@@ -545,7 +546,8 @@ public final class CGuiView {
         }
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
-        int textWidth = screen.getMinecraft().font.width(content);
+        var font = screen.getMinecraft().font;
+        int textWidth = AcademyFonts.width(font, content);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
             case "RIGHT" -> x + w - textWidth;
@@ -557,7 +559,7 @@ public final class CGuiView {
             default -> y;
         };
 
-        graphics.drawString(screen.getMinecraft().font, content, textX, textY, colour, false);
+        AcademyFonts.draw(graphics, font, content, textX, textY, colour, false);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {

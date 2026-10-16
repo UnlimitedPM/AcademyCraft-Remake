@@ -64,11 +64,13 @@ public class TerminalScreen extends Screen {
         graphics.fill(leftPos - 1, topPos - 1, leftPos + PANEL_WIDTH + 1, topPos + PANEL_HEIGHT + 1, PANEL_EDGE);
         graphics.fill(leftPos, topPos, leftPos + PANEL_WIDTH, topPos + PANEL_HEIGHT, PANEL);
 
-        graphics.drawString(font, title, leftPos + 8, topPos + 7, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            leftPos + 8, topPos + 7, TEXT, false);
 
         List<App> apps = installedWidgets();
         if (apps.isEmpty()) {
-            graphics.drawString(font, Component.translatable("ac.terminal.no_apps"),
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable("ac.terminal.no_apps"),
                     leftPos + 8, topPos + 24, DIM, false);
         }
 

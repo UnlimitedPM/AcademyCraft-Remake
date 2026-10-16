@@ -117,7 +117,7 @@ public final class MediaHud {
         pose.pushPose();
         pose.translate(x, Math.round(bottom - font.lineHeight), 0);
         pose.scale(scale, scale, 1.0f);
-        graphics.drawString(font, text, 0, 0, TEXT_COLOR, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, text, 0, 0, TEXT_COLOR, false);
         pose.popPose();
     }
 }

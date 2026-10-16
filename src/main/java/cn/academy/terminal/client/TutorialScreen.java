@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -62,7 +61,7 @@ public class TutorialScreen extends Screen {
     private int contentHeight;
 
     /** Le contenu courant, une fois mis en page. */
-    private List<FormattedCharSequence> wrapped = List.of();
+    private List<String> wrapped = List.of();
 
     public TutorialScreen() {
         super(Component.translatable("ac.app.tutorial.name"));
@@ -128,11 +127,12 @@ public class TutorialScreen extends Screen {
     /** Met le texte courant en page, et ramene le defilement dans ses bornes. */
     private void layout() {
         TutorialText text = text();
-        wrapped = font.split(Component.literal(text.content()), viewWidth());
+        wrapped = cn.academy.client.gui.AcademyFonts.split(font, text.content(), viewWidth());
+        int lineHeight = cn.academy.client.gui.AcademyFonts.lineHeight();
         int brief = text.brief().isEmpty() ? 0
-                : font.split(Component.literal(text.brief()), viewWidth()).size() * font.lineHeight
-                        + font.lineHeight;
-        contentHeight = font.lineHeight + 2 + brief + wrapped.size() * font.lineHeight;
+            : cn.academy.client.gui.AcademyFonts.split(font, text.brief(), viewWidth()).size()
+                * lineHeight + lineHeight;
+        contentHeight = lineHeight + 2 + brief + wrapped.size() * lineHeight;
         scroll = Math.max(0, Math.min(scroll, Math.max(0, contentHeight - viewHeight())));
     }
 
@@ -144,7 +144,8 @@ public class TutorialScreen extends Screen {
                 PANEL_EDGE);
         graphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + panelHeight, PANEL);
         graphics.fill(listRight(), viewTop(), listRight() + 1, viewBottom(), PANEL_EDGE);
-        graphics.drawString(font, title, leftPos + 8, topPos + 5, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            leftPos + 8, topPos + 5, TEXT, false);
 
         drawList(graphics, mouseX, mouseY);
         drawText(graphics);
@@ -165,15 +166,16 @@ public class TutorialScreen extends Screen {
             }
 
             int colour = opened.get(i) ? (hovered || i == selected ? TEXT : DIM) : LOCKED;
-            graphics.drawString(font, ellipsize(texts.get(i).title()), leftPos + 6, y + 2, colour,
-                    false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    ellipsize(texts.get(i).title()), leftPos + 6, y + 2, colour, false);
         }
     }
 
     /** Un titre trop long est coupe : la colonne ne doit pas deborder sur le texte. */
     private String ellipsize(String value) {
         String out = value;
-        while (font.width(out) > LIST_WIDTH - 12 && out.length() > 4) {
+        while (cn.academy.client.gui.AcademyFonts.width(font, out) > LIST_WIDTH - 12
+            && out.length() > 4) {
             out = out.substring(0, out.length() - 2);
         }
         return out.equals(value) ? out : out + ".";
@@ -185,27 +187,29 @@ public class TutorialScreen extends Screen {
         int y = viewTop() - scroll;
 
         if (text.isEmpty()) {
-            graphics.drawString(font, Component.translatable("ac.tutorial.missing"), x, viewTop(),
-                    DIM, false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable("ac.tutorial.missing"), x, viewTop(), DIM, false);
             return;
         }
 
-        graphics.drawString(font, text.title(), x, y, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, text.title(), x, y, TEXT, false);
         y += font.lineHeight + 2;
 
         if (!text.brief().isEmpty()) {
-            for (FormattedCharSequence line : font.split(Component.literal(text.brief()), viewWidth())) {
-                graphics.drawString(font, line, x, y, DIM, false);
-                y += font.lineHeight;
+                for (String line : cn.academy.client.gui.AcademyFonts.split(
+                        font, text.brief(), viewWidth())) {
+                    cn.academy.client.gui.AcademyFonts.draw(graphics, font, line, x, y, DIM, false);
+                    y += cn.academy.client.gui.AcademyFonts.lineHeight();
             }
-            y += font.lineHeight;
+                y += cn.academy.client.gui.AcademyFonts.lineHeight();
         }
 
-        for (FormattedCharSequence line : wrapped) {
-            if (y + font.lineHeight >= viewTop() && y <= viewBottom()) {
-                graphics.drawString(font, line, x, y, TEXT, false);
+            for (String line : wrapped) {
+                int lineHeight = cn.academy.client.gui.AcademyFonts.lineHeight();
+                if (y + lineHeight >= viewTop() && y <= viewBottom()) {
+                    cn.academy.client.gui.AcademyFonts.draw(graphics, font, line, x, y, TEXT, false);
             }
-            y += font.lineHeight;
+                y += lineHeight;
         }
     }
 

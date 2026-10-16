@@ -353,7 +353,7 @@ public class CustomizeUiScreen extends Screen {
         pose.pushPose();
         pose.translate(left, top, 0);
         pose.scale(inner, inner, 1.0f);
-        graphics.drawString(font, text, 0, 0, color, false);
+        AcademyFonts.draw(graphics, font, text, 0, 0, color, false);
         pose.popPose();
     }
 

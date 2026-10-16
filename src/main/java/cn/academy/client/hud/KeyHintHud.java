@@ -166,7 +166,7 @@ public final class KeyHintHud {
     private static void drawLabel(GuiGraphics graphics, String text, int rowY) {
         var font = Minecraft.getInstance().font;
         float scale = LABEL_SIZE / FONT_SIZE;
-        int width = font.width(text);
+        int width = cn.academy.client.gui.AcademyFonts.width(font, text);
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
@@ -175,7 +175,8 @@ public final class KeyHintHud {
                 rowY + KeyHintVisuals.CAP_Y + KeyHintVisuals.CAP_SIZE / 2.0f - FONT_SIZE * scale / 2.0f,
                 0);
         pose.scale(scale, scale, 1.0f);
-        graphics.drawString(font, text, 0, 0, KeyHintVisuals.LABEL_COLOR, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, text, 0, 0,
+            KeyHintVisuals.LABEL_COLOR, false);
         pose.popPose();
     }
 

@@ -68,9 +68,11 @@ public class MediaPlayerScreen extends Screen {
         graphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + panelHeight, PANEL);
         graphics.renderOutline(leftPos, topPos, panelWidth, panelHeight, PANEL_EDGE);
 
-        graphics.drawString(font, title, leftPos + 8, topPos + 6, TEXT, false);
-        graphics.drawString(font, Component.translatable("ac.media.player.hint"),
-                leftPos + 8, topPos + HEADER - 8, DIM, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            leftPos + 8, topPos + 6, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+            Component.translatable("ac.media.player.hint"),
+            leftPos + 8, topPos + HEADER - 8, DIM, false);
 
         hovered = -1;
         int y = topPos + HEADER + 8;
@@ -86,16 +88,17 @@ public class MediaPlayerScreen extends Screen {
             }
 
             int color = !owned ? LOCKED : playing ? PLAYING : TEXT;
-            graphics.drawString(font, Component.translatable(media.titleKey()),
-                    leftPos + 12, y + 6, color, false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable(media.titleKey()), leftPos + 12, y + 6, color, false);
 
             Component state = !owned
                     ? Component.translatable("ac.media.player.locked")
                     : playing
                             ? Component.translatable("ac.media.player.playing")
                             : Component.translatable("ac.media.player.owned");
-            graphics.drawString(font, state,
-                    leftPos + panelWidth - 12 - font.width(state), y + 6, color, false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font, state,
+                    leftPos + panelWidth - 12 - cn.academy.client.gui.AcademyFonts.width(font, state),
+                    y + 6, color, false);
 
             y += ROW;
         }

@@ -135,7 +135,8 @@ public class SettingsScreen extends Screen {
         renderBackground(graphics);
         graphics.fill(panelLeft, panelTop, panelLeft + panelWidth, panelTop + panelHeight, PANEL);
         graphics.renderOutline(panelLeft, panelTop, panelWidth, panelHeight, EDGE);
-        graphics.drawString(font, title, panelLeft + 8, panelTop + 6, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            panelLeft + 8, panelTop + 6, TEXT, false);
 
         int y = panelTop + 6 + ROW + ROW - scroll;
         String last = null;
@@ -143,7 +144,8 @@ public class SettingsScreen extends Screen {
             Row row = rows.get(i);
             if (!row.category().equals(last)) {
                 if (isVisible(y)) {
-                    graphics.drawString(font, Component.translatable("ac.settings.cat." + row.category()),
+                        cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                            Component.translatable("ac.settings.cat." + row.category()),
                             panelLeft + 8, y + 3, CATEGORY, false);
                 }
                 y += ROW;
@@ -155,8 +157,8 @@ public class SettingsScreen extends Screen {
                 if (over && !isCapturing(i)) {
                     graphics.fill(panelLeft + 4, y, panelLeft + panelWidth - 4, y + ROW, HIGHLIGHT);
                 }
-                graphics.drawString(font, Component.translatable(row.labelKey()),
-                        panelLeft + 12, y + 3, TEXT, false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable(row.labelKey()), panelLeft + 12, y + 3, TEXT, false);
                 drawValue(graphics, row, i, y);
             }
             y += ROW;
@@ -188,10 +190,10 @@ public class SettingsScreen extends Screen {
         };
 
         int right = panelLeft + panelWidth - 12;
-        int x = right - font.width(text);
+        int x = right - cn.academy.client.gui.AcademyFonts.width(font, text);
         // La ou on clique : la partie droite de la ligne, pas la ligne entiere.
         graphics.fill(x - 3, y, right + 3, y + ROW, OK_BUTTON);
-        graphics.drawString(font, text, x, y + 3, VALUE, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, text, x, y + 3, VALUE, false);
     }
 
     private void drawScrollbar(GuiGraphics graphics) {
@@ -230,7 +232,7 @@ public class SettingsScreen extends Screen {
                     case ACTION -> Component.translatable("ac.settings.ok");
                 };
                 int right = panelLeft + panelWidth - 12;
-                if (mouseX >= right - font.width(text) - 3) {
+                if (mouseX >= right - cn.academy.client.gui.AcademyFonts.width(font, text) - 3) {
                     click(row, i);
                     return true;
                 }

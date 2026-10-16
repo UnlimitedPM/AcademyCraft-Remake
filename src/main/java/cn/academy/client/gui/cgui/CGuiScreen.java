@@ -244,7 +244,7 @@ public abstract class CGuiScreen extends Screen {
         if (box.doesEcho && !empty) content = String.valueOf(box.echoChar).repeat(box.content.length());
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
-        int textWidth = font.width(content);
+        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
             case "RIGHT" -> x + w - textWidth;
@@ -256,7 +256,7 @@ public abstract class CGuiScreen extends Screen {
             default -> y;
         };
 
-        graphics.drawString(font, content, textX, textY, colour, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, content, textX, textY, colour, false);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {

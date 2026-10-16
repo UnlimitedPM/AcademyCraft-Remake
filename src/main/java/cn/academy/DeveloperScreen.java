@@ -843,7 +843,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         for (String word : content.split(" ")) {
             String candidate = current.length() == 0 ? word : current + " " + word;
-            if (current.length() > 0 && font.width(candidate) > maxWidth) {
+                if (current.length() > 0
+                    && cn.academy.client.gui.AcademyFonts.width(font, candidate) > maxWidth) {
                 lines.add(current.toString());
                 current = new StringBuilder(word);
             } else {

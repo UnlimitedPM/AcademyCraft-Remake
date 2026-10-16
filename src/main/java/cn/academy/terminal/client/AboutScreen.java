@@ -100,10 +100,12 @@ public class AboutScreen extends Screen {
 
         graphics.fill(leftPos - 1, topPos - 1, leftPos + panelWidth + 1, topPos + panelHeight + 1, PANEL_EDGE);
         graphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + panelHeight, PANEL);
-        graphics.drawString(font, title, leftPos + 8, topPos + 7, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            leftPos + 8, topPos + 7, TEXT, false);
 
         if (document.isEmpty()) {
-            graphics.drawString(font, Component.translatable("ac.about.empty"),
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable("ac.about.empty"),
                     leftPos + 8, topPos + HEADER, DIM, false);
             super.render(graphics, mouseX, mouseY, partialTick);
             return;
@@ -137,14 +139,15 @@ public class AboutScreen extends Screen {
         float scaledCentre = centre / line.scale();
         float scaledY = y / line.scale();
 
-        int textWidth = font.width(line.text());
+        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, line.text());
         float x = switch (line.align()) {
             case CENTER -> scaledCentre - textWidth / 2.0f;
             case RIGHT -> scaledCentre - ROLE_GAP - textWidth;
             case LEFT -> scaledCentre + ROLE_GAP;
         };
 
-        graphics.drawString(font, line.text(), Math.round(x), Math.round(scaledY), TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, line.text(),
+            Math.round(x), Math.round(scaledY), TEXT, false);
         graphics.pose().popPose();
     }
 
@@ -157,7 +160,8 @@ public class AboutScreen extends Screen {
         for (List<String> row : rows) {
             if (y + LINE >= viewTop() && y <= bottom) {
                 for (int i = 0; i < row.size(); i++) {
-                    graphics.drawString(font, row.get(i), first + i * DONATOR_COLUMN, y, DIM, false);
+                        cn.academy.client.gui.AcademyFonts.draw(graphics, font, row.get(i),
+                            first + i * DONATOR_COLUMN, y, DIM, false);
                 }
             }
             y += LINE;

@@ -172,6 +172,10 @@ dependencies {
 // When "copyIdeResources" is enabled, this will also run before the game launches in IDE environments.
 // See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
 tasks.named('processResources', ProcessResources).configure {
+    exclude 'assets/academy/font/ac_gui.ttf'
+    exclude 'assets/academy/font/ac_gui_*.json'
+    exclude 'assets/academy/textures/font/ac_gui_*.png'
+
     var replaceProperties = [
             minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
             forge_version: forge_version, forge_version_range: forge_version_range,

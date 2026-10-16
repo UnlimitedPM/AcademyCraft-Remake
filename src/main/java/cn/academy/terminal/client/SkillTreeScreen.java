@@ -69,19 +69,23 @@ public class SkillTreeScreen extends Screen {
         graphics.fill(leftPos - 1, topPos - 1, leftPos + PANEL_WIDTH + 1, topPos + panelHeight + 1, PANEL_EDGE);
         graphics.fill(leftPos, topPos, leftPos + PANEL_WIDTH, topPos + panelHeight, PANEL);
 
-        graphics.drawString(font, title, leftPos + 8, topPos + 7, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            leftPos + 8, topPos + 7, TEXT, false);
 
         List<Category> categories = categories();
         if (categories.isEmpty()) {
-            graphics.drawString(font, Component.literal("?"), leftPos + 8, topPos + HEADER, DIM, false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font, Component.literal("?"),
+                    leftPos + 8, topPos + HEADER, DIM, false);
         }
 
         int y = topPos + HEADER;
         for (Category category : categories) {
             int level = ClientAbilityData.get().getCategoryLevel(category);
-            graphics.drawString(font, Component.translatable(category.getDisplayKey()),
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable(category.getDisplayKey()),
                     leftPos + 10, y + 4, level > 0 ? TEXT : DIM, false);
-            graphics.drawString(font, Component.literal(level + " / " + DevelopActionLevel.MAX_LEVEL),
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.literal(level + " / " + DevelopActionLevel.MAX_LEVEL),
                     leftPos + PANEL_WIDTH - 44, y + 4, level > 0 ? LEARNED : DIM, false);
             y += ROW_HEIGHT;
         }
@@ -105,8 +109,9 @@ public class SkillTreeScreen extends Screen {
         int barX = leftPos + 10;
         int barWidth = PANEL_WIDTH - 20;
 
-        graphics.drawString(font, Component.literal((long) current + " / " + (long) max + " CP"),
-                barX, barY - 10, TEXT, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+            Component.literal((long) current + " / " + (long) max + " CP"),
+            barX, barY - 10, TEXT, false);
         graphics.fill(barX, barY, barX + barWidth, barY + 6, BAR_BG);
         int filled = (int) (barWidth * Math.min(1f, current / max));
         graphics.fill(barX, barY, barX + filled, barY + 6, CP);

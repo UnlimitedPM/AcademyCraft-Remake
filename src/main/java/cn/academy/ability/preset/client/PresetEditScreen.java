@@ -122,7 +122,8 @@ public class PresetEditScreen extends Screen {
 
         PresetData data = ClientPresetData.get();
         // Le titre, en haut a gauche, comme l'original.
-        graphics.drawString(font, Component.literal("Preset Edit"), 8, 8, WHITE, true);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+            Component.literal("Preset Edit"), 8, 8, WHITE, true);
 
         for (int preset = 0; preset < PresetData.MAX_PRESETS; preset++) {
             drawPanel(graphics, data, preset, mouseX, mouseY);
@@ -139,8 +140,9 @@ public class PresetEditScreen extends Screen {
 
         // Le numero, au-dessus du panneau : cliquer dessus met ce prereglage en service.
         Component number = Component.literal("Preset #" + (preset + 1));
-        graphics.drawString(font, number, left + (PANEL_W - font.width(number)) / 2,
-                PANEL_TOP - 12, current ? WHITE : DIM, true);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, number,
+            left + (PANEL_W - cn.academy.client.gui.AcademyFonts.width(font, number)) / 2,
+            PANEL_TOP - 12, current ? WHITE : DIM, true);
 
         graphics.fill(left, PANEL_TOP, left + PANEL_W, PANEL_TOP + PANEL_H,
                 current ? PANEL_BACK_CURRENT : PANEL_BACK);
@@ -166,7 +168,8 @@ public class PresetEditScreen extends Screen {
             // suivant, ce qui marchait chez lui et donne ici un fouillis.
             int textLeft = x + SLOT + 2;
             graphics.enableScissor(textLeft, y, left + PANEL_W - 2, y + SLOT);
-            graphics.drawString(font, skill.getDisplayName(), textLeft, y + 5, WHITE, false);
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    skill.getDisplayName(), textLeft, y + 5, WHITE, false);
             graphics.disableScissor();
         }
     }
@@ -184,11 +187,13 @@ public class PresetEditScreen extends Screen {
         graphics.renderOutline(left, top, gridW, gridH, PANEL_EDGE_CURRENT);
 
         Component title = Component.translatable("academy.preset.select");
-        graphics.drawString(font, title, left + (gridW - font.width(title)) / 2, top + PICK_MARGIN,
-                WHITE, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
+            left + (gridW - cn.academy.client.gui.AcademyFonts.width(font, title)) / 2,
+            top + PICK_MARGIN, WHITE, false);
 
         if (learned.isEmpty()) {
-            graphics.drawString(font, Component.translatable("academy.preset.none"),
+                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
+                    Component.translatable("academy.preset.none"),
                     left + PICK_MARGIN, top + PICK_MARGIN + 14, DIM, false);
             return;
         }
@@ -266,8 +271,9 @@ public class PresetEditScreen extends Screen {
         // changement le ferait. C'est une commodite du port, l'original le faisait ailleurs.
         for (int preset = 0; preset < PresetData.MAX_PRESETS; preset++) {
             Component number = Component.literal("Preset #" + (preset + 1));
-            int labelLeft = panelLeft(preset) + (PANEL_W - font.width(number)) / 2;
-            if (isIn(mouseX, mouseY, labelLeft, PANEL_TOP - 12, font.width(number), 10)) {
+            int width = cn.academy.client.gui.AcademyFonts.width(font, number);
+            int labelLeft = panelLeft(preset) + (PANEL_W - width) / 2;
+            if (isIn(mouseX, mouseY, labelLeft, PANEL_TOP - 12, width, 10)) {
                 send(PresetActionPacket.switchTo(preset));
                 return true;
             }

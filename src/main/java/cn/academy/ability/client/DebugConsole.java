@@ -63,10 +63,15 @@ public final class DebugConsole {
                 ? DebugConsoleLines.skills(data, categories)
                 : DebugConsoleLines.info(data, highest(categories));
 
-        int lineHeight = Minecraft.getInstance().font.lineHeight;
+        int lineHeight = 10;
         int y = TOP;
         for (String line : lines) {
-            graphics.drawString(Minecraft.getInstance().font, line, LEFT, y, COLOR, true);
+            graphics.pose().pushPose();
+            graphics.pose().translate(LEFT + 0.5d, y + 0.5d, 0.0d);
+            cn.academy.client.gui.AcademyFonts.drawConsole(
+                    graphics, line, 0, 0, 0xFF333333);
+            graphics.pose().popPose();
+            cn.academy.client.gui.AcademyFonts.drawConsole(graphics, line, LEFT, y, COLOR);
             y += lineHeight;
         }
     }

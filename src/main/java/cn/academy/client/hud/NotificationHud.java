@@ -147,8 +147,8 @@ public final class NotificationHud {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1f, 1f, 1f, visible);
-        graphics.drawString(Minecraft.getInstance().font, text, 0, 0,
-                CustomizeUiLayout.NOTIFY_TEXT_COLOR, false);
+        cn.academy.client.gui.AcademyFonts.draw(graphics, Minecraft.getInstance().font,
+            text, 0, 0, CustomizeUiLayout.NOTIFY_TEXT_COLOR, false);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
         pose.popPose();
     }
