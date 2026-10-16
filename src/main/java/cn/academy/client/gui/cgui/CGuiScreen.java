@@ -157,7 +157,7 @@ public abstract class CGuiScreen extends Screen {
                     drawTexture(graphics, widget, widget.texture.texture, exactX, exactY, colour);
                 }
             }
-            if (widget.tint != null) {
+            if (widget.tint != null && widget.tint.enabled) {
                 int[] colour = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover
                         : widget.tint.idle;
                 if (colour[3] > 0) {
@@ -278,8 +278,12 @@ public abstract class CGuiScreen extends Screen {
     private void drawText(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
         CWidget.TextBox box = widget.text;
         boolean empty = box.content == null || box.content.isEmpty();
+        boolean editable = focused == widget && box.allowEdit;
         String content = empty && box.hint != null ? box.hint : box.content;
-        if (content == null || content.isEmpty()) return;
+
+        // Un champ vide qui a le clavier se dessine quand meme, pour son curseur : voir CGuiView.
+        if ((content == null || content.isEmpty()) && !editable) return;
+        if (content == null) content = "";
 
         // Un champ de mot de passe se dessine masque : le vrai texte ne sort jamais de l'ecran.
         if (box.doesEcho && !empty) content = String.valueOf(box.echoChar).repeat(box.content.length());
@@ -302,11 +306,13 @@ public abstract class CGuiScreen extends Screen {
         };
 
         // Pose par le haut de sa cellule, comme le `TextBox` de l'original : voir CGuiView.
-        cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, content, textX, textY, colour,
-            cell);
+        if (!content.isEmpty()) {
+            cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, content, textX, textY, colour,
+                    cell);
+        }
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
-        if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {
+        if (editable && (System.currentTimeMillis() / 500) % 2 == 0) {
             graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + cell, colour);
         }
     }
@@ -372,7 +378,8 @@ public abstract class CGuiScreen extends Screen {
                         focused.text.content.length() - 1);
                 return true;
             }
-            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
+                    || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
                 confirm(focused);
                 return true;
             }

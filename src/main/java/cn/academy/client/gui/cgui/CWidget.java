@@ -85,6 +85,17 @@ public class CWidget {
 
         /** Le fichier porte ce drapeau ; la teinte du port se pose toujours par-dessus. */
         public boolean affectTexture;
+
+        /**
+         * L'interrupteur du composant, comme chez l'original : un ecran peut eteindre sa teinte.
+         *
+         * <p>L'onglet « sans fil » s'en sert — une icone eteinte ne doit pas s'allumer sous la
+         * souris — et sans lui elle reprenait la couleur de sa teinte au lieu de la sienne : un
+         * noeud sans liaison se dessinait donc en blanc plein, alors que l'original le laisse au
+         * tiers de sa lumiere. Le joueur l'a dit : « le logo de connexion est blanc meme quand rien
+         * n'est branche alors qu'il doit etre grise ».
+         */
+        public boolean enabled = true;
     }
 
     /**
@@ -178,9 +189,10 @@ public class CWidget {
          *
          * <p>C'est l'{@code echoChar} de l'original, et l'onglet « sans fil » s'en sert pour son
          * mot de passe : la valeur envoyee reste la bonne, mais personne ne la lit par-dessus
-         * l'epaule du joueur.
+         * l'epaule du joueur. C'est une ETOILE, et c'est le defaut de LambdaLib2 — le port laissait
+         * le caractere nul, qui ne se dessine pas du tout : le joueur voyait des cases vides.
          */
-        public char echoChar;
+        public char echoChar = '*';
         public boolean doesEcho;
 
         /** Et l'indice grise qui s'affiche tant que le champ est vide. */
@@ -531,6 +543,7 @@ public class CWidget {
         out.idle = source.idle.clone();
         out.hover = source.hover.clone();
         out.affectTexture = source.affectTexture;
+        out.enabled = source.enabled;
         return out;
     }
 

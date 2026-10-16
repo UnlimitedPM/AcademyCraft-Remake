@@ -186,10 +186,22 @@ public final class CGuiWireless {
             boolean any = !this.linked.isEmpty();
             setText(connectedRow.child("text_name"), any ? this.linked : local("not_connected"));
 
+            // L'icone de la liaison : elle dit l'etat, et l'original la laisse a soixante pour cent
+            // quand rien n'est lie — sa TEINTE est meme eteinte, sans quoi elle reprendrait la
+            // couleur du survol et se dessinerait blanche. Le port changeait l'image sans toucher a
+            // l'opacite, et le joueur voyait un logo allume sur une machine eteinte.
+            int alpha = any ? 255 : 153;
+
             CWidget icon = connectedRow.child("icon_connect");
             if (icon != null && icon.texture != null) {
                 icon.texture.texture = ICONS + (any ? "icon_connected.png" : "icon_unconnected.png");
+                icon.texture.alpha = alpha;
+                if (icon.tint != null) icon.tint.enabled = any;
             }
+
+            // Le logo du coin, a la meme lumiere : c'est l'image qui dit ce qu'on cherche.
+            CWidget logo = connectedRow.child("icon_logo");
+            if (logo != null && logo.texture != null) logo.texture.alpha = alpha;
         }
 
         if (zone == null || template == null) return;

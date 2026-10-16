@@ -169,6 +169,7 @@ public final class CGuiDocument {
         if (idle != null) out.idle = idle;
         if (hover != null) out.hover = hover;
         out.affectTexture = flag(element, "affectTexture", false);
+        out.enabled = flag(element, "enabled", true);
         return out;
     }
 

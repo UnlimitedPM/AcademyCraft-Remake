@@ -262,7 +262,7 @@ public final class CGuiView {
             // retrouvaient donc sous un carre blanc de 178 d'opacite, et leurs fleches ne se voyaient
             // plus : le drapeau etait lu, et jamais ecoute.
             int[] tint = null;
-            if (widget.tint != null) {
+            if (widget.tint != null && widget.tint.enabled) {
                 tint = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover : widget.tint.idle;
             }
 
@@ -277,7 +277,7 @@ public final class CGuiView {
                     drawTexture(graphics, widget, widget.texture, exactX, exactY, colour);
                 }
             }
-            if (widget.tint != null && !widget.tint.affectTexture && tint[3] > 0) {
+            if (tint != null && !widget.tint.affectTexture && tint[3] > 0) {
                 fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
                         argb(tint[3], tint[0], tint[1], tint[2]));
             }
@@ -629,8 +629,16 @@ public final class CGuiView {
     private void drawText(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
         CWidget.TextBox box = widget.text;
         boolean empty = box.content == null || box.content.isEmpty();
+        boolean editable = focused == widget && box.allowEdit;
         String content = empty && box.hint != null ? box.hint : box.content;
-        if (content == null || content.isEmpty()) return;
+
+        // Un champ VIDE qui a le clavier se dessine quand meme : c'est son curseur qui dit qu'on
+        // peut ecrire. Le port sortait avant de le poser, donc celui du mot de passe ne s'allumait
+        // qu'a la premiere lettre — « quand on clique entre les [ ], on ne voit pas la barre bleue
+        // qui nous dit qu'on peut ecrire tant qu'on n'a pas deja commence a ecrire ». L'original,
+        // lui, posait son trait des que le champ avait le focus, contenu ou pas.
+        if ((content == null || content.isEmpty()) && !editable) return;
+        if (content == null) content = "";
 
         // Un champ de mot de passe se dessine masque : le vrai texte ne sort jamais de l'ecran.
         if (box.doesEcho && !empty) {
@@ -661,10 +669,12 @@ public final class CGuiView {
         // Pose par le haut de sa cellule, comme le `TextBox` de l'original :
         // `(height - fontSize) x heightAlign.factor`. Avec la ligne de base du jeu, tout le texte
         // des pages tombait un pixel trop bas, et le joueur l'a vu.
-        AcademyFonts.drawTop(graphics, font, content, textX, textY, colour, cell);
+        if (!content.isEmpty()) {
+            AcademyFonts.drawTop(graphics, font, content, textX, textY, colour, cell);
+        }
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
-        if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {
+        if (editable && (System.currentTimeMillis() / 500) % 2 == 0) {
             graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + cell, colour);
         }
     }
@@ -770,7 +780,8 @@ public final class CGuiView {
                     focused.text.content.length() - 1);
             return true;
         }
-        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER) {
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
+                || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
             confirm(focused);
             return true;
         }
