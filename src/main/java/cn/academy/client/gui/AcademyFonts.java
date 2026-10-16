@@ -75,7 +75,28 @@ public final class AcademyFonts {
      */
     private static final int SOURCE_FONT_SIZE = 24;
     private static final int ATLAS_SIZE = 2048;
-    private static final int CELL_SIZE = (int) (SOURCE_FONT_SIZE * 1.4f);
+
+    /**
+     * La boite du cadratin : la hauteur de ligne de la police au cadratin de la gravure.
+     *
+     * <p>C'est ELLE qui donne l'echelle : la cellule demandee (dix pixels pour l'interface) est la
+     * hauteur de cette boite ramenee a la taille voulue, et les avances et les capitales se lisent
+     * sur elle. La case du videau, elle, est un peu plus grande — voir {@link #GLYPH_PADDING}.
+     */
+    private static final int EM = (int) (SOURCE_FONT_SIZE * 1.4f);
+
+    /**
+     * La marge transparente laissee autour du glyphe DANS sa case, en unites de gravure.
+     *
+     * <p>Sans elle, le « y » de « Academy » — dont la queue descend jusqu'au bas de la boite —
+     * touche le bord de sa case, et la carte graphique, qui echantillonne une mipmap, moyenne ce
+     * bord avec la case VOISINE : on y voit alors baver du blanc sous la lettre. Le joueur l'a vu :
+     * « pour le y du academy par exemple on voit que le blanc deborde un peu ». Deux unites de marge
+     * suffisent, et elles mangent ce que le trait ajoute par-dessus la boite.
+     */
+    private static final int GLYPH_PADDING = 2;
+
+    private static final int CELL_SIZE = EM + 2 * GLYPH_PADDING;
     private static final int CELLS_PER_ROW = ATLAS_SIZE / CELL_SIZE;
     private static final int MAX_GLYPHS = CELLS_PER_ROW * CELLS_PER_ROW;
 
@@ -105,14 +126,22 @@ public final class AcademyFonts {
      *
      * <p>Le trait de la lettre est trace une seconde fois, en contour, ce qui l'epaissit de sa
      * largeur de chaque cote sans toucher a sa forme. Mesure de la densite au niveau de mipmap
-     * echantillonne : le gras seul vaut 55,4, ce reglage a 0,6 le porte a 67,2 et a 0,9 a 74,4.
+     * echantillonne : le gras seul vaut 55,4, et ce reglage a 0,3 doit le porter autour de 59.
      *
      * <p>IL SE COMPTE EN UNITES DE GRAVURE, donc il suit la taille de la gravure : la valeur juste
      * a quarante-quatre est celle d'ici multipliee par trente-deux sur vingt-quatre. Et il s'ajoute
      * au {@link #FONT_STYLE gras} : les deux se reglent ensemble, l'un pour la FORME des lettres,
      * l'autre pour leur epaisseur.
+     *
+     * <p>IL GROSSIT AUSSI LA LETTRE, et c'est ce qui l'a fait baisser de 0,9 a 0,3 : a 0,9 le trait
+     * ajoutait cinq pour cent a la hauteur des capitales comme des descendantes (18,16 devient
+     * 19,06), et le joueur l'a vu tout de suite — « le gras est un peu trop gros et grand en hauteur
+     * aussi ». Le gras, lui, ne change PAS la hauteur : mesure a la gravure de vingt-quatre, la
+     * capitale vaut 18,16 dans les deux dessins, et le « y » 19,08 contre 19,05. Il epaissit les futs
+     * et elargit les avances de cinq a huit pour cent (avance de « H » 19 -> 20), ce qui est
+     * exactement ce qu'on lui demandait.
      */
-    private static final double GLYPH_WEIGHT = 0.9;
+    private static final double GLYPH_WEIGHT = 0.3;
 
     /**
      * La ligne de base, mesuree depuis le haut du texte : huit pixels.
@@ -213,7 +242,7 @@ public final class AcademyFonts {
      */
     static double advance(int codePoint, int cell) {
         double source = metrics(SOURCE_FONT_SIZE).charWidth(codePoint);
-        return source * cell / (double) CELL_SIZE;
+        return source * cell / (double) EM;
     }
 
     /**
@@ -231,7 +260,7 @@ public final class AcademyFonts {
         double source = font.createGlyphVector(graphics.getFontRenderContext(), "H")
                 .getVisualBounds().getHeight();
         graphics.dispose();
-        return (int) Math.round(source * cell / (double) CELL_SIZE);
+        return (int) Math.round(source * cell / (double) EM);
     }
 
     /** La hauteur d'une ligne pour une cellule donnee : c'est la cellule, comme chez l'original. */
@@ -358,16 +387,20 @@ public final class AcademyFonts {
         int whole = (int) Math.floor(x);
         float fraction = (float) (x - whole);
         if (fraction == 0f) {
-            graphics.blit(atlasLocation, whole, top, side, side, glyph.x(), glyph.y(),
-                    CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
+            blitAt(graphics, whole, top, side, glyph);
             return;
         }
 
         graphics.pose().pushPose();
         graphics.pose().translate(fraction, 0f, 0f);
-        graphics.blit(atlasLocation, whole, top, side, side, glyph.x(), glyph.y(),
-                CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
+        blitAt(graphics, whole, top, side, glyph);
         graphics.pose().popPose();
+    }
+
+    /** Le quad d'un glyphe : la boite du cadratin, pas la case entiere — la marge reste dehors. */
+    private static void blitAt(GuiGraphics graphics, int x, int top, int side, Glyph glyph) {
+        graphics.blit(atlasLocation, x, top, side, side, glyph.x(), glyph.y(), EM, EM,
+                ATLAS_SIZE, ATLAS_SIZE);
     }
 
     /**
@@ -429,8 +462,7 @@ public final class AcademyFonts {
         // La cellule est posee pour que la ligne de base tombe sur celle de la police du jeu, quelle
         // que soit la taille : c'est ce qui fait qu'un texte grossi grandit sur place au lieu de
         // descendre dans son panneau. Le decalage se lit dans la gravure, donc il suit la cellule.
-        int top = y + BASELINE - (int) Math.round(baselineInCell() * size
-                / (double) CELL_SIZE);
+        int top = y + BASELINE - (int) Math.round(baselineInCell() * size / (double) EM);
 
         // Le curseur est EXACT et c'est le dessin qui arrondit : la position d'un caractere ne perd
         // rien, et une ligne se termine exactement a la largeur annoncee. Arrondir l'avance de
@@ -454,9 +486,9 @@ public final class AcademyFonts {
         graphics.setColor(red, green, blue, alpha);
     }
 
-    /** Ou la ligne de base tombe dans la cellule, en unites du videau : c'est ou le glyphe est peint. */
+    /** Ou la ligne de base tombe dans la case du videau : c'est ou le glyphe est peint. */
     private static int baselineInCell() {
-        return 1 + metrics(SOURCE_FONT_SIZE).getAscent();
+        return GLYPH_PADDING + 1 + metrics(SOURCE_FONT_SIZE).getAscent();
     }
 
     private static Glyph glyph(int codePoint, int size) {
@@ -488,13 +520,14 @@ public final class AcademyFonts {
         Graphics2D draw = image.createGraphics();
         configure(draw, font);
         draw.setColor(java.awt.Color.WHITE);
-        draw.drawString(text, 3, 1 + metrics.getAscent());
+        draw.drawString(text, 3 + GLYPH_PADDING, 1 + metrics.getAscent() + GLYPH_PADDING);
         if (GLYPH_WEIGHT > 0) {
             java.awt.font.GlyphVector vector =
                     font.createGlyphVector(draw.getFontRenderContext(), text);
             draw.setStroke(new java.awt.BasicStroke((float) GLYPH_WEIGHT,
                     java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
-            draw.draw(vector.getOutline(3, 1 + metrics.getAscent()));
+            draw.draw(vector.getOutline(3 + GLYPH_PADDING,
+                    1 + metrics.getAscent() + GLYPH_PADDING));
         }
         draw.dispose();
         cover(image);
@@ -504,7 +537,9 @@ public final class AcademyFonts {
         glyphPixels.close();
         atlasDirty = true;
 
-        Glyph result = new Glyph(advance, x, y, size);
+        // Le glyphe se dessine depuis la boite du cadratin, a l'interieur de la case : c'est la
+        // marge qui reste transparente, et c'est elle que l'echantillon de mipmap peut moyenner.
+        Glyph result = new Glyph(advance, x + GLYPH_PADDING, y + GLYPH_PADDING, size);
         GLYPHS.put(key, result);
         return result;
     }
