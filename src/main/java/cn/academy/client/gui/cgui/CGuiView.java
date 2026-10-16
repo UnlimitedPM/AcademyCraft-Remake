@@ -272,20 +272,16 @@ public final class CGuiView {
                         : argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
                                 widget.texture.blue);
                 if (widget.texture.texture == null) {
-                    graphics.fill(x, y, x + w, y + h, colour);
+                    fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH, colour);
                 } else {
-                    // La taille exacte part avec : une image demandee plus petite qu'un pixel entier
-                    // se pose sur les pixels qu'elle occupe sans etre etiree pour autant.
-                    drawTexture(graphics, widget.texture, x, y, w, h, colour, widget.absW,
-                            widget.absH);
+                    drawTexture(graphics, widget, widget.texture, exactX, exactY, colour);
                 }
             }
             if (widget.tint != null && !widget.tint.affectTexture && tint[3] > 0) {
-                graphics.fill(x, y, x + w, y + h, argb(tint[3], tint[0], tint[1], tint[2]));
+                fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
+                        argb(tint[3], tint[0], tint[1], tint[2]));
             }
             if (widget.bar != null) {
-                // La barre, elle, recoit sa boite EXACTE et non ses pixels arrondis : c'est tout
-                // son probleme, et il est explique dans drawBar.
                 drawBar(graphics, widget, exactX, exactY, widget.absW, widget.absH);
             }
             if (widget.outline != null) {
@@ -449,6 +445,48 @@ public final class CGuiView {
     }
 
     /**
+     * Une pose posee sur la position <b>exacte</b> d'un rectangle, dont l'etendue entiere sera
+     * ensuite etiree pour couvrir la vraie.
+     *
+     * <p>C'est la piece qui manquait depuis le debut, et elle tient en une phrase : <b>la taille du
+     * document va a la carte graphique, elle ne s'arrondit pas.</b> Un element qui mesure 6,4 pixels
+     * se dessine donc sur 6 pixels que la pose etire a 6,4, et le resultat est le quad fractionnaire
+     * de l'original — la carte le rasterise exactement comme elle rasterisait le sien, un pixel
+     * s'allume quand son centre tombe dedans.
+     *
+     * <p>Le port arrondissait la taille AVANT de dessiner, et il y a perdu trois fois : une barre de
+     * 6,4 pixels en peignait 6 (« les barres sont bien 1 pixel moins large sur la droite »), puis,
+     * mesuree depuis l'absolu, elle en peignait 7 et montait d'un pixel (« trop grosse et un peu
+     * trop en haut »), et une icone d'onglet de 16,8 pixels etait etiree pour remplir les 17 qu'elle
+     * occupe (« certains endroits qui paraissent plus gros »). Le rectangle de l'original, lui, ne
+     * dependait d'aucune de ces regles : il etait simplement exact.
+     *
+     * <p>La fraction de la pose du widget est retiree au passage : les coordonnees donnees ici sont
+     * absolues, comme celles de l'original, et c'est la POSITION qui reste sur la grille — pour que
+     * l'echantillonnage d'une texture ne glisse pas d'un texel.
+     */
+    private static void exactQuad(GuiGraphics graphics, CWidget widget, double x, double y,
+                                  double scaleX, double scaleY) {
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) -(widget.absX - Math.floor(widget.absX)),
+                (float) -(widget.absY - Math.floor(widget.absY)), 0f);
+        graphics.pose().translate((float) x, (float) y, 0f);
+        graphics.pose().scale((float) scaleX, (float) scaleY, 1f);
+    }
+
+    /** Un aplat, a la taille exacte du widget. */
+    private static void fillExact(GuiGraphics graphics, CWidget widget, double x, double y,
+                                  double w, double h, int colour) {
+        if (w <= 0 || h <= 0) return;
+        int iw = Math.max(1, (int) Math.round(w));
+        int ih = Math.max(1, (int) Math.round(h));
+
+        exactQuad(graphics, widget, x, y, w / iw, h / ih);
+        graphics.fill(0, 0, iw, ih, colour);
+        graphics.pose().popPose();
+    }
+
+    /**
      * Le cadre souple : le halo en huit morceaux, puis les deux bandes claires.
      *
      * <p>Le halo deborde de la boite — c'est lui qui arrondit les coins — et les bandes se dessinent
@@ -488,37 +526,30 @@ public final class CGuiView {
 
         ResourceLocation line = ResourceLocation.tryParse(frame.line);
         if (line != null) {
-            // Les deux bandes, elles, se mesurent depuis le coin du CADRE : ce sont des aplats, et
-            // leurs bords tombent au demi-pixel pres (-8,6 en haut, -3,2 a gauche, +6,4 de large).
-            // Elles se posent donc en pixels d'ecran, la fraction de la pose retiree le temps de le
-            // faire — c'est la regle de CGuiLayout.framePixel. Sans cela celle du haut se dessinait
-            // un pixel trop haut et un pixel trop courte, et celle du bas un pixel trop courte :
-            // « celle du dessous est plus petite que la vrai bandelette, et celle du haut est un peu
-            // trop en haut a droite ».
-            double exactX = widget.absX;
-            double exactY = widget.absY;
-
-            graphics.pose().pushPose();
-            graphics.pose().translate((float) -(exactX - x), (float) -(exactY - y), 0f);
-
-            int lx = CGuiLayout.framePixel(exactX - frame.lineMargin);
-            int lw = CGuiLayout.framePixel(exactX + widget.absW + frame.lineMargin) - lx;
-            int ty = CGuiLayout.framePixel(exactY + frame.topY);
-            int th = CGuiLayout.framePixel(exactY + frame.topY + frame.topHeight) - ty;
-            int by = CGuiLayout.framePixel(exactY + widget.absH - frame.bottomInset);
-            int bh = CGuiLayout.framePixel(exactY + widget.absH - frame.bottomInset
-                    + frame.bottomHeight) - by;
-
+            // Les deux bandes se posent a la taille exacte du document — 3,2 unites de debord, 8,6
+            // au-dessus du bord haut, 12 de haut — comme le rectangle de l'original : voir exactQuad.
             blend();
-            graphics.blit(line, lx, ty, lw, th, 0f, 0f, 1, 1, 1, 1);
-            graphics.blit(line, lx, by, lw, bh, 0f, 0f, 1, 1, 1, 1);
-
-            graphics.pose().popPose();
+            band(graphics, widget, line, widget.absX - frame.lineMargin, widget.absY + frame.topY,
+                    widget.absW + frame.lineMargin * 2, frame.topHeight);
+            band(graphics, widget, line, widget.absX - frame.lineMargin,
+                    widget.absY + widget.absH - frame.bottomInset,
+                    widget.absW + frame.lineMargin * 2, frame.bottomHeight);
         }
     }
 
-    private static void drawTexture(GuiGraphics graphics, CWidget.DrawTexture window, int x, int y,
-                                    int w, int h, int colour, double exactW, double exactH) {
+    /** Une des deux bandes claires d'un cadre : `line.png` etire sur toute la largeur du panneau. */
+    private static void band(GuiGraphics graphics, CWidget widget, ResourceLocation line,
+                             double x, double y, double w, double h) {
+        int iw = Math.max(1, (int) Math.round(w));
+        int ih = Math.max(1, (int) Math.round(h));
+
+        exactQuad(graphics, widget, x, y, w / iw, h / ih);
+        graphics.blit(line, 0, 0, iw, ih, 0f, 0f, 1, 1, 1, 1);
+        graphics.pose().popPose();
+    }
+
+    private static void drawTexture(GuiGraphics graphics, CWidget widget,
+                                    CWidget.DrawTexture window, double x, double y, int colour) {
         ResourceLocation texture = ResourceLocation.tryParse(window.texture);
         if (texture == null) return;
 
@@ -528,22 +559,22 @@ public final class CGuiView {
         // zero a un, une planche de trois en prend un tiers. Le tout sans jamais avoir a connaitre les
         // dimensions du fichier — les pages des machines font 352 sur 374, les icones 48.
         //
-        // Et la taille demandee n'est pas toujours entiere : une icone d'onglet fait vingt-quatre
-        // unites a l'echelle 0,7, soit 16,8 pixels. On la pose donc sur les dix-sept pixels qu'elle
-        // occupe — il n'y a pas de demi-pixel — mais on ne l'ETIRE pas pour autant : la fenetre de
-        // texture reste celle des 16,8 pixels, si bien que le dernier pixel montre le meme morceau
-        // d'image que chez l'original. Sans cela le dessin grandit d'un pour cent et ses bords doux
-        // changent de case, ce que le joueur a vu sans avoir a mesurer : « l'icone du coffre et du
-        // reseau wifi doivent avoir un effet de transparence pour certains de leurs pixels car la
-        // ils ont certains endroits qui paraissent plus gros ».
-        double stretchX = exactW / w;
-        double stretchY = exactH / h;
+        // Et la taille est celle du DOCUMENT, fraction comprise : une icone d'onglet mesure 16,8
+        // pixels, elle se pose donc sur un quad de 16,8 pixels — la pose etire pour cela les seize
+        // pixels entiers que la version sait dessiner. C'est ce qui rend a ses bords doux les pixels
+        // qu'ils avaient chez l'original : « l'icone du coffre et du reseau wifi doivent avoir un
+        // effet de transparence pour certains de leurs pixels car la ils ont certains endroits qui
+        // paraissent plus gros ».
         blend();
-        graphics.blit(texture, x, y, w, h,
+        int iw = Math.max(1, (int) Math.round(widget.absW));
+        int ih = Math.max(1, (int) Math.round(widget.absH));
+        exactQuad(graphics, widget, x, y, widget.absW / iw, widget.absH / ih);
+        graphics.blit(texture, 0, 0, iw, ih,
                 (float) (window.u0 * UV_BASE), (float) (window.v0 * UV_BASE),
-                Math.max(1, (int) Math.round((window.u1 - window.u0) * UV_BASE * stretchX)),
-                Math.max(1, (int) Math.round((window.v1 - window.v0) * UV_BASE * stretchY)),
+                Math.max(1, (int) Math.round((window.u1 - window.u0) * UV_BASE)),
+                Math.max(1, (int) Math.round((window.v1 - window.v0) * UV_BASE)),
                 UV_BASE, UV_BASE);
+        graphics.pose().popPose();
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 
@@ -551,11 +582,9 @@ public final class CGuiView {
      * Une barre de progression : la portion de sa texture qui correspond au remplissage, ou un
      * aplat de sa couleur quand elle n'en a pas. Le morceau vient de {@link CGuiLayout#bar}.
      *
-     * <p>Et son rectangle se pose en <b>pixels d'ecran</b> — voir {@link CGuiLayout#pixels} — et non
-     * dans le repere fractionnaire du widget : c'est ce qui lui rend le dernier pixel que l'original
-     * lui donnait, un pixel etant allume quand son centre tombe dans le quad. La fraction de la pose
-     * est donc retiree le temps du dessin, puis remise : le reste des elements du widget garde, lui,
-     * la position exacte du document.
+     * <p>Et sa taille est celle du document, fraction comprise : 6,4 pixels se dessinent sur un quad
+     * de 6,4 pixels, que la carte rasterise comme elle rasterisait celui de l'original. Voir
+     * {@link #exactQuad} pour les trois formes que l'arrondi a prises cette semaine.
      */
     private static void drawBar(GuiGraphics graphics, CWidget widget, double x, double y,
                                 double w, double h) {
@@ -564,25 +593,20 @@ public final class CGuiView {
         CGuiLayout.Bar bar = CGuiLayout.bar(widget.bar, w, h);
         if (bar.w() <= 0 || bar.h() <= 0) return;
 
-        CGuiLayout.Rect rect = CGuiLayout.pixels(bar, x, y);
-        int rw = rect.x1() - rect.x0();
-        int rh = rect.y1() - rect.y0();
-        if (rw <= 0 || rh <= 0) return;
-
         int[] color = widget.bar.color;
         ResourceLocation texture = widget.bar.texture == null ? null
                 : ResourceLocation.tryParse(widget.bar.texture);
+        int rw = Math.max(1, (int) Math.round(bar.w()));
+        int rh = Math.max(1, (int) Math.round(bar.h()));
 
-        graphics.pose().pushPose();
-        graphics.pose().translate((float) -(x - Math.floor(x)), (float) -(y - Math.floor(y)), 0f);
+        exactQuad(graphics, widget, x + bar.x(), y + bar.y(), bar.w() / rw, bar.h() / rh);
 
         if (texture == null) {
-            graphics.fill(rect.x0(), rect.y0(), rect.x1(), rect.y1(),
-                    argb(color[3], color[0], color[1], color[2]));
+            graphics.fill(0, 0, rw, rh, argb(color[3], color[0], color[1], color[2]));
         } else {
             graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
             blend();
-            graphics.blit(texture, rect.x0(), rect.y0(), rw, rh,
+            graphics.blit(texture, 0, 0, rw, rh,
                     (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
                     (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
                     TEXTURE, TEXTURE);

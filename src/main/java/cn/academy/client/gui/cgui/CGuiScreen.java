@@ -152,24 +152,20 @@ public abstract class CGuiScreen extends Screen {
                 int colour = argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
                         widget.texture.blue);
                 if (widget.texture.texture == null) {
-                    graphics.fill(x, y, x + w, y + h, colour);
+                    fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH, colour);
                 } else {
-                    // La taille exacte part avec : une image demandee plus petite qu'un pixel entier
-                    // se pose sur les pixels qu'elle occupe sans etre etiree pour autant.
-                    drawTexture(graphics, widget.texture.texture, x, y, w, h, colour, widget.absW,
-                            widget.absH);
+                    drawTexture(graphics, widget, widget.texture.texture, exactX, exactY, colour);
                 }
             }
             if (widget.tint != null) {
                 int[] colour = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover
                         : widget.tint.idle;
                 if (colour[3] > 0) {
-                    graphics.fill(x, y, x + w, y + h, argb(colour[3], colour[0], colour[1],
-                            colour[2]));
+                    fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
+                            argb(colour[3], colour[0], colour[1], colour[2]));
                 }
             }
             if (widget.bar != null) {
-                // La barre recoit sa boite EXACTE : voir CGuiView, dont ce moteur est la copie.
                 drawBar(graphics, widget, exactX, exactY, widget.absW, widget.absH);
             }
             if (widget.outline != null) {
@@ -192,14 +188,38 @@ public abstract class CGuiScreen extends Screen {
     }
 
     /**
+     * Une pose posee sur la position exacte d'un rectangle, dont l'etendue entiere sera etiree pour
+     * couvrir la vraie : voir {@code CGuiView.exactQuad}, dont ce moteur est la copie.
+     */
+    private static void exactQuad(GuiGraphics graphics, CWidget widget, double x, double y,
+                                  double scaleX, double scaleY) {
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) -(widget.absX - Math.floor(widget.absX)),
+                (float) -(widget.absY - Math.floor(widget.absY)), 0f);
+        graphics.pose().translate((float) x, (float) y, 0f);
+        graphics.pose().scale((float) scaleX, (float) scaleY, 1f);
+    }
+
+    /** Un aplat, a la taille exacte du widget. */
+    private static void fillExact(GuiGraphics graphics, CWidget widget, double x, double y,
+                                  double w, double h, int colour) {
+        if (w <= 0 || h <= 0) return;
+        int iw = Math.max(1, (int) Math.round(w));
+        int ih = Math.max(1, (int) Math.round(h));
+
+        exactQuad(graphics, widget, x, y, w / iw, h / ih);
+        graphics.fill(0, 0, iw, ih, colour);
+        graphics.pose().popPose();
+    }
+
+    /**
      * Une barre de progression : la portion de sa texture qui correspond au remplissage, ou un
      * aplat de sa couleur quand elle n'en a pas.
      *
      * <p>Le morceau a dessiner vient de {@link CGuiLayout#bar}, ou le calcul est pur et relu par un
      * test : c'est le {@code switch} du composant de l'original, et il decide a la fois du
-     * rectangle et de la portion de texture — une barre qui monte prend le BAS de son image. Ses
-     * bords se posent en PIXELS d'ecran, comme la carte graphique les allumerait : voir
-     * {@link CGuiLayout#pixels}.
+     * rectangle et de la portion de texture — une barre qui monte prend le BAS de son image. Et sa
+     * taille est celle du document, fraction comprise : voir exactQuad.
      */
     private static void drawBar(GuiGraphics graphics, CWidget widget, double x, double y,
                                 double w, double h) {
@@ -208,24 +228,19 @@ public abstract class CGuiScreen extends Screen {
         CGuiLayout.Bar bar = CGuiLayout.bar(widget.bar, w, h);
         if (bar.w() <= 0 || bar.h() <= 0) return;
 
-        CGuiLayout.Rect rect = CGuiLayout.pixels(bar, x, y);
-        int rw = rect.x1() - rect.x0();
-        int rh = rect.y1() - rect.y0();
-        if (rw <= 0 || rh <= 0) return;
-
         int[] color = widget.bar.color;
         ResourceLocation texture = widget.bar.texture == null ? null
                 : ResourceLocation.tryParse(widget.bar.texture);
+        int rw = Math.max(1, (int) Math.round(bar.w()));
+        int rh = Math.max(1, (int) Math.round(bar.h()));
 
-        graphics.pose().pushPose();
-        graphics.pose().translate((float) -(x - Math.floor(x)), (float) -(y - Math.floor(y)), 0f);
+        exactQuad(graphics, widget, x + bar.x(), y + bar.y(), bar.w() / rw, bar.h() / rh);
 
         if (texture == null) {
-            graphics.fill(rect.x0(), rect.y0(), rect.x1(), rect.y1(),
-                    argb(color[3], color[0], color[1], color[2]));
+            graphics.fill(0, 0, rw, rh, argb(color[3], color[0], color[1], color[2]));
         } else {
             graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
-            graphics.blit(texture, rect.x0(), rect.y0(), rw, rh,
+            graphics.blit(texture, 0, 0, rw, rh,
                     (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
                     (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
                     TEXTURE, TEXTURE);
@@ -235,19 +250,18 @@ public abstract class CGuiScreen extends Screen {
         graphics.pose().popPose();
     }
 
-    private static void drawTexture(GuiGraphics graphics, String path, int x, int y, int w, int h,
-                                    int colour, double exactW, double exactH) {
+    private static void drawTexture(GuiGraphics graphics, CWidget widget, String path, double x,
+                                    double y, int colour) {
         ResourceLocation texture = ResourceLocation.tryParse(path);
         if (texture == null) return;
 
         graphics.setColor(((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f,
                 (colour & 0xFF) / 255f, ((colour >>> 24) & 0xFF) / 255f);
-        // La taille demandee n'est pas toujours entiere : une icone d'onglet fait 24 unites a
-        // l'echelle 0,7, soit 16,8 pixels. Elle se pose sur les dix-sept pixels qu'elle occupe, mais
-        // elle n'est pas ETIREE pour autant — voir CGuiView, dont ce moteur est la copie.
-        int uw = Math.max(1, (int) Math.round(TEXTURE * (exactW / w)));
-        int vh = Math.max(1, (int) Math.round(TEXTURE * (exactH / h)));
-        graphics.blit(texture, x, y, w, h, 0f, 0f, uw, vh, TEXTURE, TEXTURE);
+        int iw = Math.max(1, (int) Math.round(widget.absW));
+        int ih = Math.max(1, (int) Math.round(widget.absH));
+        exactQuad(graphics, widget, x, y, widget.absW / iw, widget.absH / ih);
+        graphics.blit(texture, 0, 0, iw, ih, 0f, 0f, TEXTURE, TEXTURE, TEXTURE, TEXTURE);
+        graphics.pose().popPose();
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 
