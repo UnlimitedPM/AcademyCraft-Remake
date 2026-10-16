@@ -1,6 +1,7 @@
 package cn.academy.client.gui;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -47,7 +48,16 @@ public final class AcademyFonts {
      */
     public static final int GUI_SIZE = 9;
 
-    private static final int CONSOLE_SIZE = 10;
+    /**
+     * La console de debogage (F4), en pixels.
+     *
+     * <p>Huit, et c'est mesure : sur deux captures a la meme echelle d'interface, la meme ligne fait
+     * 298 pixels chez nous et 231 chez l'original 1.12.2, dont les barres rapides font exactement la
+     * meme taille. Le rapport vaut donc 0,775, et dix fois 0,775 font huit. La console de l'original
+     * est plus petite que son texte d'interface, et c'est normal : c'est un releve de debogage, pas
+     * une page.
+     */
+    private static final int CONSOLE_SIZE = 8;
     private static final int SOURCE_FONT_SIZE = 24;
     private static final int ATLAS_SIZE = 2048;
     private static final int CELL_SIZE = (int) (SOURCE_FONT_SIZE * 1.4f);
@@ -213,6 +223,19 @@ public final class AcademyFonts {
         ensureGlyphs(text, size);
         if (atlasDirty) uploadAtlas();
 
+        // Le melange, pose par la police elle-meme, et c'est tout l'objet de ces trois lignes : la
+        // police du jeu le posait par le type de rendu de son texte, et le port l'a perdu en passant
+        // a AWT. Sans elles le texte herite de ce que l'ecran a laisse derriere lui — un effet du mod
+        // qui AJOUTE sa lumiere laisse le melange additif, et le texte devient gras et lumineux ;
+        // n'importe quel aplat le laisse eteint, et le texte s'ecrit sans fondu. C'est ce que le
+        // joueur a vu, et il l'a dit deux fois : « avec la notification le texte est le bon, une fois
+        // qu'elle part il devient moins clean », puis « quand je me mets avec le mod pour utiliser les
+        // pouvoirs, le texte devient plus fluide ». Le texte changeait donc selon ce qui avait ete
+        // dessine AVANT lui dans l'image. Un renderer de HUD ne suppose jamais l'etat qu'il n'a pas
+        // pose.
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
         if (shadow) drawLine(graphics, text, x + 1, y + 1, shadowColor(color), size);
         drawLine(graphics, text, x, y, color, size);
         return width(text, size);
@@ -228,6 +251,17 @@ public final class AcademyFonts {
 
     private static void drawLine(GuiGraphics graphics, String text, int x, int y,
                                  int color, int size) {
+        // La teinte du moment : un appelant qui assombrit son texte — une notification qui s'efface,
+        // l'apercu d'un ecran de reglage — pose une couleur AVANT d'appeler, et la police doit la
+        // respecter. C'est ce que faisait celle du jeu, dont le type de rendu ne posait aucune couleur
+        // a lui : il multipliait simplement celle du moment. Sans cela, la notification de l'original
+        // s'effacait avec son panneau et son texte restait en plein, ce qui se voit.
+        float[] tint = RenderSystem.getShaderColor();
+        float red = tint[0];
+        float green = tint[1];
+        float blue = tint[2];
+        float alpha = tint[3];
+
         int cursor = x;
         int side = box(size);
         // La cellule est posee pour que la ligne de base tombe sur celle de la police du jeu, quelle
@@ -240,15 +274,19 @@ public final class AcademyFonts {
             int codePoint = text.codePointAt(offset);
             Glyph glyph = glyph(codePoint, size);
             if (glyph.size() > 0) {
-                graphics.setColor(((color >> 16) & 0xFF) / 255f, ((color >> 8) & 0xFF) / 255f,
-                        (color & 0xFF) / 255f, ((color >>> 24) & 0xFF) / 255f);
+                graphics.setColor(((color >> 16) & 0xFF) / 255f * red,
+                        ((color >> 8) & 0xFF) / 255f * green,
+                        (color & 0xFF) / 255f * blue,
+                        ((color >>> 24) & 0xFF) / 255f * alpha);
                 graphics.blit(atlasLocation, cursor, top, side, side,
                         glyph.x(), glyph.y(), CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
                 cursor += glyph.advance();
             }
             offset += Character.charCount(codePoint);
         }
-        graphics.setColor(1f, 1f, 1f, 1f);
+
+        // La teinte est rendue telle qu'elle etait : ce qui se dessine apres nous y compte.
+        graphics.setColor(red, green, blue, alpha);
     }
 
     /** Ou la ligne de base tombe dans la cellule, en unites du videau : c'est ou le glyphe est peint. */
