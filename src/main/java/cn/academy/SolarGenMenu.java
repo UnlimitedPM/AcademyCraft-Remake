@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.energy.WirelessMachine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -13,10 +14,15 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.SlotItemHandler;
 
-public class SolarGenMenu extends AbstractContainerMenu {
+public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachine {
 
     private final SolarGenBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    @Override
+    public BlockPos machinePos() {
+        return blockEntity.getBlockPos();
+    }
 
     public SolarGenMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));

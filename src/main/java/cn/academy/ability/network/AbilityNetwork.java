@@ -168,5 +168,17 @@ public class AbilityNetwork {
                 cn.academy.energy.network.InterfererWhitelistPacket::encode,
                 cn.academy.energy.network.InterfererWhitelistPacket::decode,
                 cn.academy.energy.network.InterfererWhitelistPacket::handle);
+        // L'onglet sans fil d'une machine : une demande qui monte — la liste, un raccordement, un
+        // detachement — et l'etat qui redescend. Le paquet qui monte ne porte aucune position de
+        // machine : le serveur prend celle du conteneur ouvert, donc un client ne peut pas raccorder
+        // une machine devant laquelle il n'est pas.
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.WirelessRequestPacket.class,
+                cn.academy.energy.network.WirelessRequestPacket::encode,
+                cn.academy.energy.network.WirelessRequestPacket::decode,
+                cn.academy.energy.network.WirelessRequestPacket::handle);
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.WirelessNodesPacket.class,
+                cn.academy.energy.network.WirelessNodesPacket::encode,
+                cn.academy.energy.network.WirelessNodesPacket::decode,
+                cn.academy.energy.network.WirelessNodesPacket::handle);
     }
 }

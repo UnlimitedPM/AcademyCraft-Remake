@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.energy.WirelessMachine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -28,7 +29,7 @@ import net.minecraftforge.items.SlotItemHandler;
  * machine fait 176 de large et s'arrete a 70 de haut, le titre de l'inventaire du
  * joueur commencant juste apres.
  */
-public class ImagFusorMenu extends AbstractContainerMenu {
+public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMachine {
 
     /** L'entree, en haut a gauche : le {@code SlotCrystal(tile, SLOT_INPUT, 13, 49)} de l'original. */
     public static final int INPUT_X = 13;
@@ -54,6 +55,11 @@ public class ImagFusorMenu extends AbstractContainerMenu {
 
     private final ImagFusorBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    @Override
+    public BlockPos machinePos() {
+        return blockEntity.getBlockPos();
+    }
 
     private final SyncedInt workCounter;
     private final SyncedInt liquidAmount;

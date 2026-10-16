@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.energy.WirelessMachine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -22,7 +23,7 @@ import net.minecraftforge.items.SlotItemHandler;
  * le meme genre de machine : un emplacement, une barre d'energie, quelques lignes
  * d'etat.
  */
-public class WindgenBaseMenu extends AbstractContainerMenu {
+public class WindgenBaseMenu extends AbstractContainerMenu implements WirelessMachine {
 
     /** L'emplacement de l'objet a recharger : le {@code SlotIFItem(tile, 0, 42, 80)} de l'original. */
     public static final int SLOT_X = 42;
@@ -32,6 +33,11 @@ public class WindgenBaseMenu extends AbstractContainerMenu {
 
     private final WindgenBaseBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    @Override
+    public BlockPos machinePos() {
+        return blockEntity.getBlockPos();
+    }
 
     private final SyncedInt energyStored;
     private final SyncedInt completeness;

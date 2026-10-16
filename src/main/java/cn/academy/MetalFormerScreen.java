@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -48,6 +49,10 @@ public class MetalFormerScreen extends CGuiContainerScreen<MetalFormerMenu> {
         // Les deux fleches : le clic part par le chemin vanilla des boutons de conteneur.
         onClick(widget("btn_left"), () -> clickButton(MetalFormerMenu.BUTTON_MODE_PREVIOUS));
         onClick(widget("btn_right"), () -> clickButton(MetalFormerMenu.BUTTON_MODE_NEXT));
+
+        // L'onglet sans fil de l'original, pose en dernier : le moteur ouvre la premiere page posee,
+        // et une machine doit s'ouvrir sur sa page d'inventaire.
+        new CGuiWireless(screen).install();
     }
 
     /**

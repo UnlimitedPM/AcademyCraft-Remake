@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
@@ -37,5 +38,9 @@ public class PhaseGeneratorScreen extends CGuiContainerScreen<PhaseGeneratorMenu
                 CGuiHist.custom("IF", 0xFFB983FB,
                         () -> (double) menu.getLiquidAmount() / menu.getTankSize(),
                         () -> menu.getLiquidAmount() + " mB"));
+
+        // L'onglet sans fil de l'original, pose en dernier : le moteur ouvre la premiere page posee,
+        // et une machine doit s'ouvrir sur sa page d'inventaire.
+        new CGuiWireless(screen).install();
     }
 }

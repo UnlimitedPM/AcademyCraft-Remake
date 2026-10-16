@@ -1,6 +1,7 @@
 package cn.academy;
 
 import cn.academy.crafting.MetalFormerMode;
+import cn.academy.energy.WirelessMachine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -27,7 +28,7 @@ import net.minecraftforge.items.SlotItemHandler;
  * vers cette methode. Un paquet sur mesure aurait fait la meme chose en plus de
  * code et en plus de surface a maintenir.
  */
-public class MetalFormerMenu extends AbstractContainerMenu {
+public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMachine {
 
     /** Identifiant de bouton : mode precedent. */
     public static final int BUTTON_MODE_PREVIOUS = 0;
@@ -50,6 +51,11 @@ public class MetalFormerMenu extends AbstractContainerMenu {
 
     private final MetalFormerBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    @Override
+    public BlockPos machinePos() {
+        return blockEntity.getBlockPos();
+    }
 
     private final SyncedInt workCounter;
     private final SyncedInt modeOrdinal;

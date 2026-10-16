@@ -36,13 +36,14 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 3. **Put them on a key.** Open the **data terminal** (**Left Alt** by default) and its skill tree app: each learned skill can be placed on one of the four ability slots.
 4. **Use them.** The four slots are **left click**, **right click**, **R** and **F** by default. Some are used in one press, others work while held, and a few grow if you hold them longer (the railgun charges, the thunder clap gathers, the meltdowner builds up).
 5. **Everything else.** **C** cycles presets, **N** opens the preset editor, **V** turns your ability on and off, **F4** opens the debug console (skills, cooldowns, control points), and **Left Alt** opens the terminal. All of them can be changed in Minecraft's controls screen, under "AcademyCraft".
+6. **Power a machine.** Place a **wireless node** and a **matrix**, open a machine (solar, wind or phase generator, imag fusor, metal former, ability interferer) and use its **wireless tab**: the list shows the nodes in range, nearest first. Click a node's connect icon, type its password if it has one, and the icon in the "Connected" frame disconnects you. A machine you disconnect stays disconnected — it will not link itself back on the next tick.
 ### What is in this first version
 
 | | |
 |---|---|
 | **Abilities** | the four categories and their 35 skills — electromaster (railgun, thunder clap, magnet manipulation...), meltdowner (rays, jet engine...), teleporter (marking, shift, flesh ripping...), vecmanip (directional shock, plasma cannon...) — plus the three generic courses, with control points, overload, per-skill experience, charges and cooldowns |
 | **Skill tree** | the Ability Developer machine: the original's tree, its icons, its descriptions, its levels, its costs, and the magnetic coil that resets a category |
-| **Energy** | the Imag network: solar, wind and phase generators, the wireless nodes and the matrix, the imag fusor, the metal former with its four modes and the original's recipes (plus every ore that smelts) |
+| **Energy** | the Imag network: solar, wind and phase generators, the wireless nodes and the matrix (every machine picks its node from its own wireless tab), the imag fusor, the metal former with its four modes and the original's recipes (plus every ore that smelts) |
 | **Terminal** | the data terminal and its apps (settings, skill tree, media player, about) plus the tutorial |
 | **Interface** | the ability HUD, key hints, notifications, presets, the F4 debug console, and the ten machine screens on the rebuilt engine |
 | **World** | the mod's ores, the Imag phase liquid, the advancements |
@@ -51,7 +52,7 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 
 Honest list, so you know what you are testing:
 
-- **Wireless tab** — SSID, password and the node list have no screen yet; the nodes find a matrix by themselves.
+- **A node's own page** — a machine picks its node from its wireless tab (list, password, disconnect), but a node cannot search for a matrix from its own screen yet; it finds one by itself.
 - **Frequency transmitter** — the item is decorative for now.
 - **Languages** — only English ships today. The original also had Japanese, Korean, Russian, Simplified and Traditional Chinese.
 - **Media player** — it plays its three built-in tracks, but without covers and without a progress bar.
@@ -102,13 +103,14 @@ Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est u
 3. **Les mettre sur une touche.** Ouvrez le **terminal de données** (**Alt gauche** par défaut) et son application d'arbre : chaque compétence apprise se range sur l'un des quatre emplacements d'aptitude.
 4. **Les utiliser.** Les quatre emplacements sont le **clic gauche**, le **clic droit**, **R** et **F** par défaut. Certaines partent en une pression, d'autres agissent tant qu'on maintient, et quelques-unes montent si on maintient plus longtemps (le railgun se charge, le thunder clap s'accumule, le meltdowner monte en puissance).
 5. **Le reste.** **C** fait défiler les presets, **N** ouvre l'éditeur de presets, **V** allume et éteint l'aptitude, **F4** ouvre la console de débogage (compétences, recharges, points de contrôle), et **Alt gauche** ouvre le terminal. Toutes se changent dans les commandes de Minecraft, catégorie « AcademyCraft ».
+6. **Alimenter une machine.** Posez un **nœud sans fil** et une **matrice**, ouvrez une machine (générateur solaire, éolien ou de phase, fusor d'imag, formeur de métal, brouilleur d'aptitude) et passez par son **onglet sans fil** : la liste montre les nœuds à portée, du plus proche au plus loin. Cliquez l'icône de connexion d'un nœud, tapez son mot de passe s'il en a un, et l'icône du cadre « Connected » vous en déconnecte. Une machine que vous déconnectez reste déconnectée : elle ne se raccroche pas toute seule au tick suivant.
 ### Ce que contient cette première version
 
-Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès.
+Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; l'onglet sans fil de chaque machine, où l'on choisit le nœud qui l'alimente ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès.
 
 ### Ce qu'il manque encore
 
-- **L'onglet sans fil** : SSID, mot de passe et liste des nœuds n'ont pas encore d'écran.
+- **La page du nœud** : une machine choisit son nœud depuis son onglet sans fil (liste, mot de passe, déconnexion), mais un nœud ne peut pas encore chercher sa matrice depuis son propre écran ; il la trouve tout seul.
 - **L'émetteur de fréquence** : l'objet est décoratif pour le moment.
 - **Les langues** : l'anglais seulement. L'original en avait six.
 - **Le lecteur média** : il joue ses trois morceaux, mais sans pochettes ni barre de progression.

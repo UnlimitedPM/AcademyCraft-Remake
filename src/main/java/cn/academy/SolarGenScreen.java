@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -39,6 +40,10 @@ public class SolarGenScreen extends CGuiContainerScreen<SolarGenMenu> {
         seplineInfo();
         property(Component.translatable("ac.gui.common.prop.gen_speed").getString(),
                 String.format(Locale.ROOT, "%.2fIF/T", menu.generation()));
+
+        // L'onglet sans fil de l'original, pose en dernier : le moteur ouvre la premiere page posee,
+        // et une machine doit s'ouvrir sur sa page d'inventaire.
+        new CGuiWireless(screen).install();
     }
 
     /**

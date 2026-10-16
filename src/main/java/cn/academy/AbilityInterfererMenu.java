@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.energy.WirelessMachine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,7 +25,7 @@ import net.minecraftforge.items.SlotItemHandler;
  * paquet maison. Le rayon avance par pas de {@code RANGE_STEP}, sinon il faudrait
  * un bouton par valeur entre 10 et 100.
  */
-public class AbilityInterfererMenu extends AbstractContainerMenu {
+public class AbilityInterfererMenu extends AbstractContainerMenu implements WirelessMachine {
 
     public static final int BUTTON_TOGGLE = 0;
     public static final int BUTTON_RANGE_DOWN = 1;
@@ -37,6 +38,11 @@ public class AbilityInterfererMenu extends AbstractContainerMenu {
 
     private final AbilityInterfererBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    @Override
+    public BlockPos machinePos() {
+        return blockEntity.getBlockPos();
+    }
 
     private final SyncedInt energyStored;
     private final SyncedInt enabled;

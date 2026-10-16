@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.energy.WirelessMachine;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -19,7 +20,7 @@ import net.minecraftforge.items.SlotItemHandler;
  * unites de phase pleines, les unites vides en retour, et l'objet d'energie a
  * recharger.
  */
-public class PhaseGeneratorMenu extends AbstractContainerMenu {
+public class PhaseGeneratorMenu extends AbstractContainerMenu implements WirelessMachine {
 
     public static final int LIQUID_IN_X = 45;
     public static final int LIQUID_OUT_X = 112;
@@ -32,6 +33,11 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu {
 
     private final PhaseGeneratorBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    @Override
+    public BlockPos machinePos() {
+        return blockEntity.getBlockPos();
+    }
 
     private final SyncedInt energyStored;
     private final SyncedInt liquidAmount;

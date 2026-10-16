@@ -6627,6 +6627,157 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    // ------------------------------------------------------------------
+    // L'onglet sans fil : ce que le joueur choisit
+    //
+    // Ces quatre tests tiennent le contrat de l'onglet avec le serveur. Le serveur
+    // ne recoit jamais la position de la machine — il prend celle du conteneur
+    // ouvert — donc ce qui reste a verifier, c'est ce qu'il fait de ce qu'on lui
+    // demande : le noeud choisi, son mot de passe, ses places, et le detachement.
+    // ------------------------------------------------------------------
+
+    /**
+     * Le choix du joueur prime : la machine va au noeud qu'il a designe, et non au plus proche.
+     */
+    @GameTest(template = "empty")
+    public static void wirelessTabLinksTheChosenNode(GameTestHelper helper) {
+        BlockPos nearRel = new BlockPos(1, 1, 0);
+        BlockPos farRel = new BlockPos(1, 1, 5);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nearRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(farRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nearAbs = helper.absolutePos(nearRel);
+        BlockPos farAbs = helper.absolutePos(farRel);
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+
+        // La liste de l'onglet : les deux noeuds a portee, du plus proche au plus loin.
+        java.util.List<cn.academy.energy.NodeFinder.Candidate> candidates =
+                cn.academy.energy.NodeFinder.candidates(level, solarAbs);
+        assertValue(helper, 2, candidates.size(), "noeuds joignables");
+        assertValue(helper, nearAbs, candidates.get(0).pos(), "le plus proche d'abord");
+        assertValue(helper, farAbs, candidates.get(1).pos(), "puis le plus loin");
+        assertFalse(helper, candidates.get(0).encrypted(), "aucun des deux ne demande de mot de passe");
+        assertTrue(helper, candidates.get(0).room(), "et les deux ont de la place");
+
+        // Le joueur choisit le plus loin, et c'est celui-la qui compte : la machine ne se rabat pas
+        // sur le plus proche.
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, farAbs, ""),
+                "le raccordement au noeud choisi");
+        assertValue(helper, farAbs, ImagNetworkData.get(level).nodeOf(solarAbs), "le noeud choisi");
+
+        // Et il sort de la liste : l'ecran le montre a part, dans son cadre « Connected ».
+        java.util.List<cn.academy.energy.NodeFinder.Candidate> after =
+                cn.academy.energy.NodeFinder.candidates(level, solarAbs);
+        assertValue(helper, 1, after.size(), "le noeud lie ne figure plus dans la liste");
+        assertValue(helper, nearAbs, after.get(0).pos(), "il ne reste que l'autre");
+        helper.succeed();
+    }
+
+    /** Un noeud qui demande un mot de passe ne s'ouvre qu'au bon. */
+    @GameTest(template = "empty")
+    public static void wirelessTabAsksForTheNodePassword(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+
+        NodeBlockEntity node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+        node.setPassword("academy");
+
+        // Le noeud se declare ferme : l'ecran allume la petite cle et montre son champ de saisie.
+        assertTrue(helper, cn.academy.energy.NodeFinder.candidates(level, solarAbs).get(0).encrypted(),
+                "un noeud avec mot de passe doit l'annoncer");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.WRONG_PASSWORD,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, "faux"),
+                "le mauvais mot de passe");
+        assertValue(helper, null, ImagNetworkData.get(level).nodeOf(solarAbs),
+                "un mauvais mot de passe ne doit rien raccorder");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, "academy"),
+                "le bon mot de passe");
+        assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(solarAbs),
+                "le bon mot de passe raccorde");
+        helper.succeed();
+    }
+
+    /**
+     * Un detachement tient : sans cette memoire, la machine se raccrocherait au tick suivant, et le
+     * bouton de deconnexion de l'onglet n'aurait l'air de rien faire.
+     */
+    @GameTest(template = "empty")
+    public static void wirelessTabDetachesUntilThePlayerChoosesAgain(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, ""),
+                "le choix de l'onglet");
+
+        cn.academy.energy.NodeFinder.unlink(level, solarAbs);
+        assertValue(helper, null, ImagNetworkData.get(level).nodeOf(solarAbs), "la machine est detachee");
+        assertFalse(helper, cn.academy.energy.NodeFinder.ensureLinked(level, solarAbs),
+                "une machine detachee a la main doit le rester");
+
+        // Le joueur en choisit un autre, puis le detachement revient : c'est le dernier mot qui compte.
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, ""),
+                "un second choix volontaire");
+        cn.academy.energy.NodeFinder.detach(level, solarAbs);
+        assertTrue(helper, cn.academy.energy.NodeFinder.ensureLinked(level, solarAbs),
+                "un choix volontaire efface le refus : la recherche automatique reprend");
+        helper.succeed();
+    }
+
+    /** Un noeud plein reste dans la liste — mais il est annonce comme tel, et refuse. */
+    @GameTest(template = "empty")
+    public static void wirelessTabShowsNoRoomOnAFullNode(GameTestHelper helper) {
+        BlockPos nodeRel = new BlockPos(1, 1, 0);
+        BlockPos solarRel = new BlockPos(1, 1, 2);
+
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+        helper.setBlock(solarRel, ModBlocks.SOLAR_GEN.get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        BlockPos solarAbs = helper.absolutePos(solarRel);
+
+        NodeBlockEntity node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);
+        for (int i = 0; i < node.getCapacity(); i++) {
+            ImagNetworkData.get(level).linkUser(nodeAbs, solarAbs.offset(48, 0, i));
+        }
+
+        java.util.List<cn.academy.energy.NodeFinder.Candidate> candidates =
+                cn.academy.energy.NodeFinder.candidates(level, solarAbs);
+        assertValue(helper, 1, candidates.size(), "un noeud plein reste joignable");
+        assertFalse(helper, candidates.get(0).room(), "mais il est annonce sans place");
+
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.NO_ROOM,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, ""),
+                "un noeud plein doit refuser");
+        assertValue(helper, null, ImagNetworkData.get(level).nodeOf(solarAbs),
+                "un noeud plein ne doit rien accepter");
+        helper.succeed();
+    }
+
     /** Pose un Matrix et rend son block entity, en verifiant qu'il existe. */
     private static MatrixBlockEntity placeMatrix(GameTestHelper helper, BlockPos rel) {
         helper.setBlock(rel, ModBlocks.MATRIX.get());

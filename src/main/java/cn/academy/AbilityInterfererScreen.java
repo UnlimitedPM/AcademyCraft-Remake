@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -31,12 +32,12 @@ import java.util.Map;
  * la mise a jour de bloc que la machine envoie dix fois par seconde : un nom ajoute s'y trouve une
  * demi-seconde plus tard, et c'est ce qui fait vivre la liste a l'ecran.
  *
- * <h2>Ce qui reste dehors</h2>
+ * <h2>Ce que le port ajoute</h2>
  *
- * <p>L'onglet sans fil de l'original — choisir le noeud qui alimente la machine — n'est pas porte :
- * elle trouve son noeud toute seule, comme les autres. Ce que le port ajoute a la place, dans le
- * panneau, c'est ce que la machine fait : combien de joueurs elle brouille en ce moment, et ce que
- * cela coute.
+ * <p>L'onglet sans fil de l'original — choisir le noeud qui alimente la machine — est la, comme sur
+ * les cinq autres machines : c'est le meme geste, pose par {@code CGuiWireless}. Dans le panneau, le
+ * port ajoute en plus ce que la machine fait : combien de joueurs elle brouille en ce moment, et ce
+ * que cela coute.
  */
 public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfererMenu> {
 
@@ -87,6 +88,10 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         property(label("prop.affected"), Integer.toString(menu.getAffectedCount()));
         costField = property(label("prop.cost"),
                 Integer.toString((int) menu.getCostPerTick()) + " IF/T").child("value");
+
+        // L'onglet sans fil de l'original, pose en dernier : le moteur ouvre la premiere page posee,
+        // et cette machine doit s'ouvrir sur sa page d'inventaire, celle qui porte la liste blanche.
+        new CGuiWireless(screen).install();
 
         wirePage(window);
         fillRows(menu.whitelist());

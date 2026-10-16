@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -33,6 +34,10 @@ public class ImagFusorScreen extends CGuiContainerScreen<ImagFusorMenu> {
         histogram(
                 CGuiHist.energy(menu::getEnergyStored, menu.getMaxEnergyStored()),
                 CGuiHist.liquid(menu::getLiquidAmount, menu.getTankSize()));
+
+        // L'onglet sans fil de l'original, pose en dernier : le moteur ouvre la premiere page posee,
+        // et une machine doit s'ouvrir sur sa page d'inventaire.
+        new CGuiWireless(screen).install();
     }
 
     /**
