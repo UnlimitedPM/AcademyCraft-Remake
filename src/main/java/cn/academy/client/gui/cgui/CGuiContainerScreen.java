@@ -58,6 +58,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
     /** Les histogrammes du panneau d'infos : leur barre, leur texte, et d'ou ils lisent. */
     private final List<Reading> readings = new ArrayList<>();
 
+    /** Les onglets, dans l'ordre des pages : il faut pouvoir les rallumer quand la page change. */
+    private final List<CWidget> tabs = new ArrayList<>();
+
     private record Reading(CWidget.ProgressBar bar, CWidget.TextBox text, CGuiHist source) {}
 
     private CGuiView view;
@@ -340,23 +343,6 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         }
     }
 
-    /**
-     * Le fond translucide de l'ecran.
-     *
-     * <p>Depuis 1.17 vanilla ne le dessine plus derriere un conteneur : son {@code render} appelle
-     * {@code renderBg} directement, donc c'est a l'ecran de le poser. L'original tenait en une ligne —
-     * {@code drawDefaultBackground} — et c'est exactement ce gris-la : deux noirs transparents
-     * superposes, l'un en haut de l'ecran, l'autre en bas.
-     *
-     * <p>Et une couche de plus, par-dessus, que <b>l'original n'avait pas</b>. Le joueur a compare :
-     * « le grand fond noir n'est pas assez sombre », et pour toutes les machines. La cause est
-     * probablement le flou de menu de cette version — le monde derriere n'est plus net comme en
-     * 1.12.2, et ce que les deux noirs laissent passer ne se lit donc pas de la meme facon. Que ce
-     * soit cela ou non, le remede est le meme, et il est volontaire : un quart de noir en plus. Il se
-     * retire en mettant {@code BACKDROP_EXTRA} a zero.
-     */
-    private static final int BACKDROP_EXTRA = 0x40000000;
-
     /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
     protected CWidget widget(String name) {
         if (view != null) {
@@ -530,6 +516,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         layoutRoot(root);
 
         pages.clear();
+        tabs.clear();
         breathing.clear();
         readings.clear();
         info.children().clear();
@@ -562,21 +549,43 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         }
     }
 
-    /** L'onglet d'une page : une copie du bouton de l'original, avec l'icone de son identifiant. */
+    /**
+     * L'onglet d'une page : une copie du bouton de l'original, avec l'icone de son identifiant.
+     *
+     * <p>Son allumage ne vient PAS du document — {@code pageselect.xml} ne porte que son image et sa
+     * taille — mais du {@code FrameEvent} que {@code TechUIWidget} accrochait a chaque bouton. Il se
+     * pose donc ici, en teinte de widget : le moteur en tient deja les deux etats, l'un au repos et
+     * l'autre sous la souris, et c'est exactement ce que l'original lisait.
+     */
     private CWidget tab(Page page, int index) {
         CWidget button = CGuiContainerLayout.tab(CGuiDocument.read("rework/pageselect").copy(),
                 index, page.id());
+        button.tint = new CWidget.Tint();
+        // La teinte REMPLACE la couleur de l'icone au lieu de se poser par-dessus : sans ce
+        // drapeau, l'onglet se dessinerait avec un carre blanc de plus, et l'icone ne se verrait
+        // pas plus. C'est le mode deja ecrit pour les fleches du formeur.
+        button.tint.affectTexture = true;
+        tabs.add(button);
         view.onClick(button, () -> show(index));
         return button;
     }
 
-    /** Ce que fait un onglet : toutes les fenetres se cachent, la sienne se montre. */
+    /**
+     * Ce que fait un onglet : toutes les fenetres se cachent, la sienne se montre — et c'est aussi
+     * ce qui rallume les icones, dont la page montree est la seule blanche.
+     */
     private void show(int index) {
         current = index;
         for (Page page : pages) {
             page.window().transform.doesDraw = false;
         }
         if (!pages.isEmpty()) pages.get(index).window().transform.doesDraw = true;
+
+        for (int i = 0; i < tabs.size(); i++) {
+            boolean here = i == index;
+            tabs.get(i).tint.idle = CGuiContainerLayout.tabColor(here, false);
+            tabs.get(i).tint.hover = CGuiContainerLayout.tabColor(here, true);
+        }
     }
 
     @Override
@@ -587,10 +596,16 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         // un conteneur : son render appelle renderBg directement, donc c'est a l'ecran de le poser.
         // L'original tenait en une ligne — drawDefaultBackground — et c'est exactement ce gris-la :
         // deux noirs transparents superposes, l'un en haut de l'ecran, l'autre en bas.
+        //
+        // Et RIEN de plus. Le port y avait ajoute un quart de noir, sur la demande du joueur, qui
+        // trouvait alors le fond trop clair (le flou de menu de cette version n'existe pas en
+        // 1.12.2, et ce que les deux noirs laissent passer ne s'y lit donc pas de la meme facon).
+        // Il est revenu dessus : « le fond noir n'est pas assez transparent, il ne laisse pas assez
+        // passer la lumiere ». Une couche de plus ne se rattrape pas ailleurs, puisque les elements
+        // du mod sont eux-memes des noirs translucides — le panneau d'infos est un noir a moitie —
+        // donc la seule facon de rendre au fond ce qu'il laisse passer est de ne rien ajouter du
+        // tout.
         super.renderBackground(graphics);
-        if (BACKDROP_EXTRA != 0) {
-            graphics.fill(0, 0, width, height, BACKDROP_EXTRA);
-        }
 
         // Puis le document, pose sur le conteneur et pas sur l'ecran : c'est ce qui met le fond de la
         // page et les slots dans le meme repere. Les deux trames se rejoignent a un demi-pixel.

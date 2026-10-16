@@ -114,6 +114,49 @@ class CGuiLayoutTest {
         assertEquals(0, CGuiLayout.bar(bar, 100, 20).w(), EPS, "et une barre vide ne se remplit pas");
     }
 
+    /**
+     * Une barre d'histogramme allume SEPT pixels quand la carte graphique en allumerait sept.
+     *
+     * <p>C'est le defaut que le joueur a vu avant moi : « les barres bleues et orange dans le
+     * graphique sont bien 1 pixel moins large sur la droite ». La barre fait seize unites dessinees
+     * a quatre dixiemes, soit 6,4 pixels ; le port arrondissait cette largeur a six AVANT de la
+     * dessiner, donc le dernier pixel manquait. La carte, elle, n'allume que les pixels dont le
+     * centre tombe dans le quad : le premier a 22,4 est le 22 (centre 22,5) et le dernier le 28
+     * (centre 28,5, encore sous 28,8).
+     */
+    @Test
+    @DisplayName("une barre de 6,4 pixels en allume sept, et pas six")
+    void lesBordsDUneBarreSontDesPixels() {
+        CWidget.ProgressBar bar = new CWidget.ProgressBar();
+        bar.dir = CWidget.ProgressBar.Direction.UP;
+        bar.progress = 1.0;
+
+        // La barre d'un histogramme, posee a 22,4 unites du bord : 16 de large et 120 de haut,
+        // dessinees a quatre dixiemes.
+        CGuiLayout.Bar shape = CGuiLayout.bar(bar, 16 * 0.4, 120 * 0.4);
+        CGuiLayout.Rect rect = CGuiLayout.pixels(shape, 100.4, 40.0);
+
+        assertEquals(100, rect.x0(), "le premier pixel dont le centre tombe dans le quad");
+        assertEquals(107, rect.x1(), "la borne exclue, donc sept pixels peints : 100 a 106");
+        assertEquals(40, rect.y0());
+        assertEquals(88, rect.y1(), "et la hauteur entiere, quarante-huit pixels");
+
+        // Un bord qui tombe PILE sur un pixel ne le deborde pas : a 10,0 la barre commence au 10,
+        // et un remplissage d'un quart (25 pixels) va donc jusqu'au 34 inclus.
+        bar.dir = CWidget.ProgressBar.Direction.RIGHT;
+        bar.progress = 0.25;
+        CGuiLayout.Rect quart = CGuiLayout.pixels(CGuiLayout.bar(bar, 100, 20), 10.0, 5.0);
+        assertEquals(10, quart.x0());
+        assertEquals(35, quart.x1());
+        assertEquals(25, quart.x1() - quart.x0(), "vingt-cinq pixels pleins");
+
+        // Et vers le haut, la barre part du BAS : son premier pixel est celui du bas de la boite.
+        bar.dir = CWidget.ProgressBar.Direction.UP;
+        CGuiLayout.Rect haut = CGuiLayout.pixels(CGuiLayout.bar(bar, 100, 20), 10.0, 5.0);
+        assertEquals(20, haut.y0(), "les trois quarts du bas, sur vingt pixels de haut");
+        assertEquals(25, haut.y1(), "et son dernier pixel est le dernier de la boite");
+    }
+
     @Test
     @DisplayName("une ligne qui depasse ne se dessine pas du tout")
     void uneLigneQuiDepasseNeSeDessinePas() {

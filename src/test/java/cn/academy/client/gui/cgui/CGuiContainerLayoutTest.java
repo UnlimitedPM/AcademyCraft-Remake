@@ -67,6 +67,27 @@ class CGuiContainerLayoutTest {
     }
 
     @Test
+    @DisplayName("l'onglet survole et la page montree sont blancs, les autres gris")
+    void lAllumageDesOnglets() {
+        // Le FrameEvent de l'original, ses deux regles separees. L'onglet de la page montree est
+        // blanc et plein, quoi qu'il arrive ; un autre onglet est gris — et sous la souris il perd
+        // seulement son opacite, pas sa lumiere.
+        int[] montre = CGuiContainerLayout.tabColor(true, false);
+        assertEquals(255, montre[0]);
+        assertEquals(255, montre[3]);
+        assertEquals(montre[0], montre[1]);
+        assertEquals(montre[1], montre[2]);
+
+        int[] auRepos = CGuiContainerLayout.tabColor(false, false);
+        assertEquals(204, auRepos[0], "gris : les quatre cinquiemes de la lumiere");
+        assertEquals(204, auRepos[3], "et quatre cinquiemes de l'opacite aussi");
+
+        int[] survole = CGuiContainerLayout.tabColor(false, true);
+        assertEquals(204, survole[0], "survole, il reste gris...");
+        assertEquals(255, survole[3], "...mais il s'opacifie");
+    }
+
+    @Test
     @DisplayName("les onglets descendent de vingt-deux pixels chacun")
     void lesOngletsDescendent() {
         CWidget root = CGuiContainerLayout.root(new CWidget("root"));

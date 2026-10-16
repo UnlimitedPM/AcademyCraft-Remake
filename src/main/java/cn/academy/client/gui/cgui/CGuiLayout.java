@@ -107,6 +107,35 @@ public final class CGuiLayout {
         };
     }
 
+    /** Le rectangle d'une barre, en <b>pixels d'ecran</b> : du premier au dernier pixel allume. */
+    public record Rect(int x0, int y0, int x1, int y1) {}
+
+    /**
+     * Ce rectangle, ramene aux pixels que la carte graphique allume.
+     *
+     * <p>L'original ne dessine pas des pixels : il pose un quad a des coordonnees <b>fractionnaires</b>
+     * et la carte le rasterise sans antialiasing — <b>un pixel s'allume quand son centre tombe dans
+     * le quad</b>. Le port, lui, arrondissait la largeur de la barre AVANT de la dessiner : une barre
+     * de 6,4 pixels en peignait 6, et il manquait donc le dernier a droite. Le joueur l'a vu sans
+     * mesurer — « les barres bleues et orange dans le graphique sont bien 1 pixel moins large sur la
+     * droite » — parce que la colonne creuse de l'histogramme, elle, fait bien 6,4.
+     *
+     * @param x le coin gauche du widget, en pixels d'ecran — fraction comprise
+     * @param y idem en hauteur
+     */
+    public static Rect pixels(Bar bar, double x, double y) {
+        return new Rect(lit(x + bar.x()), lit(y + bar.y()),
+                lit(x + bar.x() + bar.w()), lit(y + bar.y() + bar.h()));
+    }
+
+    /**
+     * Le premier pixel touche par un bord, et — pour l'autre bord — celui qui le suit : un pixel va
+     * de lui-meme a lui-meme plus un, si bien que son centre est a {@code p + 0,5}.
+     */
+    static int lit(double edge) {
+        return (int) Math.ceil(edge - 0.5);
+    }
+
     /**
      * Combien de lignes de cette liste tiennent entierement dans sa boite, a partir de son rang.
      *

@@ -166,7 +166,8 @@ public abstract class CGuiScreen extends Screen {
                 }
             }
             if (widget.bar != null) {
-                drawBar(graphics, widget, x, y, w, h);
+                // La barre recoit sa boite EXACTE : voir CGuiView, dont ce moteur est la copie.
+                drawBar(graphics, widget, exactX, exactY, widget.absW, widget.absH);
             }
             if (widget.outline != null) {
                 int colour = argb(widget.outline.alpha, widget.outline.red, widget.outline.green,
@@ -193,33 +194,42 @@ public abstract class CGuiScreen extends Screen {
      *
      * <p>Le morceau a dessiner vient de {@link CGuiLayout#bar}, ou le calcul est pur et relu par un
      * test : c'est le {@code switch} du composant de l'original, et il decide a la fois du
-     * rectangle et de la portion de texture — une barre qui monte prend le BAS de son image.
+     * rectangle et de la portion de texture — une barre qui monte prend le BAS de son image. Ses
+     * bords se posent en PIXELS d'ecran, comme la carte graphique les allumerait : voir
+     * {@link CGuiLayout#pixels}.
      */
-    private static void drawBar(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
+    private static void drawBar(GuiGraphics graphics, CWidget widget, double x, double y,
+                                double w, double h) {
         if (w <= 0 || h <= 0) return;
 
         CGuiLayout.Bar bar = CGuiLayout.bar(widget.bar, w, h);
         if (bar.w() <= 0 || bar.h() <= 0) return;
 
-        ResourceLocation texture = widget.bar.texture == null ? null
-                : ResourceLocation.tryParse(widget.bar.texture);
-        if (texture == null) {
-            int[] color = widget.bar.color;
-            graphics.fill(x + (int) Math.round(bar.x()), y + (int) Math.round(bar.y()),
-                    x + (int) Math.round(bar.x() + bar.w()),
-                    y + (int) Math.round(bar.y() + bar.h()),
-                    argb(color[3], color[0], color[1], color[2]));
-            return;
-        }
+        CGuiLayout.Rect rect = CGuiLayout.pixels(bar, x, y);
+        int rw = rect.x1() - rect.x0();
+        int rh = rect.y1() - rect.y0();
+        if (rw <= 0 || rh <= 0) return;
 
         int[] color = widget.bar.color;
-        graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
-        graphics.blit(texture, x + (int) Math.round(bar.x()), y + (int) Math.round(bar.y()),
-                (int) Math.round(bar.w()), (int) Math.round(bar.h()),
-                (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
-                (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
-                TEXTURE, TEXTURE);
-        graphics.setColor(1f, 1f, 1f, 1f);
+        ResourceLocation texture = widget.bar.texture == null ? null
+                : ResourceLocation.tryParse(widget.bar.texture);
+
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) -(x - Math.floor(x)), (float) -(y - Math.floor(y)), 0f);
+
+        if (texture == null) {
+            graphics.fill(rect.x0(), rect.y0(), rect.x1(), rect.y1(),
+                    argb(color[3], color[0], color[1], color[2]));
+        } else {
+            graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
+            graphics.blit(texture, rect.x0(), rect.y0(), rw, rh,
+                    (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
+                    (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
+                    TEXTURE, TEXTURE);
+            graphics.setColor(1f, 1f, 1f, 1f);
+        }
+
+        graphics.pose().popPose();
     }
 
     private static void drawTexture(GuiGraphics graphics, String path, int x, int y, int w, int h,

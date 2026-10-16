@@ -36,6 +36,32 @@ final class CGuiContainerLayout {
     static final double TAB_X = -20;
     static final double TAB_STEP = 22;
 
+    /** Ce qu'un onglet perd de lumiere quand il n'est pas la page montree : les quatre cinquiemes. */
+    static final int TAB_DIM = 204;
+
+    /**
+     * La couleur d'un onglet, telle que le {@code FrameEvent} de l'original l'ecrit image par image.
+     *
+     * <p>Deux choses s'y allument separement, et c'est ce qui donne son air a l'onglet :
+     *
+     * <ul>
+     *   <li>la <b>lumiere</b> — blanche pour la page montree, grise pour les autres, survolees ou
+     *       non ;</li>
+     *   <li>l'<b>opacite</b> — pleine des que la souris est dessus ou que c'est la page montree,
+     *       grise sinon.</li>
+     * </ul>
+     *
+     * <p>Un onglet au repos perd donc des deux facons a la fois, et c'est voulu : il rentre dans le
+     * fond au lieu de flotter dessus. Le port les dessinait tous en blanc plein, et le joueur a
+     * demande les deux regles ensemble : « ils sont comme ca uniquement quand on est dessus et un peu
+     * grise quand on n'y est pas ».
+     */
+    static int[] tabColor(boolean current, boolean hover) {
+        int light = current ? 255 : TAB_DIM;
+        int alpha = current || hover ? 255 : TAB_DIM;
+        return new int[] { light, light, light, alpha };
+    }
+
     /** Le panneau d'infos : sept unites a droite de la racine, cinq en dessous de son haut. */
     static final double INFO_X = ROOT_WIDTH + 7;
     static final double INFO_Y = 5;

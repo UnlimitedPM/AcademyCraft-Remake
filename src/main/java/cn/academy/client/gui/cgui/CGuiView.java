@@ -281,7 +281,9 @@ public final class CGuiView {
                 graphics.fill(x, y, x + w, y + h, argb(tint[3], tint[0], tint[1], tint[2]));
             }
             if (widget.bar != null) {
-                drawBar(graphics, widget, x, y, w, h);
+                // La barre, elle, recoit sa boite EXACTE et non ses pixels arrondis : c'est tout
+                // son probleme, et il est explique dans drawBar.
+                drawBar(graphics, widget, exactX, exactY, widget.absW, widget.absH);
             }
             if (widget.outline != null) {
                 int colour = argb(widget.outline.alpha, widget.outline.red, widget.outline.green,
@@ -516,31 +518,46 @@ public final class CGuiView {
     /**
      * Une barre de progression : la portion de sa texture qui correspond au remplissage, ou un
      * aplat de sa couleur quand elle n'en a pas. Le morceau vient de {@link CGuiLayout#bar}.
+     *
+     * <p>Et son rectangle se pose en <b>pixels d'ecran</b> — voir {@link CGuiLayout#pixels} — et non
+     * dans le repere fractionnaire du widget : c'est ce qui lui rend le dernier pixel que l'original
+     * lui donnait, un pixel etant allume quand son centre tombe dans le quad. La fraction de la pose
+     * est donc retiree le temps du dessin, puis remise : le reste des elements du widget garde, lui,
+     * la position exacte du document.
      */
-    private static void drawBar(GuiGraphics graphics, CWidget widget, int x, int y, int w, int h) {
+    private static void drawBar(GuiGraphics graphics, CWidget widget, double x, double y,
+                                double w, double h) {
         if (w <= 0 || h <= 0) return;
 
         CGuiLayout.Bar bar = CGuiLayout.bar(widget.bar, w, h);
         if (bar.w() <= 0 || bar.h() <= 0) return;
 
+        CGuiLayout.Rect rect = CGuiLayout.pixels(bar, x, y);
+        int rw = rect.x1() - rect.x0();
+        int rh = rect.y1() - rect.y0();
+        if (rw <= 0 || rh <= 0) return;
+
         int[] color = widget.bar.color;
         ResourceLocation texture = widget.bar.texture == null ? null
                 : ResourceLocation.tryParse(widget.bar.texture);
+
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) -(x - Math.floor(x)), (float) -(y - Math.floor(y)), 0f);
+
         if (texture == null) {
-            graphics.fill(x + (int) Math.round(bar.x()), y + (int) Math.round(bar.y()),
-                    x + (int) Math.round(bar.x() + bar.w()),
-                    y + (int) Math.round(bar.y() + bar.h()),
+            graphics.fill(rect.x0(), rect.y0(), rect.x1(), rect.y1(),
                     argb(color[3], color[0], color[1], color[2]));
-            return;
+        } else {
+            graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
+            blend();
+            graphics.blit(texture, rect.x0(), rect.y0(), rw, rh,
+                    (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
+                    (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
+                    TEXTURE, TEXTURE);
+            graphics.setColor(1f, 1f, 1f, 1f);
         }
 
-        graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
-        graphics.blit(texture, x + (int) Math.round(bar.x()), y + (int) Math.round(bar.y()),
-                (int) Math.round(bar.w()), (int) Math.round(bar.h()),
-                (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
-                (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
-                TEXTURE, TEXTURE);
-        graphics.setColor(1f, 1f, 1f, 1f);
+        graphics.pose().popPose();
     }
 
     /** Un carre creux : le cerne du fichier, qui se dessine sur les quatre bords. */
