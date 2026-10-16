@@ -154,7 +154,10 @@ public abstract class CGuiScreen extends Screen {
                 if (widget.texture.texture == null) {
                     graphics.fill(x, y, x + w, y + h, colour);
                 } else {
-                    drawTexture(graphics, widget.texture.texture, x, y, w, h, colour);
+                    // La taille exacte part avec : une image demandee plus petite qu'un pixel entier
+                    // se pose sur les pixels qu'elle occupe sans etre etiree pour autant.
+                    drawTexture(graphics, widget.texture.texture, x, y, w, h, colour, widget.absW,
+                            widget.absH);
                 }
             }
             if (widget.tint != null) {
@@ -233,13 +236,18 @@ public abstract class CGuiScreen extends Screen {
     }
 
     private static void drawTexture(GuiGraphics graphics, String path, int x, int y, int w, int h,
-                                    int colour) {
+                                    int colour, double exactW, double exactH) {
         ResourceLocation texture = ResourceLocation.tryParse(path);
         if (texture == null) return;
 
         graphics.setColor(((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f,
                 (colour & 0xFF) / 255f, ((colour >>> 24) & 0xFF) / 255f);
-        graphics.blit(texture, x, y, w, h, 0f, 0f, TEXTURE, TEXTURE, TEXTURE, TEXTURE);
+        // La taille demandee n'est pas toujours entiere : une icone d'onglet fait 24 unites a
+        // l'echelle 0,7, soit 16,8 pixels. Elle se pose sur les dix-sept pixels qu'elle occupe, mais
+        // elle n'est pas ETIREE pour autant — voir CGuiView, dont ce moteur est la copie.
+        int uw = Math.max(1, (int) Math.round(TEXTURE * (exactW / w)));
+        int vh = Math.max(1, (int) Math.round(TEXTURE * (exactH / h)));
+        graphics.blit(texture, x, y, w, h, 0f, 0f, uw, vh, TEXTURE, TEXTURE);
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 

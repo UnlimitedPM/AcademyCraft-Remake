@@ -115,33 +115,54 @@ class CGuiLayoutTest {
     }
 
     /**
-     * Une barre d'histogramme allume SEPT pixels quand la carte graphique en allumerait sept.
+     * Un bord d'aplat se compte depuis le coin du CADRE, et pas depuis la racine de l'original.
      *
-     * <p>C'est le defaut que le joueur a vu avant moi : « les barres bleues et orange dans le
-     * graphique sont bien 1 pixel moins large sur la droite ». La barre fait seize unites dessinees
-     * a quatre dixiemes, soit 6,4 pixels ; le port arrondissait cette largeur a six AVANT de la
-     * dessiner, donc le dernier pixel manquait. La carte, elle, n'allume que les pixels dont le
-     * centre tombe dans le quad : le premier a 22,4 est le 22 (centre 22,5) et le dernier le 28
-     * (centre 28,5, encore sous 28,8).
+     * <p>C'est le demi-pixel de `placeSnapped`, vu de l'autre bout : la racine de l'original tombait
+     * a {@code guiLeft - 0,5}, donc tout ce qu'il dessinait en aplat etait decale d'un demi-pixel
+     * vers la gauche et vers le haut. Un bord entre deux pixels prenait le suivant ; un bord pile
+     * sur un pixel prenait celui-la. Le cadre ayant ete ramene au pixel, c'est cette regle-la qui
+     * rend aux aplats leur place relative — et c'est elle qui a rendu au joueur ses barres :
+     * « tu as mis les barres des graph trop grosse et un peu trop en haut ».
      */
     @Test
-    @DisplayName("une barre de 6,4 pixels en allume sept, et pas six")
-    void lesBordsDUneBarreSontDesPixels() {
+    @DisplayName("un bord d'aplat se compte depuis le coin du cadre")
+    void lesBordsDUnAplatSeComptentDepuisLeCadre() {
+        assertEquals(23, CGuiLayout.framePixel(22.4), "entre deux pixels, il prend le suivant");
+        assertEquals(22, CGuiLayout.framePixel(22.0), "pile sur un pixel, il prend celui-la");
+        assertEquals(29, CGuiLayout.framePixel(28.8), "et la borne exclue suit la meme regle");
+        assertEquals(0, CGuiLayout.framePixel(0.0), "le coin du cadre lui-meme");
+        assertEquals(-3, CGuiLayout.framePixel(-3.6), "y compris au-dessus du cadre");
+    }
+
+    /**
+     * Une barre d'histogramme occupe les SIX pixels que la meme barre occupe chez l'original.
+     *
+     * <p>Deux retours du joueur pour arriver la, et les deux fois c'est le meme demi-pixel qui
+     * parlait. La barre fait seize unites dessinees a quatre dixiemes, soit 6,4 pixels : d'abord
+     * posee a partir de son pixel arrondi, elle finissait un pixel trop tot a droite (« les barres
+     * bleues et orange sont bien 1 pixel moins large sur la droite ») ; puis mesuree depuis l'absolu,
+     * elle commencait un pixel trop tot de l'autre cote et se retrouvait un pixel trop haute —
+     * « trop grosse et un peu trop en haut ».
+     */
+    @Test
+    @DisplayName("une barre d'histogramme occupe six pixels, du premier au dernier")
+    void laBarreOccupeLesBonPixels() {
         CWidget.ProgressBar bar = new CWidget.ProgressBar();
         bar.dir = CWidget.ProgressBar.Direction.UP;
         bar.progress = 1.0;
 
-        // La barre d'un histogramme, posee a 22,4 unites du bord : 16 de large et 120 de haut,
-        // dessinees a quatre dixiemes.
+        // La barre d'un histogramme : 16 sur 120 unites dessinees a quatre dixiemes, posees a 22,4
+        // de la boite. Sur l'ecran, elle fait donc 6,4 sur 48 pixels.
         CGuiLayout.Bar shape = CGuiLayout.bar(bar, 16 * 0.4, 120 * 0.4);
         CGuiLayout.Rect rect = CGuiLayout.pixels(shape, 100.4, 40.0);
 
-        assertEquals(100, rect.x0(), "le premier pixel dont le centre tombe dans le quad");
-        assertEquals(107, rect.x1(), "la borne exclue, donc sept pixels peints : 100 a 106");
-        assertEquals(40, rect.y0());
-        assertEquals(88, rect.y1(), "et la hauteur entiere, quarante-huit pixels");
+        assertEquals(101, rect.x0(), "le premier pixel entierement couvert");
+        assertEquals(107, rect.x1(), "et la borne exclue : six pixels, de 101 a 106");
+        assertEquals(6, rect.x1() - rect.x0());
+        assertEquals(40, rect.y0(), "la boite commence ou elle commence : rien a rogner");
+        assertEquals(88, rect.y1(), "et la barre prend ses quarante-huit pixels de haut");
 
-        // Un bord qui tombe PILE sur un pixel ne le deborde pas : a 10,0 la barre commence au 10,
+        // Un bord qui tombe pile sur un pixel ne le deborde pas : a 10,0 la barre commence au 10,
         // et un remplissage d'un quart (25 pixels) va donc jusqu'au 34 inclus.
         bar.dir = CWidget.ProgressBar.Direction.RIGHT;
         bar.progress = 0.25;

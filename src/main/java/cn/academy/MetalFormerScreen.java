@@ -38,13 +38,19 @@ public class MetalFormerScreen extends CGuiContainerScreen<MetalFormerMenu> {
 
     /**
      * L'original : {@code InventoryPage(main)} sur {@code page_metalformer} — la page de la machine EST
-     * celle de l'inventaire — puis l'histogramme du tampon, comme le generateur solaire.
+     * celle de l'inventaire — puis l'histogramme de son TAMPON, comme le generateur solaire.
+     *
+     * <p>Sauf que le tampon du formeur n'est pas celui du solaire : l'original demande
+     * {@code histEnergy}, le bleu du tampon ordinaire, et le port demandait {@code histBuffer} — sa
+     * copie du generateur solaire. La barre etait donc d'un bleu plus clair, et sa legende annoncait
+     * « buffer » au lieu d'« energy » : « pour certaines machines elles n'ont meme pas la meme couleur
+     * et le texte qui dit a quoi correspond la barre n'est pas le bon non plus ».
      */
     @Override
     protected void build(CGuiContainerScreen<MetalFormerMenu> screen) {
         page("inv", "rework/page_metalformer");
 
-        histogram(CGuiHist.buffer(menu::getEnergyStored, menu.getMaxEnergyStored()));
+        histogram(CGuiHist.energy(menu::getEnergyStored, menu.getMaxEnergyStored()));
 
         // Les deux fleches : le clic part par le chemin vanilla des boutons de conteneur.
         onClick(widget("btn_left"), () -> clickButton(MetalFormerMenu.BUTTON_MODE_PREVIOUS));

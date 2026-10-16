@@ -274,7 +274,10 @@ public final class CGuiView {
                 if (widget.texture.texture == null) {
                     graphics.fill(x, y, x + w, y + h, colour);
                 } else {
-                    drawTexture(graphics, widget.texture, x, y, w, h, colour);
+                    // La taille exacte part avec : une image demandee plus petite qu'un pixel entier
+                    // se pose sur les pixels qu'elle occupe sans etre etiree pour autant.
+                    drawTexture(graphics, widget.texture, x, y, w, h, colour, widget.absW,
+                            widget.absH);
                 }
             }
             if (widget.tint != null && !widget.tint.affectTexture && tint[3] > 0) {
@@ -485,19 +488,37 @@ public final class CGuiView {
 
         ResourceLocation line = ResourceLocation.tryParse(frame.line);
         if (line != null) {
-            int lx = (int) Math.round(x - frame.lineMargin);
-            int lw = (int) Math.round(w + frame.lineMargin * 2);
+            // Les deux bandes, elles, se mesurent depuis le coin du CADRE : ce sont des aplats, et
+            // leurs bords tombent au demi-pixel pres (-8,6 en haut, -3,2 a gauche, +6,4 de large).
+            // Elles se posent donc en pixels d'ecran, la fraction de la pose retiree le temps de le
+            // faire — c'est la regle de CGuiLayout.framePixel. Sans cela celle du haut se dessinait
+            // un pixel trop haut et un pixel trop courte, et celle du bas un pixel trop courte :
+            // « celle du dessous est plus petite que la vrai bandelette, et celle du haut est un peu
+            // trop en haut a droite ».
+            double exactX = widget.absX;
+            double exactY = widget.absY;
+
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) -(exactX - x), (float) -(exactY - y), 0f);
+
+            int lx = CGuiLayout.framePixel(exactX - frame.lineMargin);
+            int lw = CGuiLayout.framePixel(exactX + widget.absW + frame.lineMargin) - lx;
+            int ty = CGuiLayout.framePixel(exactY + frame.topY);
+            int th = CGuiLayout.framePixel(exactY + frame.topY + frame.topHeight) - ty;
+            int by = CGuiLayout.framePixel(exactY + widget.absH - frame.bottomInset);
+            int bh = CGuiLayout.framePixel(exactY + widget.absH - frame.bottomInset
+                    + frame.bottomHeight) - by;
 
             blend();
-            graphics.blit(line, lx, (int) Math.round(y + frame.topY), lw,
-                    (int) Math.round(frame.topHeight), 0f, 0f, 1, 1, 1, 1);
-            graphics.blit(line, lx, (int) Math.round(y + h - frame.bottomInset), lw,
-                    (int) Math.round(frame.bottomHeight), 0f, 0f, 1, 1, 1, 1);
+            graphics.blit(line, lx, ty, lw, th, 0f, 0f, 1, 1, 1, 1);
+            graphics.blit(line, lx, by, lw, bh, 0f, 0f, 1, 1, 1, 1);
+
+            graphics.pose().popPose();
         }
     }
 
     private static void drawTexture(GuiGraphics graphics, CWidget.DrawTexture window, int x, int y,
-                                    int w, int h, int colour) {
+                                    int w, int h, int colour, double exactW, double exactH) {
         ResourceLocation texture = ResourceLocation.tryParse(window.texture);
         if (texture == null) return;
 
@@ -506,11 +527,22 @@ public final class CGuiView {
         // La fenetre demandee, en fractions converties sur une base entiere : une image entiere fait
         // zero a un, une planche de trois en prend un tiers. Le tout sans jamais avoir a connaitre les
         // dimensions du fichier — les pages des machines font 352 sur 374, les icones 48.
+        //
+        // Et la taille demandee n'est pas toujours entiere : une icone d'onglet fait vingt-quatre
+        // unites a l'echelle 0,7, soit 16,8 pixels. On la pose donc sur les dix-sept pixels qu'elle
+        // occupe — il n'y a pas de demi-pixel — mais on ne l'ETIRE pas pour autant : la fenetre de
+        // texture reste celle des 16,8 pixels, si bien que le dernier pixel montre le meme morceau
+        // d'image que chez l'original. Sans cela le dessin grandit d'un pour cent et ses bords doux
+        // changent de case, ce que le joueur a vu sans avoir a mesurer : « l'icone du coffre et du
+        // reseau wifi doivent avoir un effet de transparence pour certains de leurs pixels car la
+        // ils ont certains endroits qui paraissent plus gros ».
+        double stretchX = exactW / w;
+        double stretchY = exactH / h;
         blend();
         graphics.blit(texture, x, y, w, h,
                 (float) (window.u0 * UV_BASE), (float) (window.v0 * UV_BASE),
-                Math.max(1, (int) Math.round((window.u1 - window.u0) * UV_BASE)),
-                Math.max(1, (int) Math.round((window.v1 - window.v0) * UV_BASE)),
+                Math.max(1, (int) Math.round((window.u1 - window.u0) * UV_BASE * stretchX)),
+                Math.max(1, (int) Math.round((window.v1 - window.v0) * UV_BASE * stretchY)),
                 UV_BASE, UV_BASE);
         graphics.setColor(1f, 1f, 1f, 1f);
     }

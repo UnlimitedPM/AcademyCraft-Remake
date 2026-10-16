@@ -111,29 +111,43 @@ public final class CGuiLayout {
     public record Rect(int x0, int y0, int x1, int y1) {}
 
     /**
-     * Ce rectangle, ramene aux pixels que la carte graphique allume.
+     * Ce rectangle, ramene aux pixels que la barre occupe.
      *
-     * <p>L'original ne dessine pas des pixels : il pose un quad a des coordonnees <b>fractionnaires</b>
-     * et la carte le rasterise sans antialiasing — <b>un pixel s'allume quand son centre tombe dans
-     * le quad</b>. Le port, lui, arrondissait la largeur de la barre AVANT de la dessiner : une barre
-     * de 6,4 pixels en peignait 6, et il manquait donc le dernier a droite. Le joueur l'a vu sans
-     * mesurer — « les barres bleues et orange dans le graphique sont bien 1 pixel moins large sur la
-     * droite » — parce que la colonne creuse de l'histogramme, elle, fait bien 6,4.
+     * <p>L'original ne dessinait pas des pixels : il posait un quad a des coordonnees
+     * <b>fractionnaires</b>. La barre d'un histogramme fait seize unites a l'echelle 0,4, soit 6,4
+     * pixels, et c'est {@link #framePixel} qui dit lesquels elle occupe.
      *
      * @param x le coin gauche du widget, en pixels d'ecran — fraction comprise
      * @param y idem en hauteur
      */
     public static Rect pixels(Bar bar, double x, double y) {
-        return new Rect(lit(x + bar.x()), lit(y + bar.y()),
-                lit(x + bar.x() + bar.w()), lit(y + bar.y() + bar.h()));
+        return new Rect(framePixel(x + bar.x()), framePixel(y + bar.y()),
+                framePixel(x + bar.x() + bar.w()), framePixel(y + bar.y() + bar.h()));
     }
 
     /**
-     * Le premier pixel touche par un bord, et — pour l'autre bord — celui qui le suit : un pixel va
-     * de lui-meme a lui-meme plus un, si bien que son centre est a {@code p + 0,5}.
+     * Le premier pixel qu'un bord occupe, compte <b>depuis le coin du cadre</b>.
+     *
+     * <p>C'est la regle des aplats — une barre de progression, les deux bandes claires d'un panneau —
+     * et elle tient tout entiere dans le demi-pixel de la racine. L'original posait la sienne a
+     * {@code guiLeft - 0,5} : tout ce qu'il dessinait etait donc decale d'un demi-pixel vers la
+     * gauche et vers le haut, et un bord qui tombait <b>entre</b> deux pixels allumait le suivant,
+     * tandis qu'un bord qui tombait pile sur un pixel allumait celui-la. C'est exactement {@code ceil},
+     * mesure depuis le coin du cadre.
+     *
+     * <p>Et c'est bien le CADRE qui sert de repere, parce que le port a ramene la racine au pixel
+     * (voir {@link #placeSnapped} : les trous des emplacements du jeu sont a des positions entieres).
+     * Un aplat qui garderait son ancien pixel ne suivrait donc pas ce demi-pixel, et flotterait un
+     * pixel a gauche et en haut de tout le reste — ce que le joueur a vu tout de suite, sur toutes
+     * les machines a histogramme : « tu as mis les barres des graph trop grosse et un peu trop en
+     * haut », et sur le panneau : « celle du dessous est plus petite, et celle du haut est un peu
+     * trop en haut a droite ».
+     *
+     * <p>La mesure n'est la mesure du cadre que si l'origine de l'arbre est entiere : les ecrans de
+     * machine passent par {@code placeSnapped}, donc c'est bien le cas la ou cette regle sert.
      */
-    static int lit(double edge) {
-        return (int) Math.ceil(edge - 0.5);
+    static int framePixel(double edge) {
+        return (int) Math.ceil(edge);
     }
 
     /**
