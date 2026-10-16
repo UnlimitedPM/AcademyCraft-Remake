@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.2 - le formeur et ses recettes / the former and its recipes
+
+### English
+
+All of 0.1.1, plus two things.
+
+- **The metal former's mode arrows work.** They were wired into nothing: the engine looked up a page widget through the view, and during the screen's build the view does not know the pages yet — they are only placed in the tree afterwards. Every screen that wires something at that moment was concerned, not just this one.
+- **The metal former knows its recipes again.** It had the original's four; it now has all seventeen explicit ones — cutting silicon into wafers and pieces, etching a data chip into a calc chip, plating iron and constraint ingot, refining its four ores — plus the **refining rule**: every ore that smelts comes back at double. That covers the mod's ores, vanilla's, and any other mod's metals, because it reads the game's own smelting recipes instead of a hand-written list. The original's two exceptions are kept: redstone gives a block, lapis gives twelve.
+- A flaky in-game test (a thrown iron block landing) was given a wider budget, so the suite stops reporting a failure that was only impatience.
+- **Tests**: 158 in-game tests, 825 unit tests.
+
+### Francais
+
+Tout le 0.1.1, plus deux choses.
+
+- **Les fleches de mode du formeur de metal fonctionnent.** Elles se cablaient dans le vide : le moteur cherchait un widget de page a travers la vue, et pendant la construction de l'ecran la vue ne connait pas encore les pages — elles ne sont posees dans l'arbre qu'apres. Tous les ecrans qui cablent quelque chose a ce moment-la etaient concernes, pas seulement celui-ci.
+- **Le formeur connait ses recettes.** Il n'en avait que les quatre de l'original ; il a maintenant les dix-sept explicites — tailler le silicium en tranches et en morceaux, graver une puce de donnees en puce de calcul, plaquer le fer et le lingot de contrainte, raffiner ses quatre minerais — plus la **regle de raffinage** : tout minerai qui fond revient au double. Cela couvre les minerais du mod, ceux de vanilla et ceux des metaux des autres mods, parce qu'elle lit les recettes de fonte du jeu au lieu d'une liste ecrite a la main. Les deux exceptions de l'original sont gardees : le redstone donne un bloc, le lapis en donne douze.
+- Un test en jeu instable (le lancer d'un bloc de fer qui retombe) a recu un budget plus large : la suite ne signale plus un echec qui n'etait que de l'impatience.
+- **Des tests** : 158 tests en jeu, 825 tests unitaires.
+
 ## 0.1.1 - le developpeur ouvre la porte / the developer opens the door
 
 Tout le 0.1.0, plus ce que le tester en vrai a fait sortir. Rien n'a ete retire.
