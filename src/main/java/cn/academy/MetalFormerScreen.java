@@ -60,7 +60,9 @@ public class MetalFormerScreen extends CGuiContainerScreen<MetalFormerMenu> {
     protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
         CWidget progress = widget("progress");
         if (progress != null && progress.bar != null) {
-            progress.bar.progress = menu.getProgress();
+            // Par paliers, comme l'original : il ne synchronisait son compteur que tous les dix ticks,
+            // donc six morceaux. Voir MetalFormerBlockEntity.PROGRESS_STEPS.
+            progress.bar.progress = MetalFormerBlockEntity.displayProgress(menu.getProgress());
         }
 
         CWidget icon = widget("icon_mode");

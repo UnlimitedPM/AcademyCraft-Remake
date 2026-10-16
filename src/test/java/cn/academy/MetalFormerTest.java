@@ -29,6 +29,9 @@ class MetalFormerTest {
     /** La page de l'original, celle que l'ecran pose sous l'identifiant « inv ». */
     private static final String DOCUMENT = "rework/page_metalformer";
 
+    /** La tolerance des comparaisons de nombres a virgule. */
+    private static final double EPS = 1e-9;
+
     @Test
     @DisplayName("la page du formeur porte tout ce que l'ecran demande")
     void laPagePorteCeQueLEcranDemande() {
@@ -96,6 +99,33 @@ class MetalFormerTest {
             java.util.List<String> valeurs = new java.util.ArrayList<>();
             json(path).getAsJsonArray("values").forEach(valeur -> valeurs.add(valeur.getAsString()));
             assertEquals(attendus, valeurs, path);
+        }
+    }
+
+    /**
+     * La barre de travail se pose par paliers, comme celle de l'original.
+     *
+     * <p>L'original montait bien son compteur de zero a soixante, mais ne le synchronisait que tous
+     * les dix ticks : le client ne voyait donc que six valeurs, et le joueur se souvient de « gros
+     * blocs qui apparaissent d'un coup ». Le port synchronise a chaque tick, donc la barre grimpait
+     * d'un pixel a la fois — et comme le dessin arrondit sa largeur et sa texture separement, son bord
+     * bougeait d'un pixel a gauche ou a droite. C'est ce reglage-la que ce test fige.
+     */
+    @Test
+    @DisplayName("la barre de travail se pose par paliers, comme l'original")
+    void laBarreSePoseParPaliers() {
+        assertEquals(0.0, MetalFormerBlockEntity.displayProgress(0.0), EPS, "rien fait, rien montre");
+        assertEquals(0.0, MetalFormerBlockEntity.displayProgress(0.16), EPS, "premier morceau pas atteint");
+        assertEquals(1.0 / 6, MetalFormerBlockEntity.displayProgress(0.17), EPS, "un morceau sur six");
+        assertEquals(1.0 / 6, MetalFormerBlockEntity.displayProgress(0.33), EPS, "toujours le premier");
+        assertEquals(2.0 / 6, MetalFormerBlockEntity.displayProgress(0.34), EPS, "le deuxieme");
+        assertEquals(1.0, MetalFormerBlockEntity.displayProgress(1.0), EPS, "le dernier morceau");
+        assertEquals(1.0, MetalFormerBlockEntity.displayProgress(4.0), EPS, "et jamais au-dela");
+
+        // La barre ne montre jamais plus que le travail fait : elle peut etre en retard, pas en avance.
+        for (double avancement = 0.0; avancement <= 1.0; avancement += 0.01) {
+            assertTrue(MetalFormerBlockEntity.displayProgress(avancement) <= avancement + EPS,
+                    "la barre ne depasse pas le travail fait, a " + avancement);
         }
     }
 

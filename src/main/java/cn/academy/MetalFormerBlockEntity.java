@@ -65,6 +65,27 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
     /** Duree d'une transformation, en ticks. */
     public static final int WORK_TICKS = 60;
 
+    /**
+     * Le nombre de morceaux que la barre de travail montre, et c'est celui de l'original.
+     *
+     * <p>Son compteur de travail monte bien de zero a soixante, mais il ne le <b>synchronisait</b>
+     * que tous les dix ticks : le client ne voyait donc que six valeurs, et la barre sautait de
+     * morceau en morceau. Le port, lui, synchronise a chaque tick — la barre montait d'un pixel a la
+     * fois, et comme le dessin arrondit sa largeur et sa texture separement, son bord bougeait d'un
+     * pixel a gauche ou a droite. Le joueur a dit les deux : « des gros blocs qui apparaissent d'un
+     * coup » chez l'original, un « blanc qui bouge d'un pixel » chez nous.
+     *
+     * <p>La synchronisation reste fine — elle sert aussi au son et a l'etat de la machine — et c'est
+     * l'<b>affichage</b> qui se pose par paliers, avec {@link #displayProgress(double)}.
+     */
+    public static final int PROGRESS_STEPS = 6;
+
+    /** L'avancement d'un travail, pose sur la grille de la barre : ce que le client dessine. */
+    public static double displayProgress(double progress) {
+        double clamped = Math.max(0.0d, Math.min(1.0d, progress));
+        return Math.floor(clamped * PROGRESS_STEPS) / PROGRESS_STEPS;
+    }
+
     /** Cout par tick pendant la transformation. */
     public static final double CONSUME_PER_TICK = 13.3d;
 
