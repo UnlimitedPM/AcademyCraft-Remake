@@ -19,6 +19,7 @@ import java.awt.Graphics2D;
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -331,6 +332,66 @@ public final class AcademyFonts {
         return width(text, size);
     }
 
+    /**
+     * Un glyphe, pose a sa position EXACTE : une pose qui glisse de la fraction de pixel en trop.
+     *
+     * <p>C'est ce que faisait l'original, dont les sommets portaient la position flottante de son
+     * curseur ({@code x += info.width * scale}, sans jamais arrondir) : la carte graphique etale
+     * alors le glyphe sur les deux pixels voisins. Arrondir chaque lettre au pixel le plus proche
+     * fait au contraire sauter les unes d'un demi-pixel a gauche et les autres a droite, et la ligne
+     * se lit avec des trous irreguliers : le joueur les a vus sur sa capture — « Acade myCraft de
+     * veloper info », « 38 54/43 01 » — et c'est la signature de l'arrondi, pas de la police.
+     */
+    private static void blit(GuiGraphics graphics, double x, int top, int side, Glyph glyph) {
+        int whole = (int) Math.floor(x);
+        float fraction = (float) (x - whole);
+        if (fraction == 0f) {
+            graphics.blit(atlasLocation, whole, top, side, side, glyph.x(), glyph.y(),
+                    CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
+            return;
+        }
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(fraction, 0f, 0f);
+        graphics.blit(atlasLocation, whole, top, side, side, glyph.x(), glyph.y(),
+                CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
+        graphics.pose().popPose();
+    }
+
+    /**
+     * La couverture d'un glyphe, relevee comme LambdaLib2 la relisait.
+     *
+     * <p>La courbe de leur {@code writeImage}, relevee sur son code et mesuree : sous la moitie de la
+     * couverture le halo pale est ecrase (cent vingt-sept devient quarante et un), au-dessus le corps
+     * du trait est rapproche du plein (cent vingt-huit devient deux cent treize). Le trait perd donc
+     * son lisere pale et grossit d'un coup : les pixels pleins passent de 83 % des pixels touches a
+     * 90 %, et c'est ce qui donne au texte du vrai mod son air « presque en gras » — le joueur l'a
+     * dit avant moi, puis l'a montre : ses deux captures cote a cote parlent d'elles-memes.
+     *
+     * <p>C'est un accident de leur code — ils relisent les canaux en OCTETS SIGNES —, mais c'est
+     * AINSI que le texte du mod est dessine depuis toujours, et le but est de le retrouver : la
+     * courbe est donc reproduite telle quelle, avec ses valeurs mesurees.
+     */
+    private static void cover(BufferedImage image) {
+        int[] pixels = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+        for (int i = 0; i < pixels.length; i++) {
+            int coverage = (pixels[i] >>> 24) & 0xFF;
+            if (coverage == 0) continue;
+            pixels[i] = (shape(coverage) << 24) | 0xFFFFFF;
+        }
+    }
+
+    /**
+     * La courbe de couverture du {@code writeImage} de LambdaLib2, octets signes compris.
+     *
+     * <p>Zero reste zero — c'est ce qui evite le carre gris que l'accident aurait pu poser derriere
+     * chaque lettre —, la moitie basse est divisee par trois, et la moitie haute part de deux cent
+     * treize : deux paliers, une marche au milieu, et un texte solide.
+     */
+    private static int shape(int coverage) {
+        return coverage < 128 ? coverage * 41 / 127 : 213 + (coverage - 128) * 42 / 127;
+    }
+
     private static void ensureGlyphs(String text, int size) {
         for (int offset = 0; offset < text.length();) {
             int codePoint = text.codePointAt(offset);
@@ -371,8 +432,7 @@ public final class AcademyFonts {
                         ((color >> 8) & 0xFF) / 255f * green,
                         (color & 0xFF) / 255f * blue,
                         ((color >>> 24) & 0xFF) / 255f * alpha);
-                graphics.blit(atlasLocation, (int) Math.round(exactCursor), top, side, side,
-                        glyph.x(), glyph.y(), CELL_SIZE, CELL_SIZE, ATLAS_SIZE, ATLAS_SIZE);
+                blit(graphics, exactCursor, top, side, glyph);
                 exactCursor += glyph.advance();
             }
             offset += Character.charCount(codePoint);
@@ -425,6 +485,7 @@ public final class AcademyFonts {
             draw.draw(vector.getOutline(3, 1 + metrics.getAscent()));
         }
         draw.dispose();
+        cover(image);
 
         NativeImage glyphPixels = nativeImage(image);
         glyphPixels.copyRect(atlasPixels, 0, 0, x, y, CELL_SIZE, CELL_SIZE, false, false);
