@@ -486,9 +486,17 @@ public final class AcademyFonts {
         graphics.setColor(red, green, blue, alpha);
     }
 
-    /** Ou la ligne de base tombe dans la case du videau : c'est ou le glyphe est peint. */
+    /**
+     * Ou la ligne de base tombe dans la BOITE du cadratin — et non dans la case du videau.
+     *
+     * <p>La marge ne compte pas ici : le quad echantillonne la boite, posee au debut de la case,
+     * donc tout ce qui se mesure en unites de la boite part de la. L'y ajouter a fait remonter tout
+     * le texte d'un pixel, et le joueur l'a vu tout de suite : « l'ecriture du F4 n'est plus sur la
+     * meme ligne que dans le vrai mod ». Le calcul est `top = y + BASELINE - round(baseline x cell
+     * / EM)`, et deux unites de trop dans `baseline` font passer l'arrondi de huit a neuf.
+     */
     private static int baselineInCell() {
-        return GLYPH_PADDING + 1 + metrics(SOURCE_FONT_SIZE).getAscent();
+        return 1 + metrics(SOURCE_FONT_SIZE).getAscent();
     }
 
     private static Glyph glyph(int codePoint, int size) {
