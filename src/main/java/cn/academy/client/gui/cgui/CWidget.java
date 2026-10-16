@@ -157,8 +157,17 @@ public class CWidget {
         public int blue = 255;
         public int alpha = 255;
 
-        /** {@code TOP}, {@code CENTER} ou {@code BOTTOM} : ou le texte se pose en hauteur. */
-        public String heightAlign = "TOP";
+        /**
+         * {@code TOP}, {@code CENTER} ou {@code BOTTOM} : ou le texte se pose en hauteur.
+         *
+         * <p>CENTRE, et c'est le defaut de LambdaLib2 — {@code TextBox.heightAlign =
+         * HeightAlign.CENTER} — donc ce qu'herite tout texte dont le document ne dit rien : la
+         * ligne « Information » d'un panneau d'infos tombait un pixel trop haut avec TOP, et le
+         * joueur l'a vu (« le texte information est legerement sureleve »). Les documents qui
+         * veulent autre chose l'ecrivent (`page_wireless` dit TOP sur ses libelles, `page_interfere`
+         * BOTTOM sur le sien), et ces valeurs-la sont lues telles quelles.
+         */
+        public String heightAlign = "CENTER";
 
         /** Vrai quand le joueur peut y ecrire : c'est l'ecran qui l'allume et l'eteint. */
         public boolean allowEdit;

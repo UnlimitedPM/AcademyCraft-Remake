@@ -480,10 +480,12 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         line.transform.height = 8;
 
         // Le carre, six unites de cote, pose trois unites a GAUCHE de la ligne : c'est le pos(-3)
-        // de l'original, qui le fait deborder du panneau.
+        // de l'original, qui le fait deborder du panneau. Et une unite et demie sous le haut :
+        // `icon.size(6, 6).halign(HeightAlign.CENTER).pos(-3, .5f)` dit (8 - 6) / 2 + 0,5.
         CWidget icon = new CWidget("icon");
         icon.transform.x = -3;
-        icon.transform.y = 1;
+        icon.transform.alignHeight = "CENTER";
+        icon.transform.y = 0.5;
         icon.transform.width = 6;
         icon.transform.height = 6;
         icon.texture = new CWidget.DrawTexture();
