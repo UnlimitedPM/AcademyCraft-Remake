@@ -195,7 +195,7 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
         if (++pollCounter < RECIPE_POLL_TICKS) return;
         pollCounter = 0;
 
-        current = MetalFormerRecipes.get(inventory.getStackInSlot(SLOT_IN), mode);
+        current = MetalFormerRecipes.get(level, inventory.getStackInSlot(SLOT_IN), mode);
         workCounter = 0;
         if (current != null) setChanged();
     }

@@ -29,7 +29,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.levelgen.feature.LakeFeature;
@@ -852,6 +854,67 @@ public final class AcademyGameTests {
         assertClose(helper, 0.0d, former.getRequiredEnergy(), "plus rien a remplir");
         assertClose(helper, 500.0d, former.injectEnergy(500.0d), "un tampon plein refuse tout");
         helper.succeed();
+    }
+
+    /**
+     * Les recettes du formeur : celles de l'original, et le raffinage des minerais.
+     *
+     * <p>La table du port s'arretait aux quatre recettes du {@code VanillaCategories} de l'original :
+     * il manquait le silicium, la gravure des puces, le placage du fer — et surtout le raffinage,
+     * c'est-a-dire tout ce pour quoi on construit un formeur de metal. Ce test fait le tour des deux
+     * parties, y compris celle qui se lit dans les recettes de fonte du jeu, et il la fait aboutir
+     * pour de vrai : un minerai de fer entre, deux lingots sortent.
+     */
+    @GameTest(template = "empty")
+    public static void leFormeurAppliqueLesRecettesDeLOriginal(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (MetalFormerBlockEntity) helper.getBlockEntity(rel);
+        BlockPos abs = helper.absolutePos(rel);
+        ServerLevel level = helper.getLevel();
+
+        // Les fixes : VanillaCategories.init, puis MFIFRecipes.init.
+        assertValue(helper, 17, cn.academy.crafting.MetalFormerRecipes.all().size(),
+                "les recettes fixes de l'original");
+        assertValue(helper, 2, produit(ModItems.IMAG_SILICON_INGOT.get(),
+                cn.academy.crafting.MetalFormerMode.INCISE), "un lingot de silicium donne deux tranches");
+        assertValue(helper, 4, produit(ModItems.WAFER.get(), cn.academy.crafting.MetalFormerMode.INCISE),
+                "et une tranche, quatre morceaux");
+        assertValue(helper, 1, produit(ModItems.DATA_CHIP.get(), cn.academy.crafting.MetalFormerMode.ETCH),
+                "une puce de donnees donne une puce de calcul");
+        assertValue(helper, 1, produit(Items.IRON_INGOT, cn.academy.crafting.MetalFormerMode.PLATE),
+                "le fer se plaque");
+        assertValue(helper, 4, produit(ModBlocks.IMAGSIL_ORE.get().asItem(),
+                cn.academy.crafting.MetalFormerMode.REFINE), "quatre lingots par minerai de silicium");
+        assertValue(helper, 12, produit(Items.LAPIS_ORE, cn.academy.crafting.MetalFormerMode.REFINE),
+                "douze morceaux par minerai de lapis, comme l'original");
+        assertValue(helper, 0, produit(ModItems.WAFER.get(), cn.academy.crafting.MetalFormerMode.PLATE),
+                "et une tranche ne se plaque pas");
+
+        // Le raffinage du jeu : trois crans vers la droite, et le minerai entre dans la machine.
+        former.cycleMode(3);
+        assertValue(helper, cn.academy.crafting.MetalFormerMode.REFINE, former.getMode(),
+                "trois crans : le raffinage");
+        former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN, new ItemStack(Items.IRON_ORE));
+        former.injectEnergy(3000.0d);
+
+        for (int i = 0; i < 200; i++) {
+            MetalFormerBlockEntity.tick(level, abs, helper.getBlockState(rel), former);
+        }
+
+        ItemStack out = former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_OUT);
+        assertValue(helper, 2, out.getCount(), "deux lingots de fer");
+        assertValue(helper, Items.IRON_INGOT, out.getItem(), "et c'est bien du fer");
+        assertTrue(helper, former.getInventory().getStackInSlot(MetalFormerBlockEntity.SLOT_IN).isEmpty(),
+                "le minerai est consomme");
+        helper.succeed();
+    }
+
+    /** Ce que produirait une recette fixe pour cet objet, ou zero s'il n'y en a pas. */
+    private static int produit(Item item, cn.academy.crafting.MetalFormerMode mode) {
+        cn.academy.crafting.MetalFormerRecipes.Recipe recipe =
+                cn.academy.crafting.MetalFormerRecipes.get(new ItemStack(item), mode);
+        return recipe == null ? 0 : recipe.outputCount();
     }
 
     @GameTest(template = "empty")
@@ -5881,7 +5944,12 @@ public final class AcademyGameTests {
                 "et le bloc part vers le mur : " + block.getDeltaMovement());
 
         // La pose : il retombe sur le mur, s'y colle, et n'est plus une entite.
-        for (int i = 0; i < 60 && block.isAlive(); i++) {
+        //
+        // Le budget est large — deux cents ticks pour un vol qui en demande une vingtaine — parce que
+        // c'est le point d'arrivee qui compte, et non le temps qu'il met a y arriver. A soixante, il
+        // arrivait que le bloc soit encore en l'air : le test annoncait alors « attendu 1, trouve 0 »
+        // la ou il n'y avait rien a voir, une fois sur deux ou trois selon le rebond sur le mur.
+        for (int i = 0; i < 200 && block.isAlive(); i++) {
             block.tick();
         }
         var pose = block.position();

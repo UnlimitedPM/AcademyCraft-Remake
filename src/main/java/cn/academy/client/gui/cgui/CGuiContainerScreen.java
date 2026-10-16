@@ -337,7 +337,30 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
     /** Un widget de l'arbre, par son nom : c'est ainsi qu'une page retrouve son cadre anime. */
     protected CWidget widget(String name) {
-        return view == null ? null : view.find(name);
+        if (view != null) {
+            CWidget found = view.find(name);
+            if (found != null) return found;
+        }
+
+        // Pendant `build`, la vue ne connait pas encore les pages : elles ne sont posees dans la
+        // racine qu'APRES lui. Tout ce qui se cable la — boutons, barres, textes — se cablait donc
+        // dans le vide, et les deux fleches du formeur de metal ne faisaient rien du tout. La vue
+        // reste cherchee d'abord, parce que c'est elle qui porte les onglets et le panneau d'infos.
+        for (Page page : pages) {
+            CWidget found = find(page.window(), name);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    /** Le widget de ce nom, cherche dans tout cet arbre. */
+    private static CWidget find(CWidget widget, String name) {
+        if (widget.name().equals(name)) return widget;
+        for (CWidget child : widget.children()) {
+            CWidget found = find(child, name);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     /**

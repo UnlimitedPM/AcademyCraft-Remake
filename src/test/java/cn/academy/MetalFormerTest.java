@@ -78,6 +78,27 @@ class MetalFormerTest {
         }
     }
 
+    /**
+     * Les minerais du mod, dans l'etiquette que lit le raffinage.
+     *
+     * <p>Le mode REFINE se resout dans les recettes de fonte du jeu, mais seulement pour ce qui est
+     * <b>un minerai</b> : c'est {@code forge:ores} qui le dit, et une etiquette qui perd un minerai le
+     * rend invisible au raffinage — et aux autres mods, qui lisent la meme.
+     */
+    @Test
+    @DisplayName("les minerais du mod sont etiquetes comme des minerais")
+    void lesMineraisDuModSontEtiquetes() {
+        java.util.List<String> attendus = java.util.List.of("academy:imagsil_ore",
+                "academy:constraint_metal", "academy:reso_ore", "academy:crystal_ore");
+
+        for (String path : new String[] { "data/forge/tags/items/ores.json",
+                "data/forge/tags/blocks/ores.json" }) {
+            java.util.List<String> valeurs = new java.util.ArrayList<>();
+            json(path).getAsJsonArray("values").forEach(valeur -> valeurs.add(valeur.getAsString()));
+            assertEquals(attendus, valeurs, path);
+        }
+    }
+
     /** Le document range ses widgets les uns dans les autres : on les cherche donc a la main. */
     private static CWidget find(CWidget parent, String name) {
         CWidget direct = parent.child(name);
@@ -90,13 +111,16 @@ class MetalFormerTest {
     }
 
     private static JsonObject langue() {
-        String path = "assets/academy/lang/en_us.json";
+        return json("assets/academy/lang/en_us.json");
+    }
+
+    private static JsonObject json(String path) {
         try (InputStream in = MetalFormerTest.class.getClassLoader().getResourceAsStream(path)) {
             assertNotNull(in, path + " est introuvable");
             return JsonParser.parseString(new String(in.readAllBytes(), StandardCharsets.UTF_8))
                     .getAsJsonObject();
         } catch (Exception failure) {
-            throw new AssertionError("la langue n'a pas pu etre lue", failure);
+            throw new AssertionError(path + " n'a pas pu etre lu", failure);
         }
     }
 }

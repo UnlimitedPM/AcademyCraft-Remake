@@ -42,7 +42,7 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 |---|---|
 | **Abilities** | the four categories and their 35 skills — electromaster (railgun, thunder clap, magnet manipulation...), meltdowner (rays, jet engine...), teleporter (marking, shift, flesh ripping...), vecmanip (directional shock, plasma cannon...) — plus the three generic courses, with control points, overload, per-skill experience, charges and cooldowns |
 | **Skill tree** | the Ability Developer machine: the original's tree, its icons, its descriptions, its levels, its costs, and the magnetic coil that resets a category |
-| **Energy** | the Imag network: solar, wind and phase generators, the wireless nodes and the matrix, the imag fusor, the metal former |
+| **Energy** | the Imag network: solar, wind and phase generators, the wireless nodes and the matrix, the imag fusor, the metal former with its four modes and the original's recipes (plus every ore that smelts) |
 | **Terminal** | the data terminal and its apps (settings, skill tree, media player, about) plus the tutorial |
 | **Interface** | the ability HUD, key hints, notifications, presets, the F4 debug console, and the ten machine screens on the rebuilt engine |
 | **World** | the mod's ores, the Imag phase liquid, the advancements |
@@ -51,7 +51,6 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 
 Honest list, so you know what you are testing:
 
-- **Metal former REFINE recipes** — the mode exists but is empty. In the original it was the ore multiplier: 2 to 4 times more from the mod's ores, and twice as much from every vanilla and metal ore.
 - **Wireless tab** — SSID, password and the node list have no screen yet; the nodes find a matrix by themselves.
 - **Frequency transmitter** — the item is decorative for now.
 - **Languages** — only English ships today. The original also had Japanese, Korean, Russian, Simplified and Traditional Chinese.
@@ -105,11 +104,10 @@ Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est u
 5. **Le reste.** **C** fait défiler les presets, **N** ouvre l'éditeur de presets, **V** allume et éteint l'aptitude, **F4** ouvre la console de débogage (compétences, recharges, points de contrôle), et **Alt gauche** ouvre le terminal. Toutes se changent dans les commandes de Minecraft, catégorie « AcademyCraft ».
 ### Ce que contient cette première version
 
-Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, formeur de métal) ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès.
+Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès.
 
 ### Ce qu'il manque encore
 
-- **Les recettes REFINE du formeur de métal** : le mode existe mais il est vide. Chez l'original, c'était le multiplicateur de minerais (2 à 4 fois plus sur les minerais du mod, et le double sur tous les minerais vanilla et des métaux).
 - **L'onglet sans fil** : SSID, mot de passe et liste des nœuds n'ont pas encore d'écran.
 - **L'émetteur de fréquence** : l'objet est décoratif pour le moment.
 - **Les langues** : l'anglais seulement. L'original en avait six.
