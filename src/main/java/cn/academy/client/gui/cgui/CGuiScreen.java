@@ -288,7 +288,9 @@ public abstract class CGuiScreen extends Screen {
         // Un clic qui ne touche aucun geste rend le clavier : c'est ce que faisait l'original en
         // retirant le focus des qu'on cliquait ailleurs.
         if (hit != focused) focus(null);
-        return hit != null;
+
+        // Faux quand rien n'a ete fait : voir {@code CGuiView.click} pour la raison.
+        return false;
     }
 
     private CWidget parentOf(CWidget widget) {

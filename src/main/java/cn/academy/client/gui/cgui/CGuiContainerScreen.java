@@ -691,9 +691,19 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // La vue d'abord, et pour une raison qui n'a rien d'evident : l'ecran d'une machine EST un
+        // conteneur d'inventaire, et `AbstractContainerScreen.mouseClicked` rend VRAI des qu'un clic
+        // tombe dans son cadre — verifie au pont, sur l'ecran du formeur. Le document de l'original
+        // ne voyait donc jamais le clic de ses propres boutons : ses fleches de mode ne faisaient
+        // rien, alors que le bouton LEARN du developpeur, lui, marchait (sa page n'est pas un
+        // inventaire, donc vanilla n'etait pas appele du tout).
+        //
+        // Et la vue ne prend la main que si un widget a VRAIMENT quelque chose a faire : le fond de
+        // la page couvre tout, et un clic sur un emplacement doit rester a l'inventaire.
+        if (view != null && view.click(mouseX, mouseY, button)) return true;
+
         boolean slots = inventoryShown();
         if (slots && super.mouseClicked(mouseX, mouseY, button)) return true;
-        if (view != null && view.click(mouseX, mouseY, button)) return true;
         return slots;
     }
 

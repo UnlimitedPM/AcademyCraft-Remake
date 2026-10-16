@@ -70,4 +70,28 @@ class CGuiClickTest {
         assertTrue(overClicked[0], "c'est celui du dessus");
         assertTrue(!underClicked[0], "et pas celui du fond");
     }
+
+    @Test
+    @DisplayName("un clic sans action rend FAUX, pour laisser l'inventaire le prendre")
+    void unClicSansActionRendFaux() {
+        CWidget root = box("root", 0, 0, 400, 187);
+        CWidget page = box("ui_inv", 0, 0, 176, 187);
+        CWidget button = box("btn_left", 60, 14, 16, 16);
+        page.add(button);
+        root.add(page);
+
+        CGuiView view = new CGuiView(null, root);
+
+        // Le fond de la page couvre tout : sans cette regle, le clic sur un emplacement d'inventaire
+        // serait pris par la page, et l'ecran de la machine n'aurait plus d'inventaire du tout.
+        assertTrue(!view.click(10, 10, 0), "le fond n'a aucune action a faire");
+
+        // Et le bouton, lui, dit oui — c'est ce que l'ecran de conteneur lit pour savoir s'il doit
+        // passer le clic a vanilla. Vanilla, lui, rend VRAI des qu'un clic tombe dans son cadre :
+        // les fleches du formeur de metal ne voyaient donc jamais le clic.
+        boolean[] clicked = { false };
+        view.onClick(button, () -> clicked[0] = true);
+        assertTrue(view.click(68, 22, 0), "le bouton, si");
+        assertTrue(clicked[0], "et il a fait ce qu'il avait a faire");
+    }
 }

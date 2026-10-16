@@ -592,7 +592,11 @@ public final class CGuiView {
             return true;
         }
         if (hit != focused) focus(null);
-        return hit != null;
+
+        // Faux quand rien n'a ete fait, meme si un widget a ete touche : le fond d'une page couvre
+        // tout, et un clic sur un emplacement de machine doit rester a l'inventaire. Un ecran de
+        // conteneur s'appuie sur ce faux pour savoir s'il doit passer le clic a vanilla.
+        return false;
     }
 
     private CWidget parentOf(CWidget widget) {
