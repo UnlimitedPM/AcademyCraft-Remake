@@ -338,6 +338,30 @@ public final class AcademyFonts {
     }
 
     /**
+     * Un texte pose par le HAUT DE SA CELLULE : la convention de l'original, et celle des pages.
+     *
+     * <p>Son {@code TextBox} calcule l'origine du texte ainsi :
+     * {@code (height - fontSize) x heightAlign.factor} — donc le haut de la cellule sur le haut de
+     * sa boite quand les deux se valent, et non une ligne de base posee plus bas. Le {@link #draw}
+     * des autres ecrans garde, lui, la convention du jeu (la ligne de base a {@link #BASELINE} du
+     * haut), parce que ces ecrans-la ont ete poses avec elle.
+     */
+    public static int drawTop(GuiGraphics graphics, Font ignored, String text, int x, int top,
+                              int color, int cell) {
+        return drawText(graphics, text, x, top - cellOffset(cell), color, false, cell);
+    }
+
+    /**
+     * L'ecart entre le haut de la cellule et l'ordonnee que {@link #drawText} attend.
+     *
+     * <p>C'est {@link #BASELINE} moins la position de la ligne de base dans la cellule : le retirer
+     * pose la cellule sur l'ordonnee donnee.
+     */
+    private static int cellOffset(int cell) {
+        return BASELINE - (int) Math.round(baselineInCell() * cell / (double) EM);
+    }
+
+    /**
      * La console de debogage (F4) : le meme texte que l'interface, et c'est mesure deux fois. Sur
      * les deux captures du joueur, a la meme echelle d'interface, la meme ligne fait 298 pixels chez
      * nous a la taille dix et 231 chez l'original 1.12.2, dont les barres rapides font exactement la

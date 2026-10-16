@@ -255,13 +255,14 @@ public abstract class CGuiScreen extends Screen {
             default -> x;
         };
         int textY = switch (box.heightAlign.toUpperCase(java.util.Locale.ROOT)) {
-            case "CENTER" -> y + (h - cell) / 2;
-            case "BOTTOM" -> y + h - cell - 1;
+            case "CENTER" -> y + Math.max(0, h - cell) / 2;
+            case "BOTTOM" -> y + Math.max(0, h - cell);
             default -> y;
         };
 
-        cn.academy.client.gui.AcademyFonts.draw(graphics, font, content, textX, textY, colour,
-            false, cell);
+        // Pose par le haut de sa cellule, comme le `TextBox` de l'original : voir CGuiView.
+        cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, content, textX, textY, colour,
+            cell);
 
         // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (focused == widget && box.allowEdit && (System.currentTimeMillis() / 500) % 2 == 0) {

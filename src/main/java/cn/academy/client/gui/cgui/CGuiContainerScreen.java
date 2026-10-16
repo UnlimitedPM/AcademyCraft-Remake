@@ -177,7 +177,12 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         name.text = new CWidget.TextBox();
         name.text.fontSize = PROPERTY_FONT;
         name.text.content = key;
-        name.text.align = "CENTER";
+        // A GAUCHE, comme le `new FontOption(8)` de l'original — dont l'alignement par defaut est
+        // LEFT — et non centre dans les quarante unites du nom. Le joueur : « j'ai l'impression que
+        // tu as centre le texte au milieu alors que dans le vrai mod le texte est centre sur la
+        // droite » ; chez l'original le nom remplit sa boite jusqu'a la colonne des valeurs, ce qui
+        // se lit comme un texte pousse a droite, et la valeur commence juste apres.
+        name.text.align = "LEFT";
         name.text.heightAlign = "CENTER";
         name.text.color(255, 255, 255);
         line.add(name);
@@ -189,7 +194,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         amount.text = new CWidget.TextBox();
         amount.text.fontSize = PROPERTY_FONT;
         amount.text.content = value;
-        amount.text.align = "CENTER";
+        amount.text.align = "LEFT";
         amount.text.heightAlign = "CENTER";
         amount.text.color(255, 255, 255);
         line.add(amount);
@@ -494,7 +499,9 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         name.text = new CWidget.TextBox();
         name.text.fontSize = PROPERTY_FONT;
         name.text.content = Component.translatable(elem.id()).getString();
-        name.text.align = "CENTER";
+        // Comme `histProperty` : le nom a gauche, la valeur a gauche, dans deux boites posees a
+        // quatre et a quarante unites du bord. C'est ce qui met les valeurs en colonne.
+        name.text.align = "LEFT";
         name.text.heightAlign = "CENTER";
         line.add(name);
 
@@ -505,7 +512,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         value.text = new CWidget.TextBox();
         value.text.fontSize = PROPERTY_FONT;
         value.text.content = elem.desc().get();
-        value.text.align = "CENTER";
+        value.text.align = "LEFT";
         value.text.heightAlign = "CENTER";
         line.add(value);
 
