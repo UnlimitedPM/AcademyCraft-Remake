@@ -44,6 +44,20 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
      */
     private static final float SCALE = 0.5f;
 
+    /**
+     * Les deux rattrapages mesures sur le pied du modele, en coordonnees du modele.
+     *
+     * <p>Le pied — les faces a moins de 0,05 du sol — couvre {@code x -1,072..0,928} dans les deux
+     * fichiers OBJ, soit un centre a {@code -0,072} : le vrai mod le laisse donc deborder d'un cote
+     * et la machine parait poussee vers la droite, avec un pied qui ne tombe pas au milieu de la
+     * brique. On le recentre ({@code +0,072} modele = {@code +0,036} bloc sur le cote), puis on
+     * avance la machine d'un cheveu ({@code -0,04} modele = {@code +0,0185} bloc vers l'avant).
+     * Le pied fait pile deux unites de large, donc une fois recentre il couvre exactement la
+     * brique.
+     */
+    private static final float SHIFT_SIDE = 0.072f;
+    private static final float SHIFT_FORWARD = -0.04f;
+
     public DeveloperRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
@@ -65,6 +79,10 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
         pose.translate(0.5d, 0.0d, 0.5d);
         pose.mulPose(Axis.YP.rotationDegrees(-degrees(state.getValue(DeveloperBlock.FACING))));
         pose.scale(SCALE, SCALE, SCALE);
+
+        // Dans le repere du modele, donc dans le bon axe quelle que soit la direction : le pied
+        // recentre sur la brique, puis le leger surplus vers l'avant.
+        pose.translate(SHIFT_SIDE, 0.0d, SHIFT_FORWARD);
 
         ObjModels.draw(ObjModels.get(model).all(), pose,
                 buffers.getBuffer(ObjModels.translucent(texture)), light, overlay);
