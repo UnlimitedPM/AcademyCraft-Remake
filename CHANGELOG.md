@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.3 - les machines, la police et le reseau / the machines, the font and the network
+
+### English
+
+All of 0.1.2, plus the whole machine interface, rebuilt on the original's own documents.
+
+- **Every machine screen is the original's one.** The port drew them by hand; they are now read from the mod's own layout files, with the original's geometry kept to the pixel — or rather to the half pixel: where a document asks for a bar of 6.4 pixels, the card is asked for 6.4 and nothing is rounded on the way. Four rounds of "one pixel off" came from that rounding, and the remedy was to hand the exact size to the graphics card.
+- **The system's font, at the original's size.** The mod draws with the machine's own font (Microsoft YaHei, the one the 1.12.2 client used), rasterised at the original's cell size, with its bold drawing, its coverage curve and its margins. What you read is what the original showed.
+- **Text you can write in.** A field keeps what you typed when you move to the other field, the caret waits before the first letter, a password shows its asterisks, Enter and the keypad's Enter both validate, and Delete empties a field — the only gesture the original had for replacing a value.
+- **The wireless tab, on seven machines and on the node.** A machine picks its node, a node picks its Matrix, and a network asking for a password opens with it.
+- **The Matrix works.** Its network is created from its own panel, its reach is counted from the centre of the two-by-two-by-two cube — so a node reaches equally far from any of the four sides — and a protected network no longer joins by itself: the password is typed in the tab, where it means something.
+- **Tests**: 168 in-game tests, 841 unit tests.
+
+### Francais
+
+Tout le 0.1.2, plus toute l'interface des machines, refaite sur les documents de l'original.
+
+- **Tous les ecrans de machine sont ceux de l'original.** Le port les dessinait a la main ; ils se lisent maintenant dans ses propres fichiers de disposition, avec sa geometrie gardee au pixel pres — ou plutot au demi-pixel pres : la ou le document demande une barre de 6,4 pixels, la carte en recoit 6,4, et rien n'est arrondi en chemin. Quatre tours de « un pixel a cote » venaient de cet arrondi, et le remede a ete de donner la taille exacte a la carte graphique.
+- **La police du systeme, a la taille de l'original.** Le mod dessine avec la police de la machine (Microsoft YaHei, celle que le client 1.12.2 utilisait), gravee a la cellule de l'original, avec son dessin gras, sa courbe de couverture et ses marges. Ce qu'on lit est ce que l'original montrait.
+- **Du texte ou l'on peut ecrire.** Un champ garde ce qu'on tape quand on passe a l'autre champ, le curseur est la avant la premiere lettre, un mot de passe montre ses etoiles, Entree et l'Entree du pave valident tous les deux, et Suppr vide un champ — le seul geste que l'original avait pour remplacer une valeur.
+- **L'onglet sans fil, sur sept machines et sur le noeud.** Une machine choisit son noeud, un noeud choisit son Matrix, et un reseau qui demande un mot de passe s'ouvre avec lui.
+- **Le Matrix fonctionne.** Son reseau se cree depuis son propre panneau, sa portee se compte depuis le centre du cube de deux blocs — donc un noeud porte aussi loin des quatre cotes — et un reseau protege ne se rejoint plus tout seul : le mot de passe se tape dans l'onglet, la ou il veut dire quelque chose.
+- **Des tests** : 168 tests en jeu, 841 tests unitaires.
+
 ## 0.1.2 - le formeur et ses recettes / the former and its recipes
 
 ### English
