@@ -38,6 +38,9 @@ public final class ObjModels {
     /** Idem, pour les faces qui passent derriere (un recul de profondeur en plus). */
     private static final Map<ResourceLocation, RenderType> BEHIND = new HashMap<>();
 
+    /** Et les types translucides : melange, et la profondeur S'ECRIT. */
+    private static final Map<ResourceLocation, RenderType> TRANSLUCENT = new HashMap<>();
+
     private ObjModels() {}
 
     /** Le fichier OBJ d'un modele, tel que les modeles de bloc le nomment. */
@@ -94,6 +97,48 @@ public final class ObjModels {
      */
     public static RenderType behind(ResourceLocation texture) {
         return BEHIND.computeIfAbsent(texture, tex -> createType(tex, true));
+    }
+
+    /**
+     * Le type de rendu d'un modele a vitres : melange, et la profondeur <b>s'ecrit</b>.
+     *
+     * <p>C'est la difference qui fait tout, et celle que le chunk ne sait pas faire : une couche de
+     * bloc translucide ne touche pas a la profondeur, donc les surfaces qui sont DERRIERE une vitre
+     * se dessinent aussi. Le vrai mod, lui, dessinait sa machine dans un rendu de block entity,
+     * ou la profondeur s'ecrivait : sa vitre arriere etait cachee par celle de devant, et le monde
+     * (deja peint, lui) restait visible au travers. Le joueur l'a vu tout de suite — « dans le vrai
+     * mod on voit un peu le monde exterieur [...] alors que la pour nous non ».
+     *
+     * <p>Sans cull, comme l'original : le modele est une coque ouverte par endroits, et cacher le
+     * cote qui regarde ailleurs y ferait des trous.
+     */
+    public static RenderType translucent(ResourceLocation texture) {
+        return TRANSLUCENT.computeIfAbsent(texture, tex -> {
+            RenderType.CompositeState states = RenderType.CompositeState.builder()
+                    .setShaderState(new RenderStateShard.ShaderStateShard(
+                            GameRenderer::getRendertypeEntityTranslucentShader))
+                    .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
+                    .setTransparencyState(new RenderStateShard.TransparencyStateShard(
+                            "academy_obj_translucent",
+                            () -> {
+                                RenderSystem.enableBlend();
+                                RenderSystem.blendFunc(
+                                        com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
+                                        com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+                            },
+                            () -> {
+                                RenderSystem.disableBlend();
+                                RenderSystem.defaultBlendFunc();
+                            }))
+                    .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, true))
+                    .setCullState(new RenderStateShard.CullStateShard(false))
+                    .setLightmapState(new RenderStateShard.LightmapStateShard(true))
+                    .setOverlayState(new RenderStateShard.OverlayStateShard(true))
+                    .createCompositeState(true);
+
+            return RenderType.create("academy_obj_translucent", DefaultVertexFormat.NEW_ENTITY,
+                    VertexFormat.Mode.TRIANGLES, 256, false, false, states);
+        });
     }
 
     private static RenderType createType(ResourceLocation texture, boolean behind) {

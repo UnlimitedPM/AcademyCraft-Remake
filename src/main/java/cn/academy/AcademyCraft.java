@@ -101,6 +101,12 @@ public class AcademyCraft {
             // complete.
             event.registerBlockEntityRenderer(ModBlockEntities.MATRIX.get(),
                     cn.academy.client.render.MatrixRenderer::new);
+            // Les deux machines developeur : leurs vitres ont besoin d'une profondeur ECRITE, que
+            // la couche translucide d'un modele de bloc ne donne pas — voir DeveloperRenderer.
+            event.registerBlockEntityRenderer(ModBlockEntities.DEVELOPER_NORMAL.get(),
+                    cn.academy.client.render.DeveloperRenderer::new);
+            event.registerBlockEntityRenderer(ModBlockEntities.DEVELOPER_ADVANCED.get(),
+                    cn.academy.client.render.DeveloperRenderer::new);
             // La bille de silicium : la premiere entite du mod, et donc son premier rendu
             // d'entite. Sans cette ligne, l'objet se lancerait sans qu'on voie rien.
             event.registerEntityRenderer(ModEntities.SILBARN.get(), cn.academy.client.SilbarnRenderer::new);
