@@ -324,15 +324,14 @@ public class CWidget {
         /**
          * Et celle de l'icone, qui tient dedans.
          *
-         * <p>Treize, et non les quatorze de l'original. Son disque dessine occupe les quatre
-         * cinquiemes de ses vingt-trois unites, soit un rayon de neuf unites et demie ; une icone de
-         * quatorze a ses coins a neuf unites neuf — elle debordait donc du cercle, et le joueur l'a
-         * vu : « l'image des competences deborde des cercles », avec « des lignes noires entre la
-         * couleur du cercle et les bordures du carre de l'image ». L'original ne les voyait pas parce
-         * qu'il ECRETAIT l'icone sur la forme du disque, par un tour de profondeur ; a treize, les
-         * coins rentrent d'eux-memes.
+         * <p>Quatorze, comme l'original — et c'est l'ECRETAGE qui la fait tenir : ses coins sont a
+         * neuf unites neuf du centre, alors que le disque dessine n'a que neuf unites et demie de
+         * rayon. L'original l'ecretait sur la forme du disque par un tour de profondeur ; le port le
+         * fait par un programme a lui, {@code CGuiShaders.clipped}, qui multiplie l'icone par l'alpha
+         * du disque. La reduire a treize aurait rentre les coins, mais l'icone serait plus petite que
+         * celle de l'original, et le joueur l'aurait vu.
          */
-        public double iconSize = 13.0;
+        public double iconSize = 14.0;
 
         /** Vrai quand la competence est apprise : c'est ce qui fait apparaitre l'anneau de remplissage. */
         public boolean drawFill;

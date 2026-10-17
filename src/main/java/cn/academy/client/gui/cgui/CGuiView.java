@@ -236,25 +236,7 @@ public final class CGuiView {
 
     public void draw(GuiGraphics graphics, double mouseX, double mouseY) {
         blend();
-        // Les traits de l'arbre passent AVANT les widgets, donc sous tous les disques. L'original les
-        // dessinait par-dessus, mais avec un test de profondeur qui les effacait la ou un noeud se
-        // trouve : le resultat est le meme, et c'est celui que le joueur reclame — « les cercles des
-        // competences ne recouvrent pas les lignes blanches : si je passe ma souris sur une
-        // competence, il y a bien l'animation avec le cercle qui grandit, mais a travers on voit la
-        // ligne blanche en dessous alors que normalement non ». Les traits d'un noeud sont dessines
-        // avec lui, donc un enfant pouvait passer par-dessus le disque de son parent ; en un seul
-        // passage avant tout le reste, ce n'est plus possible.
-        drawLines(graphics, root);
         drawWidget(graphics, root, mouseX, mouseY);
-    }
-
-    /** Tous les traits d'un sous-arbre, dans l'ordre de l'arbre. */
-    private static void drawLines(GuiGraphics graphics, CWidget widget) {
-        if (!widget.transform.doesDraw || !widget.transform.enabled) return;
-        if (widget.line != null) drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
-        for (CWidget child : widget.children()) {
-            drawLines(graphics, child);
-        }
     }
 
     /**
@@ -360,7 +342,13 @@ public final class CGuiView {
             graphics.pose().popPose();
         }
 
-        // Le trait a deja ete dessine, avec tous les autres, avant le premier widget : voir draw().
+        // Le trait passe avant le noeud qu'il relie, et ses deux bouts s'arretent a douze unites et
+        // demie du centre — en dehors du disque qui en fait onze et demie — donc l'ordre ne se voit
+        // pas. Le dessiner avant TOUT l'arbre, en un seul passage, l'a enfonce sous le fond de page :
+        // les traits sont sortis gris, et le joueur l'a dit tout de suite.
+        if (widget.line != null) {
+            drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
+        }
         if (widget.disc != null) {
             drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
         }
@@ -471,10 +459,20 @@ public final class CGuiView {
         }
 
         if (disc.icon != null) {
-            boolean greyed = disc.grey
-                    && CGuiShaders.greyIcon(graphics, disc.icon, disc.iconSize, disc.iconAlpha);
-            if (!greyed) {
-                centred(graphics, disc.icon, disc.iconSize, 255, 255, 255, disc.iconAlpha);
+            // L'icone est ECRETEE sur la forme du disque : ses coins carres sortaient du cercle, et
+            // le joueur voyait le fond entre les deux — « l'image des competences deborde des
+            // cercles », « des lignes noires entre la couleur du cercle et les bordures du carre de
+            // l'image ». Le programme fait aussi le gris d'une competence non apprise, comme le
+            // programme mono de l'original. S'il n'est pas la, on retombe sur les deux anciens
+            // chemins : mieux vaut une icone qui deborde qu'une icone qui disparait.
+            boolean drawn = CGuiShaders.clipped(graphics, disc.icon, disc.back, disc.iconSize,
+                    disc.size, disc.iconAlpha, disc.grey);
+            if (!drawn) {
+                boolean greyed = disc.grey
+                        && CGuiShaders.greyIcon(graphics, disc.icon, disc.iconSize, disc.iconAlpha);
+                if (!greyed) {
+                    centred(graphics, disc.icon, disc.iconSize, 255, 255, 255, disc.iconAlpha);
+                }
             }
         }
         graphics.pose().popPose();

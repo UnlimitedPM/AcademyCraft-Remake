@@ -8,6 +8,7 @@ import cn.academy.ability.develop.DevelopActionLevel;
 import cn.academy.ability.develop.LearningHelper;
 import cn.academy.ability.develop.condition.LearningCondition;
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
+import cn.academy.client.gui.cgui.CGuiShaders;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
@@ -1043,6 +1044,10 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         CWidget glyph = centred("glyph", SURFACE_ICON_SIZE, SURFACE_ICON_SIZE);
         glyph.texture = new CWidget.DrawTexture();
         glyph.texture.texture = skill.getHintIcon().toString();
+        // L'icone d'une competence fait trente-deux pixels pour un dessin de vingt-sept unites, donc
+        // lissee a l'echelle de l'ecran : au plus proche voisin, elle sort en gros pixels — « l'icone
+        // de la competence dans la fiche est toujours pixelisee ».
+        CGuiShaders.linear(skill.getHintIcon());
         icon.add(glyph);
         return icon;
     }

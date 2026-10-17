@@ -64,16 +64,24 @@ public final class CGuiShaders {
     /** Le nom du programme de l'anneau, et celui du gris. */
     public static final String RING_PROGRAM = "skill_ring";
     public static final String MONO_PROGRAM = "skill_mono";
+    public static final String CLIP_PROGRAM = "skill_clip";
 
     /** L'uniforme que le programme de l'anneau lit : le remplissage, de zero a un. */
     public static final String RING_PROGRESS_UNIFORM = "SkillProgress";
 
+    /** Ceux du programme d'ecretage : la place de l'icone dans le disque, et son gris. */
+    public static final String CLIP_SCALE_UNIFORM = "MaskScale";
+    public static final String CLIP_OFFSET_UNIFORM = "MaskOffset";
+    public static final String CLIP_GREY_UNIFORM = "Grey";
+
     @Nullable private static ShaderInstance ring;
     @Nullable private static ShaderInstance mono;
+    @Nullable private static ShaderInstance clip;
 
     /** Un type par texture : le construire a chaque image allouerait pour rien. */
     private static final Map<ResourceLocation, RenderType> RING_TYPES = new HashMap<>();
     private static final Map<ResourceLocation, RenderType> MONO_TYPES = new HashMap<>();
+    private static final Map<String, RenderType> CLIP_TYPES = new HashMap<>();
 
     private CGuiShaders() {}
 
@@ -109,8 +117,10 @@ public final class CGuiShaders {
         // precedent, il faut donc les refaire.
         ring = null;
         mono = null;
+        clip = null;
         RING_TYPES.clear();
         MONO_TYPES.clear();
+        CLIP_TYPES.clear();
 
         try {
             ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
@@ -130,6 +140,16 @@ public final class CGuiShaders {
         } catch (Exception e) {
             LOGGER.warn("Le programme {} n'a pas pu etre compile : les icones ne seront pas eteintes",
                     MONO_PROGRAM, e);
+        }
+
+        try {
+            ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
+                    program(CLIP_PROGRAM), DefaultVertexFormat.POSITION_COLOR_TEX);
+            clip = shader;
+            event.registerShader(shader, loaded -> clip = loaded);
+        } catch (Exception e) {
+            LOGGER.warn("Le programme {} n'a pas pu etre compile : les icones deborderont du disque",
+                    CLIP_PROGRAM, e);
         }
     }
 
@@ -156,6 +176,43 @@ public final class CGuiShaders {
         RenderSystem.setShaderTexture(1, gradient);
 
         quad(graphics, type, size / 2, alpha);
+    }
+
+    /**
+     * L'icone d'un noeud, ecretee sur la forme de son disque.
+     *
+     * <p>C'est ce que l'original obtenait par un tour de profondeur, et ce qui manquait au port : les
+     * coins carres de l'icone sortaient du cercle, et le joueur les voyait — « l'image des competences
+     * deborde des cercles », « des lignes noires entre la couleur du cercle et les bordures du carre
+     * de l'image ». Le disque sert de masque : son alpha multiplie celui de l'icone.
+     *
+     * @param grey  vrai pour une competence non apprise : l'icone s'eteint, comme le faisait le
+     *              programme mono de l'original
+     * @return faux quand le programme n'est pas la : l'appelant la dessine alors normalement, ce qui
+     *     vaut mieux qu'une icone qui disparait
+     */
+    public static boolean clipped(GuiGraphics graphics, String iconTexture, String maskTexture,
+                                  double iconSize, double discSize, int alpha, boolean grey) {
+        ResourceLocation icon = ResourceLocation.tryParse(iconTexture);
+        ResourceLocation mask = ResourceLocation.tryParse(maskTexture);
+        if (clip == null || icon == null || mask == null || discSize <= 0) return false;
+
+        RenderType type = CLIP_TYPES.computeIfAbsent(icon + "|" + mask, key -> {
+            RenderType created = type("academy_skill_clip", () -> clip, icon);
+            return created;
+        });
+
+        // L'icone fait quatorze unites au milieu du disque qui en fait vingt-trois : ses coordonnees
+        // de texture vont donc de 5/23 a 18/23 de celles du disque.
+        double scale = iconSize / discSize;
+        double offset = (discSize - iconSize) / (2.0d * discSize);
+        clip.safeGetUniform(CLIP_SCALE_UNIFORM).set((float) scale, (float) scale);
+        clip.safeGetUniform(CLIP_OFFSET_UNIFORM).set((float) offset, (float) offset);
+        clip.safeGetUniform(CLIP_GREY_UNIFORM).set(grey ? 1.0f : 0.0f);
+        RenderSystem.setShaderTexture(1, mask);
+
+        quad(graphics, type, iconSize / 2, alpha);
+        return true;
     }
 
     /**
