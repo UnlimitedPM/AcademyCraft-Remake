@@ -6568,6 +6568,54 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Le generateur produit vraiment, et il produit le jour.
+     *
+     * <p>Tous les autres tests du solaire fixaient le tampon a la main : aucun ne verifiait
+     * {@code getGeneration}, donc un panneau qui ne produit rien serait passe inapercu. Le joueur l'a
+     * vu en jeu avant les tests.
+     *
+     * <p>Le panneau est pose <b>hors du banc</b>, a la hauteur du terrain : les tests tournent sous
+     * terre (la hauteur du monde y est a 66, le banc a -59), et un panneau sous terre ne produit
+     * rien — ce qui est le comportement voulu, mais ne dit rien de la production.
+     */
+    @GameTest(template = "empty")
+    public static void solarGeneratorProducesInDaylightOnly(GameTestHelper helper) {
+        BlockPos inArena = helper.absolutePos(new BlockPos(1, 1, 1));
+        ServerLevel level = helper.getLevel();
+
+        // En plein air : juste au-dessus de la hauteur du terrain, dans la meme colonne.
+        BlockPos pos = new BlockPos(inArena.getX(),
+                level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
+                        inArena.getX(), inArena.getZ()) + 2,
+                inArena.getZ());
+        level.setBlockAndUpdate(pos, ModBlocks.SOLAR_GEN.get().defaultBlockState());
+        var solar = (cn.academy.SolarGenBlockEntity) level.getBlockEntity(pos);
+        assertTrue(helper, solar != null, "le panneau doit exister a " + pos);
+
+        long originalTime = level.getDayTime();
+        level.setDayTime(6000L); // midi
+        assertTrue(helper, level.canSeeSky(pos.above()), "le ciel doit etre ouvert au-dessus du panneau");
+        solar.setEnergy(0.0d);
+        for (int i = 0; i < 20; i++) {
+            cn.academy.SolarGenBlockEntity.tick(level, pos, level.getBlockState(pos), solar);
+        }
+        int produced = solar.getEnergyStored();
+        assertTrue(helper, produced > 0, "le panneau doit produire en plein jour, il a " + produced);
+
+        // La nuit, il ne produit plus rien : le tampon ne bouge pas.
+        level.setDayTime(18000L);
+        for (int i = 0; i < 20; i++) {
+            cn.academy.SolarGenBlockEntity.tick(level, pos, level.getBlockState(pos), solar);
+        }
+        assertValue(helper, produced, solar.getEnergyStored(), "aucune production de nuit");
+
+        // L'heure du monde est partagee par tous les tests du lot : on la remet comme on l'a trouvee.
+        level.setDayTime(originalTime);
+        level.removeBlock(pos, false);
+        helper.succeed();
+    }
+
     /** Le generateur voit le noeud auquel le joueur l'a raccorde — il ne le cherche plus tout seul. */
     @GameTest(template = "empty")
     public static void solarGeneratorUsesTheNodeItIsLinkedTo(GameTestHelper helper) {

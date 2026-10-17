@@ -7,7 +7,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -18,6 +17,17 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
 
     private final SolarGenBlockEntity blockEntity;
     private final ContainerLevelAccess access;
+
+    /**
+     * Le tampon, synchronise au client.
+     *
+     * <p>Le generateur change d'energie a chaque tick, et le block entity ne previent personne : le
+     * client gardait donc la valeur du chargement du chunk, c'est-a-dire zero. L'ecran affichait un
+     * panneau qui ne produit rien alors qu'il produisait. Un {@link SyncedInt} porte la valeur du
+     * serveur au client ; l'ancien {@code DataSlot} ne le faisait pas, son {@code set} ne faisait
+     * rien.
+     */
+    private final SyncedInt energyStored;
 
     @Override
     public BlockPos machinePos() {
@@ -59,21 +69,12 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
             addSlot(new Slot(playerInventory, col, 6 + col * 18, 163));
         }
 
-        addDataSlot(new DataSlot() {
-            @Override
-            public int get() {
-                return blockEntity.getEnergyStored();
-            }
-
-            @Override
-            public void set(int value) {
-                // Read-only: the block entity is the source of truth.
-            }
-        });
+        this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
+        addDataSlot(energyStored);
     }
 
     public int getEnergyStored() {
-        return blockEntity.getEnergyStored();
+        return energyStored.value();
     }
 
     public int getMaxEnergyStored() {

@@ -65,6 +65,8 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
     private final SyncedInt liquidAmount;
     private final SyncedInt energyStored;
     private final SyncedInt working;
+    private final SyncedInt recipeEngaged;
+    private final SyncedInt imagNeeded;
 
     public ImagFusorMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
         this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
@@ -129,10 +131,17 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
         this.liquidAmount = new SyncedInt(blockEntity::getLiquidAmount);
         this.energyStored = new SyncedInt(blockEntity::getEnergyStored);
         this.working = new SyncedInt(() -> blockEntity.isWorking() ? 1 : 0);
+        // La recette engagee vit dans un champ du block entity, que rien ne synchronise : sans ces
+        // deux valeurs, l'ecran lisait `null` sur son propre cote et affichait « IDLE » a perpetuite,
+        // meme pendant la fusion. C'est ce que le joueur a vu.
+        this.recipeEngaged = new SyncedInt(() -> blockEntity.hasRecipe() ? 1 : 0);
+        this.imagNeeded = new SyncedInt(blockEntity::imagNeeded);
         addDataSlot(workCounter);
         addDataSlot(liquidAmount);
         addDataSlot(energyStored);
         addDataSlot(working);
+        addDataSlot(recipeEngaged);
+        addDataSlot(imagNeeded);
     }
 
     // ------------------------------------------------------------------
@@ -170,12 +179,12 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
 
     /** Vrai quand une recette est engagee : c'est ce qui distingue « IDLE » d'un nombre. */
     public boolean hasRecipe() {
-        return blockEntity.hasRecipe();
+        return recipeEngaged.value() != 0;
     }
 
     /** Et ce que cette recette reclame en phase liquide, en millibuckets. */
     public int imagNeeded() {
-        return blockEntity.imagNeeded();
+        return imagNeeded.value();
     }
 
     // ------------------------------------------------------------------

@@ -62,8 +62,8 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     /** Facteur applique sous la pluie. */
     private static final double RAIN_FACTOR = 0.2d;
 
-    /** Cadence de recherche d'un noeud, en ticks. */
-    private static final int NODE_SEARCH_INTERVAL = 100;
+    /** Cadence de verification du raccordement, en ticks. */
+    private static final int LINK_CHECK_INTERVAL = 100;
 
     private final ItemStackHandler inventory = new ItemStackHandler(1) {
         @Override
@@ -99,7 +99,7 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
         be.chargeBatterySlot();
         be.pushToNeighbors(level, pos);
 
-        if (++be.searchTicker >= NODE_SEARCH_INTERVAL) {
+        if (++be.searchTicker >= LINK_CHECK_INTERVAL) {
             be.searchTicker = 0;
             be.ensureLinked(server);
         }

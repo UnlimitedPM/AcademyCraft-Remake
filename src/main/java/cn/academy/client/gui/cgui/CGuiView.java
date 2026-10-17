@@ -645,10 +645,15 @@ public final class CGuiView {
         } else {
             graphics.setColor(color[0] / 255f, color[1] / 255f, color[2] / 255f, color[3] / 255f);
             blend();
+            // La portion de texture se compte sur UV_BASE et non sur TEXTURE : a 48 pas par image,
+            // la fraction sautait de 1/48 d'un coup (deux pixels et demi de la texture du fusor)
+            // alors que le quad, lui, grandissait en continu. Le dessin a l'interieur de la barre
+            // reculait donc d'un pixel a chaque saut : « on la voit faire des gauche droite de 1
+            // pixel environ durant l'animation ». A 1200 pas, le saut est de un dixieme de pixel.
             graphics.blit(texture, 0, 0, rw, rh,
-                    (float) (bar.u() * TEXTURE), (float) (bar.v() * TEXTURE),
-                    (int) Math.round(bar.uw() * TEXTURE), (int) Math.round(bar.vh() * TEXTURE),
-                    TEXTURE, TEXTURE);
+                    (float) (bar.u() * UV_BASE), (float) (bar.v() * UV_BASE),
+                    (int) Math.round(bar.uw() * UV_BASE), (int) Math.round(bar.vh() * UV_BASE),
+                    UV_BASE, UV_BASE);
             graphics.setColor(1f, 1f, 1f, 1f);
         }
 
