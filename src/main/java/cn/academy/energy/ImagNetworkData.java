@@ -51,9 +51,6 @@ public class ImagNetworkData extends SavedData {
     private static final String TAG_NODE_USERS = "node_users";
     private static final String TAG_USER_POS = "user";
 
-    /** Les machines detachees a la main : une liste de positions. */
-    private static final String TAG_REFUSED = "refused";
-
     /** Noeuds raccordes a chaque Matrix. */
     private final Links matrixToNodes = new Links();
 
@@ -176,32 +173,6 @@ public class ImagNetworkData extends SavedData {
     }
 
     // ------------------------------------------------------------------
-    // Les machines detachees a la main
-    // ------------------------------------------------------------------
-
-    /**
-     * Les machines que le joueur a detachees, et qui ne doivent plus se raccrocher toutes seules.
-     *
-     * <p>Le port raccorde ses machines au noeud le plus proche quand elles n'en ont pas — c'est son
-     * substitut au lien manuel de l'original. Un joueur qui detache depuis l'onglet sans fil dit le
-     * contraire, et sans cette memoire son detachement ne durerait que le temps d'un tick : la
-     * machine se raccrocherait aussitot, exactement comme avant.
-     */
-    private final Set<BlockPos> refused = new LinkedHashSet<>();
-
-    /** Vrai si cette machine a ete detachee a la main. */
-    public boolean isRefused(BlockPos machine) {
-        return refused.contains(machine);
-    }
-
-    /** Retient, ou oublie, le detachement volontaire d'une machine. */
-    public void setRefused(BlockPos machine, boolean value) {
-        BlockPos key = machine.immutable();
-        boolean changed = value ? refused.add(key) : refused.remove(key);
-        if (changed) setDirty(true);
-    }
-
-    // ------------------------------------------------------------------
     // Persistance
     // ------------------------------------------------------------------
 
@@ -209,11 +180,6 @@ public class ImagNetworkData extends SavedData {
     public CompoundTag save(CompoundTag tag) {
         tag.put(TAG_MATRICES, matrixToNodes.save(TAG_MATRIX_POS, TAG_NODES, TAG_NODE_POS));
         tag.put(TAG_NODE_USERS, nodeToUsers.save(TAG_NODE_POS, TAG_NODES, TAG_USER_POS));
-
-        // Les machines detachees a la main : une liste de positions, rien de plus.
-        ListTag refused = new ListTag();
-        for (BlockPos pos : this.refused) refused.add(LongTag.valueOf(pos.asLong()));
-        tag.put(TAG_REFUSED, refused);
         return tag;
     }
 
@@ -223,13 +189,6 @@ public class ImagNetworkData extends SavedData {
                 TAG_MATRIX_POS, TAG_NODES, TAG_NODE_POS);
         data.nodeToUsers.load(tag.getList(TAG_NODE_USERS, Tag.TAG_COMPOUND),
                 TAG_NODE_POS, TAG_NODES, TAG_USER_POS);
-
-        ListTag refused = tag.getList(TAG_REFUSED, Tag.TAG_LONG);
-        for (int i = 0; i < refused.size(); i++) {
-            // Une position tient dans un long, et un ListTag ne rend pas de long directement : c'est
-            // la balise qu'il faut lire.
-            if (refused.get(i) instanceof LongTag pos) data.refused.add(BlockPos.of(pos.getAsLong()));
-        }
 
         // Le chargement n'est pas une modification : rien a sauvegarder tant que
         // personne ne touche aux raccordements.

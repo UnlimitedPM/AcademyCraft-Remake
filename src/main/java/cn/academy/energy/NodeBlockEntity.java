@@ -390,69 +390,32 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     // ------------------------------------------------------------------
 
     /**
-     * Verifie le raccordement du noeud et le repare au besoin : detache d'un
-     * Matrix disparu ou devenu hors de portee, puis recherche le Matrix actif le
-     * plus proche.
+     * Verifie le raccordement du noeud : detache d'un Matrix qui ne vaut plus rien.
+     *
+     * <p>Et rien de plus. Le noeud cherchait tout seul un Matrix dans sa portee, et c'est ce filet que
+     * le joueur a fait retirer : « quand on pose une machine au sol, elle n'essaie pas de se connecter
+     * automatiquement au reseau le plus proche. Je veux qu'on soit oblige de le mettre a la main. » Le
+     * choix se fait dans l'onglet sans fil, et c'est la que le mot de passe d'un reseau protege se
+     * tape.
      */
     private void ensureLinked(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return;
-        ImagNetworkData data = ImagNetworkData.get(server);
 
-        // Le joueur a detache ce noeud depuis son onglet sans fil : c'est un ordre, pas un accident,
-        // et il tient jusqu'a ce qu'il en choisisse un autre.
-        if (data.isRefused(pos) && data.matrixOf(pos) == null) {
+        BlockPos matrixPos = ImagNetworkData.get(server).matrixOf(pos);
+        if (matrixPos == null) {
             setConnected(false);
             return;
         }
 
-        BlockPos matrixPos = data.matrixOf(pos);
-        if (matrixPos != null) {
-            MatrixBlockEntity matrix = matrixAt(level, matrixPos);
-            if (matrix != null && NodeFinder.canJoin(pos, matrix, getRange())) {
-                setConnected(true);
-                return;
-            }
-            // Le Matrix a ete casse, son coeur retire, son reseau efface, ou il est hors de la portee
-            // du noeud : le lien ne veut plus rien dire. Le detacher ici est ce qui repare les liens
-            // noues par l'ancienne regle (la portee maximale theorique d'un Matrix), qui liaient un
-            // noeud a un Matrix qu'il ne voyait meme pas.
-            data.unlink(pos);
-        }
-
-        setConnected(false);
-
-        MatrixBlockEntity found = findMatrix(server, pos);
-        if (found != null && data.link(found.getBlockPos(), pos)) {
+        MatrixBlockEntity matrix = matrixAt(level, matrixPos);
+        if (matrix != null && NodeFinder.canJoin(pos, matrix, getRange())) {
             setConnected(true);
+            return;
         }
-    }
 
-    /**
-     * Cherche le Matrix le plus proche que ce noeud peut rejoindre.
-     *
-     * <p>La regle est celle de l'onglet sans fil ({@link NodeFinder#canJoin}) : reseau ne, Matrix a
-     * portee, noeud a portee. La boite de recherche est donc la PORTEE DU NOEUD, et non la portee
-     * maximale theorique d'un Matrix : un noeud basique ne voit pas plus loin que neuf blocs, et
-     * l'ancien rayon liait des noeuds a des Matrix qu'ils n'auraient jamais du voir.
-     *
-     * <p>Et ce filet ne prend QUE les Matrix sans mot de passe : un reseau protege se rejoint a la
-     * main, depuis l'onglet, ou le mot de passe se tape. Un raccordement automatique a un reseau
-     * protege rendrait ce mot de passe inutile — ce que le joueur a vu tout de suite (« il se relie
-     * automatiquement au node qu'on pose meme si le matrix a un mot de passe, donc le mot de passe n'a
-     * aucun sens »). Le lien DEJA fait survit, lui, a un mot de passe pose apres coup : c'est
-     * {@code ensureLinked} qui le garde, et il ne demande que {@code canJoin}.
-     *
-     * <p>Le parcours se fait par chunk (« block entities du chunk ») et non bloc par bloc : dans un
-     * rayon de neuf blocs cela fait au pire quatre chunks au lieu de trois mille positions, et seuls
-     * les chunks deja charges sont lus.
-     *
-     * @return le Matrix le plus proche compatible, ou {@code null}
-     */
-    @Nullable
-    private MatrixBlockEntity findMatrix(ServerLevel level, BlockPos pos) {
-        double range = getRange();
-        return BlockEntityScan.nearest(level, pos, range, MatrixBlockEntity.class,
-                matrix -> matrix.getPassword().isEmpty() && NodeFinder.canJoin(pos, matrix, range));
+        // Le Matrix a ete casse, son coeur retire, son reseau efface, ou il est hors de portee.
+        ImagNetworkData.get(server).unlink(pos);
+        setConnected(false);
     }
 
     @Nullable

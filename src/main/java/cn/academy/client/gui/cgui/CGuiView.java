@@ -192,6 +192,20 @@ public final class CGuiView {
         return box != null && edited.contains(box);
     }
 
+    /**
+     * Rend le clavier sans rien valider : la saisie en cours est abandonnee, et la machine reprend la
+     * main a l'image suivante.
+     *
+     * <p>C'est ce que fait Echappe. Le texte tape reste affiche le temps de l'appui — l'ecran le relit
+     * ensuite depuis la machine — et rien n'est envoye au serveur.
+     */
+    private void release(CWidget box) {
+        if (box == null) return;
+        edited.remove(box);
+        if (box.text != null) box.text.color(idleRed, idleGreen, idleBlue);
+        focus(null);
+    }
+
     /** Ce que ce widget fait quand on valide son contenu : l'{@code ConfirmInputEvent} de l'original. */
     public void onConfirm(CWidget box, Consumer<String> action) {
         confirms.put(box, action);
@@ -798,7 +812,18 @@ public final class CGuiView {
 
     public boolean keyPressed(int keyCode) {
         if (!editing()) return false;
-
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            // Echappe rend le clavier SANS fermer l'ecran : c'est le geste qui sort d'un champ. Il
+            // abandonne la saisie en cours (le champ reprend la valeur de la machine a l'image
+            // suivante), et un SECOND appui ferme l'ecran, comme partout ailleurs.
+            //
+            // Sans cette branche, l'ecran avalait Echappe des qu'un champ avait le clavier — il le
+            // fait pour que la touche n'aille pas dans l'inventaire — donc la touche ne faisait plus
+            // rien du tout. Le joueur : « quand on ecrit le nom du reseau et/ou son mot de passe,
+            // faire echap pour sortir du bloc ne fonctionne plus ».
+            release(focused);
+            return true;
+        }
         if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE
                 && !focused.text.content.isEmpty()) {
             focused.text.content = focused.text.content.substring(0,

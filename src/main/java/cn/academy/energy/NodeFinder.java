@@ -37,35 +37,29 @@ public final class NodeFinder {
     public static final double SEARCH_RANGE = 20.0d;
 
     /**
-     * Verifie le raccordement d'une machine et le repare au besoin : detache
-     * d'un noeud disparu, hors de portee ou plein, puis cherche le noeud le plus
-     * proche capable de l'accueillir.
+     * Verifie le raccordement d'une machine : detache d'un noeud disparu, hors de portee ou plein.
      *
-     * <p>Ce filet ne prend QUE les noeuds sans mot de passe ({@link #accepts} ne regarde pas le mot de
-     * passe, et c'est voulu : le raccordement deja fait doit survivre a un mot de passe pose apres
-     * coup). Un noeud protege ne se rejoint qu'a la main, depuis l'onglet sans fil, ou le mot de passe
-     * se tape — sans quoi ce mot de passe ne garderait rien du tout.
+     * <p>Et rien de plus. Le port avait ajoute un filet — la machine se raccrochait d'elle-meme au
+     * noeud le plus proche — et c'est ce filet que le joueur a fait retirer : « quand on pose une
+     * machine au sol, elle n'essaie pas de se connecter automatiquement au reseau le plus proche. Je
+     * veux qu'on soit oblige de le mettre a la main. » Le raccordement se fait dans l'onglet sans
+     * fil, et nulle part ailleurs ; ce controle ne sert plus qu'a oublier un lien qui ne vaut plus
+     * rien, et il ne peut pas en creer un.
      *
-     * @param pos position de la machine a raccorder
-     * @return vrai si la machine est raccordee a un noeud apres l'appel
+     * @return vrai si la machine est encore raccordee a un noeud apres l'appel
      */
     public static boolean ensureLinked(ServerLevel level, BlockPos pos) {
         ImagNetworkData data = ImagNetworkData.get(level);
 
-        // Le joueur a detache cette machine depuis l'onglet sans fil : c'est un ordre, pas un
-        // accident, et il tient jusqu'a ce qu'il en choisisse une autre.
-        if (data.isRefused(pos) && data.nodeOf(pos) == null) return false;
-
         BlockPos nodePos = data.nodeOf(pos);
-        if (nodePos != null) {
-            NodeBlockEntity node = nodeAt(level, nodePos);
-            if (node != null && accepts(node, pos, data)) return true;
-            data.unlinkUser(pos);
-        }
+        if (nodePos == null) return false;
 
-        NodeBlockEntity found = BlockEntityScan.nearest(level, pos, SEARCH_RANGE, NodeBlockEntity.class,
-                node -> node.getPassword().isEmpty() && accepts(node, pos, data));
-        return found != null && data.linkUser(found.getBlockPos(), pos);
+        NodeBlockEntity node = nodeAt(level, nodePos);
+        if (node != null && accepts(node, pos, data)) return true;
+
+        // Le noeud a ete casse, ou il ne peut plus accueillir cette machine.
+        data.unlinkUser(pos);
+        return false;
     }
 
     /**
@@ -152,8 +146,8 @@ public final class NodeFinder {
      * Raccorde une machine au noeud que le joueur a designe, avec le mot de passe qu'il a tape.
      *
      * <p>C'est le {@code linkUser} de l'original : la portee, la place, et le mot de passe du noeud.
-     * Le choix du joueur prime ensuite sur le raccordement automatique : une machine liee a la main y
-     * reste tant que son noeud l'accepte.
+     * C'est le SEUL chemin qui raccorde une machine : rien ne se raccorde tout seul, ni a la pose ni
+     * au tick suivant.
      */
     public static LinkOutcome link(ServerLevel level, BlockPos machinePos, BlockPos nodePos,
                                    String password) {
@@ -175,23 +169,12 @@ public final class NodeFinder {
 
         data.unlinkUser(machinePos);
         if (!data.linkUser(nodePos, machinePos)) return LinkOutcome.NO_ROOM;
-
-        // Un choix volontaire efface le refus qu'un detachement precedent avait laisse.
-        data.setRefused(machinePos, false);
         return LinkOutcome.LINKED;
     }
 
-    /**
-     * Detache une machine, et l'empeche de se raccrocher toute seule.
-     *
-     * <p>Sans ce refus, le detachement ne durerait que cinq secondes : la machine chercherait son
-     * noeud au tick suivant, exactement comme avant. Le joueur qui detache veut qu'elle reste
-     * detachee, et c'est le seul endroit qui le sache.
-     */
+    /** Detache une machine. Rien ne la raccordera ensuite : c'est le joueur qui choisit. */
     public static void unlink(ServerLevel level, BlockPos machinePos) {
-        ImagNetworkData data = ImagNetworkData.get(level);
-        data.unlinkUser(machinePos);
-        data.setRefused(machinePos, true);
+        ImagNetworkData.get(level).unlinkUser(machinePos);
     }
 
     // ------------------------------------------------------------------
@@ -273,22 +256,12 @@ public final class NodeFinder {
 
         data.unlink(nodePos);
         if (!data.link(matrixPos, nodePos)) return LinkOutcome.NO_ROOM;
-
-        // Un choix volontaire efface le refus qu'un detachement precedent avait laisse.
-        data.setRefused(nodePos, false);
         return LinkOutcome.LINKED;
     }
 
-    /**
-     * Detache un noeud de son reseau, et l'empeche de s'y raccrocher tout seul.
-     *
-     * <p>La marque est la meme que pour une machine : sans elle, le noeud chercherait son Matrix au
-     * tick suivant et le bouton de deconnexion n'aurait l'air de rien faire.
-     */
+    /** Detache un noeud de son reseau. Rien ne l'y raccrochera ensuite : c'est le joueur qui choisit. */
     public static void unlinkMatrix(ServerLevel level, BlockPos nodePos) {
-        ImagNetworkData data = ImagNetworkData.get(level);
-        data.unlink(nodePos);
-        data.setRefused(nodePos, true);
+        ImagNetworkData.get(level).unlink(nodePos);
     }
 
     /** Le SSID du reseau qu'un noeud a rejoint, ou {@code null}. */

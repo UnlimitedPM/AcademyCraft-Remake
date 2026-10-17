@@ -650,66 +650,6 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
-    /**
-     * Un Matrix protege par un mot de passe ne se rejoint pas tout seul.
-     *
-     * <p>C'est le defaut signale par le joueur : « il se relie automatiquement au node qu'on pose meme
-     * si le matrix a un mot de passe, donc le mot de passe n'a aucun sens ». Le mot de passe se tape
-     * dans l'onglet sans fil ({@code wirelessTabAsksForTheNodePassword} tient le cote machine du meme
-     * contrat), et le raccordement automatique ne prend que les reseaux ouverts.
-     */
-    @GameTest(template = "empty")
-    public static void aProtectedMatrixIsNotJoinedAutomatically(GameTestHelper helper) {
-        MatrixBlockEntity matrix = wiredMatrix(helper, new BlockPos(1, 1, 1));
-        BlockPos nodeRel = new BlockPos(1, 1, 4);
-        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
-
-        ServerLevel level = helper.getLevel();
-        BlockPos nodeAbs = helper.absolutePos(nodeRel);
-        matrix.setPassword("academy");
-
-        // Le noeud tique et se raccorde tout seul : au bout d'une seconde, il doit avoir refuse.
-        helper.runAfterDelay(40, () -> {
-            assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
-                    "un reseau protege ne se rejoint pas tout seul");
-            helper.succeed();
-        });
-    }
-
-    /** Le temoin du precedent : le MEME montage, sans mot de passe, se raccorde bien tout seul. */
-    @GameTest(template = "empty")
-    public static void anOpenMatrixIsJoinedAutomatically(GameTestHelper helper) {
-        MatrixBlockEntity matrix = wiredMatrix(helper, new BlockPos(1, 1, 1));
-        BlockPos nodeRel = new BlockPos(1, 1, 4);
-        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
-
-        ServerLevel level = helper.getLevel();
-        BlockPos nodeAbs = helper.absolutePos(nodeRel);
-
-        // Le raccordement retient la position du MATRIX, pas celle du noeud : c'est ce que l'onglet
-        // affiche, et c'est ce que le noeud cherche a rejoindre.
-        helper.succeedWhen(() -> assertValue(helper, matrix.getBlockPos(),
-                ImagNetworkData.get(level).matrixOf(nodeAbs),
-                "un reseau ouvert se rejoint tout seul"));
-    }
-
-    /**
-     * Un Matrix pret a accueillir un noeud : un reseau ne, un coeur et ses trois plaques, a trois
-     * blocs d'un noeud basique — donc dans ses neuf blocs de portee.
-     *
-     * <p>Le ssid est ce qui fait exister le reseau : sans lui il n'y a rien a rejoindre, et les deux
-     * tests ci-dessus ne diraient plus rien dans l'un ou l'autre sens.
-     */
-    private static MatrixBlockEntity wiredMatrix(GameTestHelper helper, BlockPos rel) {
-        MatrixBlockEntity matrix = placeMatrix(helper, rel);
-        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
-            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
-        }
-        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_0.get()));
-        matrix.setSsid("academy");
-        return matrix;
-    }
-
     @GameTest(template = "empty")
     public static void matrixAcceptsOnlyPlatesAndCores(GameTestHelper helper) {
         MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));
@@ -820,12 +760,17 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
-    /** Un noeud pose a cote d'un Matrix actif doit s'y raccorder tout seul. */
+    /**
+     * Un noeud pose a cote d'un Matrix ne s'y raccorde PAS tout seul : le lien se fait a la main.
+     *
+     * <p>Le joueur : « quand on pose une machine au sol, elle n'essaie pas de se connecter
+     * automatiquement au reseau le plus proche. Je veux qu'on soit oblige de le mettre a la main. »
+     * Le noeud est colle au Matrix, le reseau existe et a de la place — et pourtant rien ne doit se
+     * faire tant que le joueur n'a pas choisi, dans l'onglet sans fil.
+     */
     @GameTest(template = "empty")
-    public static void nodeFindsANearbyMatrix(GameTestHelper helper) {
+    public static void nodeDoesNotJoinAMatrixByItself(GameTestHelper helper) {
         BlockPos matrixRel = new BlockPos(1, 1, 0);
-        // Le noeud est colle au Matrix : c'est forcement le plus proche, donc
-        // celui qu'il doit choisir.
         BlockPos nodeRel = new BlockPos(2, 1, 0);
 
         MatrixBlockEntity matrix = placeMatrix(helper, matrixRel);
@@ -833,9 +778,6 @@ public final class AcademyGameTests {
             matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
         }
         matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_2.get()));
-        // Un Matrix sans nom n'a pas de reseau : il n'y a rien a rejoindre, et sans cette ligne le test
-        // attendait d'un noeud qu'il se raccorde a un reseau inexistant (c'est ce que l'onglet sans fil
-        // refusait deja d'afficher).
         matrix.setSsid("academy");
 
         helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
@@ -844,14 +786,21 @@ public final class AcademyGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
 
-        // La recherche n'a lieu que tous les 100 ticks : on avance le tick a la main.
-        for (int i = 0; i < 100; i++) {
+        // La verification du noeud tourne tous les 100 ticks : on avance le tick a la main.
+        for (int i = 0; i < 200; i++) {
             NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
         }
 
+        assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "un noeud pose ne doit pas se raccorder tout seul");
+        assertTrue(helper, !node.isConnected(), "le noeud ne doit pas se savoir raccorde");
+
+        // Et le chemin MANUEL, lui, marche : c'est le seul, donc il doit fonctionner.
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, helper.absolutePos(matrixRel), ""),
+                "le choix du joueur, dans l'onglet");
         assertValue(helper, helper.absolutePos(matrixRel), ImagNetworkData.get(level).matrixOf(nodeAbs),
-                "Matrix trouve par le noeud");
-        assertTrue(helper, node.isConnected(), "le noeud doit se savoir raccorde");
+                "Matrix rejoint a la main");
         helper.succeed();
     }
 
@@ -981,8 +930,14 @@ public final class AcademyGameTests {
         return recipe == null ? 0 : recipe.outputCount();
     }
 
+    /**
+     * Le formeur voit le noeud auquel le joueur l'a raccorde.
+     *
+     * <p>Il ne le cherche plus tout seul : le lien se fait a la main, dans l'onglet sans fil. Ce
+     * test tient le cote machine du contrat, {@code nodeDoesNotJoinAMatrixByItself} tient l'autre.
+     */
     @GameTest(template = "empty")
-    public static void metalFormerFindsANearbyNode(GameTestHelper helper) {
+    public static void metalFormerUsesTheNodeItIsLinkedTo(GameTestHelper helper) {
         BlockPos nodeRel = new BlockPos(1, 1, 0);
         BlockPos formerRel = new BlockPos(1, 1, 2);
 
@@ -993,12 +948,16 @@ public final class AcademyGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos formerAbs = helper.absolutePos(formerRel);
 
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, formerAbs, helper.absolutePos(nodeRel), ""),
+                "le joueur raccorde le formeur a son noeud");
+
         for (int i = 0; i < 100; i++) {
             MetalFormerBlockEntity.tick(level, formerAbs, helper.getBlockState(formerRel), former);
         }
 
         assertValue(helper, helper.absolutePos(nodeRel), ImagNetworkData.get(level).nodeOf(formerAbs),
-                "noeud trouve par le formeur");
+                "noeud du formeur");
         assertTrue(helper, former.isLinked(), "le formeur doit se savoir raccorde");
         helper.succeed();
     }
@@ -1021,11 +980,15 @@ public final class AcademyGameTests {
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
         BlockPos formerAbs = helper.absolutePos(formerRel);
 
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, formerAbs, nodeAbs, ""),
+                "le joueur raccorde le formeur a son noeud");
+
         for (int i = 0; i < 100; i++) {
             MetalFormerBlockEntity.tick(level, formerAbs, helper.getBlockState(formerRel), former);
         }
         assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(formerAbs),
-                "le formeur doit avoir trouve le noeud avant de travailler");
+                "le formeur est raccorde a son noeud");
 
         // Recette INCISE : une plaque de fer renforcee donne six aiguilles.
         former.getInventory().setStackInSlot(MetalFormerBlockEntity.SLOT_IN,
@@ -1281,11 +1244,15 @@ public final class AcademyGameTests {
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
         BlockPos fusorAbs = helper.absolutePos(fusorRel);
 
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, fusorAbs, nodeAbs, ""),
+                "le joueur raccorde le fusor a son noeud");
+
         for (int i = 0; i < 100; i++) {
             ImagFusorBlockEntity.tick(level, fusorAbs, helper.getBlockState(fusorRel), fusor);
         }
         assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(fusorAbs),
-                "le fusor doit avoir trouve le noeud avant de travailler");
+                "le fusor est raccorde a son noeud");
 
         // Recette documentee dans imag_fusor.md : 3000 mB pour passer de la basse
         // purete a la purete moyenne.
@@ -6337,11 +6304,15 @@ public final class AcademyGameTests {
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
         BlockPos generatorAbs = helper.absolutePos(generatorRel);
 
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, generatorAbs, nodeAbs, ""),
+                "le joueur raccorde le generateur a son noeud");
+
         for (int i = 0; i < 100; i++) {
             PhaseGeneratorBlockEntity.tick(level, generatorAbs, helper.getBlockState(generatorRel), generator);
         }
         assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(generatorAbs),
-                "le generateur doit avoir trouve le noeud tout seul");
+                "le generateur est raccorde a son noeud");
 
         // On fixe la cuve et le tampon : la production reelle depend de la quantite
         // de phase restante, qu'on ne veut pas avoir a suivre ici.
@@ -6597,9 +6568,9 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
-    /** Le generateur doit trouver le noeud tout seul, comme un noeud trouve son Matrix. */
+    /** Le generateur voit le noeud auquel le joueur l'a raccorde — il ne le cherche plus tout seul. */
     @GameTest(template = "empty")
-    public static void solarGeneratorFindsANearbyNode(GameTestHelper helper) {
+    public static void solarGeneratorUsesTheNodeItIsLinkedTo(GameTestHelper helper) {
         BlockPos nodeRel = new BlockPos(1, 1, 0);
         BlockPos solarRel = new BlockPos(1, 1, 2);
 
@@ -6610,13 +6581,16 @@ public final class AcademyGameTests {
         ServerLevel level = helper.getLevel();
         BlockPos solarAbs = helper.absolutePos(solarRel);
 
-        // La recherche n'a lieu que tous les 100 ticks.
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, helper.absolutePos(nodeRel), ""),
+                "le joueur raccorde le generateur a son noeud");
+
         for (int i = 0; i < 100; i++) {
             cn.academy.SolarGenBlockEntity.tick(level, solarAbs, helper.getBlockState(solarRel), solar);
         }
 
         assertValue(helper, helper.absolutePos(nodeRel), ImagNetworkData.get(level).nodeOf(solarAbs),
-                "noeud trouve par le generateur");
+                "noeud du generateur");
         assertTrue(helper, solar.isLinked(), "le generateur doit se savoir raccorde");
         helper.succeed();
     }
@@ -6640,11 +6614,15 @@ public final class AcademyGameTests {
         BlockPos nodeAbs = helper.absolutePos(nodeRel);
         BlockPos solarAbs = helper.absolutePos(solarRel);
 
+        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
+                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, ""),
+                "le joueur raccorde le generateur a son noeud");
+
         for (int i = 0; i < 100; i++) {
             cn.academy.SolarGenBlockEntity.tick(level, solarAbs, helper.getBlockState(solarRel), solar);
         }
         assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(solarAbs),
-                "le generateur doit avoir trouve le noeud avant de lui fournir quoi que ce soit");
+                "le generateur est raccorde a son noeud");
 
         // On fixe le tampon : la production reelle depend de l'heure du monde et
         // du ciel au-dessus de la structure de test, deux choses qu'on ne veut pas
@@ -6777,11 +6755,14 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Un detachement tient : sans cette memoire, la machine se raccrocherait au tick suivant, et le
-     * bouton de deconnexion de l'onglet n'aurait l'air de rien faire.
+     * Un detachement tient, et un raccordement ne revient jamais tout seul.
+     *
+     * <p>Le lien se fait a la main, dans l'onglet sans fil, et rien ne le defait ni ne le refait sans
+     * le joueur : la verification du tick repare un lien casse, elle n'en cree pas. Le joueur :
+     * « je veux qu'on soit oblige de le mettre a la main ».
      */
     @GameTest(template = "empty")
-    public static void wirelessTabDetachesUntilThePlayerChoosesAgain(GameTestHelper helper) {
+    public static void aDetachedMachineStaysDetached(GameTestHelper helper) {
         BlockPos nodeRel = new BlockPos(1, 1, 0);
         BlockPos solarRel = new BlockPos(1, 1, 2);
 
@@ -6795,19 +6776,12 @@ public final class AcademyGameTests {
         assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
                 cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, ""),
                 "le choix de l'onglet");
+        assertValue(helper, nodeAbs, ImagNetworkData.get(level).nodeOf(solarAbs), "la machine est raccordee");
 
         cn.academy.energy.NodeFinder.unlink(level, solarAbs);
         assertValue(helper, null, ImagNetworkData.get(level).nodeOf(solarAbs), "la machine est detachee");
         assertFalse(helper, cn.academy.energy.NodeFinder.ensureLinked(level, solarAbs),
                 "une machine detachee a la main doit le rester");
-
-        // Le joueur en choisit un autre, puis le detachement revient : c'est le dernier mot qui compte.
-        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
-                cn.academy.energy.NodeFinder.link(level, solarAbs, nodeAbs, ""),
-                "un second choix volontaire");
-        cn.academy.energy.NodeFinder.detach(level, solarAbs);
-        assertTrue(helper, cn.academy.energy.NodeFinder.ensureLinked(level, solarAbs),
-                "un choix volontaire efface le refus : la recherche automatique reprend");
         helper.succeed();
     }
 
@@ -6919,8 +6893,10 @@ public final class AcademyGameTests {
     }
 
     /**
-     * Un detachement tient : sans cette memoire, le noeud retrouverait son Matrix au centieme tick
-     * et le bouton de deconnexion n'aurait l'air de rien faire.
+     * Un detachement tient : la verification du tick repare un lien casse, elle n'en cree pas.
+     *
+     * <p>Le noeud detache reste detache au fil des ticks — plus besoin de memoire de refus, puisque
+     * rien ne le raccroche jamais de lui-meme.
      */
     @GameTest(template = "empty")
     public static void wirelessTabKeepsADetachedNodeDetached(GameTestHelper helper) {
@@ -6949,17 +6925,6 @@ public final class AcademyGameTests {
         assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
                 "un noeud detache a la main doit le rester");
         assertFalse(helper, node.isConnected(), "et il se sait seul");
-
-        // Un choix volontaire, lui, efface le refus : la recherche automatique reprend ses droits.
-        assertValue(helper, cn.academy.energy.NodeFinder.LinkOutcome.LINKED,
-                cn.academy.energy.NodeFinder.linkMatrix(level, nodeAbs, matrixAbs, ""),
-                "un second choix volontaire");
-        ImagNetworkData.get(level).unlink(nodeAbs);
-        for (int i = 0; i < 100; i++) {
-            NodeBlockEntity.serverTick(level, nodeAbs, helper.getBlockState(nodeRel), node);
-        }
-        assertValue(helper, matrixAbs, ImagNetworkData.get(level).matrixOf(nodeAbs),
-                "un choix volontaire efface le refus");
         helper.succeed();
     }
 
