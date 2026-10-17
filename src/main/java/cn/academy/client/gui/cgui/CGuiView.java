@@ -342,15 +342,20 @@ public final class CGuiView {
             graphics.pose().popPose();
         }
 
-        // Le trait passe avant le noeud qu'il relie, et ses deux bouts s'arretent a douze unites et
-        // demie du centre — en dehors du disque qui en fait onze et demie — donc l'ordre ne se voit
-        // pas. Le dessiner avant TOUT l'arbre, en un seul passage, l'a enfonce sous le fond de page :
-        // les traits sont sortis gris, et le joueur l'a dit tout de suite.
-        if (widget.line != null) {
-            drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
-        }
+        // Le trait d'un noeud est dessine par SON PARENT, juste avant de dessiner ses enfants (voir
+        // la boucle plus bas). Il arrive donc apres le fond de page — qui le rendrait gris — et avant
+        // tous les disques, qui le cachent : « les lignes blanches sont cense avoir leur bout
+        // assombris » et « le cercle quand on met la souris dessus est cense cacher la ligne blanche
+        // derriere ».
         if (widget.disc != null) {
             drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
+        }
+
+        // Les traits des enfants d'abord, tous ensemble : c'est ce qui les met SOUS leurs disques.
+        for (CWidget child : widget.children()) {
+            if (child.transform.doesDraw && child.transform.enabled && child.line != null) {
+                drawLine(graphics, child, child.absX, child.absY, child.absScale);
+            }
         }
 
         for (CWidget child : widget.children()) {

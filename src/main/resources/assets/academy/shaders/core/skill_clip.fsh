@@ -30,9 +30,16 @@ out vec4 fragColor;
 
 void main() {
     vec4 icon = texture(Sampler0, texCoord0);
+    float mask = texture(Sampler1, texCoord0 * MaskScale + MaskOffset).a;
+    // Le disque sert de POCHOIR, pas de voile : on rejette ce qui tombe hors de lui, et l'icone
+    // garde son opacite. Multiplier l'alpha par celui du disque l'assombrissait, parce que le
+    // disque lui-meme est a moitie translucide : le joueur : « maintenant l'icone est assombrie ».
+    // C'est le test d'alpha de l'original, au meme seuil : GL_GREATER, 0.3.
+    if (mask < 0.3) {
+        discard;
+    }
     if (Grey > 0.5) {
         icon.rgb = vec3((icon.r + icon.g + icon.b) / 3.0);
     }
-    float mask = texture(Sampler1, texCoord0 * MaskScale + MaskOffset).a;
-    fragColor = vec4(icon.rgb, icon.a * mask) * vertexColor * ColorModulator;
+    fragColor = icon * vertexColor * ColorModulator;
 }
