@@ -80,14 +80,14 @@ class MetalFormerTest {
             assertTrue(!lang.get(key).getAsString().isBlank(), key + " est vide");
         }
 
-        // Les noms SONT ceux de l'original (`TileMetalFormer.Mode.toString()`), a une exception
-        // demandee par le joueur : « a la limite, je prefere Etching plutot que juste Etch comme
-        // dans le vrai ». Ils etaient Rolling / Cutting / Etching / Refining, c'est-a-dire une
-        // invention du port.
-        assertEquals("Plate", lang.get("academy.metal_former.mode.plate").getAsString());
-        assertEquals("Incise", lang.get("academy.metal_former.mode.incise").getAsString());
-        assertEquals("Etching", lang.get("academy.metal_former.mode.etch").getAsString());
-        assertEquals("Refine", lang.get("academy.metal_former.mode.refine").getAsString());
+        // Les noms SONT ceux de l'original (`TileMetalFormer.Mode.toString()`, donc en majuscules),
+        // a une exception demandee par le joueur : « je prefere Etching plutot que juste Etch comme
+        // dans le vrai », puis « je veux bien que tu l'ecrive en majuscule ». Ils etaient Rolling /
+        // Cutting / Etching / Refining, c'est-a-dire une invention du port.
+        assertEquals("PLATE", lang.get("academy.metal_former.mode.plate").getAsString());
+        assertEquals("INCISE", lang.get("academy.metal_former.mode.incise").getAsString());
+        assertEquals("ETCHING", lang.get("academy.metal_former.mode.etch").getAsString());
+        assertEquals("REFINE", lang.get("academy.metal_former.mode.refine").getAsString());
     }
 
     /**
