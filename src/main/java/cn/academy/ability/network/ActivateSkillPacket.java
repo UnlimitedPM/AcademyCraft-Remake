@@ -6,9 +6,7 @@ import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.PacketDistributor;
@@ -76,16 +74,11 @@ public class ActivateSkillPacket {
     }
 
     private static void handle(ServerPlayer player, AbilityData data, Skill skill, Phase phase) {
-        // Apprendre une competence passe par le developpeur : tant qu'elle ne
-        // l'est pas, la touche ne fait rien. L'original ne posait meme pas de
-        // touche dans ce cas ; le port en pose une par competence, donc il le
-        // dit plutot que de rester muet.
-        if (!data.isSkillLearned(skill)) {
-            player.displayClientMessage(
-                    Component.translatable("academy.ability.not_learned", skill.getDisplayName())
-                            .withStyle(ChatFormatting.RED), true);
-            return;
-        }
+        // Apprendre une competence passe par le developpeur : tant qu'elle ne l'est pas, la touche
+        // ne fait rien, et elle ne dit rien non plus. L'original ne posait meme pas de touche dans
+        // ce cas, donc la touche muette est son comportement a lui ; le joueur a demande qu'on
+        // retire tous ces messages rouges, celui-ci compris.
+        if (!data.isSkillLearned(skill)) return;
 
         if (phase == Phase.PRESS) {
             // Une competence A BASCULE se ferme sur un second appui : son maintien est un ETAT, et
@@ -113,7 +106,7 @@ public class ActivateSkillPacket {
             // Une competence qui se charge n'est pas lancee maintenant : on ouvre une
             // charge et on attend le relachement.
             if (skill.isChargeable()) {
-                if (!canBegin(player, data, skill)) {
+                if (!canBegin(data, skill)) {
                     refuse(player, skill);
                     return;
                 }
@@ -164,15 +157,11 @@ public class ActivateSkillPacket {
      * @return vrai si le maintien est ouvert — voir {@link #refuse}
      */
     private static boolean beginHeld(ServerPlayer player, AbilityData data, Skill skill) {
-        if (!canBegin(player, data, skill)) return false;
+        if (!canBegin(data, skill)) return false;
         // L'original refusait de s'ouvrir quand il n'y avait rien a viser, et refusait
         // donc sans rien facturer : le port verifie avant de payer, pas apres.
         if (!skill.canStart(player, data)) return false;
-        if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
-            player.displayClientMessage(
-                    Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
-            return false;
-        }
+        if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) return false;
         data.beginCharge(skill);
         skill.onStart(player, data);
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
@@ -194,14 +183,9 @@ public class ActivateSkillPacket {
     }
 
     /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */
-    private static boolean canBegin(ServerPlayer player, AbilityData data, Skill skill) {
+    private static boolean canBegin(AbilityData data, Skill skill) {
         if (!canUseAbility(data, false)) return false;
-        int cooldown = data.getCooldown(skill);
-        if (cooldown > 0) {
-            announceCooldown(player, cooldown);
-            return false;
-        }
-        return true;
+        return data.getCooldown(skill) <= 0;
     }
 
     /**
@@ -243,16 +227,10 @@ public class ActivateSkillPacket {
                 && data.getChargeTicks(skill) >= skill.getMinChargeTicks(data);
         if (!canUseAbility(data, released)) return;
 
-        // Recharge : l'original tenait un compteur par competence dans
-        // CooldownData et refusait le declenchement tant qu'il n'etait pas
-        // revenu a zero. Le message dit combien il reste, sinon le joueur
-        // n'aurait aucun moyen de savoir si la touche a echoue ou si elle est
-        // simplement en attente.
-        int cooldown = data.getCooldown(skill);
-        if (cooldown > 0) {
-            announceCooldown(player, cooldown);
-            return;
-        }
+        // Recharge : l'original tenait un compteur par competence dans CooldownData et refusait le
+        // declenchement tant qu'il n'etait pas revenu a zero. Le refus est SILENCIEUX : le HUD
+        // montre la recharge au joueur, un texte a chaque appui ne dirait rien de plus.
+        if (data.getCooldown(skill) > 0) return;
 
         // Et ce que la competence demande pour partir — sa munition, sa cible, ce qu'elle a besoin
         // de trouver. Le refus est SILENCIEUX, comme le terminate() que l'original appelait dans
@@ -269,8 +247,6 @@ public class ActivateSkillPacket {
         // ce paiement : elles seules savent ce qu'elles doivent — voir Skill#paysOnEffect.
         if (!skill.paysOnEffect()
                 && !data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) {
-            player.displayClientMessage(
-                    Component.literal("Not enough Control Points").withStyle(ChatFormatting.RED), true);
             return;
         }
 
@@ -290,12 +266,5 @@ public class ActivateSkillPacket {
         data.addSkillExp(skill, skill.getExpGain(data));
         AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                 new SyncAbilityDataPacket(data));
-    }
-
-    private static void announceCooldown(ServerPlayer player, int cooldown) {
-        player.displayClientMessage(
-                Component.translatable("academy.ability.cooldown",
-                                String.format(java.util.Locale.ROOT, "%.1f", cooldown / 20.0f))
-                        .withStyle(ChatFormatting.RED), true);
     }
 }
