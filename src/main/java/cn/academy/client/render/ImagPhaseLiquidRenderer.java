@@ -8,19 +8,28 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
-import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Les nappes de l'imag phase liquide.
@@ -29,12 +38,31 @@ import org.joml.Matrix4f;
  * hauteurs differentes, qui defilent chacun a sa vitesse, avec la meme texture pour les trois
  * (une par couche dans l'original) et une opacite qui decroit avec la distance.
  *
- * <p>Comme l'original, les nappes se dessinent sans test de profondeur : elles passent a
- * travers le bloc de fluide, qui est noir et opaque — sans cela, les deux nappes du haut
- * seraient enfermees dans le liquide et on ne verrait que celle du dessous. C'est aussi ce
- * qui fait qu'un lac se voit de loin, avant meme qu'on en approche.
+ * <h2>Pourquoi pas un rendu de block entity</h2>
+ *
+ * <p>C'est ce que le port faisait, et le joueur n'en voyait que la nappe du bas : « on ne voit que
+ * les particules du bas et pas les autres, elles sont cachees par le liquide ». La raison est dans
+ * l'ordre des couches du monde : les rendus de block entity passent <b>avant</b> la couche
+ * translucide ({@code LevelRenderer.renderLevel}, entre le terrain et
+ * {@code RenderType.translucent()}), et un bloc de fluide se dessine justement dans cette
+ * couche-la. La nappe du bas echappait au probleme parce qu'elle est <b>sous</b> le bloc de fluide,
+ * donc dans l'air ; celles des hauteurs 0,35 et 0,7 sont prisonnieres du bloc et peintes par-dessus.
+ *
+ * <p>L'original dessinait dans son passage de rendu de block entities, qui venait apres tout le
+ * reste, donc apres le fluide. On reprend sa place : {@code RenderLevelStageEvent} au stade
+ * {@code AFTER_TRANSLUCENT_BLOCKS}, ou le liquide est deja peint.
+ *
+ * <h2>Pourquoi sans test de profondeur</h2>
+ *
+ * <p>Comme l'original : les nappes passent a travers le bloc de fluide, qui est noir et opaque, et
+ * a travers le terrain — c'est ce qui fait qu'un lac se voit de loin, avant meme qu'on en approche.
+ * Le tri du plus loin au plus pres remplace la profondeur : sans lui, deux nappes melangees
+ * s'afficheraient dans l'ordre du hasard et le lac scintillerait.
  */
-public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiquidBlockEntity> {
+public final class ImagPhaseLiquidRenderer {
+
+    /** Au-dela de cette distance l'opacite passe sous le seuil de l'original : rien a peindre. */
+    private static final double MAX_DISTANCE = 45.0d;
 
     /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
     private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
@@ -104,35 +132,77 @@ public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiq
                         .createCompositeState(false));
     }
 
-    public ImagPhaseLiquidRenderer(BlockEntityRendererProvider.Context context) {}
+    private ImagPhaseLiquidRenderer() {}
 
-    @Override
-    public boolean shouldRender(ImagPhaseLiquidBlockEntity entity, Vec3 cameraPos) {
-        return shouldDraw(cameraPos, entity.getBlockPos());
+    /**
+     * Dessine les nappes de tous les blocs de liquide assez proches, du plus loin au plus pres.
+     *
+     * <p>Appelee apres la couche translucide du monde, quand le fluide est deja peint — voir la
+     * classe. Les blocs sont relus dans les chunks deja charges : un rendu de block entity ne
+     * pourrait pas le faire a ce moment-la, il n'est deja plus appele.
+     */
+    public static void draw(PoseStack pose, Vec3 camera) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+        ClientChunkCache chunks = (ClientChunkCache) mc.level.getChunkSource();
+
+        List<BlockPos> visible = blocksAround(chunks, camera);
+        if (visible.isEmpty()) return;
+
+        MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+        // Le temps de l'original : des secondes, pas des ticks.
+        float time = (mc.level.getGameTime() + mc.getFrameTime()) / 20.0f;
+
+        for (BlockPos pos : visible) {
+            FluidState fluid = mc.level.getFluidState(pos);
+            ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(fluid.getOwnHeight());
+            float alpha = ImagPhaseLayers.alpha(distanceTo(camera, pos));
+
+            pose.pushPose();
+            pose.translate(pos.getX() - camera.x, pos.getY() - camera.y, pos.getZ() - camera.z);
+            Matrix4f matrix = pose.last().pose();
+            for (int i = 0; i < layers.length; i++) {
+                drawLayer(buffers.getBuffer(LAYERS[i]), matrix, layers[i], time, alpha);
+            }
+            pose.popPose();
+        }
+
+        // Sans ce vidage, les nappes resteraient dans le tampon jusqu'a la prochaine image.
+        for (RenderType type : LAYERS) {
+            buffers.endBatch(type);
+        }
     }
 
-    @Override
-    public void render(ImagPhaseLiquidBlockEntity entity, float partialTick, PoseStack pose,
-                       MultiBufferSource buffers, int light, int overlay) {
-        Level level = entity.getLevel();
-        if (level == null) return;
+    /**
+     * Les blocs de liquide visibles, tries du plus loin au plus pres.
+     *
+     * <p>La portee vient de {@link ImagPhaseLayers#alpha} : au-dela de {@value #MAX_DISTANCE} blocs
+     * l'opacite passe sous le seuil de l'original, et il n'y a plus rien a peindre.
+     */
+    private static List<BlockPos> blocksAround(ClientChunkCache chunks, Vec3 camera) {
+        List<BlockPos> found = new ArrayList<>();
+        int radius = (int) Math.ceil(MAX_DISTANCE / 16.0d) + 1;
+        int centerX = SectionPos.blockToSectionCoord(camera.x);
+        int centerZ = SectionPos.blockToSectionCoord(camera.z);
 
-        Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        float alpha = alphaAt(camera, entity.getBlockPos());
-        if (alpha < ImagPhaseLayers.MIN_ALPHA) return;
-
-        // La hauteur du fluide : celle d'une source pleine, moins pour un fluide qui s'ecoule.
-        double fluidHeight = level.getFluidState(entity.getBlockPos()).getOwnHeight();
-        ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(fluidHeight);
-        float time = (level.getGameTime() + partialTick) / 20.0f;
-
-        pose.pushPose();
-        Matrix4f matrix = pose.last().pose();
-        for (int i = 0; i < layers.length; i++) {
-            VertexConsumer out = buffers.getBuffer(LAYERS[i]);
-            drawLayer(out, matrix, layers[i], time, alpha);
+        for (int cx = centerX - radius; cx <= centerX + radius; cx++) {
+            for (int cz = centerZ - radius; cz <= centerZ + radius; cz++) {
+                ChunkAccess chunk = chunks.getChunk(cx, cz, ChunkStatus.FULL, false);
+                if (!(chunk instanceof LevelChunk levelChunk)) continue;
+                collect(levelChunk, camera, found);
+            }
         }
-        pose.popPose();
+
+        found.sort(Comparator.comparingDouble((BlockPos pos) -> distanceTo(camera, pos)).reversed());
+        return found;
+    }
+
+    private static void collect(LevelChunk chunk, Vec3 camera, List<BlockPos> found) {
+        for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
+            if (!(entry.getValue() instanceof ImagPhaseLiquidBlockEntity)) continue;
+            if (distanceTo(camera, entry.getKey()) > MAX_DISTANCE) continue;
+            found.add(entry.getKey().immutable());
+        }
     }
 
     /** Un quad horizontal, texture dans le coin oppose a celui ou on l'a lue. */
@@ -160,16 +230,11 @@ public class ImagPhaseLiquidRenderer implements BlockEntityRenderer<ImagPhaseLiq
                 .endVertex();
     }
 
-    /** L'opacite de ce bloc vu de la camera, ou zero s'il est hors de portee. */
-    private static float alphaAt(Vec3 camera, BlockPos pos) {
+    private static double distanceTo(Vec3 camera, BlockPos pos) {
         double dx = camera.x - (pos.getX() + 0.5d);
         double dy = camera.y - (pos.getY() + 0.5d);
         double dz = camera.z - (pos.getZ() + 0.5d);
-        return ImagPhaseLayers.alpha(Math.sqrt(dx * dx + dy * dy + dz * dz));
-    }
-
-    private static boolean shouldDraw(Vec3 camera, BlockPos pos) {
-        return alphaAt(camera, pos) >= ImagPhaseLayers.MIN_ALPHA;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     private static ResourceLocation texture(String frame) {

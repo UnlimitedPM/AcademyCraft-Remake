@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderHighlightEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -22,6 +23,21 @@ import net.minecraftforge.fml.common.Mod;
 public final class ClientRenderEvents {
 
     private ClientRenderEvents() {}
+
+    /**
+     * Les nappes de l'imag phase liquide, une fois la couche translucide du monde peinte.
+     *
+     * <p>C'est la place que l'original leur donnait, et la seule ou elles se voient : un bloc de
+     * fluide se dessine dans la couche translucide, donc apres les rendus de block entity — un
+     * rendu de block entity se ferait peindre par-dessus. Le joueur l'a vu : « on ne voit que les
+     * particules du bas et pas les autres, elles sont cachees par le liquide ».
+     */
+    @SubscribeEvent
+    public static void lesNappesDuLiquideApresLEau(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        cn.academy.client.render.ImagPhaseLiquidRenderer.draw(event.getPoseStack(),
+                event.getCamera().getPosition());
+    }
 
     /**
      * Pas de lisere sur les machines developeur -- ni sur leurs sept parties invisibles, qui sont du

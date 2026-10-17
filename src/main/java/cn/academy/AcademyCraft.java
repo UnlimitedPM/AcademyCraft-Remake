@@ -90,10 +90,9 @@ public class AcademyCraft {
         @SubscribeEvent
         public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
             event.registerBlockEntityRenderer(ModBlockEntities.CAT_ENGINE.get(), CatEngineRenderer::new);
-            // L'imag phase liquide : un bloc de fluide n'a pas de modele, ses nappes se
-            // dessinent donc par-dessus, bloc de fluide par bloc de fluide.
-            event.registerBlockEntityRenderer(ModBlockEntities.IMAG_PHASE.get(),
-                    cn.academy.client.render.ImagPhaseLiquidRenderer::new);
+            // L'imag phase liquide n'a plus de rendu de block entity : ses nappes se dessinent
+            // après la couche translucide du monde, sinon le fluide les repeint. Voir
+            // ImagPhaseLiquidRenderer et ClientRenderEvents.
             // L'eolienne : sa nacelle et ses pales, qui tournent.
             event.registerBlockEntityRenderer(ModBlockEntities.WINDGEN_MAIN.get(),
                     cn.academy.client.render.WindgenMainRenderer::new);
