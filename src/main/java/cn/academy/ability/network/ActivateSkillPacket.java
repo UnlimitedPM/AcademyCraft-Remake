@@ -195,7 +195,7 @@ public class ActivateSkillPacket {
 
     /** Verifie qu'une charge peut s'ouvrir : ni surcharge, ni brouillage, ni recharge. */
     private static boolean canBegin(ServerPlayer player, AbilityData data, Skill skill) {
-        if (!canUseAbility(player, data, false)) return false;
+        if (!canUseAbility(data, false)) return false;
         int cooldown = data.getCooldown(skill);
         if (cooldown > 0) {
             announceCooldown(player, cooldown);
@@ -211,20 +211,16 @@ public class ActivateSkillPacket {
      * tout, y compris les competences qui se chargent — l'original ne creait meme pas
      * de contexte dans ce cas, donc la touche ne faisait rien du tout.
      */
-    private static boolean canUseAbility(ServerPlayer player, AbilityData data, boolean released) {
+    private static boolean canUseAbility(AbilityData data, boolean released) {
         // L'aptitude doit etre ALLUMEE : chez l'original c'etait la touche (V) qui l'allumait,
         // et rien ne partait avant. C'est le premier refus, comme chez lui.
-        if (!data.isActivated()) {
-            player.displayClientMessage(
-                    Component.literal("Ability is off - press the ability key")
-                            .withStyle(ChatFormatting.RED), true);
-            return false;
-        }
-        if (data.isInterfered()) {
-            player.displayClientMessage(
-                    Component.literal("Abilities are jammed here").withStyle(ChatFormatting.RED), true);
-            return false;
-        }
+        //
+        // Les trois refus ci-dessous sont SILENCIEUX : le HUD et la console de debogage disent deja
+        // l'etat du pouvoir (eteint, brouille, en surcharge), donc un message rouge a chaque appui
+        // ne faisait que repeter ce que le joueur voyait deja. Il l'a dit : « c'etait bien au debut
+        // mais je n'en ai plus besoin puisqu'on peut deja tout voir nativement avec le menu F4 ».
+        if (!data.isActivated()) return false;
+        if (data.isInterfered()) return false;
         // Le verrou de l'original vaut pour toute la descente, et pas seulement pour le delai
         // pendant lequel le temoin affiche la surcharge : sinon le joueur relancerait une
         // competence au milieu de sa propre recuperation.
@@ -235,12 +231,7 @@ public class ActivateSkillPacket {
         // declencher — c'est ce que le joueur a vu, « le tonnerre ne fait pas assez de
         // degats », et rien du tout sous terre. L'original ne revalidait rien a la fin d'une
         // charge : il frappait, quel que soit l'etat de sa reserve.
-        if (!released && data.isOverloadRecovering()) {
-            player.displayClientMessage(
-                    Component.literal("Overloaded - wait for your overload to drop")
-                            .withStyle(ChatFormatting.RED), true);
-            return false;
-        }
+        if (!released && data.isOverloadRecovering()) return false;
         return true;
     }
 
@@ -250,7 +241,7 @@ public class ActivateSkillPacket {
         // la refuser, sans quoi tout ce qu'elle a amasse serait perdu. Voir canUseAbility.
         boolean released = skill.isChargeable()
                 && data.getChargeTicks(skill) >= skill.getMinChargeTicks(data);
-        if (!canUseAbility(player, data, released)) return;
+        if (!canUseAbility(data, released)) return;
 
         // Recharge : l'original tenait un compteur par competence dans
         // CooldownData et refusait le declenchement tant qu'il n'etait pas
