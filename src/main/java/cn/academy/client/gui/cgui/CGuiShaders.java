@@ -148,7 +148,7 @@ public final class CGuiShaders {
                 VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
-                                GameRenderer::getPositionTexColorShader))
+                                GameRenderer::getPositionColorTexShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(key, true, false))
                         .setTransparencyState(blending())
                         .setWriteMaskState(noDepthWrite())
@@ -350,7 +350,7 @@ public final class CGuiShaders {
                 DefaultVertexFormat.POSITION_COLOR_TEX, VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
-                                GameRenderer::getPositionTexColorShader))
+                                GameRenderer::getPositionColorTexShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(key, false, false))
                         .setTransparencyState(blending())
                         .setWriteMaskState(noDepthWrite())
