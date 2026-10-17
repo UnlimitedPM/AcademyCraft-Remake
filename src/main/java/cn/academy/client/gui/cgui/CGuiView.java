@@ -342,20 +342,23 @@ public final class CGuiView {
             graphics.pose().popPose();
         }
 
-        // Le trait d'un noeud est dessine par SON PARENT, juste avant de dessiner ses enfants (voir
-        // la boucle plus bas). Il arrive donc apres le fond de page — qui le rendrait gris — et avant
-        // tous les disques, qui le cachent : « les lignes blanches sont cense avoir leur bout
-        // assombris » et « le cercle quand on met la souris dessus est cense cacher la ligne blanche
-        // derriere ».
-        if (widget.disc != null) {
-            drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
-        }
+        // Le trait d'un noeud est dessine par SON PARENT, avant tous les disques (voir la boucle plus
+        // bas). Il arrive donc apres le fond de page — qui le rendrait gris — et sous les deux cercles
+        // qu'il joint : leur cerne, qui mesure trente et une unites pour un trait qui s'arrete a
+        // douze et deux, mord sur ses bouts et les assombrit. C'est exactement ce que fait le vrai
+        // mod, et ce que le joueur voit : « le cercle quand on met la souris dessus est cense cacher
+        // la ligne blanche derriere ».
 
-        // Les traits des enfants d'abord, tous ensemble : c'est ce qui les met SOUS leurs disques.
+        // Les traits des enfants d'abord, tous ensemble : c'est ce qui les met SOUS les disques du
+        // parent comme sous les leurs.
         for (CWidget child : widget.children()) {
             if (child.transform.doesDraw && child.transform.enabled && child.line != null) {
                 drawLine(graphics, child, child.absX, child.absY, child.absScale);
             }
+        }
+
+        if (widget.disc != null) {
+            drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
         }
 
         for (CWidget child : widget.children()) {
@@ -390,15 +393,8 @@ public final class CGuiView {
 
         // L'epaisseur aussi a sa partie fractionnaire : arrondie, elle decalait le trait d'un
         // demi-pixel et le bord du quad se voyait en marches d'escalier sur les diagonales, ce que le
-        // joueur a vu. Le quad se dessine sur une epaisseur entiere, et la pose le ramene a la bonne.
+        // joueur a vu.
         double width = Math.max(1.0d, line.thickness * scale);
-        int wholeWidth = Math.max(1, (int) Math.floor(width));
-        float squash = (float) (width / wholeWidth);
-        // La longueur a sa partie fractionnaire : le trait qui pousse avancait donc d'un pixel entier a
-        // la fois, et le joueur l'a vu — « parfois les lignes blanches augmentent d'un pixel en trop ».
-        // Le quad se dessine sur sa longueur entiere, et l'echelle de la pose etire ce qu'il reste.
-        int whole = (int) Math.floor(length);
-        float stretch = (float) (length / whole);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x0, y0, 0);
@@ -406,21 +402,15 @@ public final class CGuiView {
         // donne donc tel quel, sans le retourner.
         graphics.pose().mulPose(Axis.ZP.rotation((float) Math.atan2(dy, dx)));
         // Le demi-pixel d'epaisseur, dans le repere tourne : c'est le CENTRE du trait qui doit tomber
-        // sur l'axe qui joint les deux noeuds, et non son bord. Arrondi, ce decalage posait le trait a
-        // cheval sur deux pixels, ce qui se voyait en marches d'escalier sur les diagonales.
+        // sur l'axe qui joint les deux noeuds, et non son bord.
         graphics.pose().translate(0.0d, -width / 2.0d, 0.0d);
-        graphics.pose().scale(stretch, squash, 1f);
 
-        // La texture demandee LISSE. Un trait pose de travers est le pire cas du plus proche voisin :
-        // chacun de ses texels tombe sur des pixels differents, et la ligne blanche se decoupe en
-        // marches. Filtree, elle se fond — c'est ce que l'original obtenait en chargeant ses traits
-        // par {@code preloadMipmapTexture} : « les lignes blanches en diagonales ont toujours les
-        // escaliers visibles, il faudrait donc faire de l'anti aliasing ».
-        CGuiShaders.linear(texture);
-        graphics.setColor(line.red / 255f, line.green / 255f, line.blue / 255f, line.alpha / 255f);
-        blend();
-        graphics.blit(texture, 0, 0, whole, wholeWidth, 0f, 0f, 1, 1, 1, 1);
-        graphics.setColor(1f, 1f, 1f, 1f);
+        // Les sommets se posent a la position EXACTE, longueur et epaisseur comprises : la carte les
+        // rasterise comme elle rasterisait ceux de l'original, sans arrondi intermediaire. Le fondu
+        // des deux bouts est dans les couleurs des sommets, pas dans la texture — ses colonnes, elles,
+        // sont blanches d'un bout a l'autre.
+        CGuiShaders.line(graphics, texture, length, width, scale, line.red, line.green, line.blue,
+                line.alpha);
         graphics.pose().popPose();
     }
 

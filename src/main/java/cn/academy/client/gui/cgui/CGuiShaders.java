@@ -82,6 +82,20 @@ public final class CGuiShaders {
     private static final Map<ResourceLocation, RenderType> RING_TYPES = new HashMap<>();
     private static final Map<ResourceLocation, RenderType> MONO_TYPES = new HashMap<>();
     private static final Map<String, RenderType> CLIP_TYPES = new HashMap<>();
+    private static final Map<ResourceLocation, RenderType> LINE_TYPES = new HashMap<>();
+
+    /**
+     * La longueur du fondu de chaque bout d'un trait, en unites du document.
+     *
+     * <p>Mesuree sur les captures du joueur, original contre port : le bout du vrai mod perd son
+     * opacite sur six pixels d'ecran, soit un peu moins de deux unites, et il ne s'eteint pas — il se
+     * pose a trois dixiemes. Le port dessinait un bout carre et blanc, et c'est ce qu'il a vu : « les
+     * bouts des traits blanc n'est pas gris pour nous ».
+     */
+    private static final double LINE_END_FADE = 2.0d;
+
+    /** L'opacite du bout lui-meme : le trait s'y arrete a trois dixiemes, pas a zero. */
+    private static final double LINE_TIP_ALPHA = 0.3d;
 
     private CGuiShaders() {}
 
@@ -110,6 +124,75 @@ public final class CGuiShaders {
         }
     }
 
+    /**
+     * Un trait de l'arbre, dessine dans le repere courant : l'axe des abscisses suit le trait (de
+     * zero a sa longueur), celui des ordonnees le traverse (de zero a son epaisseur).
+     *
+     * <p>Trois quads et non un seul, parce que l'opacite se donne <b>par sommet</b> : un seul quad ne
+     * sait faire qu'une rampe d'un bout a l'autre, et il en faut deux, aux deux extremites. Le corps
+     * reste plein, les deux bouts se posent a {@link #LINE_TIP_ALPHA} sur
+     * {@link #LINE_END_FADE} unites. La carte interpole le reste, donc le fondu est continu et non
+     * par paliers, comme celui du vrai mod.
+     *
+     * <p>La texture est lue <b>lisse</b>, par l'etat du type et non par un appel a
+     * {@link #linear(ResourceLocation)} : c'est ce type qui decrit le dessin du trait, et il doit
+     * decrire aussi sa maniere de lire l'image.
+     */
+    public static void line(GuiGraphics graphics, ResourceLocation texture, double length,
+                            double thickness, double scale, int red, int green, int blue,
+                            int alpha) {
+        if (length <= 0 || thickness <= 0 || alpha <= 0) return;
+
+        RenderType type = LINE_TYPES.computeIfAbsent(texture, key -> RenderType.create(
+                "academy_cgui_line", DefaultVertexFormat.POSITION_COLOR_TEX,
+                VertexFormat.Mode.QUADS, 256, false, true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getPositionTexColorShader))
+                        .setTextureState(new RenderStateShard.TextureStateShard(key, true, false))
+                        .setTransparencyState(blending())
+                        .setWriteMaskState(noDepthWrite())
+                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .createCompositeState(false)));
+
+        Matrix4f pose = graphics.pose().last().pose();
+        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
+
+        int tip = (int) Math.round(alpha * LINE_TIP_ALPHA);
+        // Un trait plus court que deux fondus n'aurait plus de corps : les deux rampes se partagent
+        // alors ce qu'il mesure.
+        double fade = Math.min(LINE_END_FADE * scale, length / 2.0d);
+
+        segment(buffer, pose, 0.0d, fade, 0.0d, fade / length, thickness, red, green, blue,
+                tip, alpha);
+        segment(buffer, pose, fade, length - fade, fade / length, (length - fade) / length,
+                thickness, red, green, blue, alpha, alpha);
+        segment(buffer, pose, length - fade, length, (length - fade) / length, 1.0d, thickness,
+                red, green, blue, alpha, tip);
+
+        // Le tampon se vide ici : les dessins du moteur, eux, partent aussitot, et un trait reste en
+        // attente se peindrait par-dessus tout ce qui suit — y compris par-dessus son propre disque,
+        // qui doit le cacher.
+        graphics.flush();
+    }
+
+    /**
+     * Un morceau de trait : un quad de {@code from} a {@code to} sur la longueur, avec l'opacite de
+     * ses deux aretes.
+     */
+    private static void segment(VertexConsumer buffer, Matrix4f pose, double from, double to,
+                                double u0, double u1, double thickness, int red, int green,
+                                int blue, int alphaFrom, int alphaTo) {
+        buffer.vertex(pose, (float) from, 0f, 0f)
+                .color(red, green, blue, alphaFrom).uv((float) u0, 0f).endVertex();
+        buffer.vertex(pose, (float) from, (float) thickness, 0f)
+                .color(red, green, blue, alphaFrom).uv((float) u0, 1f).endVertex();
+        buffer.vertex(pose, (float) to, (float) thickness, 0f)
+                .color(red, green, blue, alphaTo).uv((float) u1, 1f).endVertex();
+        buffer.vertex(pose, (float) to, 0f, 0f)
+                .color(red, green, blue, alphaTo).uv((float) u1, 0f).endVertex();
+    }
+
     /** Charge les deux programmes, chacun de son cote : voir le commentaire de la classe. */
     @SubscribeEvent
     public static void register(RegisterShadersEvent event) {
@@ -121,6 +204,7 @@ public final class CGuiShaders {
         RING_TYPES.clear();
         MONO_TYPES.clear();
         CLIP_TYPES.clear();
+        LINE_TYPES.clear();
 
         try {
             ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
