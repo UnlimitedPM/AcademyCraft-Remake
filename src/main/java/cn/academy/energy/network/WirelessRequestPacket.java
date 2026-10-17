@@ -1,6 +1,5 @@
 package cn.academy.energy.network;
 
-import java.util.Locale;
 import java.util.function.Supplier;
 
 import cn.academy.energy.NodeFinder;
@@ -8,7 +7,6 @@ import cn.academy.energy.WirelessMachine;
 import cn.academy.energy.WirelessNode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
@@ -96,14 +94,8 @@ public class WirelessRequestPacket {
     private static void machineRequest(ServerLevel level, ServerPlayer sender, BlockPos machinePos,
                                        WirelessRequestPacket msg) {
         switch (msg.action) {
-            case CONNECT -> {
-                say(sender, NodeFinder.link(level, machinePos, msg.node, msg.password));
-            }
-            case DISCONNECT -> {
-                NodeFinder.unlink(level, machinePos);
-                sender.displayClientMessage(
-                        Component.translatable("ac.gui.wireless.unlinked"), true);
-            }
+            case CONNECT -> NodeFinder.link(level, machinePos, msg.node, msg.password);
+            case DISCONNECT -> NodeFinder.unlink(level, machinePos);
             case FIND -> {
                 // Rien a faire : la liste part juste apres, et c'est elle qui repond.
             }
@@ -116,32 +108,13 @@ public class WirelessRequestPacket {
     private static void nodeRequest(ServerLevel level, ServerPlayer sender, BlockPos nodePos,
                                     WirelessRequestPacket msg) {
         switch (msg.action) {
-            case CONNECT -> {
-                say(sender, NodeFinder.linkMatrix(level, nodePos, msg.node, msg.password));
-            }
-            case DISCONNECT -> {
-                NodeFinder.unlinkMatrix(level, nodePos);
-                sender.displayClientMessage(
-                        Component.translatable("ac.gui.wireless.unlinked"), true);
-            }
+            case CONNECT -> NodeFinder.linkMatrix(level, nodePos, msg.node, msg.password);
+            case DISCONNECT -> NodeFinder.unlinkMatrix(level, nodePos);
             case FIND -> {
                 // Idem : la liste suit.
             }
         }
 
         WirelessNodesPacket.sendMatrices(sender, nodePos);
-    }
-
-    /**
-     * Ce qu'on dit au joueur apres lui : une ligne, au-dessus de sa barre rapide.
-     *
-     * <p>Une reponse possible = un texte, et c'est l'enumeration {@code LinkOutcome} qui les nomme :
-     * un cas ajoute sans traduction se verrait comme une cle brute, ce que le joueur a deja vu une
-     * fois dans ce port. {@code WirelessTabTest} relit cette liste avec le fichier de langue.
-     */
-    private static void say(ServerPlayer sender, NodeFinder.LinkOutcome outcome) {
-        sender.displayClientMessage(
-                Component.translatable("ac.gui.wireless.link."
-                        + outcome.name().toLowerCase(Locale.ROOT)), true);
     }
 }
