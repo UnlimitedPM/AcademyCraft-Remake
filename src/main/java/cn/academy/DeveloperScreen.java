@@ -206,6 +206,22 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         root.transform.doesDraw = true;
     }
 
+    /**
+     * Les fonds de cette page ne respirent pas.
+     *
+     * <p>L'original faisait osciller l'opacite des couches nommees {@code ui_} sur ses ecrans de
+     * machine ; son ecran de developpement, lui, n'installait pas ce souffle et dessinait donc sa page
+     * en plein. Le port le lui appliquait quand meme, et tout ce qui est blanc sur cette page sortait
+     * a 182 sur 255 — le grand carre du logo, le cadre du panneau, le logo « Academy tech ». Mesure
+     * sur les deux captures du joueur : 182 chez nous, 255 dans la 1.12.2, pour exactement le meme
+     * nombre de pixels. Le joueur : « l'image blanche dans la machine en haut a gauche par exemple qui
+     * est tres sombre par rapport au vrai ».
+     */
+    @Override
+    protected boolean breathes() {
+        return false;
+    }
+
     /** Un onglet de page se poserait a gauche du cadre, hors de la page : il n'y en a pas. */
     @Override
     protected boolean showsTabs() {

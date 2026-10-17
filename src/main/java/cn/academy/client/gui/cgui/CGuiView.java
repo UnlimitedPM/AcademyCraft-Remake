@@ -481,10 +481,21 @@ public final class CGuiView {
         ResourceLocation texture = ResourceLocation.tryParse(path);
         if (texture == null) return;
 
+        // La position EXACTE, la taille entiere : les trois morceaux d'un noeud se centrent donc sur
+        // le meme point. Arrondie, elle ne le faisait pas — le disque fait 23 et le cerne 31, deux
+        // tailles qui ne tombent pas sur la meme parite — et le cerne se dessinait un demi-pixel a
+        // cote du disque, ce qui se voit a l'ecran comme un rond mal cadre : « le rond en dessous de
+        // l'image de la competence est mal cadre ».
+        double px = Math.floor(x);
+        double py = Math.floor(y);
+
         graphics.setColor(red / 255f, green / 255f, blue / 255f, alpha / 255f);
         blend();
-        graphics.blit(texture, (int) Math.round(x), (int) Math.round(y),
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) (x - px), (float) (y - py), 0f);
+        graphics.blit(texture, (int) px, (int) py,
                 (int) Math.round(w), (int) Math.round(h), 0f, 0f, 1, 1, 1, 1);
+        graphics.pose().popPose();
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 

@@ -3,6 +3,7 @@ package cn.academy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -34,5 +35,16 @@ class DeveloperScreenTest {
         assertEquals(0.10, DeveloperScreen.linkDim(OUT_OF_REACH, false), 1.0e-9,
                 "un quart de noeud, et les quatre dixiemes du trait");
         assertEquals(DeveloperScreen.LINK_UNLEARNED, DeveloperScreen.linkDim(1.0, false), 1.0e-9);
+    }
+
+    @Test
+    @DisplayName("la Developer ne fait pas respirer ses fonds de page")
+    void laDeveloperNeRespirePas() {
+        // Les ecrans de machine font osciller l'opacite de leurs couches ui_ entre 172 et 216, comme
+        // l'original ; celui du developpement, non — la 1.12.2 y dessine ses blancs a 255, et le port
+        // les sortait a 182. Un ecran ne se construit pas sans Minecraft : c'est donc la surcharge
+        // elle-meme qu'on verifie ici, et elle est la seule chose a ne pas perdre.
+        assertDoesNotThrow(() -> DeveloperScreen.class.getDeclaredMethod("breathes"),
+                "DeveloperScreen doit surcharger breathes() pour eteindre le souffle");
     }
 }

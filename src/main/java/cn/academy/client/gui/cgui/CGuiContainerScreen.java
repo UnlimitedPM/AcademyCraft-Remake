@@ -544,11 +544,24 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
             Page page = pages.get(i);
             if (showsTabs()) root.add(tab(page, i));
             root.add(page.window());
-            collectBreathing(page.window());
+            if (breathes()) collectBreathing(page.window());
         }
         if (showsInfo()) root.add(info);
 
         show(0);
+    }
+
+    /**
+     * Vrai si les fonds de page respirent d'eux-memes.
+     *
+     * <p>C'est ce que font les ecrans de machine, et c'est ce que faisait l'original pour eux : leurs
+     * couches nommees {@code ui_} oscillaient entre 0,675 et 0,85 d'opacite. La Developer, elle, n'en
+     * faisait rien — son ecran n'installait pas ce souffle — et le port le lui appliquait quand meme :
+     * ses images blanches sortaient a 182 sur 255. Le joueur : « l'image blanche dans la machine en
+     * haut a gauche par exemple qui est tres sombre par rapport au vrai ».
+     */
+    protected boolean breathes() {
+        return true;
     }
 
     /** Les fonds de page qui respirent : ceux que l'original nommait {@code ui_quelquechose}. */
@@ -643,7 +656,7 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
 
     /** Le souffle des fonds de page : une seule opacite pour tous, comme chez l'original. */
     private void breathe() {
-        if (breathing.isEmpty()) return;
+        if (!breathes() || breathing.isEmpty()) return;
 
         int alpha = breatheAlpha();
         for (CWidget.DrawTexture texture : breathing) {
