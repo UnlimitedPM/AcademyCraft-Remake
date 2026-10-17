@@ -6449,28 +6449,38 @@ public final class AcademyGameTests {
         helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
         var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
 
-        // Le poseur est epargne meme s'il ne s'est pas inscrit : c'est une difference avec l'original,
-        // dont la liste partait vide — celui qui posait la machine pouvait s'etourdir tout seul.
+        // Le poseur est inscrit d'office dans sa liste, comme dans l'original (`setPlacer` y ajoutait
+        // son nom). La machine ne l'etourdit donc pas — mais c'est la LISTE qui le dit, et pas le fait
+        // d'avoir pose le bloc : s'en retirer fait de lui une cible, ce qui est le seul moyen de
+        // verifier que la machine brouille vraiment.
         machine.setPlacer(ownPlayer(helper, "PoseurDuBrouilleur"));
         assertTrue(helper, machine.isWhitelisted("PoseurDuBrouilleur"), "le poseur est epargne");
         assertFalse(helper, machine.isWhitelisted("QuelquUnDAutre"), "un inconnu ne l'est pas");
+        assertValue(helper, java.util.List.of("PoseurDuBrouilleur"), machine.getWhitelist(),
+                "et son nom est dans la liste");
 
         // Et les espaces des deux bouts partent, comme pour un nom de noeud.
         machine.addToWhitelist("  Ami  ");
         assertTrue(helper, machine.isWhitelisted("Ami"), "un nom ajoute est nettoye et epargne");
-        assertValue(helper, java.util.List.of("Ami"), machine.getWhitelist(), "la liste porte le nom");
+        assertValue(helper, java.util.List.of("PoseurDuBrouilleur", "Ami"), machine.getWhitelist(),
+                "la liste porte les deux noms");
 
         machine.addToWhitelist("Ami");
-        assertValue(helper, 1, machine.getWhitelist().size(), "deux fois le meme nom ne compte qu'une");
+        assertValue(helper, 2, machine.getWhitelist().size(), "deux fois le meme nom ne compte qu'une");
 
         var reloaded = new AbilityInterfererBlockEntity(helper.absolutePos(rel),
                 helper.getBlockState(rel));
         reloaded.load(machine.saveWithoutMetadata());
-        assertValue(helper, java.util.List.of("Ami"), reloaded.getWhitelist(),
+        assertValue(helper, java.util.List.of("PoseurDuBrouilleur", "Ami"), reloaded.getWhitelist(),
                 "liste apres rechargement");
 
         reloaded.removeFromWhitelist("Ami");
         assertFalse(helper, reloaded.isWhitelisted("Ami"), "un nom retire ne protege plus");
+
+        // Le poseur aussi peut se retirer de sa propre liste.
+        reloaded.removeFromWhitelist("PoseurDuBrouilleur");
+        assertFalse(helper, reloaded.isWhitelisted("PoseurDuBrouilleur"),
+                "le poseur qui s'est retire redevient une cible");
         helper.succeed();
     }
 

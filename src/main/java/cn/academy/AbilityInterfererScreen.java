@@ -145,9 +145,26 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         // ligne, sans rien changer a ce qu'elle montre.
         onClick(config.child("element_switch"), () -> press(AbilityInterfererMenu.BUTTON_TOGGLE));
         onClick(config.child("element_range").child("element_btn_left"),
-                () -> press(AbilityInterfererMenu.BUTTON_RANGE_DOWN));
+                () -> press(rangeButton(false)));
         onClick(config.child("element_range").child("element_btn_right"),
-                () -> press(AbilityInterfererMenu.BUTTON_RANGE_UP));
+                () -> press(rangeButton(true)));
+    }
+
+    /**
+     * Le bouton de rayon a envoyer, selon la touche Maj.
+     *
+     * <p>L'original n'avait qu'un pas, et c'etait dix. Le joueur a demande cinq, et dix quand on
+     * tient Maj : c'est donc le CLIENT qui choisit l'identifiant, et le serveur applique le pas
+     * qu'il annonce — il ne voit pas le clavier.
+     */
+    private static int rangeButton(boolean up) {
+        boolean far = net.minecraft.client.gui.screens.Screen.hasShiftDown();
+        if (up) {
+            return far ? AbilityInterfererMenu.BUTTON_RANGE_UP_FAR
+                    : AbilityInterfererMenu.BUTTON_RANGE_UP;
+        }
+        return far ? AbilityInterfererMenu.BUTTON_RANGE_DOWN_FAR
+                : AbilityInterfererMenu.BUTTON_RANGE_DOWN;
     }
 
     /** Une ligne plus bas, sans aller au-dela de la fin de la liste. */
@@ -259,7 +276,9 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
 
         CWidget range = widget("element_text_range");
         if (range != null && range.text != null) {
-            range.text.content = Integer.toString(menu.getRange());
+            // Le rayon s'ecrit comme dans l'original, qui posait un `Double` dans son champ :
+            // « 16.0 » et non « 16 ». Le zero ne sert a rien, il est demande.
+            range.text.content = Double.toString(menu.getRange());
         }
 
         // Le prix : rouge quand le tampon ne peut pas payer un cycle, blanc quand il peut. C'est la

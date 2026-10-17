@@ -17,19 +17,22 @@ import net.minecraftforge.items.SlotItemHandler;
  * Ecran du brouilleur d'aptitudes.
  *
  * Un emplacement pour l'objet d'energie, et quatre boutons : allumer ou eteindre,
- * reduire ou augmenter le rayon. Le rayon et l'etat sont les deux seuls reglages
- * de la machine ; la liste blanche editable de l'original demandait un champ de
- * saisie et n'est pas portee, seul le poseur y figure.
+ * reduire ou augmenter le rayon. Le rayon est le reglage qui coute : il avance de
+ * {@code RANGE_STEP} unites, et de deux fois plus quand on tient Maj.
  *
  * Les boutons passent par {@link #clickMenuButton}, comme partout ailleurs : aucun
- * paquet maison. Le rayon avance par pas de {@code RANGE_STEP}, sinon il faudrait
- * un bouton par valeur entre 10 et 100.
+ * paquet maison. Le rayon avance par pas, sinon il faudrait un bouton par valeur
+ * entre 10 et 100.
  */
 public class AbilityInterfererMenu extends AbstractContainerMenu implements WirelessMachine {
 
     public static final int BUTTON_TOGGLE = 0;
     public static final int BUTTON_RANGE_DOWN = 1;
     public static final int BUTTON_RANGE_UP = 2;
+
+    /** Les memes, d'un pas double : c'est le clic avec Maj. */
+    public static final int BUTTON_RANGE_DOWN_FAR = 3;
+    public static final int BUTTON_RANGE_UP_FAR = 4;
 
     public static final int SLOT_X = 139;
     public static final int SLOT_Y = 25;
@@ -99,6 +102,10 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
             case BUTTON_TOGGLE -> blockEntity.setEnabled(!blockEntity.isEnabled());
             case BUTTON_RANGE_DOWN -> blockEntity.adjustRange(-AbilityInterfererBlockEntity.RANGE_STEP);
             case BUTTON_RANGE_UP -> blockEntity.adjustRange(AbilityInterfererBlockEntity.RANGE_STEP);
+            case BUTTON_RANGE_DOWN_FAR ->
+                    blockEntity.adjustRange(-2 * AbilityInterfererBlockEntity.RANGE_STEP);
+            case BUTTON_RANGE_UP_FAR ->
+                    blockEntity.adjustRange(2 * AbilityInterfererBlockEntity.RANGE_STEP);
             default -> {
                 return false;
             }

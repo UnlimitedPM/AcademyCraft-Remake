@@ -44,8 +44,15 @@ public class InterfererWhitelistPacket {
     }
 
     public static InterfererWhitelistPacket decode(FriendlyByteBuf buf) {
-        return new InterfererWhitelistPacket(buf.readBlockPos(), buf.readUtf(
-                cn.academy.energy.ConfigText.MAX_LENGTH), buf.readBoolean());
+        // L'ordre de lecture est celui de l'ecriture, et il ne l'etait pas : le drapeau passait
+        // AVANT le nom, la lecture le prenait pour la longueur du texte, et tout nom ajoute arrivait
+        // chez le serveur en charabia. Aucun nom n'a donc jamais ete inscrit — « je ne vois pas la
+        // liste des pseudos qui sont whitelistes ». Un paquet se relit dans l'ordre ou il s'ecrit,
+        // et c'est le genre de faute qu'aucune porte ne voit : seul un essai en jeu la montre.
+        BlockPos pos = buf.readBlockPos();
+        boolean remove = buf.readBoolean();
+        String name = buf.readUtf(cn.academy.energy.ConfigText.MAX_LENGTH);
+        return new InterfererWhitelistPacket(pos, name, remove);
     }
 
     public static void handle(InterfererWhitelistPacket msg, Supplier<NetworkEvent.Context> ctx) {

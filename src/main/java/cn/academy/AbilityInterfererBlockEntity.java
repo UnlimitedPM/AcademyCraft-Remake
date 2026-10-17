@@ -55,9 +55,10 @@ import net.minecraftforge.items.ItemStackHandler;
  *
  * <h2>Qui est brouille</h2>
  *
- * Les joueurs dans le rayon, sauf ceux en creatif et sauf le poseur du bloc : on
- * ne se brouille pas soi-meme. La liste blanche editable de l'original n'est pas
- * portee, elle demandait un champ de saisie ; seul le poseur y figure.
+ * Les joueurs dans le rayon, sauf ceux en creatif et sauf les noms de la liste blanche — celle que
+ * l'ecran montre et modifie. Le poseur y est inscrit d'office au moment ou il ouvre la machine (son
+ * nom part avec la liste, comme dans l'original), mais rien de plus : s'en retirer fait de lui une
+ * cible comme une autre.
  */
 public class AbilityInterfererBlockEntity extends BlockEntity implements MenuProvider, EnergyReceiver {
 
@@ -220,14 +221,16 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     }
 
     /**
-     * Vrai si ce nom est epargne : celui qui a pose la machine, ou l'un des noms de sa liste.
+     * Vrai si ce nom est epargne : il figure dans la liste blanche, et c'est tout.
      *
-     * <p>Le poseur y est meme quand il ne s'est pas inscrit, et c'est une difference avec l'original :
-     * sa liste partait vide, donc celui qui posait une machine pouvait s'etourdir tout seul.
+     * <p>Celui qui pose la machine y est inscrit d'office ({@link #setPlacer}), comme dans
+     * l'original — sa liste s'ouvrait avec son propre nom dedans. Mais c'est bien la LISTE qui
+     * decide, pas le fait de l'avoir posee : s'en retirer, c'est redevenir une cible, ce qui est le
+     * seul moyen de verifier que la machine brouille vraiment.
      */
     public boolean isWhitelisted(String name) {
         if (name == null || name.isEmpty()) return false;
-        return name.equals(placer) || whitelist.contains(name);
+        return whitelist.contains(name);
     }
 
     /** La liste blanche, dans l'ordre ou elle a ete ecrite. */
@@ -352,10 +355,17 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
         return affected.size();
     }
 
-    /** Retient le poseur : il ne sera jamais brouille par sa machine. */
+    /**
+     * Retient le poseur, et l'inscrit dans sa propre liste : c'est ce que faisait l'original.
+     *
+     * <p>Son nom entre TEL QUEL, sans le nettoyage des noms tapes : c'est un vrai nom de joueur, et
+     * `ConfigText.clean` le tronquerait a seize caracteres sans raison — le nom n'en fait jamais
+     * plus, et `isWhitelisted` compare des noms bruts.
+     */
     public void setPlacer(Player player) {
         if (placer != null || player == null) return;
         placer = player.getGameProfile().getName();
+        if (!whitelist.contains(placer)) whitelist.add(placer);
         setChanged();
     }
 
