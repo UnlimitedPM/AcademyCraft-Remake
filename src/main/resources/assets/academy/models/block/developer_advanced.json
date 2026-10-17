@@ -3,6 +3,7 @@
   "model": "academy:models/developer_advanced.obj",
   "flip_v": true,
   "ambientocclusion": false,
+  "render_type": "minecraft:translucent",
   "textures": {
     "base": "academy:block/developer_advanced_model",
     "particle": "academy:block/developer_advanced_model"
@@ -12,5 +13,5 @@
     "scale": 0.5
   },
   "gui_light": "front",
-  "shade": false
+  "shade_quads": false
 }
