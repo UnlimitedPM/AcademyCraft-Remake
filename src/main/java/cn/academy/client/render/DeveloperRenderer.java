@@ -34,14 +34,14 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
     private static final ResourceLocation NORMAL_TEXTURE = ObjModels.texture("developer_normal_model");
 
     /**
-     * La transformation du modele de bloc, reprise telle quelle de ses fichiers JSON.
+     * L'echelle du modele, et rien de plus.
      *
-     * <p>Un modele de bloc applique son decalage et son echelle <b>autour du centre de la brique</b>
-     * (c'est ce que fait {@code BlockMath.blockCenterToCorner} : {@code +0,5 ... -0,5}), et c'est
-     * pourquoi la pose commence et finit par un demi-bloc.
+     * <p>Le modele de bloc, lui, appliquait son decalage et son echelle <b>autour du centre de la
+     * brique</b> ({@code BlockMath.blockCenterToCorner} : {@code +0,5 ... -0,5}). L'original 1.12.2
+     * ne faisait pas cela : son rendu de block entity translatait d'un demi-bloc, tournait, puis
+     * mettait a l'echelle depuis l'ORIGINE du modele. C'est cette mise en place-la qu'on reprend,
+     * car c'est la seule qui pose la machine sur le sol de la brique et l'aligne sur son multi-bloc.
      */
-    private static final float ADVANCED_TX = -0.2138f, ADVANCED_TY = -0.746f, ADVANCED_TZ = -0.2518f;
-    private static final float NORMAL_TX = -0.214f, NORMAL_TY = -0.75f, NORMAL_TZ = -0.256f;
     private static final float SCALE = 0.5f;
 
     public DeveloperRenderer(BlockEntityRendererProvider.Context context) {}
@@ -56,27 +56,25 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
         boolean advanced = block.getDeveloperType() == DeveloperType.ADVANCED;
         ResourceLocation model = advanced ? ADVANCED_MODEL : NORMAL_MODEL;
         ResourceLocation texture = advanced ? ADVANCED_TEXTURE : NORMAL_TEXTURE;
-        float tx = advanced ? ADVANCED_TX : NORMAL_TX;
-        float ty = advanced ? ADVANCED_TY : NORMAL_TY;
-        float tz = advanced ? ADVANCED_TZ : NORMAL_TZ;
 
         pose.pushPose();
-        // L'orientation du blockstate : quart de tour autour du CENTRE de la brique, et dans le sens
-        // INVERSE de la rotation de la pose — la regle de tous les modeles de blocs du port.
+        // La chaine d'origine, dans le meme ordre : un demi-bloc d'ecart (le centre de rotation du
+        // multi-bloc), le quart de tour du blockstate — les 180 degres de drawAtOrigin y sont deja
+        // fondus, c'est le sens INVERSE qu'attend un modele de bloc — puis l'echelle depuis
+        // l'origine du modele.
         pose.translate(0.5d, 0.0d, 0.5d);
         pose.mulPose(Axis.YP.rotationDegrees(-degrees(state.getValue(DeveloperBlock.FACING))));
-        pose.translate(-0.5d, 0.0d, -0.5d);
-
-        pose.translate(0.5d + tx, 0.5d + ty, 0.5d + tz);
         pose.scale(SCALE, SCALE, SCALE);
-        pose.translate(-0.5d, -0.5d, -0.5d);
 
         ObjModels.draw(ObjModels.get(model).all(), pose,
                 buffers.getBuffer(ObjModels.translucent(texture)), light, overlay);
         pose.popPose();
     }
 
-    /** Les memes quarts de tour que les fichiers de blockstate des deux machines. */
+    /**
+     * Les memes quarts de tour que les fichiers de blockstate des deux machines, augmentes des 180
+     * degres que le rendu d'origine appliquait lui-meme ({@code drawAtOrigin}).
+     */
     private static int degrees(Direction facing) {
         return switch (facing) {
             case EAST -> 90;
