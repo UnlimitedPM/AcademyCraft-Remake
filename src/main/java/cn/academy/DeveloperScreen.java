@@ -135,6 +135,31 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double TEXT_WIDTH = 240.0;
     private static final double TEXT_HEIGHT = 12.0;
 
+    /**
+     * Les tailles de la fiche d'une competence, celles de l'original.
+     *
+     * <p>Il les avait fixees une par une — {@code foSkillTitle} a douze, {@code foSkillProg} a huit,
+     * {@code foSkillDesc} a neuf, {@code foSkillUnlearned} a dix — et le port les ecrivait toutes a
+     * dix, la taille par defaut du moteur. Le joueur : « le texte n'est pas bien centre, de la bonne
+     * couleur et de la bonne taille ».
+     */
+    private static final double TEXT_FONT = 10.0;
+    private static final double TITLE_FONT = 12.0;
+    private static final double EXP_FONT = 8.0;
+    private static final double DESC_FONT = 9.0;
+
+    /**
+     * Ou se posent les lignes de la fiche, en unites sous l'icone.
+     *
+     * <p>L'original posait son bloc de texte vingt-cinq unites sous l'icone, puis chaque ligne a
+     * trois, quinze et vingt-quatre de ce bloc — soit vingt-huit, quarante et quarante-neuf. Le port
+     * les posait AU-DESSUS de l'icone, a moins quarante-six : le joueur voyait le nom et la
+     * description au-dessus du dessin, alors que l'original les met dessous.
+     */
+    private static final double TITLE_Y = 34.0;
+    private static final double SUBTITLE_Y = 44.0;
+    private static final double DESCRIPTION_Y = 53.0;
+
     /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
     private static final double CONSOLE_WIDTH = 240.0;
     private static final double CONSOLE_LINE = 10.0;
@@ -824,19 +849,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         CWidget content = new CWidget("skill");
         content.add(surfaceIcon(skill));
 
-        double y = learned ? -46 : -58;
-        content.add(text(skillName(skill), y, 255, 255, 255));
-        y += 14;
-
+        content.add(text(skillName(skill), TITLE_Y, 255, 255, 255, TITLE_FONT));
+        double y;
         if (learned) {
             content.add(text(Component.translatable("academy.developer.skill_exp",
-                    (int) (data.getSkillExp(skill) * 100)).getString(), y, 161, 225, 255));
-            y += 14;
+                    (int) (data.getSkillExp(skill) * 100)).getString(), SUBTITLE_Y, 161, 225, 255,
+                    EXP_FONT));
         } else {
             content.add(text(Component.translatable("academy.developer.not_learned").getString(),
-                    y, 255, 85, 85));
-            y += 13;
+                    SUBTITLE_Y + 1, 255, 85, 85, TEXT_FONT));
         }
+        y = DESCRIPTION_Y;
 
         // LA DESCRIPTION, DANS LES DEUX CAS. L'original ne la montrait qu'une fois la competence
         // apprise : pour une competence qu'on ne connait pas encore, il n'affichait que ce qui manque.
@@ -844,7 +867,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // petite description qui apparait pour avoir une idee de ce que fait le pouvoir » — et c'est
         // plus utile avant qu'apres : c'est au moment de la choisir qu'on veut savoir ce qu'elle fait.
         for (String line : wrap(skill.getDescription().getString(), DESCRIPTION_WIDTH)) {
-            content.add(text(line, y, 200, 200, 200));
+            content.add(text(line, y, 255, 255, 255, DESC_FONT));
             y += 10;
         }
 
@@ -852,7 +875,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             y += 6;
             for (LearningCondition condition : skill.getConditions()) {
                 if (condition.accepts(data, skill, menu.getDeveloperType())) continue;
-                content.add(text(condition.describe(skill).getString(), y, 255, 88, 88));
+                content.add(text(condition.describe(skill).getString(), y, 255, 88, 88, DESC_FONT));
                 y += 11;
             }
             y += 4;
@@ -880,7 +903,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         for (String word : content.split(" ")) {
             String candidate = current.length() == 0 ? word : current + " " + word;
                 if (current.length() > 0
-                    && cn.academy.client.gui.AcademyFonts.width(font, candidate) > maxWidth) {
+                    && cn.academy.client.gui.AcademyFonts.width(font, candidate, (int) DESC_FONT)
+                            > maxWidth) {
                 lines.add(current.toString());
                 current = new StringBuilder(word);
             } else {
@@ -1028,14 +1052,27 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * taille, et une boite de zero sur zero ne dessine donc rien du tout.
      */
     private static CWidget text(String content, double y, int red, int green, int blue) {
+        return text(content, y, red, green, blue, TEXT_FONT);
+    }
+
+    /**
+     * Le meme, a la taille demandee.
+     *
+     * <p>Les tailles sont celles de l'original, et c'est lui qui les a fixees : la fiche d'une
+     * competence ecrit son nom a douze, son experience a huit, sa description a neuf, et « pas
+     * apprise » a dix. Le port les ecrivait toutes a dix, la taille par defaut du moteur, et le
+     * joueur l'a vu : « le texte n'est pas bien centre, de la bonne couleur et de la bonne taille ».
+     */
+    private static CWidget text(String content, double y, int red, int green, int blue, double size) {
         CWidget box = new CWidget("text");
         box.transform.width = TEXT_WIDTH;
-        box.transform.height = TEXT_HEIGHT;
+        box.transform.height = Math.max(TEXT_HEIGHT, size + 2);
         box.transform.y = y;
         box.transform.alignWidth = "CENTER";
         box.transform.alignHeight = "CENTER";
         box.text = new CWidget.TextBox();
         box.text.content = content;
+        box.text.fontSize = size;
         box.text.align = "CENTER";
         box.text.heightAlign = "CENTER";
         box.text.color(red, green, blue);
@@ -1097,6 +1134,24 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         surfaceSince = now();
         surfaceClosing = false;
         hideTree(true);
+    }
+
+    /**
+     * Un clic que rien n'a pris referme la fiche ouverte.
+     *
+     * <p>L'original enveloppait la sienne d'un voile de la taille de l'ECRAN, qui se refermait au
+     * premier clic ; le port ne donnait ce clic qu'aux widgets de la page, donc au seul carre noir de
+     * la machine — le joueur : « je suis oblige de cliquer parmi le carre noir de la machine pour
+     * revenir en arriere alors qu'il faudrait que je puisse cliquer n'importe ou ».
+     */
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
+        if (surface != null && !surfaceClosing && button == 0) {
+            beginClose();
+            return true;
+        }
+        return false;
     }
 
     /** Referme la surface, en la faisant d'abord s'effacer. */

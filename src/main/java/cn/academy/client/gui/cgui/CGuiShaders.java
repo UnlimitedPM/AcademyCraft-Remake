@@ -185,11 +185,69 @@ public final class CGuiShaders {
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
                                 GameRenderer::getPositionTexColorShader))
-                        .setTextureState(new RenderStateShard.TextureStateShard(key, false, false))
+                        // Le premier drapeau demande le filtre LINEAIRE, le second les mipmaps — et
+                        // c'est le second qui posait probleme : lui seul demande a reouvrir les
+                        // niveaux de l'image. Sans mipmaps, le filtre lineaire ne touche a rien et
+                        // la texture reste entiere : c'est exactement ce qu'il faut pour un trait
+                        // pose en travers, dont les bords doivent se fondre au lieu de faire des
+                        // escaliers.
+                        .setTextureState(new RenderStateShard.TextureStateShard(key, true, false))
                         .setTransparencyState(blending())
                         .setWriteMaskState(noDepthWrite())
                         .setCullState(new RenderStateShard.CullStateShard(false))
                         .createCompositeState(false)));
+    }
+
+    /**
+     * Un rectangle texture, pose dans le repere courant.
+     *
+     * <p>Meme type lisse que le trait : les images du disque font cent vingt-huit pixels pour un
+     * dessin de vingt-trois unites, donc reduites de quatre a un. Au plus proche voisin, un cerne de
+     * huit texels tombait sur un ou deux pixels et sautait ailleurs — le cerne paraissait casse, et
+     * le joueur le lisait comme un decalage avec l'anneau de progression qui, lui, est dessine par le
+     * programme. L'original chargeait ces images {@code preloadMipmapTexture}, donc filtrees : c'est
+     * ce lissage-la qu'on retrouve ici.
+     */
+    public static void textured(GuiGraphics graphics, String texturePath, double width, double height,
+                                int red, int green, int blue, int alpha) {
+        ResourceLocation texture = ResourceLocation.tryParse(texturePath);
+        if (texture == null || width <= 0 || height <= 0 || alpha <= 0) return;
+
+        RenderType type = smooth(texture);
+        Matrix4f pose = graphics.pose().last().pose();
+        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
+
+        vertex(buffer, pose, 0.0d, 0.0d, 0f, 0f, red, green, blue, alpha);
+        vertex(buffer, pose, 0.0d, height, 0f, 1f, red, green, blue, alpha);
+        vertex(buffer, pose, width, height, 1f, 1f, red, green, blue, alpha);
+        vertex(buffer, pose, width, 0.0d, 1f, 0f, red, green, blue, alpha);
+
+        graphics.flush();
+    }
+
+    /** Un trait : un quad de longueur et de largeur donnees, pose dans le repere courant.
+     *
+     * <p>Les coordonnees de texture suivent la <b>longueur</b> en {@code u} et la traversent en
+     * {@code v}, comme les quatre coins du {@code glBegin(GL_QUADS)} de l'original. Le quad garde ses
+     * dimensions fractionnaires : c'est la carte graphique qui le rasterise, et avec le filtre lineaire
+     * du type lisse ses bords se fondent — les diagonales cessent de faire des escaliers, ce que le
+     * joueur voyait encore : « les lignes blanches en diagonales ont toujours les escaliers visibles ».
+     */
+    public static void strip(GuiGraphics graphics, String texturePath, double length, double width,
+                             int red, int green, int blue, int alpha) {
+        ResourceLocation texture = ResourceLocation.tryParse(texturePath);
+        if (texture == null || length <= 0 || width <= 0 || alpha <= 0) return;
+
+        RenderType type = smooth(texture);
+        Matrix4f pose = graphics.pose().last().pose();
+        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
+
+        vertex(buffer, pose, 0.0d, 0.0d, 0f, 0f, red, green, blue, alpha);
+        vertex(buffer, pose, 0.0d, width, 0f, 1f, red, green, blue, alpha);
+        vertex(buffer, pose, length, width, 1f, 1f, red, green, blue, alpha);
+        vertex(buffer, pose, length, 0.0d, 1f, 0f, red, green, blue, alpha);
+
+        graphics.flush();
     }
 
     /** Les types lisses, un par texture : le filtre est pose sur la texture elle-meme. */
@@ -208,7 +266,10 @@ public final class CGuiShaders {
                 VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(program))
-                        .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                        // L'anneau est une image de cent vingt-huit pixels dessinee sur trente et
+                        // une : au plus proche voisin, son trait sautait d'un pixel a l'autre. Le
+                        // filtre lineaire le rend continu, comme chez l'original.
+                        .setTextureState(new RenderStateShard.TextureStateShard(texture, true, false))
                         .setTransparencyState(blending())
                         .setWriteMaskState(noDepthWrite())
                         .setCullState(new RenderStateShard.CullStateShard(false))
@@ -253,6 +314,14 @@ public final class CGuiShaders {
 
     private static void vertex(VertexConsumer buffer, Matrix4f pose, double x, double y, float u,
                                float v, int alpha) {
-        buffer.vertex(pose, (float) x, (float) y, 0f).color(255, 255, 255, alpha).uv(u, v).endVertex();
+        vertex(buffer, pose, x, y, u, v, 255, 255, 255, alpha);
+    }
+
+    private static void vertex(VertexConsumer buffer, Matrix4f pose, double x, double y, float u,
+                               float v, int red, int green, int blue, int alpha) {
+        buffer.vertex(pose, (float) x, (float) y, 0f)
+                .color(red, green, blue, alpha)
+                .uv(u, v)
+                .endVertex();
     }
 }
