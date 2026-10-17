@@ -6449,44 +6449,45 @@ public final class AcademyGameTests {
         helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
         var machine = (AbilityInterfererBlockEntity) helper.getBlockEntity(rel);
 
-        // Le poseur est inscrit d'office dans sa liste, comme dans l'original (`setPlacer` y ajoutait
-        // son nom). La machine ne l'etourdit donc pas — mais c'est la LISTE qui le dit, et pas le fait
-        // d'avoir pose le bloc : s'en retirer fait de lui une cible, ce qui est le seul moyen de
-        // verifier que la machine brouille vraiment.
+        // Le poseur n'est PAS epargne d'office : l'original l'inscrivait dans une liste que
+        // PERSONNE ne lisait, donc son nom s'y affichait sans rien garantir. Ici la liste decide,
+        // et une machine ne doit pas blanchir son poseur a son insu — sinon on ne peut ni verifier
+        // qu'elle brouille, ni s'en retirer.
         machine.setPlacer(ownPlayer(helper, "PoseurDuBrouilleur"));
-        assertTrue(helper, machine.isWhitelisted("PoseurDuBrouilleur"), "le poseur est epargne");
-        assertFalse(helper, machine.isWhitelisted("QuelquUnDAutre"), "un inconnu ne l'est pas");
-        assertValue(helper, java.util.List.of("PoseurDuBrouilleur"), machine.getWhitelist(),
-                "et son nom est dans la liste");
+        assertFalse(helper, machine.isWhitelisted("PoseurDuBrouilleur"),
+                "le poseur n'est pas epargne d'office");
+        assertTrue(helper, machine.getWhitelist().isEmpty(), "la liste part vide");
+        assertFalse(helper, machine.isWhitelisted("QuelquUnDAutre"), "un inconnu non plus");
 
         // Et les espaces des deux bouts partent, comme pour un nom de noeud.
         machine.addToWhitelist("  Ami  ");
         assertTrue(helper, machine.isWhitelisted("Ami"), "un nom ajoute est nettoye et epargne");
-        assertValue(helper, java.util.List.of("PoseurDuBrouilleur", "Ami"), machine.getWhitelist(),
-                "la liste porte les deux noms");
+        assertValue(helper, java.util.List.of("Ami"), machine.getWhitelist(), "la liste porte le nom");
 
         machine.addToWhitelist("Ami");
-        assertValue(helper, 2, machine.getWhitelist().size(), "deux fois le meme nom ne compte qu'une");
+        assertValue(helper, 1, machine.getWhitelist().size(), "deux fois le meme nom ne compte qu'une");
 
         var reloaded = new AbilityInterfererBlockEntity(helper.absolutePos(rel),
                 helper.getBlockState(rel));
         reloaded.load(machine.saveWithoutMetadata());
-        assertValue(helper, java.util.List.of("PoseurDuBrouilleur", "Ami"), reloaded.getWhitelist(),
+        assertValue(helper, java.util.List.of("Ami"), reloaded.getWhitelist(),
                 "liste apres rechargement");
 
         reloaded.removeFromWhitelist("Ami");
         assertFalse(helper, reloaded.isWhitelisted("Ami"), "un nom retire ne protege plus");
-
-        // Le poseur aussi peut se retirer de sa propre liste.
-        reloaded.removeFromWhitelist("PoseurDuBrouilleur");
-        assertFalse(helper, reloaded.isWhitelisted("PoseurDuBrouilleur"),
-                "le poseur qui s'est retire redevient une cible");
         helper.succeed();
     }
 
-    /** Le poseur n'est jamais brouille par sa propre machine. */
+    /**
+     * Le brouilleur brouille TOUT LE MONDE dans son rayon, son poseur compris — et le relache des
+     * qu'il figure dans la liste blanche.
+     *
+     * <p>Le port epargnait le poseur d'office, ce qui rendait la machine intestable : le joueur
+     * posait son bloc, se mettait a cote, et rien ne se passait. C'est la liste qui epargne, et
+     * elle part vide.
+     */
     @GameTest(template = "empty")
-    public static void interfererNeverJamsItsOwner(GameTestHelper helper) {
+    public static void interfererJamsEvenItsOwnerUntilHeIsWhitelisted(GameTestHelper helper) {
         BlockPos rel = new BlockPos(1, 1, 1);
         var state = ModBlocks.ABILITY_INTERFERER.get().defaultBlockState();
         helper.setBlock(rel, ModBlocks.ABILITY_INTERFERER.get());
@@ -6509,8 +6510,20 @@ public final class AcademyGameTests {
             AbilityInterfererBlockEntity.tick(level, abs, state, machine);
         }
 
-        assertValue(helper, 0, machine.getAffectedCount(), "le poseur ne doit pas etre brouille");
-        assertFalse(helper, isInterfered(owner), "et il doit pouvoir utiliser ses competences");
+        assertValue(helper, 1, machine.getAffectedCount(), "le poseur compte parmi les brouilles");
+        // La source est posee sur la donnee du joueur ; c'est `refreshInterference` qui en fait un
+        // drapeau, et il tourne au tick du joueur — que ce faux joueur ne recoit pas.
+        refreshInterference(owner);
+        assertTrue(helper, isInterfered(owner), "et il ne peut pas utiliser ses competences");
+
+        // Il s'inscrit : le cycle suivant le relache.
+        machine.addToWhitelist(owner.getGameProfile().getName());
+        for (int i = 0; i < 10; i++) {
+            AbilityInterfererBlockEntity.tick(level, abs, state, machine);
+        }
+        assertValue(helper, 0, machine.getAffectedCount(), "un nom epargne n'est plus compte");
+        refreshInterference(owner);
+        assertFalse(helper, isInterfered(owner), "et il reprend ses competences");
 
         // Le faux joueur est un singleton du niveau, partage par tous les tests : il
         // faut le retirer, sinon le prochain test le retrouve la ou on l'a laisse.
@@ -6527,6 +6540,12 @@ public final class AcademyGameTests {
         owner.revive();
         owner.moveTo(100_000.0d, 100.0d, 100_000.0d);
         helper.succeed();
+    }
+
+    /** Rejoue le tick de la donnee d'aptitudes : c'est lui qui met le drapeau de brouillage a jour. */
+    private static void refreshInterference(net.minecraft.world.entity.player.Player player) {
+        player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .ifPresent(cn.academy.ability.AbilityData::refreshInterference);
     }
 
     /** Vrai si ce joueur est brouille, d'apres sa donnee d'aptitudes. */

@@ -51,6 +51,9 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
     /** Le champ du prix, qui vire au rouge quand la machine ne peut pas le payer. */
     private CWidget costField;
 
+    /** Le champ du nombre de joueurs brouilles : il change avec qui entre dans le rayon. */
+    private CWidget affectedField;
+
     /** Le panneau de la liste, sa zone, et le modele de ligne dont chaque nom fait une copie. */
     private CWidget listPanel;
     private CWidget zone;
@@ -85,9 +88,9 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         // tampon ne peut pas le payer — c'est ce qui explique pourquoi l'interrupteur refuse de
         // s'allumer, et sans quoi le bouton a l'air casse.
         seplineInfo();
-        property(label("prop.affected"), Integer.toString(menu.getAffectedCount()));
-        costField = property(label("prop.cost"),
-                Integer.toString((int) menu.getCostPerTick()) + " IF/T").child("value");
+        affectedField = property(label("prop.affected"),
+                Integer.toString(menu.getAffectedCount())).child("value");
+        costField = property(label("prop.cost"), costText(menu.getCostPerTick())).child("value");
 
         // L'onglet sans fil de l'original, pose en dernier : le moteur ouvre la premiere page posee,
         // et cette machine doit s'ouvrir sur sa page d'inventaire, celle qui porte la liste blanche.
@@ -99,6 +102,20 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
 
     private static String label(String key) {
         return Component.translatable("ac.gui.common." + key).getString();
+    }
+
+    /**
+     * Le prix d'un cycle, ramene au tick, ecrit sans decimale inutile.
+     *
+     * <p>Le cout vaut {@code rayon²/10} : il tombe juste a dix, vingt, trente... mais pas a
+     * quinze (22,5). Le porter a l'entier afficherait donc 22 pour un cout de 22,5, et le joueur
+     * lit ce nombre pour savoir ce que la machine lui prend.
+     */
+    private static String costText(double perTick) {
+        String value = perTick == Math.rint(perTick)
+                ? Long.toString((long) perTick)
+                : String.format(java.util.Locale.ROOT, "%.1f", perTick);
+        return value + " IF/T";
     }
 
     /**
@@ -284,8 +301,18 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         // Le prix : rouge quand le tampon ne peut pas payer un cycle, blanc quand il peut. C'est la
         // meme regle que celle qui refuse d'allumer la machine.
         if (costField != null && costField.text != null) {
+            costField.text.content = costText(menu.getCostPerTick());
             if (menu.canPay()) costField.text.color(255, 255, 255);
             else costField.text.color(0x9E, 0x2B, 0x25);
+        }
+
+        // Et le nombre de joueurs qu'elle brouille *en ce moment*. Les deux lignes du panneau
+        // disaient ce que la machine FAIT, et elles etaient ecrites UNE fois, dans `build` : elles
+        // restaient donc figees jusqu'a la prochaine ouverture de l'ecran. Le joueur : « le nombre
+        // d'electricite qu'il consomme ne se rafraichit que quand je quitte le bloc », et
+        // « Affected reste a 0 ».
+        if (affectedField != null && affectedField.text != null) {
+            affectedField.text.content = Integer.toString(menu.getAffectedCount());
         }
 
         // Le champ d'ajout s'en va des qu'il n'a plus le clavier.

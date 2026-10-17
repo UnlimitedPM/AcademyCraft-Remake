@@ -216,7 +216,10 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     }
 
     private boolean isProtected(Player player) {
-        if (player.isCreative()) return true;
+        // L'original ne prenait que des joueurs en SURVIE (`EntitySelectors.survivalPlayer`), et
+        // verifiait en plus le mode creatif : un joueur en creatif ou en spectateur n'a jamais ete
+        // brouille. C'est la premiere chose a savoir quand « la machine ne me fait rien ».
+        if (player.isCreative() || player.isSpectator()) return true;
         return isWhitelisted(player.getGameProfile().getName());
     }
 
@@ -356,16 +359,17 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     }
 
     /**
-     * Retient le poseur, et l'inscrit dans sa propre liste : c'est ce que faisait l'original.
+     * Retient le poseur — et rien de plus.
      *
-     * <p>Son nom entre TEL QUEL, sans le nettoyage des noms tapes : c'est un vrai nom de joueur, et
-     * `ConfigText.clean` le tronquerait a seize caracteres sans raison — le nom n'en fait jamais
-     * plus, et `isWhitelisted` compare des noms bruts.
+     * <p>L'original inscrivait son nom dans la liste au passage, mais cette liste n'etait lue par
+     * PERSONNE : le poseur y figurait sans jamais etre epargne, et c'etait un ornement. Ici la liste
+     * decide vraiment, donc l'y inscrire d'office aurait fait de lui une exception permanente —
+     * impossible de verifier que la machine brouille, et impossible de s'en retirer. C'est au joueur
+     * de s'ajouter s'il veut etre epargne.
      */
     public void setPlacer(Player player) {
         if (placer != null || player == null) return;
         placer = player.getGameProfile().getName();
-        if (!whitelist.contains(placer)) whitelist.add(placer);
         setChanged();
     }
 
