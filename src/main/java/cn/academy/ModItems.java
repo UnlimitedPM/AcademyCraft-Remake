@@ -426,7 +426,10 @@ public class ModItems {
     public static class TooltipItem extends Item {
         private final String tooltipKey;
         public TooltipItem(String tooltipKey) {
-            super(new Item.Properties());
+            this(tooltipKey, new Item.Properties());
+        }
+        public TooltipItem(String tooltipKey, Item.Properties properties) {
+            super(properties);
             this.tooltipKey = tooltipKey;
         }
         @Override

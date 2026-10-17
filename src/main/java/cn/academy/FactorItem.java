@@ -3,6 +3,7 @@ package cn.academy;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
@@ -22,7 +23,11 @@ public class FactorItem extends ModItems.TooltipItem {
 
     public FactorItem(String categoryName) {
         // L'infobulle reste celle de l'objet, comme avant l'eclatement.
-        super("ac.ability." + categoryName + ".name");
+        //
+        // Et la pile ne monte pas au-dessus de UN : un facteur dit quelle categorie on veut
+        // prendre, il ne se ramasse pas par 64. C'est le joueur qui l'a demande, et il a raison
+        // de le demander — l'objet ne sert qu'une fois.
+        super("ac.ability." + categoryName + ".name", new Item.Properties().stacksTo(1));
         this.categoryName = categoryName;
     }
 
