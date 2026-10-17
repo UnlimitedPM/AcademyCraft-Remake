@@ -45,20 +45,18 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
     private static final float SCALE = 0.5f;
 
     /**
-     * Les deux rattrapages mesures sur le pied du modele, en coordonnees du modele.
+     * Le seul rattrapage garde : le recentrage lateral du pied, en coordonnees du modele.
      *
      * <p>Le pied — les faces a moins de 0,05 du sol — couvre {@code x -1,072..0,928} dans les deux
      * fichiers OBJ, soit un centre a {@code -0,072} : le vrai mod le laisse donc deborder d'un cote
      * et la machine parait poussee vers la droite, avec un pied qui ne tombe pas au milieu de la
-     * brique. On le recentre ({@code +0,072} modele = {@code +0,036} bloc sur le cote) : le pied
-     * fait pile deux unites de large, donc une fois recentre il couvre exactement la brique.
+     * brique. Le pied fait pile deux unites de large, donc {@code +0,072} modele ({@code +0,036}
+     * bloc) le pose exactement sur la brique.
      *
-     * <p>Reste l'avant : le vrai mod affleure pile le bord de la brique. Le joueur a trouve ca
-     * « pas assez en avant », puis la premiere correction (« un demi-centimetre ») « trop en
-     * avant » : on ne garde donc qu'un demi, {@code -0,01} modele = {@code +0,005} bloc.
+     * <p>Rien sur l'axe avant : le vrai mod affleure pile le bord de la brique, et trois essais
+     * d'avancee ont tous ete refuses par le joueur. On y revient pour de bon.
      */
     private static final float SHIFT_SIDE = 0.072f;
-    private static final float SHIFT_FORWARD = -0.01f;
 
     public DeveloperRenderer(BlockEntityRendererProvider.Context context) {}
 
@@ -83,8 +81,8 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
         pose.scale(SCALE, SCALE, SCALE);
 
         // Dans le repere du modele, donc dans le bon axe quelle que soit la direction : le pied
-        // recentre sur la brique, puis le leger surplus vers l'avant.
-        pose.translate(SHIFT_SIDE, 0.0d, SHIFT_FORWARD);
+        // recentre sur la brique. Rien en profondeur, la machine affleure le bord comme l'original.
+        pose.translate(SHIFT_SIDE, 0.0d, 0.0d);
 
         ObjModels.draw(ObjModels.get(model).all(), pose,
                 buffers.getBuffer(ObjModels.translucent(texture)), light, overlay);
