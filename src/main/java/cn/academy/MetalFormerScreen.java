@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.client.gui.AcademyFonts;
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiHist;
 import cn.academy.client.gui.cgui.CGuiWireless;
@@ -88,9 +89,9 @@ public class MetalFormerScreen extends CGuiContainerScreen<MetalFormerMenu> {
     /**
      * Le nom du mode, quand la souris passe sur son icone.
      *
-     * <p>L'original dessinait sa petite boite a six unites de l'icone ; l'infobulle du jeu fait le meme
-     * office et se lit mieux. Elle vient APRES le dessin des widgets — la machine a le meme crochet,
-     * mais il passe avant, donc tout ce qu'il dessine est recouvert par le fond de la page.
+     * <p>C'est la boite de l'original ({@link AcademyFonts#drawBox}) : un noir a moitie, la police
+     * du mod, et le nom ecrit dedans. Le port se servait de l'infobulle du jeu en se disant qu'elle
+     * faisait le meme office — elle ne le fait pas, ni pour la police ni pour l'habillage.
      */
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -101,8 +102,15 @@ public class MetalFormerScreen extends CGuiContainerScreen<MetalFormerMenu> {
         if (mouseX < icon.absX || mouseX >= icon.absX + icon.absW) return;
         if (mouseY < icon.absY || mouseY >= icon.absY + icon.absH) return;
 
-        graphics.renderTooltip(font, Component.translatable(
-                "academy.metal_former.mode." + menu.getMode().getId()), mouseX, mouseY);
+        // L'original ne passait pas par l'infobulle du jeu : son `icon_mode` dessinait, dans son
+        // FrameEvent, un `TechUI.drawTextBox` — le nom du mode sur un noir a moitie, avec la police
+        // du mod (`FontOption(10)`) et non celle du jeu, a six unites de l'icone et dix au-dessus.
+        // Le joueur a releve les deux : « la police d'ecriture n'a pas ete changee pour ce texte
+        // la », puis « le texte s'affiche avec l'affichage basique alors que normalement il y a un
+        // affichage particulier pour ca ».
+        AcademyFonts.drawBox(graphics, font,
+                Component.translatable("academy.metal_former.mode." + menu.getMode().getId()).getString(),
+                icon.absX + 6, icon.absY - 10, AcademyFonts.GUI_SIZE);
     }
 
     /**

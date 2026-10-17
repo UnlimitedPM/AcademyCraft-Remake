@@ -352,6 +352,29 @@ public final class AcademyFonts {
     }
 
     /**
+     * Un texte sur son propre fond : le {@code TechUI.drawTextBox} de l'original.
+     *
+     * <p>Un noir a moitie de {@code largeur + 12} sur {@code cellule + 4}, centre sur {@code x} (le
+     * {@code align.lenOffset} de l'original, qui vaut un demi pour un centrage), et le texte blanc a
+     * quatre cinquiemes pose a {@code (+5, +2)}. C'est ce que dessinait le nom du mode survole du
+     * formeur ; le port y avait mis l'infobulle du jeu, et le joueur a vu les deux differences :
+     * « la police d'ecriture n'a pas ete changee pour ce texte la » et « le texte s'affiche avec
+     * l'affichage basique alors que normalement il y a un affichage particulier pour ca ».
+     *
+     * @param x le centre horizontal de la boite, en pixels d'ecran
+     * @param y le haut de la boite
+     */
+    public static void drawBox(GuiGraphics graphics, Font font, String text, double x, double y,
+                               int cell) {
+        int width = width(font, text, cell);
+        int left = (int) Math.round(x - width / 2.0);
+        int top = (int) Math.round(y);
+
+        graphics.fill(left, top, left + width + 12, top + cell + 4, 0x80000000);
+        drawTop(graphics, font, text, left + 5, top + 2, 0xCCFFFFFF, cell);
+    }
+
+    /**
      * L'ecart entre le haut de la cellule et l'ordonnee que {@link #drawText} attend.
      *
      * <p>C'est {@link #BASELINE} moins la position de la ligne de base dans la cellule : le retirer

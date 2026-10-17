@@ -196,10 +196,10 @@
 
   "container.academy.matrix": "Wireless Imag Matrix",
 
-  "academy.metal_former.mode.plate": "Rolling",
-  "academy.metal_former.mode.incise": "Cutting",
+  "academy.metal_former.mode.plate": "Plate",
+  "academy.metal_former.mode.incise": "Incise",
   "academy.metal_former.mode.etch": "Etching",
-  "academy.metal_former.mode.refine": "Refining",
+  "academy.metal_former.mode.refine": "Refine",
 
   "academy.windgen_base.status.base_only": "No pillar column",
   "academy.windgen_base.status.no_top": "Column incomplete",
