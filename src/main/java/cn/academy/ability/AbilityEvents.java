@@ -59,6 +59,17 @@ public class AbilityEvents {
             // Les sources d'interference sont evaluees ici, une fois par tick : une
             // source qui ne brouille plus disparait d'elle-meme.
             data.refreshInterference();
+            // Un pouvoir DEJA en cours s'arrete quand le joueur entre dans un brouillage.
+            //
+            // L'original ne bloquait que les nouveaux : son `canUseAbility` est lu a l'appui, donc
+            // une charge ouverte ou un maintien en cours continuait tranquillement dans le champ.
+            // Le joueur a demande le contraire — « si j'etais en train de preparer mon pouvoir /
+            // en train de l'utiliser, ca ne m'empeche pas de continuer a l'utiliser ». C'est donc
+            // un ecart assume a l'original, et il est fait avant tout tick de maintien, pour que
+            // rien ne parte pendant ce tick-la.
+            if (data.isInterfered()) {
+                endInterfered(player, data);
+            }
             // Les recharges avancent d'un tick, comme la boucle de CooldownData.
             data.tickCooldowns();
             // Et les charges en cours, comme le compteur du contexte d'activation.
@@ -145,6 +156,31 @@ public class AbilityEvents {
         // Une copie : `endHeld` retire la competence de la table qu'on parcourt.
         for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
             endHeld(player, data, skill);
+        }
+    }
+
+    /**
+     * Termine tout ce qui etait en cours chez un joueur brouille.
+     *
+     * <p>Les maintiens passent par la fin ordinaire ({@link #endHeld}) : elle rend ce qu'ils avaient
+     * emprunte — le vol des ailes, par exemple —, pose leur recharge et previent le client. Les
+     * charges en cours s'annulent, comme le {@code terminate()} de l'original quand il abandonnait
+     * un contexte.
+     *
+     * <p>Idempotent : sans rien d'ouvert, la boucle ne fait rien, et c'est ce qui permet de
+     * l'appeler a chaque tick de brouillage sans compter les transitions.
+     */
+    private static void endInterfered(ServerPlayer player, AbilityData data) {
+        for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
+            if (skill.isHeld()) {
+                endHeld(player, data, skill);
+            } else {
+                data.cancelCharge(skill);
+                // Le client tient sa propre charge des l'appui, donc sans ce message il
+                // continuerait son animation sur un pouvoir que le serveur vient d'abandonner.
+                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                        new HoldOverPacket(skill.getName()));
+            }
         }
     }
 
