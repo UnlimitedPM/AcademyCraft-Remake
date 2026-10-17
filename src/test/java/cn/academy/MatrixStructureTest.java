@@ -90,29 +90,57 @@ class MatrixStructureTest {
     }
 
     @Test
-    @DisplayName("la portee se compte depuis le centre du cube, pas depuis le coin de l'ancrage")
-    void laPorteePartDuCentreDuCube() {
-        // Ancrage en (10, 64, 10) tourne vers le nord : ses huit parties occupent les cellules
-        // x 9..10 (vers `left`, l'ouest), y 64..65 et z 10..11 (vers `back`, le sud). Le centre du
-        // cube est donc en (10, 65, 11) : le milieu en x, le milieu en z, et UN BLOC au-dessus de la
-        // base pour la hauteur, le cube en faisant deux.
-        assertEquals(0.0d, MatrixStructure.centreDistSqr(10, 64, 10, Direction.NORTH,
-                10.0d, 65.0d, 11.0d), 1.0e-9d);
+    @DisplayName("la portee se compte depuis la surface du cube, jusqu'au centre du bloc vise")
+    void laPorteePartDeLaSurfaceDuCube() {
+        // Ancrage en (10, 64, 10) tourne vers le nord : ses huit parties occupent x 9..11,
+        // y 64..66 et z 10..12. Le cube fait donc deux blocs de large dans les trois axes et son
+        // centre est en (10, 65, 11).
+        //
+        // Le bloc pose contre lui, en (11, 65, 11), a son centre a (11,5 ; 65,5 ; 11,5) : il est a un
+        // demi-bloc de la surface du cube, et a un demi-bloc en hauteur et en profondeur il est
+        // DEDANS. Sa distance est donc 0,5 — pas 1,5 comme si on comptait depuis le coin.
+        assertEquals(0.25d, MatrixStructure.machineDistSqr(10, 64, 10, Direction.NORTH,
+                11, 65, 11), 1.0e-9d);
 
-        // Le defaut d'origine, vu par le joueur : la portee se comptait depuis le bloc d'ancrage, qui
-        // est un COIN du cube. Un noeud pose a douze blocs du centre etait donc plus loin sur deux des
-        // quatre cotes que sur les deux autres — « il y a 2 cotes ou les nodes se relient a onze blocs
-        // de distance, et les 2 autres cotes ou il se connecte a seulement neuf ». Depuis le centre,
-        // les quatre cotes donnent exactement la meme distance.
+        // Un bloc a l'interieur du cube est a distance nulle : le cube n'est pas un point.
+        assertEquals(0.0d, MatrixStructure.machineDistSqr(10, 64, 10, Direction.NORTH,
+                10, 65, 11), 1.0e-9d);
+    }
+
+    @Test
+    @DisplayName("un noeud se raccorde a la meme distance des quatre cotes")
+    void memePorteeDesQuatreCotes() {
+        // Ce que le joueur a mesure, deux fois : d'abord « il y a 2 cotes ou les nodes se relient a
+        // onze blocs de distance, et les 2 autres cotes ou il se connecte a seulement neuf », puis,
+        // le centre corrige, « il fait toujours un rayon de 11x11x10x10 en fonction de comment je
+        // l'ai pose ».
+        //
+        // On compte donc les blocs VIDES entre le cube et le noeud : ce nombre doit etre le meme des
+        // quatre cotes, pour une portee de noeud donnee. Douze est celle du noeud STANDARD.
         for (Direction side : Direction.Plane.HORIZONTAL) {
-            double distSqr = MatrixStructure.centreDistSqr(10, 64, 10, Direction.NORTH,
-                    10.0d + side.getStepX() * 12.0d, 65.0d, 11.0d + side.getStepZ() * 12.0d);
-            assertEquals(144.0d, distSqr, 1.0e-9d, "cote " + side);
+            assertEquals(11, blocsVidesAtteints(side, 12.0d), "cote " + side);
         }
+    }
 
-        // Et le coin de l'ancrage, lui, n'est pas le centre : il en est a la racine de deux. Le tester
-        // ici est ce qui empeche de remettre un demi-bloc de hauteur au lieu d'un bloc plein.
-        assertEquals(2.0d, MatrixStructure.centreDistSqr(10, 64, 10, Direction.NORTH,
-                10.0d, 64.0d, 10.0d), 1.0e-9d);
+    /**
+     * Le nombre de blocs vides entre le cube et le noeud le plus eloigne encore atteint.
+     *
+     * <p>Le cube va de x 9 a 11 et de z 10 a 12 : le premier bloc vide de chaque cote est donc le
+     * onze en x croissant, le huit en x decroissant, le douze en z croissant et le neuf en z
+     * decroissant.
+     */
+    private static int blocsVidesAtteints(Direction side, double range) {
+        int stepX = side.getStepX();
+        int stepZ = side.getStepZ();
+        int atteints = -1;
+        for (int vides = 0; vides <= 30; vides++) {
+            int dx = stepX == 0 ? 0 : (stepX > 0 ? 1 : -2) + stepX * vides;
+            int dz = stepZ == 0 ? 0 : (stepZ > 0 ? 1 : -2) + stepZ * vides;
+            double distSqr = MatrixStructure.machineDistSqr(10, 64, 10, Direction.NORTH,
+                    10 + dx, 65, 11 + dz);
+            if (distSqr > range * range) break;
+            atteints = vides;
+        }
+        return atteints;
     }
 }

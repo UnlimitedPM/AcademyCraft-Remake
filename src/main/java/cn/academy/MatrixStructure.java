@@ -57,24 +57,41 @@ public final class MatrixStructure {
      */
     public static final double MACHINE_HALF_HEIGHT = 1.0d;
 
+    /** Le demi-cote du cube, en blocs : deux blocs de large, donc un de chaque cote du centre. */
+    public static final double MACHINE_HALF_SIZE = 1.0d;
+
     /**
-     * Le carre de la distance entre le <b>centre</b> de la machine et un point, en blocs.
+     * Le carre de la distance entre le Matrix et un bloc, en blocs.
      *
-     * <p>La portee se compte depuis le centre, et non depuis le bloc d'ancrage : celui-ci est un COIN
-     * du cube, donc deux des quatre cotes de la machine s'etendent d'un bloc vers le point vise et les
-     * deux autres s'en eloignent. Mesuree depuis le coin, la meme portee donne un noeud atteint
-     * quarante pour cent plus loin selon le cote — ce que le joueur a vu tout de suite : « comme le
-     * matrix fait du 2x2x2, il y a 2 cotes ou les nodes se relient a onze blocs de distance, et les 2
-     * autres cotes ou il se connecte a seulement neuf ».
+     * <p>La portee se compte depuis la <b>surface</b> du cube, et jusqu'au <b>centre</b> du bloc
+     * vise — la distance d'un objet a un autre, pas d'un coin a un coin.
+     *
+     * <p>Trois erreurs se cachaient dans les deux coins de cette phrase, et le joueur les a toutes
+     * vues : « comme le matrix fait du 2x2x2, il y a 2 cotes ou les nodes se relient a onze blocs de
+     * distance, et les 2 autres cotes ou il se connecte a seulement neuf », puis, le centre corrige,
+     * « il fait toujours un rayon de 11x11x10x10 en fonction de comment je l'ai pose ». Mesuree depuis
+     * le bloc d'ancrage, qui est un COIN du cube, la portee s'arretait deux blocs trop tot d'un cote
+     * et jamais de l'autre ; mesuree depuis le centre mais jusqu'au coin du bloc du noeud, il restait
+     * un demi-bloc, donc un bloc entier d'ecart entre les deux cotes opposes.
      *
      * <p>Les coordonnees sont donnees en doubles et non en {@code BlockPos} pour que le calcul reste
      * celui du rendu : c'est la meme origine, au demi-bloc pres.
      */
-    public static double centreDistSqr(double anchorX, double anchorY, double anchorZ, Direction facing,
-                                       double x, double y, double z) {
-        double dx = x - (anchorX + centreX(facing));
-        double dy = y - (anchorY + MACHINE_HALF_HEIGHT);
-        double dz = z - (anchorZ + centreZ(facing));
+    public static double machineDistSqr(double anchorX, double anchorY, double anchorZ, Direction facing,
+                                        double blockX, double blockY, double blockZ) {
+        double dx = outside(blockX + 0.5d, anchorX + centreX(facing));
+        double dy = outside(blockY + 0.5d, anchorY + MACHINE_HALF_HEIGHT);
+        double dz = outside(blockZ + 0.5d, anchorZ + centreZ(facing));
         return dx * dx + dy * dy + dz * dz;
+    }
+
+    /**
+     * L'ecart entre un point et le cube, sur un axe : zero tant que le point est dans le cube.
+     *
+     * <p>C'est ce qui fait que la distance est la meme des quatre cotes — le cube s'etendant d'un
+     * bloc de chaque cote de son centre, et non d'un bloc d'un cote et de rien de l'autre.
+     */
+    private static double outside(double point, double centre) {
+        return Math.max(0.0d, Math.abs(point - centre) - MACHINE_HALF_SIZE);
     }
 }
