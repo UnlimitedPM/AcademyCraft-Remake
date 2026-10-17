@@ -100,17 +100,6 @@ final class CGuiContainerLayout {
         window.transform.alignHeight = "CENTER";
         window.transform.scale = 1.0;
         window.transform.doesDraw = false;
-
-        // Les cadres des emplacements du joueur sont un pixel trop bas dans la texture : le premier
-        // a son bord haut en 106 et son bord gauche en 8, alors que les emplacements se posent en
-        // 105 et 6 (c'est le `mapPlayerInventory` de l'original, repris tel quel dans les menus).
-        // La page, elle, est deja deux unites a gauche de la racine : la colonne tombe donc juste,
-        // et seule la ligne est a reprendre. Sans ce pixel, chaque objet se dessine un pixel plus
-        // haut que son cadre — le joueur : « il y a 3 carres d'inventaire qui ne sont pas comme le
-        // vrai, les 3 dernieres colonnes dans la 2eme ligne en partant du haut », puis, en clair,
-        // « les cadres sont decales ».
-        CWidget frames = window.child("ui_inv");
-        if (frames != null) frames.transform.y = -1;
         return window;
     }
 

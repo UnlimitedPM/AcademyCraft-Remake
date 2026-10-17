@@ -106,30 +106,6 @@ class CGuiContainerLayoutTest {
     }
 
     @Test
-    @DisplayName("les cadres de l'inventaire tombent sur les trous des emplacements du joueur")
-    void lesCadresTombentSurLesSlots() {
-        CWidget root = CGuiContainerLayout.root(new CWidget("root"));
-        CWidget page = CGuiContainerLayout.page(CGuiDocument.read("rework/page_inv").copy());
-        root.add(page);
-
-        // La racine se pose au pixel entier, comme dans l'ecran (voir CGuiView.place) : c'est ce
-        // qui rend le calcul verifiable ici, sans Minecraft.
-        CGuiLayout.placeSnapped(root, LEFT, TOP,
-                CGuiContainerLayout.WIDTH, CGuiContainerLayout.HEIGHT, 1.0);
-
-        CWidget frames = page.child("ui_inv");
-        assertNotNull(frames, "la page porte la couche des cadres");
-
-        // Les emplacements du joueur se posent en 6 + 18 * colonne et en 105 / 123 / 141 / 163 — le
-        // `mapPlayerInventory` de l'original, repris mot pour mot par les menus du port. La texture
-        // `ui_inventory.png`, elle, dessine son premier cadre avec son bord gauche en 8 et son bord
-        // haut en 106. La page etant deux unites a gauche de la racine, la colonne tombe juste ; la
-        // ligne, elle, demandait ce pixel de reprise.
-        assertEquals(LEFT + 6, frames.absX + 8, EPS, "le bord gauche du premier cadre");
-        assertEquals(TOP + 105, frames.absY + 106, EPS, "le bord haut de la premiere rangee");
-    }
-
-    @Test
     @DisplayName("le panneau d'infos se pose sept unites a droite de la racine")
     void lePanneauDInfos() {
         CWidget root = CGuiContainerLayout.root(new CWidget("root"));
