@@ -3,6 +3,7 @@
   "model": "academy:models/developer_advanced.obj",
   "flip_v": true,
   "ambientocclusion": false,
+  "automatic_culling": false,
   "render_type": "minecraft:translucent",
   "textures": {
     "base": "academy:block/developer_advanced_model",
