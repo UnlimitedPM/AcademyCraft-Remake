@@ -77,6 +77,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double LINK_WIDTH = 5.5;
     private static final double LINK_FADE = 5.0;
 
+    /**
+     * Ce qui reste a l'opacite d'un trait quand la competence n'est pas apprise : quatre dixiemes.
+     *
+     * <p>C'est le facteur de l'original — {@code mAlpha * (if (learned) 1.0 else 0.4)} — et il
+     * manquait au port : un trait se dessinait a l'opacite de son noeud, deux fois et demie trop
+     * clair des que la competence n'etait pas apprise. Le joueur a compare les deux versions cote a
+     * cote : « la luminosite des elements n'est pas la meme pour les 2 ».
+     */
+    static final double LINK_UNLEARNED = 0.4;
+
     /** L'apparition : un fondu par noeud, decale de son rang de huit centiemes de seconde. */
     private static final double APPEAR_STEP = 0.08;
     private static final double APPEAR_SPEED = 10.0;
@@ -660,9 +670,19 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             }
             if (node.widget.line != null) {
                 node.widget.line.progress = clamp01(LINK_FADE * dt);
-                node.widget.line.alpha = alpha(LINK_FADE * dt * node.dim);
+                node.widget.line.alpha = alpha(LINK_FADE * dt * linkDim(node.dim, node.learned));
             }
         }
+    }
+
+    /**
+     * L'opacite d'un trait : celle de son noeud, et le facteur des competences non apprises.
+     *
+     * <p>Voir {@link #LINK_UNLEARNED}. Une competence apprise garde son trait plein ; toutes les
+     * autres le portent a quatre dixiemes, qu'elles soient a portee (sept dixiemes) ou non (un quart).
+     */
+    static double linkDim(double dim, boolean learned) {
+        return dim * (learned ? 1.0d : LINK_UNLEARNED);
     }
 
     /** Une opacite de zero a 255, bornee. */
