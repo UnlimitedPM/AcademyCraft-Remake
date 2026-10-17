@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -56,6 +57,31 @@ class ImagPhaseLayersTest {
         for (ImagPhaseLayers.Layer couche : couches) {
             assertEquals(0.7d, couche.density(), 0.0001d, "la densite ne change pas");
         }
+    }
+
+    @Test
+    @DisplayName("sur une surface pleine, la hauteur par coin redonne la hauteur d'origine")
+    void heightAtRedonneLaHauteurSurUneSurfacePleine() {
+        for (ImagPhaseLayers.Layer couche : ImagPhaseLayers.layers(PLEIN)) {
+            assertEquals(couche.height(), couche.heightAt(PLEIN), 0.000001d,
+                    "une surface plate ne doit rien changer");
+        }
+    }
+
+    @Test
+    @DisplayName("sur un liquide qui coule, la nappe suit la hauteur de chaque coin")
+    void laNappeSuitLaPente() {
+        ImagPhaseLayers.Layer basse = ImagPhaseLayers.layers(PLEIN)[0];
+        ImagPhaseLayers.Layer haute = ImagPhaseLayers.layers(PLEIN)[1];
+
+        // Un coin a moitie plein ne se pose pas a la meme hauteur qu'un coin plein : c'est ce qui
+        // fait suivre la pente a la nappe au lieu de la laisser flotter a plat au-dessus.
+        assertNotEquals(basse.heightAt(1.0d), basse.heightAt(0.5d), 0.0001d, "la nappe basse se penche");
+        assertNotEquals(haute.heightAt(1.0d), haute.heightAt(0.5d), 0.0001d, "la nappe haute se penche aussi");
+        // La basse est SOUS la surface : un coin plus bas la remonte donc vers zero.
+        assertTrue(basse.heightAt(0.5d) > basse.heightAt(1.0d));
+        // La haute est AU-DESSUS : un coin plus bas la descend.
+        assertTrue(haute.heightAt(0.5d) < haute.heightAt(1.0d));
     }
 
     @Test

@@ -43,8 +43,19 @@ public final class ImagPhaseLayers {
         return 1.2d * Math.sqrt(Math.max(0.0d, fluidHeight));
     }
 
-    /** Une nappe : sa hauteur, ses deux vitesses de defilement, et sa densite. */
-    public record Layer(double height, double speedU, double speedV, double density) {
+    /**
+     * Une nappe : son facteur de hauteur, ses deux vitesses de defilement, et sa densite.
+     *
+     * <p>La hauteur est un facteur, et pas une valeur : sur un liquide qui coule, la surface
+     * n'est pas plane, et chaque coin du bloc a la sienne. La nappe se pose donc sur chacune des
+     * quatre hauteurs de coin — voir {@link #heightAt(double)}.
+     */
+    public record Layer(double factor, double height, double speedU, double speedV, double density) {
+
+        /** La hauteur de cette nappe pour une hauteur de fluide donnee (celle d'un coin). */
+        public double heightAt(double fluidHeight) {
+            return factor * ImagPhaseLayers.stackHeight(fluidHeight);
+        }
 
         /** Le decalage de la texture sur cet axe, en tours de texture. */
         public double offset(double speed, double time) {
@@ -71,10 +82,10 @@ public final class ImagPhaseLayers {
      */
     public static Layer[] layers(double fluidHeight) {
         double ht = stackHeight(fluidHeight);
-        Layer basse = new Layer(-0.3d * ht, 0.3d, 0.2d, 0.7d);
-        Layer haute = new Layer(0.35d * ht, 0.3d, 0.05d, 0.7d);
+        Layer basse = new Layer(-0.3d, -0.3d * ht, 0.3d, 0.2d, 0.7d);
+        Layer haute = new Layer(0.35d, 0.35d * ht, 0.3d, 0.05d, 0.7d);
         return ht > 0.5d
-                ? new Layer[] { basse, haute, new Layer(0.7d * ht, 0.1d, 0.25d, 0.7d) }
+                ? new Layer[] { basse, haute, new Layer(0.7d, 0.7d * ht, 0.1d, 0.25d, 0.7d) }
                 : new Layer[] { basse, haute };
     }
 }

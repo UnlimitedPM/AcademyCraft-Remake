@@ -18,10 +18,13 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -63,6 +66,18 @@ public final class ImagPhaseLiquidRenderer {
 
     /** Au-dela de cette distance l'opacite passe sous le seuil de l'original : rien a peindre. */
     private static final double MAX_DISTANCE = 45.0d;
+
+    /**
+     * Le temps entre deux relevés des surfaces, en ticks.
+     *
+     * <p>Une surface de liquide ne change pas d'une image a l'autre, et la relever coute cher :
+     * chaque bloc interroge une vingtaine de blocs voisins, comme le rendu de l'eau de vanilla.
+     */
+    private static final int REFRESH_TICKS = 10;
+
+    /** Les nappes a peindre, relues par {@link #refreshSheets}. */
+    private static final List<Sheet> SHEETS = new ArrayList<>();
+    private static long sheetsTick = Long.MIN_VALUE;
 
     /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
     private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
@@ -127,6 +142,8 @@ public final class ImagPhaseLiquidRenderer {
                         .setTransparencyState(TRANSLUCENT)
                         .setDepthTestState(ALWAYS)
                         .setWriteMaskState(COLOR_ONLY)
+                        // Le sens de l'original : un lac se voit d'en haut comme d'en dessous.
+                        .setCullState(new RenderStateShard.CullStateShard(false))
                         .setOverlayState(NO_OVERLAY)
                         .setLightmapState(NO_LIGHTMAP)
                         .createCompositeState(false));
@@ -146,23 +163,29 @@ public final class ImagPhaseLiquidRenderer {
         if (mc.level == null) return;
         ClientChunkCache chunks = (ClientChunkCache) mc.level.getChunkSource();
 
-        List<BlockPos> visible = blocksAround(chunks, camera);
+        refreshSheets(mc, chunks, camera);
+
+        List<Sheet> visible = new ArrayList<>();
+        for (Sheet sheet : SHEETS) {
+            if (distanceTo(camera, sheet.pos()) <= MAX_DISTANCE) visible.add(sheet);
+        }
         if (visible.isEmpty()) return;
+        visible.sort(Comparator.comparingDouble((Sheet sheet) -> distanceTo(camera, sheet.pos())).reversed());
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         // Le temps de l'original : des secondes, pas des ticks.
         float time = (mc.level.getGameTime() + mc.getFrameTime()) / 20.0f;
 
-        for (BlockPos pos : visible) {
-            FluidState fluid = mc.level.getFluidState(pos);
-            ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(fluid.getOwnHeight());
-            float alpha = ImagPhaseLayers.alpha(distanceTo(camera, pos));
+        for (Sheet sheet : visible) {
+            float alpha = ImagPhaseLayers.alpha(distanceTo(camera, sheet.pos()));
+            ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(mean(sheet.corners()));
+            BlockPos pos = sheet.pos();
 
             pose.pushPose();
             pose.translate(pos.getX() - camera.x, pos.getY() - camera.y, pos.getZ() - camera.z);
             Matrix4f matrix = pose.last().pose();
             for (int i = 0; i < layers.length; i++) {
-                drawLayer(buffers.getBuffer(LAYERS[i]), matrix, layers[i], time, alpha);
+                drawLayer(buffers.getBuffer(LAYERS[i]), matrix, layers[i], sheet.corners(), time, alpha);
             }
             pose.popPose();
         }
@@ -173,50 +196,122 @@ public final class ImagPhaseLiquidRenderer {
         }
     }
 
+    /** Une surface prete : son bloc, et les quatre hauteurs de coin de sa surface. */
+    private record Sheet(BlockPos pos, float[] corners) {}
+
     /**
-     * Les blocs de liquide visibles, tries du plus loin au plus pres.
+     * Relit les blocs de liquide et leurs quatre hauteurs de coin, toutes les dix ticks.
      *
-     * <p>La portee vient de {@link ImagPhaseLayers#alpha} : au-dela de {@value #MAX_DISTANCE} blocs
-     * l'opacite passe sous le seuil de l'original, et il n'y a plus rien a peindre.
+     * <p>Appelee avant le dessin, depuis {@link #draw} : la liste des surfaces ne depend ni de
+     * l'image ni de l'angle, seulement du monde.
      */
-    private static List<BlockPos> blocksAround(ClientChunkCache chunks, Vec3 camera) {
-        List<BlockPos> found = new ArrayList<>();
+    private static void refreshSheets(Minecraft mc, ClientChunkCache chunks, Vec3 camera) {
+        long now = mc.level.getGameTime();
+        if (sheetsTick != Long.MIN_VALUE && now - sheetsTick < REFRESH_TICKS) return;
+        sheetsTick = now;
+        SHEETS.clear();
+
         int radius = (int) Math.ceil(MAX_DISTANCE / 16.0d) + 1;
         int centerX = SectionPos.blockToSectionCoord(camera.x);
         int centerZ = SectionPos.blockToSectionCoord(camera.z);
-
         for (int cx = centerX - radius; cx <= centerX + radius; cx++) {
             for (int cz = centerZ - radius; cz <= centerZ + radius; cz++) {
                 ChunkAccess chunk = chunks.getChunk(cx, cz, ChunkStatus.FULL, false);
                 if (!(chunk instanceof LevelChunk levelChunk)) continue;
-                collect(levelChunk, camera, found);
+                collect(mc.level, levelChunk, camera, SHEETS);
             }
         }
-
-        found.sort(Comparator.comparingDouble((BlockPos pos) -> distanceTo(camera, pos)).reversed());
-        return found;
     }
 
-    private static void collect(LevelChunk chunk, Vec3 camera, List<BlockPos> found) {
+    private static void collect(Level level, LevelChunk chunk, Vec3 camera, List<Sheet> found) {
         for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
+            BlockPos pos = entry.getKey();
             if (!(entry.getValue() instanceof ImagPhaseLiquidBlockEntity)) continue;
-            if (distanceTo(camera, entry.getKey()) > MAX_DISTANCE) continue;
-            found.add(entry.getKey().immutable());
+            if (distanceTo(camera, pos) > MAX_DISTANCE) continue;
+            found.add(new Sheet(pos.immutable(), cornerHeights(level, pos)));
         }
+    }
+
+    /**
+     * Les quatre hauteurs de coin du bloc, dans l'ordre des sommets du quad.
+     *
+     * <p>Copie du calcul de vanilla : sur un liquide qui coule, la surface n'est pas plane, et
+     * chaque coin vaut la moyenne ponderee des blocs qui le touchent. C'est ce qui fait que les
+     * nappes suivent la pente au lieu de flotter a plat au-dessus d'elle.
+     */
+    private static float[] cornerHeights(Level level, BlockPos pos) {
+        Fluid fluid = level.getFluidState(pos).getType();
+        float self = heightOf(level, fluid, pos);
+        float north = heightOf(level, fluid, pos.north());
+        float south = heightOf(level, fluid, pos.south());
+        float east = heightOf(level, fluid, pos.east());
+        float west = heightOf(level, fluid, pos.west());
+        return new float[] {
+                corner(level, fluid, self, north, west, pos.north().west()),
+                corner(level, fluid, self, north, east, pos.north().east()),
+                corner(level, fluid, self, south, east, pos.south().east()),
+                corner(level, fluid, self, south, west, pos.south().west()),
+        };
+    }
+
+    /** Portage de {@code LiquidBlockRenderer.getHeight} : la hauteur d'un bloc de fluide. */
+    private static float heightOf(Level level, Fluid fluid, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        FluidState fluidState = state.getFluidState();
+        if (!fluid.isSame(fluidState.getType())) {
+            // Un bloc plein vaut -1 : il ne participe pas a la surface, alors qu'un bloc vide
+            // vaut 0 et la tire vers le bas. C'est la distinction que fait vanilla.
+            return state.getCollisionShape(level, pos).isEmpty() ? 0f : -1f;
+        }
+        // Un bloc de fluide qui a le meme fluide au-dessus est cache : sa surface est le plafond.
+        return fluid.isSame(level.getBlockState(pos.above()).getFluidState().getType())
+                ? 1f : fluidState.getOwnHeight();
+    }
+
+    /** Portage de {@code LiquidBlockRenderer.calculateAverageHeight} : la hauteur d'un coin. */
+    private static float corner(Level level, Fluid fluid, float self, float sideA, float sideB,
+                                BlockPos diagonal) {
+        if (sideA >= 1f || sideB >= 1f) return 1f;
+        float[] acc = new float[2];
+        if (sideA > 0f || sideB > 0f) {
+            float d = heightOf(level, fluid, diagonal);
+            if (d >= 1f) return 1f;
+            addWeightedHeight(acc, d);
+        }
+        addWeightedHeight(acc, self);
+        addWeightedHeight(acc, sideA);
+        addWeightedHeight(acc, sideB);
+        return acc[1] <= 0f ? 0f : acc[0] / acc[1];
+    }
+
+    /** Portage de {@code LiquidBlockRenderer.addWeightedHeight} : une surface pleine pese plus. */
+    private static void addWeightedHeight(float[] acc, float height) {
+        if (height >= 0.8f) {
+            acc[0] += height * 10f;
+            acc[1] += 10f;
+        } else if (height >= 0f) {
+            acc[0] += height;
+            acc[1] += 1f;
+        }
+    }
+
+    private static float mean(float[] values) {
+        float sum = 0f;
+        for (float value : values) sum += value;
+        return sum / values.length;
     }
 
     /** Un quad horizontal, texture dans le coin oppose a celui ou on l'a lue. */
     private static void drawLayer(VertexConsumer out, Matrix4f matrix, ImagPhaseLayers.Layer layer,
-                                  float time, float alpha) {
-        double height = layer.height();
+                                  float[] corners, float time, float alpha) {
         double u = layer.offsetU(time);
         double v = layer.offsetV(time);
         double d = layer.density();
 
-        vertex(out, matrix, 0.0d, height, 0.0d, u, v, alpha);
-        vertex(out, matrix, 1.0d, height, 0.0d, u + d, v, alpha);
-        vertex(out, matrix, 1.0d, height, 1.0d, u + d, v + d, alpha);
-        vertex(out, matrix, 0.0d, height, 1.0d, u, v + d, alpha);
+        vertex(out, matrix, 0.0d, layer.heightAt(corners[0]), 0.0d, u, v, alpha);
+        vertex(out, matrix, 1.0d, layer.heightAt(corners[1]), 0.0d, u + d, v, alpha);
+        vertex(out, matrix, 1.0d, layer.heightAt(corners[2]), 1.0d, u + d, v + d, alpha);
+        vertex(out, matrix, 0.0d, layer.heightAt(corners[3]), 1.0d, u, v + d, alpha);
     }
 
     private static void vertex(VertexConsumer out, Matrix4f matrix, double x, double y, double z,
