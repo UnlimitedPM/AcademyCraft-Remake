@@ -151,4 +151,29 @@ class CGuiClickTest {
         assertTrue(!view.click(20, 4, 0), "un libelle n'a rien a faire");
         assertTrue(view.focused() == null, "et il rend le clavier");
     }
+
+    @Test
+    @DisplayName("une page cachee ne prend aucun clic")
+    void unePageCacheeNePrendRien() {
+        // Une seule page s'affiche, mais TOUTES restent dans l'arbre : c'est ainsi que le moteur les
+        // garde pretes, et c'est ce qui rendait leurs champs et leurs lignes cliquables quand meme.
+        // Le joueur, dans l'ecran d'une machine : « je ne peux pas recuperer l'item qui se trouve
+        // dans mon 9eme slot » — l'objet invisible de l'onglet sans fil repondait a sa place.
+        CWidget root = box("root", 0, 0, 400, 187);
+        CWidget shown = box("ui_inv", 0, 0, 176, 187);
+        CWidget hidden = box("page_wireless", 0, 0, 176, 187);
+        hidden.transform.doesDraw = false;
+
+        CWidget button = box("icon_connect", 150, 163, 16, 16);
+        hidden.add(button);
+        root.add(shown);
+        root.add(hidden);
+
+        boolean[] clicked = { false };
+        CGuiView view = new CGuiView(null, root);
+        view.onClick(button, () -> clicked[0] = true);
+
+        assertTrue(!view.click(158, 171, 0), "la page cachee doit laisser passer le clic");
+        assertTrue(!clicked[0], "et son bouton ne doit rien faire");
+    }
 }

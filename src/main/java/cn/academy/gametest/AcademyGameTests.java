@@ -1304,6 +1304,13 @@ public final class AcademyGameTests {
         assertValue(helper, 1, fusor.getInventory().getStackInSlot(ImagFusorBlockEntity.SLOT_INPUT).getCount(),
                 "le cristal de depart doit etre intact");
         assertValue(helper, 2999, fusor.getLiquidAmount(), "la phase doit etre intacte");
+
+        // Et la recette reste engagee : c'est elle que l'ecran affiche, en nombre et non en
+        // « IDLE ». Avant, elle etait remise a zero des qu'il manquait quelque chose puis reprise a
+        // la recherche suivante, et le texte battait (le joueur : « le texte fluctue en permanence
+        // entre 8000 et IDLE »).
+        assertTrue(helper, fusor.hasRecipe(), "la recette tient, meme sans assez de phase");
+        assertValue(helper, 3000, fusor.imagNeeded(), "et l'ecran annonce ce qu'elle demande");
         helper.succeed();
     }
 

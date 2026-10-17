@@ -159,8 +159,13 @@ public final class CGuiView {
      * </ul>
      */
     private static CWidget hitTest(CWidget widget, double mouseX, double mouseY) {
-        CWidget found = widget.transform.doesDraw && widget.isPointWithin(mouseX, mouseY)
-                ? widget : null;
+        // Un sous-arbre qui ne se dessine pas ne se touche pas non plus. Une page cachee reste dans
+        // l'arbre — c'est ainsi que le moteur la garde prete — et ses champs, eux, repondaient : le
+        // joueur ne pouvait plus prendre l'objet du dernier emplacement de sa barre rapide, sans
+        // rien voir sous son curseur.
+        if (!widget.transform.doesDraw || !widget.transform.enabled) return null;
+
+        CWidget found = widget.isPointWithin(mouseX, mouseY) ? widget : null;
 
         for (CWidget child : widget.children()) {
             CWidget deeper = hitTest(child, mouseX, mouseY);
@@ -773,9 +778,13 @@ public final class CGuiView {
     }
 
     private CWidget pick(CWidget widget, double mouseX, double mouseY) {
+        // Meme regle que le dessin, et meme raison que dans {@link #hitTest} : ce qui ne se voit pas
+        // ne prend pas le clic.
+        if (!widget.transform.doesDraw || !widget.transform.enabled) return null;
+
         boolean interactive = clicks.containsKey(widget)
                 || widget.text != null && widget.text.allowEdit;
-        CWidget found = interactive && widget.transform.doesDraw && widget.isPointWithin(mouseX, mouseY)
+        CWidget found = interactive && widget.isPointWithin(mouseX, mouseY)
                 ? widget : null;
 
         for (CWidget child : widget.children()) {

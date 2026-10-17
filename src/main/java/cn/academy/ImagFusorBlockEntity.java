@@ -231,20 +231,31 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     }
 
     /**
-     * Avance la fusion d'un tick, ou abandonne si une condition n'est plus
-     * remplie : entree disparue, energie insuffisante, cuve trop vide, ou sortie
-     * qui refuserait le resultat.
+     * Avance la fusion d'un tick, ou l'abandonne si l'entree ne correspond plus.
      *
-     * L'abandon remet l'avancement a zero, comme l'original. Une machine
-     * sous-alimentee ne progresse donc pas lentement, elle ne progresse pas.
+     * <p>Manquer d'energie ou de phase n'est PAS un abandon : la recette reste engagee et l'ecran
+     * continue d'afficher ce qu'elle demande. C'est ce que le joueur voyait battre : l'original
+     * remettait la recette a zero des qu'il manquait quelque chose, et comme le port relit le texte
+     * a chaque image, il alternait entre le nombre et « IDLE » a chaque nouvelle recherche.
      */
     private void continueWork(Level level, BlockPos pos) {
-        if (isActionBlocked() || energy < CONSUME_PER_TICK
-                || tank.getFluidAmount() < currentRecipe.liquid()) {
+        // L'entree ne correspond plus, ou la sortie refuserait le resultat : la commande est caduque.
+        if (isActionBlocked()) {
             currentRecipe = null;
             workCounter = 0;
             setLit(level, pos, false);
             setChanged();
+            return;
+        }
+
+        // Sous-alimentee : rien ne progresse et l'avancement deja fait est perdu, comme dans
+        // l'original — mais la recette tient, et le texte de l'ecran avec elle.
+        if (energy < CONSUME_PER_TICK || tank.getFluidAmount() < currentRecipe.liquid()) {
+            if (workCounter != 0) {
+                workCounter = 0;
+                setChanged();
+            }
+            setLit(level, pos, false);
             return;
         }
 
@@ -297,9 +308,16 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         return !currentRecipe.fits(inventory.getStackInSlot(SLOT_OUTPUT));
     }
 
-    /** Vrai si la machine est en train de fondre. */
+    /**
+     * Vrai si la fusion avance vraiment : une recette engagee, et de quoi la faire avancer.
+     *
+     * <p>Manquer d'energie ou de phase n'est pas « en train de fondre » : la recette reste engagee —
+     * l'ecran continue d'afficher ce qu'elle demande — mais le son et la lumiere s'eteignent.
+     */
     public boolean isWorking() {
-        return currentRecipe != null && !isActionBlocked();
+        return currentRecipe != null && !isActionBlocked()
+                && energy >= CONSUME_PER_TICK
+                && tank.getFluidAmount() >= currentRecipe.liquid();
     }
 
     // ------------------------------------------------------------------
