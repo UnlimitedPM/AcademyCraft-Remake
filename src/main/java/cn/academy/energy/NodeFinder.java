@@ -41,6 +41,11 @@ public final class NodeFinder {
      * d'un noeud disparu, hors de portee ou plein, puis cherche le noeud le plus
      * proche capable de l'accueillir.
      *
+     * <p>Ce filet ne prend QUE les noeuds sans mot de passe ({@link #accepts} ne regarde pas le mot de
+     * passe, et c'est voulu : le raccordement deja fait doit survivre a un mot de passe pose apres
+     * coup). Un noeud protege ne se rejoint qu'a la main, depuis l'onglet sans fil, ou le mot de passe
+     * se tape — sans quoi ce mot de passe ne garderait rien du tout.
+     *
      * @param pos position de la machine a raccorder
      * @return vrai si la machine est raccordee a un noeud apres l'appel
      */
@@ -58,8 +63,8 @@ public final class NodeFinder {
             data.unlinkUser(pos);
         }
 
-        NodeBlockEntity found = BlockEntityScan.nearest(level, pos, SEARCH_RANGE,
-                NodeBlockEntity.class, node -> accepts(node, pos, data));
+        NodeBlockEntity found = BlockEntityScan.nearest(level, pos, SEARCH_RANGE, NodeBlockEntity.class,
+                node -> node.getPassword().isEmpty() && accepts(node, pos, data));
         return found != null && data.linkUser(found.getBlockPos(), pos);
     }
 
@@ -240,7 +245,7 @@ public final class NodeFinder {
     public static boolean canJoin(BlockPos nodePos, MatrixBlockEntity matrix, double nodeRange) {
         if (!matrix.isInitialized()) return false;
         if (!matrix.canReach(nodePos)) return false;
-        return matrix.getBlockPos().distSqr(nodePos) <= nodeRange * nodeRange;
+        return matrix.reachSqr(nodePos) <= nodeRange * nodeRange;
     }
 
     /**

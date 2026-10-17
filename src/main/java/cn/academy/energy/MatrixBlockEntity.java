@@ -13,7 +13,9 @@ import javax.annotation.Nullable;
 
 import cn.academy.ModBlockEntities;
 import cn.academy.ModItems;
+import cn.academy.MatrixBlock;
 import cn.academy.MatrixMenu;
+import cn.academy.MatrixStructure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -219,11 +221,24 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
         buffer = value;
     }
 
+    /**
+     * Le carre de la distance entre le <b>centre</b> de la machine et cette position, en blocs.
+     *
+     * <p>C'est la seule definition de la distance d'un Matrix : sa portee et celle d'un noeud se
+     * mesurent toutes les deux depuis ce centre, sinon elles dependent du cote par lequel on
+     * s'approche (voir {@link MatrixStructure#centreDistSqr}).
+     */
+    public double reachSqr(BlockPos pos) {
+        return MatrixStructure.centreDistSqr(worldPosition.getX(), worldPosition.getY(), worldPosition.getZ(),
+                getBlockState().getValue(MatrixBlock.FACING),
+                pos.getX(), pos.getY(), pos.getZ());
+    }
+
     /** Vrai si un noeud a cette position est assez proche pour etre raccorde. */
     public boolean canReach(BlockPos nodePos) {
         if (!isWorking()) return false;
         double range = getRange();
-        return worldPosition.distSqr(nodePos) <= range * range;
+        return reachSqr(nodePos) <= range * range;
     }
 
     public ItemStackHandler getInventory() {

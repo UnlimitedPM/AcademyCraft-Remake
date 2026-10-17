@@ -435,6 +435,13 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
      * maximale theorique d'un Matrix : un noeud basique ne voit pas plus loin que neuf blocs, et
      * l'ancien rayon liait des noeuds a des Matrix qu'ils n'auraient jamais du voir.
      *
+     * <p>Et ce filet ne prend QUE les Matrix sans mot de passe : un reseau protege se rejoint a la
+     * main, depuis l'onglet, ou le mot de passe se tape. Un raccordement automatique a un reseau
+     * protege rendrait ce mot de passe inutile — ce que le joueur a vu tout de suite (« il se relie
+     * automatiquement au node qu'on pose meme si le matrix a un mot de passe, donc le mot de passe n'a
+     * aucun sens »). Le lien DEJA fait survit, lui, a un mot de passe pose apres coup : c'est
+     * {@code ensureLinked} qui le garde, et il ne demande que {@code canJoin}.
+     *
      * <p>Le parcours se fait par chunk (« block entities du chunk ») et non bloc par bloc : dans un
      * rayon de neuf blocs cela fait au pire quatre chunks au lieu de trois mille positions, et seuls
      * les chunks deja charges sont lus.
@@ -445,7 +452,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     private MatrixBlockEntity findMatrix(ServerLevel level, BlockPos pos) {
         double range = getRange();
         return BlockEntityScan.nearest(level, pos, range, MatrixBlockEntity.class,
-                matrix -> NodeFinder.canJoin(pos, matrix, range));
+                matrix -> matrix.getPassword().isEmpty() && NodeFinder.canJoin(pos, matrix, range));
     }
 
     @Nullable

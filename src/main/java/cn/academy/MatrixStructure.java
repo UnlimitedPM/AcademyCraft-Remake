@@ -46,4 +46,35 @@ public final class MatrixStructure {
     public static double centreZ(Direction facing) {
         return 0.5d + 0.5d * (left(facing).getStepZ() + back(facing).getStepZ());
     }
+
+    /**
+     * La hauteur du centre du cube, en blocs, depuis la base de l'ancrage.
+     *
+     * <p>Un bloc plein, et non un demi : le multi-bloc occupe DEUX blocs de haut, donc son centre est
+     * un bloc au-dessus du bas de l'ancrage. Le rendu, lui, pose son modele au milieu des quatre blocs
+     * du bas (un demi-bloc) — c'est une autre question, et c'est pour cela que les deux nombres sont
+     * separes.
+     */
+    public static final double MACHINE_HALF_HEIGHT = 1.0d;
+
+    /**
+     * Le carre de la distance entre le <b>centre</b> de la machine et un point, en blocs.
+     *
+     * <p>La portee se compte depuis le centre, et non depuis le bloc d'ancrage : celui-ci est un COIN
+     * du cube, donc deux des quatre cotes de la machine s'etendent d'un bloc vers le point vise et les
+     * deux autres s'en eloignent. Mesuree depuis le coin, la meme portee donne un noeud atteint
+     * quarante pour cent plus loin selon le cote — ce que le joueur a vu tout de suite : « comme le
+     * matrix fait du 2x2x2, il y a 2 cotes ou les nodes se relient a onze blocs de distance, et les 2
+     * autres cotes ou il se connecte a seulement neuf ».
+     *
+     * <p>Les coordonnees sont donnees en doubles et non en {@code BlockPos} pour que le calcul reste
+     * celui du rendu : c'est la meme origine, au demi-bloc pres.
+     */
+    public static double centreDistSqr(double anchorX, double anchorY, double anchorZ, Direction facing,
+                                       double x, double y, double z) {
+        double dx = x - (anchorX + centreX(facing));
+        double dy = y - (anchorY + MACHINE_HALF_HEIGHT);
+        double dz = z - (anchorZ + centreZ(facing));
+        return dx * dx + dy * dy + dz * dz;
+    }
 }

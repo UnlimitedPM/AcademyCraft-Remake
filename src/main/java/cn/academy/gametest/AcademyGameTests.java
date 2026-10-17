@@ -650,6 +650,66 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Un Matrix protege par un mot de passe ne se rejoint pas tout seul.
+     *
+     * <p>C'est le defaut signale par le joueur : « il se relie automatiquement au node qu'on pose meme
+     * si le matrix a un mot de passe, donc le mot de passe n'a aucun sens ». Le mot de passe se tape
+     * dans l'onglet sans fil ({@code wirelessTabAsksForTheNodePassword} tient le cote machine du meme
+     * contrat), et le raccordement automatique ne prend que les reseaux ouverts.
+     */
+    @GameTest(template = "empty")
+    public static void aProtectedMatrixIsNotJoinedAutomatically(GameTestHelper helper) {
+        MatrixBlockEntity matrix = wiredMatrix(helper, new BlockPos(1, 1, 1));
+        BlockPos nodeRel = new BlockPos(1, 1, 4);
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+        matrix.setPassword("academy");
+
+        // Le noeud tique et se raccorde tout seul : au bout d'une seconde, il doit avoir refuse.
+        helper.runAfterDelay(40, () -> {
+            assertValue(helper, null, ImagNetworkData.get(level).matrixOf(nodeAbs),
+                    "un reseau protege ne se rejoint pas tout seul");
+            helper.succeed();
+        });
+    }
+
+    /** Le temoin du precedent : le MEME montage, sans mot de passe, se raccorde bien tout seul. */
+    @GameTest(template = "empty")
+    public static void anOpenMatrixIsJoinedAutomatically(GameTestHelper helper) {
+        MatrixBlockEntity matrix = wiredMatrix(helper, new BlockPos(1, 1, 1));
+        BlockPos nodeRel = new BlockPos(1, 1, 4);
+        helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
+
+        ServerLevel level = helper.getLevel();
+        BlockPos nodeAbs = helper.absolutePos(nodeRel);
+
+        // Le raccordement retient la position du MATRIX, pas celle du noeud : c'est ce que l'onglet
+        // affiche, et c'est ce que le noeud cherche a rejoindre.
+        helper.succeedWhen(() -> assertValue(helper, matrix.getBlockPos(),
+                ImagNetworkData.get(level).matrixOf(nodeAbs),
+                "un reseau ouvert se rejoint tout seul"));
+    }
+
+    /**
+     * Un Matrix pret a accueillir un noeud : un reseau ne, un coeur et ses trois plaques, a trois
+     * blocs d'un noeud basique — donc dans ses neuf blocs de portee.
+     *
+     * <p>Le ssid est ce qui fait exister le reseau : sans lui il n'y a rien a rejoindre, et les deux
+     * tests ci-dessus ne diraient plus rien dans l'un ou l'autre sens.
+     */
+    private static MatrixBlockEntity wiredMatrix(GameTestHelper helper, BlockPos rel) {
+        MatrixBlockEntity matrix = placeMatrix(helper, rel);
+        for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
+            matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
+        }
+        matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_0.get()));
+        matrix.setSsid("academy");
+        return matrix;
+    }
+
     @GameTest(template = "empty")
     public static void matrixAcceptsOnlyPlatesAndCores(GameTestHelper helper) {
         MatrixBlockEntity matrix = placeMatrix(helper, new BlockPos(1, 1, 1));
@@ -773,6 +833,10 @@ public final class AcademyGameTests {
             matrix.getInventory().setStackInSlot(slot, new ItemStack(ModItems.CONSTRAINT_PLATE.get()));
         }
         matrix.getInventory().setStackInSlot(MatrixBlockEntity.SLOT_CORE, new ItemStack(ModItems.MAT_CORE_2.get()));
+        // Un Matrix sans nom n'a pas de reseau : il n'y a rien a rejoindre, et sans cette ligne le test
+        // attendait d'un noeud qu'il se raccorde a un reseau inexistant (c'est ce que l'onglet sans fil
+        // refusait deja d'afficher).
+        matrix.setSsid("academy");
 
         helper.setBlock(nodeRel, ModBlocks.NODE_BASIC.get());
         NodeBlockEntity node = (NodeBlockEntity) helper.getBlockEntity(nodeRel);

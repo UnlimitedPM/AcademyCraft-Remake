@@ -88,4 +88,31 @@ class MatrixStructureTest {
                     "centre en z pour " + facing);
         }
     }
+
+    @Test
+    @DisplayName("la portee se compte depuis le centre du cube, pas depuis le coin de l'ancrage")
+    void laPorteePartDuCentreDuCube() {
+        // Ancrage en (10, 64, 10) tourne vers le nord : ses huit parties occupent les cellules
+        // x 9..10 (vers `left`, l'ouest), y 64..65 et z 10..11 (vers `back`, le sud). Le centre du
+        // cube est donc en (10, 65, 11) : le milieu en x, le milieu en z, et UN BLOC au-dessus de la
+        // base pour la hauteur, le cube en faisant deux.
+        assertEquals(0.0d, MatrixStructure.centreDistSqr(10, 64, 10, Direction.NORTH,
+                10.0d, 65.0d, 11.0d), 1.0e-9d);
+
+        // Le defaut d'origine, vu par le joueur : la portee se comptait depuis le bloc d'ancrage, qui
+        // est un COIN du cube. Un noeud pose a douze blocs du centre etait donc plus loin sur deux des
+        // quatre cotes que sur les deux autres — « il y a 2 cotes ou les nodes se relient a onze blocs
+        // de distance, et les 2 autres cotes ou il se connecte a seulement neuf ». Depuis le centre,
+        // les quatre cotes donnent exactement la meme distance.
+        for (Direction side : Direction.Plane.HORIZONTAL) {
+            double distSqr = MatrixStructure.centreDistSqr(10, 64, 10, Direction.NORTH,
+                    10.0d + side.getStepX() * 12.0d, 65.0d, 11.0d + side.getStepZ() * 12.0d);
+            assertEquals(144.0d, distSqr, 1.0e-9d, "cote " + side);
+        }
+
+        // Et le coin de l'ancrage, lui, n'est pas le centre : il en est a la racine de deux. Le tester
+        // ici est ce qui empeche de remettre un demi-bloc de hauteur au lieu d'un bloc plein.
+        assertEquals(2.0d, MatrixStructure.centreDistSqr(10, 64, 10, Direction.NORTH,
+                10.0d, 64.0d, 10.0d), 1.0e-9d);
+    }
 }
