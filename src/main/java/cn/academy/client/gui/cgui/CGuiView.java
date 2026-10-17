@@ -236,7 +236,25 @@ public final class CGuiView {
 
     public void draw(GuiGraphics graphics, double mouseX, double mouseY) {
         blend();
+        // Les traits de l'arbre passent AVANT les widgets, donc sous tous les disques. L'original les
+        // dessinait par-dessus, mais avec un test de profondeur qui les effacait la ou un noeud se
+        // trouve : le resultat est le meme, et c'est celui que le joueur reclame — « les cercles des
+        // competences ne recouvrent pas les lignes blanches : si je passe ma souris sur une
+        // competence, il y a bien l'animation avec le cercle qui grandit, mais a travers on voit la
+        // ligne blanche en dessous alors que normalement non ». Les traits d'un noeud sont dessines
+        // avec lui, donc un enfant pouvait passer par-dessus le disque de son parent ; en un seul
+        // passage avant tout le reste, ce n'est plus possible.
+        drawLines(graphics, root);
         drawWidget(graphics, root, mouseX, mouseY);
+    }
+
+    /** Tous les traits d'un sous-arbre, dans l'ordre de l'arbre. */
+    private static void drawLines(GuiGraphics graphics, CWidget widget) {
+        if (!widget.transform.doesDraw || !widget.transform.enabled) return;
+        if (widget.line != null) drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
+        for (CWidget child : widget.children()) {
+            drawLines(graphics, child);
+        }
     }
 
     /**
@@ -342,14 +360,7 @@ public final class CGuiView {
             graphics.pose().popPose();
         }
 
-        // Le trait passe avant le noeud qu'il relie : l'original le dessinait APRES, mais avec un
-        // test de profondeur qui l'ecartait la ou le noeud se trouve — donc, a l'arrivee, la meme
-        // image. Les deux bouts du trait s'arretent d'ailleurs a douze unites et demie du centre de
-        // chaque noeud, c'est-a-dire en dehors du disque qui en fait onze et demie : ils ne se
-        // croisent jamais, et l'ordre ne se voit pas.
-        if (widget.line != null) {
-            drawLine(graphics, widget, widget.absX, widget.absY, widget.absScale);
-        }
+        // Le trait a deja ete dessine, avec tous les autres, avant le premier widget : voir draw().
         if (widget.disc != null) {
             drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
         }
@@ -620,6 +631,15 @@ public final class CGuiView {
                                     CWidget.DrawTexture window, double x, double y, int colour) {
         ResourceLocation texture = ResourceLocation.tryParse(window.texture);
         if (texture == null) return;
+
+        // Les images du developpeur sont dessinees PLUS GRANDES que leur fichier — le disque d'une
+        // fiche fait cinquante unites pour une image de cent vingt-huit pixels, qu'on voit donc a
+        // une autre echelle — d'ou le grain : « dans la page qui explique ce que fait la competence,
+        // elle est un peu pixelisee ». Le filtre lineaire les rend douces, et l'original les lisait
+        // deja ainsi (ses textures de developpeur passaient par preloadMipmapTexture).
+        if (window.texture != null && window.texture.contains("guis/developer/")) {
+            CGuiShaders.linear(texture);
+        }
 
         graphics.setColor(((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f,
                 (colour & 0xFF) / 255f, ((colour >>> 24) & 0xFF) / 255f);

@@ -321,8 +321,18 @@ public class CWidget {
         /** Et celle de l'anneau, qui deborde donc du disque. */
         public double ringSize = 31.0;
 
-        /** Et celle de l'icone, qui tient dedans. */
-        public double iconSize = 14.0;
+        /**
+         * Et celle de l'icone, qui tient dedans.
+         *
+         * <p>Treize, et non les quatorze de l'original. Son disque dessine occupe les quatre
+         * cinquiemes de ses vingt-trois unites, soit un rayon de neuf unites et demie ; une icone de
+         * quatorze a ses coins a neuf unites neuf — elle debordait donc du cercle, et le joueur l'a
+         * vu : « l'image des competences deborde des cercles », avec « des lignes noires entre la
+         * couleur du cercle et les bordures du carre de l'image ». L'original ne les voyait pas parce
+         * qu'il ECRETAIT l'icone sur la forme du disque, par un tour de profondeur ; a treize, les
+         * coins rentrent d'eux-memes.
+         */
+        public double iconSize = 13.0;
 
         /** Vrai quand la competence est apprise : c'est ce qui fait apparaitre l'anneau de remplissage. */
         public boolean drawFill;
