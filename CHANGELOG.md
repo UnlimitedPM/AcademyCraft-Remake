@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
+
+### English
+
+All of 0.1.3, plus the Ability Developer, its screen and its two machines.
+
+- **The skill tree draws like the original.** Its lines were invisible: the port asked the graphics card for a program that reads its vertices in one order and handed them over in another, so nothing came out and nothing complained. They now fade at both ends instead of stopping on a hard edge, pass under the nodes' discs, and their enlarged end follows the hover of its own node, as in 1.12.2 where the line lived inside the node's box.
+- **The card over the tree, and the text on it**, come from the original's own layout: the tree stays behind the card, the icon is clipped on its disc and keeps its brightness, the text falls where the original put it, a click counts anywhere on a node, and the line and the disc are smooth instead of stair-stepped.
+- **The two machines are 3D again, drawn the original's way.** The port drew them as a block model, and a translucent block-model layer does not write depth: the rear glass pane painted over the front one and hid the world behind. They now go through a block entity renderer, as in 1.12.2, with a translucent pass that writes depth, so the glass shows the world behind it. The vanilla outline is gone, the inside of the open shell is visible, and the glass alpha is the original's.
+- **And they sit where they should.** The block-model transform put them half a block down, half a block forward and half a block right; the original's placement (a half-block offset, scale from the model's origin) gave back the height and the depth. The foot still hung to one side, a flaw of the real mod, measured on both models at 0.072, so it is recentred on its block: the foot is exactly one block wide. Nothing else moved.
+- **The jammer jams.** Its placer is no longer spared, a power already running stops on entering the field, its whitelist reaches the server, and its radius is set by 5 or 10.
+- **The Matrix's reach** is counted from the centre of its two-by-two-by-two cube, so a node reaches equally far from any of the four sides; nothing joins a network by itself any more, and Escape leaves a field.
+- **The former speaks the original's language**: its modes carry the names of 1.12.2, a hovered mode shows its name in a box, and its ores go through the blast furnace. The solar panel's screen no longer shows a frozen buffer, the fusor no longer forgets what it was doing and its recipe stops flickering between 8000 and IDLE, a hidden page no longer takes clicks, and the inventory's frames sit on their slots again.
+- **Tests**: 167 in-game tests, 850 unit tests.
+
+### Francais
+
+Tout le 0.1.3, plus le developpeur de competences, son ecran et ses deux machines.
+
+- **L'arbre se dessine comme l'original.** Ses traits etaient invisibles : le port demandait a la carte graphique un programme qui lit ses sommets dans un ordre et les lui donnait dans l'autre, donc rien ne sortait et rien ne se plaignait. Ils s'effacent maintenant a leurs deux bouts au lieu de s'arreter net, passent sous les disques des noeuds, et leur bout grossi suit le survol de son propre noeud, comme en 1.12.2 ou le trait vivait dans la boite du noeud.
+- **La fiche au-dessus de l'arbre, et son texte**, viennent de la disposition de l'original : l'arbre reste derriere la fiche, l'icone est ecretee sur son disque et garde son eclat, le texte tombe ou l'original le mettait, un clic compte n'importe ou sur un noeud, et le trait comme le disque sont lisses au lieu d'etre en escalier.
+- **Les deux machines sont de nouveau en 3D, dessinees comme l'original.** Le port les dessinait en modele de bloc, et une couche de bloc translucide n'ecrit pas la profondeur : la vitre arriere repeignait celle de devant et cachait le monde derriere. Elles passent maintenant par un rendu de block entity, comme en 1.12.2, avec une couche translucide qui ecrit la profondeur : a travers la vitre on voit le monde. Le lisere vanilla a disparu, l'interieur de la coque ouverte se voit, et l'alpha de la vitre est celui de l'original.
+- **Et elles sont a leur place.** La transformation du modele de bloc les posait un demi-bloc plus bas, un demi-bloc en avant et un demi-bloc a droite ; la mise en place de l'original (un demi-bloc d'ecart, echelle depuis l'origine du modele) a rendu la hauteur et la profondeur. Le pied debordait encore d'un cote, un defaut du vrai mod, mesure sur les deux modeles a 0,072 : il est donc recentre sur sa brique, et il fait pile un bloc de large. Rien d'autre n'a bouge.
+- **Le brouilleur brouille.** Son poseur n'est plus epargne, un pouvoir deja en cours s'arrete quand on entre dans le champ, sa liste blanche arrive au serveur, et son rayon se regle par 5 ou 10.
+- **La portee du Matrix** se compte depuis le centre de son cube de deux blocs, donc un noeud porte aussi loin des quatre cotes ; plus rien ne se raccorde tout seul a un reseau, et Echap sort d'un champ.
+- **Le formeur parle la langue de l'original** : ses modes portent les noms de 1.12.2, un mode survole montre son nom dans sa boite, et ses minerais passent au haut-fourneau. L'ecran du panneau solaire ne montre plus un tampon fige, le fusor n'oublie plus ce qu'il faisait et sa recette ne bat plus entre 8000 et IDLE, une page cachee ne prend plus les clics, et les cadres de l'inventaire retombent sur leurs emplacements.
+- **Des tests** : 167 tests en jeu, 850 tests unitaires.
+
 ## 0.1.3 - les machines, la police et le reseau / the machines, the font and the network
 
 ### English
