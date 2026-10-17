@@ -273,6 +273,13 @@ public class CWidget {
         /** La part dessinee, de zero a un : la poussee de l'animation. */
         public double progress = 1.0;
 
+        /**
+         * Le noeud d'ou le trait part. Son survol ecarte le premier bout, comme celui du noeud qui
+         * porte le trait ecarte le second : dans l'original le trait vit dans la boite du noeud, et
+         * un noeud grossi repousse donc ses bouts au lieu de passer par-dessus.
+         */
+        public CWidget source;
+
         public int red = 255;
         public int green = 255;
         public int blue = 255;

@@ -350,7 +350,8 @@ public final class CGuiView {
         // la ligne blanche derriere ».
 
         // Les traits des enfants d'abord, tous ensemble : c'est ce qui les met SOUS les disques du
-        // parent comme sous les leurs.
+        // parent comme sous les leurs. Chaque bout suit le survol de son propre noeud : celui du
+        // parent est donne par le trait lui-meme, celui de l'enfant se lit dans son disque.
         for (CWidget child : widget.children()) {
             if (child.transform.doesDraw && child.transform.enabled && child.line != null) {
                 drawLine(graphics, child, child.absX, child.absY, child.absScale);
@@ -364,6 +365,18 @@ public final class CGuiView {
         for (CWidget child : widget.children()) {
             drawWidget(graphics, child, mouseX, mouseY);
         }
+    }
+
+    /**
+     * Un bout de trait, ecarte de son noeud par l'echelle de survol de ce noeud.
+     *
+     * <p>Le bout est a {@code inset} du centre ; le noeud grossi d'un cinquieme le repousse d'un
+     * cinquieme de cet ecart, et l'ecart visible reste donc le meme. Le {@code unit} est la direction
+     * qui va du centre vers le bout : pour le bout du parent c'est celle du trait, pour celui de
+     * l'enfant c'est l'inverse.
+     */
+    static double movedEnd(double point, double unit, double inset, double hover) {
+        return point + unit * inset * (hover - 1.0d);
     }
 
     /**
@@ -383,8 +396,40 @@ public final class CGuiView {
 
         double x0 = originX + line.x0 * scale;
         double y0 = originY + line.y0 * scale;
-        double x1 = x0 + (line.x1 - line.x0) * scale * line.progress;
-        double y1 = y0 + (line.y1 - line.y0) * scale * line.progress;
+        double x1 = originX + line.x1 * scale;
+        double y1 = originY + line.y1 * scale;
+
+        double ux = x1 - x0;
+        double uy = y1 - y0;
+        double norm = Math.sqrt(ux * ux + uy * uy);
+        if (norm <= 0) return;
+        ux /= norm;
+        uy /= norm;
+
+        // LES DEUX BOUTS SUIVENT LEUR NOEUD. Dans l'original le trait vit dans la boite du noeud :
+        // le survol le grossit avec son disque, et chaque bout garde donc toujours le meme ecart au
+        // centre qu'il regarde. Le port laissait les bouts en place ; le noeud grossi passait
+        // par-dessus le sien, et le joueur voyait le trait au travers du cerne de progression —
+        // « ce qui fait grandir les cercles me fait toujours voir les lignes en transparence ».
+        // L'ecart se lit dans la geometrie : c'est la distance du bout au centre de la boite.
+        double halfWidth = widget.transform.width / 2.0d;
+        double halfHeight = widget.transform.height / 2.0d;
+        double inset = Math.sqrt((line.x1 - halfWidth) * (line.x1 - halfWidth)
+                + (line.y1 - halfHeight) * (line.y1 - halfHeight)) * scale;
+        double childHover = widget.disc == null ? 1.0d : widget.disc.drawScale;
+        CWidget source = line.source;
+        double parentHover = source == null || source.disc == null ? 1.0d : source.disc.drawScale;
+
+        // Le premier bout s'ecarte de son parent, le second de son enfant. Le trait reste donc sur
+        // le meme axe : seule sa longueur change.
+        x0 = movedEnd(x0, ux, inset, parentHover);
+        y0 = movedEnd(y0, uy, inset, parentHover);
+        x1 = movedEnd(x1, -ux, inset, childHover);
+        y1 = movedEnd(y1, -uy, inset, childHover);
+
+        // Le trait qui pousse part du bout du parent et va vers celui de l'enfant.
+        x1 = x0 + (x1 - x0) * line.progress;
+        y1 = y0 + (y1 - y0) * line.progress;
 
         double dx = x1 - x0;
         double dy = y1 - y0;
@@ -393,8 +438,8 @@ public final class CGuiView {
 
         // L'epaisseur aussi a sa partie fractionnaire : arrondie, elle decalait le trait d'un
         // demi-pixel et le bord du quad se voyait en marches d'escalier sur les diagonales, ce que le
-        // joueur a vu.
-        double width = Math.max(1.0d, line.thickness * scale);
+        // joueur a vu. Et elle suit le survol, comme le reste du noeud.
+        double width = Math.max(1.0d, line.thickness * scale * childHover);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x0, y0, 0);

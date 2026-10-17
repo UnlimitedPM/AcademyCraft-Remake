@@ -17,7 +17,9 @@ import net.minecraft.world.entity.player.Inventory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * L'ecran du developpeur d'aptitudes : l'arbre des competences de l'original.
@@ -563,6 +565,18 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             nodes.add(node);
             index++;
         }
+
+        // Le trait connait le noeud d'ou il part : son survol ecarte le premier bout, comme celui du
+        // noeud qui le porte ecarte le second. Sans cela, le disque grossi passait par-dessus le bout
+        // et le joueur voyait le trait au travers du cerne de progression.
+        Map<Skill, CWidget> bySkill = new HashMap<>();
+        for (Node node : nodes) bySkill.put(node.skill, node.widget);
+        for (Node node : nodes) {
+            if (node.widget.line == null) continue;
+            Skill parent = node.skill.getParent();
+            node.widget.line.source = parent == null ? null : bySkill.get(parent);
+        }
+
         signature = signature();
     }
 
