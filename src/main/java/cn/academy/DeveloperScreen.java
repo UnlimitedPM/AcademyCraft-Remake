@@ -156,9 +156,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * les posait AU-DESSUS de l'icone, a moins quarante-six : le joueur voyait le nom et la
      * description au-dessus du dessin, alors que l'original les met dessous.
      */
-    private static final double TITLE_Y = 34.0;
-    private static final double SUBTITLE_Y = 44.0;
-    private static final double DESCRIPTION_Y = 53.0;
+    private static final double TITLE_Y = 29.0;
+    private static final double SUBTITLE_Y = 39.0;
+    private static final double DESCRIPTION_Y = 49.0;
 
     /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
     private static final double CONSOLE_WIDTH = 240.0;
@@ -821,9 +821,11 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // Les noeuds qui viennent de naitre n'ont pas encore de place : sans ce repose, ils se
         // dessineraient tous au coin, le temps d'une image.
         reflow();
-        // Et si une surface est ouverte, le nouvel arbre se cache a son tour : il prendrait sinon le
-        // clic destine au voile, et se dessinerait par-dessus.
-        hideTree(surface != null);
+        // Et si une surface est ouverte, l'arbre reste dessine SOUS son voile : c'est ce que faisait
+        // l'original, dont le voile couvrait tout l'ecran sans rien cacher — le joueur : « quand on
+        // lit ce que fait l'attaque, on doit quand meme voir l'interface de base derriere (avec
+        // toutes les competences, leur cercle d'xp etc) ».
+        reflow();
     }
 
     // ------------------------------------------------------------------
@@ -1133,7 +1135,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         surfaceSince = now();
         surfaceClosing = false;
-        hideTree(true);
     }
 
     /**
@@ -1166,14 +1167,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (surface != null && page != null) page.remove(surface);
         surface = null;
         surfaceClosing = false;
-        hideTree(false);
-    }
-
-    /** L'arbre se cache tant qu'une surface est ouverte : voir {@link #open}. */
-    private void hideTree(boolean hidden) {
-        for (Node node : nodes) {
-            node.widget.transform.doesDraw = !hidden;
-        }
     }
 
     /** Le fondu de la surface : elle monte a sept dixiemes, et redescend quand on la referme. */

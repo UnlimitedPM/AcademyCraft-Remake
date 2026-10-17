@@ -371,6 +371,8 @@ public final class CGuiView {
     private static void drawLine(GuiGraphics graphics, CWidget widget, double originX,
                                  double originY, double scale) {
         CWidget.Line line = widget.line;
+        ResourceLocation texture = ResourceLocation.tryParse(line.texture);
+        if (texture == null) return;
 
         double x0 = originX + line.x0 * scale;
         double y0 = originY + line.y0 * scale;
@@ -382,7 +384,17 @@ public final class CGuiView {
         double length = Math.sqrt(dx * dx + dy * dy);
         if (length < 1) return;
 
+        // L'epaisseur aussi a sa partie fractionnaire : arrondie, elle decalait le trait d'un
+        // demi-pixel et le bord du quad se voyait en marches d'escalier sur les diagonales, ce que le
+        // joueur a vu. Le quad se dessine sur une epaisseur entiere, et la pose le ramene a la bonne.
         double width = Math.max(1.0d, line.thickness * scale);
+        int wholeWidth = Math.max(1, (int) Math.floor(width));
+        float squash = (float) (width / wholeWidth);
+        // La longueur a sa partie fractionnaire : le trait qui pousse avancait donc d'un pixel entier a
+        // la fois, et le joueur l'a vu — « parfois les lignes blanches augmentent d'un pixel en trop ».
+        // Le quad se dessine sur sa longueur entiere, et l'echelle de la pose etire ce qu'il reste.
+        int whole = (int) Math.floor(length);
+        float stretch = (float) (length / whole);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x0, y0, 0);
@@ -390,16 +402,21 @@ public final class CGuiView {
         // donne donc tel quel, sans le retourner.
         graphics.pose().mulPose(Axis.ZP.rotation((float) Math.atan2(dy, dx)));
         // Le demi-pixel d'epaisseur, dans le repere tourne : c'est le CENTRE du trait qui doit tomber
-        // sur l'axe qui joint les deux noeuds, et non son bord.
+        // sur l'axe qui joint les deux noeuds, et non son bord. Arrondi, ce decalage posait le trait a
+        // cheval sur deux pixels, ce qui se voyait en marches d'escalier sur les diagonales.
         graphics.pose().translate(0.0d, -width / 2.0d, 0.0d);
+        graphics.pose().scale(stretch, squash, 1f);
 
-        // Le trait passe par le type LISSE, et garde ses dimensions fractionnaires : c'est ce qui
-        // efface les escaliers de ses diagonales. Le port arrondissait sa longueur et son epaisseur
-        // pour les dessiner en {@code blit}, au plus proche voisin — deux raisons pour que les bords
-        // mordent la grille de pixels, et le joueur les voyait toujours : « les lignes blanches en
-        // diagonales ont toujours les escaliers visibles, il faudrait donc faire de l'anti aliasing ».
-        CGuiShaders.strip(graphics, line.texture, length, width,
-                line.red, line.green, line.blue, line.alpha);
+        // La texture demandee LISSE. Un trait pose de travers est le pire cas du plus proche voisin :
+        // chacun de ses texels tombe sur des pixels differents, et la ligne blanche se decoupe en
+        // marches. Filtree, elle se fond — c'est ce que l'original obtenait en chargeant ses traits
+        // par {@code preloadMipmapTexture} : « les lignes blanches en diagonales ont toujours les
+        // escaliers visibles, il faudrait donc faire de l'anti aliasing ».
+        CGuiShaders.linear(texture);
+        graphics.setColor(line.red / 255f, line.green / 255f, line.blue / 255f, line.alpha / 255f);
+        blend();
+        graphics.blit(texture, 0, 0, whole, wholeWidth, 0f, 0f, 1, 1, 1, 1);
+        graphics.setColor(1f, 1f, 1f, 1f);
         graphics.pose().popPose();
     }
 
@@ -470,19 +487,29 @@ public final class CGuiView {
         ResourceLocation texture = ResourceLocation.tryParse(path);
         if (texture == null) return;
 
-        // La position EXACTE dans la pose, et le dessin LISSE : les trois morceaux d'un noeud se
-        // centrent ainsi sur le meme point, et leurs bords se fondent au lieu de sauter d'un pixel a
-        // l'autre. Arrondie au plus proche voisin, une image de cent vingt-huit pixels reduite a
-        // vingt-trois faisait un cerne casse, que le joueur lisait comme un decalage avec l'anneau
-        // de progression : « j'ai l'impression qu'il y a un petit decalage du cercle en lui meme avec
-        // le cercle qui donne le pourcentage ».
+        // La position EXACTE, la taille entiere : les trois morceaux d'un noeud se centrent donc sur
+        // le meme point. Arrondie, elle ne le faisait pas — le disque fait 23 et le cerne 31, deux
+        // tailles qui ne tombent pas sur la meme parite — et le cerne se dessinait un demi-pixel a
+        // cote du disque, ce qui se voit a l'ecran comme un rond mal cadre : « le rond en dessous de
+        // l'image de la competence est mal cadre ».
+        //
+        // Et la texture est demandee LISSE : ces images font cent vingt-huit pixels pour un dessin de
+        // vingt-trois, donc reduites de cinq a un, et au plus proche voisin un cerne de huit texels
+        // tombait sur un ou deux pixels en sautant ailleurs — casse par endroits, ce que le joueur
+        // lisait comme un decalage avec l'anneau de progression : « j'ai l'impression qu'il y a un
+        // petit decalage du cercle en lui meme avec le cercle qui donne le pourcentage ».
         double px = Math.floor(x);
         double py = Math.floor(y);
 
+        CGuiShaders.linear(texture);
+        graphics.setColor(red / 255f, green / 255f, blue / 255f, alpha / 255f);
+        blend();
         graphics.pose().pushPose();
         graphics.pose().translate((float) (x - px), (float) (y - py), 0f);
-        CGuiShaders.textured(graphics, path, w, h, red, green, blue, alpha);
+        graphics.blit(texture, (int) px, (int) py,
+                (int) Math.round(w), (int) Math.round(h), 0f, 0f, 1, 1, 1, 1);
         graphics.pose().popPose();
+        graphics.setColor(1f, 1f, 1f, 1f);
     }
 
     /**
