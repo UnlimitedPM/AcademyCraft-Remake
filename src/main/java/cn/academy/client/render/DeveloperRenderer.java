@@ -50,13 +50,15 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
      * <p>Le pied — les faces a moins de 0,05 du sol — couvre {@code x -1,072..0,928} dans les deux
      * fichiers OBJ, soit un centre a {@code -0,072} : le vrai mod le laisse donc deborder d'un cote
      * et la machine parait poussee vers la droite, avec un pied qui ne tombe pas au milieu de la
-     * brique. On le recentre ({@code +0,072} modele = {@code +0,036} bloc sur le cote), puis on
-     * avance la machine d'un cheveu ({@code -0,04} modele = {@code +0,0185} bloc vers l'avant).
-     * Le pied fait pile deux unites de large, donc une fois recentre il couvre exactement la
-     * brique.
+     * brique. On le recentre ({@code +0,072} modele = {@code +0,036} bloc sur le cote) : le pied
+     * fait pile deux unites de large, donc une fois recentre il couvre exactement la brique.
+     *
+     * <p>Reste l'avant : le vrai mod affleure pile le bord de la brique. Le joueur a trouve ca
+     * « pas assez en avant », puis la premiere correction (« un demi-centimetre ») « trop en
+     * avant » : on ne garde donc qu'un demi, {@code -0,01} modele = {@code +0,005} bloc.
      */
     private static final float SHIFT_SIDE = 0.072f;
-    private static final float SHIFT_FORWARD = -0.04f;
+    private static final float SHIFT_FORWARD = -0.01f;
 
     public DeveloperRenderer(BlockEntityRendererProvider.Context context) {}
 
