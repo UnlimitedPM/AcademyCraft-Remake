@@ -97,12 +97,36 @@ public final class ImagPhaseLiquidRenderer {
                     });
 
     /**
-     * La profondeur est toujours acceptee ({@code GL_ALWAYS}) : c'est ce que faisait
-     * l'original, et sans cela les nappes restent enfermees dans le bloc de fluide, qui
-     * est noir et opaque.
+     * Le test de profondeur, entierement coupe.
+     *
+     * <p>PIEGE PAYE : `new RenderStateShard.DepthTestStateShard(nom, 519)` ne fait RIEN. Verifie
+     * dans la classe elle-meme, dont le `setupRenderState` est vide quand la fonction vaut 519
+     * (c'est ainsi que vanilla declare son `NO_DEPTH_TEST`, qui ne coupe donc rien tout seul et
+     * s'appuie sur l'etat courant). Les nappes restaient testees en profondeur : le liquide, noir
+     * et opaque, les cachait, alors que l'original faisait `glDisable(GL_DEPTH_TEST)` et les
+     * laissait voir « au travers meme des murs », comme le joueur le decrit.
      */
+    private static final class SansProfondeur extends RenderStateShard.DepthTestStateShard {
+
+        SansProfondeur(String name) {
+            super(name, 519);
+        }
+
+        @Override
+        public void setupRenderState() {
+            RenderSystem.disableDepthTest();
+        }
+
+        @Override
+        public void clearRenderState() {
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthFunc(515);
+        }
+    }
+
+    /** La profondeur, coupee pour de vrai. */
     private static final RenderStateShard.DepthTestStateShard ALWAYS =
-            new RenderStateShard.DepthTestStateShard("academy_imag_phase_always", 519);
+            new SansProfondeur("academy_imag_phase_no_depth");
 
     /** La couleur, mais pas la profondeur : une nappe ne cache pas celle qui la suit. */
     private static final RenderStateShard.WriteMaskStateShard COLOR_ONLY =
@@ -142,8 +166,8 @@ public final class ImagPhaseLiquidRenderer {
      * (« could not find sampler named Sampler2 »).
      *
      * <p>Les etats de Minecraft sont inaccessibles depuis un mod, donc refaits ici :
-     * melange alpha comme l'eau, profondeur toujours acceptee (c'est la difference), et
-     * couleur ecrite mais pas la profondeur.
+     * melange alpha comme l'eau, aucune profondeur (c'est la difference), et couleur ecrite mais
+     * pas la profondeur.
      */
     private static RenderType layer(ResourceLocation texture) {
         return RenderType.create("academy_imag_phase_layer",
