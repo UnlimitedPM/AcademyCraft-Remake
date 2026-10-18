@@ -4,8 +4,12 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.minecraftforge.common.SoundActions;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -31,6 +35,49 @@ public class ModFluids {
                     .density(2000)
                     .canSwim(false)) { // Désactive la nage horizontale
 
+                /**
+                 * La descente dans le liquide, celle de la 1.12.2.
+                 *
+                 * <p>PIEGE DE VERSION : par defaut Forge laisse faire la physique de l'eau, et
+                 * celle de la 1.20.1 retire la gravite DIVISEE PAR SEIZE a chaque tick
+                 * (`LivingEntity.getFluidFallingAdjustedMovement` : `motion.y - gravity / 16`).
+                 * La 1.12.2 la retirait pleine moins son frein de 0,8, donc on descendait quatre
+                 * fois plus vite. Le joueur l'a senti tout de suite : « on coule très lentement
+                 * dedans alors que normalement non ».
+                 *
+                 * <p>C'est donc la branche de l'eau de `LivingEntity.travel`, recopiee avec
+                 * `gravity / 4` : a la gravite d'un joueur (0,08) cela fait 0,02 par tick, le
+                 * chiffre exact de `Entity.updateMotion` en 1.12.2. Rendre `true` dit a Forge que
+                 * le deplacement est fait, ce qui evite sa version.
+                 */
+                @Override
+                public boolean move(FluidState state, LivingEntity entity, Vec3 input, double gravity) {
+                    double departY = entity.getY();
+
+                    entity.moveRelative(0.02f, input);
+                    entity.move(MoverType.SELF, entity.getDeltaMovement());
+                    Vec3 motion = entity.getDeltaMovement();
+                    if (entity.horizontalCollision && entity.onClimbable()) {
+                        motion = new Vec3(motion.x, 0.2d, motion.z);
+                    }
+
+                    // Le frein de l'eau, puis la gravite : `motionY * 0.8 - 0.02` en 1.12.2, la ou
+                    // la 1.20.1 fait `motionY * 0.8 - gravite / 16`.
+                    motion = new Vec3(motion.x * 0.8d, motion.y * 0.8d, motion.z * 0.8d);
+                    if (!entity.isNoGravity()) {
+                        motion = new Vec3(motion.x, motion.y - gravity / 4.0d, motion.z);
+                    }
+
+                    // La force de la 1.12.2 quand on nage contre une paroi et qu'il y a de la place
+                    // au-dessus de la tete : on remonte le long du mur au lieu d'y rester colle.
+                    if (entity.horizontalCollision
+                            && entity.isFree(motion.x, motion.y + 0.6d - entity.getY() + departY, motion.z)) {
+                        motion = new Vec3(motion.x, 0.3d, motion.z);
+                    }
+                    entity.setDeltaMovement(motion);
+                    return true;
+                }
+
                 @Override
                 public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
                     consumer.accept(new IClientFluidTypeExtensions() {
@@ -47,10 +94,10 @@ public class ModFluids {
                         private static final ResourceLocation OVERLAY =
                                 ResourceLocation.withDefaultNamespace("textures/misc/underwater.png");
 
-                        // Le bleu sombre de l'eau, celui de `EntityRenderer.updateFogColor`
-                        // en 1.12.2 pour un bloc de material eau.
-                        private static final Vector3f FOG = new Vector3f(0.02f, 0.02f, 0.2f);
-
+                        // Le bleu de l'eau, celui de `EntityRenderer.updateFogColor` en 1.12.2
+                        // pour un bloc de material eau, remonte d'un cran pour que le voile se
+                        // lise comme bleu et non comme du noir.
+                        private static final Vector3f FOG = new Vector3f(0.03f, 0.05f, 0.28f);
                         @Override
                         public ResourceLocation getStillTexture() { return STILL; }
                         @Override

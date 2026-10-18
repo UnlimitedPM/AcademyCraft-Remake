@@ -71,9 +71,13 @@ public final class ClientRenderEvents {
      * joueur voyait a travers : « a l'interieur du liquide, on voit tout en transparent alors que
      * dans le vrai mod on a le filtre a l'ecran comme quand on est dans de l'eau ».
      *
-     * <p>Les distances sont celles de l'eau de vanilla, relevees dans {@code FogRenderer} :
-     * de -8 a 96 blocs, et d'autant plus courtes que la vision sous l'eau est mauvaise. Forge
-     * n'applique un changement que si l'evenement est annule.
+     * <p>Les distances sont celles de l'eau de vanilla, relevees dans {@code FogRenderer}, mais
+     * beaucoup plus courtes : la 1.20.1 laisse voir a 96 blocs sous l'eau, la 1.12.2 a une
+     * quinzaine. Le joueur compare au vrai mod — « quand on est dans le liquide, on a pas assez le
+     * masque bleu a l'ecran » — et cette distance EST ce masque : tout ce qui est au-dela prend la
+     * couleur du brouillard. Forge n'applique un changement que si l'evenement est annule.
+     *
+     * <p>C'est ce chiffre qu'il faut bouger si le voile est trop dense ou trop leger.
      */
     @SubscribeEvent
     public static void leBrouillardDansLeLiquide(ViewportEvent.RenderFog event) {
@@ -81,8 +85,8 @@ public final class ClientRenderEvents {
         LocalPlayer player = mc.player;
         if (player == null) return;
         if (!player.isEyeInFluidType(ModFluids.PHASE_LIQUID_TYPE.get())) return;
-        event.setNearPlaneDistance(-8.0f);
-        event.setFarPlaneDistance(96.0f * Math.max(0.25f, player.getWaterVision()));
+        event.setNearPlaneDistance(-4.0f);
+        event.setFarPlaneDistance(12.0f * Math.max(0.25f, player.getWaterVision()));
         event.setFogShape(FogShape.CYLINDER);
         event.setCanceled(true);
     }
