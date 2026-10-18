@@ -1,5 +1,8 @@
 package cn.academy;
 
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.level.material.Fluid;
@@ -11,6 +14,7 @@ import net.minecraftforge.fluids.ForgeFlowingFluid;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import org.joml.Vector3f;
 
 import java.util.function.Consumer;
 
@@ -37,10 +41,29 @@ public class ModFluids {
                         private static final ResourceLocation STILL = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/black");
                         private static final ResourceLocation FLOW = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "block/black");
 
+                        // Le voile de l'eau de vanilla, quand la tete est dans le liquide.
+                        // L'original l'avait sans rien demander : son bloc etait en
+                        // `Material.WATER`, et Minecraft appliquait le filtre de l'eau.
+                        private static final ResourceLocation OVERLAY =
+                                ResourceLocation.withDefaultNamespace("textures/misc/underwater.png");
+
+                        // Le bleu sombre de l'eau, celui de `EntityRenderer.updateFogColor`
+                        // en 1.12.2 pour un bloc de material eau.
+                        private static final Vector3f FOG = new Vector3f(0.02f, 0.02f, 0.2f);
+
                         @Override
                         public ResourceLocation getStillTexture() { return STILL; }
                         @Override
                         public ResourceLocation getFlowingTexture() { return FLOW; }
+                        @Override
+                        public ResourceLocation getRenderOverlayTexture(Minecraft mc) { return OVERLAY; }
+
+                        @Override
+                        public Vector3f modifyFogColor(Camera camera, float partialTick, ClientLevel level,
+                                                       int renderDistance, float darkenWorldAmount,
+                                                       Vector3f fluidFogColor) {
+                            return FOG;
+                        }
                     });
                 }
             });

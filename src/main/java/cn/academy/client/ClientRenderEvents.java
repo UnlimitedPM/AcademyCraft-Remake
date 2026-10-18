@@ -2,11 +2,16 @@ package cn.academy.client;
 
 import cn.academy.AcademyCraft;
 import cn.academy.DeveloperBlock;
+import cn.academy.ModFluids;
+import com.mojang.blaze3d.shaders.FogShape;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderHighlightEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.client.event.ViewportEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
@@ -50,5 +55,29 @@ public final class ClientRenderEvents {
         if (viewer.level().getBlockState(pos).getBlock() instanceof DeveloperBlock) {
             event.setCanceled(true);
         }
+    }
+
+    /**
+     * Le brouillard de l'eau, quand la tete est dans l'imag phase liquide.
+     *
+     * <p>L'original n'avait rien a faire pour l'avoir : son bloc etait en {@code Material.WATER},
+     * et Minecraft appliquait le brouillard et le voile de l'eau. Le port n'en avait aucun — le
+     * joueur voyait a travers : « a l'interieur du liquide, on voit tout en transparent alors que
+     * dans le vrai mod on a le filtre a l'ecran comme quand on est dans de l'eau ».
+     *
+     * <p>Les distances sont celles de l'eau de vanilla, relevees dans {@code FogRenderer} :
+     * de -8 a 96 blocs, et d'autant plus courtes que la vision sous l'eau est mauvaise. Forge
+     * n'applique un changement que si l'evenement est annule.
+     */
+    @SubscribeEvent
+    public static void leBrouillardDansLeLiquide(ViewportEvent.RenderFog event) {
+        Minecraft mc = Minecraft.getInstance();
+        LocalPlayer player = mc.player;
+        if (player == null) return;
+        if (!player.isEyeInFluidType(ModFluids.PHASE_LIQUID_TYPE.get())) return;
+        event.setNearPlaneDistance(-8.0f);
+        event.setFarPlaneDistance(96.0f * Math.max(0.25f, player.getWaterVision()));
+        event.setFogShape(FogShape.CYLINDER);
+        event.setCanceled(true);
     }
 }

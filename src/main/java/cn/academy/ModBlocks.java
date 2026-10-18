@@ -132,9 +132,12 @@ public class ModBlocks {
 
     // Le bloc de fluide porte un block entity : c'est lui qui fait dessiner les
     // nappes du liquide (voir ImagPhaseLiquidRenderer). L'original faisait pareil.
+    //
+    // Il eclaire aussi, niveau 8 : l'original appelait `setLuminosity(8)` sur son fluide. Sans
+    // ca un lac d'imag phase est un trou noir, et ses nappes s'y perdent.
     public static final RegistryObject<LiquidBlock> PHASE_LIQUID_BLOCK = BLOCKS.register("phase_liquid",
             () -> new ImagPhaseLiquidBlock(ModFluids.SOURCE_PHASE_LIQUID,
-                    BlockBehaviour.Properties.copy(Blocks.WATER).noLootTable()));
+                    BlockBehaviour.Properties.copy(Blocks.WATER).noLootTable().lightLevel(state -> 8)));
 
     // --- MÉTHODES UTILITAIRES ---
     private static <T extends Block> RegistryObject<T> registerBlock(String name, Supplier<T> block) {

@@ -10,11 +10,9 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientChunkCache;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceLocation;
@@ -103,11 +101,16 @@ public final class ImagPhaseLiquidRenderer {
     private static final RenderStateShard.WriteMaskStateShard COLOR_ONLY =
             new RenderStateShard.WriteMaskStateShard(true, false);
 
-    private static final RenderStateShard.OverlayStateShard NO_OVERLAY =
-            new RenderStateShard.OverlayStateShard(false);
-
-    private static final RenderStateShard.LightmapStateShard NO_LIGHTMAP =
-            new RenderStateShard.LightmapStateShard(false);
+    /**
+     * Le regain de brillance des nappes.
+     *
+     * <p>L'original n'en avait pas : ses textures sont faites de points epars dont l'alpha
+     * tourne autour de 4 %, ce qui donne des scintillements presque invisibles sur le noir
+     * du liquide. Le joueur l'a dit — « les nappes ne sont pas assez brillantes » — donc
+     * elles s'eclaircissent d'un cran. Une nappe proche est deja a pleine opacite : le
+     * facteur ne joue que sur celles du fond.
+     */
+    private static final float BRIGHTNESS = 1.5f;
 
     /**
      * Une nappe : la texture de sa couche, et le rendu qui va avec.
@@ -121,31 +124,35 @@ public final class ImagPhaseLiquidRenderer {
     };
 
     /**
-     * Le rendu d'une nappe : lumineux, transparent, sans cull, et surtout sans test de
-     * profondeur.
+     * Le rendu d'une nappe : la texture, sa couleur, rien d'autre.
+     *
+     * <p>C'est le shader le plus simple du jeu ({@code position_color_tex}) : la texture
+     * multipliee par la couleur du sommet. Ni lumiere, ni brouillard, ni superposition —
+     * exactement ce que faisait la fonction fixe de l'original, ou un {@code glColor4d} sur
+     * une texture suffisait. Le shader d'entite translucide, lui, demandait une carte de
+     * lumiere que ce rendu ne fournit pas : le jeu s'en plaignait au demarrage
+     * (« could not find sampler named Sampler2 »).
      *
      * <p>Les etats de Minecraft sont inaccessibles depuis un mod, donc refaits ici :
-     * melange alpha comme l'eau, profondeur toujours acceptee (c'est la difference),
-     * couleur ecrite mais pas la profondeur, et aucune lumiere — les nappes brillent.
+     * melange alpha comme l'eau, profondeur toujours acceptee (c'est la difference), et
+     * couleur ecrite mais pas la profondeur.
      */
     private static RenderType layer(ResourceLocation texture) {
         return RenderType.create("academy_imag_phase_layer",
-                DefaultVertexFormat.NEW_ENTITY,
+                DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,
                 256,
                 false,
                 true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
-                                GameRenderer::getRendertypeEntityTranslucentEmissiveShader))
+                                GameRenderer::getPositionColorTexShader))
                         .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
                         .setTransparencyState(TRANSLUCENT)
                         .setDepthTestState(ALWAYS)
                         .setWriteMaskState(COLOR_ONLY)
                         // Le sens de l'original : un lac se voit d'en haut comme d'en dessous.
                         .setCullState(new RenderStateShard.CullStateShard(false))
-                        .setOverlayState(NO_OVERLAY)
-                        .setLightmapState(NO_LIGHTMAP)
                         .createCompositeState(false));
     }
 
@@ -177,7 +184,7 @@ public final class ImagPhaseLiquidRenderer {
         float time = (mc.level.getGameTime() + mc.getFrameTime()) / 20.0f;
 
         for (Sheet sheet : visible) {
-            float alpha = ImagPhaseLayers.alpha(distanceTo(camera, sheet.pos()));
+            float alpha = Math.min(1f, BRIGHTNESS * ImagPhaseLayers.alpha(distanceTo(camera, sheet.pos())));
             ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(mean(sheet.corners()));
             BlockPos pos = sheet.pos();
 
@@ -319,9 +326,6 @@ public final class ImagPhaseLiquidRenderer {
         out.vertex(matrix, (float) x, (float) y, (float) z)
                 .color(1f, 1f, 1f, alpha)
                 .uv((float) u, (float) v)
-                .overlayCoords(OverlayTexture.NO_OVERLAY)
-                .uv2(LightTexture.FULL_BRIGHT)
-                .normal(0f, 1f, 0f)
                 .endVertex();
     }
 
