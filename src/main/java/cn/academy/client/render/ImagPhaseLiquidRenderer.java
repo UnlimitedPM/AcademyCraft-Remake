@@ -26,8 +26,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -79,11 +77,6 @@ public final class ImagPhaseLiquidRenderer {
     private static final List<Sheet> SHEETS = new ArrayList<>();
     private static long sheetsTick = Long.MIN_VALUE;
 
-    /** Compteur d'images, pour la trace temporaire de {@link #draw}. */
-    private static int frames;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger("academy-imag-phase");
-
     /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
     private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
             new RenderStateShard.TransparencyStateShard("academy_imag_phase_translucent",
@@ -131,18 +124,6 @@ public final class ImagPhaseLiquidRenderer {
     /** La couleur, mais pas la profondeur : une nappe ne cache pas celle qui la suit. */
     private static final RenderStateShard.WriteMaskStateShard COLOR_ONLY =
             new RenderStateShard.WriteMaskStateShard(true, false);
-
-    /**
-     * Le regain de brillance des nappes.
-     *
-     * <p>L'original n'en avait pas. Ses textures sont faites de points epars dont l'alpha tourne
-     * autour de 4 %, ce qui donne des scintillements presque invisibles sur le noir du liquide.
-     * Le joueur l'a dit deux fois — « les nappes ne sont pas assez brillantes », « on ne les voit
-     * pas a travers le liquide noir » — alors les textures elles-memes ont ete eclairees (alpha
-     * multiplie par quatre, voir leur dossier), et ce facteur les eclaircit encore d'un cran. Une
-     * nappe proche est deja a pleine opacite : le facteur ne joue que sur celles du fond.
-     */
-    private static final float BRIGHTNESS = 1.5f;
 
     /**
      * Une nappe : la texture de sa couche, et le rendu qui va avec.
@@ -211,19 +192,12 @@ public final class ImagPhaseLiquidRenderer {
         if (visible.isEmpty()) return;
         visible.sort(Comparator.comparingDouble((Sheet sheet) -> distanceTo(camera, sheet.pos())).reversed());
 
-        // Trace temporaire : elle dit si le rendu tourne et combien de surfaces il voit.
-        // A retirer une fois les nappes validees en jeu.
-        if (++frames % 200 == 0) {
-            LOGGER.info("nappes : {} surfaces connues, {} dessinees (camera {})",
-                    SHEETS.size(), visible.size(), camera);
-        }
-
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         // Le temps de l'original : des secondes, pas des ticks.
         float time = (mc.level.getGameTime() + mc.getFrameTime()) / 20.0f;
 
         for (Sheet sheet : visible) {
-            float alpha = Math.min(1f, BRIGHTNESS * ImagPhaseLayers.alpha(distanceTo(camera, sheet.pos())));
+            float alpha = ImagPhaseLayers.alpha(distanceTo(camera, sheet.pos()));
             ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(mean(sheet.corners()));
             BlockPos pos = sheet.pos();
 
