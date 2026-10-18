@@ -36,10 +36,15 @@ public final class ClientRenderEvents {
      * fluide se dessine dans la couche translucide, donc apres les rendus de block entity — un
      * rendu de block entity se ferait peindre par-dessus. Le joueur l'a vu : « on ne voit que les
      * particules du bas et pas les autres, elles sont cachees par le liquide ».
+     *
+     * <p>Le stade est {@code AFTER_WEATHER}, et pas {@code AFTER_TRANSLUCENT_BLOCKS} : selon le mode
+     * graphique, {@code LevelRenderer} dessine la couche translucide deux fois (une fois avant les
+     * particules, une fois apres), et la meteo tombe apres les deux. Le joueur voyait encore les
+     * nappes « ne pas passer au travers du noir du liquide ».
      */
     @SubscribeEvent
     public static void lesNappesDuLiquideApresLEau(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_WEATHER) return;
         cn.academy.client.render.ImagPhaseLiquidRenderer.draw(event.getPoseStack(),
                 event.getCamera().getPosition());
     }
