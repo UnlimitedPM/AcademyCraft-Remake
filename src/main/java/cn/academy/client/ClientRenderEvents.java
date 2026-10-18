@@ -37,14 +37,15 @@ public final class ClientRenderEvents {
      * rendu de block entity se ferait peindre par-dessus. Le joueur l'a vu : « on ne voit que les
      * particules du bas et pas les autres, elles sont cachees par le liquide ».
      *
-     * <p>Le stade est {@code AFTER_WEATHER}, et pas {@code AFTER_TRANSLUCENT_BLOCKS} : selon le mode
-     * graphique, {@code LevelRenderer} dessine la couche translucide deux fois (une fois avant les
-     * particules, une fois apres), et la meteo tombe apres les deux. Le joueur voyait encore les
-     * nappes « ne pas passer au travers du noir du liquide ».
+     * <p>Le stade {@code AFTER_WEATHER} a ete essaye, et il ne va pas : la pose n'y est plus celle
+     * du monde, les nappes se dessinaient « en fonction de la position de la camera » au lieu de
+     * rester dans le liquide. Forge appelle le stade generique a la fin de chaque
+     * {@code renderChunkLayer}, donc ici la couche translucide est deja peinte et la pose est
+     * encore celle qui translate de {@code -camera}.
      */
     @SubscribeEvent
     public static void lesNappesDuLiquideApresLEau(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_WEATHER) return;
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
         cn.academy.client.render.ImagPhaseLiquidRenderer.draw(event.getPoseStack(),
                 event.getCamera().getPosition());
     }
