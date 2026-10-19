@@ -234,10 +234,8 @@
 
   "academy.preset.title": "能力预设",
   "academy.preset.select": "选择技能",
-  "academy.preset.hint": "选择一个已学会的能力，然后点击你想绑定的按键。右键清除按键。点击数字使用该预设。",
-  "academy.preset.learned": "已学会",
-  "academy.preset.slots": "各预设的按键",
-  "academy.preset.none": "还没有学会任何东西",
+  "academy.preset.tag": "预设 #%s",
+  "academy.preset.remove": "移除当前",
   "academy.developer.skill_exp": "技能经验：%s%%",
   "academy.developer.level": "等级 %s",
   "academy.developer.not_learned": "技能未学会。",

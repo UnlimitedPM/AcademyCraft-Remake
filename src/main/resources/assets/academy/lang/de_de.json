@@ -234,10 +234,8 @@
 
   "academy.preset.title": "Fähigkeits-Presets",
   "academy.preset.select": "Fertigkeit wählen",
-  "academy.preset.hint": "Wähle eine erlernte Fähigkeit und klicke dann auf die gewünschte Taste. Rechtsklick leert eine Taste. Klicke auf eine Nummer, um dieses Preset zu benutzen.",
-  "academy.preset.learned": "Erlernt",
-  "academy.preset.slots": "Tasten der einzelnen Presets",
-  "academy.preset.none": "Noch nichts erlernt",
+  "academy.preset.tag": "Preset #%s",
+  "academy.preset.remove": "Aktuelle entfernen",
   "academy.developer.skill_exp": "Fertigkeitserfahrung: %s%%",
   "academy.developer.level": "Stufe %s",
   "academy.developer.not_learned": "Fertigkeit nicht erlernt.",

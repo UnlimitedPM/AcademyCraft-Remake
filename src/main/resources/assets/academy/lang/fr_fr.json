@@ -234,10 +234,8 @@
 
   "academy.preset.title": "Préréglages d'aptitudes",
   "academy.preset.select": "Choisir une compétence",
-  "academy.preset.hint": "Choisissez une aptitude apprise, puis cliquez sur la touche voulue. Un clic droit vide une touche. Cliquez sur un numéro pour utiliser ce préréglage.",
-  "academy.preset.learned": "Apprises",
-  "academy.preset.slots": "Touches de chaque préréglage",
-  "academy.preset.none": "Rien d'appris pour l'instant",
+  "academy.preset.tag": "Préréglage n°%s",
+  "academy.preset.remove": "Retirer celle-ci",
   "academy.developer.skill_exp": "Expérience de compétence : %s%%",
   "academy.developer.level": "Niveau %s",
   "academy.developer.not_learned": "Compétence non apprise.",

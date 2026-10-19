@@ -234,10 +234,8 @@
 
   "academy.preset.title": "Preajustes de habilidades",
   "academy.preset.select": "Elegir una habilidad",
-  "academy.preset.hint": "Elige una habilidad aprendida y haz clic en la tecla que quieras. El clic derecho vacía una tecla. Haz clic en un número para usar ese preajuste.",
-  "academy.preset.learned": "Aprendidas",
-  "academy.preset.slots": "Teclas de cada preajuste",
-  "academy.preset.none": "Aún no hay nada aprendido",
+  "academy.preset.tag": "Preajuste n.º%s",
+  "academy.preset.remove": "Quitar la actual",
   "academy.developer.skill_exp": "Experiencia de habilidad: %s%%",
   "academy.developer.level": "Nivel %s",
   "academy.developer.not_learned": "Habilidad no aprendida.",
