@@ -144,8 +144,22 @@ public final class EnergyItems {
     // Barre de niveau (la barre de durabilite de l'original)
     // ------------------------------------------------------------------
 
+    /**
+     * La barre se montre-t-elle ?
+     *
+     * <p>PAS QUAND L'OBJET EST PLEIN, et c'est l'original : sa barre etait la barre de
+     * durabilite, dont les degats valaient {@code (1 - charge/max) * 13}. A pleine charge les
+     * degats tombaient donc a zero, et Minecraft cache une barre de durabilite sans degats.
+     * Le joueur l'a redemande : « dans le vrai mod, lorsque l'item est pleinement recharge,
+     * c'est fait de sorte qu'on ne voie pas de barre de recharge ».
+     */
     public static boolean hasBar(ItemStack stack) {
-        return supports(stack);
+        return supports(stack) && hasBar(getEnergy(stack), maxEnergy(stack));
+    }
+
+    /** La meme regle, sans pile : c'est la partie pure, donc testable en JUnit. */
+    public static boolean hasBar(double energy, double max) {
+        return max > 0.0d && energy < max;
     }
 
     /** Largeur de barre entre 0 et {@link #BAR_STEPS}, comme la durabilite vanilla. */

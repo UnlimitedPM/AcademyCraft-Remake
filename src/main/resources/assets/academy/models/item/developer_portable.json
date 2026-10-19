@@ -1,6 +1,8 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": { "layer0": "academy:item/developer_portable_empty" },
+  "credit": "Developeur portable : AUCUNE geometrie ici. C'est DeveloperPortableRenderer qui dessine le modele OBJ en main et l'image dans la case, d'ou builtin/entity - sans quoi Minecraft fabriquerait une image plate a partir de layer0 et c'est ELLE qu'on verrait en main. Les poses, elles aussi, vivent dans le rendu : ce sont celles de l'original (ItemDeveloper, onModelBake), et elles ont besoin de l'ordre exact de sa chaine.",
+  "parent": "builtin/entity",
+  "gui_light": "front",
+  "textures": { "particle": "academy:item/developer_portable_empty" },
   "overrides": [
     { "predicate": { "academy:energy": 0.5 }, "model": "academy:item/developer_portable_half" },
     { "predicate": { "academy:energy": 1.0 }, "model": "academy:item/developer_portable_full" }

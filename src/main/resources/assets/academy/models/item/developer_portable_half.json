@@ -1,4 +1,6 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": { "layer0": "academy:item/developer_portable_half" }
+  "credit": "Etat a mi-charge : meme rendu que developer_portable, c'est DeveloperPortableRenderer qui choisit l'image et dessine le modele OBJ. builtin/entity est obligatoire ici aussi, sinon cette variante redeviendrait plate en main.",
+  "parent": "builtin/entity",
+  "gui_light": "front",
+  "textures": { "particle": "academy:item/developer_portable_half" }
 }

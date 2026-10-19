@@ -63,6 +63,8 @@ public class EnergyUnitItem extends Item implements ImagEnergyItem {
     }
 
     // La barre de durabilite de l'original (l'energie y tenait lieu de degats).
+    // Et comme lui, elle DISPARAIT a pleine charge : les degats valaient zero, et Minecraft
+    // cache une barre de durabilite sans degats. C'est la regle de EnergyItems.hasBar.
     @Override
     public boolean isBarVisible(ItemStack stack) {
         return EnergyItems.hasBar(stack);

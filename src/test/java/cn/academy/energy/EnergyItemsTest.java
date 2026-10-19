@@ -3,6 +3,7 @@ package cn.academy.energy;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -28,6 +29,15 @@ class EnergyItemsTest {
     @Test
     void uneCapaciteNulleNeMontreAucuneBarre() {
         assertEquals(0, EnergyItems.barWidth(100.0d, 0.0d));
+    }
+
+    @Test
+    void laBarreDisparaitAPleineCharge() {
+        // L'original : la barre etait la durabilite, et des degats nuls cachent la barre.
+        assertTrue(EnergyItems.hasBar(0.0d, 10_000.0d), "a vide, la barre se voit");
+        assertTrue(EnergyItems.hasBar(9_999.0d, 10_000.0d), "presque plein, encore");
+        assertFalse(EnergyItems.hasBar(10_000.0d, 10_000.0d), "plein, plus de barre");
+        assertFalse(EnergyItems.hasBar(0.0d, 0.0d), "pas de capacite, pas de barre");
     }
 
     @Test

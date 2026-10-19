@@ -120,7 +120,8 @@ public class DeveloperPortableItem extends Item implements ImagEnergyItem {
                 (int) getEnergy(stack), (int) MAX_ENERGY));
     }
 
-    // La meme barre que l'unite d'energie : la charge se lit sans ouvrir l'infobulle.
+    // La meme barre que l'unite d'energie : la charge se lit sans ouvrir l'infobulle, et elle
+    // disparait a pleine charge, comme la barre de durabilite de l'original.
     @Override
     public boolean isBarVisible(ItemStack stack) {
         return EnergyItems.hasBar(stack);
@@ -134,5 +135,28 @@ public class DeveloperPortableItem extends Item implements ImagEnergyItem {
     @Override
     public int getBarColor(ItemStack stack) {
         return EnergyItems.barColor(stack);
+    }
+
+    /**
+     * Le rendu de l'objet : l'image dans l'inventaire, le boitier en volume dans la main.
+     *
+     * <p>Portage du TEISR de l'original ({@code ItemDeveloper.initClient}). Le modele JSON ne
+     * peut pas faire les deux — il montre la meme chose dans la case et en main — d'ou ce rendu
+     * en code. Voir {@code DeveloperPortableRenderer}, ou vivent aussi les poses de l'original.
+     */
+    @Override
+    public void initializeClient(java.util.function.Consumer<
+            net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
+        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
+            private cn.academy.client.render.DeveloperPortableRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
+                if (renderer == null) {
+                    renderer = new cn.academy.client.render.DeveloperPortableRenderer();
+                }
+                return renderer;
+            }
+        });
     }
 }
