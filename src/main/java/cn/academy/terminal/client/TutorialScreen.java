@@ -172,7 +172,6 @@ public class TutorialScreen extends CGuiScreen {
 
         buildList();
         orderScrollBars();
-        dressScrollBars();
 
         CWidget left = find("showWindow");
         if (left != null) {
@@ -226,43 +225,14 @@ public class TutorialScreen extends CGuiScreen {
     }
 
     /**
-     * La barre de defilement : un GRIS FONCE et un curseur blanc.
+     * La barre de defilement, telle QUELLE dans le document.
      *
-     * <p>Sa texture est blanche des deux cotes ; laissee telle quelle, la glissiere se lisait
-     * comme une bande claire posee sur le panneau — « le gris de la barre de scroll n'est pas
-     * assez fonce ». La couleur du document multiplie la texture : un gris sombre pour la
-     * glissiere, du blanc pour le curseur, dont les bords restent alors doux et transparents
-     * comme ils le sont dans le fichier.
+     * <p>Le port l'avait reglee a la main — glissiere assombrie, curseur retreci — et le
+     * resultat ne ressemblait plus a rien : le joueur a envoye les captures du vrai mod a
+     * cote des notres. Ses textures disent deja tout : la glissiere est du blanc a 40 % (un
+     * gris moyen, `alpha 102` dans l'image) et le curseur du blanc a 80 % (`alpha 204` dans
+     * le document), tous deux adoucis sur leurs bords. On ne touche donc plus a rien.
      */
-    private void dressScrollBars() {
-        CWidget centerPart = find("centerPart");
-        if (centerPart == null) return;
-
-        CWidget track = centerPart.child("scroll_1");
-        if (track != null && track.texture != null) {
-            track.texture.red = 46;
-            track.texture.green = 46;
-            track.texture.blue = 46;
-            track.texture.alpha = 210;
-        }
-
-        CWidget thumb = centerPart.child("scroll_2");
-        if (thumb != null && thumb.texture != null) {
-            thumb.texture.red = 255;
-            thumb.texture.green = 255;
-            thumb.texture.blue = 255;
-            thumb.texture.alpha = 235;
-
-            // Le curseur se retire d'une unite de chaque cote : sa texture et celle de la
-            // glissiere ont la meme largeur, et collees bord a bord leurs deux bords doux
-            // se melangeaient en un liseré clair — « le blanc n'a toujours pas sa bordure en
-            // transparent ». Unitee, la bordure du curseur retombe sur le gris fonce.
-            thumb.transform.width = 7.5;
-            thumb.transform.x = -1.0;
-            if (thumb.outline != null) thumb.outline = null;
-        }
-    }
-
     private void hide(String name) {
         CWidget widget = find(name);
         if (widget != null) widget.transform.doesDraw = false;
