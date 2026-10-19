@@ -4,10 +4,10 @@ import cn.academy.AcademyCraft;
 import cn.academy.DeveloperBlock;
 import cn.academy.ModFluids;
 import com.mojang.blaze3d.shaders.FogShape;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderHighlightEvent;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
@@ -78,16 +78,33 @@ public final class ClientRenderEvents {
      * couleur du brouillard. Forge n'applique un changement que si l'evenement est annule.
      *
      * <p>C'est ce chiffre qu'il faut bouger si le voile est trop dense ou trop leger.
+     *
+     * <p>ET LA MEME CONDITION QUE LA COULEUR, sinon mur blanc : Forge ne change la couleur du
+     * brouillard que si la camera est SOUS la surface du fluide
+     * ({@code ForgeHooksClient.getFogColor}), et le joueur a vu ce que donne l'ecart — « quand on
+     * est pile poil entre le liquide et l'air exterieur, on a une couleur blanche a l'ecran comme
+     * si il y avait du brouillard ». Les distances courtes s'appliquaient des que l'oeil touchait
+     * le fluide, donc une tete a la surface recevait le brouillard du liquide avec la couleur du
+     * CIEL. On teste donc la surface nous-memes, et pas `isEyeInFluidType`.
      */
     @SubscribeEvent
     public static void leBrouillardDansLeLiquide(ViewportEvent.RenderFog event) {
-        Minecraft mc = Minecraft.getInstance();
-        LocalPlayer player = mc.player;
-        if (player == null) return;
-        if (!player.isEyeInFluidType(ModFluids.PHASE_LIQUID_TYPE.get())) return;
+        Entity viewer = event.getCamera().getEntity();
+        if (viewer == null || viewer.level() == null) return;
+
+        BlockPos pos = event.getCamera().getBlockPosition();
+        FluidState state = viewer.level().getFluidState(pos);
+        if (state.getFluidType() != ModFluids.PHASE_LIQUID_TYPE.get()) return;
+        if (event.getCamera().getPosition().y >= pos.getY() + state.getHeight(viewer.level(), pos)) return;
+
         event.setNearPlaneDistance(-4.0f);
-        event.setFarPlaneDistance(12.0f * Math.max(0.25f, player.getWaterVision()));
+        event.setFarPlaneDistance(12.0f * Math.max(0.25f, visionSousLEau(viewer)));
         event.setFogShape(FogShape.CYLINDER);
         event.setCanceled(true);
+    }
+
+    /** La vision sous l'eau du joueur, 1.0 par defaut (moins avec Aqua Affinity, comme vanilla). */
+    private static float visionSousLEau(Entity viewer) {
+        return viewer instanceof LocalPlayer player ? player.getWaterVision() : 1.0f;
     }
 }
