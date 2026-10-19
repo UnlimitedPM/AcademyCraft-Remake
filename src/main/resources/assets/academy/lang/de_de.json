@@ -193,6 +193,7 @@
   "ac.tutorial.missing": "Diese Anleitung fehlt in diesem Build.",
   "ac.tutorial.update": "Cloud-Terminal aktualisiert",
   "ac.tutorial.crafting": "Herstellen: %s",
+  "ac.tutorial.misaka": "Misaka Nr.%d",
   "ac.gui.crafttype.shaped": "Formrezept",
   "ac.gui.crafttype.shapeless": "Formloses Rezept",
 

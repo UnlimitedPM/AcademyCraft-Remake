@@ -57,6 +57,16 @@ public class TutorialScreen extends CGuiScreen {
     /** La cellule du texte : huit, comme le {@code FontOption(8)} de l'original. */
     private static final int CONTENT_CELL = 8;
 
+    /**
+     * Le facteur entre la cellule du document et celle que le port dessine.
+     *
+     * <p>L'original ecrit son texte en unites du document (une cellule de huit) et met toute
+     * sa fenetre a l'echelle de la largeur — 1,33 pour un ecran de six cent quarante. La
+     * cellule exacte vaut donc 10,7, et le joueur l'a trouvee « trop grosse » : ce facteur
+     * l'amene a 9,6. Il ne touche qu'aux trois textes du tutoriel.
+     */
+    private static final double CELL_FACTOR = 0.9;
+
     /** La teinte d'une ligne au repos, puis sous le curseur (l'original : blanc a 30 %). */
     private static final int[] ROW_IDLE = { 255, 255, 255, 0 };
     private static final int[] ROW_HOVER = { 255, 255, 255, 76 };
@@ -114,6 +124,9 @@ public class TutorialScreen extends CGuiScreen {
     private List<TutorialPreviews.View> previews = List.of();
     private int previewIndex;
 
+    /** Vrai pendant qu'on glisse le curseur de la barre de defilement. */
+    private boolean draggingScroll;
+
     public TutorialScreen() {
         super(Component.translatable("ac.app.tutorial.name"), "tutorial");
     }
@@ -132,7 +145,7 @@ public class TutorialScreen extends CGuiScreen {
         // Tout se lit une fois : les treize textes et ce que le serveur a ouvert. Les relire a
         // chaque rendu ferait treize lectures de fichier par image.
         String language = Minecraft.getInstance().getLanguageManager().getSelected();
-        String name = Minecraft.getInstance().getUser().getName();
+        String name = misakaName();
         texts.clear();
         opened.clear();
         for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
@@ -159,26 +172,29 @@ public class TutorialScreen extends CGuiScreen {
 
         buildList();
         orderScrollBars();
-        fadeScrollBars();
+        dressScrollBars();
 
         CWidget left = find("showWindow");
         if (left != null) {
             onClick(left.child("btn_left"), () -> cyclePreview(-1));
             onClick(left.child("btn_right"), () -> cyclePreview(1));
+        }
+    }
 
-            // Les fleches de l'original portent une PLAQUE blanche (sa texture), et a quatre
-            // vingts pour cent elle se lit comme un bloc gris pose sur l'apercu — « ca fait
-            // tres moche puisque le gris de fond est visible ». Elles s'effacent donc au repos
-            // et s'allument sous la souris, comme les etiquettes.
-            for (String arrow : new String[] { "btn_left", "btn_right" }) {
-                CWidget widget = left.child(arrow);
-                if (widget == null) continue;
+    /**
+     * Les fleches de l'apercu n'ont plus leur place : l'original ne les montrait que pour
+     * tourner entre les recettes d'un MEME objet (il en cherchait plusieurs par objet), et
+     * l'on passe deja d'une vue a l'autre par les etiquettes. Le joueur les a trouvees
+     * laides et inutiles — « les fleches dans les resources n'ont meme pas de vraie raison
+     * d'etre la » — elles restent donc dans le document mais ne se dessinent jamais.
+     */
+    private void hidePreviewArrows() {
+        CWidget window = find("showWindow");
+        if (window == null) return;
 
-                widget.tint = new CWidget.Tint();
-                widget.tint.affectTexture = true;
-                widget.tint.idle = new int[] { 255, 255, 255, 64 };
-                widget.tint.hover = new int[] { 255, 255, 255, 255 };
-            }
+        for (String arrow : new String[] { "btn_left", "btn_right" }) {
+            CWidget widget = window.child(arrow);
+            if (widget != null) widget.transform.doesDraw = false;
         }
     }
 
@@ -210,19 +226,41 @@ public class TutorialScreen extends CGuiScreen {
     }
 
     /**
-     * La barre de defilement, en BLANC TRANSLUCIDE : sa texture est blanche, et a pleine opacite
-     * elle se lit comme un bloc pose sur le panneau — « le blanc qui doit prendre une couleur
-     * transparente n'est pas transparent ». La glissiere reste plus effacee que le curseur.
+     * La barre de defilement : un GRIS FONCE et un curseur blanc.
+     *
+     * <p>Sa texture est blanche des deux cotes ; laissee telle quelle, la glissiere se lisait
+     * comme une bande claire posee sur le panneau — « le gris de la barre de scroll n'est pas
+     * assez fonce ». La couleur du document multiplie la texture : un gris sombre pour la
+     * glissiere, du blanc pour le curseur, dont les bords restent alors doux et transparents
+     * comme ils le sont dans le fichier.
      */
-    private void fadeScrollBars() {
+    private void dressScrollBars() {
         CWidget centerPart = find("centerPart");
         if (centerPart == null) return;
 
         CWidget track = centerPart.child("scroll_1");
-        if (track != null && track.texture != null) track.texture.alpha = 96;
+        if (track != null && track.texture != null) {
+            track.texture.red = 46;
+            track.texture.green = 46;
+            track.texture.blue = 46;
+            track.texture.alpha = 210;
+        }
 
         CWidget thumb = centerPart.child("scroll_2");
-        if (thumb != null && thumb.texture != null) thumb.texture.alpha = 224;
+        if (thumb != null && thumb.texture != null) {
+            thumb.texture.red = 255;
+            thumb.texture.green = 255;
+            thumb.texture.blue = 255;
+            thumb.texture.alpha = 235;
+
+            // Le curseur se retire d'une unite de chaque cote : sa texture et celle de la
+            // glissiere ont la meme largeur, et collees bord a bord leurs deux bords doux
+            // se melangeaient en un liseré clair — « le blanc n'a toujours pas sa bordure en
+            // transparent ». Unitee, la bordure du curseur retombe sur le gris fonce.
+            thumb.transform.width = 7.5;
+            thumb.transform.x = -1.0;
+            if (thumb.outline != null) thumb.outline = null;
+        }
     }
 
     private void hide(String name) {
@@ -297,17 +335,8 @@ public class TutorialScreen extends CGuiScreen {
         previews = TutorialPreviews.views(TutorialLibrary.entries().get(index).id());
         previewIndex = 0;
         CWidget showWindow = find("showWindow");
-        if (showWindow != null) {
-            showWindow.transform.doesDraw = !previews.isEmpty();
-
-            // Les deux fleches ne servent qu'a tourner entre plusieurs vues : l'original les
-            // cachait des qu'il n'y en avait qu'une.
-            boolean arrows = previews.size() > 1;
-            for (String arrow : new String[] { "btn_left", "btn_right" }) {
-                CWidget widget = showWindow.child(arrow);
-                if (widget != null) widget.transform.doesDraw = arrows;
-            }
-        }
+        if (showWindow != null) showWindow.transform.doesDraw = !previews.isEmpty();
+        hidePreviewArrows();
 
         CWidget rightWindow = find("rightWindow");
         CWidget centerPart = find("centerPart");
@@ -315,6 +344,22 @@ public class TutorialScreen extends CGuiScreen {
         // Comme l'original : le texte ne s'ouvre que pour un tutoriel APPRIS. Un tutoriel
         // ferme reste lisible dans la liste, en gris, et son titre s'affiche a droite.
         if (centerPart != null) centerPart.transform.doesDraw = opened.get(index);
+    }
+
+    /**
+     * Le nom dont l'original signait le tutoriel d'accueil : « Misaka No.14163 ».
+     *
+     * <p>Son {@code ACMarkdownRenderer} remplacait la balise {@code ![misakaname]} par le
+     * numero du joueur, traduit par {@code ac.tutorial.misaka}. Le port y mettait le nom du
+     * compte Minecraft, et le joueur l'a lu : « il y a ecrit "this is Dev." au lieu de "this
+     * is Misaka No.14163" ». Faute de numero — un monde tout neuf, ou un serveur qui ne l'a
+     * pas encore envoye — le nom du compte reste le repli.
+     */
+    private static String misakaName() {
+        int id = ClientTutorialData.get().getMisakaId();
+        if (id < 0) return Minecraft.getInstance().getUser().getName();
+
+        return Component.translatable("ac.tutorial.misaka", id).getString();
     }
 
     /** Le nom d'une touche tel que le jeu l'affiche, ou {@code null} si l'identifiant est inconnu. */
@@ -540,14 +585,67 @@ public class TutorialScreen extends CGuiScreen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 && selected >= 0 && !previews.isEmpty()) {
-            int tag = tagAt(mouseX, mouseY);
-            if (tag >= 0) {
-                previewIndex = tag;
+        if (button == 0 && selected >= 0) {
+            // La barre se prend a la souris, comme chez l'original (son {@code DragBar}) : on
+            // clique dessus et le texte saute la ou l'on a clique, puis on glisse.
+            if (scrollBarAt(mouseX, mouseY)) {
+                draggingScroll = true;
+                scrollTo(mouseY);
                 return true;
+            }
+
+            if (!previews.isEmpty()) {
+                int tag = tagAt(mouseX, mouseY);
+                if (tag >= 0) {
+                    previewIndex = tag;
+                    return true;
+                }
             }
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX,
+                                double dragY) {
+        if (draggingScroll) {
+            scrollTo(mouseY);
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        boolean dragged = draggingScroll;
+        draggingScroll = false;
+        return super.mouseReleased(mouseX, mouseY, button) || dragged;
+    }
+
+    /** Vrai si ce point tombe sur la glissiere (ou sur le curseur). */
+    private boolean scrollBarAt(double mouseX, double mouseY) {
+        CWidget centerPart = find("centerPart");
+        if (centerPart == null || !centerPart.transform.doesDraw) return false;
+
+        CWidget track = centerPart.child("scroll_1");
+        if (track == null || !track.transform.doesDraw) return false;
+
+        return mouseX >= track.absX - 2 && mouseX <= track.absX + track.absW + 2
+                && mouseY >= track.absY && mouseY <= track.absY + track.absH;
+    }
+
+    /** Place le texte pour que le MILIEU du curseur soit sous la souris, comme un glissement. */
+    private void scrollTo(double mouseY) {
+        CWidget centerPart = find("centerPart");
+        if (centerPart == null) return;
+        CWidget track = centerPart.child("scroll_1");
+        CWidget thumb = centerPart.child("scroll_2");
+        if (track == null || thumb == null) return;
+
+        int max = Math.max(0, contentHeight - contentViewHeight());
+        double span = Math.max(1.0, track.absH - thumb.absH);
+        double progress = (mouseY - track.absY - thumb.absH / 2.0) / span;
+        scroll = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * max);
     }
 
     /**
@@ -661,14 +759,15 @@ public class TutorialScreen extends CGuiScreen {
             case 3 -> 1.4;
             default -> 1.0;
         };
-        return Math.max(5, (int) Math.round(CONTENT_CELL * ratio * unit));
+        return Math.max(5, (int) Math.round(CONTENT_CELL * ratio * unit * CELL_FACTOR));
     }
 
     /** Un texte du contenu ; un titre se dessine en GRAS, comme l'original (double passe). */
     private void drawLine(GuiGraphics graphics, String line, int x, int y, int colour, int cell,
                           boolean bold) {
         AcademyFonts.drawTop(graphics, font, line, x, y, colour, cell);
-        if (bold) AcademyFonts.drawTop(graphics, font, line, x + 1, y, colour, cell);
+        // La police du port est DEJA grasse : une seconde passe ne fait qu'epaissir le titre
+        // au-dela de l'original, qui passe de sa police normale a sa police grasse.
     }
 
     /** Le titre et le resume, dans la fenetre du bas : 3 unites du bord, comme l'original. */
@@ -681,7 +780,7 @@ public class TutorialScreen extends CGuiScreen {
         int left = (int) Math.round(area.absX) + (int) Math.round(3 * unit);
         int top = (int) Math.round(area.absY) + (int) Math.round(3 * unit);
 
-        int titleCell = Math.max(5, (int) Math.round(AcademyFonts.GUI_SIZE * unit));
+        int titleCell = Math.max(5, (int) Math.round(AcademyFonts.GUI_SIZE * unit * CELL_FACTOR));
         AcademyFonts.drawTop(graphics, font, texts.get(selected).title(), left, top,
                 0xFFFFFFFF, titleCell);
 
@@ -690,7 +789,7 @@ public class TutorialScreen extends CGuiScreen {
 
         // L'original descend a quinze unites pour le resume (son {@code glTranslated(3, 15)}),
         // le coupe a cent trente unites, et l'ecrit en blanc comme le reste du texte.
-        int cell = Math.max(5, (int) Math.round(CONTENT_CELL * unit));
+        int cell = Math.max(5, (int) Math.round(CONTENT_CELL * unit * CELL_FACTOR));
         int limit = Math.max(1, (int) Math.round(130 * unit));
         int lineTop = (int) Math.round(area.absY) + (int) Math.round(15 * unit);
         for (String line : AcademyFonts.split(font, brief, limit, cell)) {

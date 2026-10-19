@@ -193,6 +193,7 @@
   "ac.tutorial.missing": "Ce tutoriel manque dans cette version.",
   "ac.tutorial.update": "Cloud Terminal mis à jour",
   "ac.tutorial.crafting": "Fabrication : %s",
+  "ac.tutorial.misaka": "Misaka n°%d",
   "ac.gui.crafttype.shaped": "Fabrication avec forme",
   "ac.gui.crafttype.shapeless": "Fabrication sans forme",
 

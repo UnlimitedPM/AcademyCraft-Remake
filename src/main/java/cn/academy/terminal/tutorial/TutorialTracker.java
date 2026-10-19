@@ -89,7 +89,7 @@ public class TutorialTracker {
      * comptait pas comme « actives ».
      */
     public static void scan(ServerPlayer player, TutorialData data) {
-        boolean changed = false;
+        boolean changed = data.ensureMisakaId();
 
         for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
             if (entry.alwaysOpen() || data.isUnlocked(entry.id())) continue;
