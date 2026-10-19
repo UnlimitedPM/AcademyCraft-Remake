@@ -60,7 +60,11 @@ public class PresetEditScreen extends Screen {
     private static final double PAGE_H = 141.5;
     private static final double ROW_W = 110.0;
     private static final double ROW_H = 34.75;
-    private static final double ROW_X = 0.5;
+    // Le document donne aux lignes `x = 0,5` ET `alignWidth = CENTER` : le moteur ajoute le
+    // centrage `(116,25 - 110) / 2` a ce x, donc leur bord gauche est a 3,625. Le port ne
+    // prenait que le 0,5, ce qui tirait tout de 3,125 vers la gauche — « les images sont
+    // legerement trop a gauche », dit le joueur.
+    private static final double ROW_X = (PAGE_W - ROW_W) / 2 + 0.5;
     private static final double ROW_TOP = 1.5;
     private static final double ICON_SIZE = 26.5;
     private static final double ICON_X = 2.25;
@@ -68,7 +72,9 @@ public class PresetEditScreen extends Screen {
     private static final double NAME_X = 36.25;
     private static final double NAME_Y = 10.0;
     private static final double NAME_H = 15.0;
+    private static final double NAME_W = 62.5;
     private static final double TITLE_BOX = 35.0;
+    private static final double TITLE_X = (PAGE_W - TITLE_BOX) / 2 + 0.5;
     private static final double TITLE_Y = -15.0;
 
     /** Le pas entre deux panneaux, et la duree du glissement (0,35 s chez l'original). */
@@ -174,7 +180,7 @@ public class PresetEditScreen extends Screen {
     /** Le nom de l'ecran, en haut a gauche : douze unites, comme le document. */
     private void drawScreenTitle(GuiGraphics graphics) {
         AcademyFonts.drawTop(graphics, font,
-                Component.translatable("academy.preset.title").getString(),
+                Component.translatable("ac.gui.preset_edit.name").getString(),
                 5, 5, 0xFFFFFFFF, 12);
     }
 
@@ -233,11 +239,14 @@ public class PresetEditScreen extends Screen {
         // Le fond du panneau.
         image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 465, 566, alpha);
 
-        // Son titre, centre au-dessus.
-        String title = Component.translatable("academy.preset.tag", preset + 1).getString();
+        // Son titre, centre au-dessus. Le document le pose a `x = 0,5` avec un alignement
+        // CENTER, et son `TextBox` ecrit par le HAUT de sa cellule (`heightAlign = CENTER`
+        // dans une boite de 15 pour une police de 10, donc deux et demi plus bas).
+        String title = Component.translatable("ac.gui.preset_edit.tag").getString()
+                + (preset + 1);
         int titleCell = 10;
         AcademyFonts.drawTop(graphics, font, title,
-                (int) Math.round(ROW_X + (PAGE_W - TITLE_BOX) / 2),
+                (int) Math.round(TITLE_X),
                 (int) Math.round(TITLE_Y + (15 - titleCell) / 2.0),
                 shaded(0xFFFFFFFF, alpha), titleCell);
 
@@ -261,12 +270,13 @@ public class PresetEditScreen extends Screen {
                     (int) Math.round(ICON_SIZE), 0f, 0f, 32, 32, 32, 32);
             graphics.setColor(1f, 1f, 1f, 1f);
 
-            // Le nom deborde sur le panneau voisin, comme chez l'original : sa boite fait
-            // 62,5 et rien ne le coupe.
-            AcademyFonts.draw(graphics, font, skill.getDisplayName(),
+            // Le nom, coupe a la largeur de sa boite de 62,5 — c'est ce que fait son
+            // `TextBox` : la chaine s'arrete des que la largeur est atteinte, sans points de
+            // suspension. Le port le laissait deborder sur le panneau voisin.
+            AcademyFonts.drawTop(graphics, font, fit(skill.getDisplayName().getString()),
                     (int) Math.round(ROW_X + NAME_X),
-                    (int) Math.round(rowY + NAME_Y + (NAME_H - 10) / 2),
-                    shaded(0xFFFFFFFF, alpha), false, 10);
+                    (int) Math.round(rowY + NAME_Y + (NAME_H - 10) / 2.0),
+                    shaded(0xFFFFFFFF, alpha), 10);
         }
 
         graphics.pose().popPose();
@@ -301,7 +311,7 @@ public class PresetEditScreen extends Screen {
         // Le cartouche du nom, au-dessus de la fenetre.
         Pick hovered = pickAt(mouseX, mouseY);
         String hint = hovered == null
-                ? Component.translatable("academy.preset.select").getString()
+                ? Component.translatable("ac.gui.preset_edit.skill_select").getString()
                 : hovered.hint();
         int hintWidth = AcademyFonts.width(font, hint, 9) + 6;
         int hintTop = top - 14;
@@ -333,7 +343,7 @@ public class PresetEditScreen extends Screen {
 
         List<Pick> out = new ArrayList<>();
         out.add(new Pick(null, TEX_CANCEL, CANCEL_TEX,
-                Component.translatable("academy.preset.remove").getString()));
+                Component.translatable("ac.gui.preset_edit.skill_remove").getString()));
         for (Skill skill : learned) {
             if (preset != null && preset.contains(skill.getName())) continue;
             out.add(new Pick(skill, skill.getHintIcon(), ICON_TEX, skill.getDisplayName().getString()));
@@ -386,6 +396,25 @@ public class PresetEditScreen extends Screen {
     /** La meme couleur, a l'opacite du panneau : c'est l'{@code AlphaAssign} de l'original. */
     private static int shaded(int colour, int alpha) {
         return (colour & 0x00FFFFFF) | (alpha << 24);
+    }
+
+    /**
+     * Le texte coupe a la largeur de sa boite de nom.
+     *
+     * <p>C'est la regle de son {@code TextBox} : il additionne les largeurs de caracteres et
+     * s'arrete des que le total atteint la largeur du widget — pas de points de suspension,
+     * pas de debordement. « Le nom des competences ne doit pas pouvoir depasser », dit le
+     * joueur.
+     */
+    private static String fit(String text) {
+        double acc = 0;
+        int i = 0;
+        while (i < text.length() && acc < NAME_W) {
+            int codePoint = text.codePointAt(i);
+            acc += AcademyFonts.width(null, new String(Character.toChars(codePoint)), 10);
+            i += Character.charCount(codePoint);
+        }
+        return text.substring(0, i);
     }
 
     private static void blend() {
@@ -471,7 +500,8 @@ public class PresetEditScreen extends Screen {
 
     @Override
     public boolean isPauseScreen() {
-        return false;
+        // L'ecran de l'original arretait le jeu : en solo, ouvrir les prereglages met en pause.
+        return true;
     }
 
     private static boolean isIn(double mouseX, double mouseY, int x, int y, int width, int height) {
