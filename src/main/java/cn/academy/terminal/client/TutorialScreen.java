@@ -1,12 +1,18 @@
 package cn.academy.terminal.client;
 
+import cn.academy.ability.client.AbilityKeyBindings;
+import cn.academy.client.gui.AcademyFonts;
+import cn.academy.client.gui.cgui.CGuiScreen;
+import cn.academy.client.gui.cgui.CWidget;
 import cn.academy.terminal.tutorial.TutorialLibrary;
+import cn.academy.terminal.tutorial.TutorialMarkdown;
 import cn.academy.terminal.tutorial.TutorialText;
 import cn.academy.terminal.tutorial.client.ClientTutorialData;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -14,69 +20,72 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * L'ecran de « MisakaCloud » : la liste des tutoriels a gauche, leur texte a droite.
+ * L'ecran de « MisakaCloud », sur le VRAI document de l'original.
  *
- * <p>C'est la disposition de l'original — le contenu au milieu, la liste a gauche, et
- * l'apercu des recettes a droite. L'apercu n'est pas porte : il demanderait un affichage
- * de recettes complet, pour des figures qui ne sont pas l'essentiel.
+ * <p>La mise en page est celle de {@code assets/academy/guis/tutorial.xml}, copie tel quel :
+ * une fenetre de 427 x 240, le panneau de la liste a gauche (85 x 220,5), et a droite la
+ * colonne du texte (172 de large) avec, au-dessus, la fenetre d'apercu et, en dessous, celle
+ * du titre et du resume. Tout est mis a l'echelle de la largeur comme chez l'original
+ * ({@code width / 480}).
  *
- * <h2>Ce qui ouvre un tutoriel</h2>
+ * <h2>Ce que le port n'a pas encore</h2>
  *
- * Le serveur ouvre les tutoriels ({@code TutorialTracker}) et le client lit ce qu'il lui
- * envoie : un tutoriel s'ouvre quand le joueur a <b>eu</b> l'objet qu'il demande, et il ne
- * se referme plus. C'est le comportement de l'original, ou une condition restait acquise
- * une fois vraie — ranger ensuite son lingot dans un coffre ne referme rien.
+ * <p>L'APERCU 3D ({@code showWindow}) : l'original y dessinait un modele de machine, avec des
+ * boutons pour tourner autour, et chaque tutoriel portait son propre groupe de vues. La
+ * fenetre est donc laissee fermee — sans quoi elle montrerait un cadre vide. Le reste de
+ * l'ecran (liste, titre, resume, texte) est celui de l'original.
  *
- * <p>Un tutoriel non ouvert reste <b>visible</b>, en gris, et son texte s'affiche quand
- * meme : c'est ce que faisait l'original, ou la liste entiere restait a l'ecran.
+ * <h2>Le texte</h2>
+ *
+ * <p>Le contenu est du markdown : {@link TutorialMarkdown} le coupe en lignes et en images,
+ * et c'est ici qu'il est mis en page, avec la police du mod et le defilement de la fenetre.
+ * Les captures ({@code ![titre](academy:textures/tutorial/...)}) etaient l'un des deux
+ * reproches du joueur — « on ne voit pas les images » : elles se dessinent a la largeur de
+ * la colonne, proportions gardees par {@link TutorialImages}.
  */
 @OnlyIn(Dist.CLIENT)
-public class TutorialScreen extends Screen {
+public class TutorialScreen extends CGuiScreen {
 
-    private static final int MARGIN = 16;
-    private static final int HEADER = 18;
-    private static final int ROW = 12;
-    private static final int LIST_WIDTH = 96;
+    /** La largeur de reference du document : l'original mettait l'ecran a cette echelle. */
+    private static final double REF_WIDTH = 480.0;
 
-    private static final int PANEL = 0xF0181824;
-    private static final int PANEL_EDGE = 0xFF6FA8DC;
-    private static final int TEXT = 0xFFE0E0E0;
-    private static final int DIM = 0xFF909090;
-    private static final int LOCKED = 0xFF606060;
-    private static final int SELECTED = 0xFF2A3A50;
+    /** La largeur du texte dans la colonne (l'original : {@code widthLimit_$eq(150)}). */
+    private static final int CONTENT_WIDTH = 150;
+
+    /** La teinte de la ligne choisie dans la liste (l'original : blanc a 30 %). */
+    private static final int[] SELECTED = { 255, 255, 255, 76 };
+    private static final int[] UNSELECTED = { 255, 255, 255, 0 };
 
     private final List<TutorialText> texts = new ArrayList<>();
     private final List<Boolean> opened = new ArrayList<>();
+    private final List<CWidget> rows = new ArrayList<>();
 
-    private int leftPos;
-    private int topPos;
-    private int panelWidth;
-    private int panelHeight;
-
-    /** Le tutoriel choisi, par son rang dans la liste. */
-    private int selected;
+    /** Le tutoriel choisi, ou {@code -1} tant qu'on n'a rien clique. */
+    private int selected = -1;
 
     /** Defilement du texte, en pixels. */
     private int scroll;
     private int contentHeight;
 
-    /** Le contenu courant, une fois mis en page. */
-    private List<String> wrapped = List.of();
+    private List<TutorialMarkdown.Block> blocks = List.of();
 
     public TutorialScreen() {
-        super(Component.translatable("ac.app.tutorial.name"));
+        super(Component.translatable("ac.app.tutorial.name"), "guis/tutorial");
+    }
+
+    @Override
+    protected void layout() {
+        CWidget frame = find("frame");
+        if (frame != null) frame.transform.scale = width / REF_WIDTH;
+        super.layout();
     }
 
     @Override
     protected void init() {
-        panelWidth = width - 2 * MARGIN;
-        panelHeight = height - 2 * MARGIN;
-        leftPos = MARGIN;
-        topPos = MARGIN;
+        super.init();
 
-        // Tout se lit une fois : les textes des treize tutoriels et ce qui est ouvert.
-        // Les relire a chaque rendu ferait treize lectures de fichier par image, et
-        // autant de parcours d'inventaire.
+        // Tout se lit une fois : les treize textes et ce que le serveur a ouvert. Les relire a
+        // chaque rendu ferait treize lectures de fichier par image.
         String language = Minecraft.getInstance().getLanguageManager().getSelected();
         String name = Minecraft.getInstance().getUser().getName();
         texts.clear();
@@ -84,169 +93,210 @@ public class TutorialScreen extends Screen {
         for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
             TutorialText raw = TutorialLibrary.load(entry.id(), language);
             texts.add(new TutorialText(raw.title(), raw.brief(), raw.contentFor(name)));
-            // Ce que le serveur a ouvert, plus les tutoriels sans condition. Le client ne
-            // devine rien : un tutoriel reste ouvert meme si son bloc a ete range.
             opened.add(entry.alwaysOpen() || ClientTutorialData.get().isUnlocked(entry.id()));
         }
 
-        layout();
+        // L'introduction en logo de l'original (logo0..3) et l'apercu 3D restent fermes.
+        hide("logo0");
+        hide("logo1");
+        hide("logo2");
+        hide("logo3");
+        hide("showWindow");
+
+        // Le cote droit attend un clic : c'est l'etat de repos de l'original.
+        hide("rightWindow");
+        hide("centerPart");
+
+        buildList();
     }
 
-    private TutorialLibrary.Entry entry() {
-        return TutorialLibrary.entries().get(selected);
+    private void hide(String name) {
+        CWidget widget = find(name);
+        if (widget != null) widget.transform.doesDraw = false;
     }
 
-    private TutorialText text() {
-        return texts.get(selected);
-    }
+    /** La liste : une ligne par tutoriel, ouverte en clair et fermee en gris. */
+    private void buildList() {
+        CWidget list = find("list");
+        if (list == null) return;
 
-    private int listRight() {
-        return leftPos + LIST_WIDTH;
-    }
+        for (CWidget child : new ArrayList<>(list.children())) list.remove(child);
+        rows.clear();
+        list.list = new CWidget.ElementList();
 
-    private int textLeft() {
-        return listRight() + 6;
-    }
-
-    private int viewTop() {
-        return topPos + HEADER;
-    }
-
-    private int viewBottom() {
-        return topPos + panelHeight - 4;
-    }
-
-    private int viewHeight() {
-        return viewBottom() - viewTop();
-    }
-
-    private int viewWidth() {
-        return leftPos + panelWidth - textLeft() - 6;
-    }
-
-    /** Met le texte courant en page, et ramene le defilement dans ses bornes. */
-    private void layout() {
-        TutorialText text = text();
-        wrapped = cn.academy.client.gui.AcademyFonts.split(font, text.content(), viewWidth());
-        int lineHeight = cn.academy.client.gui.AcademyFonts.lineHeight();
-        int brief = text.brief().isEmpty() ? 0
-            : cn.academy.client.gui.AcademyFonts.split(font, text.brief(), viewWidth()).size()
-                * lineHeight + lineHeight;
-        contentHeight = lineHeight + 2 + brief + wrapped.size() * lineHeight;
-        scroll = Math.max(0, Math.min(scroll, Math.max(0, contentHeight - viewHeight())));
-    }
-
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
-
-        graphics.fill(leftPos - 1, topPos - 1, leftPos + panelWidth + 1, topPos + panelHeight + 1,
-                PANEL_EDGE);
-        graphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + panelHeight, PANEL);
-        graphics.fill(listRight(), viewTop(), listRight() + 1, viewBottom(), PANEL_EDGE);
-        cn.academy.client.gui.AcademyFonts.draw(graphics, font, title,
-            leftPos + 8, topPos + 5, TEXT, false);
-
-        drawList(graphics, mouseX, mouseY);
-        drawText(graphics);
-        drawScrollBar(graphics);
-
-        super.render(graphics, mouseX, mouseY, partialTick);
-    }
-
-    /** La liste des tutoriels : l'ouvert en clair, les autres en gris. */
-    private void drawList(GuiGraphics graphics, int mouseX, int mouseY) {
         for (int i = 0; i < texts.size(); i++) {
-            int y = viewTop() + i * ROW;
-            boolean hovered = mouseY >= y && mouseY < y + ROW
-                    && mouseX >= leftPos + 2 && mouseX < listRight() - 2;
+            int index = i;
 
-            if (i == selected) {
-                graphics.fill(leftPos + 2, y, listRight() - 2, y + ROW, SELECTED);
-            }
+            CWidget row = new CWidget("row_" + i);
+            row.transform.width = 72;
+            row.transform.height = 12;
+            row.tint = new CWidget.Tint();
+            row.tint.idle = UNSELECTED.clone();
+            row.tint.hover = SELECTED.clone();
 
-            int colour = opened.get(i) ? (hovered || i == selected ? TEXT : DIM) : LOCKED;
-                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
-                    ellipsize(texts.get(i).title()), leftPos + 6, y + 2, colour, false);
+            CWidget label = new CWidget("label");
+            label.transform.width = 69;
+            label.transform.height = 12;
+            label.transform.x = 3;
+            label.text = new CWidget.TextBox();
+            label.text.content = ellipsize(texts.get(i).title());
+            label.text.fontSize = 10;
+            label.text.align = "LEFT";
+            label.text.heightAlign = "CENTER";
+            int grey = opened.get(i) ? 255 : 153;
+            label.text.red = grey;
+            label.text.green = grey;
+            label.text.blue = grey;
+
+            row.add(label);
+            onClick(row, () -> select(index));
+            rows.add(row);
+            list.add(row);
         }
     }
 
     /** Un titre trop long est coupe : la colonne ne doit pas deborder sur le texte. */
     private String ellipsize(String value) {
         String out = value;
-        while (cn.academy.client.gui.AcademyFonts.width(font, out) > LIST_WIDTH - 12
-            && out.length() > 4) {
+        while (AcademyFonts.width(font, out) > 65 && out.length() > 4) {
             out = out.substring(0, out.length() - 2);
         }
         return out.equals(value) ? out : out + ".";
     }
 
-    private void drawText(GuiGraphics graphics) {
-        TutorialText text = text();
-        int x = textLeft();
-        int y = viewTop() - scroll;
+    private void select(int index) {
+        selected = index;
+        scroll = 0;
+        blocks = TutorialMarkdown.parse(texts.get(index).content(), TutorialScreen::keyName);
 
-        if (text.isEmpty()) {
-                cn.academy.client.gui.AcademyFonts.draw(graphics, font,
-                    Component.translatable("ac.tutorial.missing"), x, viewTop(), DIM, false);
-            return;
-        }
+        CWidget rightWindow = find("rightWindow");
+        CWidget centerPart = find("centerPart");
+        if (rightWindow != null) rightWindow.transform.doesDraw = true;
+        // Comme l'original : le texte ne s'ouvre que pour un tutoriel APPRIS. Un tutoriel
+        // ferme reste lisible dans la liste, en gris, et son titre s'affiche a droite.
+        if (centerPart != null) centerPart.transform.doesDraw = opened.get(index);
 
-        cn.academy.client.gui.AcademyFonts.draw(graphics, font, text.title(), x, y, TEXT, false);
-        y += font.lineHeight + 2;
-
-        if (!text.brief().isEmpty()) {
-                for (String line : cn.academy.client.gui.AcademyFonts.split(
-                        font, text.brief(), viewWidth())) {
-                    cn.academy.client.gui.AcademyFonts.draw(graphics, font, line, x, y, DIM, false);
-                    y += cn.academy.client.gui.AcademyFonts.lineHeight();
-            }
-                y += cn.academy.client.gui.AcademyFonts.lineHeight();
-        }
-
-            for (String line : wrapped) {
-                int lineHeight = cn.academy.client.gui.AcademyFonts.lineHeight();
-                if (y + lineHeight >= viewTop() && y <= viewBottom()) {
-                    cn.academy.client.gui.AcademyFonts.draw(graphics, font, line, x, y, TEXT, false);
-            }
-                y += lineHeight;
+        for (int i = 0; i < rows.size(); i++) {
+            rows.get(i).tint.idle = (i == index ? SELECTED : UNSELECTED).clone();
         }
     }
 
-    private void drawScrollBar(GuiGraphics graphics) {
-        int max = Math.max(0, contentHeight - viewHeight());
-        if (max <= 0) return;
-
-        int barX = leftPos + panelWidth - 4;
-        graphics.fill(barX, viewTop(), barX + 2, viewBottom(), 0xFF373737);
-        int barHeight = Math.max(8, viewHeight() * viewHeight() / contentHeight);
-        int barTop = viewTop() + (viewHeight() - barHeight) * scroll / max;
-        graphics.fill(barX, barTop, barX + 2, barTop + barHeight, PANEL_EDGE);
+    /** Le nom d'une touche tel que le jeu l'affiche, ou {@code null} si l'identifiant est inconnu. */
+    private static String keyName(String id) {
+        KeyMapping key = switch (id) {
+            case "ability_activation" -> AbilityKeyBindings.TOGGLE_ABILITY;
+            case "edit_preset" -> AbilityKeyBindings.PRESET_EDIT;
+            case "switch_preset" -> AbilityKeyBindings.PRESET_NEXT;
+            case "open_data_terminal" -> TerminalKeyBindings.OPEN_TERMINAL;
+            default -> null;
+        };
+        return key == null ? null : key.getTranslatedKeyMessage().getString();
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        for (int i = 0; i < texts.size(); i++) {
-            int y = viewTop() + i * ROW;
-            if (mouseX >= leftPos + 2 && mouseX < listRight() - 2
-                    && mouseY >= y && mouseY < y + ROW) {
-                selected = i;
-                scroll = 0;
-                layout();
-                return true;
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+
+        if (selected < 0) return;
+        drawRightWindow(graphics);
+        if (opened.get(selected)) drawContent(graphics);
+    }
+
+    /** Le titre et le resume, dans la fenetre du bas : 3 unites du bord, comme l'original. */
+    private void drawRightWindow(GuiGraphics graphics) {
+        CWidget window = find("rightWindow");
+        CWidget area = window == null ? null : window.child("text");
+        if (area == null) return;
+
+        int left = (int) Math.round(area.absX) + 3;
+        int top = (int) Math.round(area.absY) + 3;
+        int cell = AcademyFonts.GUI_SIZE;
+
+        AcademyFonts.drawTop(graphics, font, texts.get(selected).title(), left, top,
+                0xFFFFFFFF, cell);
+        top += AcademyFonts.lineHeight(cell) + 2;
+
+        String brief = texts.get(selected).brief();
+        if (brief.isEmpty()) return;
+        for (String line : AcademyFonts.split(font, brief, (int) area.absW - 8)) {
+            if (!line.isEmpty()) {
+                AcademyFonts.drawTop(graphics, font, line, left, top, 0xFFC8C8C8, cell);
+            }
+            top += AcademyFonts.lineHeight(cell);
+        }
+    }
+
+    /** Le contenu, dans la colonne de gauche de la partie droite, avec son defilement. */
+    private void drawContent(GuiGraphics graphics) {
+        CWidget centerPart = find("centerPart");
+        CWidget area = centerPart == null ? null : centerPart.child("text");
+        if (area == null) return;
+
+        int left = (int) Math.round(area.absX) + 4;
+        int top = (int) Math.round(area.absY) + 3;
+        int bottom = (int) Math.round(area.absY + area.absH) - 2;
+
+        graphics.enableScissor((int) Math.round(area.absX), (int) Math.round(area.absY),
+                (int) Math.round(area.absX + area.absW), (int) Math.round(area.absY + area.absH));
+
+        int cell = AcademyFonts.GUI_SIZE;
+        int lineHeight = AcademyFonts.lineHeight(cell);
+        int y = top - scroll;
+
+        for (TutorialMarkdown.Block block : blocks) {
+            if (block.isImage()) {
+                y = drawImage(graphics, block.image(), left, y, top, bottom) + 4;
+                continue;
+            }
+
+            List<String> lines = block.text().isEmpty()
+                    ? List.of("") : AcademyFonts.split(font, block.text(), CONTENT_WIDTH);
+            for (String line : lines) {
+                if (!line.isEmpty() && y + lineHeight >= top && y <= bottom) {
+                    AcademyFonts.drawTop(graphics, font, line, left, y, 0xFFE0E0E0, cell);
+                }
+                y += lineHeight;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+
+        contentHeight = y - (top - scroll);
+        graphics.disableScissor();
+    }
+
+    /**
+     * Une capture du tutoriel, a la largeur de la colonne et proportions gardees.
+     *
+     * @return le bas de l'image, ou {@code y} quand le fichier est absent
+     */
+    private int drawImage(GuiGraphics graphics, String path, int x, int y, int top, int bottom) {
+        int[] size = TutorialImages.size(path);
+        ResourceLocation texture = path == null ? null : ResourceLocation.tryParse(path);
+        if (size == null || texture == null) return y;
+
+        int w = CONTENT_WIDTH;
+        int h = Math.max(1, (int) Math.round(size[1] * (double) w / size[0]));
+        if (y + h >= top && y <= bottom) {
+            graphics.blit(texture, x, y, w, h, 0f, 0f, size[0], size[1], size[0], size[1]);
+        }
+        return y + h;
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-        if (delta != 0) {
-            int max = Math.max(0, contentHeight - viewHeight());
-            scroll = Math.max(0, Math.min(max, scroll + (int) (-delta * font.lineHeight * 2)));
+        if (selected >= 0 && delta != 0) {
+            int viewHeight = contentViewHeight();
+            int max = Math.max(0, contentHeight - viewHeight);
+            scroll = Math.max(0, Math.min(max,
+                    scroll + (int) (-delta * AcademyFonts.lineHeight() * 2)));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, delta);
+    }
+
+    private int contentViewHeight() {
+        CWidget centerPart = find("centerPart");
+        CWidget area = centerPart == null ? null : centerPart.child("text");
+        return area == null ? 0 : Math.max(0, (int) Math.round(area.absH) - 5);
     }
 
     @Override
