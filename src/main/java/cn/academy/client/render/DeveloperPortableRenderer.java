@@ -134,6 +134,12 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
                 pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
             case THIRD_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND -> {
+                // ECART DEMANDE PAR LE JOUEUR : la main semblait le prendre par le coin BAS
+                // GAUCHE, et pas tout en bas. Le modele est donc recale a gauche (la main
+                // tombe alors sur son cote droit) et remonte (elle tombe plus pres du bas).
+                // A l'echelle 0,2 le modele fait 0,48 de large et 0,6 de haut : ces deux
+                // nombres sont du meme ordre, et ce sont eux qu'il faut tourner.
+                pose.translate(-0.22f, 0.18f, 0.0f);
                 pose.scale(0.2f, 0.2f, 0.2f);
                 pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
