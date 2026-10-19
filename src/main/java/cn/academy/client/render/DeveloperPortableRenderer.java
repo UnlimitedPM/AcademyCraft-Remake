@@ -125,7 +125,11 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
     private static void handPose(ItemDisplayContext context, PoseStack pose) {
         switch (context) {
             case FIRST_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND -> {
-                pose.translate(0.34f, -0.1f, -0.1f);
+                // ECART DEMANDE PAR LE JOUEUR : la chaine de l'original pose l'objet a
+                // (0,34; -0,1; -0,1), et en main il tombait trop a DROITE et trop BAS.
+                // Le decalage est donc ramene a gauche (-0,15) et remonte (+0,12) ; c'est
+                // le seul nombre a tourner si la main le veut encore autrement.
+                pose.translate(0.19f, 0.02f, -0.1f);
                 pose.scale(0.3f, 0.3f, 0.3f);
                 pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
@@ -152,8 +156,8 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
         double max = EnergyItems.maxEnergy(stack);
         double ratio = max <= 0.0d ? 0.0d : EnergyItems.getEnergy(stack) / max;
         ResourceLocation texture = ratio >= 1.0d ? ICON_FULL : ratio >= 0.5d ? ICON_HALF : ICON_EMPTY;
-
-        VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutoutNoCull(texture));
+        RenderType type = RenderType.entityCutoutNoCull(texture);
+        VertexConsumer consumer = buffers.getBuffer(type);
 
         // Face avant, dans le bon sens de lecture.
         vertex(consumer, pose, light, overlay, -0.5f, 0.5f, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
@@ -166,6 +170,14 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
         vertex(consumer, pose, light, overlay, 0.5f, -0.5f, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
         vertex(consumer, pose, light, overlay, -0.5f, -0.5f, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
         vertex(consumer, pose, light, overlay, -0.5f, 0.5f, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
+
+        // ET LE TAMPON SE VIDE MAINTENANT, PENDANT QUE L'ECLAIRAGE EST PLAT. Un sommet est
+        // ecrit dans un tampon et la lumiere directionnelle n'est appliquee qu'AU MOMENT OU
+        // le tampon se vide : changer l'eclairage autour de l'ecriture des sommets ne suffit
+        // donc pas (c'etait la faute du premier essai, et l'icone restait sombre).
+        if (buffers instanceof MultiBufferSource.BufferSource source) {
+            source.endBatch(type);
+        }
     }
 
     private static void vertex(VertexConsumer consumer, PoseStack pose, int light, int overlay,
