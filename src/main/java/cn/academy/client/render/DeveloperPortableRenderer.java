@@ -125,11 +125,11 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
     private static void handPose(ItemDisplayContext context, PoseStack pose) {
         switch (context) {
             case FIRST_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND -> {
-                // ECART DEMANDE PAR LE JOUEUR, en deux temps : la chaine de l'original pose
+                // ECART DEMANDE PAR LE JOUEUR, en trois temps : la chaine de l'original pose
                 // l'objet a (0,34; -0,1; -0,1), et en main il tombait trop a DROITE et trop
-                // BAS. Deux descentes de 15 puis 11 cm a gauche, et de 12 puis 12 cm vers le
-                // haut. C'est le seul nombre a tourner si la main le veut encore autrement.
-                pose.translate(0.08f, 0.14f, -0.1f);
+                // BAS. Trois descentes a gauche (15, 11 puis 6 cm) et trois montees (12, 12
+                // puis 6 cm). C'est le seul nombre a tourner si la main le veut autrement.
+                pose.translate(0.02f, 0.20f, -0.1f);
                 pose.scale(0.3f, 0.3f, 0.3f);
                 pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
