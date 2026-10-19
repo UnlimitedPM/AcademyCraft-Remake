@@ -87,7 +87,8 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
             if (stack.isEmpty()) return false;
             return switch (slot) {
                 case SLOT_LIQUID_IN -> stack.is(ModItems.MATTER_UNIT_PHASE.get());
-                case SLOT_OUTPUT -> stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                case SLOT_OUTPUT -> cn.academy.energy.EnergyItems.supports(stack)
+                        || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
                 // Les unites vides sont posees par la machine.
                 default -> false;
             };
@@ -194,6 +195,17 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
     private void chargeOutput() {
         ItemStack stack = inventory.getStackInSlot(SLOT_OUTPUT);
         if (stack.isEmpty() || energy <= 0.0d) return;
+
+        // L'original rechargeait l'objet par IFItemManager.charge.
+        if (cn.academy.energy.EnergyItems.supports(stack)) {
+            double given = cn.academy.energy.EnergyItems.push(stack,
+                    Math.min(BANDWIDTH, energy));
+            if (given > 0.0d) {
+                energy -= given;
+                setChanged();
+            }
+            return;
+        }
 
         stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
             int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);

@@ -107,6 +107,12 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
             // On refuse de mettre quoi que ce soit dans la sortie : c'est la
             // machine qui la remplit.
             if (slot == SLOT_OUT) return false;
+            // L'emplacement batterie etait un SlotIFItem : tout objet energetique
+            // y entrait, aucun autre.
+            if (slot == SLOT_BATTERY) {
+                return cn.academy.energy.EnergyItems.supports(stack)
+                        || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+            }
             return true;
         }
 
@@ -181,6 +187,17 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
     private void drawFromBattery() {
         ItemStack stack = inventory.getStackInSlot(SLOT_BATTERY);
         if (stack.isEmpty() || energy >= BUFFER_SIZE) return;
+
+        // L'original tirait par IFItemManager.pull.
+        if (cn.academy.energy.EnergyItems.supports(stack)) {
+            double taken = cn.academy.energy.EnergyItems.pull(stack,
+                    Math.min(BANDWIDTH, BUFFER_SIZE - energy));
+            if (taken > 0.0d) {
+                energy += taken;
+                setChanged();
+            }
+            return;
+        }
 
         stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
             int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);

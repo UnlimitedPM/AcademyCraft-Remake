@@ -87,7 +87,10 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     private final ItemStackHandler inventory = new ItemStackHandler(1) {
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            return stack.isEmpty() || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+            // SlotIFItem de l'original (qui ne prenait que l'unite d'energie), etendu
+            // a tout objet energetique du port.
+            return stack.isEmpty() || cn.academy.energy.EnergyItems.supports(stack)
+                    || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
         }
 
         @Override
@@ -287,6 +290,17 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     private void drawFromBattery() {
         ItemStack stack = inventory.getStackInSlot(SLOT_BATTERY);
         if (stack.isEmpty() || energy >= BUFFER_SIZE) return;
+
+        // L'original tirait par IFItemManager.pull.
+        if (cn.academy.energy.EnergyItems.supports(stack)) {
+            double taken = cn.academy.energy.EnergyItems.pull(stack,
+                    Math.min(BANDWIDTH, BUFFER_SIZE - energy));
+            if (taken > 0.0d) {
+                energy += taken;
+                setChanged();
+            }
+            return;
+        }
 
         stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
             int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);

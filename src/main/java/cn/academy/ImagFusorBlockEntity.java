@@ -99,7 +99,8 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
             return switch (slot) {
                 case SLOT_INPUT -> true;
                 case SLOT_IMAG_INPUT -> stack.is(ModItems.MATTER_UNIT_PHASE.get());
-                case SLOT_ENERGY_INPUT -> stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                case SLOT_ENERGY_INPUT -> cn.academy.energy.EnergyItems.supports(stack)
+                        || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
                 // La sortie et les unites vides sont remplies par la machine.
                 default -> false;
             };
@@ -219,6 +220,18 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     private void drawFromBattery() {
         ItemStack stack = inventory.getStackInSlot(SLOT_ENERGY_INPUT);
         if (stack.isEmpty() || energy >= BUFFER_SIZE) return;
+
+        // L'original tirait par IFItemManager.pull : l'objet energetique du mod
+        // d'abord, un objet Forge Energy ensuite (autres mods).
+        if (cn.academy.energy.EnergyItems.supports(stack)) {
+            double taken = cn.academy.energy.EnergyItems.pull(stack,
+                    Math.min(BANDWIDTH, BUFFER_SIZE - energy));
+            if (taken > 0.0d) {
+                energy += taken;
+                setChanged();
+            }
+            return;
+        }
 
         stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
             int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);

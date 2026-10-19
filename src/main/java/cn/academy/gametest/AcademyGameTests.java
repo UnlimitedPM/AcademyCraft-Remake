@@ -557,6 +557,67 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Un generateur recharge l'unite d'energie posee dans son emplacement batterie.
+     *
+     * <p>Les generateurs du port ne rechargeaient que les objets Forge Energy : les
+     * objets du mod n'exposent pas cette capacite, donc l'emplacement refusait
+     * l'unite et ne faisait rien. L'original rechargeait par {@code IFItemManager}.
+     */
+    @GameTest(template = "empty")
+    public static void solarGeneratorChargesTheEnergyUnit(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.SOLAR_GEN.get());
+        var solar = (cn.academy.SolarGenBlockEntity) helper.getBlockEntity(rel);
+
+        net.minecraft.world.item.ItemStack unit =
+                new net.minecraft.world.item.ItemStack(ModItems.ENERGY_UNIT.get());
+        assertTrue(helper, solar.getInventory().isItemValid(
+                        cn.academy.SolarGenBlockEntity.SLOT_BATTERY, unit),
+                "le generateur solaire doit accepter une unite d'energie");
+
+        solar.setEnergy(5000.0d);
+        solar.getInventory().setStackInSlot(cn.academy.SolarGenBlockEntity.SLOT_BATTERY, unit);
+        cn.academy.SolarGenBlockEntity.tick(
+                helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), solar);
+
+        double charge = cn.academy.energy.EnergyItems.getEnergy(unit);
+        assertTrue(helper, charge > 0.0d,
+                "l'unite aurait du se recharger dans le generateur solaire, charge = " + charge);
+        assertTrue(helper, charge <= cn.academy.EnergyUnitItem.BANDWIDTH,
+                "un tick ne doit pas depasser la bande passante de l'unite, charge = " + charge);
+        helper.succeed();
+    }
+
+    /**
+     * Le formeur de metal s'alimente sur le developpeur portable pose dans son
+     * emplacement batterie (l'original : {@code IFItemManager.pull}).
+     */
+    @GameTest(template = "empty")
+    public static void metalFormerDrawsFromThePortableBattery(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (cn.academy.MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        net.minecraft.world.item.ItemStack portable =
+                new net.minecraft.world.item.ItemStack(ModItems.DEVELOPER_PORTABLE.get());
+        cn.academy.DeveloperPortableItem.charge(portable, 1000.0d);
+        assertTrue(helper, former.getInventory().isItemValid(
+                        cn.academy.MetalFormerBlockEntity.SLOT_BATTERY, portable),
+                "le formeur doit accepter le developpeur portable comme batterie");
+
+        former.setEnergy(0.0d);
+        former.getInventory().setStackInSlot(cn.academy.MetalFormerBlockEntity.SLOT_BATTERY, portable);
+        cn.academy.MetalFormerBlockEntity.tick(
+                helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), former);
+
+        assertTrue(helper, cn.academy.DeveloperPortableItem.getEnergy(portable) < 1000.0d,
+                "le portable aurait du se decharger dans le formeur");
+        assertTrue(helper, former.getEnergy() > 0.0d,
+                "le formeur aurait du recevoir de l'energie, energie = " + former.getEnergy());
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le Matrix sans fil
     // ------------------------------------------------------------------

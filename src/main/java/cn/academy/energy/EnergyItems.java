@@ -92,6 +92,32 @@ public final class EnergyItems {
         return item != null && getEnergy(stack) >= item.getMaxEnergy();
     }
 
+    /**
+     * Retire de l'energie sans depasser la bande passante de l'objet.
+     *
+     * <p>C'est le {@code IFItemManager.pull} de l'original : les machines qui
+     * s'alimentent sur un objet (formeur, fusor, brouilleur) passent par la.
+     *
+     * @return la quantite reellement retiree.
+     */
+    public static double pull(ItemStack stack, double amount) {
+        return discharge(stack, Math.min(Math.max(0.0d, amount), bandwidth(stack)));
+    }
+
+    /**
+     * Ajoute de l'energie sans depasser la bande passante de l'objet.
+     *
+     * <p>C'est le {@code IFItemManager.charge} de l'original, cote machine :
+     * les generateurs et le noeud recharge l'objet ainsi.
+     *
+     * @return la quantite reellement transmise.
+     */
+    public static double push(ItemStack stack, double available) {
+        double before = getEnergy(stack);
+        charge(stack, Math.min(Math.max(0.0d, available), bandwidth(stack)));
+        return getEnergy(stack) - before;
+    }
+
     /** L'infobulle de l'original : {@code 4200/10000 IF}. */
     public static Component describe(ItemStack stack) {
         return Component.translatable("ac.energy.item_level",

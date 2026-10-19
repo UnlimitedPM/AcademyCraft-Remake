@@ -1,5 +1,6 @@
 package cn.academy;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import cn.academy.energy.EnergyGenerator;
@@ -92,6 +93,13 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     private final ItemStackHandler inventory = new ItemStackHandler(1) {
+        @Override
+        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
+            // SlotIFItem de l'original : tout objet energetique, rien d'autre.
+            return stack.isEmpty() || cn.academy.energy.EnergyItems.supports(stack)
+                    || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+        }
+
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
@@ -220,6 +228,17 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     private void chargeInsertedItem() {
         ItemStack stack = inventory.getStackInSlot(SLOT_CHARGE);
         if (stack.isEmpty() || energy <= 0.0d) return;
+
+        // L'original rechargeait l'objet par IFItemManager.charge.
+        if (cn.academy.energy.EnergyItems.supports(stack)) {
+            double given = cn.academy.energy.EnergyItems.push(stack,
+                    Math.min(BANDWIDTH, energy));
+            if (given > 0.0d) {
+                energy -= given;
+                setChanged();
+            }
+            return;
+        }
 
         stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
             int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
