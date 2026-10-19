@@ -160,22 +160,38 @@ public abstract class CGuiScreen extends Screen {
             graphics.pose().pushPose();
             graphics.pose().translate((float) (exactX - x), (float) (exactY - y), 0f);
 
+            // La teinte d'un widget, et ses deux facons — c'est le fichier qui choisit :
+            //
+            //   - `affectTexture` : elle REMPLACE la couleur du dessin. Une image dont l'alpha
+            //     porte tout le motif s'allume ainsi sans qu'un pixel de plus soit peint ;
+            //   - sinon : elle se pose par-dessus, en aplat.
+            //
+            // Ce moteur peignait l'aplat dans les deux cas. Le curseur de la barre de
+            // defilement du tutoriel s'en trouvait RECOUVERT d'un carre blanc a 80 %
+            // (`Tint` a `affectTexture` dans le document) : ses bords doux disparaissaient, et
+            // on ne voyait plus qu'un bloc a bord dur — le joueur l'a signale trois fois.
+            // C'est la meme regle que {@code CGuiView}, ou le drapeau, lui, etait deja lu.
+            int[] tint = null;
+            if (widget.tint != null && widget.tint.enabled) {
+                tint = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover
+                        : widget.tint.idle;
+            }
+            boolean tintTexture = tint != null && widget.tint.affectTexture;
+
             if (widget.texture != null) {
-                int colour = argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
-                        widget.texture.blue);
+                int colour = tintTexture
+                        ? argb(tint[3], tint[0], tint[1], tint[2])
+                        : argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
+                                widget.texture.blue);
                 if (widget.texture.texture == null) {
                     fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH, colour);
                 } else {
                     drawTexture(graphics, widget, widget.texture.texture, exactX, exactY, colour);
                 }
             }
-            if (widget.tint != null && widget.tint.enabled) {
-                int[] colour = widget.isPointWithin(mouseX, mouseY) ? widget.tint.hover
-                        : widget.tint.idle;
-                if (colour[3] > 0) {
-                    fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
-                            argb(colour[3], colour[0], colour[1], colour[2]));
-                }
+            if (tint != null && !tintTexture && tint[3] > 0) {
+                fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
+                        argb(tint[3], tint[0], tint[1], tint[2]));
             }
             if (widget.bar != null) {
                 drawBar(graphics, widget, exactX, exactY, widget.absW, widget.absH);
