@@ -125,11 +125,11 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
     private static void handPose(ItemDisplayContext context, PoseStack pose) {
         switch (context) {
             case FIRST_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND -> {
-                // ECART DEMANDE PAR LE JOUEUR : la chaine de l'original pose l'objet a
-                // (0,34; -0,1; -0,1), et en main il tombait trop a DROITE et trop BAS.
-                // Le decalage est donc ramene a gauche (-0,15) et remonte (+0,12) ; c'est
-                // le seul nombre a tourner si la main le veut encore autrement.
-                pose.translate(0.19f, 0.02f, -0.1f);
+                // ECART DEMANDE PAR LE JOUEUR, en deux temps : la chaine de l'original pose
+                // l'objet a (0,34; -0,1; -0,1), et en main il tombait trop a DROITE et trop
+                // BAS. Deux descentes de 15 puis 11 cm a gauche, et de 12 puis 12 cm vers le
+                // haut. C'est le seul nombre a tourner si la main le veut encore autrement.
+                pose.translate(0.08f, 0.14f, -0.1f);
                 pose.scale(0.3f, 0.3f, 0.3f);
                 pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
@@ -159,17 +159,14 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
         RenderType type = RenderType.entityCutoutNoCull(texture);
         VertexConsumer consumer = buffers.getBuffer(type);
 
-        // Face avant, dans le bon sens de lecture.
+        // UNE SEULE FACE, normale vers la camera. Les deux faces coplanaires se disputent la
+        // profondeur (test LEQUAL) et c'est la DERNIERE dessinee qui gagne : c'etait la face
+        // arriere, dont la normale regarde ailleurs, donc l'icone sortait SOMBRE malgre
+        // l'eclairage plat. Un objet vu de face n'a besoin que d'une face.
         vertex(consumer, pose, light, overlay, -0.5f, 0.5f, SPRITE_Z, 0f, 0f, 0f, 0f, 1f);
         vertex(consumer, pose, light, overlay, -0.5f, -0.5f, SPRITE_Z, 0f, 1f, 0f, 0f, 1f);
         vertex(consumer, pose, light, overlay, 0.5f, -0.5f, SPRITE_Z, 1f, 1f, 0f, 0f, 1f);
         vertex(consumer, pose, light, overlay, 0.5f, 0.5f, SPRITE_Z, 1f, 0f, 0f, 0f, 1f);
-
-        // Et le revers, au meme endroit : l'image se lit dans le meme sens des deux cotes.
-        vertex(consumer, pose, light, overlay, 0.5f, 0.5f, SPRITE_Z, 1f, 0f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, 0.5f, -0.5f, SPRITE_Z, 1f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -0.5f, -0.5f, SPRITE_Z, 0f, 1f, 0f, 0f, -1f);
-        vertex(consumer, pose, light, overlay, -0.5f, 0.5f, SPRITE_Z, 0f, 0f, 0f, 0f, -1f);
 
         // ET LE TAMPON SE VIDE MAINTENANT, PENDANT QUE L'ECLAIRAGE EST PLAT. Un sommet est
         // ecrit dans un tampon et la lumiere directionnelle n'est appliquee qu'AU MOMENT OU
