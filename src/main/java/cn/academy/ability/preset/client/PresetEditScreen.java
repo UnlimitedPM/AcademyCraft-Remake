@@ -52,8 +52,8 @@ public class PresetEditScreen extends Screen {
     //
     // Le port dessinait des rectangles gris de son invention ; tout ce qui suit est le
     // document lui-meme : un panneau de 116,25 sur 141,5, quatre lignes de 110 sur 34,75
-    // (une par touche), l'icone de 26,5 a 2,25 du bord, le nom a 36,25 dans une boite de
-    // 62,5 sur 15, et le titre du panneau quinze unites au-dessus.
+    // (une par touche), l'icone incrustee dans la plaque du document, le nom a 36,25 dans
+    // une boite de 62,5 sur 15, et le titre du panneau quinze unites au-dessus.
     // ------------------------------------------------------------------
 
     private static final double PAGE_W = 116.25;
@@ -66,9 +66,20 @@ public class PresetEditScreen extends Screen {
     // legerement trop a gauche », dit le joueur.
     private static final double ROW_X = (PAGE_W - ROW_W) / 2 + 0.5;
     private static final double ROW_TOP = 1.5;
-    private static final double ICON_SIZE = 26.5;
-    private static final double ICON_X = 2.25;
-    private static final double ICON_Y = 3.75;
+
+    // La plaque que `back.png` dessine dans chaque ligne : 27 sur 27,25 a (5,25 ; 3,25) de
+    // la page (mesuree dans la texture, qui fait quatre pixels par unite). L'image de la
+    // competence s'y INCRUSTE — un filet d'une unite tout autour — au lieu d'etre posee
+    // par-dessus : « il faudrait plutot faire en sorte que l'image soit incrustee dans le
+    // carre », dit le joueur.
+    private static final double SLOT_X = 5.25;
+    private static final double SLOT_Y = 3.25;
+    private static final double SLOT_W = 27.0;
+    private static final double SLOT_H = 27.25;
+    /** Le filet de plaque laisse autour de l'image incrustee. */
+    private static final double ICON_INSET = 1.0;
+    private static final double ICON_SIZE = SLOT_W - ICON_INSET * 2;
+
     private static final double NAME_X = 36.25;
     private static final double NAME_Y = 10.0;
     private static final double NAME_H = 15.0;
@@ -265,9 +276,11 @@ public class PresetEditScreen extends Screen {
 
             blend();
             graphics.setColor(1f, 1f, 1f, alpha / 255f);
-            graphics.blit(skill.getHintIcon(), (int) Math.round(ROW_X + ICON_X),
-                    (int) Math.round(rowY + ICON_Y), (int) Math.round(ICON_SIZE),
-                    (int) Math.round(ICON_SIZE), 0f, 0f, 32, 32, 32, 32);
+            graphics.blit(skill.getHintIcon(),
+                    (int) Math.round(SLOT_X + ICON_INSET),
+                    (int) Math.round(rowY + SLOT_Y + (SLOT_H - ICON_SIZE) / 2),
+                    (int) Math.round(ICON_SIZE), (int) Math.round(ICON_SIZE),
+                    0f, 0f, 32, 32, 32, 32);
             graphics.setColor(1f, 1f, 1f, 1f);
 
             // Le nom, coupe a la largeur de sa boite de 62,5 — c'est ce que fait son
