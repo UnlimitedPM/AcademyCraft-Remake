@@ -70,7 +70,7 @@ public class TutorialScreen extends CGuiScreen {
     private List<TutorialMarkdown.Block> blocks = List.of();
 
     public TutorialScreen() {
-        super(Component.translatable("ac.app.tutorial.name"), "guis/tutorial");
+        super(Component.translatable("ac.app.tutorial.name"), "tutorial");
     }
 
     @Override
