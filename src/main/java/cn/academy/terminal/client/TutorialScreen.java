@@ -65,6 +65,15 @@ public class TutorialScreen extends CGuiScreen {
     private static final ResourceLocation CRAFTING_GRID = ResourceLocation.fromNamespaceAndPath(
             AcademyCraft.MOD_ID, "textures/guis/tutorial/crafting_grid.png");
 
+    /** La planche du four : 192 x 128, posee a 60 %, une case de chaque cote. */
+    private static final ResourceLocation SMELTING_VIEW = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/guis/tutorial_smelting.png");
+
+    private static final double SMELT_SCALE = 0.6;
+    private static final double SMELT_IN_X = 30.0;
+    private static final double SMELT_OUT_X = 123.3333;
+    private static final double SMELT_Y = 43.1667;
+
     private static final double GRID_SCALE = 0.6;
     private static final double GRID_CELL = 43.0;
     private static final double GRID_MARGIN = 5.0;
@@ -80,6 +89,17 @@ public class TutorialScreen extends CGuiScreen {
     private final List<TutorialText> texts = new ArrayList<>();
     private final List<Boolean> opened = new ArrayList<>();
     private final List<CWidget> rows = new ArrayList<>();
+
+    /**
+     * L'ordre des lignes de la liste : les tutoriels APPRIS d'abord, puis les autres.
+     *
+     * <p>C'est celui de l'original — {@code TutorialRegistry.groupByLearned} rend deux listes
+     * et l'ecran pose la premiere puis la seconde. Le port les affichait dans l'ordre du
+     * registre, si bien que « Ability Basis » — toujours ouvert — se retrouvait au dixieme
+     * rang au lieu du deuxieme. Le joueur l'a vu : « on passe de Research Note a Resources
+     * directement alors que normalement apres ca c'est Ability Basis ».
+     */
+    private final List<Integer> order = new ArrayList<>();
 
     /** Le tutoriel choisi, ou {@code -1} tant qu'on n'a rien clique. */
     private int selected = -1;
@@ -121,6 +141,12 @@ public class TutorialScreen extends CGuiScreen {
             opened.add(entry.alwaysOpen() || ClientTutorialData.get().isUnlocked(entry.id()));
         }
 
+        // Les appris d'abord, les autres ensuite — chacun dans l'ordre du registre, comme
+        // les deux listes de l'original.
+        order.clear();
+        for (int i = 0; i < texts.size(); i++) if (opened.get(i)) order.add(i);
+        for (int i = 0; i < texts.size(); i++) if (!opened.get(i)) order.add(i);
+
         // L'introduction en logo de l'original (logo0..3) : ce sont les images blanches floues
         // qui entourent la liste, et c'est leur degrade que le joueur voyait dans le vrai mod.
         // Elles restent affichees tant qu'aucun tutoriel n'est choisi, puis s'effacent — c'est
@@ -133,11 +159,26 @@ public class TutorialScreen extends CGuiScreen {
 
         buildList();
         orderScrollBars();
+        fadeScrollBars();
 
         CWidget left = find("showWindow");
         if (left != null) {
             onClick(left.child("btn_left"), () -> cyclePreview(-1));
             onClick(left.child("btn_right"), () -> cyclePreview(1));
+
+            // Les fleches de l'original portent une PLAQUE blanche (sa texture), et a quatre
+            // vingts pour cent elle se lit comme un bloc gris pose sur l'apercu — « ca fait
+            // tres moche puisque le gris de fond est visible ». Elles s'effacent donc au repos
+            // et s'allument sous la souris, comme les etiquettes.
+            for (String arrow : new String[] { "btn_left", "btn_right" }) {
+                CWidget widget = left.child(arrow);
+                if (widget == null) continue;
+
+                widget.tint = new CWidget.Tint();
+                widget.tint.affectTexture = true;
+                widget.tint.idle = new int[] { 255, 255, 255, 64 };
+                widget.tint.hover = new int[] { 255, 255, 255, 255 };
+            }
         }
     }
 
@@ -168,6 +209,22 @@ public class TutorialScreen extends CGuiScreen {
         centerPart.add(thumb);
     }
 
+    /**
+     * La barre de defilement, en BLANC TRANSLUCIDE : sa texture est blanche, et a pleine opacite
+     * elle se lit comme un bloc pose sur le panneau — « le blanc qui doit prendre une couleur
+     * transparente n'est pas transparent ». La glissiere reste plus effacee que le curseur.
+     */
+    private void fadeScrollBars() {
+        CWidget centerPart = find("centerPart");
+        if (centerPart == null) return;
+
+        CWidget track = centerPart.child("scroll_1");
+        if (track != null && track.texture != null) track.texture.alpha = 96;
+
+        CWidget thumb = centerPart.child("scroll_2");
+        if (thumb != null && thumb.texture != null) thumb.texture.alpha = 224;
+    }
+
     private void hide(String name) {
         CWidget widget = find(name);
         if (widget != null) widget.transform.doesDraw = false;
@@ -182,34 +239,35 @@ public class TutorialScreen extends CGuiScreen {
         rows.clear();
         list.list = new CWidget.ElementList();
 
-        for (int i = 0; i < texts.size(); i++) {
-            int index = i;
+        for (int row = 0; row < order.size(); row++) {
+            int index = order.get(row);
 
-            CWidget row = new CWidget("row_" + i);
-            row.transform.width = 72;
-            row.transform.height = 12;
-            row.tint = new CWidget.Tint();
-            row.tint.idle = ROW_IDLE.clone();
-            row.tint.hover = ROW_HOVER.clone();
+            CWidget line = new CWidget("row_" + row);
+            line.transform.width = 72;
+            line.transform.height = 12;
+            line.tint = new CWidget.Tint();
+            line.tint.idle = ROW_IDLE.clone();
+            line.tint.hover = ROW_HOVER.clone();
 
             CWidget label = new CWidget("label");
             label.transform.width = 69;
             label.transform.height = 12;
             label.transform.x = 3;
             label.text = new CWidget.TextBox();
-            label.text.content = ellipsize(texts.get(i).title());
+            label.text.content = ellipsize(texts.get(index).title());
             label.text.fontSize = 10;
             label.text.align = "LEFT";
             label.text.heightAlign = "CENTER";
-            int grey = opened.get(i) ? 255 : 153;
+            // L'original ecrit en gris les tutoriels pas encore appris (`fromFloatMono(0.6)`).
+            int grey = opened.get(index) ? 255 : 153;
             label.text.red = grey;
             label.text.green = grey;
             label.text.blue = grey;
 
-            row.add(label);
-            onClick(row, () -> select(index));
-            rows.add(row);
-            list.add(row);
+            line.add(label);
+            onClick(line, () -> select(index));
+            rows.add(line);
+            list.add(line);
         }
     }
 
@@ -345,6 +403,15 @@ public class TutorialScreen extends CGuiScreen {
      * resultat a droite — plus le genre de recette au-dessus, « Shaped Crafting ».
      */
     private void previewRecipe(GuiGraphics graphics, TutorialPreviews.Recipe recipe) {
+        switch (recipe.shape) {
+            case CRAFT -> previewCrafting(graphics, recipe);
+            case SMELT -> previewSmelting(graphics, recipe);
+            case NONE -> { }
+        }
+    }
+
+    /** La grille d'etabli de l'original, avec ses ingredients a deux fois la taille d'une icone. */
+    private void previewCrafting(GuiGraphics graphics, TutorialPreviews.Recipe recipe) {
         graphics.pose().pushPose();
         graphics.pose().scale((float) GRID_SCALE, (float) GRID_SCALE, 1f);
         graphics.pose().translate(-98f, -64f, 0f);
@@ -376,6 +443,31 @@ public class TutorialScreen extends CGuiScreen {
                 ? "ac.gui.crafttype.shaped" : "ac.gui.crafttype.shapeless").getString();
         int width = AcademyFonts.width(font, label, 12);
         AcademyFonts.drawTop(graphics, font, label, (196 - width) / 2, -24, 0xFFFFFFFF, 12);
+
+        graphics.pose().popPose();
+    }
+
+    /** Le four de l'original : une case a gauche, une a droite, sur sa planche de 192 x 128. */
+    private void previewSmelting(GuiGraphics graphics, TutorialPreviews.Recipe recipe) {
+        graphics.pose().pushPose();
+        graphics.pose().scale((float) SMELT_SCALE, (float) SMELT_SCALE, 1f);
+        graphics.pose().translate(-96f, -64f, 0f);
+
+        blend();
+        graphics.blit(SMELTING_VIEW, 0, 0, 192, 128, 0f, 0f, 192, 128, 192, 128);
+
+        ItemStack input = recipe.grid.isEmpty() ? ItemStack.EMPTY : recipe.grid.get(0);
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) SMELT_IN_X, (float) SMELT_Y, 0f);
+        graphics.pose().scale(2f, 2f, 1f);
+        if (!input.isEmpty()) graphics.renderItem(input, 0, 0);
+        graphics.pose().popPose();
+
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) SMELT_OUT_X, (float) SMELT_Y, 0f);
+        graphics.pose().scale(2f, 2f, 1f);
+        if (!recipe.result.isEmpty()) graphics.renderItem(recipe.result, 0, 0);
+        graphics.pose().popPose();
 
         graphics.pose().popPose();
     }
@@ -467,6 +559,11 @@ public class TutorialScreen extends CGuiScreen {
      */
     @Override
     protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
+        // Le curseur de la barre suit le defilement A CHAQUE IMAGE, meme quand les logos sont
+        // partis : il etait deplace dans le bloc des logos, qui sort tot — la barre restait donc
+        // en haut quoi qu'on fasse defiler.
+        moveScrollThumb();
+
         CWidget logo1 = find("logo1");
         if (logo1 == null || !logo1.transform.doesDraw) return;
 
@@ -515,31 +612,56 @@ public class TutorialScreen extends CGuiScreen {
 
     /** La hauteur du contenu mis en page, pour la barre de defilement. */
     private int measure() {
+        double unit = unit();
+        int width = (int) Math.round(CONTENT_WIDTH * unit);
         int height = 0;
 
         for (TutorialMarkdown.Block block : blocks) {
             if (block.isImage()) {
                 int[] size = TutorialImages.size(block.image());
                 height += (size == null ? 0
-                        : Math.max(1, (int) Math.round(size[1] * (double) CONTENT_WIDTH / size[0])))
-                        + 4;
+                        : Math.max(1, (int) Math.round(size[1] * (double) width / size[0])))
+                        + (int) Math.round(4 * unit);
                 continue;
             }
-            int cell = cellOf(block);
+            int cell = cellOf(block, unit);
             height += (block.text().isEmpty() ? 1
-                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, cell).size())
+                    : AcademyFonts.split(font, block.text(), width, cell).size())
                     * AcademyFonts.lineHeight(cell);
         }
         return height;
     }
 
-    /** La cellule d'un morceau : 12 pour un titre, 10 pour un sous-titre, 8 pour le corps. */
-    private static int cellOf(TutorialMarkdown.Block block) {
-        return switch (block.heading()) {
-            case 1 -> 12;
-            case 2 -> 10;
-            default -> CONTENT_CELL;
+    /**
+     * L'echelle du document — celle que l'original donnait a toute sa fenetre.
+     *
+     * <p>Son texte est ecrit en UNITES du document ({@code FontOption(8)}), et le document
+     * entier est ensuite mis a l'echelle de la largeur de l'ecran : a six cent quarante
+     * pixels de large, une cellule de huit s'affiche sur dix virgule sept. Le port dessinait
+     * ses cellules en pixels d'ecran, donc vingt-cinq pour cent trop petit — « le texte est
+     * trop petit, mal cadre ». La largeur de coupe suit la meme echelle : cent cinquante
+     * unites font deux cents pixels, et le texte touche alors la barre de defilement.
+     */
+    private double unit() {
+        return width / REF_WIDTH;
+    }
+
+    /**
+     * La cellule d'un morceau : la taille de base, multipliee par celle de son titre.
+     *
+     * <p>{@code ACMarkdownRenderer} prend sa taille dans
+     * {@code headerPrefixes = [1,0; 1,2; 1,4; 1,6; 1,8]}, et un titre de rang {@code n} vaut
+     * {@code 1,8 / 1,6 / 1,4} pour {@code #}, {@code ##}, {@code ###}. Le port ne connaissait
+     * que deux rangs et les dessinait en 12 et 10.
+     */
+    private static int cellOf(TutorialMarkdown.Block block, double unit) {
+        double ratio = switch (block.heading()) {
+            case 1 -> 1.8;
+            case 2 -> 1.6;
+            case 3 -> 1.4;
+            default -> 1.0;
         };
+        return Math.max(5, (int) Math.round(CONTENT_CELL * ratio * unit));
     }
 
     /** Un texte du contenu ; un titre se dessine en GRAS, comme l'original (double passe). */
@@ -555,22 +677,27 @@ public class TutorialScreen extends CGuiScreen {
         CWidget area = window == null ? null : window.child("text");
         if (area == null) return;
 
-        int left = (int) Math.round(area.absX) + 3;
-        int top = (int) Math.round(area.absY) + 3;
+        double unit = unit();
+        int left = (int) Math.round(area.absX) + (int) Math.round(3 * unit);
+        int top = (int) Math.round(area.absY) + (int) Math.round(3 * unit);
 
+        int titleCell = Math.max(5, (int) Math.round(AcademyFonts.GUI_SIZE * unit));
         AcademyFonts.drawTop(graphics, font, texts.get(selected).title(), left, top,
-                0xFFFFFFFF, AcademyFonts.GUI_SIZE);
-        top += AcademyFonts.lineHeight(AcademyFonts.GUI_SIZE) + 2;
+                0xFFFFFFFF, titleCell);
 
         String brief = TutorialMarkdown.inline(texts.get(selected).brief(), TutorialScreen::keyName);
         if (brief.isEmpty()) return;
-        // L'original coupait le resume a cent trente unites, dans une fenetre qui en fait 158,5.
-        int limit = Math.max(1, (int) Math.round(130 * area.absScale));
-        for (String line : AcademyFonts.split(font, brief, limit, CONTENT_CELL)) {
+
+        // L'original descend a quinze unites pour le resume (son {@code glTranslated(3, 15)}),
+        // le coupe a cent trente unites, et l'ecrit en blanc comme le reste du texte.
+        int cell = Math.max(5, (int) Math.round(CONTENT_CELL * unit));
+        int limit = Math.max(1, (int) Math.round(130 * unit));
+        int lineTop = (int) Math.round(area.absY) + (int) Math.round(15 * unit);
+        for (String line : AcademyFonts.split(font, brief, limit, cell)) {
             if (!line.isEmpty()) {
-                AcademyFonts.drawTop(graphics, font, line, left, top, 0xFFC8C8C8, CONTENT_CELL);
+                AcademyFonts.drawTop(graphics, font, line, left, lineTop, 0xFFFFFFFF, cell);
             }
-            top += AcademyFonts.lineHeight(CONTENT_CELL);
+            lineTop += AcademyFonts.lineHeight(cell);
         }
     }
 
@@ -580,8 +707,10 @@ public class TutorialScreen extends CGuiScreen {
         CWidget area = centerPart == null ? null : centerPart.child("text");
         if (area == null) return;
 
-        int left = (int) Math.round(area.absX) + 4;
-        int top = (int) Math.round(area.absY) + 3;
+        double unit = unit();
+        int width = (int) Math.round(CONTENT_WIDTH * unit);
+        int left = (int) Math.round(area.absX) + (int) Math.round(3 * unit);
+        int top = (int) Math.round(area.absY) + (int) Math.round(3 * unit);
         int bottom = (int) Math.round(area.absY + area.absH) - 2;
 
         graphics.enableScissor((int) Math.round(area.absX), (int) Math.round(area.absY),
@@ -591,17 +720,18 @@ public class TutorialScreen extends CGuiScreen {
 
         for (TutorialMarkdown.Block block : blocks) {
             if (block.isImage()) {
-                y = drawImage(graphics, block.image(), left, y, top, bottom) + 4;
+                y = drawImage(graphics, block.image(), left, y, top, bottom, width)
+                        + (int) Math.round(4 * unit);
                 continue;
             }
 
-            int blockCell = cellOf(block);
+            int blockCell = cellOf(block, unit);
             List<String> lines = block.text().isEmpty()
                     ? List.of("")
-                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, blockCell);
+                    : AcademyFonts.split(font, block.text(), width, blockCell);
             for (String line : lines) {
                 if (!line.isEmpty() && y + blockCell >= top && y <= bottom) {
-                    drawLine(graphics, line, left, y, 0xFFE0E0E0, blockCell, block.heading() > 0);
+                    drawLine(graphics, line, left, y, 0xFFFFFFFF, blockCell, block.heading() > 0);
                 }
                 y += AcademyFonts.lineHeight(blockCell);
             }
@@ -615,16 +745,16 @@ public class TutorialScreen extends CGuiScreen {
      *
      * @return le bas de l'image, ou {@code y} quand le fichier est absent
      */
-    private int drawImage(GuiGraphics graphics, String path, int x, int y, int top, int bottom) {
+    private int drawImage(GuiGraphics graphics, String path, int x, int y, int top, int bottom,
+                          int width) {
         int[] size = TutorialImages.size(path);
         ResourceLocation texture = path == null ? null : ResourceLocation.tryParse(path);
         if (size == null || texture == null) return y;
 
-        int w = CONTENT_WIDTH;
-        int h = Math.max(1, (int) Math.round(size[1] * (double) w / size[0]));
+        int h = Math.max(1, (int) Math.round(size[1] * (double) width / size[0]));
         if (y + h >= top && y <= bottom) {
             blend();
-            graphics.blit(texture, x, y, w, h, 0f, 0f, size[0], size[1], size[0], size[1]);
+            graphics.blit(texture, x, y, width, h, 0f, 0f, size[0], size[1], size[0], size[1]);
         }
         return y + h;
     }
@@ -634,8 +764,8 @@ public class TutorialScreen extends CGuiScreen {
         if (selected >= 0 && delta != 0) {
             int viewHeight = contentViewHeight();
             int max = Math.max(0, contentHeight - viewHeight);
-            scroll = Math.max(0, Math.min(max,
-                    scroll + (int) (-delta * AcademyFonts.lineHeight(CONTENT_CELL) * 2)));
+            int step = Math.max(1, (int) Math.round(AcademyFonts.lineHeight(CONTENT_CELL) * unit() * 2));
+            scroll = Math.max(0, Math.min(max, scroll + (int) (-delta * step)));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, delta);

@@ -94,7 +94,7 @@ public final class TutorialMarkdown {
             if (level > 0) {
                 String heading = inline(line.substring(level).trim(), keyName);
                 if (!heading.isEmpty()) {
-                    blocks.add(new Block(heading, null, Math.min(level, 2)));
+                    blocks.add(new Block(heading, null, Math.min(level, 3)));
                 }
                 continue;
             }

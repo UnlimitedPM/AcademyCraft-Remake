@@ -10,6 +10,8 @@ import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
+import net.minecraft.world.item.crafting.SmeltingRecipe;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -51,13 +53,19 @@ public final class TutorialPreviews {
     public record View(Kind kind, String id) {}
 
     /**
-     * Une recette d'artisanat, posee dans la grille de trois sur trois.
+     * Une recette d'artisanat ou de cuisson, posee dans la grille de trois sur trois.
      *
      * <p>C'est le {@code CraftingGridDisplay} de l'original : ses neuf cases a la place que la
      * recette leur donne — une recette en forme de triangle ne se lit pas comme une recette
-     * pleine — et son resultat a droite.
+     * pleine — et son resultat a droite. La cuisson, elle, n'a qu'une entree : son
+     * {@code Smelting} n'a qu'une case a gauche et une a droite.
      */
     public static final class Recipe {
+
+        /** Ce que la vue dessine : une grille d'etabli, un four, ou rien du tout. */
+        public enum Shape { CRAFT, SMELT, NONE }
+
+        public final Shape shape;
 
         /** Vrai pour une recette en forme, faux pour une recette en vrac. */
         public final boolean shaped;
@@ -68,7 +76,8 @@ public final class TutorialPreviews {
         /** Le resultat, ou une pile vide si la recette est introuvable. */
         public final ItemStack result;
 
-        private Recipe(boolean shaped, List<ItemStack> grid, ItemStack result) {
+        private Recipe(Shape shape, boolean shaped, List<ItemStack> grid, ItemStack result) {
+            this.shape = shape;
             this.shaped = shaped;
             this.grid = Collections.unmodifiableList(grid);
             this.result = result;
@@ -131,24 +140,54 @@ public final class TutorialPreviews {
         Recipe known = RECIPES.get(id);
         if (known != null) return known;
 
-        Recipe found = null;
         ItemStack wanted = stack(id);
         var level = Minecraft.getInstance().level;
 
-        if (level != null && !wanted.isEmpty()) {
-            for (CraftingRecipe recipe : level.getRecipeManager()
-                    .getAllRecipesFor(RecipeType.CRAFTING)) {
-                ItemStack result = recipe.getResultItem(level.registryAccess());
-                if (!result.is(wanted.getItem())) continue;
-
-                found = grid(recipe, result);
-                break;
-            }
+        Recipe found = level == null || wanted.isEmpty() ? null
+                : craftingRecipe(level, wanted);
+        if (found == null && level != null && !wanted.isEmpty()) {
+            found = smeltingRecipe(level, wanted);
+        }
+        if (found == null) {
+            found = new Recipe(Recipe.Shape.NONE, false, emptyGrid(), wanted);
         }
 
-        if (found == null) found = new Recipe(false, emptyGrid(), wanted);
         RECIPES.put(id, found);
         return found;
+    }
+
+    /** La premiere recette d'etabli qui donne cet objet, ou {@code null}. */
+    private static Recipe craftingRecipe(Level level, ItemStack wanted) {
+        for (CraftingRecipe recipe : level.getRecipeManager()
+                .getAllRecipesFor(RecipeType.CRAFTING)) {
+            ItemStack result = recipe.getResultItem(level.registryAccess());
+            if (!result.is(wanted.getItem())) continue;
+
+            return grid(recipe, result);
+        }
+        return null;
+    }
+
+    /**
+     * La premiere recette de four qui donne cet objet, ou {@code null}.
+     *
+     * <p>Sans elle, un lingot de silicium — qui se cuit et ne s'assemble pas — s'affichait
+     * dans une grille d'etabli VIDE : il semblait tomber du ciel. Le joueur l'a vu : « pour
+     * l'imag silicon ingot, tu as mis comme si il passait juste dans une table de craft, de
+     * sorte qu'il soit juste gratuit ».
+     */
+    private static Recipe smeltingRecipe(Level level, ItemStack wanted) {
+        for (SmeltingRecipe recipe : level.getRecipeManager()
+                .getAllRecipesFor(RecipeType.SMELTING)) {
+            ItemStack result = recipe.getResultItem(level.registryAccess());
+            if (!result.is(wanted.getItem())) continue;
+
+            List<ItemStack> grid = emptyGrid();
+            List<Ingredient> ingredients = recipe.getIngredients();
+            if (!ingredients.isEmpty()) grid.set(0, first(ingredients.get(0)));
+            return new Recipe(Recipe.Shape.SMELT, false, grid, result);
+        }
+        return null;
     }
 
     /** Une recette posee dans la grille : sa forme decide de la place de chaque ingredient. */
@@ -174,7 +213,7 @@ public final class TutorialPreviews {
             }
         }
 
-        return new Recipe(shaped, grid, result);
+        return new Recipe(Recipe.Shape.CRAFT, shaped, grid, result);
     }
 
     /** La premiere pile d'un ingredient : l'original les faisait defiler toutes les deux secondes. */
