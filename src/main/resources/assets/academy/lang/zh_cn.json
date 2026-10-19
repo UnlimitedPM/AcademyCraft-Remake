@@ -59,6 +59,7 @@
 
   "academy.developer.type.portable": "便携式开发机",
   "academy.developer.portable.energy": "能量 %s / %s",
+  "ac.energy.item_level": "%s/%s IF",
   "academy.developer.type.normal": "普通能力开发机",
   "academy.developer.type.advanced": "高级能力开发机",
   "block.academy.ability_interferer": "能力干扰器",

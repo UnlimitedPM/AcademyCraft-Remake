@@ -11,7 +11,6 @@ import java.util.Random;
 import java.util.Set;
 
 import cn.academy.ModBlockEntities;
-import cn.academy.ModItems;
 import cn.academy.NodeMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -83,9 +82,9 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // Seules les unites d'energie vides ont un sens ici ; les autres
-            // objets sont refuses pour eviter de les perdre.
-            return stack.isEmpty() || stack.is(ModItems.ENERGY_UNIT.get());
+            // Tout objet energetique : unite d'energie ET developpeur portable, comme
+            // le SlotIFItem de l'original qui testait l'interface et pas la classe.
+            return stack.isEmpty() || EnergyItems.supports(stack);
         }
 
         @Override
@@ -432,8 +431,10 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         double missing = getMaxEnergy() - energy;
         if (missing <= 0.0d) return;
 
-        double request = Math.min(getBandwidth(), missing);
-        double taken = ModItems.EnergyUnit.discharge(stack, (float) request);
+        // La bande passante est celle de l'OBJET, pas celle du noeud (l'original lisait
+        // getBandwidth() sur l'ImagEnergyItem).
+        double request = Math.min(EnergyItems.bandwidth(stack), missing);
+        double taken = EnergyItems.discharge(stack, request);
         if (taken > 0.0d) {
             setEnergy(energy + taken);
             setChanged();
@@ -445,9 +446,11 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         ItemStack stack = inventory.getStackInSlot(SLOT_CHARGE_OUT);
         if (stack.isEmpty() || energy <= 0.0d) return;
 
-        double available = Math.min(getBandwidth(), energy);
-        float before = ModItems.EnergyUnit.getEnergy(stack);
-        float after = ModItems.EnergyUnit.charge(stack, (float) available);
+        if (EnergyItems.isFull(stack)) return;
+
+        double available = Math.min(EnergyItems.bandwidth(stack), energy);
+        double before = EnergyItems.getEnergy(stack);
+        double after = EnergyItems.charge(stack, available);
         double given = after - before;
 
         if (given > 0.0d) {

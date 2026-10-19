@@ -81,6 +81,11 @@ public class ModCreativeTabs {
                         output.accept(ModItems.MATTER_UNIT_PHASE.get());
                         output.accept(ModItems.IMAG_PHASE.get());
                         output.accept(ModItems.ENERGY_UNIT.get());
+                        // L'original donnait DEUX piles dans l'onglet : une vide et une pleine.
+                        net.minecraft.world.item.ItemStack fullUnit =
+                                new net.minecraft.world.item.ItemStack(ModItems.ENERGY_UNIT.get());
+                        cn.academy.energy.EnergyItems.setEnergy(fullUnit, EnergyUnitItem.MAX_ENERGY);
+                        output.accept(fullUnit);
                         output.accept(ModItems.WINDGEN_FAN.get());
                         output.accept(ModItems.COIN.get());
                         output.accept(ModItems.SILBARN.get());

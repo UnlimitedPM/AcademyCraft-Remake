@@ -59,6 +59,7 @@
 
   "academy.developer.type.portable": "Desarrollador portátil",
   "academy.developer.portable.energy": "Energía %s / %s",
+  "ac.energy.item_level": "%s/%s IF",
   "academy.developer.type.normal": "Desarrollador de habilidades normal",
   "academy.developer.type.advanced": "Desarrollador de habilidades avanzado",
   "block.academy.ability_interferer": "Interferidor de habilidades",

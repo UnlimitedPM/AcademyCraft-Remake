@@ -85,8 +85,7 @@ public class ModItems {
     public static final RegistryObject<Item> MAT_CORE_1 = ITEMS.register("mat_core_1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAT_CORE_2 = ITEMS.register("mat_core_2", () -> new Item(new Item.Properties()));
 
-    public static final RegistryObject<Item> ENERGY_UNIT = ITEMS.register("energy_unit",
-            () -> new Item(new Item.Properties().stacksTo(1)));
+    public static final RegistryObject<Item> ENERGY_UNIT = ITEMS.register("energy_unit", EnergyUnitItem::new);
     public static final RegistryObject<Item> WINDGEN_FAN = ITEMS.register("windgen_fan",
             // L'original : setMaxStackSize(1) + setMaxDamage(100). Rien ne l'use
             // en jeu, mais il n'est pas empilable et c'est ce qui compte pour
@@ -380,41 +379,35 @@ public class ModItems {
     }
 
     /**
-     * Etat de l'unite d'energie, porte par le NBT {@code ac_energy}.
+     * Ancien point d'entree de l'unite d'energie, garde pour les appelants
+     * existants.
      *
-     * L'original (1.12.2) utilisait {@code ItemEnergyBase(10000, 20)} avec des
-     * degats d'objet pour l'icone. En 1.20.1 on stocke l'energie en NBT et on
-     * expose l'etat via la propriete d'item {@code academy:energy}
-     * (voir {@link ModItemProperties}).
+     * <p>La regle vit maintenant dans {@link cn.academy.energy.EnergyItems}, une
+     * seule fois pour l'unite ET pour le developpeur portable. Ce bloc ne fait
+     * que deleguer, avec les types {@code float} que le port exposait avant.
      */
     public static final class EnergyUnit {
         private EnergyUnit() {}
 
-        public static final float MAX_ENERGY = 10000f;
-        public static final float BANDWIDTH = 20f;
-        private static final String KEY = "ac_energy";
+        public static final float MAX_ENERGY = (float) EnergyUnitItem.MAX_ENERGY;
+        public static final float BANDWIDTH = (float) EnergyUnitItem.BANDWIDTH;
 
         public static float getEnergy(ItemStack stack) {
-            return stack.getTag() != null ? stack.getTag().getFloat(KEY) : 0f;
+            return (float) cn.academy.energy.EnergyItems.getEnergy(stack);
         }
 
         /** Ajoute de l'energie sans depasser {@link #MAX_ENERGY}. Retourne le nouveau niveau. */
         public static float charge(ItemStack stack, float amount) {
-            float updated = Math.min(getEnergy(stack) + amount, MAX_ENERGY);
-            stack.getOrCreateTag().putFloat(KEY, updated);
-            return updated;
+            return (float) cn.academy.energy.EnergyItems.charge(stack, amount);
         }
 
         /** Retire de l'energie. Retourne la quantite reellement retiree. */
         public static float discharge(ItemStack stack, float amount) {
-            float available = getEnergy(stack);
-            float taken = Math.min(available, amount);
-            stack.getOrCreateTag().putFloat(KEY, available - taken);
-            return taken;
+            return (float) cn.academy.energy.EnergyItems.discharge(stack, amount);
         }
 
         public static boolean isFull(ItemStack stack) {
-            return getEnergy(stack) >= MAX_ENERGY;
+            return cn.academy.energy.EnergyItems.isFull(stack);
         }
     }
 

@@ -59,6 +59,7 @@
 
   "academy.developer.type.portable": "Développeur portable",
   "academy.developer.portable.energy": "Énergie %s / %s",
+  "ac.energy.item_level": "%s/%s IF",
   "academy.developer.type.normal": "Développeur d'aptitudes normal",
   "academy.developer.type.advanced": "Développeur d'aptitudes avancé",
   "block.academy.ability_interferer": "Brouilleur d'aptitudes",

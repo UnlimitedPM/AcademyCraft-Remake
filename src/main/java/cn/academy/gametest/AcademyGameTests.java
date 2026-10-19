@@ -516,6 +516,47 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Le noeud accepte TOUT objet energetique, pas seulement l'unite.
+     *
+     * <p>C'est le {@code SlotIFItem} de l'original, qui testait l'interface
+     * {@code ImagEnergyItem} : le developpeur portable se rechargeait donc dans un
+     * noeud, a SA bande passante (50 IF par tick, contre 20 pour l'unite). Le port
+     * ne connaissait que {@code ENERGY_UNIT}, donc le portable ne se rechargeait
+     * nulle part.
+     */
+    @GameTest(template = "empty")
+    public static void wirelessNodeRechargesThePortableDeveloper(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(1, 1, 1);
+        helper.setBlock(rel, ModBlocks.NODE_BASIC.get());
+        var node = (cn.academy.energy.NodeBlockEntity) helper.getBlockEntity(rel);
+
+        net.minecraft.world.item.ItemStack portable =
+                new net.minecraft.world.item.ItemStack(ModItems.DEVELOPER_PORTABLE.get());
+
+        assertTrue(helper, node.getInventory().isItemValid(
+                        cn.academy.energy.NodeBlockEntity.SLOT_CHARGE_OUT, portable),
+                "le noeud doit accepter le developpeur portable");
+        assertTrue(helper, !node.getInventory().isItemValid(
+                        cn.academy.energy.NodeBlockEntity.SLOT_CHARGE_OUT,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE)),
+                "le noeud ne doit pas accepter un objet quelconque");
+
+        node.setEnergy(10000.0d);
+        node.getInventory().setStackInSlot(
+                cn.academy.energy.NodeBlockEntity.SLOT_CHARGE_OUT, portable);
+
+        cn.academy.energy.NodeBlockEntity.serverTick(
+                helper.getLevel(), helper.absolutePos(rel), helper.getBlockState(rel), node);
+
+        double charged = cn.academy.DeveloperPortableItem.getEnergy(portable);
+        assertTrue(helper, charged > 0.0d,
+                "le portable aurait du se charger depuis le noeud, charge = " + charged);
+        assertTrue(helper, charged <= cn.academy.DeveloperPortableItem.BANDWIDTH,
+                "un tick ne doit pas depasser la bande passante du portable, charge = " + charged);
+        helper.succeed();
+    }
+
     // ------------------------------------------------------------------
     // Reseau energetique : le Matrix sans fil
     // ------------------------------------------------------------------

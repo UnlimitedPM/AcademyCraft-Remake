@@ -1,6 +1,8 @@
 package cn.academy;
 
 import cn.academy.ability.develop.PortableDevCapability;
+import cn.academy.energy.EnergyItems;
+import cn.academy.energy.ImagEnergyItem;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -35,7 +37,7 @@ import java.util.List;
  * <p>L'energie, elle, est dans l'objet et y reste : un portable ne se raccorde a rien, et
  * il faut le recharger ailleurs — dans un noeud, comme n'importe quelle unite d'energie.
  */
-public class DeveloperPortableItem extends Item {
+public class DeveloperPortableItem extends Item implements ImagEnergyItem {
 
     /** Tampon de l'objet. {@code DeveloperType.PORTABLE.getEnergy()}. */
     public static final double MAX_ENERGY = 10_000.0d;
@@ -43,10 +45,18 @@ public class DeveloperPortableItem extends Item {
     /** Energie acceptee ou rendue par tick. {@code LATENCY_MK1}. */
     public static final double BANDWIDTH = 50.0d;
 
-    private static final String ENERGY_KEY = "ac_energy";
-
     public DeveloperPortableItem() {
         super(new Item.Properties().stacksTo(1));
+    }
+
+    @Override
+    public double getMaxEnergy() {
+        return MAX_ENERGY;
+    }
+
+    @Override
+    public double getBandwidth() {
+        return BANDWIDTH;
     }
 
     // ------------------------------------------------------------------
@@ -54,26 +64,21 @@ public class DeveloperPortableItem extends Item {
     // ------------------------------------------------------------------
 
     public static double getEnergy(ItemStack stack) {
-        return stack.getTag() == null ? 0.0d : stack.getTag().getDouble(ENERGY_KEY);
+        return EnergyItems.getEnergy(stack);
     }
 
     /** Ajoute de l'energie sans depasser le tampon. Rend le nouveau niveau. */
     public static double charge(ItemStack stack, double amount) {
-        double updated = Math.min(getEnergy(stack) + amount, MAX_ENERGY);
-        stack.getOrCreateTag().putDouble(ENERGY_KEY, updated);
-        return updated;
+        return EnergyItems.charge(stack, amount);
     }
 
     /** Retire de l'energie. Rend la quantite reellement retiree. */
     public static double discharge(ItemStack stack, double amount) {
-        double available = getEnergy(stack);
-        double taken = Math.min(available, amount);
-        stack.getOrCreateTag().putDouble(ENERGY_KEY, available - taken);
-        return taken;
+        return EnergyItems.discharge(stack, amount);
     }
 
     public static boolean isFull(ItemStack stack) {
-        return getEnergy(stack) >= MAX_ENERGY;
+        return EnergyItems.isFull(stack);
     }
 
     // ------------------------------------------------------------------
@@ -103,5 +108,21 @@ public class DeveloperPortableItem extends Item {
                                 TooltipFlag flag) {
         tooltip.add(Component.translatable("academy.developer.portable.energy",
                 (int) getEnergy(stack), (int) MAX_ENERGY));
+    }
+
+    // La meme barre que l'unite d'energie : la charge se lit sans ouvrir l'infobulle.
+    @Override
+    public boolean isBarVisible(ItemStack stack) {
+        return EnergyItems.hasBar(stack);
+    }
+
+    @Override
+    public int getBarWidth(ItemStack stack) {
+        return EnergyItems.barWidth(stack);
+    }
+
+    @Override
+    public int getBarColor(ItemStack stack) {
+        return EnergyItems.barColor(stack);
     }
 }
