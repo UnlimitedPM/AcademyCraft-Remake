@@ -13,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
@@ -72,6 +73,10 @@ public class TutorialScreen extends CGuiScreen {
 
     private List<TutorialMarkdown.Block> blocks = List.of();
 
+    /** Les apercus du tutoriel choisi, et celui qui est montre. */
+    private List<TutorialPreviews.View> previews = List.of();
+    private int previewIndex;
+
     public TutorialScreen() {
         super(Component.translatable("ac.app.tutorial.name"), "tutorial");
     }
@@ -111,6 +116,18 @@ public class TutorialScreen extends CGuiScreen {
 
         buildList();
         orderScrollBars();
+
+        CWidget left = find("showWindow");
+        if (left != null) {
+            onClick(left.child("btn_left"), () -> cyclePreview(-1));
+            onClick(left.child("btn_right"), () -> cyclePreview(1));
+        }
+    }
+
+    /** Les fleches de l'apercu : elles tournent entre les vues du tutoriel. */
+    private void cyclePreview(int delta) {
+        if (previews.isEmpty()) return;
+        previewIndex = Math.floorMod(previewIndex + delta, previews.size());
     }
 
     /**
@@ -202,6 +219,11 @@ public class TutorialScreen extends CGuiScreen {
         blocks = TutorialMarkdown.parse(texts.get(index).content(), TutorialScreen::keyName);
         contentHeight = measure();
 
+        previews = TutorialPreviews.views(TutorialLibrary.entries().get(index).id());
+        previewIndex = 0;
+        CWidget showWindow = find("showWindow");
+        if (showWindow != null) showWindow.transform.doesDraw = !previews.isEmpty();
+
         CWidget rightWindow = find("rightWindow");
         CWidget centerPart = find("centerPart");
         if (rightWindow != null) rightWindow.transform.doesDraw = true;
@@ -233,6 +255,157 @@ public class TutorialScreen extends CGuiScreen {
         if (selected < 0) return;
         drawRightWindow(graphics);
         if (opened.get(selected)) drawContent(graphics);
+        if (!previews.isEmpty()) {
+            drawPreview(graphics);
+            drawTags(graphics);
+        }
+    }
+
+    /** L'apercu courant : un bloc ou un objet en volume, une image, ou une grille de recette. */
+    private void drawPreview(GuiGraphics graphics) {
+        CWidget window = find("showWindow");
+        CWidget area = window == null ? null : window.child("area");
+        if (area == null || previews.isEmpty()) return;
+
+        double cx = area.absX + area.absW / 2;
+        double cy = area.absY + area.absH / 2;
+        double size = Math.min(area.absW, area.absH);
+        TutorialPreviews.View view = previews.get(previewIndex);
+
+        switch (view.kind()) {
+            case BLOCK, ITEM -> centreItem(graphics, TutorialPreviews.stack(view.id()), cx, cy, size);
+            case ICON -> {
+                ResourceLocation icon = ResourceLocation.tryParse(view.id());
+                int[] iconSize = TutorialImages.size(view.id());
+                if (icon != null && iconSize != null) {
+                    int w = (int) Math.round(size * 0.7);
+                    int h = Math.max(1, (int) Math.round(iconSize[1] * (double) w / iconSize[0]));
+                    graphics.blit(icon, (int) Math.round(cx - w / 2.0),
+                            (int) Math.round(cy - h / 2.0), w, h,
+                            0f, 0f, iconSize[0], iconSize[1], iconSize[0], iconSize[1]);
+                }
+            }
+            case RECIPE -> drawRecipe(graphics, view.id(), cx, cy, size);
+        }
+    }
+
+    /** Une pile bien centree, mise a l'echelle de la case. */
+    private static void centreItem(GuiGraphics graphics, ItemStack stack, double cx, double cy,
+                                   double size) {
+        if (stack.isEmpty()) return;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) cx, (float) cy, 0f);
+        float scale = (float) (size / 16.0 * 0.8);
+        graphics.pose().scale(scale, scale, 1f);
+        graphics.renderItem(stack, -8, -8);
+        graphics.pose().popPose();
+    }
+
+    /** Une grille de trois sur trois, la fleche, et le resultat. */
+    private static void drawRecipe(GuiGraphics graphics, String id, double cx, double cy,
+                                   double size) {
+        List<ItemStack> ingredients = TutorialPreviews.ingredients(id);
+        ItemStack result = TutorialPreviews.stack(id);
+
+        double cell = Math.min(size / 4.8, size / 3.0);
+        double left = cx - (4.8 * cell) / 2;
+        double top = cy - (3 * cell) / 2;
+
+        for (int i = 0; i < 9; i++) {
+            double x = left + (i % 3) * cell;
+            double y = top + (i / 3) * cell;
+            slot(graphics, x, y, cell);
+            if (i < ingredients.size()) itemIn(graphics, ingredients.get(i), x, y, cell);
+        }
+
+        // La fleche, entre la grille et le resultat.
+        int arrowY = (int) Math.round(cy);
+        graphics.fill((int) Math.round(left + 3.1 * cell), arrowY - 1,
+                (int) Math.round(left + 3.5 * cell), arrowY + 1, 0xFFC8C8C8);
+
+        double resultX = left + 3.6 * cell;
+        slot(graphics, resultX, top + cell, cell);
+        itemIn(graphics, result, resultX, top + cell, cell);
+    }
+
+    /** Le fond d'une case de recette. */
+    private static void slot(GuiGraphics graphics, double x, double y, double cell) {
+        int x0 = (int) Math.round(x);
+        int y0 = (int) Math.round(y);
+        int x1 = (int) Math.round(x + cell);
+        int y1 = (int) Math.round(y + cell);
+        graphics.fill(x0, y0, x1, y1, 0x50000000);
+        graphics.fill(x0, y0, x1, y0 + 1, 0x60C8C8C8);
+        graphics.fill(x0, y1 - 1, x1, y1, 0x60C8C8C8);
+        graphics.fill(x0, y0, x0 + 1, y1, 0x60C8C8C8);
+        graphics.fill(x1 - 1, y0, x1, y1, 0x60C8C8C8);
+    }
+
+    /** Une pile dans une case de recette. */
+    private static void itemIn(GuiGraphics graphics, ItemStack stack, double x, double y,
+                               double cell) {
+        if (stack.isEmpty()) return;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate((float) x, (float) y, 0f);
+        float scale = (float) (cell * 0.8 / 16.0);
+        graphics.pose().scale(scale, scale, 1f);
+        graphics.renderItem(stack, 1, 1);
+        graphics.pose().popPose();
+    }
+
+    /** La rangee d'etiquettes, une par apercu : CRAFT pour une recette, VIEW pour le reste. */
+    private void drawTags(GuiGraphics graphics) {
+        CWidget window = find("showWindow");
+        CWidget area = window == null ? null : window.child("tag_area");
+        if (area == null) return;
+
+        double size = area.absH;
+        double step = size - area.absScale;
+
+        for (int i = 0; i < previews.size(); i++) {
+            ResourceLocation icon = TutorialPreviews.tagIcon(previews.get(i));
+            int x = (int) Math.round(area.absX + i * step);
+            int y = (int) Math.round(area.absY);
+            int side = Math.max(1, (int) Math.round(size));
+
+            int tint = i == previewIndex ? 0xFFFFFFFF : 0xB2FFFFFF;
+            graphics.setColor(((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f,
+                    (tint & 0xFF) / 255f, 1f);
+            graphics.blit(icon, x, y, side, side, 0f, 0f, 48, 48, 48, 48);
+            graphics.setColor(1f, 1f, 1f, 1f);
+        }
+    }
+
+    /** L'etiquette sous ce point, ou {@code -1}. */
+    private int tagAt(double mouseX, double mouseY) {
+        CWidget window = find("showWindow");
+        CWidget area = window == null ? null : window.child("tag_area");
+        if (area == null) return -1;
+
+        double size = area.absH;
+        double step = size - area.absScale;
+        for (int i = 0; i < previews.size(); i++) {
+            double x = area.absX + i * step;
+            if (mouseX >= x && mouseX <= x + size && mouseY >= area.absY
+                    && mouseY <= area.absY + size) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button == 0 && selected >= 0 && !previews.isEmpty()) {
+            int tag = tagAt(mouseX, mouseY);
+            if (tag >= 0) {
+                previewIndex = tag;
+                return true;
+            }
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     /**
