@@ -291,7 +291,6 @@ public class TutorialScreen extends CGuiScreen {
 
     /** La hauteur du contenu mis en page, pour la barre de defilement. */
     private int measure() {
-        int lineHeight = AcademyFonts.lineHeight(CONTENT_CELL);
         int height = 0;
 
         for (TutorialMarkdown.Block block : blocks) {
@@ -302,11 +301,28 @@ public class TutorialScreen extends CGuiScreen {
                         + 4;
                 continue;
             }
+            int cell = cellOf(block);
             height += (block.text().isEmpty() ? 1
-                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, CONTENT_CELL).size())
-                    * lineHeight;
+                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, cell).size())
+                    * AcademyFonts.lineHeight(cell);
         }
         return height;
+    }
+
+    /** La cellule d'un morceau : 12 pour un titre, 10 pour un sous-titre, 8 pour le corps. */
+    private static int cellOf(TutorialMarkdown.Block block) {
+        return switch (block.heading()) {
+            case 1 -> 12;
+            case 2 -> 10;
+            default -> CONTENT_CELL;
+        };
+    }
+
+    /** Un texte du contenu ; un titre se dessine en GRAS, comme l'original (double passe). */
+    private void drawLine(GuiGraphics graphics, String line, int x, int y, int colour, int cell,
+                          boolean bold) {
+        AcademyFonts.drawTop(graphics, font, line, x, y, colour, cell);
+        if (bold) AcademyFonts.drawTop(graphics, font, line, x + 1, y, colour, cell);
     }
 
     /** Le titre et le resume, dans la fenetre du bas : 3 unites du bord, comme l'original. */
@@ -322,7 +338,7 @@ public class TutorialScreen extends CGuiScreen {
                 0xFFFFFFFF, AcademyFonts.GUI_SIZE);
         top += AcademyFonts.lineHeight(AcademyFonts.GUI_SIZE) + 2;
 
-        String brief = texts.get(selected).brief();
+        String brief = TutorialMarkdown.inline(texts.get(selected).brief(), TutorialScreen::keyName);
         if (brief.isEmpty()) return;
         for (String line : AcademyFonts.split(font, brief, (int) area.absW - 8, CONTENT_CELL)) {
             if (!line.isEmpty()) {
@@ -345,8 +361,6 @@ public class TutorialScreen extends CGuiScreen {
         graphics.enableScissor((int) Math.round(area.absX), (int) Math.round(area.absY),
                 (int) Math.round(area.absX + area.absW), (int) Math.round(area.absY + area.absH));
 
-        int cell = CONTENT_CELL;
-        int lineHeight = AcademyFonts.lineHeight(cell);
         int y = top - scroll;
 
         for (TutorialMarkdown.Block block : blocks) {
@@ -355,14 +369,15 @@ public class TutorialScreen extends CGuiScreen {
                 continue;
             }
 
+            int blockCell = cellOf(block);
             List<String> lines = block.text().isEmpty()
                     ? List.of("")
-                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, CONTENT_CELL);
+                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, blockCell);
             for (String line : lines) {
-                if (!line.isEmpty() && y + lineHeight >= top && y <= bottom) {
-                    AcademyFonts.drawTop(graphics, font, line, left, y, 0xFFE0E0E0, cell);
+                if (!line.isEmpty() && y + blockCell >= top && y <= bottom) {
+                    drawLine(graphics, line, left, y, 0xFFE0E0E0, blockCell, block.heading() > 0);
                 }
-                y += lineHeight;
+                y += AcademyFonts.lineHeight(blockCell);
             }
         }
 

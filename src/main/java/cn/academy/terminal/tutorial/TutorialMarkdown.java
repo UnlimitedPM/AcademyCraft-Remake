@@ -26,11 +26,16 @@ import java.util.regex.Pattern;
 public final class TutorialMarkdown {
 
     /**
-     * Un morceau : soit une ligne de texte ({@code text}), soit une image ({@code image}).
+     * Un morceau : une ligne de texte ({@code text}), une image ({@code image}), et pour le
+     * texte son rang de TITRE ({@code heading} : 0 = corps, 1 = {@code #}, 2 = {@code ##}).
      *
      * <p>Une ligne de texte vide est un saut de paragraphe, et non un oubli.
      */
-    public record Block(String text, String image) {
+    public record Block(String text, String image, int heading) {
+
+        public Block(String text, String image) {
+            this(text, image, 0);
+        }
 
         public boolean isImage() {
             return image != null;
@@ -80,6 +85,20 @@ public final class TutorialMarkdown {
                 continue;
             }
 
+            // LES TITRES du fichier s'ecrivent sans espace apres les dieses
+            // ({@code #Learning Ability}), et l'original les dessinait en gras : les laisser
+            // tels quels affichait « # Learning Ability » en plein texte, ce que le joueur a
+            // vu tout de suite sur sa capture.
+            int level = 0;
+            while (level < line.length() && line.charAt(level) == '#') level++;
+            if (level > 0) {
+                String heading = inline(line.substring(level).trim(), keyName);
+                if (!heading.isEmpty()) {
+                    blocks.add(new Block(heading, null, Math.min(level, 2)));
+                }
+                continue;
+            }
+
             blocks.add(new Block(inline(line, keyName), null));
         }
 
@@ -99,13 +118,14 @@ public final class TutorialMarkdown {
      * perdent leurs marques : la police du port n'a pas de variante a dessiner ici, et des
      * etoiles au milieu d'une phrase se liraient comme une faute.
      */
-    static String inline(String line, Function<String, String> keyName) {
+    public static String inline(String line, Function<String, String> keyName) {
         String out = KEY_TAG.matcher(line).replaceAll(result -> {
             String name = keyName == null ? null : keyName.apply(result.group(1));
             return Matcher.quoteReplacement(name == null || name.isEmpty() ? "???" : name);
         });
 
         out = out.replace("__", "").replace("**", "");
+        out = out.replace("_", "").replace("*", "");
         return out;
     }
 }
