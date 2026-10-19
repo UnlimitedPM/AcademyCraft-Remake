@@ -42,13 +42,15 @@ class ImagPhaseLayersTest {
         ImagPhaseLayers.Layer[] couches = ImagPhaseLayers.layers(PLEIN);
         double ht = ImagPhaseLayers.stackHeight(PLEIN);
 
-        // La basse nage SOUS la surface : elle est a -0.3 * ht, donc invisible dans le bloc.
-        assertEquals(-0.3d * ht, couches[0].height(), 0.0001d);
+        // ECART DEMANDE PAR LE JOUEUR sur la basse : 0.1 * ht et non -0.3 * ht, sinon elle pend
+        // SOUS le bloc de fluide — « j'aimerais bien que la premiere nappe repasse sous le liquide »,
+        // en comptant du haut vers le bas.
+        assertEquals(0.1d * ht, couches[0].height(), 0.0001d);
+        assertTrue(couches[0].height() > 0.0d, "la basse nage dans le liquide, plus en dessous");
         assertEquals(0.35d * ht, couches[1].height(), 0.0001d);
-        // ECART DEMANDE PAR LE JOUEUR : la troisieme vaut 0.9 * ht et non 0.7 * ht, sinon elle
-        // tombe 9 cm sous la surface du liquide — « elle apparait en dessous du liquide ».
-        assertEquals(0.9d * ht, couches[2].height(), 0.0001d);
-        assertTrue(couches[2].height() > PLEIN, "et elle passe au-dessus de la surface");
+        // La troisieme garde la hauteur de l'original.
+        assertEquals(0.7d * ht, couches[2].height(), 0.0001d);
+        assertTrue(couches[2].height() < PLEIN, "et elle reste sous la surface");
 
         // Et chaque nappe a sa vitesse de defilement et la meme densite.
         assertEquals(0.3d, couches[0].speedU(), 0.0001d);
@@ -81,9 +83,8 @@ class ImagPhaseLayersTest {
         // fait suivre la pente a la nappe au lieu de la laisser flotter a plat au-dessus.
         assertNotEquals(basse.heightAt(1.0d), basse.heightAt(0.5d), 0.0001d, "la nappe basse se penche");
         assertNotEquals(haute.heightAt(1.0d), haute.heightAt(0.5d), 0.0001d, "la nappe haute se penche aussi");
-        // La basse est SOUS la surface : un coin plus bas la remonte donc vers zero.
-        assertTrue(basse.heightAt(0.5d) > basse.heightAt(1.0d));
-        // La haute est AU-DESSUS : un coin plus bas la descend.
+        // Les trois nappes sont AU-DESSUS du fond : un coin plus bas les descend toutes.
+        assertTrue(basse.heightAt(0.5d) < basse.heightAt(1.0d));
         assertTrue(haute.heightAt(0.5d) < haute.heightAt(1.0d));
     }
 

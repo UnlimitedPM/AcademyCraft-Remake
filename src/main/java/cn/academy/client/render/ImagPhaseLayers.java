@@ -80,19 +80,24 @@ public final class ImagPhaseLayers {
      * que l'original posait, et elle se lit sur la hauteur de la pile et non sur celle du
      * liquide.
      *
-     * <p>ECART DEMANDE PAR LE JOUEUR, sur la troisieme seulement : sa hauteur etait
-     * {@code 0.7 * ht} = 0,79 pour une source pleine, donc 9 cm SOUS la surface du liquide, et il
-     * la voyait « apparaitre en dessous du liquide ». Elle passe a {@code 0.9 * ht} = 1,01, un peu
-     * au-dessus de la surface (0,875). C'est ce facteur qu'il faut tourner encore si elle flotte
-     * trop haut.
+     * <p>ECART DEMANDE PAR LE JOUEUR, sur la BASSE seulement. Elle vaut {@code 0.1 * ht} la ou
+     * l'original mettait {@code -0.3 * ht} : a -0,34 elle pendait SOUS le bloc de fluide, donc
+     * sous le liquide, et le joueur la voyait flotter la — « j'aimerais bien que la premiere nappe
+     * repasse sous le liquide » (il compte du haut vers le bas : la sienne de « premiere » est
+     * celle du haut, que j'avais montee par erreur). A 0,11 elle nage juste au-dessus du fond du
+     * bloc, dans le liquide. C'est ce facteur qu'il faut tourner si elle est trop bas ou trop
+     * haut.
      */
     public static Layer[] layers(double fluidHeight) {
         double ht = stackHeight(fluidHeight);
-        Layer basse = new Layer(-0.3d, -0.3d * ht, 0.3d, 0.2d, 0.7d);
-        Layer haute = new Layer(0.35d, 0.35d * ht, 0.3d, 0.05d, 0.7d);
-        double troisieme = 0.9d;
+        double basse = 0.1d;
         return ht > 0.5d
-                ? new Layer[] { basse, haute, new Layer(troisieme, troisieme * ht, 0.1d, 0.25d, 0.7d) }
-                : new Layer[] { basse, haute };
+                ? new Layer[] {
+                        new Layer(basse, basse * ht, 0.3d, 0.2d, 0.7d),
+                        new Layer(0.35d, 0.35d * ht, 0.3d, 0.05d, 0.7d),
+                        new Layer(0.7d, 0.7d * ht, 0.1d, 0.25d, 0.7d) }
+                : new Layer[] {
+                        new Layer(basse, basse * ht, 0.3d, 0.2d, 0.7d),
+                        new Layer(0.35d, 0.35d * ht, 0.3d, 0.05d, 0.7d) };
     }
 }
