@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceLocation;
@@ -24,6 +25,7 @@ import net.minecraft.world.level.chunk.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
@@ -65,6 +67,12 @@ public final class ImagPhaseLiquidRenderer {
     /** Au-dela de cette distance l'opacite passe sous le seuil de l'original : rien a peindre. */
     private static final double MAX_DISTANCE = 45.0d;
 
+    /** La meme, au carre : on compare des carres, jamais des racines. */
+    private static final double MAX_DISTANCE_SQR = MAX_DISTANCE * MAX_DISTANCE;
+
+    /** Accumulateur de {@link #addWeightedHeight}, reutilise : voir {@link #corner}. */
+    private static final float[] ACC = new float[2];
+
     /**
      * Le temps entre deux relevés des surfaces, en ticks.
      *
@@ -76,6 +84,18 @@ public final class ImagPhaseLiquidRenderer {
     /** Les nappes a peindre, relues par {@link #refreshSheets}. */
     private static final List<Sheet> SHEETS = new ArrayList<>();
     private static long sheetsTick = Long.MIN_VALUE;
+
+    /**
+     * Les surfaces de l'image, relues a chaque image mais toujours dans la meme liste.
+     *
+     * <p>C'est ce qui evite l'allocation d'une liste par image : on la vide, on la remplit, on la
+     * trie. Elle est petite (les surfaces a moins de 45 blocs), donc ce `clear` ne coute rien.
+     */
+    private static final List<Sheet> VISIBLE = new ArrayList<>();
+
+    /** Du plus loin au plus pres : le melange alpha se pose dans cet ordre. */
+    private static final Comparator<Sheet> FAR_FIRST =
+            Comparator.comparingDouble((Sheet sheet) -> sheet.distSq).reversed();
 
     /** Le melange alpha de l'eau : c'est l'alpha des sommets qui decide. */
     private static final RenderStateShard.TransparencyStateShard TRANSLUCENT =
@@ -178,36 +198,42 @@ public final class ImagPhaseLiquidRenderer {
      * classe. Les blocs sont relus dans les chunks deja charges : un rendu de block entity ne
      * pourrait pas le faire a ce moment-la, il n'est deja plus appele.
      */
-    public static void draw(PoseStack pose, Vec3 camera) {
+    public static void draw(PoseStack pose, Vec3 camera, Frustum frustum) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
         ClientChunkCache chunks = (ClientChunkCache) mc.level.getChunkSource();
 
         refreshSheets(mc, chunks, camera);
 
-        List<Sheet> visible = new ArrayList<>();
+        // Une seule passe : la distance au carre sert au tri, au culling ET a l'opacite, et le
+        // frustum ecarte ce qui est derriere la camera. Rien n'est alloue ici.
+        VISIBLE.clear();
         for (Sheet sheet : SHEETS) {
-            if (distanceTo(camera, sheet.pos()) <= MAX_DISTANCE) visible.add(sheet);
+            sheet.distSq = distanceSqr(camera, sheet.pos);
+            if (sheet.distSq > MAX_DISTANCE_SQR) continue;
+            if (frustum != null && !frustum.isVisible(sheet.box)) continue;
+            VISIBLE.add(sheet);
         }
-        if (visible.isEmpty()) return;
-        visible.sort(Comparator.comparingDouble((Sheet sheet) -> distanceTo(camera, sheet.pos())).reversed());
+        if (VISIBLE.isEmpty()) return;
+        VISIBLE.sort(FAR_FIRST);
 
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
         // Le temps de l'original : des secondes, pas des ticks.
         float time = (mc.level.getGameTime() + mc.getFrameTime()) / 20.0f;
+        // Une seule matrice pour toutes les surfaces : le decalage se pose sur les sommets
+        // (x + ox), la ou un `pushPose` par bloc allouait une pose par surface et par image.
+        Matrix4f matrix = pose.last().pose();
 
-        for (Sheet sheet : visible) {
-            float alpha = ImagPhaseLayers.alpha(distanceTo(camera, sheet.pos()));
-            ImagPhaseLayers.Layer[] layers = ImagPhaseLayers.layers(mean(sheet.corners()));
-            BlockPos pos = sheet.pos();
-
-            pose.pushPose();
-            pose.translate(pos.getX() - camera.x, pos.getY() - camera.y, pos.getZ() - camera.z);
-            Matrix4f matrix = pose.last().pose();
+        for (Sheet sheet : VISIBLE) {
+            float alpha = ImagPhaseLayers.alpha(Math.sqrt(sheet.distSq));
+            double ox = sheet.pos.getX() - camera.x;
+            double oy = sheet.pos.getY() - camera.y;
+            double oz = sheet.pos.getZ() - camera.z;
+            ImagPhaseLayers.Layer[] layers = sheet.layers;
             for (int i = 0; i < layers.length; i++) {
-                drawLayer(buffers.getBuffer(LAYERS[i]), matrix, layers[i], sheet.corners(), time, alpha);
+                drawLayer(buffers.getBuffer(LAYERS[i]), matrix, layers[i], sheet.corners,
+                        ox, oy, oz, time, alpha);
             }
-            pose.popPose();
         }
 
         // Sans ce vidage, les nappes resteraient dans le tampon jusqu'a la prochaine image.
@@ -216,8 +242,28 @@ public final class ImagPhaseLiquidRenderer {
         }
     }
 
-    /** Une surface prete : son bloc, et les quatre hauteurs de coin de sa surface. */
-    private record Sheet(BlockPos pos, float[] corners) {}
+    /**
+     * Une surface prete : son bloc, ses quatre hauteurs de coin, et tout ce qui ne depend pas de
+     * l'image — les nappes, la boite du frustum, la distance du dernier tri.
+     *
+     * <p>C'est le second gain : les nappes et leur hauteur moyenne etaient recalculees a CHAQUE
+     * image, alors qu'elles ne changent qu'au rafraichissement (toutes les dix ticks). Seule la
+     * distance est mutable, puisqu'elle bouge avec la camera.
+     */
+    private static final class Sheet {
+        private final BlockPos pos;
+        private final float[] corners;
+        private final ImagPhaseLayers.Layer[] layers;
+        private final AABB box;
+        private double distSq;
+
+        private Sheet(BlockPos pos, float[] corners, ImagPhaseLayers.Layer[] layers, AABB box) {
+            this.pos = pos;
+            this.corners = corners;
+            this.layers = layers;
+            this.box = box;
+        }
+    }
 
     /**
      * Relit les blocs de liquide et leurs quatre hauteurs de coin, toutes les dix ticks.
@@ -250,8 +296,15 @@ public final class ImagPhaseLiquidRenderer {
         for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
             BlockPos pos = entry.getKey();
             if (!(entry.getValue() instanceof ImagPhaseLiquidBlockEntity)) continue;
-            if (distanceTo(camera, pos) > MAX_DISTANCE) continue;
-            found.add(new Sheet(pos.immutable(), cornerHeights(level, pos)));
+            if (distanceSqr(camera, pos) > MAX_DISTANCE_SQR) continue;
+            float[] corners = cornerHeights(level, pos);
+            found.add(new Sheet(pos.immutable(), corners,
+                    ImagPhaseLayers.layers(mean(corners)),
+                    // Le bloc, plus la pile de nappes qui deborde au-dessus (1.2 au plus) et la
+                    // nappe basse qui pend un peu en dessous : de quoi ne jamais couper une
+                    // nappe que l'oeil verrait.
+                    new AABB(pos.getX(), pos.getY() - 0.5d, pos.getZ(),
+                            pos.getX() + 1.0d, pos.getY() + 1.6d, pos.getZ() + 1.0d)));
         }
     }
 
@@ -295,16 +348,19 @@ public final class ImagPhaseLiquidRenderer {
     private static float corner(Level level, Fluid fluid, float self, float sideA, float sideB,
                                 BlockPos diagonal) {
         if (sideA >= 1f || sideB >= 1f) return 1f;
-        float[] acc = new float[2];
+        // Un tableau reutilise : quatre coins par bloc et par rafraichissement, sur le fil de
+        // rendu, donc rien d'autre ne le touche.
+        ACC[0] = 0f;
+        ACC[1] = 0f;
         if (sideA > 0f || sideB > 0f) {
             float d = heightOf(level, fluid, diagonal);
             if (d >= 1f) return 1f;
-            addWeightedHeight(acc, d);
+            addWeightedHeight(ACC, d);
         }
-        addWeightedHeight(acc, self);
-        addWeightedHeight(acc, sideA);
-        addWeightedHeight(acc, sideB);
-        return acc[1] <= 0f ? 0f : acc[0] / acc[1];
+        addWeightedHeight(ACC, self);
+        addWeightedHeight(ACC, sideA);
+        addWeightedHeight(ACC, sideB);
+        return ACC[1] <= 0f ? 0f : ACC[0] / ACC[1];
     }
 
     /** Portage de {@code LiquidBlockRenderer.addWeightedHeight} : une surface pleine pese plus. */
@@ -326,15 +382,16 @@ public final class ImagPhaseLiquidRenderer {
 
     /** Un quad horizontal, texture dans le coin oppose a celui ou on l'a lue. */
     private static void drawLayer(VertexConsumer out, Matrix4f matrix, ImagPhaseLayers.Layer layer,
-                                  float[] corners, float time, float alpha) {
+                                  float[] corners, double ox, double oy, double oz,
+                                  float time, float alpha) {
         double u = layer.offsetU(time);
         double v = layer.offsetV(time);
         double d = layer.density();
 
-        vertex(out, matrix, 0.0d, layer.heightAt(corners[0]), 0.0d, u, v, alpha);
-        vertex(out, matrix, 1.0d, layer.heightAt(corners[1]), 0.0d, u + d, v, alpha);
-        vertex(out, matrix, 1.0d, layer.heightAt(corners[2]), 1.0d, u + d, v + d, alpha);
-        vertex(out, matrix, 0.0d, layer.heightAt(corners[3]), 1.0d, u, v + d, alpha);
+        vertex(out, matrix, ox, oy + layer.heightAt(corners[0]), oz, u, v, alpha);
+        vertex(out, matrix, ox + 1.0d, oy + layer.heightAt(corners[1]), oz, u + d, v, alpha);
+        vertex(out, matrix, ox + 1.0d, oy + layer.heightAt(corners[2]), oz + 1.0d, u + d, v + d, alpha);
+        vertex(out, matrix, ox, oy + layer.heightAt(corners[3]), oz + 1.0d, u, v + d, alpha);
     }
 
     private static void vertex(VertexConsumer out, Matrix4f matrix, double x, double y, double z,
@@ -345,11 +402,11 @@ public final class ImagPhaseLiquidRenderer {
                 .endVertex();
     }
 
-    private static double distanceTo(Vec3 camera, BlockPos pos) {
+    private static double distanceSqr(Vec3 camera, BlockPos pos) {
         double dx = camera.x - (pos.getX() + 0.5d);
         double dy = camera.y - (pos.getY() + 0.5d);
         double dz = camera.z - (pos.getZ() + 0.5d);
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+        return dx * dx + dy * dy + dz * dz;
     }
 
     private static ResourceLocation texture(String frame) {

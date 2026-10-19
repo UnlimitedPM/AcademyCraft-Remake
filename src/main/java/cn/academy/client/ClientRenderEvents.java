@@ -47,7 +47,7 @@ public final class ClientRenderEvents {
     public static void lesNappesDuLiquideApresLEau(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
         cn.academy.client.render.ImagPhaseLiquidRenderer.draw(event.getPoseStack(),
-                event.getCamera().getPosition());
+                event.getCamera().getPosition(), event.getFrustum());
     }
 
     /**
