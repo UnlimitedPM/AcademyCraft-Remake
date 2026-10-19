@@ -79,13 +79,20 @@ public final class ImagPhaseLayers {
      * <p>La troisieme n'apparait que sur un fluide assez profond : c'est la seule condition
      * que l'original posait, et elle se lit sur la hauteur de la pile et non sur celle du
      * liquide.
+     *
+     * <p>ECART DEMANDE PAR LE JOUEUR, sur la troisieme seulement : sa hauteur etait
+     * {@code 0.7 * ht} = 0,79 pour une source pleine, donc 9 cm SOUS la surface du liquide, et il
+     * la voyait « apparaitre en dessous du liquide ». Elle passe a {@code 0.9 * ht} = 1,01, un peu
+     * au-dessus de la surface (0,875). C'est ce facteur qu'il faut tourner encore si elle flotte
+     * trop haut.
      */
     public static Layer[] layers(double fluidHeight) {
         double ht = stackHeight(fluidHeight);
         Layer basse = new Layer(-0.3d, -0.3d * ht, 0.3d, 0.2d, 0.7d);
         Layer haute = new Layer(0.35d, 0.35d * ht, 0.3d, 0.05d, 0.7d);
+        double troisieme = 0.9d;
         return ht > 0.5d
-                ? new Layer[] { basse, haute, new Layer(0.7d, 0.7d * ht, 0.1d, 0.25d, 0.7d) }
+                ? new Layer[] { basse, haute, new Layer(troisieme, troisieme * ht, 0.1d, 0.25d, 0.7d) }
                 : new Layer[] { basse, haute };
     }
 }

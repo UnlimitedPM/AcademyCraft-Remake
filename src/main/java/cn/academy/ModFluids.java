@@ -33,7 +33,10 @@ public class ModFluids {
                     .sound(SoundActions.BUCKET_EMPTY, net.minecraft.sounds.SoundEvents.BUCKET_EMPTY)
                     .viscosity(6000)
                     .density(2000)
-                    .canSwim(false)) { // Désactive la nage horizontale
+                    // La nage. La 1.12.2 ne l'avait pas (elle est arrivee en 1.13), mais le joueur
+                    // la veut ici : c'est ce drapeau qui autorise la position de nage, donc
+                    // l'animation de brasse et l'oeil plus bas quand on sprinte dans le liquide.
+                    .canSwim(true)) {
 
                 /**
                  * La descente dans le liquide, celle de la 1.12.2.

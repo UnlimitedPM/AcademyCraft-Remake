@@ -45,7 +45,10 @@ class ImagPhaseLayersTest {
         // La basse nage SOUS la surface : elle est a -0.3 * ht, donc invisible dans le bloc.
         assertEquals(-0.3d * ht, couches[0].height(), 0.0001d);
         assertEquals(0.35d * ht, couches[1].height(), 0.0001d);
-        assertEquals(0.7d * ht, couches[2].height(), 0.0001d);
+        // ECART DEMANDE PAR LE JOUEUR : la troisieme vaut 0.9 * ht et non 0.7 * ht, sinon elle
+        // tombe 9 cm sous la surface du liquide — « elle apparait en dessous du liquide ».
+        assertEquals(0.9d * ht, couches[2].height(), 0.0001d);
+        assertTrue(couches[2].height() > PLEIN, "et elle passe au-dessus de la surface");
 
         // Et chaque nappe a sa vitesse de defilement et la meme densite.
         assertEquals(0.3d, couches[0].speedU(), 0.0001d);
