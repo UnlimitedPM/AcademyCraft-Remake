@@ -207,10 +207,12 @@ public final class AcademyGameTests {
         assertTrue(helper, set, "setBlock a refuse la pose de academy:phase_liquid");
         assertTrue(helper, readBack.is(ModBlocks.PHASE_LIQUID_BLOCK.get()),
                 "le bloc phase_liquid n'a pas survecu a la pose, lu : " + readBack);
-        // Et il porte son block entity : c'est lui qui fait dessiner les nappes du liquide.
-        // Sans lui, l'imag phase serait un bloc noir.
-        assertTrue(helper, helper.getBlockEntity(rel) != null,
-                "le bloc de fluide doit porter un block entity pour ses nappes");
+        // Et il n'a PAS de block entity : il en portait un par bloc de liquide, qui ne contenait
+        // rien, uniquement pour que le rendu retrouve les blocs. Le rendu passe maintenant par la
+        // palette du chunk (`LevelChunk.findBlocks`). Ce test tient la decision : remettre un
+        // block entity ici le fera tomber.
+        assertTrue(helper, helper.getBlockEntity(rel) == null,
+                "le bloc de fluide ne doit plus porter de block entity");
         helper.succeed();
     }
 

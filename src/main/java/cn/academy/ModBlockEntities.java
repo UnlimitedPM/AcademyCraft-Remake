@@ -16,14 +16,8 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("cat_engine", () ->
                     BlockEntityType.Builder.of(CatEngineBlockEntity::new, ModBlocks.CAT_ENGINE.get()).build(null));
 
-    /**
-     * Le bloc de fluide lui-meme. Il ne porte rien : il existe pour que les nappes
-     * de l'imag phase puissent etre dessinees autour de lui.
-     */
-    public static final RegistryObject<BlockEntityType<ImagPhaseLiquidBlockEntity>> IMAG_PHASE =
-            BLOCK_ENTITIES.register("phase_liquid", () ->
-                    BlockEntityType.Builder.of(ImagPhaseLiquidBlockEntity::new,
-                            ModBlocks.PHASE_LIQUID_BLOCK.get()).build(null));
+    // PAS de block entity pour le bloc de fluide : un par bloc de liquide ne portait rien du tout.
+    // Le rendu des nappes retrouve les blocs par la palette du chunk.
 
     public static final RegistryObject<BlockEntityType<SolarGenBlockEntity>> SOLAR_GEN =
             BLOCK_ENTITIES.register("solar_gen", () ->

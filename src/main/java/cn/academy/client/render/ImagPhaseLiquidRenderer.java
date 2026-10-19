@@ -1,7 +1,7 @@
 package cn.academy.client.render;
 
 import cn.academy.AcademyCraft;
-import cn.academy.ImagPhaseLiquidBlockEntity;
+import cn.academy.ModBlocks;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -293,10 +293,11 @@ public final class ImagPhaseLiquidRenderer {
     }
 
     private static void collect(Level level, LevelChunk chunk, Vec3 camera, List<Sheet> found) {
-        for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
-            BlockPos pos = entry.getKey();
-            if (!(entry.getValue() instanceof ImagPhaseLiquidBlockEntity)) continue;
-            if (distanceSqr(camera, pos) > MAX_DISTANCE_SQR) continue;
+        // Sans block entity, les blocs se retrouvent par la PALETTE du chunk : `findBlocks` saute
+        // d'un coup les sections qui ne contiennent pas le bloc, la ou une boucle de 16x16x16 les
+        // lirait une par une. C'est la lecture la moins chere qui donne quand meme chaque position.
+        chunk.findBlocks(state -> state.is(ModBlocks.PHASE_LIQUID_BLOCK.get()), (pos, state) -> {
+            if (distanceSqr(camera, pos) > MAX_DISTANCE_SQR) return;
             float[] corners = cornerHeights(level, pos);
             found.add(new Sheet(pos.immutable(), corners,
                     ImagPhaseLayers.layers(mean(corners)),
@@ -305,7 +306,7 @@ public final class ImagPhaseLiquidRenderer {
                     // nappe que l'oeil verrait.
                     new AABB(pos.getX(), pos.getY() - 0.5d, pos.getZ(),
                             pos.getX() + 1.0d, pos.getY() + 1.6d, pos.getZ() + 1.0d)));
-        }
+        });
     }
 
     /**

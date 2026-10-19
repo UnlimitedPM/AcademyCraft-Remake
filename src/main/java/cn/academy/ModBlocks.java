@@ -130,8 +130,8 @@ public class ModBlocks {
                     .sound(SoundType.METAL)
             ));
 
-    // Le bloc de fluide porte un block entity : c'est lui qui fait dessiner les
-    // nappes du liquide (voir ImagPhaseLiquidRenderer). L'original faisait pareil.
+    // Le bloc de fluide. Il n'a plus de block entity : un par bloc de liquide ne portait rien,
+    // et le rendu des nappes retrouve les blocs par la palette du chunk.
     //
     // Il eclaire aussi, niveau 8 : l'original appelait `setLuminosity(8)` sur son fluide. Sans
     // ca un lac d'imag phase est un trou noir, et ses nappes s'y perdent.
