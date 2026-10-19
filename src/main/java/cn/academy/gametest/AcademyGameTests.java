@@ -576,6 +576,13 @@ public final class AcademyGameTests {
                         cn.academy.SolarGenBlockEntity.SLOT_BATTERY, unit),
                 "le generateur solaire doit accepter une unite d'energie");
 
+        // Le MENU a son propre controle (SlotItemHandler.mayPlace) : c'est lui qui
+        // decide d'un clic et d'un shift-clic, et il refusait l'unite du mod.
+        var player = ownPlayer(helper, "solaire_batterie");
+        var menu = new cn.academy.SolarGenMenu(0, player.getInventory(), solar);
+        assertTrue(helper, menu.slots.get(0).mayPlace(unit),
+                "l'emplacement du menu solaire doit accepter l'unite d'energie");
+
         solar.setEnergy(5000.0d);
         solar.getInventory().setStackInSlot(cn.academy.SolarGenBlockEntity.SLOT_BATTERY, unit);
         cn.academy.SolarGenBlockEntity.tick(

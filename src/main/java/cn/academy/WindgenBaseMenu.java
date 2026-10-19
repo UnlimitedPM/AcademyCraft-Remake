@@ -62,7 +62,7 @@ public class WindgenBaseMenu extends AbstractContainerMenu implements WirelessMa
                 SLOT_X, SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
 

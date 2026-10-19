@@ -53,7 +53,7 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
         addSlot(new SlotItemHandler(blockEntity.getInventory(), SolarGenBlockEntity.SLOT_BATTERY, 42, 81) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
 

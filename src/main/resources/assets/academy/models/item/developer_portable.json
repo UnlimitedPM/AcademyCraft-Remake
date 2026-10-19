@@ -2,7 +2,7 @@
   "parent": "minecraft:item/generated",
   "textures": { "layer0": "academy:item/developer_portable_empty" },
   "overrides": [
-    { "predicate": { "energy": 0.5 }, "model": "academy:item/developer_portable_half" },
-    { "predicate": { "energy": 1.0 }, "model": "academy:item/developer_portable_full" }
+    { "predicate": { "academy:energy": 0.5 }, "model": "academy:item/developer_portable_half" },
+    { "predicate": { "academy:energy": 1.0 }, "model": "academy:item/developer_portable_full" }
   ]
 }

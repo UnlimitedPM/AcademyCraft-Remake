@@ -39,6 +39,21 @@ public final class EnergyItems {
         return itemOf(stack) != null;
     }
 
+    /**
+     * Vrai pour un objet que les emplacements batterie acceptent : un objet
+     * energetique du mod, ou un objet Forge Energy d'un autre mod.
+     *
+     * <p>Une seule definition, lue par les block entities ET par les menus — sans
+     * quoi le menu refuse un objet que la machine sait pourtant charger, ce qui
+     * etait exactement le defaut : le slot refusait l'unite et le portable.
+     */
+    public static boolean isEnergyItem(ItemStack stack) {
+        return supports(stack)
+                || (!stack.isEmpty()
+                && stack.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY)
+                        .isPresent());
+    }
+
     public static double maxEnergy(ItemStack stack) {
         ImagEnergyItem item = itemOf(stack);
         return item == null ? 0.0d : item.getMaxEnergy();

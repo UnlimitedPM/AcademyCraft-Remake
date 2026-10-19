@@ -72,7 +72,7 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
                 SLOT_X, SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
 
@@ -201,7 +201,7 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
         } else {
             // Du joueur vers la machine : seuls les objets d'energie ont leur place
             // ici, le reste ne bouge pas.
-            if (!stackInSlot.getCapability(ForgeCapabilities.ENERGY).isPresent()) return ItemStack.EMPTY;
+            if (!cn.academy.energy.EnergyItems.isEnergyItem(stackInSlot)) return ItemStack.EMPTY;
             if (!moveItemStackTo(stackInSlot, 0, MACHINE_SLOTS, false)) return ItemStack.EMPTY;
         }
 

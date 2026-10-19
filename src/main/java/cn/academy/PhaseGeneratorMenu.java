@@ -77,7 +77,7 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
                 OUTPUT_X, OUTPUT_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
 
@@ -153,7 +153,7 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
             if (stackInSlot.is(ModItems.MATTER_UNIT_PHASE.get())) {
                 moved = moveItemStackTo(stackInSlot, PhaseGeneratorBlockEntity.SLOT_LIQUID_IN,
                         PhaseGeneratorBlockEntity.SLOT_LIQUID_IN + 1, false);
-            } else if (stackInSlot.getCapability(ForgeCapabilities.ENERGY).isPresent()) {
+            } else if (cn.academy.energy.EnergyItems.isEnergyItem(stackInSlot)) {
                 moved = moveItemStackTo(stackInSlot, PhaseGeneratorBlockEntity.SLOT_OUTPUT,
                         PhaseGeneratorBlockEntity.SLOT_OUTPUT + 1, false);
             } else {

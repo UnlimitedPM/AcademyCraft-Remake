@@ -87,7 +87,7 @@ public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMa
         addSlot(new SlotItemHandler(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_BATTERY, BATTERY_SLOT_X, BATTERY_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
 
@@ -178,7 +178,7 @@ public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMa
         } else {
             // Du joueur vers la machine : une batterie va dans son emplacement,
             // tout le reste tente l'entree.
-            boolean moved = stackInSlot.getCapability(ForgeCapabilities.ENERGY).isPresent()
+            boolean moved = cn.academy.energy.EnergyItems.isEnergyItem(stackInSlot)
                     ? moveItemStackTo(stackInSlot,
                             MetalFormerBlockEntity.SLOT_BATTERY, MetalFormerBlockEntity.SLOT_BATTERY + 1, false)
                     : moveItemStackTo(stackInSlot,

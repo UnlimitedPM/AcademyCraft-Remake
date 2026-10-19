@@ -104,7 +104,7 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
                 ENERGY_INPUT_X, ENERGY_INPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+                return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
         addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_OUTPUT,
@@ -210,7 +210,7 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
             if (stackInSlot.is(ModItems.MATTER_UNIT_PHASE.get())) {
                 moved = moveItemStackTo(stackInSlot, ImagFusorBlockEntity.SLOT_IMAG_INPUT,
                         ImagFusorBlockEntity.SLOT_IMAG_INPUT + 1, false);
-            } else if (stackInSlot.getCapability(ForgeCapabilities.ENERGY).isPresent()) {
+            } else if (cn.academy.energy.EnergyItems.isEnergyItem(stackInSlot)) {
                 moved = moveItemStackTo(stackInSlot, ImagFusorBlockEntity.SLOT_ENERGY_INPUT,
                         ImagFusorBlockEntity.SLOT_ENERGY_INPUT + 1, false);
             } else {
