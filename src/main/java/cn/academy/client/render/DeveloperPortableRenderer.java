@@ -2,6 +2,7 @@ package cn.academy.client.render;
 
 import cn.academy.AcademyCraft;
 import cn.academy.energy.EnergyItems;
+import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -77,7 +78,15 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
             // demi-bloc POSITIF que la 1.12.2 donnait aux images d'objets, et que le joueur a
             // valide sur la piece du railgun.
             pose.translate(0.5f, 0.5f, 0.5f);
+            // ET L'ECLAIRAGE PLAT, sinon l'image sort SOMBRE : un modele `builtin/entity`
+            // repond toujours `isGui3d() == true` (`BuiltInModel.isGui3d`, quelle que soit la
+            // valeur de `gui_light`), donc la case de l'inventaire est dessinee avec les deux
+            // lumieres directionnelles des objets en volume — et notre quad, dont la normale
+            // regarde la camera, n'en recoit qu'une fraction. Le joueur l'a vu tout de suite :
+            // « l'item dans mon inventaire est sombre comme s'il y avait de l'ombre dessus ».
+            Lighting.setupForFlatItems();
             icon(stack, pose, buffers, light, overlay);
+            Lighting.setupFor3DItems();
         } else {
             // LE CUBE EST DEJA DECALE D'UN DEMI-BLOC NEGATIF quand on arrive ici :
             // `ItemRenderer.render` fait `translate(-0,5, -0,5, -0,5)` AVANT d'appeler le rendu
@@ -91,6 +100,13 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
             pose.translate(0.5f, 0.5f, 0.5f);
             handPose(context, pose);
             pose.translate(-0.5f, -0.5f, -0.5f);
+            // ET LE MODELE SE REDRESSE ICI. Mesure au rendu hors jeu (projection des 60 faces
+            // avec leurs UV) : vu depuis la face de l'ecran, le panneau est dessine a
+            // 180 degres — le texte se lit a l'envers ET en miroir. Un demi-tour autour de
+            // l'axe du regard (Z) le remet droit, sans lui faire lacher la camera, et c'est
+            // aussi ce que montre l'icone de l'objet (l'antenne en haut). Le joueur : « il est
+            // encore a l'envers ».
+            pose.mulPose(Axis.ZP.rotationDegrees(180f));
             ObjModels.draw(ObjModels.get(MODEL).all(), pose,
                     buffers.getBuffer(ObjModels.type(TEXTURE)), light, overlay);
         }
