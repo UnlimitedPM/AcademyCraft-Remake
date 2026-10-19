@@ -1,5 +1,6 @@
 package cn.academy.terminal.client;
 
+import cn.academy.AcademyCraft;
 import cn.academy.ability.client.AbilityKeyBindings;
 import cn.academy.client.gui.AcademyFonts;
 import cn.academy.client.gui.cgui.CGuiScreen;
@@ -56,9 +57,25 @@ public class TutorialScreen extends CGuiScreen {
     /** La cellule du texte : huit, comme le {@code FontOption(8)} de l'original. */
     private static final int CONTENT_CELL = 8;
 
-    /** La teinte de la ligne choisie dans la liste (l'original : blanc a 30 %). */
-    private static final int[] SELECTED = { 255, 255, 255, 76 };
-    private static final int[] UNSELECTED = { 255, 255, 255, 0 };
+    /** La teinte d'une ligne au repos, puis sous le curseur (l'original : blanc a 30 %). */
+    private static final int[] ROW_IDLE = { 255, 255, 255, 0 };
+    private static final int[] ROW_HOVER = { 255, 255, 255, 76 };
+
+    /** La planche de la grille d'artisanat : 196 x 128, posee a 60 %, comme l'original. */
+    private static final ResourceLocation CRAFTING_GRID = ResourceLocation.fromNamespaceAndPath(
+            AcademyCraft.MOD_ID, "textures/guis/tutorial/crafting_grid.png");
+
+    private static final double GRID_SCALE = 0.6;
+    private static final double GRID_CELL = 43.0;
+    private static final double GRID_MARGIN = 5.0;
+    private static final double GRID_RESULT_X = 153.0;
+    private static final double GRID_RESULT_Y = 49.0;
+
+    /** La taille d'un bloc ou d'un objet dans la case : l'original en faisait le tiers de la sienne. */
+    private static final double PREVIEW_ITEM = 68.0;
+
+    /** La taille d'une image d'apercu, en unites de la case. */
+    private static final double PREVIEW_ICON = 96.0;
 
     private final List<TutorialText> texts = new ArrayList<>();
     private final List<Boolean> opened = new ArrayList<>();
@@ -172,8 +189,8 @@ public class TutorialScreen extends CGuiScreen {
             row.transform.width = 72;
             row.transform.height = 12;
             row.tint = new CWidget.Tint();
-            row.tint.idle = UNSELECTED.clone();
-            row.tint.hover = SELECTED.clone();
+            row.tint.idle = ROW_IDLE.clone();
+            row.tint.hover = ROW_HOVER.clone();
 
             CWidget label = new CWidget("label");
             label.transform.width = 69;
@@ -222,7 +239,17 @@ public class TutorialScreen extends CGuiScreen {
         previews = TutorialPreviews.views(TutorialLibrary.entries().get(index).id());
         previewIndex = 0;
         CWidget showWindow = find("showWindow");
-        if (showWindow != null) showWindow.transform.doesDraw = !previews.isEmpty();
+        if (showWindow != null) {
+            showWindow.transform.doesDraw = !previews.isEmpty();
+
+            // Les deux fleches ne servent qu'a tourner entre plusieurs vues : l'original les
+            // cachait des qu'il n'y en avait qu'une.
+            boolean arrows = previews.size() > 1;
+            for (String arrow : new String[] { "btn_left", "btn_right" }) {
+                CWidget widget = showWindow.child(arrow);
+                if (widget != null) widget.transform.doesDraw = arrows;
+            }
+        }
 
         CWidget rightWindow = find("rightWindow");
         CWidget centerPart = find("centerPart");
@@ -230,10 +257,6 @@ public class TutorialScreen extends CGuiScreen {
         // Comme l'original : le texte ne s'ouvre que pour un tutoriel APPRIS. Un tutoriel
         // ferme reste lisible dans la liste, en gris, et son titre s'affiche a droite.
         if (centerPart != null) centerPart.transform.doesDraw = opened.get(index);
-
-        for (int i = 0; i < rows.size(); i++) {
-            rows.get(i).tint.idle = (i == index ? SELECTED : UNSELECTED).clone();
-        }
     }
 
     /** Le nom d'une touche tel que le jeu l'affiche, ou {@code null} si l'identifiant est inconnu. */
@@ -257,11 +280,20 @@ public class TutorialScreen extends CGuiScreen {
         if (opened.get(selected)) drawContent(graphics);
         if (!previews.isEmpty()) {
             drawPreview(graphics);
-            drawTags(graphics);
+            drawTags(graphics, mouseX, mouseY);
         }
     }
 
-    /** L'apercu courant : un bloc ou un objet en volume, une image, ou une grille de recette. */
+    /**
+     * L'apercu courant : un bloc en volume, un objet, une image, ou une grille de recette.
+     *
+     * <p>L'original le dessinait dans une CAMERA : sa case ({@code area}) servait de fenetre a
+     * une projection en perspective, et le bloc tournait sur lui-meme au rythme de
+     * {@code GameTimer / 80} — un tour en trente secondes. Le port se contente du volume que le
+     * modele d'objet porte deja : {@code renderItem} applique la pose isometrique du contexte
+     * GUI tout seul, et une rotation ajoutee par-dessus deplace l'objet au lieu de le tourner
+     * (le modele se recentre par une translation, qui tourne avec la pose).
+     */
     private void drawPreview(GuiGraphics graphics) {
         CWidget window = find("showWindow");
         CWidget area = window == null ? null : window.child("area");
@@ -269,100 +301,100 @@ public class TutorialScreen extends CGuiScreen {
 
         double cx = area.absX + area.absW / 2;
         double cy = area.absY + area.absH / 2;
-        double size = Math.min(area.absW, area.absH);
         TutorialPreviews.View view = previews.get(previewIndex);
-
-        switch (view.kind()) {
-            case BLOCK, ITEM -> centreItem(graphics, TutorialPreviews.stack(view.id()), cx, cy, size);
-            case ICON -> {
-                ResourceLocation icon = ResourceLocation.tryParse(view.id());
-                int[] iconSize = TutorialImages.size(view.id());
-                if (icon != null && iconSize != null) {
-                    int w = (int) Math.round(size * 0.7);
-                    int h = Math.max(1, (int) Math.round(iconSize[1] * (double) w / iconSize[0]));
-                    graphics.blit(icon, (int) Math.round(cx - w / 2.0),
-                            (int) Math.round(cy - h / 2.0), w, h,
-                            0f, 0f, iconSize[0], iconSize[1], iconSize[0], iconSize[1]);
-                }
-            }
-            case RECIPE -> drawRecipe(graphics, view.id(), cx, cy, size);
-        }
-    }
-
-    /** Une pile bien centree, mise a l'echelle de la case. */
-    private static void centreItem(GuiGraphics graphics, ItemStack stack, double cx, double cy,
-                                   double size) {
-        if (stack.isEmpty()) return;
 
         graphics.pose().pushPose();
         graphics.pose().translate((float) cx, (float) cy, 0f);
-        float scale = (float) (size / 16.0 * 0.8);
-        graphics.pose().scale(scale, scale, 1f);
+
+        switch (view.kind()) {
+            case BLOCK, ITEM -> previewItem(graphics, TutorialPreviews.stack(view.id()));
+            case ICON -> previewIcon(graphics, view.id());
+            case RECIPE -> previewRecipe(graphics, TutorialPreviews.recipe(view.id()));
+        }
+
+        graphics.pose().popPose();
+    }
+
+    /** Une pile au centre de la case ; un bloc s'y dessine en volume, comme dans l'inventaire. */
+    private static void previewItem(GuiGraphics graphics, ItemStack stack) {
+        if (stack.isEmpty()) return;
+
+        float scale = (float) (PREVIEW_ITEM / 16.0);
+        graphics.pose().pushPose();
+        graphics.pose().scale(scale, scale, scale);
         graphics.renderItem(stack, -8, -8);
         graphics.pose().popPose();
     }
 
-    /** Une grille de trois sur trois, la fleche, et le resultat. */
-    private static void drawRecipe(GuiGraphics graphics, String id, double cx, double cy,
-                                   double size) {
-        List<ItemStack> ingredients = TutorialPreviews.ingredients(id);
-        ItemStack result = TutorialPreviews.stack(id);
+    /** Une image d'apercu, a sa place au centre de la case. */
+    private static void previewIcon(GuiGraphics graphics, String id) {
+        ResourceLocation texture = ResourceLocation.tryParse(id);
+        int[] size = TutorialImages.size(id);
+        if (texture == null || size == null) return;
 
-        double cell = Math.min(size / 4.8, size / 3.0);
-        double left = cx - (4.8 * cell) / 2;
-        double top = cy - (3 * cell) / 2;
+        int w = (int) Math.round(PREVIEW_ICON);
+        int h = Math.max(1, (int) Math.round(size[1] * (double) w / size[0]));
+        blend();
+        graphics.blit(texture, -w / 2, -h / 2, w, h,
+                0f, 0f, size[0], size[1], size[0], size[1]);
+    }
+
+    /**
+     * La grille d'artisanat de l'original : sa planche de 196 sur 128 posee a 60 %, les neuf
+     * cases a 43 unites de pas, les ingredients a deux fois la taille d'une icone, et le
+     * resultat a droite — plus le genre de recette au-dessus, « Shaped Crafting ».
+     */
+    private void previewRecipe(GuiGraphics graphics, TutorialPreviews.Recipe recipe) {
+        graphics.pose().pushPose();
+        graphics.pose().scale((float) GRID_SCALE, (float) GRID_SCALE, 1f);
+        graphics.pose().translate(-98f, -64f, 0f);
+
+        blend();
+        graphics.blit(CRAFTING_GRID, 0, 0, 196, 128, 0f, 0f, 196, 128, 196, 128);
 
         for (int i = 0; i < 9; i++) {
-            double x = left + (i % 3) * cell;
-            double y = top + (i / 3) * cell;
-            slot(graphics, x, y, cell);
-            if (i < ingredients.size()) itemIn(graphics, ingredients.get(i), x, y, cell);
+            ItemStack stack = recipe.grid.get(i);
+            if (stack.isEmpty()) continue;
+
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) (GRID_MARGIN + (i % 3) * GRID_CELL),
+                    (float) (GRID_MARGIN + (i / 3) * GRID_CELL), 0f);
+            graphics.pose().scale(2f, 2f, 1f);
+            graphics.renderItem(stack, 0, 0);
+            graphics.pose().popPose();
         }
 
-        // La fleche, entre la grille et le resultat.
-        int arrowY = (int) Math.round(cy);
-        graphics.fill((int) Math.round(left + 3.1 * cell), arrowY - 1,
-                (int) Math.round(left + 3.5 * cell), arrowY + 1, 0xFFC8C8C8);
+        if (!recipe.result.isEmpty()) {
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) GRID_RESULT_X, (float) GRID_RESULT_Y, 0f);
+            graphics.pose().scale(2f, 2f, 1f);
+            graphics.renderItem(recipe.result, 0, 0);
+            graphics.pose().popPose();
+        }
 
-        double resultX = left + 3.6 * cell;
-        slot(graphics, resultX, top + cell, cell);
-        itemIn(graphics, result, resultX, top + cell, cell);
-    }
+        String label = Component.translatable(recipe.shaped
+                ? "ac.gui.crafttype.shaped" : "ac.gui.crafttype.shapeless").getString();
+        int width = AcademyFonts.width(font, label, 12);
+        AcademyFonts.drawTop(graphics, font, label, (196 - width) / 2, -24, 0xFFFFFFFF, 12);
 
-    /** Le fond d'une case de recette. */
-    private static void slot(GuiGraphics graphics, double x, double y, double cell) {
-        int x0 = (int) Math.round(x);
-        int y0 = (int) Math.round(y);
-        int x1 = (int) Math.round(x + cell);
-        int y1 = (int) Math.round(y + cell);
-        graphics.fill(x0, y0, x1, y1, 0x50000000);
-        graphics.fill(x0, y0, x1, y0 + 1, 0x60C8C8C8);
-        graphics.fill(x0, y1 - 1, x1, y1, 0x60C8C8C8);
-        graphics.fill(x0, y0, x0 + 1, y1, 0x60C8C8C8);
-        graphics.fill(x1 - 1, y0, x1, y1, 0x60C8C8C8);
-    }
-
-    /** Une pile dans une case de recette. */
-    private static void itemIn(GuiGraphics graphics, ItemStack stack, double x, double y,
-                               double cell) {
-        if (stack.isEmpty()) return;
-
-        graphics.pose().pushPose();
-        graphics.pose().translate((float) x, (float) y, 0f);
-        float scale = (float) (cell * 0.8 / 16.0);
-        graphics.pose().scale(scale, scale, 1f);
-        graphics.renderItem(stack, 1, 1);
         graphics.pose().popPose();
     }
 
-    /** La rangee d'etiquettes, une par apercu : CRAFT pour une recette, VIEW pour le reste. */
-    private void drawTags(GuiGraphics graphics) {
+    /**
+     * La rangee d'etiquettes, une par apercu : CRAFT pour une recette, VIEW pour le reste.
+     *
+     * <p>Chez l'original chacune se dessinait a 70 % d'opacite et passait au blanc plein sous
+     * la souris — c'est le survol qui l'allumait, pas la vue choisie. Et la vue survolee
+     * donnait son nom au-dessus de la rangee : « Crafting : ... » pour une recette.
+     */
+    private void drawTags(GuiGraphics graphics, double mouseX, double mouseY) {
         CWidget window = find("showWindow");
         CWidget area = window == null ? null : window.child("tag_area");
         if (area == null) return;
 
         double size = area.absH;
         double step = size - area.absScale;
+        blend();
 
         for (int i = 0; i < previews.size(); i++) {
             ResourceLocation icon = TutorialPreviews.tagIcon(previews.get(i));
@@ -370,12 +402,30 @@ public class TutorialScreen extends CGuiScreen {
             int y = (int) Math.round(area.absY);
             int side = Math.max(1, (int) Math.round(size));
 
-            int tint = i == previewIndex ? 0xFFFFFFFF : 0xB2FFFFFF;
-            graphics.setColor(((tint >> 16) & 0xFF) / 255f, ((tint >> 8) & 0xFF) / 255f,
-                    (tint & 0xFF) / 255f, 1f);
+            boolean hovered = mouseX >= x && mouseX <= x + side
+                    && mouseY >= y && mouseY <= y + side;
+
+            graphics.setColor(1f, 1f, 1f, hovered ? 1f : 0.7f);
             graphics.blit(icon, x, y, side, side, 0f, 0f, 48, 48, 48, 48);
             graphics.setColor(1f, 1f, 1f, 1f);
+
+            if (hovered) drawTagName(graphics, area, i);
         }
+    }
+
+    /** Le nom de la vue survolee, au-dessus de la rangee, comme le faisait l'original. */
+    private void drawTagName(GuiGraphics graphics, CWidget area, int index) {
+        TutorialPreviews.View view = previews.get(index);
+        if (view.kind() != TutorialPreviews.Kind.RECIPE) return;
+
+        ItemStack result = TutorialPreviews.recipe(view.id()).result;
+        if (result.isEmpty()) return;
+
+        String name = Component.translatable("ac.tutorial.crafting", result.getHoverName())
+                .getString();
+        AcademyFonts.drawTop(graphics, font, name, (int) Math.round(area.absX),
+                (int) Math.round(area.absY) - AcademyFonts.lineHeight(AcademyFonts.GUI_SIZE),
+                0xFFFFFFFF, AcademyFonts.GUI_SIZE);
     }
 
     /** L'etiquette sous ce point, ou {@code -1}. */
@@ -442,6 +492,7 @@ public class TutorialScreen extends CGuiScreen {
         int right = (int) Math.round(Math.max(x0, x1));
 
         if (glow != null && right > left) {
+            blend();
             graphics.blit(glow, left, (int) Math.round(y - height * 2), right - left,
                     Math.max(1, (int) Math.round(height * 5)), 0f, 0f, 32, 32, 32, 32);
         }
@@ -513,7 +564,9 @@ public class TutorialScreen extends CGuiScreen {
 
         String brief = TutorialMarkdown.inline(texts.get(selected).brief(), TutorialScreen::keyName);
         if (brief.isEmpty()) return;
-        for (String line : AcademyFonts.split(font, brief, (int) area.absW - 8, CONTENT_CELL)) {
+        // L'original coupait le resume a cent trente unites, dans une fenetre qui en fait 158,5.
+        int limit = Math.max(1, (int) Math.round(130 * area.absScale));
+        for (String line : AcademyFonts.split(font, brief, limit, CONTENT_CELL)) {
             if (!line.isEmpty()) {
                 AcademyFonts.drawTop(graphics, font, line, left, top, 0xFFC8C8C8, CONTENT_CELL);
             }
@@ -570,6 +623,7 @@ public class TutorialScreen extends CGuiScreen {
         int w = CONTENT_WIDTH;
         int h = Math.max(1, (int) Math.round(size[1] * (double) w / size[0]));
         if (y + h >= top && y <= bottom) {
+            blend();
             graphics.blit(texture, x, y, w, h, 0f, 0f, size[0], size[1], size[0], size[1]);
         }
         return y + h;

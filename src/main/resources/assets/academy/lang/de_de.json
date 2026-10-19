@@ -192,6 +192,9 @@
   "ac.about.empty": "Die Credits fehlen in diesem Build.",
   "ac.tutorial.missing": "Diese Anleitung fehlt in diesem Build.",
   "ac.tutorial.update": "Cloud-Terminal aktualisiert",
+  "ac.tutorial.crafting": "Herstellen: %s",
+  "ac.gui.crafttype.shaped": "Formrezept",
+  "ac.gui.crafttype.shapeless": "Formloses Rezept",
 
   "item.academy.imag_phase": "Imag-Phasen-Flüssigkeit",
   "item.academy.logo": "AcademyCraft-Logo",

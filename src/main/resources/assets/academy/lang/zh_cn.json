@@ -192,6 +192,9 @@
   "ac.about.empty": "此版本缺少制作人员名单。",
   "ac.tutorial.missing": "此版本缺少该教程。",
   "ac.tutorial.update": "云终端已更新",
+  "ac.tutorial.crafting": "合成: %s",
+  "ac.gui.crafttype.shaped": "有序合成",
+  "ac.gui.crafttype.shapeless": "无序合成",
 
   "item.academy.imag_phase": "虚数相位液体",
   "item.academy.logo": "AcademyCraft 标志",

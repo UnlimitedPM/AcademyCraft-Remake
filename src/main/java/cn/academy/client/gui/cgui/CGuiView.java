@@ -261,7 +261,9 @@ public final class CGuiView {
 
     /** Un widget, puis ses enfants — l'ordre du fichier, qui est celui du dessin. */
     private void drawWidget(GuiGraphics graphics, CWidget widget, double mouseX, double mouseY) {
-        if (!widget.transform.doesDraw || !widget.transform.enabled) return;
+        // `enabled` est le drapeau des EVENEMENTS d'un composant, pas celui de sa visibilite :
+        // voir {@code CGuiScreen.drawWidget}.
+        if (!widget.transform.doesDraw) return;
 
         // Un bouton s'allume sous le curseur. C'est le seul retour qu'il donne — il n'a pas de fond —
         // et c'est ce que l'original faisait dans son FrameEvent : quatre cinquiemes d'intensite au

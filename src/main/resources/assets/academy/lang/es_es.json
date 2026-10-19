@@ -192,6 +192,9 @@
   "ac.about.empty": "Faltan los créditos en esta versión.",
   "ac.tutorial.missing": "Falta este tutorial en esta versión.",
   "ac.tutorial.update": "Terminal Cloud actualizado",
+  "ac.tutorial.crafting": "Fabricación: %s",
+  "ac.gui.crafttype.shaped": "Fabricación con forma",
+  "ac.gui.crafttype.shapeless": "Fabricación sin forma",
 
   "item.academy.imag_phase": "Fase imag líquida",
   "item.academy.logo": "Logotipo de AcademyCraft",

@@ -7,6 +7,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import com.mojang.blaze3d.systems.RenderSystem;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -137,7 +138,14 @@ public abstract class CGuiScreen extends Screen {
 
     /** Un widget, puis ses enfants — l'ordre du fichier, qui est celui du dessin. */
     protected void drawWidget(GuiGraphics graphics, CWidget widget, double mouseX, double mouseY) {
-        if (!widget.transform.doesDraw || !widget.transform.enabled) return;
+        // `enabled` n'est PAS « visible ». Chez l'original c'est le drapeau des EVENEMENTS de
+        // chaque composant ({@code Component.enabled} : un gestionnaire desactive ne repond
+        // pas), et un widget dont le Transform le porte ne se cache pas pour autant. Le
+        // document du tutoriel s'en sert — le panneau du texte, sa fenetre de titre et le
+        // champ du resume sont desactives pour ne pas prendre les clics — et le port les
+        // cachait donc en entier : le texte s'affichait par chance (il est dessine par
+        // l'ecran) mais la barre de defilement, elle, n'apparaissait jamais.
+        if (!widget.transform.doesDraw) return;
 
         // Meme chose que CGuiView : la position exacte du widget vit dans la pose, pour que ses
         // elements se posent ou l'original les posait, et non au pixel arrondi.
@@ -259,6 +267,11 @@ public abstract class CGuiScreen extends Screen {
         ResourceLocation texture = ResourceLocation.tryParse(path);
         if (texture == null) return;
 
+        // Sans le melange, l'alpha de l'image est IGNORE : les coins ronds d'une fenetre se
+        // dessinaient en blanc plein, et son fond noir a moitie devenait un aplat noir. Une
+        // icone d'etiquette, qui tient tout entiere dans son alpha, n'etait plus qu'un carre
+        // blanc — c'est ce que le joueur voyait sous les apercus du tutoriel.
+        blend();
         graphics.setColor(((colour >> 16) & 0xFF) / 255f, ((colour >> 8) & 0xFF) / 255f,
                 (colour & 0xFF) / 255f, ((colour >>> 24) & 0xFF) / 255f);
         int iw = Math.max(1, (int) Math.round(widget.absW));
@@ -267,6 +280,12 @@ public abstract class CGuiScreen extends Screen {
         graphics.blit(texture, 0, 0, iw, ih, 0f, 0f, TEXTURE, TEXTURE, TEXTURE, TEXTURE);
         graphics.pose().popPose();
         graphics.setColor(1f, 1f, 1f, 1f);
+    }
+
+    /** Le melange alpha, celui que tout dessin de texture demande. */
+    protected static void blend() {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
     }
 
     /** Un carre creux : le cerne du fichier, qui se dessine sur les quatre bords. */
