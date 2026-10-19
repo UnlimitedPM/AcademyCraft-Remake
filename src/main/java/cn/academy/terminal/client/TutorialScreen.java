@@ -52,6 +52,9 @@ public class TutorialScreen extends CGuiScreen {
     /** La largeur du texte dans la colonne (l'original : {@code widthLimit_$eq(150)}). */
     private static final int CONTENT_WIDTH = 150;
 
+    /** La cellule du texte : huit, comme le {@code FontOption(8)} de l'original. */
+    private static final int CONTENT_CELL = 8;
+
     /** La teinte de la ligne choisie dans la liste (l'original : blanc a 30 %). */
     private static final int[] SELECTED = { 255, 255, 255, 76 };
     private static final int[] UNSELECTED = { 255, 255, 255, 0 };
@@ -96,11 +99,10 @@ public class TutorialScreen extends CGuiScreen {
             opened.add(entry.alwaysOpen() || ClientTutorialData.get().isUnlocked(entry.id()));
         }
 
-        // L'introduction en logo de l'original (logo0..3) et l'apercu 3D restent fermes.
-        hide("logo0");
-        hide("logo1");
-        hide("logo2");
-        hide("logo3");
+        // L'introduction en logo de l'original (logo0..3) : ce sont les images blanches floues
+        // qui entourent la liste, et c'est leur degrade que le joueur voyait dans le vrai mod.
+        // Elles restent affichees tant qu'aucun tutoriel n'est choisi, puis s'effacent — c'est
+        // exactement ce que faisait l'original au premier clic. L'apercu 3D, lui, reste ferme.
         hide("showWindow");
 
         // Le cote droit attend un clic : c'est l'etat de repos de l'original.
@@ -108,6 +110,28 @@ public class TutorialScreen extends CGuiScreen {
         hide("centerPart");
 
         buildList();
+        orderScrollBars();
+    }
+
+    /**
+     * La barre de defilement se dessine DANS CET ORDRE : la glissiere, puis le curseur.
+     *
+     * <p>Le document les pose dans l'autre sens, et le moteur dessine dans l'ordre du fichier :
+     * la glissiere passait donc par-dessus le curseur, qui n'avait plus l'air d'exister. C'est
+     * le reproche du joueur — « il manque la barre de scroll qui n'est juste pas visible ».
+     */
+    private void orderScrollBars() {
+        CWidget centerPart = find("centerPart");
+        if (centerPart == null) return;
+
+        CWidget track = centerPart.child("scroll_1");
+        CWidget thumb = centerPart.child("scroll_2");
+        if (track == null || thumb == null) return;
+
+        centerPart.remove(track);
+        centerPart.remove(thumb);
+        centerPart.add(track);
+        centerPart.add(thumb);
     }
 
     private void hide(String name) {
@@ -165,9 +189,18 @@ public class TutorialScreen extends CGuiScreen {
     }
 
     private void select(int index) {
+        // Premier choix : les logos s'effacent, comme chez l'original.
+        if (selected < 0) {
+            hide("logo0");
+            hide("logo1");
+            hide("logo2");
+            hide("logo3");
+        }
+
         selected = index;
         scroll = 0;
         blocks = TutorialMarkdown.parse(texts.get(index).content(), TutorialScreen::keyName);
+        contentHeight = measure();
 
         CWidget rightWindow = find("rightWindow");
         CWidget centerPart = find("centerPart");
@@ -202,6 +235,80 @@ public class TutorialScreen extends CGuiScreen {
         if (opened.get(selected)) drawContent(graphics);
     }
 
+    /**
+     * Les deux traits lumineux de l'introduction, tant que les logos sont la.
+     *
+     * <p>L'original les dessinait dans un ecouteur de {@code logo1} : deux segments blancs
+     * flanques de leur halo, a 500 unites du centre (dont 300 deja pleines), quinze unites
+     * au-dessus du milieu. C'est le « blanc en transparence » que le joueur regrettait.
+     */
+    @Override
+    protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
+        CWidget logo1 = find("logo1");
+        if (logo1 == null || !logo1.transform.doesDraw) return;
+
+        double scale = logo1.absScale;
+        double cx = logo1.absX + logo1.absW / 2;
+        double cy = logo1.absY + logo1.absH / 2 + 15 * scale;
+        double ln = 500 * scale;
+        double ln2 = 300 * scale;
+        double ht = Math.max(1.0, 5 * scale);
+
+        lineGlow(graphics, cx + (ln - ln2), cx + ln, cy, ht);
+        lineGlow(graphics, cx - ln, cx - (ln - ln2), cy, ht);
+
+        moveScrollThumb();
+    }
+
+    /** Un trait blanc avec son halo : le {@code lineglow} de l'original. */
+    private static void lineGlow(GuiGraphics graphics, double x0, double x1, double y,
+                                 double height) {
+        ResourceLocation glow = ResourceLocation.tryParse(
+                "academy:textures/effects/glow_line.png");
+        int left = (int) Math.round(Math.min(x0, x1));
+        int right = (int) Math.round(Math.max(x0, x1));
+
+        if (glow != null && right > left) {
+            graphics.blit(glow, left, (int) Math.round(y - height * 2), right - left,
+                    Math.max(1, (int) Math.round(height * 5)), 0f, 0f, 32, 32, 32, 32);
+        }
+        graphics.fill(left, (int) Math.round(y), right,
+                (int) Math.round(y + height), 0xFFFFFFFF);
+    }
+
+    /** Le curseur de la barre suit le defilement, dans la glissiere du document. */
+    private void moveScrollThumb() {
+        CWidget centerPart = find("centerPart");
+        if (centerPart == null) return;
+        CWidget track = centerPart.child("scroll_1");
+        CWidget thumb = centerPart.child("scroll_2");
+        if (track == null || thumb == null) return;
+
+        int max = Math.max(0, contentHeight - contentViewHeight());
+        double span = Math.max(0.0, track.transform.height - thumb.transform.height - 4);
+        thumb.transform.y = 2 + (max <= 0 ? 0 : (double) scroll / max * span);
+    }
+
+    /** La hauteur du contenu mis en page, pour la barre de defilement. */
+    private int measure() {
+        int lineHeight = AcademyFonts.lineHeight(CONTENT_CELL);
+        int height = 0;
+
+        for (TutorialMarkdown.Block block : blocks) {
+            if (block.isImage()) {
+                int[] size = TutorialImages.size(block.image());
+                height += (size == null ? 0
+                        : Math.max(1, (int) Math.round(size[1] * (double) CONTENT_WIDTH / size[0])))
+                        + 4;
+                continue;
+            }
+            height += (block.text().isEmpty() ? 1
+                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, CONTENT_CELL).size())
+                    * lineHeight;
+        }
+        return height;
+    }
+
     /** Le titre et le resume, dans la fenetre du bas : 3 unites du bord, comme l'original. */
     private void drawRightWindow(GuiGraphics graphics) {
         CWidget window = find("rightWindow");
@@ -210,19 +317,18 @@ public class TutorialScreen extends CGuiScreen {
 
         int left = (int) Math.round(area.absX) + 3;
         int top = (int) Math.round(area.absY) + 3;
-        int cell = AcademyFonts.GUI_SIZE;
 
         AcademyFonts.drawTop(graphics, font, texts.get(selected).title(), left, top,
-                0xFFFFFFFF, cell);
-        top += AcademyFonts.lineHeight(cell) + 2;
+                0xFFFFFFFF, AcademyFonts.GUI_SIZE);
+        top += AcademyFonts.lineHeight(AcademyFonts.GUI_SIZE) + 2;
 
         String brief = texts.get(selected).brief();
         if (brief.isEmpty()) return;
-        for (String line : AcademyFonts.split(font, brief, (int) area.absW - 8)) {
+        for (String line : AcademyFonts.split(font, brief, (int) area.absW - 8, CONTENT_CELL)) {
             if (!line.isEmpty()) {
-                AcademyFonts.drawTop(graphics, font, line, left, top, 0xFFC8C8C8, cell);
+                AcademyFonts.drawTop(graphics, font, line, left, top, 0xFFC8C8C8, CONTENT_CELL);
             }
-            top += AcademyFonts.lineHeight(cell);
+            top += AcademyFonts.lineHeight(CONTENT_CELL);
         }
     }
 
@@ -239,7 +345,7 @@ public class TutorialScreen extends CGuiScreen {
         graphics.enableScissor((int) Math.round(area.absX), (int) Math.round(area.absY),
                 (int) Math.round(area.absX + area.absW), (int) Math.round(area.absY + area.absH));
 
-        int cell = AcademyFonts.GUI_SIZE;
+        int cell = CONTENT_CELL;
         int lineHeight = AcademyFonts.lineHeight(cell);
         int y = top - scroll;
 
@@ -250,7 +356,8 @@ public class TutorialScreen extends CGuiScreen {
             }
 
             List<String> lines = block.text().isEmpty()
-                    ? List.of("") : AcademyFonts.split(font, block.text(), CONTENT_WIDTH);
+                    ? List.of("")
+                    : AcademyFonts.split(font, block.text(), CONTENT_WIDTH, CONTENT_CELL);
             for (String line : lines) {
                 if (!line.isEmpty() && y + lineHeight >= top && y <= bottom) {
                     AcademyFonts.drawTop(graphics, font, line, left, y, 0xFFE0E0E0, cell);
@@ -259,7 +366,6 @@ public class TutorialScreen extends CGuiScreen {
             }
         }
 
-        contentHeight = y - (top - scroll);
         graphics.disableScissor();
     }
 
@@ -287,7 +393,7 @@ public class TutorialScreen extends CGuiScreen {
             int viewHeight = contentViewHeight();
             int max = Math.max(0, contentHeight - viewHeight);
             scroll = Math.max(0, Math.min(max,
-                    scroll + (int) (-delta * AcademyFonts.lineHeight() * 2)));
+                    scroll + (int) (-delta * AcademyFonts.lineHeight(CONTENT_CELL) * 2)));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, delta);

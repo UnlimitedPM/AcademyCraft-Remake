@@ -274,6 +274,17 @@ public final class AcademyFonts {
     }
 
     public static List<String> split(Font ignored, String text, int maxWidth) {
+        return split(ignored, text, maxWidth, GUI_SIZE);
+    }
+
+    /**
+     * Le meme retour a la ligne, pour une AUTRE cellule.
+     *
+     * <p>L'original ecrit son texte de tutoriel en huit (son {@code FontOption(8)} de
+     * {@code GuiTutorial}), et le port dessinait tout a dix : les lignes se coupaient donc
+     * ailleurs et le texte paraissait plus gros que dans le vrai mod.
+     */
+    public static List<String> split(Font ignored, String text, int maxWidth, int cell) {
         List<String> lines = new ArrayList<>();
         for (String paragraph : text.split("\\n", -1)) {
             if (paragraph.trim().isEmpty()) {
@@ -284,17 +295,17 @@ public final class AcademyFonts {
             StringBuilder line = new StringBuilder();
             for (String word : paragraph.trim().split("\\s+")) {
                 if (line.length() == 0) {
-                    appendWrappedWord(word, line, lines, maxWidth);
+                    appendWrappedWord(word, line, lines, maxWidth, cell);
                     continue;
                 }
 
                 String candidate = line + " " + word;
-                if (width(candidate, GUI_SIZE) <= maxWidth) {
+                if (width(candidate, cell) <= maxWidth) {
                     line.append(' ').append(word);
                 } else {
                     lines.add(line.toString());
                     line.setLength(0);
-                    appendWrappedWord(word, line, lines, maxWidth);
+                    appendWrappedWord(word, line, lines, maxWidth, cell);
                 }
             }
             if (line.length() > 0) lines.add(line.toString());
@@ -303,11 +314,11 @@ public final class AcademyFonts {
     }
 
     private static void appendWrappedWord(String word, StringBuilder line,
-                                          List<String> lines, int maxWidth) {
+                                          List<String> lines, int maxWidth, int cell) {
         for (int offset = 0; offset < word.length();) {
             int codePoint = word.codePointAt(offset);
             String next = new String(Character.toChars(codePoint));
-            if (line.length() > 0 && width(line + next, GUI_SIZE) > maxWidth) {
+            if (line.length() > 0 && width(line + next, cell) > maxWidth) {
                 lines.add(line.toString());
                 line.setLength(0);
             }
