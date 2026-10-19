@@ -613,8 +613,14 @@ public class TutorialScreen extends CGuiScreen {
         if (track == null || thumb == null) return;
 
         int max = Math.max(0, contentHeight - contentViewHeight());
-        double span = Math.max(1.0, track.absH - thumb.absH);
-        double progress = (mouseY - track.absY - thumb.absH / 2.0) / span;
+        double lower = thumb.dragBar == null ? 2 : thumb.dragBar.lower * track.absScale;
+        double upper = thumb.dragBar == null || thumb.dragBar.upper * track.absScale <= lower
+                ? track.absH - thumb.absH
+                : thumb.dragBar.upper * track.absScale;
+        double start = track.absY + lower;
+        double span = Math.max(1.0, upper - lower);
+
+        double progress = (mouseY - start - thumb.absH / 2.0) / span;
         scroll = (int) Math.round(Math.max(0.0, Math.min(1.0, progress)) * max);
     }
 
@@ -665,7 +671,15 @@ public class TutorialScreen extends CGuiScreen {
                 (int) Math.round(y + height), 0xFFFFFFFF);
     }
 
-    /** Le curseur de la barre suit le defilement, dans la glissiere du document. */
+    /**
+     * Le curseur de la barre suit le defilement, dans les bornes du DOCUMENT.
+     *
+     * <p>Son {@code DragBar} dit ou le curseur peut aller : de deux unites a cent soixante-cinq,
+     * sur une glissiere de deux cent seize. Le port calculait un trajet a lui — la hauteur de
+     * la glissiere moins celle du curseur moins quatre — et le curseur s'arretait donc a deux
+     * unites du bas, visiblement avant la fin : « l'element blanc qui slide n'atteint pas la
+     * fin de la barre grise ».
+     */
     private void moveScrollThumb() {
         CWidget centerPart = find("centerPart");
         if (centerPart == null) return;
@@ -673,9 +687,13 @@ public class TutorialScreen extends CGuiScreen {
         CWidget thumb = centerPart.child("scroll_2");
         if (track == null || thumb == null) return;
 
+        double lower = thumb.dragBar == null ? 2 : thumb.dragBar.lower;
+        double upper = thumb.dragBar == null || thumb.dragBar.upper <= lower
+                ? track.transform.height - thumb.transform.height
+                : thumb.dragBar.upper;
+
         int max = Math.max(0, contentHeight - contentViewHeight());
-        double span = Math.max(0.0, track.transform.height - thumb.transform.height - 4);
-        thumb.transform.y = 2 + (max <= 0 ? 0 : (double) scroll / max * span);
+        thumb.transform.y = lower + (max <= 0 ? 0 : (double) scroll / max * (upper - lower));
     }
 
     /** La hauteur du contenu mis en page, pour la barre de defilement. */

@@ -89,6 +89,7 @@ public final class CGuiDocument {
             case "Tint" -> widget.tint = tint(element);
             case "ProgressBar" -> widget.bar = progressBar(element);
             case "TextBox" -> widget.text = textBox(element);
+            case "DragBar" -> widget.dragBar = dragBar(element);
             default -> {
                 // Un composant que le port n'a pas repris : celui des listes defilantes, des
                 // boutons ou des barres. Les fichiers qui en portent en auront besoin un jour ;
@@ -170,6 +171,13 @@ public final class CGuiDocument {
         if (hover != null) out.hover = hover;
         out.affectTexture = flag(element, "affectTexture", false);
         out.enabled = flag(element, "enabled", true);
+        return out;
+    }
+
+    private static CWidget.DragBar dragBar(Element element) {
+        CWidget.DragBar out = new CWidget.DragBar();
+        out.lower = number(element, "lower", 0);
+        out.upper = number(element, "upper", 0);
         return out;
     }
 

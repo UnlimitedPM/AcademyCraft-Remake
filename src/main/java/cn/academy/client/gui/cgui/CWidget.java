@@ -69,6 +69,20 @@ public class CWidget {
         public double v1 = 1;
     }
 
+    /**
+     * Une barre de defilement : les bornes entre lesquelles son curseur peut glisser.
+     *
+     * <p>C'est le {@code DragBar} de LambdaLib2, et le document les donne en unites du widget
+     * (deux pour le haut, cent soixante-cinq pour le bas, sur une glissiere de deux cent
+     * seize). Le port les ignorait et calculait un trajet a lui, en retirant quatre unites de
+     * la hauteur — le curseur n'arrivait donc jamais au bout : « l'element blanc qui slide
+     * n'atteint pas la fin de la barre grise ».
+     */
+    public static final class DragBar {
+        public double lower;
+        public double upper;
+    }
+
     /** Un cerne, dessine sur les quatre bords du widget. */
     public static final class Outline {
         public int red = 255;
@@ -369,6 +383,7 @@ public class CWidget {
     public Frame frame;
     public Line line;
     public Disc disc;
+    public DragBar dragBar;
 
     // --- Ou le widget tombe sur l'ecran, en pixels : pose par CGuiLayout, lu par le rendu. ---
 
@@ -445,9 +460,18 @@ public class CWidget {
         out.list = copy(list);
         out.line = copy(line);
         out.disc = copy(disc);
+        out.dragBar = copy(dragBar);
         for (CWidget child : children) {
             out.add(child.copy());
         }
+        return out;
+    }
+
+    private static DragBar copy(DragBar source) {
+        if (source == null) return null;
+        DragBar out = new DragBar();
+        out.lower = source.lower;
+        out.upper = source.upper;
         return out;
     }
 
