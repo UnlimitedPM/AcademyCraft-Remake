@@ -79,30 +79,47 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
             pose.translate(0.5f, 0.5f, 0.5f);
             icon(stack, pose, buffers, light, overlay);
         } else {
-            // Le modele OBJ est centre sur l'origine : c'est le demi-bloc NEGATIF de la 1.12.2.
-            pose.translate(-0.5f, -0.5f, -0.5f);
+            // LE CUBE EST DEJA DECALE D'UN DEMI-BLOC NEGATIF quand on arrive ici :
+            // `ItemRenderer.render` fait `translate(-0,5, -0,5, -0,5)` AVANT d'appeler le rendu
+            // en code (ligne 113 de sa source), exactement comme la 1.12.2 avant son TEISR.
+            // Ce demi-bloc POSITIF l'annule donc, et le modele se retrouve dans le repere de
+            // l'original ; puis la chaine de l'original, puis SON propre demi-bloc negatif.
+            //
+            // C'est le piege qui a coute un aller-retour : sans ce +0,5 le modele tombait un
+            // bloc a gauche et sous les pieds (deux fois -0,5), ce que le joueur a vu tout de
+            // suite — « il se trouve en dessous de mes pieds et sur la gauche ».
+            pose.translate(0.5f, 0.5f, 0.5f);
             handPose(context, pose);
+            pose.translate(-0.5f, -0.5f, -0.5f);
             ObjModels.draw(ObjModels.get(MODEL).all(), pose,
                     buffers.getBuffer(ObjModels.type(TEXTURE)), light, overlay);
         }
         pose.popPose();
     }
 
-    /** Les trois chaines de l'original, appliquees dans le meme ordre. */
+    /**
+     * Les trois chaines de l'original, dans SON ordre.
+     *
+     * <p>{@code TransformChain} PRE-MULTIPLIE chaque operation (`Matrix4f.mul(temp, result)`),
+     * donc la chaine de l'originale {@code rotate().scale().translate()} vaut la matrice
+     * {@code T * S * R}. Ici c'est la pose qui pre-multiplie pareil : on ecrit donc les
+     * operations dans l'ordre de la chaine, {@code translate} d'abord, {@code rotate} en
+     * dernier — l'inverse de l'ordre « d'application » habituel.
+     */
     private static void handPose(ItemDisplayContext context, PoseStack pose) {
         switch (context) {
             case FIRST_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND -> {
-                pose.mulPose(Axis.YP.rotationDegrees(180f));
-                pose.scale(0.3f, 0.3f, 0.3f);
                 pose.translate(0.34f, -0.1f, -0.1f);
+                pose.scale(0.3f, 0.3f, 0.3f);
+                pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
             case THIRD_PERSON_LEFT_HAND, THIRD_PERSON_RIGHT_HAND -> {
-                pose.mulPose(Axis.YP.rotationDegrees(180f));
                 pose.scale(0.2f, 0.2f, 0.2f);
+                pose.mulPose(Axis.YP.rotationDegrees(180f));
             }
             case GROUND -> {
-                pose.scale(-0.15f, -0.15f, 0.15f);
                 pose.translate(0.0f, 0.1f, 0.0f);
+                pose.scale(-0.15f, -0.15f, 0.15f);
             }
             // Les autres contextes (cadre, tete, objet fixe) n'avaient aucune chaine : le
             // modele y est seulement recentre, comme dans l'original.
