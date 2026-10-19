@@ -31,14 +31,15 @@ public record Media(String id, boolean internal) {
     }
 
     /**
-     * Le son du morceau, tel qu'il est range dans les ressources.
+     * Le son du morceau, tel qu'il est declare.
      *
-     * <p>Le fichier vit dans {@code assets/academy/sounds/media/<id>.ogg} : la 1.20.1
-     * resout un chemin de son sans declaration des lors qu'il suit celui du fichier, donc
-     * aucun fichier de description n'est necessaire.
+     * <p>La 1.20.1 ne joue un son que s'il figure dans {@code sounds.json} : sans entree, le
+     * moteur se tait et note « Unable to play unknown soundEvent ». Les trois morceaux du mod
+     * y sont donc declares, en <b>flux</b> — un OGG de quatre megaoctets n'a pas a etre charge
+     * en memoire — et c'est leur identifiant qui les nomme.
      */
     public ResourceLocation sound() {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "media/" + id);
+        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "media." + id);
     }
 
     /** L'objet qui donne ce morceau, tel qu'il est enregistre. */

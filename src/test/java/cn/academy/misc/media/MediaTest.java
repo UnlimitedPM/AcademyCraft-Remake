@@ -56,8 +56,9 @@ class MediaTest {
     void leSonEtLobjetSuiventLeNomDuMorceau() {
         Media media = MediaManager.get("only_my_railgun");
         assertNotNull(media);
-        assertEquals("academy:media/only_my_railgun", media.sound().toString(),
-                "le fichier se resout depuis le nom, sans declaration");
+        assertEquals("academy:media.only_my_railgun", media.sound().toString(),
+                "le son est celui que `sounds.json` declare — sans declaration, le moteur "
+                        + "se tait avec « Unable to play unknown soundEvent »");
         assertEquals("media_only_my_railgun", media.itemName(),
                 "et l'objet porte le meme nom, precede de media_");
         assertEquals("ac.media.only_my_railgun.name", media.titleKey());

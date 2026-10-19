@@ -83,6 +83,17 @@ public final class ModSounds {
     public static final RegistryObject<SoundEvent> MACHINE_IMAG_FUSOR_WORK = event("machine.imag_fusor_work");
     public static final RegistryObject<SoundEvent> MACHINE_MACHINE_WORK = event("machine.machine_work");
 
+    //
+    // Les trois morceaux du lecteur media. L'original ne les declarait pas dans son
+    // `sounds.json` : il ouvrait lui-meme une source en flux dans le `SoundSystem` du jeu.
+    // Le port passe par le moteur, donc les morceaux sont des sons comme les autres —
+    // declares dans le fichier ET enregistres, sans quoi le moteur se tait en notant
+    // « Unable to play unknown soundEvent ».
+    //
+    public static final RegistryObject<SoundEvent> MEDIA_ONLY_MY_RAILGUN = event("media.only_my_railgun");
+    public static final RegistryObject<SoundEvent> MEDIA_LEVEL5_JUDGELIGHT = event("media.level5_judgelight");
+    public static final RegistryObject<SoundEvent> MEDIA_SISTERS_NOISE = event("media.sisters_noise");
+
     /** Tous les evenements enregistres, dans l'ordre du fichier. */
     public static List<RegistryObject<SoundEvent>> all() {
         return List.copyOf(ALL);

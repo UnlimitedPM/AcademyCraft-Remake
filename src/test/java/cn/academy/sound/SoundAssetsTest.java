@@ -27,8 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class SoundAssetsTest {
 
-    /** Les evenements du {@code sounds.json} de l'original. */
-    private static final int EVENTS = 44;
+    /** Les evenements du {@code sounds.json} de l'original, plus les trois morceaux du lecteur. */
+    private static final int EVENTS = 47;
 
     private static final String ROOT = "/assets/academy/";
     private static final String FILE = ROOT + "sounds.json";
@@ -53,7 +53,8 @@ class SoundAssetsTest {
         assertEquals(EVENTS, json.entrySet().size(), "les evenements de l'original");
         for (String name : new String[] { "ability.deny", "em.minedetect", "md.meltdowner",
                 "terminal.select", "tp.tp_flashing", "vecmanip.groundshock",
-                "machine.machine_work" }) {
+                "machine.machine_work", "media.only_my_railgun",
+                "media.level5_judgelight", "media.sisters_noise" }) {
             assertTrue(json.has(name), "evenement manquant : " + name);
         }
     }

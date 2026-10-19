@@ -2632,7 +2632,7 @@ public final class AcademyGameTests {
             registered.add(holder.getId().getPath());
         }
 
-        assertValue(helper, 44, registered.size(), "les evenements de l'original");
+        assertValue(helper, 47, registered.size(), "les evenements de l'original, et les morceaux du lecteur");
         assertTrue(helper, declared.equals(registered),
                 "chaque evenement annonce doit etre enregistre, et l'inverse : annonces "
                         + declared + ", enregistres " + registered);
