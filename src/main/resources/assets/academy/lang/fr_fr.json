@@ -59,6 +59,7 @@
 
   "academy.developer.type.portable": "Développeur portable",
   "academy.developer.portable.energy": "Énergie %s / %s",
+  "academy.developer.portable.empty": "Le développeur n'a plus d'énergie.",
   "ac.energy.item_level": "%s/%s IF",
   "academy.developer.type.normal": "Développeur d'aptitudes normal",
   "academy.developer.type.advanced": "Développeur d'aptitudes avancé",

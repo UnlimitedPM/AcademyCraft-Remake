@@ -59,6 +59,7 @@
 
   "academy.developer.type.portable": "Tragbarer Entwickler",
   "academy.developer.portable.energy": "Energie %s / %s",
+  "academy.developer.portable.empty": "Der Entwickler hat keine Energie mehr.",
   "ac.energy.item_level": "%s/%s IF",
   "academy.developer.type.normal": "Normaler Fähigkeitsentwickler",
   "academy.developer.type.advanced": "Fortschrittlicher Fähigkeitsentwickler",

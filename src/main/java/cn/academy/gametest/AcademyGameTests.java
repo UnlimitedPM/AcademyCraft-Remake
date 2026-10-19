@@ -2181,6 +2181,14 @@ public final class AcademyGameTests {
         // Avec un objet vide, il demarre puis echoue au premier tick.
         var empty = new ItemStack(ModItems.DEVELOPER_PORTABLE.get());
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, empty);
+
+        // Mais l'ECRAN ne s'ouvre plus : le joueur l'a demande, un portable a sec
+        // ne doit pas laisser croire qu'il fonctionne.
+        var opened = empty.getItem().use(helper.getLevel(), player,
+                net.minecraft.world.InteractionHand.MAIN_HAND);
+        assertFalse(helper, opened.getResult().consumesAction(),
+                "un portable vide ne doit pas ouvrir l'ecran");
+
         assertTrue(helper, data.startDeveloping(player, category.getCategoryId(), -1),
                 "l'objet present suffit a demarrer");
 

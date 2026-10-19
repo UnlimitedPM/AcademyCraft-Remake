@@ -32,8 +32,15 @@ public class EnergyUnitItem extends Item implements ImagEnergyItem {
     /** Capacite de l'objet, en IF. L'original : {@code new ItemEnergyBase(10000, 20)}. */
     public static final double MAX_ENERGY = 10_000.0d;
 
-    /** Bande passante de l'objet, en IF par tick. */
-    public static final double BANDWIDTH = 20.0d;
+    /**
+     * Bande passante de l'objet, en IF par tick.
+     *
+     * <p>L'original valait 20 : une unite se rechargeait donc deux fois et demie
+     * plus lentement que le developpeur portable (50), pour la meme capacite de
+     * 10 000 IF. Le joueur l'a vu en jeu et veut les deux au meme rythme ; c'est
+     * un ECART DEMANDE PAR LE JOUEUR, la valeur d'origine reste 20.
+     */
+    public static final double BANDWIDTH = 50.0d;
 
     public EnergyUnitItem() {
         super(new Item.Properties().stacksTo(1));

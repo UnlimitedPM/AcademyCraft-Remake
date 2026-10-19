@@ -89,6 +89,16 @@ public class DeveloperPortableItem extends Item implements ImagEnergyItem {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
 
+        // Un portable a sec n'ouvre rien : le joueur l'a demande en jeu, et c'est
+        // l'ecran qui doit le dire, pas un echec silencieux au premier tick.
+        if (getEnergy(stack) < cn.academy.ability.develop.DeveloperType.PORTABLE.getEnergyPerTick()) {
+            if (!level.isClientSide && player instanceof ServerPlayer server) {
+                server.displayClientMessage(
+                        Component.translatable("academy.developer.portable.empty"), true);
+            }
+            return InteractionResultHolder.fail(stack);
+        }
+
         if (!level.isClientSide && player instanceof ServerPlayer server) {
             // L'ecran est celui de la machine : seule la source de l'energie change, et
             // c'est le drapeau du paquet qui le dira au client.
