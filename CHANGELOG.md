@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.1.5 - l'imag phase liquide / the imag phase liquid
+
+### English
+
+All of 0.1.4, plus the imag phase liquid rebuilt on the original's own renderer, a reworked
+loot table, and the whole game in four languages.
+
+- **The liquid's sheets are back, and they show like the original's.** The port drew three
+  translucent quads per liquid block, but they were painted *before* the fluid's own layer, so
+  the black fluid covered them; then, once they drew after it, they stayed hidden inside it.
+  Both causes are gone: the sheets now draw right after the world's translucent layer, and the
+  depth test is truly off, as in 1.12.2's `RenderImagPhaseLiquid`, so they are visible through
+  the liquid and even through walls. Their textures and their opacity are the original's own,
+  and they follow the slope of a flowing liquid corner by corner.
+- **The liquid is a liquid.** It emits light 8, as the original's fluid did; entering it tints
+  the screen and closes the fog like water; and it sinks at the 1.12.2 speed, four times faster
+  than 1.20.1's own water, which divides gravity by sixteen. You can also swim in it, with the
+  swimming pose arriving on sprint — a request of the player's, the 1.12.2 mod could not.
+- **Four factor items in the old structures' chests**, one per stack, as the original's loot
+  table had them.
+- **The mod speaks French, German, Spanish and Chinese**, 418 keys each, checked against the
+  English file by a test that compares the keys, the placeholders and the line breaks.
+- **No more red chat messages.** A refusal — power off, not learnt, not enough points,
+  overloaded, jammed, on cooldown — is silent now, as is a machine's wireless link.
+- **And it costs less.** The sheets' renderer allocates nothing per frame any more (the layer
+  geometry and their box are computed twice a second), skips what the camera cannot see, and
+  the liquid block no longer carries an empty block entity per block: the renderer finds the
+  blocks through the chunk's palette.
+- **Tests**: 167 in-game tests, 856 unit tests.
+
+### Francais
+
+Tout le 0.1.4, plus l'imag phase liquide refaite sur le rendu de l'original, une table de butin
+retravaillee, et tout le jeu en quatre langues.
+
+- **Les nappes du liquide sont revenues, et se voient comme dans l'original.** Le port dessinait
+  trois quads translucides par bloc de liquide, mais ils etaient peints *avant* la couche du
+  fluide : le noir les recouvrait. Une fois dessines apres, ils restaient enfermes dedans. Les
+  deux causes sont parties : les nappes passent juste apres la couche translucide du monde, et le
+  test de profondeur est vraiment coupe, comme le `RenderImagPhaseLiquid` de 1.12.2 — on les voit
+  a travers le liquide et meme a travers les murs. Leurs textures et leur opacite sont celles de
+  l'original, et elles suivent la pente d'un liquide qui coule, coin par coin.
+- **Le liquide est un liquide.** Il eclaire, niveau 8, comme le fluide de l'original ; y entrer
+  teinte l'ecran et referme le brouillard comme l'eau ; et on y coule a la vitesse de la 1.12.2,
+  quatre fois plus vite que dans l'eau de la 1.20.1, qui divise la gravite par seize. On peut
+  aussi y nager, la position de nage arrivant en sprintant — une demande du joueur, le mod de
+  1.12.2 ne le pouvait pas.
+- **Quatre facteurs d'induction dans les coffres des vieilles structures**, un par pile, comme les
+  avait la table de butin de l'original.
+- **Le mod parle francais, allemand, espagnol et chinois**, 418 cles chacun, verifiees contre le
+  fichier anglais par un test qui compare les cles, les jetons et les sauts de ligne.
+- **Plus aucun message rouge.** Un refus — pouvoir eteint, competence non apprise, points
+  insuffisants, surcharge, brouillage, recharge — est silencieux, et le raccordement sans fil
+  d'une machine aussi.
+- **Et ca coute moins cher.** Le rendu des nappes n'alloue plus rien par image (la geometrie des
+  nappes et leur boite sont calculees deux fois par seconde), ecarte ce que la camera ne voit pas,
+  et le bloc de liquide ne porte plus un block entity vide par bloc : le rendu retrouve les blocs
+  par la palette du chunk.
+- **Des tests** : 167 tests en jeu, 856 tests unitaires.
+
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 
 ### English
