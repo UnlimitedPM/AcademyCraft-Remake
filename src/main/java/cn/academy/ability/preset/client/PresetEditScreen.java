@@ -67,17 +67,16 @@ public class PresetEditScreen extends Screen {
     private static final double ROW_X = (PAGE_W - ROW_W) / 2 + 0.5;
     private static final double ROW_TOP = 1.5;
 
-    // La plaque que `back.png` dessine dans chaque ligne : 27 sur 27,25 a (5,25 ; 3,25) de
-    // la page (mesuree dans la texture, qui fait quatre pixels par unite). L'image de la
-    // competence s'y INCRUSTE — un filet d'une unite tout autour — au lieu d'etre posee
-    // par-dessus : « il faudrait plutot faire en sorte que l'image soit incrustee dans le
-    // carre », dit le joueur.
+    // La plaque que `back.png` dessine dans chaque ligne : 27,25 sur 27,25 a (5,25 ; 3,25)
+    // de la page (mesuree dans la texture, qui fait quatre pixels par unite — les carres
+    // vont de 19 a 127 px, puis tous les 139). L'image de la competence s'y INCRUSTE, a la
+    // taille du carre : elle le remplit au lieu d'etre posee par-dessus, desalignee.
     private static final double SLOT_X = 5.25;
     private static final double SLOT_Y = 3.25;
-    private static final double SLOT_W = 27.0;
+    private static final double SLOT_W = 27.25;
     private static final double SLOT_H = 27.25;
-    /** Le filet de plaque laisse autour de l'image incrustee. */
-    private static final double ICON_INSET = 1.0;
+    /** Le filet de plaque laisse autour de l'image : aucun, elle fait la taille du carre. */
+    private static final double ICON_INSET = 0.0;
     private static final double ICON_SIZE = SLOT_W - ICON_INSET * 2;
 
     private static final double NAME_X = 36.25;
