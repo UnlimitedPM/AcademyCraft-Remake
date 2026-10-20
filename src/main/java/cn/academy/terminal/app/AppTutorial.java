@@ -14,9 +14,10 @@ import java.util.Random;
  * montrerait rien de ce que le mod sait faire — et son icone est tiree au hasard parmi
  * les trois de l'original, « pour le plaisir » comme il le disait lui-meme.
  *
- * <p>Une difference avec l'original : le tirage a lieu <b>une fois</b>, a la
- * construction, et non a chaque appel. L'original tirait a chaque rendu, donc son icone
- * changeait plusieurs fois par seconde ; le port garde le hasard, pas le scintillement.
+ * <p>Le tirage a lieu <b>a chaque ouverture du terminal</b> : le joueur l'a demande — « l'icone
+ * de MisakaCloud ne change pas aleatoirement a chaque fois que je ferme et que je reouvre le
+ * terminal ». L'original tirait a chaque RENDU, donc son icone changeait plusieurs fois par
+ * seconde ; ici le hasard est garde, le scintillement non.
  */
 public final class AppTutorial extends App {
 
@@ -31,13 +32,17 @@ public final class AppTutorial extends App {
 
     public static final AppTutorial INSTANCE = new AppTutorial();
 
-    private final int iconIndex;
-    private final int iconSize;
+    private int iconIndex;
+    private int iconSize;
 
     private AppTutorial() {
         super("tutorial");
         setPreInstalled();
+        rerollIcon();
+    }
 
+    /** Tire une des trois icones au hasard. Appele a chaque ouverture du terminal. */
+    public void rerollIcon() {
         int[] picked = ICONS[new Random().nextInt(ICONS.length)];
         iconIndex = picked[0];
         iconSize = picked[1];

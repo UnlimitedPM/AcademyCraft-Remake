@@ -34,9 +34,10 @@ public final class TerminalGhostOverlay {
         TerminalScreen page = TerminalScreen.ghost();
         if (page == null) return;
 
-        // La page ne sert que sous le chat : le terminal ouvert la dessine lui-meme, et tout
-        // autre ecran doit rester seul.
-        if (!(Minecraft.getInstance().screen instanceof ChatScreen)) return;
+        // La page ne sert que sous le chat — et pendant l'image ou le chat se ferme (le jeu n'a
+        // pas encore repose le terminal) : sans ca, on voyait la page se fermer puis se rouvrir.
+        var minecraft = Minecraft.getInstance();
+        if (minecraft.screen != null && !(minecraft.screen instanceof ChatScreen)) return;
 
         page.renderPage(event.getGuiGraphics());
     }

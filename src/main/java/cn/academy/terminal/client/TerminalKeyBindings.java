@@ -40,10 +40,19 @@ public class TerminalKeyBindings {
         if (event.phase != TickEvent.Phase.END) return;
 
         // La page revient une fois le chat totalement ferme (voir TerminalScreen.requestResume).
+        // Tant qu'elle n'est pas reposee, son calque la dessine : c'est ce qui evite l'image
+        // « se ferme puis se rouvre » que le joueur voyait en quittant le chat.
         var pending = TerminalScreen.takeResume();
         if (pending != null) {
             var client = net.minecraft.client.Minecraft.getInstance();
-            if (client.screen == null) client.setScreen(pending);
+            if (client.screen == null) {
+                client.setScreen(pending);
+                TerminalScreen.clearGhost();
+            } else if (!(client.screen instanceof net.minecraft.client.gui.screens.ChatScreen)) {
+                TerminalScreen.clearGhost();
+            } else {
+                TerminalScreen.keepResume(pending);
+            }
         }
 
         if (!OPEN_TERMINAL.consumeClick()) return;

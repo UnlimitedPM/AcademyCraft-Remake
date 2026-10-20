@@ -176,6 +176,9 @@ public class TerminalScreen extends Screen {
     private static final int CAM_GRID_X = 10;
     private static final int CAM_GRID_Y = 12;
 
+    /** Combien de fois le contenu de la page est pose (l'original le pose deux fois). */
+    private static final int CONTENT_PASSES = 2;
+
     /** La camera de l'image, refaite a chaque rendu. */
     private static final Matrix4f IDENTITY = new Matrix4f();
     private Matrix4f frameCamera = IDENTITY;
@@ -215,6 +218,15 @@ public class TerminalScreen extends Screen {
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
         this.apps = installedApps();
+
+        // L'icone de MisakaCloud est tiree au hasard A CHAQUE OUVERTURE du terminal (le joueur :
+        // « elle ne change pas aleatoirement a chaque fois que je ferme et que je reouvre »).
+        // L'original tirait a chaque rendu, donc elle scintillait ; ici le tirage est par ouverture.
+        for (App app : this.apps) {
+            if (app instanceof cn.academy.terminal.app.AppTutorial tutorial) {
+                tutorial.rerollIcon();
+            }
+        }
     }
 
     @Override
@@ -223,6 +235,21 @@ public class TerminalScreen extends Screen {
         // Le curseur du jeu disparait : seul le halo de la page reste visible.
         GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(),
                 GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+
+        // La page revient la ou elle etait : son halo ET le pointeur du systeme. Sans ce
+        // replacement, revenir du chat posait le pointeur hors de la page, et `confineCursor`
+        // le rabattait sur le bord gauche — « ca remet mon curseur au milieu a gauche ».
+        frameCamera = buildCamera(yawNow(), pitchNow());
+        warpCursorToPage();
+    }
+
+    /** Pose le pointeur du systeme sur le curseur de la page (en pixels de fenetre). */
+    private void warpCursorToPage() {
+        float[] point = project(frameCamera, buffX, buffY);
+        var window = Minecraft.getInstance().getWindow();
+        double sx = window.getWidth() / (double) Math.max(1, width);
+        double sy = window.getHeight() / (double) Math.max(1, height);
+        GLFW.glfwSetCursorPos(window.getWindow(), point[0] * sx, point[1] * sy);
     }
 
     /**
@@ -313,7 +340,6 @@ public class TerminalScreen extends Screen {
      */
     public static void requestResume() {
         pendingResume = ghost;
-        ghost = null;
     }
 
     /** La page qui doit reprendre la main, une seule fois. */
@@ -321,6 +347,16 @@ public class TerminalScreen extends Screen {
         TerminalScreen was = pendingResume;
         pendingResume = null;
         return was;
+    }
+
+    /** Le chat est encore ouvert : la demande attend le tick suivant. */
+    public static void keepResume(TerminalScreen page) {
+        pendingResume = page;
+    }
+
+    /** La page a repris la main : son calque n'a plus rien a dessiner. */
+    public static void clearGhost() {
+        ghost = null;
     }
 
     @Override
@@ -402,9 +438,18 @@ public class TerminalScreen extends Screen {
         }
 
         backdrop(graphics);
-        drawHeader(graphics);
-        drawApps(graphics, buffX, buffY);
-        drawArrows(graphics);
+
+        // Tout le contenu se dessine DEUX FOIS, comme le fond. Le joueur : « le fond est encore
+        // un peu trop sombre, le texte et les icones aussi ». C'est bien ce que fait l'original :
+        // mesure sur sa capture, le corps du panneau vaut 0,36 d'opacite pour un PNG qui n'en
+        // porte que 0,20 — soit {@code 1 - 0,8^2}, deux passages — et le meme doublage éclaircit
+        // ses plaques (0,36 -> 0,59), ses icones (0,6 -> 0,84) et ses noms (0,2 -> 0,36).
+        for (int pass = 0; pass < CONTENT_PASSES; pass++) {
+            drawHeader(graphics);
+            drawApps(graphics, buffX, buffY);
+            drawArrows(graphics);
+        }
+
         drawCursor(graphics, buffX, buffY);
 
         graphics.setColor(1f, 1f, 1f, 1f);
