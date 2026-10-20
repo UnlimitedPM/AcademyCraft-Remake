@@ -139,11 +139,11 @@ public class TerminalScreen extends Screen {
      * l'ecran suivait donc celle de la fenetre. La valeur est ajustee sur SA capture, cote par
      * cote : le corps visible du panneau y fait 410 sur 446 unites d'interface.
      */
-    private static final double VIEW_HEIGHT_PART = 0.727;
+    private static final double VIEW_HEIGHT_PART = 0.747;
 
     /** Sa place, mesuree sur la meme capture : son centre tombe a 76 % de la largeur, 49 % de la hauteur. */
     private static final double VIEW_X = 0.764;
-    private static final double VIEW_Y = 0.468;
+    private static final double VIEW_Y = 0.49;
 
     /**
      * L'aplatissement vertical de la page.
@@ -154,10 +154,19 @@ public class TerminalScreen extends Screen {
      * 430 de large, contre 446 pour 410 chez lui — la page deborde vers le bas et l'ecran ne se
      * ressemble plus.
      */
-    private static final double VIEW_SQUASH_Y = 0.842;
+    private static final double VIEW_SQUASH_Y = 0.90;
 
-    /** Les angles de l'original, tels quels : son lacet, son tangage, son roulis. */
-    private static final double BASE_YAW = -18.0;
+    /**
+     * Les angles de la page.
+     *
+     * <p>Le LACET est POSITIF, et c'est le joueur qui l'a tranche : chez nous la page est
+     * dessinee en coordonnees d'ecran (Y vers le bas), donc chaque rotation rend le contraire
+     * de ce que rend le meme angle dans son repere a lui (Y vers le haut). Avec -18 il lisait
+     * une page qui « regarde a droite » ; +18 est son « par defaut elle regarde vers la
+     * gauche ». Les deux BALAYAGES suivent le meme retournement, sinon la souris pousse la
+     * page du cote oppose a celui qu'il attend.
+     */
+    private static final double BASE_YAW = 18.0;
     private static final double YAW_SWING = 4.0;
     private static final double BASE_PITCH = 7.0;
     private static final double PITCH_SWING = 4.0;
@@ -202,6 +211,44 @@ public class TerminalScreen extends Screen {
                 GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
     }
 
+    /**
+     * Garde la VRAIE souris dans la fenetre.
+     *
+     * <p>Le halo de la page est borne (0..605, 0..740), mais cela n'empechait pas le pointeur
+     * du systeme de sortir : en multi-ecran il passait sur le voisin et le clic changeait de
+     * fenetre. On ne peut pas detourner le pointeur comme le faisait le {@code MouseHelper} de
+     * l'original (un ecran recoit des coordonnees absolues), donc on le RAPPORTE au bord des
+     * qu'il le depasse.
+     */
+    private void confineCursor() {
+        long handle = Minecraft.getInstance().getWindow().getWindow();
+        double[] x = new double[1], y = new double[1];
+        GLFW.glfwGetCursorPos(handle, x, y);
+        double maxX = Minecraft.getInstance().getWindow().getWidth() - 2.0;
+        double maxY = Minecraft.getInstance().getWindow().getHeight() - 2.0;
+        double cx = Math.max(1.0, Math.min(maxX, x[0]));
+        double cy = Math.max(1.0, Math.min(maxY, y[0]));
+        if (cx != x[0] || cy != y[0]) {
+            GLFW.glfwSetCursorPos(handle, cx, cy);
+        }
+    }
+
+    /**
+     * La touche du terminal le referme.
+     *
+     * <p>Un {@code KeyMapping} ne rend ses clics que hors d'un ecran (son contexte est
+     * {@code IN_GAME}) : ouvert, c'est donc a la page de reconnaitre SA touche. C'est ce que
+     * faisait l'original, dont la meme touche allumait et eteignait l'overlay.
+     */
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == TerminalKeyBindings.OPEN_TERMINAL.getKey().getValue()) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
     @Override
     public void removed() {
         super.removed();
@@ -234,6 +281,7 @@ public class TerminalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        confineCursor();
         // Le terminal de l'original flottait sur le jeu sans l'assombrir : il ne prend donc
         // pas le fond des contenants, et le jeu ne se met pas en pause.
         //
@@ -477,8 +525,12 @@ public class TerminalScreen extends Screen {
     private Matrix4f sceneMatrix(double cursorX, double cursorY) {
         double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
 
-        double yaw = BASE_YAW - YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
-        double pitch = BASE_PITCH + PITCH_SWING * (cursorY / SELECT_H - 0.5);
+        // Les deux balayages sont INVERSEs (le joueur : « quand je mets la souris vers la
+        // droite ca penche vers la droite, ca doit aller dans le sens inverse » ; « quand on
+        // regarde vers le bas ca doit pencher vers le haut »). C'est la meme cause que le
+        // lacet : nos coordonnees d'ecran ont Y vers le bas.
+        double yaw = BASE_YAW + YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
+        double pitch = BASE_PITCH - PITCH_SWING * (cursorY / SELECT_H - 0.5);
 
         Matrix4f scene = new Matrix4f();
         scene.translate((float) (width * VIEW_X), (float) (height * VIEW_Y), 0.0f);
