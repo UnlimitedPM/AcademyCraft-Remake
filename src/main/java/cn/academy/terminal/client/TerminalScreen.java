@@ -144,6 +144,15 @@ public class TerminalScreen extends Screen {
     private static final double APPEAR_STEP = 0.1;
     private static final double APPEAR_TIME = 0.4;
 
+    /**
+     * En combien de morceaux par cote se coupent la plaque d'une case et son icone.
+     *
+     * <p>Un morceau garde des cotes paralleles : plus il y en a, plus le trapeze de la
+     * perspective est fin. Quatre par cote ramene l'erreur sous le pixel pour une case de 151.
+     */
+    private static final int CELL_STEPS = 4;
+    private static final int ICON_STEPS = 4;
+
     // ------------------------------------------------------------------
     // La camera de l'original : sa place devant l'oeil, ses angles, son champ.
     // ------------------------------------------------------------------
@@ -221,6 +230,10 @@ public class TerminalScreen extends Screen {
 
     /** Instant de l'ouverture, pour ignorer une repetition de la meme touche. */
     private long chatOpenedAt;
+
+    /** Position du pointeur a l'ouverture du chat, rendue telle quelle a la sortie. */
+    private double chatPointerX;
+    private double chatPointerY;
 
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
@@ -368,14 +381,22 @@ public class TerminalScreen extends Screen {
         long handle = Minecraft.getInstance().getWindow().getWindow();
 
         if (on) {
+            // On RETIENT la position du pointeur, pour la rendre telle quelle en sortant : relire
+            // une projection puis la reposer laissait une erreur d'echelle (pixels de fenetre
+            // contre pixels d'interface) et le halo finissait « un peu trop haut et un peu trop a
+            // gauche ». Les coordonnees de GLFW se rendent dans leur propre unite, donc au pixel.
             GLFW.glfwSetInputMode(handle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+            double[] x = new double[1], y = new double[1];
+            GLFW.glfwGetCursorPos(handle, x, y);
+            chatPointerX = x[0];
+            chatPointerY = y[0];
             return;
         }
 
         chatText = "";
         GLFW.glfwSetInputMode(handle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        GLFW.glfwSetCursorPos(handle, chatPointerX, chatPointerY);
         frameCamera = buildCamera(yawNow(), pitchNow());
-        warpCursorToPage();
     }
 
     @Override
@@ -512,10 +533,17 @@ public class TerminalScreen extends Screen {
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 
-    /** Les deux angles du moment : ceux de l'original, plus ce que la souris y ajoute. */
+    /**
+     * Les deux angles du moment : ceux de l'original, plus ce que la souris y ajoute.
+     *
+     * <p>ECART ASSUME : l'original ajoutait {@code + 1 * sin(t)} au lacet, ce qui faisait
+     * lentement respirer la page. Le joueur le voit comme un defaut — « les app bougent un peu
+     * meme quand on ne deplace pas la souris du tout » — et il a raison de le voir ainsi : ce
+     * balancement deplace aussi le point sous le curseur, donc le halo derivait tout seul.
+     * Retire : la page ne bouge plus que quand la souris bouge.
+     */
     private double yawNow() {
-        double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
-        return BASE_YAW - YAW_SWING * (buffX / SELECT_W - 0.5) + Math.sin(time);
+        return BASE_YAW - YAW_SWING * (buffX / SELECT_W - 0.5);
     }
 
     private double pitchNow() {
@@ -565,10 +593,10 @@ public class TerminalScreen extends Screen {
                     float v0 = (float) (y0 / PAGE_H);
                     float v1 = (float) (y1 / PAGE_H);
 
-                    backdropVertex(builder, x0, y0, u0, v0);
-                    backdropVertex(builder, x0, y1, u0, v1);
-                    backdropVertex(builder, x1, y1, u1, v1);
-                    backdropVertex(builder, x1, y0, u1, v0);
+                    pageVertex(builder, x0, y0, u0, v0);
+                    pageVertex(builder, x0, y1, u0, v1);
+                    pageVertex(builder, x1, y1, u1, v1);
+                    pageVertex(builder, x1, y0, u1, v0);
                 }
             }
         }
@@ -576,11 +604,64 @@ public class TerminalScreen extends Screen {
         BufferUploader.drawWithShader(builder.end());
     }
 
-    /** Un sommet du fond, deja projete a l'ecran. */
-    private void backdropVertex(BufferBuilder builder, double pageX, double pageY, float u,
-                                float v) {
+    /** Un sommet de la page, deja projete a l'ecran. */
+    private void pageVertex(BufferBuilder builder, double pageX, double pageY, float u, float v) {
         float[] point = project(frameCamera, pageX, pageY);
         builder.vertex(point[0], point[1], 0.0f).uv(u, v).endVertex();
+    }
+
+    /**
+     * Une image de la page, EN PERSPECTIVE.
+     *
+     * <p>Un element pose par la transformation locale de {@link #pushLocal} garde ses cotes
+     * paralleles : c'est un parallelogramme. Or la page, elle, se resserre de 17 pour cent vers
+     * son cote eloigne. Les plaques et les icones des applications paraissaient donc posees a
+     * plat sur une page inclinee — le joueur : « j'ai l'impression que les app doivent elles
+     * aussi etre decalees plus ou moins comme le terminal en lui meme ».
+     *
+     * <p>La case est donc coupee en petits morceaux, chacun avec ses QUATRE coins projetes par
+     * la camera : la fuite entre ainsi dans l'element, comme dans le fond. Quatre morceaux par
+     * cote suffisent — l'ecart de projection sur 151 unites vaut quelques pixels, divise par
+     * quatre il passe sous le pixel.
+     *
+     * <p>Passer par un {@link BufferBuilder} oblige a vider d'abord ce que la page a en attente :
+     * les sommets ecrits ici partent tout de suite, et l'ordre du dessin doit rester celui des
+     * appels.
+     */
+    private void imageProjected(GuiGraphics graphics, ResourceLocation texture, double x,
+                                double y, double width, double height, int alpha, int steps) {
+        if (alpha <= 0) return;
+
+        graphics.flush();
+        RenderSystem.setShaderTexture(0, texture);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderColor(1f, 1f, 1f, alpha / 255f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+
+        for (int col = 0; col < steps; col++) {
+            for (int row = 0; row < steps; row++) {
+                double x0 = x + width * col / steps;
+                double x1 = x + width * (col + 1) / steps;
+                double y0 = y + height * row / steps;
+                double y1 = y + height * (row + 1) / steps;
+                float u0 = (float) (col / (double) steps);
+                float u1 = (float) ((col + 1) / (double) steps);
+                float v0 = (float) (row / (double) steps);
+                float v1 = (float) ((row + 1) / (double) steps);
+
+                pageVertex(builder, x0, y0, u0, v0);
+                pageVertex(builder, x0, y1, u0, v1);
+                pageVertex(builder, x1, y1, u1, v1);
+                pageVertex(builder, x1, y0, u1, v0);
+            }
+        }
+
+        BufferUploader.drawWithShader(builder.end());
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
     }
 
     /** Le logo, les deux mots du terminal, le joueur, et le compte suivi de l'heure. */
@@ -642,16 +723,19 @@ public class TerminalScreen extends Screen {
             double appear = clamp((age - (index + 1) * APPEAR_STEP) / APPEAR_TIME, 0.0, 1.0);
             boolean hovered = index == selected;
 
-            imageAlpha(graphics, hovered ? TEX_APP_HIGHLIGHT : TEX_APP, x, y, CELL, CELL,
-                    151, 151, (int) Math.round(255 * appear));
+            // La plaque de la case passe par le maillage projete, pas par la pose affine : elle
+            // doit se resserrer avec la page (voir `imageProjected`).
+            imageProjected(graphics, hovered ? TEX_APP_HIGHLIGHT : TEX_APP, x, y, CELL, CELL,
+                    (int) Math.round(255 * appear), CELL_STEPS);
 
             App app = apps.get(index);
             int iconAlpha = (int) Math.round(255 * (hovered ? 0.8 : 0.6) * appear);
             // Les icones se dessinent LISSEES : le joueur voyait « des escaliers en trop » et
             // les trouve anticrenelees chez l'original. Le reste de la page garde le plus proche
             // voisin (c'est ce que fait son interface, et les traits fins y restent nets).
-            iconImage(graphics, app.getIcon(), x + ICON_X, y + ICON_Y, ICON_SIZE, ICON_SIZE,
-                    app.getIconSize(), app.getIconSize(), iconAlpha);
+            smooth(app.getIcon());
+            imageProjected(graphics, app.getIcon(), x + ICON_X, y + ICON_Y, ICON_SIZE,
+                    ICON_SIZE, iconAlpha, ICON_STEPS);
 
             double textPart = hovered ? 0.1 + 0.72 * appear : 0.1 + 0.1 * appear;
             // Le document centre le nom dans sa case de 151 (son TextBox dit `align=CENTER`) ;
@@ -978,13 +1062,6 @@ public class TerminalScreen extends Screen {
     private void image(GuiGraphics graphics, ResourceLocation texture, double x, double y,
                        double width, double height, int texWidth, int texHeight) {
         imageAlpha(graphics, texture, x, y, width, height, texWidth, texHeight, 255);
-    }
-
-    /** Une icone d'application, LISSEE (voir {@link #smooth(ResourceLocation)}). */
-    private void iconImage(GuiGraphics graphics, ResourceLocation texture, double x, double y,
-                           double width, double height, int texWidth, int texHeight, int alpha) {
-        smooth(texture);
-        imageAlpha(graphics, texture, x, y, width, height, texWidth, texHeight, alpha);
     }
 
     /** Les textures deja passees en filtrage lineaire (une fois chacune). */
