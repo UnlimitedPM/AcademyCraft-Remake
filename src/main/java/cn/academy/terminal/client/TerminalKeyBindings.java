@@ -48,18 +48,20 @@ public class TerminalKeyBindings {
     }
 
     /**
-     * Le terminal revient quand le chat qu'il a ouvert se referme.
+     * Le terminal reprend la main quand le chat qu'il a laisse s'ouvrir se referme.
      *
-     * <p>La page est un calque qui ne met pas le jeu en pause : elle laisse donc le chat
-     * s'ouvrir par-dessus, et le joueur retrouve son terminal en quittant le chat (Entree ou
-     * Echap). Sans ce retour, ecrire dans le chat fermerait le terminal pour de bon.
+     * <p>La page n'est pas fermee : elle est seulement recouverte ({@link TerminalGhostOverlay}
+     * la dessine pendant la saisie). C'est la MEME instance qui revient, donc le defilement et le
+     * curseur restent ou ils etaient.
      */
     @SubscribeEvent
     public static void onScreenClosing(ScreenEvent.Closing event) {
         if (!(event.getScreen() instanceof net.minecraft.client.gui.screens.ChatScreen)) return;
-        if (!TerminalScreen.takeChatReturn()) return;
+
+        TerminalScreen page = TerminalScreen.resumeAfterChat();
+        if (page == null) return;
 
         var minecraft = net.minecraft.client.Minecraft.getInstance();
-        minecraft.execute(() -> minecraft.setScreen(new TerminalScreen()));
+        minecraft.execute(() -> minecraft.setScreen(page));
     }
 }

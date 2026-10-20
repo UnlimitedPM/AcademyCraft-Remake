@@ -8,10 +8,13 @@ import cn.academy.terminal.App;
 import cn.academy.terminal.AppRegistry;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
@@ -130,65 +133,43 @@ public class TerminalScreen extends Screen {
     private static final double APPEAR_TIME = 0.4;
 
     // ------------------------------------------------------------------
-    // La scene de l'original : sa place, ses angles, sa vitesse de curseur.
+    // La camera de l'original : sa place devant l'oeil, ses angles, son champ.
     // ------------------------------------------------------------------
 
-    /**
-     * La part de la hauteur d'ecran que prend la page.
-     *
-     * <p>L'original la posait en unites du monde, devant un regard a 50 degres : sa taille a
-     * l'ecran suivait donc celle de la fenetre. La valeur est ajustee sur SA capture, cote par
-     * cote : le corps visible du panneau y fait 410 sur 446 unites d'interface.
-     */
-    private static final double VIEW_HEIGHT_PART = 0.747;
+    /** Le champ de vision de l'original, en degres : son {@code gluPerspective(50, ...)}. */
+    private static final double CAM_FOV = 50.0;
 
-    /** Sa place, mesuree sur la meme capture : son centre tombe a 76 % de la largeur, 49 % de la hauteur. */
-    private static final double VIEW_X = 0.764;
-    private static final double VIEW_Y = 0.49;
+    /** Son echelle : la page de 640 sur 785 tient dans 1/310 de sa taille, en unites du monde. */
+    private static final double CAM_UNIT = 1.0 / 310.0;
 
-    /**
-     * L'aplatissement vertical de la page.
-     *
-     * <p>C'est ce qui manque a une pose affine : chez lui la page est vue en perspective, donc
-     * son cote droit (le plus loin) est plus court que le gauche et la page parait moins haute
-     * qu'elle n'est large. Sans ce facteur, le panneau du port mesure 521 unites de haut pour
-     * 430 de large, contre 446 pour 410 chez lui — la page deborde vers le bas et l'ecran ne se
-     * ressemble plus.
-     */
-    private static final double VIEW_SQUASH_Y = 0.90;
-
-    /**
-     * Les angles de la page.
-     *
-     * <p>Le LACET est POSITIF, et c'est le joueur qui l'a tranche : chez nous la page est
-     * dessinee en coordonnees d'ecran (Y vers le bas), donc chaque rotation rend le contraire
-     * de ce que rend le meme angle dans son repere a lui (Y vers le haut). Avec -18 il lisait
-     * une page qui « regarde a droite » ; +18 est son « par defaut elle regarde vers la
-     * gauche ». Les deux BALAYAGES suivent le meme retournement, sinon la souris pousse la
-     * page du cote oppose a celui qu'il attend.
-     */
-    /**
-     * Le lacet est NEGATIF : le bord haut monte vers la DROITE.
-     *
-     * <p>Le joueur, a qui l'on demandait quel coin doit etre le plus haut : « il faudrait
-     * intervertir les points de chaque cote, donc que la hauteur du haut de gauche passe a
-     * droite et inversement ». Les deux coins du haut s'echangent, donc le lacet revient a
-     * -18 — et le BALAYAGE garde son signe, puisqu'il etait deja dans le bon sens.
-     */
+    /** Ses angles de repos, et le balayage que la souris y ajoute (les nombres de l'original). */
     private static final double BASE_YAW = -18.0;
     private static final double YAW_SWING = 4.0;
     private static final double BASE_PITCH = 7.0;
     private static final double PITCH_SWING = 4.0;
+    private static final double BASE_ROLL = -1.6;
+
     /**
-     * Le roulis est POSITIF, comme le lacet.
+     * POURQUOI LA PROJECTION EST CALCULEE A LA MAIN.
      *
-     * <p>Le joueur : « on a l'impression que la fenetre regarde la droite ». Ce qui donnait
-     * cette impression n'etait pas le lacet mais le ROULIS : les deux cotes de la page
-     * penchaient vers la droite en descendant. Sur sa capture les cotes penchent vers la
-     * GAUCHE (le bord gauche passe de 1160 a 1150 entre le haut et le bas), donc le signe
-     * est inverse chez nous, comme celui du lacet.
+     * <p>Le joueur, apres quatre essais : « j'ai l'impression que le point de depart pour faire
+     * tourner le terminal est mal pose, comme s'il tournait autour du point en haut a droite au
+     * lieu du centre », puis « normalement le terminal est penche vers notre direction, plus ou
+     * moins par rapport au centre du jeu la ou il y a le curseur ».
+     *
+     * <p>Les deux reproches viennent de la MEME chose : une pose affine ne sait pas montrer la
+     * perspective. Chez l'original la page est posee quatre unites devant l'oeil, a droite ; son
+     * cote droit est donc plus loin, plus court, et elle parait tournee VERS LE JOUEUR. Ici les
+     * quatre coins sont projetes par cette camera, et chaque element est dessine dans la petite
+     * transformation locale de son propre voisinage : le fond, les icones, les textes et le
+     * curseur suivent donc tous la perspective, comme dans son mod.
      */
-    private static final double BASE_ROLL = 1.6;
+    private static final int CAM_GRID_X = 10;
+    private static final int CAM_GRID_Y = 12;
+
+    /** La camera de l'image, refaite a chaque rendu. */
+    private static final Matrix4f IDENTITY = new Matrix4f();
+    private Matrix4f frameCamera = IDENTITY;
 
     /** Le curseur glisse vers sa cible a cette vitesse, en unites par seconde. */
     private static final double BALANCE_SPEED = 3000.0;
@@ -216,8 +197,8 @@ public class TerminalScreen extends Screen {
     private double buffX = SELECT_W / 2;
     private double buffY = SELECT_H / 2;
 
-    /** Vrai quand la page a cede la main au chat : elle reprend la main a sa fermeture. */
-    private static boolean chatReturn;
+    /** La page que le chat recouvre : dessinee par l'overlay, elle reprend la main ensuite. */
+    private static TerminalScreen ghost;
 
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
@@ -245,17 +226,16 @@ public class TerminalScreen extends Screen {
      * le depasse (une fois par image, ce qui suffit a le retenir).
      */
     private void confineCursor() {
-        Matrix4f scene = sceneMatrix(buffX, buffY);
+        Matrix4f camera = frameCamera;
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
         double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
         double[][] corners = { { 0, 0 }, { PAGE_W, 0 }, { 0, PAGE_H }, { PAGE_W, PAGE_H } };
         for (double[] corner : corners) {
-            Vector4f point = new Vector4f((float) corner[0], (float) corner[1], 0.0f, 1.0f);
-            scene.transform(point);
-            minX = Math.min(minX, point.x);
-            maxX = Math.max(maxX, point.x);
-            minY = Math.min(minY, point.y);
-            maxY = Math.max(maxY, point.y);
+            float[] point = project(camera, corner[0], corner[1]);
+            minX = Math.min(minX, point[0]);
+            maxX = Math.max(maxX, point[0]);
+            minY = Math.min(minY, point[1]);
+            maxY = Math.max(maxY, point[1]);
         }
 
         var window = Minecraft.getInstance().getWindow();
@@ -289,22 +269,31 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == TerminalKeyBindings.OPEN_TERMINAL.getKey().getValue()) {
-            chatReturn = false;
+            ghost = null;
             onClose();
             return true;
         }
         if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
-            chatReturn = true;
+            // Le chat s'ouvre PAR-DESSUS : la page reste affichee (c'est un calque, elle ne met
+            // pas le jeu en pause) et c'est TerminalGhostOverlay qui la dessine pendant la
+            // saisie. Le terminal revient a la fermeture du chat, avec son defilement et son
+            // curseur.
+            ghost = this;
             minecraft.setScreen(new ChatScreen(""));
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    /** Vrai une seule fois : la page reprend la main des que le chat se ferme. */
-    public static boolean takeChatReturn() {
-        boolean was = chatReturn;
-        chatReturn = false;
+    /** La page a l'ecran pendant que le chat est ouvert, ou null. */
+    public static TerminalScreen ghost() {
+        return ghost;
+    }
+
+    /** Une seule fois : la page qui reprend la main a la fermeture du chat. */
+    public static TerminalScreen resumeAfterChat() {
+        TerminalScreen was = ghost;
+        ghost = null;
         return was;
     }
 
@@ -347,29 +336,100 @@ public class TerminalScreen extends Screen {
         // La souris est d'abord ramenee dans la page avec la scene de l'image precedente,
         // puis le curseur glisse vers elle : c'est lui qui incline la scene, donc il faut
         // le connaitre avant de poser la matrice.
-        double[] target = pageAt(mouseX, mouseY, buffX, buffY);
+        double[] target = pageAt(mouseX, mouseY);
         double step = BALANCE_SPEED * (minecraft == null ? 0.016 : minecraft.getDeltaFrameTime());
         buffX = balance(buffX, target[0], step);
         buffY = balance(buffY, target[1], step);
 
-        graphics.pose().pushPose();
-        graphics.pose().mulPoseMatrix(sceneMatrix(buffX, buffY));
+        frameCamera = buildCamera(yawNow(), pitchNow());
 
-        // Le fond se pose DEUX FOIS, exprès. Mesure sur sa capture : le corps du panneau y vaut
-        // (94 ; 105 ; 70) sur une herbe a (72 ; 90 ; 36), soit une opacite de 0,36 — alors que
-        // back.png n'en porte que 0,20. Deux passages donnent exactement 1 - 0,8^2 = 0,36, et
-        // c'est aussi ce que fait l'original (ses bords et son bandeau ressortent plus francs
-        // que les notres). Un seul passage donne (85 ; 99 ; 56), le panneau « trop transparent »
-        // qu'il a signale deux fois.
-        image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 268, 327);
-        image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 268, 327);
+        renderPage(graphics);
+
+        graphics.setColor(1f, 1f, 1f, 1f);
+    }
+
+    /**
+     * La page elle-meme, sans toucher a la souris.
+     *
+     * <p>Appelee par {@link #render} quand le terminal a la main, et par l'overlay du chat
+     * quand il ne l'a plus : c'est ce qui le laisse AFFICHE pendant qu'on ecrit.
+     */
+    public void renderPage(GuiGraphics graphics) {
+        if (frameCamera == null || frameCamera == IDENTITY) {
+            frameCamera = buildCamera(yawNow(), pitchNow());
+        }
+
+        backdrop(graphics);
         drawHeader(graphics);
         drawApps(graphics, buffX, buffY);
         drawArrows(graphics);
         drawCursor(graphics, buffX, buffY);
 
-        graphics.pose().popPose();
         graphics.setColor(1f, 1f, 1f, 1f);
+    }
+
+    /** Les deux angles du moment : ceux de l'original, plus ce que la souris y ajoute. */
+    private double yawNow() {
+        double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
+        return BASE_YAW - YAW_SWING * (buffX / SELECT_W - 0.5) + Math.sin(time);
+    }
+
+    private double pitchNow() {
+        return BASE_PITCH + PITCH_SWING * (buffY / SELECT_H - 0.5);
+    }
+
+    /**
+     * Le fond de la page, en damier.
+     *
+     * <p>Un seul quadrilatere ne peut pas suivre une projection : la perspective courbe ses
+     * bords. La page est donc coupee en cases, chacune avec sa propre transformation locale —
+     * c'est ce qui donne la silhouette en trapeze de l'original. Le fond se pose DEUX FOIS,
+     * comme chez lui (mesure sur sa capture : 0,36 d'opacite pour un PNG qui n'en porte que
+     * 0,20, soit {@code 1 - 0,8^2}).
+     */
+    private void backdrop(GuiGraphics graphics) {
+        // Le fond ne passe PAS par une image par case : deux cases voisines arrondies au pixel
+        // laissent un liseré clair (le joueur le voyait en damier). Les sommets sont donc
+        // calcules un par un et le maillage est soude : les bords mitoyens sont exactement les
+        // memes, il n'y a plus de couture.
+        graphics.flush();
+
+        RenderType type = RenderType.text(TEX_BACK);
+        MultiBufferSource.BufferSource source = Minecraft.getInstance().renderBuffers().bufferSource();
+        VertexConsumer consumer = source.getBuffer(type);
+
+        for (int pass = 0; pass < 2; pass++) {
+            for (int col = 0; col < CAM_GRID_X; col++) {
+                for (int row = 0; row < CAM_GRID_Y; row++) {
+                    double x0 = PAGE_W * col / CAM_GRID_X;
+                    double x1 = PAGE_W * (col + 1) / CAM_GRID_X;
+                    double y0 = PAGE_H * row / CAM_GRID_Y;
+                    double y1 = PAGE_H * (row + 1) / CAM_GRID_Y;
+                    float u0 = (float) (x0 / PAGE_W);
+                    float u1 = (float) (x1 / PAGE_W);
+                    float v0 = (float) (y0 / PAGE_H);
+                    float v1 = (float) (y1 / PAGE_H);
+
+                    backdropVertex(consumer, x0, y0, u0, v0);
+                    backdropVertex(consumer, x0, y1, u0, v1);
+                    backdropVertex(consumer, x1, y1, u1, v1);
+                    backdropVertex(consumer, x1, y0, u1, v0);
+                }
+            }
+        }
+
+        source.endBatch(type);
+    }
+
+    /** Un sommet du fond, deja projete a l'ecran. */
+    private void backdropVertex(VertexConsumer consumer, double pageX, double pageY, float u,
+                                float v) {
+        float[] point = project(frameCamera, pageX, pageY);
+        // Le type de rendu du texte demande aussi la carte de lumiere (POSITION_COLOR_TEX_LIGHTMAP) :
+        // sans elle, BufferBuilder refuse le sommet (« Not filled all elements of the vertex »).
+        // 240 partout = pleine lumiere, ce qui est ce qu'on veut pour un calque d'interface.
+        consumer.vertex(point[0], point[1], 0.0f).color(1f, 1f, 1f, 1f).uv(u, v).uv2(240, 240)
+                .endVertex();
     }
 
     /** Le logo, les deux mots du terminal, le joueur, et le compte suivi de l'heure. */
@@ -514,7 +574,7 @@ public class TerminalScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
-        double[] point = pageAt(mouseX, mouseY, buffX, buffY);
+        double[] point = pageAt(mouseX, mouseY);
         double pageX = point[0];
         double pageY = point[1];
 
@@ -581,55 +641,107 @@ public class TerminalScreen extends Screen {
      * affine — il jette la quatrieme composante — donc une projection en perspective posée
      * sur la pose s'ecrase. La page est donc vue de biais, sans raccourci.
      */
-    private Matrix4f sceneMatrix(double cursorX, double cursorY) {
-        double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
+    private Matrix4f buildCamera(double yaw, double pitch) {
+        double aspect = width / (double) Math.max(1, height);
 
-        // Le SENS DE LA SOURIS suit le signe du lacet : retourner le lacet de base retourne donc
-        // aussi la reponse a la souris, meme si le balayage garde son signe (le joueur : « tu
-        // viens de defaire la logique qui etait la bonne, quand je vise a gauche ca monte la
-        // gauche »). Les deux balayages sont donc dans le sens INVERSE de ceux de l'original, son
-        // repere etant a Y vers le haut et le notre a Y vers le bas.
-        double yaw = BASE_YAW + YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
-        double pitch = BASE_PITCH + PITCH_SWING * (cursorY / SELECT_H - 0.5);
+        Matrix4f camera = new Matrix4f();
+        camera.translate((float) (0.35 * aspect + 1.0), (float) -0.6, -4.0f);
+        camera.rotateZ((float) Math.toRadians(BASE_ROLL));
+        camera.rotateY((float) Math.toRadians(yaw));
+        camera.rotateX((float) Math.toRadians(pitch));
+        camera.translate(-1.0f, 1.8f, 0.0f);
+        camera.scale((float) CAM_UNIT, (float) -CAM_UNIT, (float) CAM_UNIT);
+        return camera;
+    }
 
-        Matrix4f scene = new Matrix4f();
-        scene.translate((float) (width * VIEW_X), (float) (height * VIEW_Y), 0.0f);
-        scene.rotateZ((float) Math.toRadians(BASE_ROLL));
-        // L'ordre compte : le lacet d'abord, le tangage ensuite. C'est ce qui incline le
-        // BORD HAUT de la page en laissant ses cotes verticaux, comme sur sa capture —
-        // l'inverse penche les cotes et laisse les bords horizontaux.
-        scene.rotateX((float) Math.toRadians(pitch));
-        scene.rotateY((float) Math.toRadians(yaw));
-        scene.scale((float) viewScale(), (float) (viewScale() * VIEW_SQUASH_Y), 1.0f);
-        scene.translate((float) (-PAGE_W / 2.0), (float) (-PAGE_H / 2.0), 0.0f);
-        return scene;
+    /** Un point de la page, projete a l'ecran (en unites d'interface). */
+    private float[] project(Matrix4f camera, double pageX, double pageY) {
+        Vector4f point = new Vector4f((float) pageX, (float) pageY, 0.0f, 1.0f);
+        camera.transform(point);
+
+        double depth = -point.z;
+        double tanHalf = Math.tan(Math.toRadians(CAM_FOV / 2.0));
+        double aspect = width / (double) Math.max(1, height);
+        double ndcX = point.x / (depth * tanHalf * aspect);
+        double ndcY = point.y / (depth * tanHalf);
+
+        return new float[] {
+                (float) ((ndcX * 0.5 + 0.5) * width),
+                (float) ((1.0 - (ndcY * 0.5 + 0.5)) * height)
+        };
+    }
+
+    /**
+     * La petite transformation locale d'une case de la page.
+     *
+     * <p>Elle s'appuie sur les trois coins projetes de la case : chaque element (image, texte,
+     * case d'application) est donc dessine DANS la perspective, avec son orientation et son
+     * echelle du moment. C'est ce qui remplace la pose affine et rend l'inclinaison de
+     * l'original — bord droit plus court, page tournee vers le joueur.
+     */
+    private void pushLocal(GuiGraphics graphics, double x, double y, double w, double h) {
+        double safeW = Math.max(w, 1.0e-3);
+        double safeH = Math.max(h, 1.0e-3);
+
+        float[] origin = project(frameCamera, x, y);
+        float[] alongX = project(frameCamera, x + safeW, y);
+        float[] alongY = project(frameCamera, x, y + safeH);
+
+        double ux = (alongX[0] - origin[0]) / safeW;
+        double uy = (alongX[1] - origin[1]) / safeW;
+        double vx = (alongY[0] - origin[0]) / safeH;
+        double vy = (alongY[1] - origin[1]) / safeH;
+
+        // Le constructeur de JOML range ses arguments par COLONNE (son m01 est la colonne 0,
+        // ligne 1) : les deux bases vont donc par groupes de quatre, puis la translation.
+        Matrix4f local = new Matrix4f(
+                (float) ux, (float) uy, 0.0f, 0.0f,
+                (float) vx, (float) vy, 0.0f, 0.0f,
+                0.0f, 0.0f, 1.0f, 0.0f,
+                (float) (origin[0] - ux * x - vx * y), (float) (origin[1] - uy * x - vy * y),
+                0.0f, 1.0f);
+
+        graphics.pose().pushPose();
+        graphics.pose().mulPoseMatrix(local);
+    }
+
+    private static void popLocal(GuiGraphics graphics) {
+        graphics.pose().popPose();
     }
 
     /**
      * Ou tombe cette souris, en unites de page.
      *
-     * <p>La page n'est pas face a l'ecran : un point de l'ecran ne lui correspond pas
-     * directement. C'est l'inverse de sa pose qui le dit, ce qui rend les coordonnees exactes
-     * sous le curseur — et donc des cases qu'on vise vraiment.
+     * <p>La projection n'a pas d'inverse direct simple : on la remonte par Newton, en partant du
+     * curseur de l'image precedente (il bouge de quelques unites par image, deux ou trois pas
+     * suffisent donc a tomber au pixel pres).
      */
-    private double[] pageAt(double mouseX, double mouseY, double cursorX, double cursorY) {
-        Matrix4f inverse = new Matrix4f(sceneMatrix(cursorX, cursorY));
-        inverse.invert();
+    private double[] pageAt(double mouseX, double mouseY) {
+        Matrix4f camera = buildCamera(yawNow(), pitchNow());
+        double x = buffX;
+        double y = buffY;
 
-        Vector4f point = new Vector4f((float) mouseX, (float) mouseY, 0.0f, 1.0f);
-        inverse.transform(point);
+        for (int step = 0; step < 8; step++) {
+            float[] here = project(camera, x, y);
+            double errorX = here[0] - mouseX;
+            double errorY = here[1] - mouseY;
+            if (Math.abs(errorX) < 0.05 && Math.abs(errorY) < 0.05) break;
 
-        if (Math.abs(point.w) < 1.0e-6) return new double[] { cursorX, cursorY };
+            float[] alongX = project(camera, x + 1.0, y);
+            float[] alongY = project(camera, x, y + 1.0);
+            double j11 = alongX[0] - here[0];
+            double j21 = alongX[1] - here[1];
+            double j12 = alongY[0] - here[0];
+            double j22 = alongY[1] - here[1];
 
-        return new double[] {
-                clamp(point.x / point.w, 0.0, SELECT_W),
-                clamp(point.y / point.w, 0.0, SELECT_H)
-        };
-    }
+            double det = j11 * j22 - j12 * j21;
+            if (Math.abs(det) < 1.0e-9) break;
 
-    /** L'echelle de la page : deux tiers de la hauteur de l'ecran. */
-    private double viewScale() {
-        return height * VIEW_HEIGHT_PART / PAGE_H;
+            x -= (j22 * errorX - j12 * errorY) / det;
+            y -= (-j21 * errorX + j11 * errorY) / det;
+        }
+
+        return new double[] { clamp(x, 0.0, SELECT_W), clamp(y, 0.0, SELECT_H) };
     }
 
     /** Le curseur glisse vers sa cible, a la vitesse de l'original. */
@@ -660,7 +772,9 @@ public class TerminalScreen extends Screen {
         int x = (int) Math.round(rightAligned
                 ? boxX + boxWidth - AcademyFonts.width(null, shown, cell)
                 : boxX);
+        pushLocal(graphics, boxX, boxY, Math.max(boxWidth, 1.0), Math.max(cell, 1));
         AcademyFonts.drawTop(graphics, font, shown, x, (int) Math.round(boxY), colour, cell);
+        popLocal(graphics);
     }
 
     private static String fit(String text, double boxWidth, int cell) {
@@ -674,16 +788,17 @@ public class TerminalScreen extends Screen {
         return text.substring(0, i);
     }
 
-    private static void image(GuiGraphics graphics, ResourceLocation texture, double x, double y,
-                              double width, double height, int texWidth, int texHeight) {
+    private void image(GuiGraphics graphics, ResourceLocation texture, double x, double y,
+                       double width, double height, int texWidth, int texHeight) {
         imageAlpha(graphics, texture, x, y, width, height, texWidth, texHeight, 255);
     }
 
-    private static void imageAlpha(GuiGraphics graphics, ResourceLocation texture, double x,
-                                   double y, double width, double height, int texWidth,
-                                   int texHeight, int alpha) {
+    private void imageAlpha(GuiGraphics graphics, ResourceLocation texture, double x,
+                            double y, double width, double height, int texWidth,
+                            int texHeight, int alpha) {
         if (alpha <= 0) return;
 
+        pushLocal(graphics, x, y, width, height);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         graphics.setColor(1f, 1f, 1f, alpha / 255f);
@@ -691,5 +806,6 @@ public class TerminalScreen extends Screen {
                 (int) Math.round(width), (int) Math.round(height),
                 0f, 0f, texWidth, texHeight, texWidth, texHeight);
         graphics.setColor(1f, 1f, 1f, 1f);
+        popLocal(graphics);
     }
 }
