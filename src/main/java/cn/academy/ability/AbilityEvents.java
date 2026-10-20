@@ -269,6 +269,27 @@ public class AbilityEvents {
         });
     }
 
+    /**
+     * « Enable PvP » : sans cette case, une competence ne touche pas un autre joueur.
+     *
+     * <p>C'est le {@code canAttackPlayer} de l'original, et il se lit au meme endroit que chez
+     * lui — au PREMIER crochet de {@code LivingEntity.hurt} — donc un coup refuse ne laisse ni
+     * degats, ni recul, ni rouge. Le port n'a qu'un type de source pour ses competences
+     * ({@link Skill#skillDamage}, de l'{@code indirect_magic} avec le joueur pour auteur), c'est
+     * donc elle qui les reconnait : le corps a corps du jeu, lui, reste intact.
+     */
+    @SubscribeEvent
+    public static void onSkillHitsPlayer(LivingAttackEvent event) {
+        if (cn.academy.Config.attackPlayer) return;
+        if (!(event.getEntity() instanceof Player)) return;
+
+        var source = event.getSource();
+        if (!(source.getEntity() instanceof Player)) return;
+        if (!source.is(net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC)) return;
+
+        event.setCanceled(true);
+    }
+
     @SubscribeEvent
     public static void onLivingHurt(LivingHurtEvent event) {
         // La marque de radiation multiplie les degats recus, d'ou qu'ils viennent : c'est ce

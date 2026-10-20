@@ -338,11 +338,22 @@ public class EntityCoinThrowing extends Entity {
      * <p>Le retour n'est fait que chez le SERVEUR — c'est lui qui tient les inventaires — et jamais
      * en creatif, comme l'original. Un client qui arrive ici par ses propres moyens se contente
      * donc de la retirer, et la vraie piece, celle du serveur, rentre dans la main de son joueur.
+     *
+     * <p>Et elle ANNONCE le resultat du lancer quand « Play Heads or Tails » est coche, comme le
+     * faisait l'original a sa retombee ({@code ac.headsOrTails.0} = pile). Le message part du
+     * serveur plutot que du client comme chez lui : le tirage est ainsi le meme pour tout le monde
+     * et ne peut pas etre relance en changeant de dimension.
      */
     public void settle() {
         if (!this.level().isClientSide) {
             Player thrower = thrower();
-            if (thrower != null) returnCoin(thrower);
+            if (thrower != null) {
+                returnCoin(thrower);
+                if (cn.academy.Config.headsOrTails) {
+                    thrower.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                            "ac.headsOrTails." + this.level().random.nextInt(2)), false);
+                }
+            }
         }
         discard();
     }

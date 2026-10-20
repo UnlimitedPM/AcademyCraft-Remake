@@ -175,6 +175,24 @@ public final class Config {
                      "l'instant ; les rayons miniers, eux, cassaient sans rien demander.")
             .define("general.destroyBlocks", true);
 
+    private static final ForgeConfigSpec.BooleanValue ATTACK_PLAYER = BUILDER
+            .comment("Autorise les competences a toucher d'autres joueurs (PvP).",
+                     "Portage de generic.attackPlayer de la 1.12.2, ou il valait vrai. Sans elle,",
+                     "une competence ne fait rien a un joueur : ni degats, ni recul.")
+            .define("general.attackPlayer", true);
+
+    private static final ForgeConfigSpec.BooleanValue HEADS_OR_TAILS = BUILDER
+            .comment("Annonce le resultat du lancer de piece (pile ou face).",
+                     "Portage de generic.headsOrTails de la 1.12.2, ou il valait faux.")
+            .define("general.headsOrTails", false);
+
+    private static final ForgeConfigSpec.BooleanValue USE_MOUSE_WHEEL = BUILDER
+            .comment("La molette regle la distance du saut traversant ; sinon elle defile la barre.",
+                     "Portage de generic.useMouseWheel de la 1.12.2 — avec un ecart assume : il y",
+                     "valait faux, alors que le port a toujours regle la distance a la molette.",
+                     "Laisser vrai garde le geste que le joueur connait.")
+            .define("general.useMouseWheel", true);
+
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> AFFECTED_ENTITIES = BUILDER
             .comment("Entites que vecmanip peut devier ou reflechir, avec leur difficulte.",
                      "Ecriture : \"<id>=<difficulte>\", par exemple minecraft:arrow=1.0 ;",
@@ -215,6 +233,9 @@ public final class Config {
     public static double overloadRecoverSpeed = 1.0d;
     public static double progressIncrRate = 1.0d;
     public static boolean destroyBlocks = true;
+    public static boolean attackPlayer = true;
+    public static boolean headsOrTails = false;
+    public static boolean useMouseWheel = true;
 
     /** La config chargee, pour pouvoir la reecrire depuis l'ecran de reglage du mod. */
     private static net.minecraftforge.fml.config.ModConfig loadedConfig;
@@ -235,6 +256,30 @@ public final class Config {
         DESTROY_BLOCKS.set(destroyBlocks);
         save();
         return destroyBlocks;
+    }
+
+    /** Bascule « Enable PvP » et l'ecrit dans le fichier. */
+    public static boolean toggleAttackPlayer() {
+        attackPlayer = !attackPlayer;
+        ATTACK_PLAYER.set(attackPlayer);
+        save();
+        return attackPlayer;
+    }
+
+    /** Bascule « Play Heads or Tails » et l'ecrit dans le fichier. */
+    public static boolean toggleHeadsOrTails() {
+        headsOrTails = !headsOrTails;
+        HEADS_OR_TAILS.set(headsOrTails);
+        save();
+        return headsOrTails;
+    }
+
+    /** Bascule « Mouse wheel adjust tp distance » et l'ecrit dans le fichier. */
+    public static boolean toggleUseMouseWheel() {
+        useMouseWheel = !useMouseWheel;
+        USE_MOUSE_WHEEL.set(useMouseWheel);
+        save();
+        return useMouseWheel;
     }
 
     /** Reecrit le fichier de config. Un echec ne fait pas tomber le jeu. */
@@ -274,6 +319,9 @@ public final class Config {
         overloadRecoverSpeed = OVERLOAD_RECOVER_SPEED.get();
         progressIncrRate = PROGRESS_INCR_RATE.get();
         destroyBlocks = DESTROY_BLOCKS.get();
+        attackPlayer = ATTACK_PLAYER.get();
+        headsOrTails = HEADS_OR_TAILS.get();
+        useMouseWheel = USE_MOUSE_WHEEL.get();
         giveCloudTerminal = GIVE_CLOUD_TERMINAL.get();
         // Une nouvelle instance de liste a chaque chargement : c'est ce que
         // MetalTargets surveille pour reconstruire ses ensembles.

@@ -817,6 +817,7 @@ public class AbilityClientEvents {
      */
     @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        if (!cn.academy.Config.useMouseWheel) return;
         if (!TeleportAim.active()) return;
         event.setCanceled(true);
 
