@@ -68,7 +68,16 @@ public class SettingsScreen extends Screen {
 
     /** Le libelle, la case a cocher et le controle de droite. */
     private static final double LABEL_X = 15.0;
-    private static final double LABEL_W = 300.0;
+    /**
+     * La largeur du libelle.
+     *
+     * <p>Le document dit 300, et le texte s'y coupe net (regle du {@code TextBox}). Mais sa police
+     * est PLUS ETROITE que celle du port : « Mouse wheel adjust tp distance » tient chez lui dans
+     * ces 300 et sortait coupe ici (« Mouse wheel adjust t »), alors que son ecran le montre en
+     * entier. La boite va donc jusqu'au controle, qui commence a 440 — le resultat visible est le
+     * sien, sans deborder sur la colonne des touches.
+     */
+    private static final double LABEL_W = 415.0;
     private static final double BOX_X = 550.0;
     private static final double BOX_SIZE = 35.0;
     private static final double CTRL_X = 440.0;
@@ -111,8 +120,8 @@ public class SettingsScreen extends Screen {
             return new Row("ac.settings.cat." + category, Kind.HEADER, category, null, null, null);
         }
 
-        static Row key(String category, KeyMapping mapping) {
-            return new Row(mapping.getName(), Kind.KEY, category, mapping, null, null);
+        static Row key(String category, String labelKey, KeyMapping mapping) {
+            return new Row(labelKey, Kind.KEY, category, mapping, null, null);
         }
 
         static Row toggle(String category, String labelKey,
@@ -155,26 +164,35 @@ public class SettingsScreen extends Screen {
      * Le contenu de la page, dans l'ordre de l'original : un titre de categorie, puis ses
      * lignes. Le titre est une ligne a part entiere chez lui (le {@code t_cathead} de 611 sur 60,
      * avec son trait sous le texte), pas un simple libelle pose au-dessus.
+     *
+     * <p>Les libelles sont ses CLES de langue ({@code ac.settings.prop.*}), pas les noms de
+     * touches du jeu : c'est ce qui affiche « Ability #1 », « Switch Preset », « Activate
+     * Ability » ou « Open Data Terminal », comme sur son ecran.
      */
     private void buildRows() {
         if (!rows.isEmpty()) return;
 
         rows.add(Row.header("keys"));
-        // Keys : ce que l'original listait, dans son ordre — les quatre touches d'aptitude
-        // d'abord, puis l'allumage, les prereglages et le terminal.
-        rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_1));
-        rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_2));
-        rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_3));
-        rows.add(Row.key("keys", AbilityKeyBindings.ABILITY_4));
-        rows.add(Row.key("keys", AbilityKeyBindings.TOGGLE_ABILITY));
-        rows.add(Row.key("keys", AbilityKeyBindings.PRESET_EDIT));
-        rows.add(Row.key("keys", AbilityKeyBindings.PRESET_NEXT));
-        rows.add(Row.key("keys", TerminalKeyBindings.OPEN_TERMINAL));
+        rows.add(Row.key("keys", "ac.settings.prop.ability_0", AbilityKeyBindings.ABILITY_1));
+        rows.add(Row.key("keys", "ac.settings.prop.ability_1", AbilityKeyBindings.ABILITY_2));
+        rows.add(Row.key("keys", "ac.settings.prop.ability_2", AbilityKeyBindings.ABILITY_3));
+        rows.add(Row.key("keys", "ac.settings.prop.ability_3", AbilityKeyBindings.ABILITY_4));
+        rows.add(Row.key("keys", "ac.settings.prop.debug_console", AbilityKeyBindings.DEBUG_CONSOLE));
+        rows.add(Row.key("keys", "ac.settings.prop.switch_preset", AbilityKeyBindings.PRESET_NEXT));
+        rows.add(Row.key("keys", "ac.settings.prop.ability_activation", AbilityKeyBindings.TOGGLE_ABILITY));
+        rows.add(Row.key("keys", "ac.settings.prop.edit_preset", AbilityKeyBindings.PRESET_EDIT));
+        rows.add(Row.key("keys", "ac.settings.prop.open_data_terminal",
+                TerminalKeyBindings.OPEN_TERMINAL));
 
         rows.add(Row.header("generic"));
-        // Generic : seule « Destroy blocks » a un comportement aujourd'hui.
+        rows.add(Row.toggle("generic", "ac.settings.prop.attackPlayer",
+                () -> cn.academy.Config.attackPlayer, () -> cn.academy.Config.toggleAttackPlayer()));
         rows.add(Row.toggle("generic", "ac.settings.prop.destroyBlocks",
                 () -> cn.academy.Config.destroyBlocks, () -> cn.academy.Config.toggleDestroyBlocks()));
+        rows.add(Row.toggle("generic", "ac.settings.prop.headsOrTails",
+                () -> cn.academy.Config.headsOrTails, () -> cn.academy.Config.toggleHeadsOrTails()));
+        rows.add(Row.toggle("generic", "ac.settings.prop.useMouseWheel",
+                () -> cn.academy.Config.useMouseWheel, () -> cn.academy.Config.toggleUseMouseWheel()));
 
         rows.add(Row.header("misc"));
         rows.add(Row.action("misc", "ac.settings.prop.edit_ui",
@@ -228,12 +246,10 @@ public class SettingsScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
-        // La page est reduite a un CINQUIEME : au plus proche voisin ses bords sortent en
-        // escalier, et son titre avec. Meme chaine que la page « A propos » de l'original.
-        GuiTextures.smoothMipmapped(TEX_BACK);
-        GuiTextures.smooth(TEX_ROLLBAR);
-        GuiTextures.smooth(TEX_CHECK_ON);
-        GuiTextures.smooth(TEX_CHECK_OFF);
+        // SANS lissage, comme l'original : cette page n'est pas dans ses `preloadMipmapTexture`, et
+        // les mipmaps DILUENT ce qu'elle a de plus fin — le titre « Settings » et le trait blanc
+        // qui le souligne sortaient gris, la ou le vrai mod les montre francs. Au plus proche
+        // voisin chaque trait garde sa valeur pleine.
 
         graphics.pose().pushPose();
         graphics.pose().translate((float) originX(), (float) originY(), 0f);

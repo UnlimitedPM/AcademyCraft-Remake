@@ -192,6 +192,13 @@ public class AboutScreen extends Screen {
         double centre = VIEW_W / 2;
         double y = 2 * FONT;
 
+        // Le credit du portage : la seule ligne qui ne vient pas de l'original, tout en haut de la
+        // fenetre — les 60 unites du premier titre restent donc libres au-dessus du reste.
+        String remake = document.getRemake();
+        if (!remake.isEmpty()) {
+            credits.add(new Line(remake, centre, 0, (int) FONT, CENTER, null));
+        }
+
         for (String text : document.getHeader()) {
             credits.add(new Line(text, centre, y, (int) FONT, CENTER, null));
             y += FONT;

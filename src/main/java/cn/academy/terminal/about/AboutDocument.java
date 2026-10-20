@@ -75,6 +75,16 @@ public final class AboutDocument {
     private final List<String> donators;
 
     /**
+     * La ligne du haut : qui a fait ce portage.
+     *
+     * <p>Elle n'existe pas dans le {@code about.conf} de l'original — c'est le seul ajout de
+     * contenu du port, demande par le joueur : « tout en haut, au dessus du reste, ecris
+     * quelque chose comme Remake made by UnlimitedPM ». Le document la porte donc, plutot que
+     * l'ecran, pour qu'elle se change sans toucher au code.
+     */
+    private final String remake;
+
+    /**
      * Le texte de l'onglet des dons, par langue.
      *
      * <p>Repris de la section {@code donation} de {@code about.conf} : une liste de lignes, ou
@@ -85,11 +95,12 @@ public final class AboutDocument {
     private final java.util.Map<String, List<String>> donation;
 
     private AboutDocument(List<String> header, List<Staff> staff, List<String> donators,
-                          java.util.Map<String, List<String>> donation) {
+                          java.util.Map<String, List<String>> donation, String remake) {
         this.header = List.copyOf(header);
         this.staff = List.copyOf(staff);
         this.donators = List.copyOf(donators);
         this.donation = java.util.Map.copyOf(donation);
+        this.remake = remake == null ? "" : remake;
     }
 
     /**
@@ -123,7 +134,7 @@ public final class AboutDocument {
     }
 
     public static AboutDocument empty() {
-        return new AboutDocument(List.of(), List.of(), List.of(), java.util.Map.of());
+        return new AboutDocument(List.of(), List.of(), List.of(), java.util.Map.of(), "");
     }
 
     /** Lit un document depuis un lecteur JSON. Les champs absents restent vides. */
@@ -152,7 +163,13 @@ public final class AboutDocument {
                 staff.add(new Staff(entry.get("role").getAsString(), strings(entry.getAsJsonArray("names"))));
             }
         }
-        return new AboutDocument(header, staff, donators, donation(root));
+        return new AboutDocument(header, staff, donators, donation(root), string(root, "remake"));
+    }
+
+    /** Un champ texte du document, ou une chaine vide. */
+    private static String string(JsonObject root, String key) {
+        JsonElement element = root.get(key);
+        return element == null || !element.isJsonPrimitive() ? "" : element.getAsString();
     }
 
     /** Les listes de lignes de l'onglet des dons, une par langue. */
@@ -185,6 +202,11 @@ public final class AboutDocument {
 
     public List<String> getDonators() {
         return donators;
+    }
+
+    /** La ligne du haut, celle du portage. Vide si le document ne la donne pas. */
+    public String getRemake() {
+        return remake;
     }
 
     /**
