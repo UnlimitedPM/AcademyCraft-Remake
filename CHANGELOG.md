@@ -41,6 +41,9 @@ loot table, and the whole game in four languages.
   for `mods.academy.ImagFusor` with the number of millibuckets. Scripts are **replayable**: a
   recipe replaces the one that already handled the same input, so a `/reload` never duplicates
   anything. Soft dependency as well.
+- **The two developer recipes name a red bed** instead of the `minecraft:beds` tag. The tag came
+  from the port (1.12.2 had a single bed item); in JEI it turned the slot into a tag, which told the
+  player nothing about what to put there.
 - **Tests**: 170 in-game tests, 866 unit tests.
 
 ### Francais
@@ -84,6 +87,9 @@ retravaillee, et tout le jeu en quatre langues.
   meme chose pour `mods.academy.ImagFusor` avec le nombre de millibassins. Les scripts sont
   **rejouables** : une recette remplace celle qui traitait deja la meme entree, donc un `/reload`
   ne duplique jamais rien. Soft depend lui aussi.
+- **Les deux recettes du developpeur nomment un lit rouge** au lieu du tag `minecraft:beds`. Le
+  tag venait du port (la 1.12.2 n'avait qu'un seul lit) ; dans JEI il transformait l'emplacement en
+  tag, ce qui ne disait rien de ce qu'il fallait y mettre.
 - **Des tests** : 170 tests en jeu, 866 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers

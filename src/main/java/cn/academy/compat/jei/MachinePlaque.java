@@ -33,6 +33,10 @@ final class MachinePlaque implements IDrawable {
     /** La couleur du texte : du gris fonce, sur le gris clair de la planche. */
     private static final int TEXT_COLOUR = 0xFF303030;
 
+    /** Le fond sombre de la case d'icone : c'est celui de l'ecran de la machine. */
+    private static final int ICON_BACKDROP = 0xFF2A2A32;
+    private static final int ICON_BORDER = 0xFF9AA0AA;
+
     private final ResourceLocation page;
     private final int width;
     private final int height;
@@ -62,14 +66,17 @@ final class MachinePlaque implements IDrawable {
         graphics.blit(page, xOffset, yOffset, width, height, 0f, 0f, width, height, width, height);
 
         if (icon != null) {
-            // Ces icones sont dessinees en BLANC dans le mod (l'ecran de la machine est sombre) :
-            // posees telles quelles sur le gris clair de la planche, elles ne se voyaient pas du
-            // tout — un carre blanc. On les assombrit le temps du blit.
+            // Les icones sont dessinees en BLANC dans le mod, sur le fond sombre de l'ecran de la
+            // machine : posees telles quelles sur le gris clair de la planche, elles faisaient un
+            // carre blanc illisible. On leur redonne le fond de la machine, et on les dessine a sa
+            // taille (24 chez elle, 22 ici, la place que la planche laisse entre ses deux fleches).
+            int x = xOffset + icon.x();
+            int y = yOffset + icon.y();
+            int size = icon.size();
+            graphics.fill(x - 1, y - 1, x + size + 1, y + size + 1, ICON_BORDER);
+            graphics.fill(x, y, x + size, y + size, ICON_BACKDROP);
             GuiTextures.smoothMipmapped(icon.texture());
-            graphics.setColor(0.25f, 0.25f, 0.29f, 1f);
-            graphics.blit(icon.texture(), xOffset + icon.x(), yOffset + icon.y(),
-                    icon.size(), icon.size(), 0f, 0f, 48, 48, 48, 48);
-            graphics.setColor(1f, 1f, 1f, 1f);
+            graphics.blit(icon.texture(), x, y, size, size, 0f, 0f, 48, 48, 48, 48);
         }
 
         if (label != null) {

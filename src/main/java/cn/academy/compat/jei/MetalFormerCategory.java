@@ -55,10 +55,15 @@ public class MetalFormerCategory implements IRecipeCategory<MetalFormerRecipes.R
     private static final int OUTPUT_X = 72;
     private static final int SLOT_Y = 24;
 
-    /** La case MODE : 14 de cote, entre les deux emplacements. */
-    private static final int MODE_X = 40;
-    private static final int MODE_Y = 25;
-    private static final int MODE_SIZE = 14;
+    /**
+     * L'icone du mode. Sa case dans la planche ne fait que 14 de cote, ce qui reduit l'icone a une
+     * tache : on lui donne 22, la place libre entre les deux fleches, et le fond sombre de la
+     * machine — c'est a 24 que son ecran la dessine, et c'est cette taille qui montre la forme de
+     * l'outil.
+     */
+    private static final int MODE_X = 35;
+    private static final int MODE_Y = 22;
+    private static final int MODE_SIZE = 22;
 
     /** La ligne du nom du mode, sous les emplacements. */
     private static final int NAME_Y = 45;

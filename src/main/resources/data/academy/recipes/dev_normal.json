@@ -7,7 +7,7 @@
   ],
   "key": {
     "B": {
-      "tag": "minecraft:beds"
+      "item": "minecraft:red_bed"
     },
     "P": {
       "item": "minecraft:piston"
