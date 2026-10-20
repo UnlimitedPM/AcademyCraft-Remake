@@ -38,6 +38,14 @@ public class TerminalKeyBindings {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+
+        // La page revient une fois le chat totalement ferme (voir TerminalScreen.requestResume).
+        var pending = TerminalScreen.takeResume();
+        if (pending != null) {
+            var client = net.minecraft.client.Minecraft.getInstance();
+            if (client.screen == null) client.setScreen(pending);
+        }
+
         if (!OPEN_TERMINAL.consumeClick()) return;
 
         var minecraft = net.minecraft.client.Minecraft.getInstance();
@@ -57,11 +65,8 @@ public class TerminalKeyBindings {
     @SubscribeEvent
     public static void onScreenClosing(ScreenEvent.Closing event) {
         if (!(event.getScreen() instanceof net.minecraft.client.gui.screens.ChatScreen)) return;
+        if (TerminalScreen.ghost() == null) return;
 
-        TerminalScreen page = TerminalScreen.resumeAfterChat();
-        if (page == null) return;
-
-        var minecraft = net.minecraft.client.Minecraft.getInstance();
-        minecraft.execute(() -> minecraft.setScreen(page));
+        TerminalScreen.requestResume();
     }
 }

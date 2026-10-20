@@ -8,13 +8,16 @@ import cn.academy.terminal.App;
 import cn.academy.terminal.AppRegistry;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
@@ -78,8 +81,14 @@ public class TerminalScreen extends Screen {
     private static final double PAGE_W = 640.0;
     private static final double PAGE_H = 785.0;
 
-    /** La grille : des cases de 151 au pas de 180, trois par rangee. */
-    private static final double GRID_X = 30.0;
+    /**
+     * La grille : des cases de 151 au pas de 180, trois par rangee.
+     *
+     * <p>Le depart est a 65, pas a 30 : c'est le {@code START_X} de {@code TerminalUI}, et c'est
+     * ce qui CENTRE les trois colonnes (65 a gauche, 64 a droite sur une page de 640). Le joueur
+     * l'a vu tout de suite — « les applications ne sont plus du tout bien centrees ».
+     */
+    private static final double GRID_X = 65.0;
     private static final double GRID_Y = 155.0;
     private static final double CELL = 151.0;
     private static final double STEP = 180.0;
@@ -200,6 +209,9 @@ public class TerminalScreen extends Screen {
     /** La page que le chat recouvre : dessinee par l'overlay, elle reprend la main ensuite. */
     private static TerminalScreen ghost;
 
+    /** La page qui doit revenir au tick suivant, une fois le chat ferme. */
+    private static TerminalScreen pendingResume;
+
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
         this.apps = installedApps();
@@ -270,6 +282,7 @@ public class TerminalScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == TerminalKeyBindings.OPEN_TERMINAL.getKey().getValue()) {
             ghost = null;
+            pendingResume = null;
             onClose();
             return true;
         }
@@ -290,10 +303,23 @@ public class TerminalScreen extends Screen {
         return ghost;
     }
 
-    /** Une seule fois : la page qui reprend la main a la fermeture du chat. */
-    public static TerminalScreen resumeAfterChat() {
-        TerminalScreen was = ghost;
+    /**
+     * Demande la reprise de la page au tick suivant.
+     *
+     * <p>PAS un {@code setScreen} immediat : la demande arrive depuis {@code ScreenEvent.Closing},
+     * donc pendant que le chat se ferme, et le jeu ecraserait notre ecran en terminant sa propre
+     * fermeture. Le joueur l'a vu : « si on le referme en faisant Echap ca ferme aussi la page du
+     * terminal ». La reprise est donc consommee au tick suivant, quand plus personne n'ecrit.
+     */
+    public static void requestResume() {
+        pendingResume = ghost;
         ghost = null;
+    }
+
+    /** La page qui doit reprendre la main, une seule fois. */
+    public static TerminalScreen takeResume() {
+        TerminalScreen was = pendingResume;
+        pendingResume = null;
         return was;
     }
 
@@ -320,7 +346,23 @@ public class TerminalScreen extends Screen {
     private static List<App> installedApps() {
         return ClientTerminalData.get().getInstalledApps(AppRegistry.INSTANCE).stream()
                 .filter(AppScreens::isAvailable)
+                .sorted(java.util.Comparator.comparingInt(app -> orderOf(app.getName())))
                 .toList();
+    }
+
+    /**
+     * L'ordre des applications, celui de l'original.
+     *
+     * <p>Il ne venait pas du registre mais de ses annotations {@code @RegApp(priority = ...)} : le
+     * tutoriel d'abord, puis le reglage (-1), puis l'ecran « a propos » (-2), et le lecteur media
+     * en dernier. Le joueur l'a vu : chez lui la premiere case est MisakaCloud, pas About.
+     */
+    private static final List<String> APP_ORDER =
+            List.of("tutorial", "skill_tree", "freq_transmitter", "settings", "about", "media_player");
+
+    private static int orderOf(String name) {
+        int index = APP_ORDER.indexOf(name);
+        return index < 0 ? APP_ORDER.size() : index;
     }
 
     // ------------------------------------------------------------------
@@ -392,11 +434,22 @@ public class TerminalScreen extends Screen {
         // laissent un liseré clair (le joueur le voyait en damier). Les sommets sont donc
         // calcules un par un et le maillage est soude : les bords mitoyens sont exactement les
         // memes, il n'y a plus de couture.
+        //
+        // ET SURTOUT PAS `RenderType.text` : ce type passe par le shader du TEXTE, qui JETTE les
+        // fragments d'alpha inferieur a 0,1 (le `discard` de `rendertype_text`). Or les bords de
+        // back.png sont a 12/255 — le joueur a vu disparaitre « les couleurs blanches semi
+        // transparentes sur les bordures ». On prend donc le meme chemin qu'un blit : position
+        // + uv, et le shader `position_tex`.
         graphics.flush();
 
-        RenderType type = RenderType.text(TEX_BACK);
-        MultiBufferSource.BufferSource source = Minecraft.getInstance().renderBuffers().bufferSource();
-        VertexConsumer consumer = source.getBuffer(type);
+        RenderSystem.setShaderTexture(0, TEX_BACK);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
 
         for (int pass = 0; pass < 2; pass++) {
             for (int col = 0; col < CAM_GRID_X; col++) {
@@ -410,26 +463,22 @@ public class TerminalScreen extends Screen {
                     float v0 = (float) (y0 / PAGE_H);
                     float v1 = (float) (y1 / PAGE_H);
 
-                    backdropVertex(consumer, x0, y0, u0, v0);
-                    backdropVertex(consumer, x0, y1, u0, v1);
-                    backdropVertex(consumer, x1, y1, u1, v1);
-                    backdropVertex(consumer, x1, y0, u1, v0);
+                    backdropVertex(builder, x0, y0, u0, v0);
+                    backdropVertex(builder, x0, y1, u0, v1);
+                    backdropVertex(builder, x1, y1, u1, v1);
+                    backdropVertex(builder, x1, y0, u1, v0);
                 }
             }
         }
 
-        source.endBatch(type);
+        BufferUploader.drawWithShader(builder.end());
     }
 
     /** Un sommet du fond, deja projete a l'ecran. */
-    private void backdropVertex(VertexConsumer consumer, double pageX, double pageY, float u,
+    private void backdropVertex(BufferBuilder builder, double pageX, double pageY, float u,
                                 float v) {
         float[] point = project(frameCamera, pageX, pageY);
-        // Le type de rendu du texte demande aussi la carte de lumiere (POSITION_COLOR_TEX_LIGHTMAP) :
-        // sans elle, BufferBuilder refuse le sommet (« Not filled all elements of the vertex »).
-        // 240 partout = pleine lumiere, ce qui est ce qu'on veut pour un calque d'interface.
-        consumer.vertex(point[0], point[1], 0.0f).color(1f, 1f, 1f, 1f).uv(u, v).uv2(240, 240)
-                .endVertex();
+        builder.vertex(point[0], point[1], 0.0f).uv(u, v).endVertex();
     }
 
     /** Le logo, les deux mots du terminal, le joueur, et le compte suivi de l'heure. */
@@ -496,8 +545,11 @@ public class TerminalScreen extends Screen {
                     app.getIconSize(), app.getIconSize(), iconAlpha);
 
             double textPart = hovered ? 0.1 + 0.72 * appear : 0.1 + 0.1 * appear;
-            text(graphics, app.getDisplayName().getString(), x, y + LABEL_Y, CELL, LABEL_CELL,
-                    ((int) Math.round(255 * textPart) << 24) | 0x00FFFFFF, false);
+            // Le document centre le nom dans sa case de 151 (son TextBox dit `align=CENTER`) ;
+            // aligne a gauche, il debordait vers la droite et la case ne se lisait plus
+            // centree — le joueur l'a vu des la premiere image.
+            textCentered(graphics, app.getDisplayName().getString(), x, y + LABEL_Y, CELL,
+                    LABEL_CELL, ((int) Math.round(255 * textPart) << 24) | 0x00FFFFFF);
         }
     }
 
@@ -622,6 +674,18 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         // L'overlay de l'original ne mettait pas le jeu en pause.
+        return false;
+    }
+
+    /**
+     * Echap ne ferme PAS la page.
+     *
+     * <p>Le joueur : « dans le vrai mod, pour le refermer il n'y a que la meme touche que celle
+     * qui l'a ouvert ». Echap servait au chat ; une fois celui-ci ferme, il ne doit pas emporter
+     * le terminal avec lui.
+     */
+    @Override
+    public boolean shouldCloseOnEsc() {
         return false;
     }
 
@@ -772,6 +836,16 @@ public class TerminalScreen extends Screen {
         int x = (int) Math.round(rightAligned
                 ? boxX + boxWidth - AcademyFonts.width(null, shown, cell)
                 : boxX);
+        pushLocal(graphics, boxX, boxY, Math.max(boxWidth, 1.0), Math.max(cell, 1));
+        AcademyFonts.drawTop(graphics, font, shown, x, (int) Math.round(boxY), colour, cell);
+        popLocal(graphics);
+    }
+
+    /** Un texte centre dans sa boite, comme le {@code align=CENTER} du document. */
+    private void textCentered(GuiGraphics graphics, String value, double boxX, double boxY,
+                              double boxWidth, int cell, int colour) {
+        String shown = fit(value, boxWidth, cell);
+        int x = (int) Math.round(boxX + (boxWidth - AcademyFonts.width(null, shown, cell)) / 2.0);
         pushLocal(graphics, boxX, boxY, Math.max(boxWidth, 1.0), Math.max(cell, 1));
         AcademyFonts.drawTop(graphics, font, shown, x, (int) Math.round(boxY), colour, cell);
         popLocal(graphics);
