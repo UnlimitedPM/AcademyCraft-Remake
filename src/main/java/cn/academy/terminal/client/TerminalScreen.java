@@ -326,8 +326,7 @@ public class TerminalScreen extends Screen {
                 return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                chatMode = false;
-                chatText = "";
+                setChatMode(false);
                 return true;
             }
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !chatText.isEmpty()) {
@@ -342,16 +341,41 @@ public class TerminalScreen extends Screen {
             return true;
         }
         if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
-            chatMode = true;
-            chatText = "";
             // La touche qui ouvre le chat produit AUSSI son caractere (T ecrivait « t »). On avale
             // le premier caractere, et on note l'instant pour qu'une repetition de la meme touche
             // (Entree gardee enfoncee) ne referme pas la ligne tout de suite.
             swallowChar = true;
             chatOpenedAt = System.currentTimeMillis();
+            setChatMode(true);
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /**
+     * Entre ou sort de la saisie du chat.
+     *
+     * <p>Pendant la saisie, le POINTEUR DU SYSTEME redevient visible et libre : le joueur veut
+     * « quand meme voir la souris bouger quand j'ecris dans le chat ». Le halo de la page, lui,
+     * reste fige la ou il etait.
+     *
+     * <p>A la sortie, on remet le pointeur DU SYSTEME sur le halo : sinon il se retrouve hors de
+     * la page, `confineCursor` le rabattrait sur le bord et le halo sauterait avec lui — « elle
+     * revient encore au milieu sur la gauche ». Il ne peut donc plus rien se deplacer.
+     */
+    private void setChatMode(boolean on) {
+        chatMode = on;
+        long handle = Minecraft.getInstance().getWindow().getWindow();
+
+        if (on) {
+            GLFW.glfwSetInputMode(handle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+            return;
+        }
+
+        chatText = "";
+        GLFW.glfwSetInputMode(handle, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+        frameCamera = buildCamera(yawNow(), pitchNow());
+        warpCursorToPage();
     }
 
     @Override
@@ -370,8 +394,7 @@ public class TerminalScreen extends Screen {
     /** Envoie ce qui est tape : une commande si la ligne commence par « / ». */
     private void sendChat() {
         String text = chatText.trim();
-        chatMode = false;
-        chatText = "";
+        setChatMode(false);
         if (text.isEmpty() || minecraft == null || minecraft.player == null) return;
         if (text.startsWith("/")) {
             minecraft.player.connection.sendCommand(text.substring(1));
@@ -562,6 +585,8 @@ public class TerminalScreen extends Screen {
 
     /** Le logo, les deux mots du terminal, le joueur, et le compte suivi de l'heure. */
     private void drawHeader(GuiGraphics graphics) {
+        // Le logo profite du meme anticrenelage que les icones (il est reduit lui aussi).
+        smooth(TEX_LOGO);
         image(graphics, TEX_LOGO, LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE, 50, 50);
 
         text(graphics, "DATA", STATIC_X, STATIC_0_Y, 100, STATIC_CELL, STATIC_COLOUR, false);
@@ -996,8 +1021,16 @@ public class TerminalScreen extends Screen {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER,
                 GL11.GL_LINEAR_MIPMAP_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        // Et le filtrage ANISOTROPE au maximum : la page est vue de biais, donc l'icone est
+        // compressee sur un axe et le filtrage trilineaire laisse encore des marches dans cette
+        // direction. Le joueur a demande « encore plus fort ». Si le pilote ne connait pas
+        // l'extension, GL ignore simplement le reglage.
+        GL11.glTexParameterf(GL11.GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
         GlStateManager._bindTexture(0);
     }
+
+    /** {@code GL_TEXTURE_MAX_ANISOTROPY_EXT} : absent de GL11, la valeur est celle de l'extension. */
+    private static final int GL_TEXTURE_MAX_ANISOTROPY = 0x84FE;
 
     private void imageAlpha(GuiGraphics graphics, ResourceLocation texture, double x,
                             double y, double width, double height, int texWidth,
