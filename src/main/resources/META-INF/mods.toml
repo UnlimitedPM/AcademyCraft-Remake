@@ -76,6 +76,23 @@ description='''AcademyCraft for Minecraft 1.20.1: abilities, an Imag energy netw
     ordering="NONE"
     side="BOTH"
 
+# Integrations FACULTATIVES : le mod marche sans elles, et n'en charge rien. Elles ne sont la que
+# pour l'ordre de chargement quand elles sont presentes (notre plugin JEI doit exister avant que
+# JEI ne balaie le classpath, et nos scripts CraftTweaker avant que CT ne charge les siens).
+[[dependencies.academy]]
+    modId="jei"
+    mandatory=false
+    versionRange="[15,)"
+    ordering="AFTER"
+    side="CLIENT"
+
+[[dependencies.academy]]
+    modId="crafttweaker"
+    mandatory=false
+    versionRange="[14,)"
+    ordering="AFTER"
+    side="BOTH"
+
 # Features are specific properties of the game environment, that you may want to declare you require. This example declares
 # that your mod requires GL version 3.2 or higher. Other features will be added. They are side aware so declaring this won't
 # stop your mod loading on the server for example.

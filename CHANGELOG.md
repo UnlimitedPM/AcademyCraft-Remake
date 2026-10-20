@@ -28,7 +28,18 @@ loot table, and the whole game in four languages.
   geometry and their box are computed twice a second), skips what the camera cannot see, and
   the liquid block no longer carries an empty block entity per block: the renderer finds the
   blocks through the chunk's palette.
-- **Tests**: 167 in-game tests, 856 unit tests.
+- **JEI knows the machines.** Two recipe categories of its own — the metal former (one row per
+  mode, with the mode's name between the input and the output) and the imag fusor (the phase a
+  fusion drinks, in millibuckets) — plus the generic refining, where every ore that smelts gives
+  twice its furnace result. Both machines are registered as catalysts, so the "uses" key on a
+  metal former opens its recipes. JEI stays **optional**: it is a soft dependency, and the mod
+  loads without it.
+- **CraftTweaker speaks to the machines.** `mods.academy.MetalFormer.addRecipe(<in>, <out>, "incise")`,
+  `removeRecipe(<out>)`, `removeRecipeByInput(<in>, "plate")`, `removeAllRecipes()`, and the same
+  for `mods.academy.ImagFusor` with the number of millibuckets. Scripts are **replayable**: a
+  recipe replaces the one that already handled the same input, so a `/reload` never duplicates
+  anything. Soft dependency as well.
+- **Tests**: 170 in-game tests, 866 unit tests.
 
 ### Francais
 
@@ -58,7 +69,18 @@ retravaillee, et tout le jeu en quatre langues.
   nappes et leur boite sont calculees deux fois par seconde), ecarte ce que la camera ne voit pas,
   et le bloc de liquide ne porte plus un block entity vide par bloc : le rendu retrouve les blocs
   par la palette du chunk.
-- **Des tests** : 167 tests en jeu, 856 tests unitaires.
+- **JEI connait les machines.** Deux categories de recettes a lui — le formeur de metal (une ligne
+  par mode, avec le nom du mode entre l'entree et la sortie) et le fusor d'imag (la phase qu'une
+  fusion boit, en millibassins) — plus le raffinage generique, ou tout minerai qui fond donne deux
+  fois son resultat de four. Les deux machines sont declarees comme catalyseurs : la touche
+  "utilisations" sur un formeur ouvre ses recettes. JEI reste **facultatif**, en soft depend : le
+  mod se lance sans lui.
+- **CraftTweaker parle aux machines.** `mods.academy.MetalFormer.addRecipe(<entree>, <sortie>, "incise")`,
+  `removeRecipe(<sortie>)`, `removeRecipeByInput(<entree>, "plate")`, `removeAllRecipes()`, et la
+  meme chose pour `mods.academy.ImagFusor` avec le nombre de millibassins. Les scripts sont
+  **rejouables** : une recette remplace celle qui traitait deja la meme entree, donc un `/reload`
+  ne duplique jamais rien. Soft depend lui aussi.
+- **Des tests** : 170 tests en jeu, 866 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 

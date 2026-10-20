@@ -47,4 +47,18 @@ public enum MetalFormerMode {
         if (ordinal < 0 || ordinal >= values.length) return PLATE;
         return values[ordinal];
     }
+
+    /**
+     * Retrouve un mode depuis son identifiant, ou {@code null} s'il n'existe pas.
+     *
+     * <p>Sert aux scripts CraftTweaker, qui ecrivent le mode en toutes lettres
+     * ({@code "incise"}, {@code "plate"}...) : une faute de frappe doit se voir, pas retomber
+     * silencieusement sur un mode par defaut.
+     */
+    public static MetalFormerMode byId(String id) {
+        for (MetalFormerMode mode : values()) {
+            if (mode.id.equalsIgnoreCase(id)) return mode;
+        }
+        return null;
+    }
 }

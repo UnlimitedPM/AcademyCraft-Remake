@@ -64,8 +64,52 @@ public final class ImagFusorRecipes {
 
     /** Toutes les recettes. */
     public static List<Recipe> all() {
+        return Collections.unmodifiableList(ensure());
+    }
+
+    /** La table vivante, construite au premier acces. */
+    private static List<Recipe> ensure() {
         if (recipes == null) recipes = buildDefaults();
-        return Collections.unmodifiableList(recipes);
+        return recipes;
+    }
+
+    /**
+     * Ajoute une recette, en remplacant celle qui traite le meme objet.
+     *
+     * <p>Le fusor ne choisit sa recette que par l'entree (voir {@link #get(ItemStack)}) : une entree
+     * n'a donc qu'une transformation, et remplacer est ce qui rend un script rejouable apres un
+     * {@code /reload}.
+     */
+    public static void add(Recipe recipe) {
+        List<Recipe> list = ensure();
+        list.removeIf(existing -> existing.input() == recipe.input());
+        list.add(recipe);
+    }
+
+    /** Retire les recettes qui donnent cet objet. Renvoie le nombre de recettes retirees. */
+    public static int removeByOutput(Item output) {
+        List<Recipe> list = ensure();
+        int before = list.size();
+        list.removeIf(recipe -> recipe.output() == output);
+        return before - list.size();
+    }
+
+    /** Retire la recette de cette entree. Renvoie le nombre de recettes retirees. */
+    public static int removeByInput(Item input) {
+        List<Recipe> list = ensure();
+        int before = list.size();
+        list.removeIf(recipe -> recipe.input() == input);
+        return before - list.size();
+    }
+
+    /** Vide la table. Les recettes fixes ne reviennent qu'au redemarrage. */
+    public static void removeAll() {
+        ensure().clear();
+    }
+
+    /** La table de depart, pour les tests : oublie tout ce que les scripts ont pu y mettre. */
+    public static void reset() {
+        recipes = buildDefaults();
     }
 
     /** La recette qui concerne cet objet, ou {@code null}. */

@@ -82,10 +82,74 @@ public final class MetalFormerRecipes {
 
     /** Toutes les recettes, dans l'ordre de l'original. */
     public static List<Recipe> all() {
-        if (recipes == null) recipes = buildDefaults();
-        return Collections.unmodifiableList(recipes);
+        return Collections.unmodifiableList(ensure());
     }
 
+    /** La table vivante, construite au premier acces. */
+    private static List<Recipe> ensure() {
+        if (recipes == null) recipes = buildDefaults();
+        return recipes;
+    }
+
+    /**
+     * Ajoute une recette, en remplacant celle qui a la meme entree dans le meme mode.
+     *
+     * <p>Remplacer plutot qu'empiler est ce qui rend les scripts rejouables : un script
+     * CraftTweaker est re-execute a chaque {@code /reload}, et une recette ajoutee deux fois ne doit
+     * pas apparaitre deux fois. Le mode est donc la cle : une entree n'a qu'une transformation par
+     * mode, c'est deja la regle de {@link #get(ItemStack, MetalFormerMode)} qui prend la premiere.
+     */
+    public static void add(Recipe recipe) {
+        List<Recipe> list = ensure();
+        list.removeIf(existing -> existing.mode() == recipe.mode() && existing.input() == recipe.input());
+        list.add(recipe);
+    }
+
+    /** Retire les recettes qui donnent cet objet. Renvoie le nombre de recettes retirees. */
+    public static int removeByOutput(Item output) {
+        List<Recipe> list = ensure();
+        int before = list.size();
+        list.removeIf(recipe -> recipe.output() == output);
+        return before - list.size();
+    }
+
+    /** Retire la recette de cette entree dans ce mode. Renvoie le nombre de recettes retirees. */
+    public static int removeByInput(Item input, MetalFormerMode mode) {
+        List<Recipe> list = ensure();
+        int before = list.size();
+        list.removeIf(recipe -> recipe.input() == input && recipe.mode() == mode);
+        return before - list.size();
+    }
+
+    /** Vide la table. Les recettes fixes ne reviennent qu'au redemarrage. */
+    public static void removeAll() {
+        ensure().clear();
+    }
+
+    /**
+     * La table de depart, pour les tests : oublie tout ce que les scripts ont pu y mettre.
+     *
+     * <p>Reservee aux tests unitaires — en jeu, elle n'est jamais appelee : un {@code /reload} ne
+     * doit pas effacer le travail des scripts, et c'est pourquoi les modifications sont ecrites pour
+     * pouvoir etre rejouees (voir {@link #add(Recipe)}).
+     */
+    public static void reset() {
+        recipes = buildDefaults();
+    }
+
+    /**
+     * Toutes les recettes d'un monde : les fixes, puis le raffinage du jeu.
+     *
+     * <p>Sert a JEI, qui tourne cote client : {@link #refined} y est volontairement eteint (c'est le
+     * serveur qui decide d'une transformation), donc la table de raffinage est refaite ici, sans
+     * cache, a partir des recettes de fonte que le client connait. Le resultat est celui du serveur :
+     * meme regle, meme source.
+     */
+    public static List<Recipe> allIn(net.minecraft.world.level.Level level) {
+        List<Recipe> built = new ArrayList<>(all());
+        if (level != null) built.addAll(resolveRefine(level));
+        return built;
+    }
     /** La premiere recette qui accepte cette entree dans ce mode, ou {@code null}. */
     public static Recipe get(ItemStack input, MetalFormerMode mode) {
         if (input.isEmpty()) return null;

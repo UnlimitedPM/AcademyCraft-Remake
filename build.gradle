@@ -65,6 +65,14 @@ minecraft {
             // Marqueurs de logging recommandés pour l'environnement de développement
             property 'forge.logging.markers', 'REGISTRIES'
 
+            // CraftTweaker en developpement : son fichier de mixins parle en noms SRG
+            // ("f_205845_"), alors que ce projet compile en noms officiels ("frozen"). Sans ces
+            // deux proprietes, Mixin ne sait pas traduire et tue le lancement sur
+            //   InvalidAccessorException: No candidates were found matching f_205845_:Z
+            // Le fichier de correspondance est celui que ForgeGradle fabrique deja pour nous.
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+
             // Niveau de logging pour la console
             property 'forge.logging.console.level', 'debug'
 
@@ -124,6 +132,12 @@ repositories {
     flatDir {
         dir 'libs'
     }
+
+    // JEI et CraftTweaker : les deux seuls depots qui les publient pour 1.20.1.
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com'
+    }
 }
 
 dependencies {
@@ -133,6 +147,24 @@ dependencies {
     // If the group id is "net.minecraft" and the artifact id is one of ["client", "server", "joined"],
     // then special handling is done to allow a setup of a vanilla dependency without the use of an external repository.
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    // JEI : integration en SOFT DEPEND. On compile contre son API seulement (compileOnly), et le
+    // mod complet n'est charge qu'en developpement (runtimeOnly) — un joueur qui n'a pas JEI ne
+    // doit rien voir de tout cela. Les deux artefacts -common-api et -forge-api sont ceux que la
+    // documentation de JEI 15 demande ; le plugin ne nomme que des types d'API.
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
+    runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+
+    // CraftTweaker : meme principe, compileOnly. Nos classes de script ne sont lues que si CT est la.
+    compileOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-${minecraft_version}:${crafttweaker_version}")
+
+    // ... mais on veut pouvoir ESSAYER un script : CT n'est donc charge que pour runClient, comme le
+    // pont de debogage ci-dessous (meme condition, meme raison : ne pas alourdir les taches serveur
+    // et les GameTests, qui ne testent rien de tout ca).
+    if (debugBridgeEnClient) {
+        runtimeOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-${minecraft_version}:${crafttweaker_version}")
+    }
 
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
