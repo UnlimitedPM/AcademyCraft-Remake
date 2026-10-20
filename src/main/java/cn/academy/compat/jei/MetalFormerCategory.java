@@ -51,21 +51,18 @@ public class MetalFormerCategory implements IRecipeCategory<MetalFormerRecipes.R
     private static final int PAGE_H = 57;
 
     /**
-     * La page fait la planche PLUS une case de mode : les icones de mode sont des dessins de 48, et
-     * reduites a la case de 14 de la planche (ou aux 24 de l'ecran de la machine) il n'en reste
-     * qu'une cloche blanche — c'est ce que le joueur voyait. A l'echelle 1, la scie circulaire de
-     * INCISE, le stylet d'ETCH et la plaque de PLATE se lisent enfin.
+     * La case MODE de la planche : son cadre va de 39 a 54, son interieur fait donc 14 de cote a
+     * (40 ; 25). C'est la que va l'icone, a cette taille — pas ailleurs.
      */
-    private static final int MODE_X = 100;
-    private static final int MODE_Y = 4;
-    private static final int MODE_BOX = 48;
-    private static final int MODE_RIGHT = MODE_X + MODE_BOX;
+    private static final int MODE_X = 40;
+    private static final int MODE_Y = 25;
+    private static final int MODE_SIZE = 14;
 
-    private static final int WIDTH = MODE_RIGHT + 2;
-    private static final int HEIGHT = 66;
+    private static final int WIDTH = PAGE_W;
+    private static final int HEIGHT = PAGE_H;
 
-    /** La ligne du nom du mode, sous la case. */
-    private static final int NAME_Y = 55;
+    /** La ligne du nom du mode, sous les emplacements. */
+    private static final int NAME_Y = 45;
 
     /** Les deux emplacements, la ou la planche les dessine (son cadre fait 18, l'objet 16). */
     private static final int INPUT_X = 6;
@@ -130,8 +127,8 @@ public class MetalFormerCategory implements IRecipeCategory<MetalFormerRecipes.R
                                    MetalFormerRecipes.Recipe recipe, IFocusGroup focuses) {
         builder.addDrawableWidget(new MachinePlaque(WIDTH, HEIGHT,
                 new MachinePlaque.Picture(PAGE, PAGE_W, PAGE_H, 0, 0),
-                new MachinePlaque.Icon(iconOf(recipe.mode()), MODE_X, MODE_Y),
-                new MachinePlaque.Label(modeName(recipe.mode()), MODE_X, MODE_RIGHT, NAME_Y)))
+                new MachinePlaque.Icon(iconOf(recipe.mode()), MODE_X, MODE_Y, MODE_SIZE),
+                new MachinePlaque.Label(modeName(recipe.mode()), 0, WIDTH, NAME_Y)))
                 .setPosition(0, 0);
     }
 
@@ -154,8 +151,8 @@ public class MetalFormerCategory implements IRecipeCategory<MetalFormerRecipes.R
     public void getTooltip(mezz.jei.api.gui.builder.ITooltipBuilder tooltip,
                            MetalFormerRecipes.Recipe recipe, IRecipeSlotsView slotsView,
                            double mouseX, double mouseY) {
-        if (mouseX >= MODE_X && mouseX < MODE_RIGHT
-                && mouseY >= MODE_Y && mouseY < MODE_Y + MODE_BOX) {
+        if (mouseX >= MODE_X && mouseX < MODE_X + MODE_SIZE
+                && mouseY >= MODE_Y && mouseY < MODE_Y + MODE_SIZE) {
             tooltip.add(Component.translatable(
                     "academy.metal_former.mode." + recipe.mode().getId()));
         }

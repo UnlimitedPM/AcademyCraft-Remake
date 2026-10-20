@@ -79,6 +79,29 @@ public class AcademyJeiPlugin implements IModPlugin {
     @Override
     public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
         runtime = jeiRuntime;
+        hideTagPages(jeiRuntime);
+    }
+
+    /**
+     * Retire de JEI ses pages de <b>tags</b>.
+     *
+     * <p>JEI en cree une par tag (« Block Tags », « Item Tags »...) et les montre dans la liste des
+     * utilisations de l'objet, a cote des vraies recettes. Le joueur les trouve inutiles : c'est
+     * une liste de noms internes, pas une recette.
+     *
+     * <p>On les cache plutot que de toucher a la configuration de JEI : c'est l'API qui le prevoit
+     * ({@code hideRecipeCategory}), et ca reste chez nous. Elles sont reconnaissables a leur classe
+     * ({@code ...plugins.jei.tags.TagInfoRecipeCategory}) ; si un jour JEI la renomme, on ne cache
+     * simplement plus rien, sans rien casser.
+     */
+    private static void hideTagPages(IJeiRuntime jeiRuntime) {
+        var manager = jeiRuntime.getRecipeManager();
+        var tags = manager.createRecipeCategoryLookup().get()
+                .filter(category -> category.getClass().getName().endsWith("tags.TagInfoRecipeCategory"))
+                .map(mezz.jei.api.recipe.category.IRecipeCategory::getRecipeType)
+                .toList();
+        tags.forEach(manager::hideRecipeCategory);
+        LOGGER.debug("JEI: {} pages de tags masquees", tags.size());
     }
 
     /** Le runtime de JEI, ou null si JEI n'est pas la (ou pas encore pret). */

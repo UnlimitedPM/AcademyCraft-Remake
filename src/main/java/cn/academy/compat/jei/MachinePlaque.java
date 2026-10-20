@@ -1,5 +1,6 @@
 package cn.academy.compat.jei;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import mezz.jei.api.gui.drawable.IDrawable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -20,20 +21,21 @@ import net.minecraft.resources.ResourceLocation;
  * passe par l'atlas de textures de JEI, ou nos images ne sont pas, et ne dessinait rien du tout
  * (verifie a l'ecran : ni planche, ni erreur).
  *
- * <h2>L'icone du mode a l'echelle 1</h2>
+ * <h2>IL FAUT RALLUMER LE MELANGE</h2>
  *
- * Les quatre icones de mode sont des dessins de 48 de cote (une scie circulaire pour INCISE, un
- * stylet pour ETCH...) et l'ecran de la machine les reduit a 24 : a cette taille il n'en reste
- * qu'une cloche blanche, verifie a l'ecran dans la machine comme dans JEI. La page leur donne donc
- * une case de 48, a l'echelle 1, ou le dessin se lit enfin.
+ * C'est le piege qui a coute le plus cher ici. Les icones du mod sont des dessins BLANCS dont les
+ * bords sont ANTICRENELES : leur transparence fait tout le dessin. Sans melange actif, chaque pixel
+ * opaque sort blanc plein et la transparence disparait — l'icone devient une tache blanche, ce que
+ * le joueur a decrit mot pour mot (« le blanc n'a pas de transparence »). On l'allume donc avant
+ * chaque texture, comme le fait le moteur d'interface des machines (`CGuiView`).
  */
 final class MachinePlaque implements IDrawable {
 
     /** Une image posee telle quelle, a une position de la page. */
     record Picture(ResourceLocation texture, int width, int height, int x, int y) {}
 
-    /** L'icone d'un mode, dessinee a sa taille native sur un fond sombre. */
-    record Icon(ResourceLocation texture, int x, int y) {}
+    /** L'icone d'un mode : sa case, et sa taille dans cette case. */
+    record Icon(ResourceLocation texture, int x, int y, int size) {}
 
     /** Un texte, centre entre deux colonnes de la page. */
     record Label(String text, int left, int right, int y) {}
@@ -41,12 +43,11 @@ final class MachinePlaque implements IDrawable {
     /** La couleur du texte : du gris fonce, sur le gris clair de la planche. */
     private static final int TEXT_COLOUR = 0xFF303030;
 
-    /** Le fond sombre de la case d'icone : c'est celui de l'ecran de la machine. */
+    /** Le fond de la case d'icone : le sombre de l'ecran de la machine. */
     private static final int ICON_BACKDROP = 0xFF2A2A32;
-    private static final int ICON_BORDER = 0xFF9AA0AA;
 
-    /** La taille native des icones de mode. */
-    static final int ICON_SOURCE = 48;
+    /** La taille de l'image source des icones de mode. */
+    private static final int ICON_SOURCE = 48;
 
     private final int width;
     private final int height;
@@ -74,18 +75,19 @@ final class MachinePlaque implements IDrawable {
 
     @Override
     public void draw(GuiGraphics graphics, int xOffset, int yOffset) {
+        blend();
         graphics.blit(page.texture(), xOffset + page.x(), yOffset + page.y(),
                 page.width(), page.height(), 0f, 0f,
                 page.width(), page.height(), page.width(), page.height());
 
         if (icon != null) {
-            // Au plus proche voisin, comme la machine : ce sont des dessins fins, un filtrage les
-            // moyenne en une tache blanche.
+            // La case de la planche est claire, et les icones sont blanches : on leur remet le fond
+            // sombre de l'ecran de la machine, sinon elles ne s'y voient pas du tout.
             int x = xOffset + icon.x();
             int y = yOffset + icon.y();
-            graphics.fill(x - 1, y - 1, x + ICON_SOURCE + 1, y + ICON_SOURCE + 1, ICON_BORDER);
-            graphics.fill(x, y, x + ICON_SOURCE, y + ICON_SOURCE, ICON_BACKDROP);
-            graphics.blit(icon.texture(), x, y, ICON_SOURCE, ICON_SOURCE, 0f, 0f,
+            graphics.fill(x, y, x + icon.size(), y + icon.size(), ICON_BACKDROP);
+            blend();
+            graphics.blit(icon.texture(), x, y, icon.size(), icon.size(), 0f, 0f,
                     ICON_SOURCE, ICON_SOURCE, ICON_SOURCE, ICON_SOURCE);
         }
 
@@ -95,5 +97,11 @@ final class MachinePlaque implements IDrawable {
             graphics.drawString(font, label.text(), xOffset + centred, yOffset + label.y(),
                     TEXT_COLOUR, false);
         }
+    }
+
+    /** Rallume le melange : un {@code fill} ou un {@code drawString} le coupe en se terminant. */
+    private static void blend() {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
     }
 }

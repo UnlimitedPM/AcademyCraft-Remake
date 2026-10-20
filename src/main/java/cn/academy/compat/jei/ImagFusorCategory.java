@@ -102,7 +102,6 @@ public class ImagFusorCategory implements IRecipeCategory<ImagFusorRecipes.Recip
                         GAUGE_LEFT, GAUGE_RIGHT, GAUGE_Y)))
                 .setPosition(0, 0);
     }
-
     @Override
     public IDrawable getIcon() {
         return icon;
