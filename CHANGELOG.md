@@ -31,9 +31,11 @@ loot table, and the whole game in four languages.
 - **JEI knows the machines.** Two recipe categories of its own — the metal former (one row per
   mode, with the mode's name between the input and the output) and the imag fusor (the phase a
   fusion drinks, in millibuckets) — plus the generic refining, where every ore that smelts gives
-  twice its furnace result. Both machines are registered as catalysts, so the "uses" key on a
-  metal former opens its recipes. JEI stays **optional**: it is a soft dependency, and the mod
-  loads without it.
+  twice its furnace result. Both pages are drawn on **the original's own NEI sheets**
+  (`nei_metalformer.png`, `nei_fusor.png`, shipped but never wired): the machine's schematic, with
+  IN, MODE and OUT, its slots in their place, the mode's icon and its name. Both machines are
+  registered as catalysts, so the "uses" key on a metal former opens its recipes. JEI stays
+  **optional**: it is a soft dependency, and the mod loads without it.
 - **CraftTweaker speaks to the machines.** `mods.academy.MetalFormer.addRecipe(<in>, <out>, "incise")`,
   `removeRecipe(<out>)`, `removeRecipeByInput(<in>, "plate")`, `removeAllRecipes()`, and the same
   for `mods.academy.ImagFusor` with the number of millibuckets. Scripts are **replayable**: a
@@ -72,9 +74,11 @@ retravaillee, et tout le jeu en quatre langues.
 - **JEI connait les machines.** Deux categories de recettes a lui — le formeur de metal (une ligne
   par mode, avec le nom du mode entre l'entree et la sortie) et le fusor d'imag (la phase qu'une
   fusion boit, en millibassins) — plus le raffinage generique, ou tout minerai qui fond donne deux
-  fois son resultat de four. Les deux machines sont declarees comme catalyseurs : la touche
-  "utilisations" sur un formeur ouvre ses recettes. JEI reste **facultatif**, en soft depend : le
-  mod se lance sans lui.
+  fois son resultat de four. Les deux pages sont dessinees sur **les planches NEI de l'original**
+  (`nei_metalformer.png`, `nei_fusor.png`, livrees mais jamais branchees) : le schema de la
+  machine, avec IN, MODE et OUT, ses emplacements a leur place, l'icone du mode et son nom. Les
+  deux machines sont declarees comme catalyseurs : la touche "utilisations" sur un formeur ouvre
+  ses recettes. JEI reste **facultatif**, en soft depend : le mod se lance sans lui.
 - **CraftTweaker parle aux machines.** `mods.academy.MetalFormer.addRecipe(<entree>, <sortie>, "incise")`,
   `removeRecipe(<sortie>)`, `removeRecipeByInput(<entree>, "plate")`, `removeAllRecipes()`, et la
   meme chose pour `mods.academy.ImagFusor` avec le nombre de millibassins. Les scripts sont
