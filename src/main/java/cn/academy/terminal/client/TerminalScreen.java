@@ -167,7 +167,15 @@ public class TerminalScreen extends Screen {
      * gauche ». Les deux BALAYAGES suivent le meme retournement, sinon la souris pousse la
      * page du cote oppose a celui qu'il attend.
      */
-    private static final double BASE_YAW = 18.0;
+    /**
+     * Le lacet est NEGATIF : le bord haut monte vers la DROITE.
+     *
+     * <p>Le joueur, a qui l'on demandait quel coin doit etre le plus haut : « il faudrait
+     * intervertir les points de chaque cote, donc que la hauteur du haut de gauche passe a
+     * droite et inversement ». Les deux coins du haut s'echangent, donc le lacet revient a
+     * -18 — et le BALAYAGE garde son signe, puisqu'il etait deja dans le bon sens.
+     */
+    private static final double BASE_YAW = -18.0;
     private static final double YAW_SWING = 4.0;
     private static final double BASE_PITCH = 7.0;
     private static final double PITCH_SWING = 4.0;
@@ -576,12 +584,13 @@ public class TerminalScreen extends Screen {
     private Matrix4f sceneMatrix(double cursorX, double cursorY) {
         double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
 
-        // Le balayage HORIZONTAL est inverse, celui du TANGAGE l'etait deja. Attention au piege
-        // qui a coute deux essais : inverser a la fois le lacet de base ET son balayage ne
-        // change RIEN au sens du mouvement (c'est -(base + balayage)), il faut retourner le
-        // balayage SEUL.
-        double yaw = BASE_YAW - YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
-        double pitch = BASE_PITCH - PITCH_SWING * (cursorY / SELECT_H - 0.5);
+        // Le SENS DE LA SOURIS suit le signe du lacet : retourner le lacet de base retourne donc
+        // aussi la reponse a la souris, meme si le balayage garde son signe (le joueur : « tu
+        // viens de defaire la logique qui etait la bonne, quand je vise a gauche ca monte la
+        // gauche »). Les deux balayages sont donc dans le sens INVERSE de ceux de l'original, son
+        // repere etant a Y vers le haut et le notre a Y vers le bas.
+        double yaw = BASE_YAW + YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
+        double pitch = BASE_PITCH + PITCH_SWING * (cursorY / SELECT_H - 0.5);
 
         Matrix4f scene = new Matrix4f();
         scene.translate((float) (width * VIEW_X), (float) (height * VIEW_Y), 0.0f);
