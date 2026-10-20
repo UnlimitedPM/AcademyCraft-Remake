@@ -8,11 +8,15 @@ import cn.academy.terminal.App;
 import cn.academy.terminal.AppRegistry;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
+import org.joml.Matrix4f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
@@ -39,14 +43,27 @@ import java.util.List;
  *       n'y a plus rien a faire defiler.</li>
  * </ul>
  *
- * <p>La selection se fait comme chez lui : la page est coupee en trois par trois (605 sur 740),
- * et la case visee est celle de cette grille — c'est ce qui permet de viser une case sans
- * passer par ses pixels.
+ * <h2>La perspective, comme chez lui</h2>
  *
- * <p>Un ecart : l'original etait un overlay en perspective, vu de biais, qui tournait avec la
- * souris et prenait la main sur le curseur du jeu. Ici la page est plate et mise a l'echelle de
- * la fenetre — meme contenu, meme animation, meme son, mais le terminal ne detourne plus le
- * curseur.
+ * <p>L'original ne posait pas la page a plat : il montait une vraie scene 3D, vue en
+ * {@code gluPerspective(50)}, posee devant et a droite — « comme si on la tenait » — et
+ * penchee de {@code -18} degres en lacet et {@code 7} en tangage, le tout a l'echelle
+ * {@code 1/310}.
+ *
+ * <p>Cette scene est reprise ici pour sa <b>pose</b> : la meme chaine de rotations, posee sur
+ * la pose de dessin du jeu, la meme echelle, et la meme place — trois quarts a droite, un peu
+ * au-dessus du milieu. Une chose manque : la <b>fuite</b> de la perspective. Le jeu ecrit ses
+ * sommets avec une transformation affine (il jette la quatrieme composante), donc une
+ * projection en perspective posee sur la pose s'ecrase au lieu de fuir ; la page est donc vue
+ * de biais, mais sans raccourci. Le cadre, les cases et le son sont ceux de l'original.
+ *
+ * <p>Comme la page n'est plus face a l'ecran, la souris ne tombe pas droit dessus : elle est
+ * <b>desempilee</b> par l'inverse de la meme matrice, ce qui donne les coordonnees exactes
+ * sous le curseur. Le halo est <b>retenu dans la page</b> (0 a 605, 0 a 740, comme chez lui)
+ * et le curseur du jeu est <b>cache</b> : seul le point blanc reste.
+ *
+ * <p>Un ecart : le curseur suit la souris de l'ecran au lieu d'etre pris en main par le jeu —
+ * un {@code Screen} ne peut pas detourner la souris comme le faisait son {@code MouseHelper}.
  */
 public class TerminalScreen extends Screen {
 
@@ -105,10 +122,38 @@ public class TerminalScreen extends Screen {
 
     /** Le halo de la souris : 20 a 24 de cote, un peu plus quand une case est visee. */
     private static final double CURSOR_BASE = 20.0;
+    private static final int CURSOR_ALPHA = 180;
 
     /** Le decalage d'apparition des cases, et sa duree. */
     private static final double APPEAR_STEP = 0.1;
     private static final double APPEAR_TIME = 0.4;
+
+    // ------------------------------------------------------------------
+    // La scene de l'original : sa place, ses angles, sa vitesse de curseur.
+    // ------------------------------------------------------------------
+
+    /**
+     * La part de la hauteur d'ecran que prend la page.
+     *
+     * <p>L'original la posait en unites du monde, devant un regard a 50 degres : sa taille a
+     * l'ecran suivait donc celle de la fenetre. Ici la meme regle, en clair : deux tiers de la
+     * hauteur, ce qui laisse le panneau sur la droite sans manger tout l'ecran.
+     */
+    private static final double VIEW_HEIGHT_PART = 0.66;
+
+    /** Sa place : trois quarts a droite, un peu au-dessus du milieu — la ou son regard la posait. */
+    private static final double VIEW_X = 0.74;
+    private static final double VIEW_Y = 0.52;
+
+    /** Les angles de l'original, et ce que la souris y ajoute. */
+    private static final double BASE_YAW = -18.0;
+    private static final double YAW_SWING = 4.0;
+    private static final double BASE_PITCH = 7.0;
+    private static final double PITCH_SWING = 4.0;
+    private static final double BASE_ROLL = -1.6;
+
+    /** Le curseur glisse vers sa cible a cette vitesse, en unites par seconde. */
+    private static final double BALANCE_SPEED = 3000.0;
 
     private static final ResourceLocation TEX_BACK = texture("back.png");
     private static final ResourceLocation TEX_APP = texture("app_back.png");
@@ -129,9 +174,28 @@ public class TerminalScreen extends Screen {
     /** La case visee a l'image precedente : c'est le changement qui fait claquer le son. */
     private int lastSelected = -1;
 
+    /** Le curseur dans la page, retenu dans ses bords : c'est lui qui incline la scene. */
+    private double buffX = SELECT_W / 2;
+    private double buffY = SELECT_H / 2;
+
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
         this.apps = installedApps();
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        // Le curseur du jeu disparait : seul le halo de la page reste visible.
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(),
+                GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_HIDDEN);
+    }
+
+    @Override
+    public void removed() {
+        super.removed();
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(),
+                GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
     }
 
     private static ResourceLocation texture(String name) {
@@ -160,23 +224,24 @@ public class TerminalScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         // Le terminal de l'original flottait sur le jeu sans l'assombrir : il ne prend donc
-        // pas le fond des conteneurs, et le jeu ne se met pas en pause.
-        double scale = pageScale();
-        double left = (width - PAGE_W * scale) / 2.0;
-        double top = (height - PAGE_H * scale) / 2.0;
-
-        double pageX = (mouseX - left) / scale;
-        double pageY = (mouseY - top) / scale;
+        // pas le fond des contenants, et le jeu ne se met pas en pause.
+        //
+        // La souris est d'abord ramenee dans la page avec la scene de l'image precedente,
+        // puis le curseur glisse vers elle : c'est lui qui incline la scene, donc il faut
+        // le connaitre avant de poser la matrice.
+        double[] target = pageAt(mouseX, mouseY, buffX, buffY);
+        double step = BALANCE_SPEED * (minecraft == null ? 0.016 : minecraft.getDeltaFrameTime());
+        buffX = balance(buffX, target[0], step);
+        buffY = balance(buffY, target[1], step);
 
         graphics.pose().pushPose();
-        graphics.pose().translate((float) left, (float) top, 0f);
-        graphics.pose().scale((float) scale, (float) scale, 1f);
+        graphics.pose().mulPoseMatrix(sceneMatrix(buffX, buffY));
 
         image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 640, 785);
         drawHeader(graphics);
-        drawApps(graphics, pageX, pageY);
+        drawApps(graphics, buffX, buffY);
         drawArrows(graphics);
-        drawCursor(graphics, pageX, pageY);
+        drawCursor(graphics, buffX, buffY);
 
         graphics.pose().popPose();
         graphics.setColor(1f, 1f, 1f, 1f);
@@ -216,7 +281,7 @@ public class TerminalScreen extends Screen {
      */
     private void drawApps(GuiGraphics graphics, double pageX, double pageY) {
         double age = (System.nanoTime() - openedNano) / 1_000_000_000.0;
-        int selected = selectedIndex(pageX, pageY);
+        int selected = cellAt(pageX, pageY);
 
         // Le son de selection se joue quand la case visee CHANGE, comme chez l'original.
         if (selected >= 0 && selected != lastSelected && minecraft != null
@@ -266,37 +331,40 @@ public class TerminalScreen extends Screen {
     /**
      * Le halo de la souris, en melange additif.
      *
-     * <p>L'original le posait sous le curseur de la page, qui vivait plus bas que la souris
-     * parce que la page etait vue de biais. Ici la page est plate : le halo suit la souris, a
-     * la meme taille, avec le meme battement.
+     * <p>Il se pose sur le curseur de la page, qui est retenu dans ses bords ; l'opacite est
+     * celle de l'original (0,4 en additif), remontee un peu pour ressortir sur le fond sombre.
      */
     private void drawCursor(GuiGraphics graphics, double pageX, double pageY) {
-        if (pageX < 0 || pageY < 0 || pageX > PAGE_W || pageY > PAGE_H) return;
-
         double seconds = (System.nanoTime() - openedNano) / 1_000_000_000.0;
         double beat = CURSOR_BASE + Math.sin(seconds * 3.333) * 2;
-        double size = (selectedIndex(pageX, pageY) >= 0 ? 1.3 : 1.0) * beat;
+        double size = (cellAt(pageX, pageY) >= 0 ? 1.3 : 1.0) * beat;
 
         RenderSystem.enableBlend();
         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
                 GlStateManager.DestFactor.ONE);
         imageAlpha(graphics, TEX_CURSOR, pageX - size / 2, pageY - size / 2, size, size,
-                20, 20, 102);
+                20, 20, CURSOR_ALPHA);
         RenderSystem.defaultBlendFunc();
     }
 
     /**
-     * La case visee, dans la grille de selection de l'original : la page y est coupee en trois
-     * par trois, sur 605 de large et 740 de haut.
+     * La case sous un point de la page, ou -1.
+     *
+     * <p>Ce sont les <b>vraies</b> cases qui comptent, pas la grille de selection de
+     * l'original (605 sur 740 coupee en trois par trois) : sa grille debordait des cases, et
+     * le joueur cliquait une application en visant sa voisine.
      */
-    private int selectedIndex(double pageX, double pageY) {
-        if (pageX < 0 || pageY < 0 || pageX >= SELECT_W || pageY >= SELECT_H) return -1;
+    private int cellAt(double pageX, double pageY) {
+        int first = scroll * COLUMNS;
+        int last = Math.min(apps.size(), first + COLUMNS * ROWS);
 
-        int column = (int) (pageX / SELECT_W * COLUMNS);
-        int row = (int) (pageY / SELECT_H * ROWS);
-        int index = scroll * COLUMNS + row * COLUMNS + column;
-
-        return index < apps.size() ? index : -1;
+        for (int index = first; index < last; index++) {
+            int order = index - first;
+            double x = GRID_X + STEP * (order % COLUMNS);
+            double y = GRID_Y + STEP * (order / COLUMNS);
+            if (pageX >= x && pageX < x + CELL && pageY >= y && pageY < y + CELL) return index;
+        }
+        return -1;
     }
 
     /** Combien de rangees on peut faire defiler, comme le {@code getMaxScroll} de l'original. */
@@ -321,11 +389,9 @@ public class TerminalScreen extends Screen {
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
-        double scale = pageScale();
-        double left = (width - PAGE_W * scale) / 2.0;
-        double top = (height - PAGE_H * scale) / 2.0;
-        double pageX = (mouseX - left) / scale;
-        double pageY = (mouseY - top) / scale;
+        double[] point = pageAt(mouseX, mouseY, buffX, buffY);
+        double pageX = point[0];
+        double pageY = point[1];
 
         // Les fleches de defilement.
         double arrowX = (PAGE_W - ARROW_W) / 2;
@@ -339,7 +405,7 @@ public class TerminalScreen extends Screen {
         }
 
         // Une case : elle ouvre son application.
-        int index = selectedIndex(pageX, pageY);
+        int index = cellAt(pageX, pageY);
         if (index >= 0) {
             Screen page = AppScreens.create(apps.get(index));
             if (minecraft != null && page != null) {
@@ -378,9 +444,66 @@ public class TerminalScreen extends Screen {
     // Outils de dessin et de mesure
     // ------------------------------------------------------------------
 
-    /** L'echelle de la page : elle tient dans la fenetre, sans jamais depasser sa taille. */
-    private double pageScale() {
-        return Math.min(1.0, Math.min((width - 12.0) / PAGE_W, (height - 12.0) / PAGE_H));
+    /**
+     * La pose de l'original : sa place, ses trois angles, et son echelle.
+     *
+     * <p>L'ordre est celui de ses appels GL, du dernier au premier pour un sommet :
+     * on ramene le point au centre de la page, on le met a l'echelle (l'axe Y retourne, comme
+     * son {@code scale(1/310, -1/310)}), on le fait tourner de ses trois angles, puis on le
+     * pose a sa place sur l'ecran.
+     *
+     * <p>La fuite en perspective manque : le jeu ecrit ses sommets avec une transformation
+     * affine — il jette la quatrieme composante — donc une projection en perspective posée
+     * sur la pose s'ecrase. La page est donc vue de biais, sans raccourci.
+     */
+    private Matrix4f sceneMatrix(double cursorX, double cursorY) {
+        double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
+
+        double yaw = BASE_YAW - YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
+        double pitch = BASE_PITCH + PITCH_SWING * (cursorY / SELECT_H - 0.5);
+
+        Matrix4f scene = new Matrix4f();
+        scene.translate((float) (width * VIEW_X), (float) (height * VIEW_Y), 0.0f);
+        scene.rotateZ((float) Math.toRadians(BASE_ROLL));
+        scene.rotateY((float) Math.toRadians(yaw));
+        scene.rotateX((float) Math.toRadians(pitch));
+        scene.scale((float) viewScale(), (float) viewScale(), 1.0f);
+        scene.translate((float) (-PAGE_W / 2.0), (float) (-PAGE_H / 2.0), 0.0f);
+        return scene;
+    }
+
+    /**
+     * Ou tombe cette souris, en unites de page.
+     *
+     * <p>La page n'est pas face a l'ecran : un point de l'ecran ne lui correspond pas
+     * directement. C'est l'inverse de sa pose qui le dit, ce qui rend les coordonnees exactes
+     * sous le curseur — et donc des cases qu'on vise vraiment.
+     */
+    private double[] pageAt(double mouseX, double mouseY, double cursorX, double cursorY) {
+        Matrix4f inverse = new Matrix4f(sceneMatrix(cursorX, cursorY));
+        inverse.invert();
+
+        Vector4f point = new Vector4f((float) mouseX, (float) mouseY, 0.0f, 1.0f);
+        inverse.transform(point);
+
+        if (Math.abs(point.w) < 1.0e-6) return new double[] { cursorX, cursorY };
+
+        return new double[] {
+                clamp(point.x / point.w, 0.0, SELECT_W),
+                clamp(point.y / point.w, 0.0, SELECT_H)
+        };
+    }
+
+    /** L'echelle de la page : deux tiers de la hauteur de l'ecran. */
+    private double viewScale() {
+        return height * VIEW_HEIGHT_PART / PAGE_H;
+    }
+
+    /** Le curseur glisse vers sa cible, a la vitesse de l'original. */
+    private static double balance(double from, double to, double step) {
+        double distance = to - from;
+        if (Math.abs(distance) <= step) return to;
+        return from + Math.signum(distance) * step;
     }
 
     private static boolean inside(double x, double y, double left, double top, double width,

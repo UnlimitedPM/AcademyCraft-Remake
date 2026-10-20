@@ -1,13 +1,17 @@
 package cn.academy.terminal.client;
 
+import cn.academy.AcademyCraft;
 import cn.academy.client.gui.AcademyFonts;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 /**
  * L'installation du terminal de donnees : la barre de progression de l'original.
@@ -17,20 +21,20 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * 147 sur 6, un creux de 146 sur 5, la part remplie de 145 sur 4, et au-dessus le mot
  * « Installing... » sur son propre fond gris.
  *
- * <p>Ses temps sont ceux de l'original, au centieme :
- * <ul>
- *   <li><b>4 secondes</b> de remplissage ({@code ANIM_LENGTH}) ;</li>
- *   <li>puis <b>0,7 seconde</b> d'attente ({@code WAIT}) avant d'ouvrir le terminal ;</li>
- *   <li>apparition en 0,2 s, disparition en 0,2 s apres les 4 secondes ;</li>
- *   <li>le texte garde un dixieme d'opacite meme efface, comme dans son {@code initBlender}.</li>
- * </ul>
+ * <p>C'est un <b>calque</b>, pas un ecran : chez l'original c'etait un {@code AuxGui}, dessine
+ * par-dessus le jeu sans lui prendre la main — on continue de marcher pendant l'installation.
+ * La barre est donc dessinee apres le HUD, et le jeu ne se met ni en pause ni en attente.
  *
- * <p>A la fin, elle ouvre le terminal et dit dans le chat quelle touche l'ouvre — avec le nom
- * <b>reel</b> de la touche du joueur, ce que l'original faisait aussi (il lisait son
- * gestionnaire de touches).
+ * <p>Ses temps sont ceux de l'original : <b>4 secondes</b> de remplissage, puis <b>0,7
+ * seconde</b> d'attente avant d'ouvrir le terminal ; apparition en 0,2 s, disparition en 0,2 s
+ * apres les 4 secondes. Le texte garde un dixieme d'opacite meme efface, comme dans son
+ * {@code initBlender}.
+ *
+ * <p>A la fin, elle ouvre le terminal — la, le jeu prend la main — et dit dans le chat quelle
+ * touche l'ouvre, avec le nom <b>reel</b> de la touche du joueur.
  */
-@OnlyIn(Dist.CLIENT)
-public class TerminalInstallScreen extends Screen {
+@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
+public final class TerminalInstallOverlay {
 
     /** Les temps de l'original, en secondes. */
     private static final double LENGTH = 4.0;
@@ -39,6 +43,8 @@ public class TerminalInstallScreen extends Screen {
     private static final double BLEND_OUT = 0.2;
 
     /** Le document : la barre, son liseré, son creux, sa part remplie, et son etiquette. */
+    private static final double BAR_X = 164.0;
+    private static final double BAR_Y = 203.0;
     private static final double BAR_W = 150.0;
     private static final double BAR_H = 9.0;
     private static final double OUTLINE_W = 147.0;
@@ -56,29 +62,51 @@ public class TerminalInstallScreen extends Screen {
     private static final int COVER = 0xC81E1E1E;
     private static final int PROGRESS = 0xC8FFFFFF;
 
-    /** L'endroit de la barre dans la fenetre : le document la posait aux quatre cinquiemes. */
-    private static final double BAR_Y_PART = 0.846;
+    /** L'instant du debut, ou -1 quand il n'y a rien a montrer. */
+    private static long startNano = -1L;
 
-    private final long startNano = System.nanoTime();
+    private TerminalInstallOverlay() {}
 
-    /** Vrai une fois le terminal ouvert : la barre ne doit pas le rouvrir. */
-    private boolean finished;
-
-    public TerminalInstallScreen() {
-        super(Component.empty());
+    /** Demarre l'animation. Appelee quand le serveur dit que le terminal vient d'arriver. */
+    public static void start() {
+        startNano = System.nanoTime();
     }
 
-    @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public static boolean isRunning() {
+        return startNano >= 0;
+    }
+
+    /**
+     * La barre, par-dessus le HUD.
+     *
+     * <p>Le crochet est {@code Post} de la hotbar : c'est le dernier calque du jeu, donc la
+     * barre passe devant tout — et surtout, on continue de voir le monde et de marcher.
+     */
+    @SubscribeEvent
+    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+        if (startNano < 0) return;
+        if (!event.getOverlay().id().equals(VanillaGuiOverlay.HOTBAR.id())) return;
+
+        draw(event.getGuiGraphics());
+    }
+
+    /** La fin de l'animation : le terminal s'ouvre, et le jeu reprend la main. */
+    @SubscribeEvent
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || startNano < 0) return;
+        if (elapsed() >= LENGTH + WAIT) finish();
+    }
+
+    private static void draw(GuiGraphics graphics) {
         double time = elapsed();
         double fade = fade(time);
+        Minecraft minecraft = Minecraft.getInstance();
 
-        double left = (width - BAR_W) / 2.0;
-        double top = height * BAR_Y_PART;
+        double left = BAR_X;
+        double top = BAR_Y;
         double middleX = left + BAR_W / 2.0;
         double middleY = top + BAR_H / 2.0;
 
-        // Le fond de la barre.
         fill(graphics, left, top, BAR_W, BAR_H, scaleAlpha(BACK, fade));
         fill(graphics, middleX - OUTLINE_W / 2, middleY - OUTLINE_H / 2, OUTLINE_W, OUTLINE_H,
                 scaleAlpha(OUTLINE, fade));
@@ -94,13 +122,9 @@ public class TerminalInstallScreen extends Screen {
         fill(graphics, left, top - TAG_H, BAR_W, TAG_H, scaleAlpha(BACK, fade));
         String tag = Component.translatable("ac.gui.terminal.installing").getString();
         int textAlpha = (int) Math.round(255 * (0.1 + 0.9 * fade));
-        AcademyFonts.drawTop(graphics, font, fit(tag, BAR_W - 2, TAG_CELL), (int) Math.round(left),
-                (int) Math.round(top - TAG_H), (textAlpha << 24) | 0x00FFFFFF, TAG_CELL);
-    }
-
-    @Override
-    public void tick() {
-        if (!finished && elapsed() >= LENGTH + WAIT) finish();
+        AcademyFonts.drawTop(graphics, minecraft.font, fit(tag, BAR_W - 2, TAG_CELL),
+                (int) Math.round(left), (int) Math.round(top - TAG_H),
+                (textAlpha << 24) | 0x00FFFFFF, TAG_CELL);
     }
 
     /**
@@ -109,11 +133,13 @@ public class TerminalInstallScreen extends Screen {
      * <p>C'est l'ordre de l'original : {@code TerminalUI.keyHandler.onKeyUp()} puis le message
      * dans le chat.
      */
-    private void finish() {
-        finished = true;
+    private static void finish() {
+        startNano = -1L;
 
         Minecraft minecraft = Minecraft.getInstance();
-        minecraft.setScreen(new TerminalScreen());
+        // Un autre ecran ouvert (inventaire, discussion) garde la main : le terminal
+        // s'ouvrira par sa touche, comme d'habitude.
+        if (minecraft.screen == null) minecraft.setScreen(new TerminalScreen());
 
         if (minecraft.player != null) {
             String key = TerminalKeyBindings.OPEN_TERMINAL.getTranslatedKeyMessage().getString();
@@ -122,17 +148,7 @@ public class TerminalInstallScreen extends Screen {
         }
     }
 
-    @Override
-    public boolean isPauseScreen() {
-        // L'effet de l'original etait un overlay : le jeu continuait de tourner.
-        return false;
-    }
-
-    // ------------------------------------------------------------------
-    // Outils
-    // ------------------------------------------------------------------
-
-    private double elapsed() {
+    private static double elapsed() {
         return (System.nanoTime() - startNano) / 1_000_000_000.0;
     }
 

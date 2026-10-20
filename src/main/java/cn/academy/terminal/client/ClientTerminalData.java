@@ -21,21 +21,20 @@ public final class ClientTerminalData {
     }
 
     /**
-     * Met le cache a jour, et joue l'animation d'installation si le terminal vient d'arriver.
+     * Met le cache a jour, et lance l'animation d'installation si le terminal vient d'arriver.
      *
      * <p>C'est le {@code install} de l'original : son objet d'installation envoyait un message
      * a son client, qui ouvrait {@code TerminalInstallEffect}. Ici le meme drapeau voyage avec
      * l'etat, ce qui evite un second paquet pour un booleen.
+     *
+     * <p>L'animation est un <b>calque</b> : on continue de marcher pendant l'installation, et
+     * c'est le terminal qui prend la main a la fin — comme chez l'original, ou l'effet etait un
+     * {@code AuxGui} et le terminal un overlay qui detournait la souris.
      */
     public static void update(CompoundTag tag, boolean installedNow) {
         DATA.deserializeNBT(tag);
 
-        if (!installedNow) return;
-
-        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        // Un ecran deja ouvert (inventaire, discussion) ne doit pas etre remplace sous les
-        // doigts du joueur : l'installation n'ouvre l'animation que si rien ne la cache.
-        if (minecraft.screen == null) minecraft.setScreen(new TerminalInstallScreen());
+        if (installedNow) TerminalInstallOverlay.start();
     }
 
     public static TerminalData get() {
