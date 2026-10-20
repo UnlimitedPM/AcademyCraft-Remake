@@ -96,7 +96,8 @@ public class ImagFusorCategory implements IRecipeCategory<ImagFusorRecipes.Recip
     @Override
     public void createRecipeExtras(mezz.jei.api.gui.widgets.IRecipeExtrasBuilder builder,
                                    ImagFusorRecipes.Recipe recipe, IFocusGroup focuses) {
-        builder.addDrawableWidget(new MachinePlaque(PAGE, WIDTH, HEIGHT, null,
+        builder.addDrawableWidget(new MachinePlaque(WIDTH, HEIGHT,
+                new MachinePlaque.Picture(PAGE, WIDTH, HEIGHT, 0, 0), null,
                 new MachinePlaque.Label(recipe.liquid() + " mB",
                         GAUGE_LEFT, GAUGE_RIGHT, GAUGE_Y)))
                 .setPosition(0, 0);

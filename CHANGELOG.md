@@ -33,7 +33,9 @@ loot table, and the whole game in four languages.
   fusion drinks, in millibuckets) — plus the generic refining, where every ore that smelts gives
   twice its furnace result. Both pages are drawn on **the original's own NEI sheets**
   (`nei_metalformer.png`, `nei_fusor.png`, shipped but never wired): the machine's schematic, with
-  IN, MODE and OUT, its slots in their place, the mode's icon and its name. Both machines are
+  IN, MODE and OUT, its slots in their place. The metal former adds a panel with the mode's icon **at
+  its native size** and its name: these icons are 48-pixel drawings that the machine reduces to 24,
+  where nothing is left but a white bell. Both machines are
   registered as catalysts, so the "uses" key on a metal former opens its recipes. JEI stays
   **optional**: it is a soft dependency, and the mod loads without it.
 - **CraftTweaker speaks to the machines.** `mods.academy.MetalFormer.addRecipe(<in>, <out>, "incise")`,
@@ -79,8 +81,9 @@ retravaillee, et tout le jeu en quatre langues.
   fusion boit, en millibassins) — plus le raffinage generique, ou tout minerai qui fond donne deux
   fois son resultat de four. Les deux pages sont dessinees sur **les planches NEI de l'original**
   (`nei_metalformer.png`, `nei_fusor.png`, livrees mais jamais branchees) : le schema de la
-  machine, avec IN, MODE et OUT, ses emplacements a leur place, l'icone du mode et son nom. Les
-  deux machines sont declarees comme catalyseurs : la touche "utilisations" sur un formeur ouvre
+  machine, avec IN, MODE et OUT, ses emplacements a leur place. Le formeur ajoute une case pour
+  l'icone de son mode, **a sa taille native**, et son nom : ces icones sont des dessins de 48
+  pixels que la machine reduit a 24, ou il ne reste qu'une cloche blanche. Les deux machines sont declarees comme catalyseurs : la touche "utilisations" sur un formeur ouvre
   ses recettes. JEI reste **facultatif**, en soft depend : le mod se lance sans lui.
 - **CraftTweaker parle aux machines.** `mods.academy.MetalFormer.addRecipe(<entree>, <sortie>, "incise")`,
   `removeRecipe(<sortie>)`, `removeRecipeByInput(<entree>, "plate")`, `removeAllRecipes()`, et la
