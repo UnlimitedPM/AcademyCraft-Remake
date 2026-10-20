@@ -467,11 +467,12 @@ public class ModItems {
             if (!player.getAbilities().instabuild) stack.shrink(1);
             data.install();
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                cn.academy.terminal.TerminalEvents.sync(serverPlayer);
+                // Le drapeau allume l'animation d'installation cote client, et le message qui
+                // donne la touche part a la FIN de cette animation, comme dans l'original.
+                cn.academy.terminal.TerminalEvents.sync(serverPlayer, true);
                 cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
                         cn.academy.advancements.AcademyAdvancements.TERMINAL_INSTALLED);
             }
-            player.displayClientMessage(Component.translatable("ac.terminal.key_hint"), false);
             return InteractionResultHolder.success(stack);
         }
     }

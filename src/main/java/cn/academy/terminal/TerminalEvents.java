@@ -57,12 +57,23 @@ public class TerminalEvents {
 
     /** Envoie l'etat courant au joueur. A appeler apres toute installation. */
     public static void sync(ServerPlayer player) {
+        sync(player, false);
+    }
+
+    /**
+     * Envoie l'etat courant, en disant si le terminal vient d'etre installe.
+     *
+     * <p>Le drapeau n'est pas une commodite : c'est ce qui declenche l'animation
+     * d'installation cote client, exactement comme le message {@code install} que
+     * l'original envoyait a son propre client depuis l'objet.
+     */
+    public static void sync(ServerPlayer player, boolean installedNow) {
         // Un faux joueur — celui des tests headless — n'a pas de vraie connexion :
         // lui envoyer un paquet laisserait une exception. C'est la seule exception
         // a l'envoi, et elle ne concerne aucun joueur en jeu.
         if (player instanceof net.minecraftforge.common.util.FakePlayer) return;
         player.getCapability(TerminalCapability.TERMINAL_DATA).ifPresent(data ->
                 AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new SyncTerminalDataPacket(data)));
+                        new SyncTerminalDataPacket(data, installedNow)));
     }
 }

@@ -20,25 +20,36 @@ public class SyncTerminalDataPacket {
 
     private final CompoundTag data;
 
+    /** Vrai quand le terminal vient d'etre installe : le client joue alors son animation. */
+    private final boolean installedNow;
+
     public SyncTerminalDataPacket(TerminalData data) {
-        this.data = data.serializeNBT();
+        this(data, false);
     }
 
-    private SyncTerminalDataPacket(CompoundTag tag) {
+    public SyncTerminalDataPacket(TerminalData data, boolean installedNow) {
+        this.data = data.serializeNBT();
+        this.installedNow = installedNow;
+    }
+
+    private SyncTerminalDataPacket(CompoundTag tag, boolean installedNow) {
         this.data = tag;
+        this.installedNow = installedNow;
     }
 
     public static void encode(SyncTerminalDataPacket msg, FriendlyByteBuf buf) {
         buf.writeNbt(msg.data);
+        buf.writeBoolean(msg.installedNow);
     }
 
     public static SyncTerminalDataPacket decode(FriendlyByteBuf buf) {
-        return new SyncTerminalDataPacket(buf.readNbt());
+        CompoundTag tag = buf.readNbt();
+        return new SyncTerminalDataPacket(tag, buf.readBoolean());
     }
 
     public static void handle(SyncTerminalDataPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> ClientTerminalData.update(msg.data));
+        ctx.enqueueWork(() -> ClientTerminalData.update(msg.data, msg.installedNow));
         ctx.setPacketHandled(true);
     }
 }
