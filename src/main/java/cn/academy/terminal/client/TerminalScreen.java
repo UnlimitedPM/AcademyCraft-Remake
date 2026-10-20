@@ -86,10 +86,10 @@ public class TerminalScreen extends Screen {
     private static final double SELECT_W = 605.0;
     private static final double SELECT_H = 740.0;
 
-    /** L'icone et le nom, dans une case. */
-    private static final double ICON_X = 40.0;
-    private static final double ICON_Y = 50.0;
-    private static final double ICON_SIZE = 50.0;
+    /** L'icone et le nom, dans une case : l'icone est grande — 110 sur 151, comme le document. */
+    private static final double ICON_X = 9.0;
+    private static final double ICON_Y = 32.0;
+    private static final double ICON_SIZE = 110.0;
     private static final double LABEL_Y = 148.0;
     private static final int LABEL_CELL = 32;
 
@@ -136,21 +136,21 @@ public class TerminalScreen extends Screen {
      * La part de la hauteur d'ecran que prend la page.
      *
      * <p>L'original la posait en unites du monde, devant un regard a 50 degres : sa taille a
-     * l'ecran suivait donc celle de la fenetre. Ici la meme regle, en clair : deux tiers de la
-     * hauteur, ce qui laisse le panneau sur la droite sans manger tout l'ecran.
+     * l'ecran suivait donc celle de la fenetre. Ici la meme regle, en clair : les trois quarts
+     * de la hauteur, comme son panneau vu de biais.
      */
-    private static final double VIEW_HEIGHT_PART = 0.66;
+    private static final double VIEW_HEIGHT_PART = 0.80;
 
     /** Sa place : trois quarts a droite, un peu au-dessus du milieu — la ou son regard la posait. */
     private static final double VIEW_X = 0.74;
     private static final double VIEW_Y = 0.52;
 
-    /** Les angles de l'original, et ce que la souris y ajoute. */
-    private static final double BASE_YAW = -18.0;
+    /** Les angles de l'original : son lacet, son tangage, son roulis, et le mouvement de la souris. */
+    private static final double BASE_YAW = 15.0;
     private static final double YAW_SWING = 4.0;
-    private static final double BASE_PITCH = 7.0;
+    private static final double BASE_PITCH = 19.0;
     private static final double PITCH_SWING = 4.0;
-    private static final double BASE_ROLL = -1.6;
+    private static final double BASE_ROLL = 0.8;
 
     /** Le curseur glisse vers sa cible a cette vitesse, en unites par seconde. */
     private static final double BALANCE_SPEED = 3000.0;
@@ -237,7 +237,7 @@ public class TerminalScreen extends Screen {
         graphics.pose().pushPose();
         graphics.pose().mulPoseMatrix(sceneMatrix(buffX, buffY));
 
-        image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 640, 785);
+        image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 268, 327);
         drawHeader(graphics);
         drawApps(graphics, buffX, buffY);
         drawArrows(graphics);
@@ -320,11 +320,11 @@ public class TerminalScreen extends Screen {
     private void drawArrows(GuiGraphics graphics) {
         if (scroll > 0) {
             image(graphics, TEX_ARROW_UP, (PAGE_W - ARROW_W) / 2, ARROW_UP_Y, ARROW_W, ARROW_H,
-                    100, 25);
+                    64, 17);
         }
         if (scroll < maxScroll()) {
             image(graphics, TEX_ARROW_DOWN, (PAGE_W - ARROW_W) / 2, ARROW_DOWN_Y, ARROW_W,
-                    ARROW_H, 100, 25);
+                    ARROW_H, 64, 17);
         }
     }
 
@@ -343,7 +343,7 @@ public class TerminalScreen extends Screen {
         RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA,
                 GlStateManager.DestFactor.ONE);
         imageAlpha(graphics, TEX_CURSOR, pageX - size / 2, pageY - size / 2, size, size,
-                20, 20, CURSOR_ALPHA);
+                32, 32, CURSOR_ALPHA);
         RenderSystem.defaultBlendFunc();
     }
 
@@ -465,8 +465,11 @@ public class TerminalScreen extends Screen {
         Matrix4f scene = new Matrix4f();
         scene.translate((float) (width * VIEW_X), (float) (height * VIEW_Y), 0.0f);
         scene.rotateZ((float) Math.toRadians(BASE_ROLL));
-        scene.rotateY((float) Math.toRadians(yaw));
+        // L'ordre compte : le lacet d'abord, le tangage ensuite. C'est ce qui incline le
+        // BORD HAUT de la page en laissant ses cotes verticaux, comme sur sa capture —
+        // l'inverse penche les cotes et laisse les bords horizontaux.
         scene.rotateX((float) Math.toRadians(pitch));
+        scene.rotateY((float) Math.toRadians(yaw));
         scene.scale((float) viewScale(), (float) viewScale(), 1.0f);
         scene.translate((float) (-PAGE_W / 2.0), (float) (-PAGE_H / 2.0), 0.0f);
         return scene;
