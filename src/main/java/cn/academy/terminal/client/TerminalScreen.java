@@ -25,6 +25,8 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL30;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -214,6 +216,12 @@ public class TerminalScreen extends Screen {
     private boolean chatMode;
     private String chatText = "";
 
+    /** Le premier caractere apres l'ouverture est avale (la touche du chat le produit aussi). */
+    private boolean swallowChar;
+
+    /** Instant de l'ouverture, pour ignorer une repetition de la meme touche. */
+    private long chatOpenedAt;
+
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
         this.apps = installedApps();
@@ -311,6 +319,9 @@ public class TerminalScreen extends Screen {
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (chatMode) {
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                // Entree gardee enfoncee repete l'evenement : ouvrir puis envoyer tout de suite
+                // donnait l'impression d'un double appui (« comme si j'appuyais 2 fois »).
+                if (System.currentTimeMillis() - chatOpenedAt < 150L) return true;
                 sendChat();
                 return true;
             }
@@ -333,6 +344,11 @@ public class TerminalScreen extends Screen {
         if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
             chatMode = true;
             chatText = "";
+            // La touche qui ouvre le chat produit AUSSI son caractere (T ecrivait « t »). On avale
+            // le premier caractere, et on note l'instant pour qu'une repetition de la meme touche
+            // (Entree gardee enfoncee) ne referme pas la ligne tout de suite.
+            swallowChar = true;
+            chatOpenedAt = System.currentTimeMillis();
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -341,6 +357,10 @@ public class TerminalScreen extends Screen {
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
         if (!chatMode) return super.charTyped(codePoint, modifiers);
+        if (swallowChar) {
+            swallowChar = false;
+            return true;
+        }
         if (chatText.length() < 250 && !Character.isISOControl(codePoint)) {
             chatText += codePoint;
         }
@@ -365,7 +385,9 @@ public class TerminalScreen extends Screen {
         int top = height - 14;
         graphics.fill(2, top, width - 2, height - 2, 0x80000000);
         String caret = (System.currentTimeMillis() / 500L) % 2L == 0L ? "_" : "";
-        AcademyFonts.drawTop(graphics, font, chatText + caret, 4, top + 3, 0xFFFFFFFF, 10);
+        // LA POLICE DU JEU, pas celle du mod : la ligne s'ecrit comme le chat du jeu (le joueur :
+        // « quand j'ecris dans le chat c'est ecrit avec la police d'ecriture de windows »).
+        graphics.drawString(font, chatText + caret, 4, top + 3, 0xFFFFFFFF);
     }
 
     @Override
@@ -416,17 +438,16 @@ public class TerminalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        confineCursor();
-        // Le terminal de l'original flottait sur le jeu sans l'assombrir : il ne prend donc
-        // pas le fond des contenants, et le jeu ne se met pas en pause.
-        //
-        // La souris est d'abord ramenee dans la page avec la scene de l'image precedente,
-        // puis le curseur glisse vers elle : c'est lui qui incline la scene, donc il faut
-        // le connaitre avant de poser la matrice.
-        double[] target = pageAt(mouseX, mouseY);
-        double step = BALANCE_SPEED * (minecraft == null ? 0.016 : minecraft.getDeltaFrameTime());
-        buffX = balance(buffX, target[0], step);
-        buffY = balance(buffY, target[1], step);
+        // PENDANT LA SAISIE DU CHAT, LA SOURIS NE BOUGE PLUS : ni le halo, ni la page. Le joueur :
+        // « je ne veux pas non plus pouvoir la bouger pendant que le chat est ouvert ». On ne lit
+        // donc plus la souris du tout tant que la ligne est ouverte.
+        if (!chatMode) {
+            confineCursor();
+            double[] target = pageAt(mouseX, mouseY);
+            double step = BALANCE_SPEED * (minecraft == null ? 0.016 : minecraft.getDeltaFrameTime());
+            buffX = balance(buffX, target[0], step);
+            buffY = balance(buffY, target[1], step);
+        }
 
         frameCamera = buildCamera(yawNow(), pitchNow());
 
@@ -685,6 +706,10 @@ public class TerminalScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (chatMode) {
+            // La page ne se manipule pas pendant la saisie : la souris y est figee.
+            return true;
+        }
         if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
             return super.mouseClicked(mouseX, mouseY, button);
         }
@@ -957,8 +982,19 @@ public class TerminalScreen extends Screen {
         var loaded = Minecraft.getInstance().getTextureManager().getTexture(texture, null);
         if (loaded == null) return;
 
-        GlStateManager._bindTexture(loaded.getId());
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+        int id = loaded.getId();
+        GlStateManager._bindTexture(id);
+
+        // Les MIPMAPS sont ce qui enleve vraiment les escaliers : une icone de 110 px dessinee
+        // sur ~85 px ne lit que quatre texels par pixel, et le filtrage lineaire seul n'y peut
+        // rien. On autorise les niveaux, on les fabrique, puis on demande un filtrage ENTRE deux
+        // niveaux (le joueur a demande « un peu plus fort » que le lineaire simple).
+        // A la main, pas par AbstractTexture.setFilter : celui-ci rappelle prepareImage, qui
+        // reouvre les niveaux avec des donnees nulles et VIDERait la texture.
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12.GL_TEXTURE_MAX_LEVEL, 4);
+        GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER,
+                GL11.GL_LINEAR_MIPMAP_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GlStateManager._bindTexture(0);
     }
