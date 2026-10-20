@@ -10,6 +10,7 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -170,7 +171,16 @@ public class TerminalScreen extends Screen {
     private static final double YAW_SWING = 4.0;
     private static final double BASE_PITCH = 7.0;
     private static final double PITCH_SWING = 4.0;
-    private static final double BASE_ROLL = -1.6;
+    /**
+     * Le roulis est POSITIF, comme le lacet.
+     *
+     * <p>Le joueur : « on a l'impression que la fenetre regarde la droite ». Ce qui donnait
+     * cette impression n'etait pas le lacet mais le ROULIS : les deux cotes de la page
+     * penchaient vers la droite en descendant. Sur sa capture les cotes penchent vers la
+     * GAUCHE (le bord gauche passe de 1160 a 1150 entre le haut et le bas), donc le signe
+     * est inverse chez nous, comme celui du lacet.
+     */
+    private static final double BASE_ROLL = 1.6;
 
     /** Le curseur glisse vers sa cible a cette vitesse, en unites par seconde. */
     private static final double BALANCE_SPEED = 3000.0;
@@ -198,6 +208,9 @@ public class TerminalScreen extends Screen {
     private double buffX = SELECT_W / 2;
     private double buffY = SELECT_H / 2;
 
+    /** Vrai quand la page a cede la main au chat : elle reprend la main a sa fermeture. */
+    private static boolean chatReturn;
+
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
         this.apps = installedApps();
@@ -212,41 +225,79 @@ public class TerminalScreen extends Screen {
     }
 
     /**
-     * Garde la VRAIE souris dans la fenetre.
+     * Garde la VRAIE souris DANS LE TERMINAL.
      *
      * <p>Le halo de la page est borne (0..605, 0..740), mais cela n'empechait pas le pointeur
      * du systeme de sortir : en multi-ecran il passait sur le voisin et le clic changeait de
-     * fenetre. On ne peut pas detourner le pointeur comme le faisait le {@code MouseHelper} de
-     * l'original (un ecran recoit des coordonnees absolues), donc on le RAPPORTE au bord des
-     * qu'il le depasse.
+     * fenetre. Le joueur a demande la meme limite que le curseur dessine, donc on borne le
+     * pointeur au RECTANGLE DE LA PAGE (sa boite a l'ecran), et non a la fenetre du jeu.
+     *
+     * <p>Un ecran recoit des coordonnees absolues : on ne peut pas detourner le pointeur comme
+     * le faisait le {@code MouseHelper} de l'original, on le rapporte donc au bord des qu'il
+     * le depasse (une fois par image, ce qui suffit a le retenir).
      */
     private void confineCursor() {
-        long handle = Minecraft.getInstance().getWindow().getWindow();
+        Matrix4f scene = sceneMatrix(buffX, buffY);
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE;
+        double[][] corners = { { 0, 0 }, { PAGE_W, 0 }, { 0, PAGE_H }, { PAGE_W, PAGE_H } };
+        for (double[] corner : corners) {
+            Vector4f point = new Vector4f((float) corner[0], (float) corner[1], 0.0f, 1.0f);
+            scene.transform(point);
+            minX = Math.min(minX, point.x);
+            maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+
+        var window = Minecraft.getInstance().getWindow();
+        double sx = window.getWidth() / (double) Math.max(1, width);
+        double sy = window.getHeight() / (double) Math.max(1, height);
+        double loX = Math.max(1.0, minX * sx);
+        double hiX = Math.min(window.getWidth() - 2.0, maxX * sx);
+        double loY = Math.max(1.0, minY * sy);
+        double hiY = Math.min(window.getHeight() - 2.0, maxY * sy);
+
+        long handle = window.getWindow();
         double[] x = new double[1], y = new double[1];
         GLFW.glfwGetCursorPos(handle, x, y);
-        double maxX = Minecraft.getInstance().getWindow().getWidth() - 2.0;
-        double maxY = Minecraft.getInstance().getWindow().getHeight() - 2.0;
-        double cx = Math.max(1.0, Math.min(maxX, x[0]));
-        double cy = Math.max(1.0, Math.min(maxY, y[0]));
+        double cx = Math.max(loX, Math.min(hiX, x[0]));
+        double cy = Math.max(loY, Math.min(hiY, y[0]));
         if (cx != x[0] || cy != y[0]) {
             GLFW.glfwSetCursorPos(handle, cx, cy);
         }
     }
 
     /**
-     * La touche du terminal le referme.
+     * Une touche du jeu, dans la page : le terminal se referme, et le CHAT s'ouvre.
      *
      * <p>Un {@code KeyMapping} ne rend ses clics que hors d'un ecran (son contexte est
      * {@code IN_GAME}) : ouvert, c'est donc a la page de reconnaitre SA touche. C'est ce que
      * faisait l'original, dont la meme touche allumait et eteignait l'overlay.
+     *
+     * <p>Le chat s'ouvre par-dessus (le terminal est un calque, il ne met pas le jeu en pause) et
+     * revient a sa fermeture : c'est `chatReturn`, lu par {@code TerminalKeyBindings}.
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == TerminalKeyBindings.OPEN_TERMINAL.getKey().getValue()) {
+            chatReturn = false;
             onClose();
             return true;
         }
+        if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
+            chatReturn = true;
+            minecraft.setScreen(new ChatScreen(""));
+            return true;
+        }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /** Vrai une seule fois : la page reprend la main des que le chat se ferme. */
+    public static boolean takeChatReturn() {
+        boolean was = chatReturn;
+        chatReturn = false;
+        return was;
     }
 
     @Override
@@ -525,11 +576,11 @@ public class TerminalScreen extends Screen {
     private Matrix4f sceneMatrix(double cursorX, double cursorY) {
         double time = (System.nanoTime() - openedNano) / 1_000_000_000.0;
 
-        // Les deux balayages sont INVERSEs (le joueur : « quand je mets la souris vers la
-        // droite ca penche vers la droite, ca doit aller dans le sens inverse » ; « quand on
-        // regarde vers le bas ca doit pencher vers le haut »). C'est la meme cause que le
-        // lacet : nos coordonnees d'ecran ont Y vers le bas.
-        double yaw = BASE_YAW + YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
+        // Le balayage HORIZONTAL est inverse, celui du TANGAGE l'etait deja. Attention au piege
+        // qui a coute deux essais : inverser a la fois le lacet de base ET son balayage ne
+        // change RIEN au sens du mouvement (c'est -(base + balayage)), il faut retourner le
+        // balayage SEUL.
+        double yaw = BASE_YAW - YAW_SWING * (cursorX / SELECT_W - 0.5) + Math.sin(time);
         double pitch = BASE_PITCH - PITCH_SWING * (cursorY / SELECT_H - 0.5);
 
         Matrix4f scene = new Matrix4f();

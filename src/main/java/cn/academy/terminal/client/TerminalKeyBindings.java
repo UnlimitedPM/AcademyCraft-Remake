@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.client.event.ScreenEvent;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -44,5 +45,21 @@ public class TerminalKeyBindings {
         if (!ClientTerminalData.get().isTerminalInstalled()) return;
 
         minecraft.setScreen(new TerminalScreen());
+    }
+
+    /**
+     * Le terminal revient quand le chat qu'il a ouvert se referme.
+     *
+     * <p>La page est un calque qui ne met pas le jeu en pause : elle laisse donc le chat
+     * s'ouvrir par-dessus, et le joueur retrouve son terminal en quittant le chat (Entree ou
+     * Echap). Sans ce retour, ecrire dans le chat fermerait le terminal pour de bon.
+     */
+    @SubscribeEvent
+    public static void onScreenClosing(ScreenEvent.Closing event) {
+        if (!(event.getScreen() instanceof net.minecraft.client.gui.screens.ChatScreen)) return;
+        if (!TerminalScreen.takeChatReturn()) return;
+
+        var minecraft = net.minecraft.client.Minecraft.getInstance();
+        minecraft.execute(() -> minecraft.setScreen(new TerminalScreen()));
     }
 }
