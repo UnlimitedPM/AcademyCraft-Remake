@@ -2,6 +2,7 @@ package cn.academy.terminal.client;
 
 import cn.academy.AcademyCraft;
 import cn.academy.client.gui.AcademyFonts;
+import cn.academy.client.gui.GuiTextures;
 import cn.academy.terminal.about.AboutDocument;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.Util;
@@ -89,10 +90,19 @@ public class AboutScreen extends Screen {
     private static final double DONATOR_W = 150.0;
     private static final double DONATOR_MARGIN = 30.0;
 
-    /** Les couleurs de l'original : texte, lien, lien survole, onglet ouvert. */
+    /**
+     * Les couleurs de l'original : texte, lien, lien survole, onglet ouvert.
+     *
+     * <p>ATTENTION A L'ORDRE : l'original ecrit ses liens en {@code 0xRRGGBBAA}
+     * ({@code Colors.fromRGBA32(0x5bb4ffff)}), alors que la police du port attend
+     * {@code 0xAARRGGBB}. Garder la valeur de l'original telle quelle donnait un alpha de 91 et un
+     * texte (180 ; 255 ; 255) a 36 % : un vert d'eau delave au lieu d'un bleu — « Patreon doit
+     * etre ecrit en bleu et la il est en vert ». Mesure sur la capture : (89 ; 116 ; 114),
+     * exactement le melange de (180 ; 255 ; 255) a 0,357 sur le fond sombre.
+     */
     private static final int TEXT_COLOUR = 0xFFFFFFFF;
-    private static final int LINK_COLOUR = 0x5BB4FFFF;
-    private static final int LINK_HOVER = 0x8ECBFFFF;
+    private static final int LINK_COLOUR = 0xFF5BB4FF;
+    private static final int LINK_HOVER = 0xFF8ECBFF;
     private static final int TAB_TEXT_ON = 0xFF3D3F4B;
     private static final int TAB_TEXT_OFF = 0xFFFFFFFF;
     private static final int TAB_FILL_ON = 0x80FFFFFF;
@@ -293,6 +303,14 @@ public class AboutScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
+
+        // La page est reduite a un QUART : au plus proche voisin ses bords sortent en escalier.
+        // L'original charge cette texture avec ses mipmaps (`preloadMipmapTexture("guis/about/bg")`,
+        // donc GL_LINEAR_MIPMAP_LINEAR) : c'est de la que vient son flou — le joueur : « dans le
+        // vrai mod on ne voit pas les bords de l'anti creusage, on dirait que c'est un peu
+        // floute ». A 742 dessine sur 185, le niveau 2 est exactement la taille de l'ecran.
+        GuiTextures.smoothMipmapped(TEX_BG);
+        GuiTextures.smoothMipmapped(TEX_GLOW);
 
         hoveredUrl = null;
 
@@ -521,5 +539,11 @@ public class AboutScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    /** Fermer l'application rend le terminal, qui n'a jamais ete ferme. */
+    @Override
+    public void onClose() {
+        AppScreens.close();
     }
 }
