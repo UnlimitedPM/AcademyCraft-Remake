@@ -48,6 +48,7 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 | **Interface** | the ability HUD, key hints, notifications, presets, the F4 debug console, and the ten machine screens on the rebuilt engine |
 | **World** | the mod's ores, the Imag phase liquid, the advancements |
 | **Integrations** | **JEI** (two recipe categories: the metal former's four modes, the imag fusor's phases, plus the generic refining of every ore that smelts) and **CraftTweaker** (`mods.academy.MetalFormer` and `mods.academy.ImagFusor` add or remove recipes from a script). Both are **optional**: without them the mod behaves exactly the same |
+| **Configuration** | `config/academy-common.toml`: the four control point tables per level (`initCp`, `addCp`, `initOverload`, `addOverload`, the original's `init_cp` and friends), a multiplier on every cost, cooldown and experience gain, the list of disabled skills, world generation, the damage scale, block breaking and PvP. Every option carries a comment in French then in English, and every number a bound |
 
 ### What is still missing
 
@@ -56,7 +57,7 @@ Honest list, so you know what you are testing:
 - **Frequency transmitter** — the item is decorative: linking a machine to its node, and a node to its network, is done from their own wireless tabs.
 - **Languages** — the mod speaks English, French, German, Spanish and Chinese. The original also had Japanese, Korean, Russian and Traditional Chinese.
 - **Media player** — it plays its three built-in tracks, but without covers and without a progress bar.
-- **Per-skill configuration** — you cannot disable a skill or tune its cost yet.
+- **Per-skill cost multipliers** — the 1.12.2 kept one file per skill (`cp_consume_speed`, `overload_consume_speed`, `exp_incr_speed`). Here the cost, cooldown and experience multipliers are global, and a skill is switched on or off from `ability.disabledSkills`. Damage and range stay in the code, where the original kept them too.
 - **EU (IC2) / RF conversion** blocks.
 
 ### Building from source
@@ -106,14 +107,15 @@ Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est u
 6. **Alimenter une machine.** Posez un **nœud sans fil** et une **matrice**, ouvrez une machine (générateur solaire, éolien ou de phase, fusor d'imag, formeur de métal, brouilleur d'aptitude) et passez par son **onglet sans fil** : la liste montre les nœuds à portée, du plus proche au plus loin. Cliquez l'icône de connexion d'un nœud, tapez son mot de passe s'il en a un, et l'icône du cadre « Connected » vous en déconnecte. Une machine que vous déconnectez reste déconnectée : elle ne se raccroche pas toute seule au tick suivant. Le **nœud** fait la même chose dans l'autre sens : c'est son propre onglet sans fil qui choisit la matrice qu'il rejoint.
 ### Ce que contient cette première version
 
-Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; l'onglet sans fil de chaque machine, où l'on choisit le nœud qui l'alimente, et celui de chaque nœud, où l'on choisit le réseau qu'il rejoint ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès ; et les deux intégrations facultatives, **JEI** (les recettes du formeur de métal et du fusor d'imag dans leurs propres catégories, raffinage générique des minerais compris) et **CraftTweaker** (`mods.academy.MetalFormer` et `mods.academy.ImagFusor` pour ajouter ou retirer des recettes depuis un script).
+Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; l'onglet sans fil de chaque machine, où l'on choisit le nœud qui l'alimente, et celui de chaque nœud, où l'on choisit le réseau qu'il rejoint ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès ; les deux intégrations facultatives, **JEI** (les recettes du formeur de métal et du fusor d'imag dans leurs propres catégories, raffinage générique des minerais compris) et **CraftTweaker** (`mods.academy.MetalFormer` et `mods.academy.ImagFusor` pour ajouter ou retirer des recettes depuis un script) ; et la **configuration** (`config/academy-common.toml`) : les quatre tables de points de contrôle par niveau (`initCp`, `addCp`, `initOverload`, `addOverload`, les `init_cp` de l'original), un multiplicateur sur chaque coût, chaque recharge et chaque gain d'expérience, la liste des compétences désactivées, la génération du monde, l'échelle des dégâts, le cassage de blocs et le PvP — chaque réglage commenté en français puis en anglais, et chaque nombre borné.
 
 ### Ce qu'il manque encore
 
 - **L'émetteur de fréquence** : l'objet est décoratif ; c'est l'onglet sans fil de la machine et celui du nœud qui font les raccordements.
 - **Les langues** : le mod parle anglais, français, allemand, espagnol et chinois. L'original en avait aussi quatre autres (japonais, coréen, russe, chinois traditionnel).
 - **Le lecteur média** : il joue ses trois morceaux, mais sans pochettes ni barre de progression.
-- **La configuration par compétence**, et les blocs de conversion **EU (IC2) / RF**.
+- **Les multiplicateurs par compétence** : la 1.12.2 tenait un fichier par compétence (`cp_consume_speed`, `overload_consume_speed`, `exp_incr_speed`). Ici les multiplicateurs de coût, de recharge et d'expérience sont globaux, et une compétence s'allume ou s'éteint dans `ability.disabledSkills`. Les dégâts et les portées restent dans le code, comme dans l'original.
+- **Les blocs de conversion EU (IC2) / RF**.
 
 ### Compiler depuis les sources
 

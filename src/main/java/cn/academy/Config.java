@@ -11,14 +11,27 @@ import java.util.List;
 /**
  * Configuration du mod (fichier {@code config/academy-common.toml}).
  *
- * Portage de l'ancien {@code config/academy-craft-data.conf} (HOCON) de la 1.12.2.
- * L'original exposait beaucoup plus de reglages via un systeme de donnees complexe
- * (courbes de CP par niveau, difficultes par entite pour VecManip, activation
- * competence par competence...). On ne garde ici que les reglages que le port
- * honore reellement, plutot que d'exposer des valeurs mortes.
+ * <p>Portage de l'ancien {@code config/academy-craft-data.conf} (HOCON) de la 1.12.2. L'original
+ * exposait ses reglages par un systeme de donnees complexe ; le port garde ce qu'il honore
+ * reellement, plus les <b>tables de points de controle</b> et l'<b>interrupteur par competence</b>
+ * que l'original avait et qui manquaient ici.
  *
- * Les champs statiques sont initialises a leur valeur par defaut : un appel avant
- * le chargement de la config (datapack, biome modifier) reste donc coherent.
+ * <h2>Deux pieges, tous les deux payes</h2>
+ *
+ * <ul>
+ *   <li><b>Une liste se declare avec {@code defineList}</b> et un predicat. Un {@code define} sur
+ *       une liste ecrit le TYPE exact de la liste Java ({@code ImmutableCollections$ListN}) : le
+ *       jeu la juge alors toujours fausse et la remplace par le defaut a chaque lecture — le
+ *       reglage « ne se retient pas », sans une erreur ;</li>
+ *   <li><b>toute option se declare AVANT {@code SPEC = BUILDER.build()}</b> : apres, elle compile
+ *       et n'est simplement jamais lue.</li>
+ * </ul>
+ *
+ * <p>Les champs statiques sont initialises a leur valeur par defaut : un appel avant le chargement
+ * de la config (datapack, biome modifier, test unitaire) reste donc coherent.
+ *
+ * <p>Chaque option porte son commentaire en francais PUIS en anglais, parce que le fichier est lu
+ * par les joueurs des deux langues et que le reste du projet fait deja ce choix.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class Config {
@@ -32,62 +45,197 @@ public final class Config {
     // ------------------------------------------------------------------
     private static final ForgeConfigSpec.BooleanValue GEN_ORES = BUILDER
             .comment("Genere les minerais d'AcademyCraft dans l'Overworld.",
-                     "Equivalent de genOres dans la 1.12.2.")
+                     "Equivalent de genOres dans la 1.12.2.",
+                     "Whether AcademyCraft's ores generate in the overworld (the 1.12.2 genOres).")
             .define("general.generateOres", true);
 
     private static final ForgeConfigSpec.BooleanValue GEN_PHASE_LIQUID = BUILDER
             .comment("Genere des poches de liquide Imag Phase sous terre.",
-                     "Equivalent de genPhaseLiquid dans la 1.12.2.")
+                     "Equivalent de genPhaseLiquid dans la 1.12.2.",
+                     "Whether pockets of Imag Phase liquid generate underground (the 1.12.2 genPhaseLiquid).")
             .define("general.generatePhaseLiquid", true);
 
     private static final ForgeConfigSpec.DoubleValue DAMAGE_SCALE = BUILDER
             .comment("Multiplicateur global des degats infliges par les competences.",
-                     "Equivalent de ac.ability.calc_global.damage_scale dans la 1.12.2.")
+                     "Equivalent de ac.ability.calc_global.damage_scale dans la 1.12.2.",
+                     "Global multiplier on the damage every skill deals (the 1.12.2 damage_scale).")
             .defineInRange("general.damageScale", 1.0d, 0.0d, 1000.0d);
+
+    private static final ForgeConfigSpec.BooleanValue DESTROY_BLOCKS = BUILDER
+            .comment("Autorise les competences a casser des blocs.",
+                     "Portage de generic.destroyBlocks de la 1.12.2 : les competences qui",
+                     "effacent des blocs le consultent avant de le faire.",
+                     "Whether skills may break blocks (the 1.12.2 generic.destroyBlocks).")
+            .define("general.destroyBlocks", true);
+
+    private static final ForgeConfigSpec.BooleanValue ATTACK_PLAYER = BUILDER
+            .comment("Autorise les competences a toucher d'autres joueurs (PvP).",
+                     "Portage de generic.attackPlayer de la 1.12.2, ou il valait vrai. Sans elle,",
+                     "une competence ne fait rien a un joueur : ni degats, ni recul.",
+                     "Whether skills may damage other players, i.e. PvP (the 1.12.2 attackPlayer).")
+            .define("general.attackPlayer", true);
+
+    private static final ForgeConfigSpec.BooleanValue HEADS_OR_TAILS = BUILDER
+            .comment("Annonce le resultat du lancer de piece (pile ou face).",
+                     "Portage de generic.headsOrTails de la 1.12.2, ou il valait faux.",
+                     "Whether a coin toss announces heads or tails (the 1.12.2 headsOrTails).")
+            .define("general.headsOrTails", false);
+
+    private static final ForgeConfigSpec.BooleanValue USE_MOUSE_WHEEL = BUILDER
+            .comment("La molette regle la distance du saut traversant ; sinon elle defile la barre.",
+                     "Portage de generic.useMouseWheel de la 1.12.2 — avec un ecart assume : il y",
+                     "valait faux, alors que le port a toujours regle la distance a la molette.",
+                     "Whether the mouse wheel sets the phase jump distance (the 1.12.2 useMouseWheel).")
+            .define("general.useMouseWheel", true);
+
+    /** Le cadeau de l'original : l'objet MisakaCloud, une fois, au premier joueur. */
+    private static final ForgeConfigSpec.BooleanValue GIVE_CLOUD_TERMINAL = BUILDER
+            .comment("Donne l'objet MisakaCloud au joueur, une seule fois, a sa premiere venue.",
+                     "Portage de generic.giveCloudTerminal de la 1.12.2.",
+                     "Whether the player receives the MisakaCloud item once (the 1.12.2 giveCloudTerminal).")
+            .define("general.giveCloudTerminal", true);
 
     // ------------------------------------------------------------------
     // Ability (Control Points)
     // ------------------------------------------------------------------
     private static final ForgeConfigSpec.DoubleValue CP_START = BUILDER
             .comment("Control Points d'un joueur qui n'a pas encore de categorie.",
-                     "Le plafond, lui, appartient au niveau : 1800 des le niveau 1, comme",
-                     "l'init_cp de la 1.12.2 (voir AbilityData.baseMaxControlPoint).",
-                     "Apprendre une categorie remplit la reserve de son niveau.")
+                     "Le plafond, lui, appartient au niveau : voir ability.initCp.",
+                     "Control points of a player who has no ability category yet.")
             .defineInRange("ability.controlPointStart", 100.0d, 0.0d, 1_000_000.0d);
 
     private static final ForgeConfigSpec.DoubleValue CP_REGEN_SPEED = BUILDER
             .comment("Vitesse de recuperation des Control Points.",
-                     "La reserve regagne une part de son PLAFOND par tick (0,0003 chez l'original,"
-                             + " doublee quand elle est pleine), donc ce reglage est un MULTIPLICATEUR :",
-                     "1.0 = la vitesse de l'original ; 0 = plus rien ne remonte tout seul.")
+                     "La reserve regagne une part de son PLAFOND par tick (0,0003 chez l'original,",
+                     "doublee quand elle est pleine), donc ce reglage est un MULTIPLICATEUR :",
+                     "1.0 = la vitesse de l'original ; 0 = plus rien ne remonte tout seul.",
+                     "Control point regeneration, as a multiplier: 1.0 is the 1.12.2 speed, 0 freezes it.")
             .defineInRange("ability.controlPointRegenSpeed", 1.0d, 0.0d, 100.0d);
 
     private static final ForgeConfigSpec.IntValue CP_RECOVER_COOLDOWN = BUILDER
             .comment("Ticks d'attente avant que la reserve ne se remette a remonter,",
-                     "apres chaque paiement. Repris de ac.ability.data.cp_recover_cooldown.")
+                     "apres chaque paiement. Repris de ac.ability.data.cp_recover_cooldown.",
+                     "Ticks of silence after a payment before the reserve regenerates again.")
             .defineInRange("ability.controlPointRecoverCooldown", 15, 0, 20_000);
 
     private static final ForgeConfigSpec.IntValue OVERLOAD_RECOVER_COOLDOWN = BUILDER
             .comment("Ticks d'attente avant que le surcout ne redescende.",
-                     "Repris de ac.ability.data.overload_recover_cooldown de la 1.12.2.")
+                     "Repris de ac.ability.data.overload_recover_cooldown de la 1.12.2.",
+                     "Ticks before the overload bar starts going down again.")
             .defineInRange("ability.overloadRecoverCooldown", 32, 0, 20_000);
 
     private static final ForgeConfigSpec.DoubleValue OVERLOAD_RECOVER_SPEED = BUILDER
             .comment("Vitesse de recuperation du surcout. 1.0 = celle de la 1.12.2,",
-                     "soit environ un dixieme de seconde par point sur une reserve pleine.")
+                     "soit environ un dixieme de seconde par point sur une reserve pleine.",
+                     "Overload recovery, as a multiplier: 1.0 is the 1.12.2 speed.")
             .defineInRange("ability.overloadRecoverSpeed", 1.0d, 0.0d, 1000.0d);
+
+    private static final ForgeConfigSpec.DoubleValue PROGRESS_INCR_RATE = BUILDER
+            .comment("Vitesse de progression des niveaux d'aptitude.",
+                     "1.0 = la valeur de la 1.12.2 : il faut remplir un palier en utilisant",
+                     "ses competences avant de pouvoir monter d'un niveau.",
+                     "Ability level progression speed: 1.0 is the 1.12.2 value.")
+            .defineInRange("ability.progressIncrRate", 1.0d, 0.01d, 1000.0d);
+
+    // ------------------------------------------------------------------
+    // Les tables de points de controle (init_cp, add_cp, init_overload, add_overload)
+    // ------------------------------------------------------------------
+
+    /** Les plafonds de l'original, du niveau 0 au niveau 5 : {@code init_cp}. */
+    private static final List<Double> DEFAULT_INIT_CP =
+            List.of(1800.0, 1800.0, 2800.0, 4000.0, 5800.0, 8000.0);
+
+    /** Ce que l'usage ajoute au plafond, de l'original : {@code add_cp}. */
+    private static final List<Double> DEFAULT_ADD_CP =
+            List.of(0.0, 900.0, 1000.0, 1500.0, 1700.0, 12000.0);
+
+    /** Les plafonds de surcout, de l'original : {@code init_overload}. */
+    private static final List<Double> DEFAULT_INIT_OVERLOAD =
+            List.of(100.0, 100.0, 150.0, 240.0, 350.0, 500.0);
+
+    /** Ce que l'usage ajoute au surcout, de l'original : {@code add_overload}. */
+    private static final List<Double> DEFAULT_ADD_OVERLOAD =
+            List.of(0.0, 40.0, 70.0, 80.0, 100.0, 500.0);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends Double>> INIT_CP = BUILDER
+            .comment("Plafond de la reserve par niveau, du niveau 0 au niveau 5 (six valeurs).",
+                     "Repris de init_cp de la 1.12.2 : 1800 des le niveau 1, 8000 au niveau 5.",
+                     "Une liste qui n'a pas six valeurs est ignoree, et le defaut revient.",
+                     "CP ceiling per level, level 0 to level 5 (six values). From the 1.12.2 init_cp.",
+                     "A list without exactly six values is ignored and the default comes back.")
+            .defineList("ability.initCp", DEFAULT_INIT_CP, o -> o instanceof Double);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends Double>> ADD_CP = BUILDER
+            .comment("Ce que l'usage des competences peut ajouter au plafond, par niveau (six valeurs).",
+                     "Repris de add_cp de la 1.12.2 : payer une competence agrandit la reserve.",
+                     "How much use may add to the CP ceiling, per level (six values). From add_cp.")
+            .defineList("ability.addCp", DEFAULT_ADD_CP, o -> o instanceof Double);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends Double>> INIT_OVERLOAD = BUILDER
+            .comment("Plafond du surcout par niveau (six valeurs). Repris de init_overload.",
+                     "Overload ceiling per level (six values). From the 1.12.2 init_overload.")
+            .defineList("ability.initOverload", DEFAULT_INIT_OVERLOAD, o -> o instanceof Double);
+
+    private static final ForgeConfigSpec.ConfigValue<List<? extends Double>> ADD_OVERLOAD = BUILDER
+            .comment("Ce que l'usage peut ajouter au surcout, par niveau (six valeurs). Repris de add_overload.",
+                     "How much use may add to the overload ceiling, per level (six values). From add_overload.")
+            .defineList("ability.addOverload", DEFAULT_ADD_OVERLOAD, o -> o instanceof Double);
+
+    // ------------------------------------------------------------------
+    // Les multiplicateurs de cout
+    // ------------------------------------------------------------------
+    private static final ForgeConfigSpec.DoubleValue CP_COST_SCALE = BUILDER
+            .comment("Multiplicateur de TOUT ce qui est paye en Control Points.",
+                     "0.5 divise les couts par deux, 2.0 les double. Les ecrans qui affichent",
+                     "un prix montrent la valeur de base : c'est le paiement qui suit ce reglage.",
+                     "Multiplier on every control point payment. 0.5 halves costs, 2.0 doubles them.",
+                     "Screens that show a price show the base value; the payment follows this setting.")
+            .defineInRange("ability.cpCostScale", 1.0d, 0.0d, 100.0d);
+
+    private static final ForgeConfigSpec.DoubleValue OVERLOAD_COST_SCALE = BUILDER
+            .comment("Multiplicateur de tout ce qui est paye en surcout.",
+                     "Multiplier on every overload payment.")
+            .defineInRange("ability.overloadCostScale", 1.0d, 0.0d, 100.0d);
+
+    private static final ForgeConfigSpec.DoubleValue COOLDOWN_SCALE = BUILDER
+            .comment("Multiplicateur des recharges des competences.",
+                     "0.5 = deux fois plus court, 2.0 = deux fois plus long.",
+                     "Multiplier on every skill cooldown: 0.5 is half as long, 2.0 twice as long.")
+            .defineInRange("ability.cooldownScale", 1.0d, 0.0d, 100.0d);
+
+    private static final ForgeConfigSpec.DoubleValue EXP_SCALE = BUILDER
+            .comment("Multiplicateur de l'experience gagnee en utilisant ses competences.",
+                     "Portage de exp_incr_speed de la 1.12.2, en global plutot que par competence.",
+                     "Multiplier on the experience skills earn when used. From the 1.12.2 exp_incr_speed.")
+            .defineInRange("ability.expScale", 1.0d, 0.0d, 1000.0d);
+
+    /**
+     * Les competences mises hors service.
+     *
+     * <p>C'est le {@code enabled = false} de l'original, ecrit en une seule liste : une competence
+     * citee ici ne se lance plus et ne se range plus sur une touche, comme si elle n'etait pas
+     * apprise (elle le reste, et son experience est gardee). Ecrire le nom court
+     * ({@code arc_gen}) ou le nom complet ({@code electromaster.arc_gen}) revient au meme.
+     */
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> DISABLED_SKILLS = BUILDER
+            .comment("Competences desactivees : nom court (arc_gen) ou complet (electromaster.arc_gen).",
+                     "Une competence citee ici ne se lance plus et ne se range plus sur une touche,",
+                     "comme le enabled = false de la 1.12.2.",
+                     "Disabled skills, by short name (arc_gen) or full name (electromaster.arc_gen).",
+                     "A listed skill cannot be cast nor put on a key, like the 1.12.2 'enabled = false'.")
+            .defineList("ability.disabledSkills", List.of(), o -> o instanceof String);
+
+    // ------------------------------------------------------------------
+    // Ce que l'electromaster attire
+    // ------------------------------------------------------------------
 
     /**
      * Ce que l'electromaster attire, repris de {@code normalMetalBlocks} de l'original.
      *
-     * Ces blocs s'attrapent a tout niveau d'experience.
-     *
-     * <p>Avec trois blocs que l'original n'avait pas, et que le joueur a demandes : la porte et la
-     * trappe en fer — « qui n'etait pas possible dans le vrai mod pour aucune raison apparente » — et
-     * le <b>cuivre travaille</b>, qui n'existait pas en 1.12.2. Le cuivre s'ajoute ici a titre
-     * d'exemple : c'est son NOM qui le fait reconnaitre par {@code MetalTargets}, toutes variantes
-     * comprises, oxydees, cirees et taillees. Voir aussi {@code MetalTargets.NEW_STRONG_METALS}, qui
-     * porte les memes blocs en code : la config d'un joueur qui met son mod a jour ne les verra pas.
+     * <p>Ces blocs s'attrapent a tout niveau d'experience, avec les blocs ajoutes par le port (porte
+     * et trappe en fer, cuivre travaille). Voir {@code MetalTargets.NEW_STRONG_METALS} : les memes
+     * blocs sont aussi en code, parce qu'une config deja ecrite ne recoit jamais une entree ajoutee
+     * a une liste existante.
      */
     private static final List<String> DEFAULT_METAL_BLOCKS = List.of(
             "minecraft:rail",
@@ -105,16 +253,7 @@ public final class Config {
             "minecraft:sticky_piston",
             "minecraft:piston");
 
-    /**
-     * Les blocs faiblement metalliques, repris de {@code weakMetalBlocks}.
-     *
-     * Il faut soixante pour cent d'experience pour s'y accrocher : une machine ou un
-     * minerai de fer ne s'attrapent pas du premier coup.
-     *
-     * <p>Avec le cuivre et le fer non travailles, qui sont neufs ou oublies : le minerai de cuivre,
-     * le cuivre brut, et le bloc de fer brut. Voir {@code MetalTargets.NEW_WEAK_METALS} pour la meme
-     * raison que ci-dessus — les deux endroits, la config et le code, sont voulus.
-     */
+    /** Les blocs faiblement metalliques, repris de {@code weakMetalBlocks} (60 % d'experience). */
     private static final List<String> DEFAULT_WEAK_METAL_BLOCKS = List.of(
             "minecraft:dispenser",
             "minecraft:hopper",
@@ -125,14 +264,7 @@ public final class Config {
             "minecraft:raw_copper_block",
             "minecraft:raw_iron_block");
 
-    /**
-     * Les entites metalliques, reprises de {@code metalEntities}.
-     *
-     * <p>Avec le crochet magnetique du mod, comme dans l'original : il y figurait sous le nom
-     * {@code academy:EntityMagHook}, et c'est ce qui donne tout son sens a l'objet — le deplacement
-     * magnetique s'accroche a un crochet lance. Le port l'ecrit sous le nom qu'il enregistre,
-     * {@code academy:mag_hook}.
-     */
+    /** Les entites metalliques, reprises de {@code metalEntities} (crochet magnetique compris). */
     private static final List<String> DEFAULT_METAL_ENTITIES = List.of(
             "minecraft:minecart",
             "minecraft:chest_minecart",
@@ -146,60 +278,28 @@ public final class Config {
 
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> METAL_BLOCKS = BUILDER
             .comment("Blocs franchement metalliques, que l'electromaster attire a tout niveau.",
-                     "Noms de blocs, comme minecraft:iron_block.",
-                     "Repris de normalMetalBlocks de la 1.12.2.")
+                     "Noms de blocs, comme minecraft:iron_block. Repris de normalMetalBlocks.",
+                     "Strongly metallic blocks the electromaster pulls at any level (normalMetalBlocks).")
             .defineList("ability.metalBlocks", DEFAULT_METAL_BLOCKS, o -> o instanceof String);
 
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> WEAK_METAL_BLOCKS = BUILDER
             .comment("Blocs faiblement metalliques, attires a partir de 60 % d'experience.",
-                     "Repris de weakMetalBlocks de la 1.12.2.")
+                     "Repris de weakMetalBlocks de la 1.12.2.",
+                     "Weakly metallic blocks, pulled from 60 % experience on (weakMetalBlocks).")
             .defineList("ability.weakMetalBlocks", DEFAULT_WEAK_METAL_BLOCKS, o -> o instanceof String);
 
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> METAL_ENTITIES = BUILDER
             .comment("Entites metalliques, que l'electromaster peut attirer.",
-                     "Repris de metalEntities de la 1.12.2.")
+                     "Repris de metalEntities de la 1.12.2.",
+                     "Metallic entities the electromaster can pull (metalEntities).")
             .defineList("ability.metalEntities", DEFAULT_METAL_ENTITIES, o -> o instanceof String);
-
-    private static final ForgeConfigSpec.DoubleValue PROGRESS_INCR_RATE = BUILDER
-            .comment("Vitesse de progression des niveaux d'aptitude.",
-                     "1.0 = la valeur de la 1.12.2 : il faut remplir un palier en utilisant",
-                     "ses competences avant de pouvoir monter d'un niveau. Augmenter ce",
-                     "nombre raccourcit l'attente.")
-            .defineInRange("ability.progressIncrRate", 1.0d, 0.01d, 1000.0d);
-
-    private static final ForgeConfigSpec.BooleanValue DESTROY_BLOCKS = BUILDER
-            .comment("Autorise les competences a casser des blocs.",
-                     "Portage de generic.destroyBlocks de la 1.12.2 : les competences qui",
-                     "effacent des blocs le consultent avant de le faire. Seules celles qui",
-                     "le demandaient chez l'original le lisent — l'onde de choc pour",
-                     "l'instant ; les rayons miniers, eux, cassaient sans rien demander.")
-            .define("general.destroyBlocks", true);
-
-    private static final ForgeConfigSpec.BooleanValue ATTACK_PLAYER = BUILDER
-            .comment("Autorise les competences a toucher d'autres joueurs (PvP).",
-                     "Portage de generic.attackPlayer de la 1.12.2, ou il valait vrai. Sans elle,",
-                     "une competence ne fait rien a un joueur : ni degats, ni recul.")
-            .define("general.attackPlayer", true);
-
-    private static final ForgeConfigSpec.BooleanValue HEADS_OR_TAILS = BUILDER
-            .comment("Annonce le resultat du lancer de piece (pile ou face).",
-                     "Portage de generic.headsOrTails de la 1.12.2, ou il valait faux.")
-            .define("general.headsOrTails", false);
-
-    private static final ForgeConfigSpec.BooleanValue USE_MOUSE_WHEEL = BUILDER
-            .comment("La molette regle la distance du saut traversant ; sinon elle defile la barre.",
-                     "Portage de generic.useMouseWheel de la 1.12.2 — avec un ecart assume : il y",
-                     "valait faux, alors que le port a toujours regle la distance a la molette.",
-                     "Laisser vrai garde le geste que le joueur connait.")
-            .define("general.useMouseWheel", true);
 
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> AFFECTED_ENTITIES = BUILDER
             .comment("Entites que vecmanip peut devier ou reflechir, avec leur difficulte.",
                      "Ecriture : \"<id>=<difficulte>\", par exemple minecraft:arrow=1.0 ;",
                      "un id seul vaut la difficulte par defaut, 1.0.",
-                     "La difficulte multiplie le cout en surcout et l'experience gagnee.",
-                     "Repris de ac.ability.category.vecmanip.common.affected_entities du 1.12.2,",
-                     "dont la liste d'objets n'a pas d'equivalent dans une config plate.")
+                     "Entities vecmanip may deflect or reflect, with their difficulty.",
+                     "Syntax: \"<id>=<difficulty>\", e.g. minecraft:arrow=1.0.")
             .defineList("ability.affectedEntities",
                     List.of("minecraft:arrow=1.0", "minecraft:potion=1.4", "minecraft:snowball=0.1"),
                     o -> o instanceof String);
@@ -207,21 +307,17 @@ public final class Config {
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> EXCLUDED_ENTITIES = BUILDER
             .comment("Entites que vecmanip ne touche jamais.",
                      "Des ids d'entites, plus deux mots-cles : \"living\" (tout ce qui vit)",
-                     "et \"mob\" (les creatures). Repris de ...common.affected_entities.excluded,",
-                     "ou les deux mots-cles s'ecrivaient deja ainsi.")
+                     "et \"mob\" (les creatures).",
+                     "Entities vecmanip never touches. Two keywords exist: \"living\" and \"mob\".")
             .defineList("ability.excludedEntities",
                     List.of("minecraft:item", "minecraft:xp_bottle", "living", "mob"),
                     o -> o instanceof String);
 
-    /** Le cadeau de l'original : l'objet MisakaCloud, une fois, au premier joueur. */
-    private static final ForgeConfigSpec.BooleanValue GIVE_CLOUD_TERMINAL = BUILDER
-            .comment("Donne l'objet MisakaCloud au joueur, une seule fois, a sa premiere venue.",
-                     "Portage de generic.giveCloudTerminal de la 1.12.2.")
-            .define("general.giveCloudTerminal", true);
-
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
+    // ------------------------------------------------------------------
     // Valeurs en cache, relues a chaque chargement/rechargement de la config.
+    // ------------------------------------------------------------------
     public static boolean generateOres = true;
     public static boolean generatePhaseLiquid = true;
     public static double damageScale = 1.0d;
@@ -236,6 +332,30 @@ public final class Config {
     public static boolean attackPlayer = true;
     public static boolean headsOrTails = false;
     public static boolean useMouseWheel = true;
+    public static boolean giveCloudTerminal = true;
+
+    public static double cpCostScale = 1.0d;
+    public static double overloadCostScale = 1.0d;
+    public static double cooldownScale = 1.0d;
+    public static double expScale = 1.0d;
+
+    /** Les plafonds par niveau, lus par {@code AbilityData}. Copie privee : jamais partagee. */
+    public static float[] initCp = toFloats(DEFAULT_INIT_CP);
+    public static float[] addCp = toFloats(DEFAULT_ADD_CP);
+    public static float[] initOverload = toFloats(DEFAULT_INIT_OVERLOAD);
+    public static float[] addOverload = toFloats(DEFAULT_ADD_OVERLOAD);
+
+    /** Les competences mises hors service. */
+    public static List<String> disabledSkills = List.of();
+
+    /** Les listes de metaux, relues a chaque chargement de config. */
+    public static List<String> metalBlocks = List.of();
+    public static List<String> weakMetalBlocks = List.of();
+    public static List<String> metalEntities = List.of();
+
+    /** Ce que vecmanip peut devier, et ce qu'il ne touche jamais. */
+    public static List<String> affectedEntities = List.of();
+    public static List<String> excludedEntities = List.of();
 
     /** La config chargee, pour pouvoir la reecrire depuis l'ecran de reglage du mod. */
     private static net.minecraftforge.fml.config.ModConfig loadedConfig;
@@ -244,6 +364,15 @@ public final class Config {
     public static void capture(net.minecraftforge.fml.config.ModConfig config) {
         loadedConfig = config;
     }
+
+    /** Valeur de {@link #controlPointStart}. Le plafond, lui, appartient au niveau. */
+    public static float startingControlPoint() {
+        return (float) controlPointStart;
+    }
+
+    // ------------------------------------------------------------------
+    // L'ecran de reglage du mod
+    // ------------------------------------------------------------------
 
     /**
      * Bascule « Destroy blocks » et l'ecrit dans le fichier.
@@ -290,21 +419,11 @@ public final class Config {
         } catch (Exception e) {
             // Disque plein, fichier verrouille : la valeur reste en memoire.
         }
-    }    public static boolean giveCloudTerminal = true;
-
-    /** Les listes de metaux, relues a chaque chargement de config. */
-    public static List<String> metalBlocks = List.of();
-    public static List<String> weakMetalBlocks = List.of();
-    public static List<String> metalEntities = List.of();
-
-    /** Ce que vecmanip peut devier, et ce qu'il ne touche jamais. */
-    public static List<String> affectedEntities = List.of();
-    public static List<String> excludedEntities = List.of();
-
-    /** Valeur de {@link #controlPointStart}. Le plafond, lui, appartient au niveau. */
-    public static float startingControlPoint() {
-        return (float) controlPointStart;
     }
+
+    // ------------------------------------------------------------------
+    // Lecture
+    // ------------------------------------------------------------------
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event) {
@@ -323,19 +442,45 @@ public final class Config {
         headsOrTails = HEADS_OR_TAILS.get();
         useMouseWheel = USE_MOUSE_WHEEL.get();
         giveCloudTerminal = GIVE_CLOUD_TERMINAL.get();
-        // Une nouvelle instance de liste a chaque chargement : c'est ce que
-        // MetalTargets surveille pour reconstruire ses ensembles.
+
+        cpCostScale = CP_COST_SCALE.get();
+        overloadCostScale = OVERLOAD_COST_SCALE.get();
+        cooldownScale = COOLDOWN_SCALE.get();
+        expScale = EXP_SCALE.get();
+
+        // Les tables : six valeurs, sinon on garde le defaut. Une liste trop courte ferait
+        // planter le premier acces a un niveau eleve, et c'est un reglage, pas un bug.
+        initCp = table(INIT_CP.get(), DEFAULT_INIT_CP);
+        addCp = table(ADD_CP.get(), DEFAULT_ADD_CP);
+        initOverload = table(INIT_OVERLOAD.get(), DEFAULT_INIT_OVERLOAD);
+        addOverload = table(ADD_OVERLOAD.get(), DEFAULT_ADD_OVERLOAD);
+
+        // Une nouvelle instance de liste a chaque chargement : c'est ce que MetalTargets
+        // surveille pour reconstruire ses ensembles.
         metalBlocks = List.copyOf(METAL_BLOCKS.get());
         weakMetalBlocks = List.copyOf(WEAK_METAL_BLOCKS.get());
         metalEntities = List.copyOf(METAL_ENTITIES.get());
         affectedEntities = List.copyOf(AFFECTED_ENTITIES.get());
         excludedEntities = List.copyOf(EXCLUDED_ENTITIES.get());
+        disabledSkills = List.copyOf(DISABLED_SKILLS.get());
+    }
+
+    /** Une table de config, ou son defaut si elle n'a pas la bonne longueur. */
+    private static float[] table(List<? extends Double> read, List<Double> fallback) {
+        List<? extends Double> source = read.size() == fallback.size() ? read : fallback;
+        return toFloats(source);
+    }
+
+    /** Une liste de nombres, en tableau de flottants — ce que lit la logique du jeu. */
+    private static float[] toFloats(List<? extends Double> values) {
+        float[] out = new float[values.size()];
+        for (int i = 0; i < out.length; i++) out[i] = values.get(i).floatValue();
+        return out;
     }
 
     /**
      * Validation d'un identifiant d'item, conservee du template MDK : utile des
-     * qu'on exposera des listes d'items en config (comme l'ancien
-     * {@code affected_entities} de VecManip).
+     * qu'on exposera des listes d'items en config.
      */
     @SuppressWarnings("unused")
     private static boolean validateItemName(final Object obj) {

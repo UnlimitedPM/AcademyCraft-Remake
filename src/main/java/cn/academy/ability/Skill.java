@@ -292,9 +292,35 @@ public abstract class Skill {
      * toute seule : la proposer dans l'editeur de prereglaGes laisserait croire qu'elle se
      * lance, et le joueur la chercherait en vain sur le rappel des touches. L'original ne la
      * montrait pas non plus.
+     *
+     * <p>Une competence coupee par {@code ability.disabledSkills} ne s'y range pas davantage :
+     * si elle ne peut pas partir, la proposer serait un mensonge de plus.
      */
     public boolean canControl() {
-        return true;
+        return isEnabled();
+    }
+
+    /**
+     * Cette competence est-elle autorisee par la configuration du serveur ?
+     *
+     * <p>Portage des noeuds {@code enabled} de l'original — un par competence, ecrits dans
+     * {@code config/academy/skills/<categorie>/<competence>.cfg}. Le port en fait une seule
+     * liste ({@code ability.disabledSkills}) plutot que trente fichiers : la question posee au
+     * jeu est « que veut-on couper ? », et elle se repond rarement pour une seule competence.
+     *
+     * <p>La liste accepte le nom court ({@code mind_course}) comme le nom qualifie
+     * ({@code aptitude.mind_course}) : le premier est ce que le joueur lit dans l'arbre, le
+     * second leve l'ambiguite quand deux categories ont une competence de meme nom. Les noms
+     * sont ceux de la declaration ({@link #getName()} et {@link Category#getName()}), ceux-la
+     * memes qui servent aux fichiers et aux traductions, donc ils ne bougent pas d'une version a
+     * l'autre.
+     */
+    public boolean isEnabled() {
+        List<String> disabled = cn.academy.Config.disabledSkills;
+        if (disabled.isEmpty()) return true;
+        if (disabled.contains(getName())) return false;
+        Category category = getCategory();
+        return category == null || !disabled.contains(category.getName() + "." + getName());
     }
 
     // ------------------------------------------------------------------

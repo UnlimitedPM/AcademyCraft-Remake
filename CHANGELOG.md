@@ -5,7 +5,7 @@
 ### English
 
 All of 0.1.4, plus the imag phase liquid rebuilt on the original's own renderer, a reworked
-loot table, and the whole game in four languages.
+loot table, the whole game in four languages, and a config file that tunes the powers.
 
 - **The liquid's sheets are back, and they show like the original's.** The port drew three
   translucent quads per liquid block, but they were painted *before* the fluid's own layer, so
@@ -45,12 +45,22 @@ loot table, and the whole game in four languages.
 - **The two developer recipes name a red bed** instead of the `minecraft:beds` tag. The tag came
   from the port (1.12.2 had a single bed item); in JEI it turned the slot into a tag, which told the
   player nothing about what to put there.
-- **Tests**: 170 in-game tests, 866 unit tests.
+- **The config file tunes the powers now.** The four tables the 1.12.2 kept in `ac_ability` are
+  back — `initCp`, `addCp`, `initOverload`, `addOverload`, six values each, level 0 to level 5 — and
+  they are read, which a unit test proves by changing them and watching a player's ceiling follow.
+  Three multipliers sit on top: `cpCostScale` and `overloadCostScale` (applied where the payment
+  happens, so no cost can slip past them) and `cooldownScale`, which the icon's grey follows because
+  it is the real duration that is stored. `expScale` speeds experience up. A skill is turned off
+  from `ability.disabledSkills`, by short name (`arc_gen`) or full name (`electromaster.arc_gen`):
+  it can then neither be cast nor placed on a key — the 1.12.2's `enabled = false`, in one list
+  instead of thirty files. Every option is commented in French then in English, every number is
+  bounded, and a table without exactly six values falls back to the default instead of crashing.
+- **Tests**: 170 in-game tests, 879 unit tests.
 
 ### Francais
 
 Tout le 0.1.4, plus l'imag phase liquide refaite sur le rendu de l'original, une table de butin
-retravaillee, et tout le jeu en quatre langues.
+retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle les pouvoirs.
 
 - **Les nappes du liquide sont revenues, et se voient comme dans l'original.** Le port dessinait
   trois quads translucides par bloc de liquide, mais ils etaient peints *avant* la couche du
@@ -92,7 +102,18 @@ retravaillee, et tout le jeu en quatre langues.
 - **Les deux recettes du developpeur nomment un lit rouge** au lieu du tag `minecraft:beds`. Le
   tag venait du port (la 1.12.2 n'avait qu'un seul lit) ; dans JEI il transformait l'emplacement en
   tag, ce qui ne disait rien de ce qu'il fallait y mettre.
-- **Des tests** : 170 tests en jeu, 866 tests unitaires.
+- **Le fichier de config regle enfin les pouvoirs.** Les quatre tables que la 1.12.2 tenait dans
+  `ac_ability` sont revenues — `initCp`, `addCp`, `initOverload`, `addOverload`, six valeurs
+  chacune, du niveau 0 au niveau 5 — et elles sont lues : un test unitaire les change et regarde le
+  plafond d'un joueur suivre. Trois multiplicateurs se posent dessus : `cpCostScale` et
+  `overloadCostScale` (appliques la ou le paiement se fait, donc aucun cout ne peut y echapper) et
+  `cooldownScale`, que le gris de l'icone suit puisque c'est la duree REELLE qui est rangee.
+  `expScale` accelere l'experience. Une competence s'eteint dans `ability.disabledSkills`, par nom
+  court (`arc_gen`) ou complet (`electromaster.arc_gen`) : elle ne se lance plus et ne se range
+  plus sur une touche — le `enabled = false` de la 1.12.2, en une liste au lieu de trente
+  fichiers. Chaque reglage est commente en francais puis en anglais, chaque nombre est borne, et
+  une table qui n'a pas exactement six valeurs retombe sur le defaut au lieu de planter.
+- **Des tests** : 170 tests en jeu, 879 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 

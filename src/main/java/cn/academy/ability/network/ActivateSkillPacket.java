@@ -90,6 +90,12 @@ public class ActivateSkillPacket {
                 return;
             }
 
+            // Une competence coupee par la config ne part pas. Le refus est muet, comme les
+            // autres : l'original ne lancait simplement pas la sienne, et le joueur a demande
+            // qu'on retire les messages rouges. Fermer, plus haut, reste permis — couper une
+            // competence pendant qu'on l'utilise ne doit pas la laisser ouverte pour toujours.
+            if (!skill.isEnabled()) return;
+
             // Une competence deja tenue ne se rouvre pas. L'original n'avait qu'un
             // contexte d'activation a la fois, et un second appui sur une competence
             // ouverte remettrait son compteur a zero — ce qui, pour un effet qui se

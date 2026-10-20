@@ -292,24 +292,19 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     private float addMaxControlPoint;
 
-    /**
-     * Plafond de base de la reserve par niveau, repris de {@code init_cp} de l'original.
+    /*
+     * Plafond de base de la reserve par niveau, repris de `init_cp` de l'original.
      *
-     * <p>C'est la meme echelle que dans la 1.12.2, a l'unite pres : 1800 points des le niveau 1,
+     * C'est la meme echelle que dans la 1.12.2, a l'unite pres : 1800 points des le niveau 1,
      * 8000 au niveau 5. Le port y avait substitue un plafond de 100 avec un facteur 28 pour
      * retomber sur les couts des competences ; ce detour rendait surtout la recuperation
      * invisible — 0,03 point par tick au lieu de 0,54. La reserve est maintenant celle de
      * l'original, donc les couts, qui l'etaient deja, s'y lisent sans conversion.
-     */
-    private static final float[] BASE_MAX_CONTROL_POINT = {1800f, 1800f, 2800f, 4000f, 5800f, 8000f};
-
-    /**
-     * Ce que l'usage des competences peut ajouter a la reserve, repris de {@code add_cp}.
      *
-     * <p>Comme pour le surcout, le plafond grandit a mesure qu'on se sert de ses pouvoirs, et
-     * c'est cette table qui dit jusqu'ou.
+     * La table elle-meme vit dans la config (ability.initCp), comme chez l'original : c'est ce
+     * qui permet de regler la reserve sur son propre serveur sans recompiler. Les quatre tables
+     * (reserve et surcout, plafond de base et gain maximal) y sont, voir Config.ability.
      */
-    private static final float[] MAX_ADD_CONTROL_POINT = {0f, 900f, 1000f, 1500f, 1700f, 12000f};
 
     /** Part du cout qui devient du plafond, reprise de {@code maxcp_incr_rate}. */
     private static final float CP_INCR_RATE = 0.0025f;
@@ -324,12 +319,12 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
     /** Plafond de base de la reserve pour ce niveau. */
     public static float baseMaxControlPoint(int level) {
-        return BASE_MAX_CONTROL_POINT[clampLevel(level)];
+        return cn.academy.Config.initCp[clampLevel(level)];
     }
 
     /** Gain de plafond maximal pour ce niveau. */
     public static float maxAddControlPoint(int level) {
-        return MAX_ADD_CONTROL_POINT[clampLevel(level)];
+        return cn.academy.Config.addCp[clampLevel(level)];
     }
 
     public int getCategoryLevel(Category category) {
@@ -485,40 +480,32 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     // ------------------------------------------------------------------
 
     /**
-     * Plafond de base du surcout par niveau, repris de {@code init_overload} de
-     * l'original.
-     *
-     * C'est la meme reserve que dans la 1.12.2, a l'unite pres : contrairement aux
-     * couts en CP de l'original, ceux du surcout tiennent dans une echelle que le
-     * port peut reprendre telle quelle.
-     */
-    private static final float[] BASE_MAX_OVERLOAD = {100f, 100f, 150f, 240f, 350f, 500f};
-
-    /**
-     * Gain de plafond acquis en utilisant ses competences, repris de
-     * {@code add_overload}. Le joueur gagne donc de la reserve en s'en servant.
-     */
-    private static final float[] MAX_ADD_OVERLOAD = {0f, 40f, 70f, 80f, 100f, 500f};
-
-    /**
      * Part du surcout qui devient du plafond, reprise de {@code maxo_incr_rate}.
      *
      * Bornee a 10 points par activation, comme l'original.
      */
     private static final float OVERLOAD_INCR_RATE = 0.0058f;
 
-    /** Plafond de base du surcout pour ce niveau. */
+    /**
+     * Plafond de base du surcout pour ce niveau, repris de {@code init_overload} de
+     * l'original.
+     *
+     * <p>C'est la meme reserve que dans la 1.12.2, a l'unite pres : contrairement aux
+     * couts en CP de l'original, ceux du surcout tiennent dans une echelle que le
+     * port peut reprendre telle quelle. La table lue est celle de la config
+     * ({@code ability.initOverload}).
+     */
     public static float baseMaxOverload(int level) {
-        return BASE_MAX_OVERLOAD[clampLevel(level)];
+        return cn.academy.Config.initOverload[clampLevel(level)];
     }
 
     /** Gain de plafond maximal pour ce niveau. */
     public static float maxAddOverload(int level) {
-        return MAX_ADD_OVERLOAD[clampLevel(level)];
+        return cn.academy.Config.addOverload[clampLevel(level)];
     }
 
     private static int clampLevel(int level) {
-        return Math.max(0, Math.min(BASE_MAX_OVERLOAD.length - 1, level));
+        return Math.max(0, Math.min(cn.academy.Config.initCp.length - 1, level));
     }
 
     /**
@@ -716,6 +703,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * quand meme du surcout derriere elle.
      */
     public boolean perform(float cp, float overloadCost) {
+        cp = scaled(cp, cn.academy.Config.cpCostScale);
+        overloadCost = scaled(overloadCost, cn.academy.Config.overloadCostScale);
         if (controlPoint < cp) return false;
         controlPoint -= cp;
         growMaxControlPoint(cp);
@@ -726,6 +715,20 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
+     * Un cout, avec le multiplicateur de la config.
+     *
+     * <p>C'est ici, et seulement ici, que les reglages {@code ability.cpCostScale} et
+     * {@code ability.overloadCostScale} s'appliquent : tout ce qui se paie passe par les deux
+     * methodes de paiement, donc aucun cout ne peut y echapper. Les ecrans qui affichent un prix
+     * montrent la valeur de base — c'est le paiement qui suit le reglage, et le commentaire de la
+     * config le dit.
+     */
+    private static float scaled(float cost, double scale) {
+        if (scale == 1.0d || cost <= 0f) return cost;
+        return (float) (cost * scale);
+    }
+
+    /**
      * Paye sans verifier la reserve, en la vidant au pire.
      *
      * Portage de {@code CPData.performWithForce} : certains couts se calculent sur ce
@@ -733,6 +736,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * qu'on a — donc il n'y a rien a refuser, seulement une reserve a vider.
      */
     public void performForced(float cp, float overloadCost) {
+        cp = scaled(cp, cn.academy.Config.cpCostScale);
+        overloadCost = scaled(overloadCost, cn.academy.Config.overloadCostScale);
         controlPoint = Math.max(0f, controlPoint - cp);
         growMaxControlPoint(cp);
         addOverload(overloadCost);
@@ -1112,7 +1117,9 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
 
         learnSkill(skill);
 
-        float effective = amount * skill.getExpIncrSpeed();
+        // Deux multiplicateurs : celui de la competence (inchange depuis l'original) et celui de
+        // la config (ability.expScale), qui vaut 1.0 par defaut.
+        float effective = (float) (amount * skill.getExpIncrSpeed() * cn.academy.Config.expScale);
         String key = skillKey(skill);
         float current = skillExps.getOrDefault(key, 0f);
         float reached = Math.min(1f, current + effective);
@@ -1252,9 +1259,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      *
      * Une duree nulle ou negative n'entre rien : une competence sans recharge ne doit
      * pas laisser de compteur derriere elle.
+     *
+     * <p>La duree passe par {@code ability.cooldownScale} (1.0 par defaut) : c'est le seul
+     * endroit ou une recharge se pose, donc le seul ou le multiplicateur peut s'appliquer.
+     * Le total retenu est la duree REELLE, celle que le gris de l'icone doit suivre.
      */
     public void setCooldown(Skill skill, int ticks) {
         if (skill == null || skill.getCategory() == null || ticks <= 0) return;
+        double scale = cn.academy.Config.cooldownScale;
+        if (scale != 1.0d) ticks = Math.max(1, (int) Math.round(ticks * scale));
         String key = skillKey(skill);
         cooldowns.merge(key, ticks, Math::max);
         cooldownTotals.merge(key, ticks, Math::max);
