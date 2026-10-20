@@ -471,7 +471,10 @@ public class SettingsScreen extends Screen {
     @Override
     public void onClose() {
         if (minecraft == null) return;
-        cn.academy.Config.save();
+        // PAS de `Config.save()` ici. Chaque bascule ecrit DEJA sa valeur et le fichier
+        // (`Config.toggle*`) ; sauvegarder encore une fois n'apportait rien et pouvait meme
+        // effacer une modification faite a la main dans le .toml pendant la partie : une
+        // sauvegarde reecrit le fichier ENTIER depuis ce que le jeu a lu au demarrage.
         // Ouverte depuis le terminal, l'application le rend en se fermant ; ouverte depuis
         // l'ecran de personnalisation du HUD, elle rend cet ecran-la.
         if (parent != null) {

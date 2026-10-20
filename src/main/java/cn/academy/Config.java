@@ -109,7 +109,10 @@ public final class Config {
                      "La reserve regagne une part de son PLAFOND par tick (0,0003 chez l'original,",
                      "doublee quand elle est pleine), donc ce reglage est un MULTIPLICATEUR :",
                      "1.0 = la vitesse de l'original ; 0 = plus rien ne remonte tout seul.",
-                     "Control point regeneration, as a multiplier: 1.0 is the 1.12.2 speed, 0 freezes it.")
+                     "La valeur s'ecrit sur la ligne du reglage, PAS dans ce commentaire : le jeu",
+                     "reecrit les commentaires a chaque demarrage.",
+                     "Control point regeneration, as a multiplier: 1.0 is the 1.12.2 speed, 0 freezes it.",
+                     "Edit the setting's own line, not this comment: the game rewrites comments on load.")
             .defineInRange("ability.controlPointRegenSpeed", 1.0d, 0.0d, 100.0d);
 
     private static final ForgeConfigSpec.IntValue CP_RECOVER_COOLDOWN = BUILDER
