@@ -155,14 +155,14 @@ public class TerminalScreen extends Screen {
     /**
      * De combien la plaque d'une case est ECLAIREE avant d'etre posee.
      *
-     * <p>Le joueur : « le fond gris des app est trop transparent ». Mesure chez l'original :
-     * sa plaque ne vaut que (90 ; 94 ; 82) sur une page a (85 ; 94 ; 65), et la sienne est
-     * pourtant un PNG gris de 91 a 36 % d'opacite — c'est bien ce que donne le dessin en deux
-     * passages. Une plaque plus DENSE n'y changerait rien (son gris est deja la valeur du fond),
-     * donc la seule facon de la faire ressortir est de l'eclairer : la teinte multiplie la
-     * couleur de la texture, et 1,3 amene le corps a environ (117 ; 120 ; 112).
+     * <p>Calibrage sur la reference du joueur (captures cote a cote) : sa plaque vaut
+     * (90 ; 94 ; 82) sur sa page, et le dessin en deux passages donne (88 ; 92 ; 80) — deux
+     * unites de moins. La consigne est revenue deux fois : « le fond gris est trop transparent »
+     * puis, une fois la plaque eclaircie a 1,3 (105 ; 108 ; 96), « notre gris est trop clair ».
+     * Le dessin des deux passages est donc JUSTE, c'est ce +3 % qui tombe exactement sur sa
+     * valeur. Ne pas retoucher sans une nouvelle capture de reference.
      */
-    private static final float PLATE_TINT = 1.3f;
+    private static final float PLATE_TINT = 1.03f;
 
     // ------------------------------------------------------------------
     // La camera de l'original : sa place devant l'oeil, ses angles, son champ.
@@ -1114,6 +1114,14 @@ public class TerminalScreen extends Screen {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12.GL_TEXTURE_MAX_LEVEL, 0);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        // ET SURTOUT BLOQUER LE REPLIEMENT : GL repete une texture par defaut, et un filtrage
+        // lineaire au bord lit alors le cote OPPOSE. L'icone des reglages est la seule dont le
+        // dessin touche les quatre bords (son engrenage les remplit), donc la seule ou ca se
+        // voyait : un liseré blanc se dessinait sur le cadre de son image — le joueur : « on voit
+        // une distinction entre l'image de l'icone et la couleur de fond ». Avec
+        // CLAMP_TO_EDGE, le bord repete sa propre valeur.
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
         GlStateManager._bindTexture(0);
 
         // Note SEULEMENT une fois le reglage pose : la premiere image d'un ecran arrive AVANT que
