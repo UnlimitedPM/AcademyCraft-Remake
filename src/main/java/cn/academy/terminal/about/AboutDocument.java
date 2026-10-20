@@ -74,10 +74,22 @@ public final class AboutDocument {
     private final List<Staff> staff;
     private final List<String> donators;
 
-    private AboutDocument(List<String> header, List<Staff> staff, List<String> donators) {
+    /**
+     * Le texte de l'onglet des dons, par langue.
+     *
+     * <p>Repris de la section {@code donation} de {@code about.conf} : une liste de lignes, ou
+     * {@code "]"} en tete aligne la ligne a droite et {@code "!!<texte>|<url>"} fait un lien.
+     * L'original retombait sur {@code en_us} quand sa langue n'y etait pas ; le port garde les
+     * deux langues qu'il livrait.
+     */
+    private final java.util.Map<String, List<String>> donation;
+
+    private AboutDocument(List<String> header, List<Staff> staff, List<String> donators,
+                          java.util.Map<String, List<String>> donation) {
         this.header = List.copyOf(header);
         this.staff = List.copyOf(staff);
         this.donators = List.copyOf(donators);
+        this.donation = java.util.Map.copyOf(donation);
     }
 
     /**
@@ -111,7 +123,7 @@ public final class AboutDocument {
     }
 
     public static AboutDocument empty() {
-        return new AboutDocument(List.of(), List.of(), List.of());
+        return new AboutDocument(List.of(), List.of(), List.of(), java.util.Map.of());
     }
 
     /** Lit un document depuis un lecteur JSON. Les champs absents restent vides. */
@@ -140,7 +152,18 @@ public final class AboutDocument {
                 staff.add(new Staff(entry.get("role").getAsString(), strings(entry.getAsJsonArray("names"))));
             }
         }
-        return new AboutDocument(header, staff, donators);
+        return new AboutDocument(header, staff, donators, donation(root));
+    }
+
+    /** Les listes de lignes de l'onglet des dons, une par langue. */
+    private static java.util.Map<String, List<String>> donation(JsonObject root) {
+        JsonElement element = root.get("donation");
+        if (element == null || !element.isJsonObject()) return java.util.Map.of();
+        java.util.Map<String, List<String>> out = new java.util.LinkedHashMap<>();
+        for (String lang : element.getAsJsonObject().keySet()) {
+            out.put(lang, strings(element.getAsJsonObject().getAsJsonArray(lang)));
+        }
+        return out;
     }
 
     private static List<String> strings(JsonArray array) {
@@ -162,6 +185,19 @@ public final class AboutDocument {
 
     public List<String> getDonators() {
         return donators;
+    }
+
+    /**
+     * Le texte de l'onglet des dons dans une langue, ou celui d'{@code en_us} a defaut.
+     *
+     * <p>C'est la regle de l'original, qui ne connaissait que {@code zh_cn} et {@code en_us} :
+     * tout autre langue lit l'anglais.
+     */
+    public List<String> donation(String lang) {
+        List<String> lines = donation.get(lang);
+        if (lines != null) return lines;
+        List<String> fallback = donation.get("en_us");
+        return fallback == null ? List.of() : fallback;
     }
 
     public boolean isEmpty() {
