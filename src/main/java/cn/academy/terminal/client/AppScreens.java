@@ -54,4 +54,25 @@ public final class AppScreens {
             net.minecraft.client.Minecraft.getInstance().setScreen(page);
         }
     }
-}
+    /**
+     * L'ecran qui a ouvert l'application : le terminal.
+     *
+     * <p>Un ecran de Minecraft REMPLACE le precedent, il n'y a donc pas de « dessous » : on garde
+     * l'instance pour la REPOSER a la fermeture. Ouvrir une application ne fermait pas le
+     * terminal, mais le rendre au jeu a la sortie le faisait disparaitre — le joueur : « quand on
+     * ouvre une app, ce n'est pas cense fermer le data terminal derriere, il doit rester ouvert ».
+     */
+    private static Screen origin;
+
+    /** Ouvre une application depuis un ecran, qui revient a sa fermeture. */
+    public static void open(App app, Screen from) {
+        origin = from;
+        open(app);
+    }
+
+    /** Ferme une application : le terminal reprend la main, s'il en venait. */
+    public static void close() {
+        Screen target = origin;
+        origin = null;
+        net.minecraft.client.Minecraft.getInstance().setScreen(target);
+    }}

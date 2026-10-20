@@ -228,6 +228,13 @@ public class SettingsScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         renderBackground(graphics);
 
+        // La page est reduite a un CINQUIEME : au plus proche voisin ses bords sortent en
+        // escalier, et son titre avec. Meme chaine que la page « A propos » de l'original.
+        GuiTextures.smoothMipmapped(TEX_BACK);
+        GuiTextures.smooth(TEX_ROLLBAR);
+        GuiTextures.smooth(TEX_CHECK_ON);
+        GuiTextures.smooth(TEX_CHECK_OFF);
+
         graphics.pose().pushPose();
         graphics.pose().translate((float) originX(), (float) originY(), 0f);
         graphics.pose().scale((float) PAGE_SCALE, (float) PAGE_SCALE, 1f);
@@ -447,9 +454,14 @@ public class SettingsScreen extends Screen {
 
     @Override
     public void onClose() {
-        if (minecraft != null) {
-            cn.academy.Config.save();
+        if (minecraft == null) return;
+        cn.academy.Config.save();
+        // Ouverte depuis le terminal, l'application le rend en se fermant ; ouverte depuis
+        // l'ecran de personnalisation du HUD, elle rend cet ecran-la.
+        if (parent != null) {
             minecraft.setScreen(parent);
+        } else {
+            cn.academy.terminal.client.AppScreens.close();
         }
     }
 

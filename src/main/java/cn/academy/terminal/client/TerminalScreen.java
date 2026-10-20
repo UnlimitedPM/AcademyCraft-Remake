@@ -855,15 +855,16 @@ public class TerminalScreen extends Screen {
         // Une case : elle ouvre son application.
         int index = cellAt(pageX, pageY);
         if (index >= 0) {
-            Screen page = AppScreens.create(apps.get(index));
-            if (minecraft != null && page != null) {
+            App app = apps.get(index);
+            if (minecraft != null && AppScreens.isAvailable(app)) {
                 // Le seul son de l'original qui se declare dans la categorie `master`, et le
                 // plus discret de tous : 0,2, un clic de selection.
                 if (minecraft.player != null) {
                     AcademySounds.playFor(minecraft.player, ModSounds.TERMINAL_SELECT,
                             SoundSource.MASTER, 0.2f, 1.0f);
                 }
-                minecraft.setScreen(page);
+                // La page s'ouvre PAR-DESSUS le terminal, qui revient a sa fermeture.
+                AppScreens.open(app, this);
             }
             return true;
         }
@@ -1078,58 +1079,22 @@ public class TerminalScreen extends Screen {
         imageAlpha(graphics, texture, x, y, width, height, texWidth, texHeight, 255);
     }
 
-    /** Les textures deja passees en filtrage lineaire (une fois chacune). */
-    private static final java.util.Set<ResourceLocation> SMOOTHED = new java.util.HashSet<>();
-
     /**
-     * Passe une texture en filtrage LINEAIRE.
+     * Passe une texture en filtrage LINEAIRE (voir {@link cn.academy.client.gui.GuiTextures}).
      *
      * <p>Le joueur : « les icones des app dans le vrai mod ont un anti aliasing dessus, la je vois
      * des escaliers en trop ». Un blit de GUI echantillonne au plus proche voisin, donc une icone
      * de 110 pixels dessinee plus petite sort en escalier.
      *
-     * <p>On pose les parametres du sampler a la main plutot que par {@code AbstractTexture.setFilter} :
-     * celui-ci rappelle {@code TextureUtil.prepareImage}, qui REOUVRE les niveaux avec des donnees
-     * nulles et VIDE la texture (vecu sur {@code line.png}). Ici rien n'est realloue.
-     *
      * <p>LINEAIRE SIMPLE, sans mipmaps. Les mipmaps avaient ete essayes pour « enlever les
      * escaliers », et c'est eux qui les ont crees : une icone de 110 px dessinee sur 94 lit
-     * 1,18 texel par pixel, donc le filtre trilineaire melange deja le niveau HUIT fois plus
-     * petit (55 px), et le dessin sort par gros blocs — « les icones sont pas belles comme dans
-     * le vrai mod, comme si les bords etaient pixelises ». Le vrai mod, lui, dessine ses icones
-     * a l'echelle 1 (page de 640 unites sur 640 pixels) : il n'a besoin d'aucun mipmap. Le
-     * lineaire seul donne ici une image douce et nette, sans marches.
+     * 1,18 texel par pixel, donc le filtre trilineaire melange deja le niveau deux fois plus
+     * petit, et le dessin sort par gros blocs — « les icones sont pas belles comme dans le vrai
+     * mod, comme si les bords etaient pixelises ». Le vrai mod, lui, dessine ses icones a
+     * l'echelle 1 (page de 640 unites sur 640 pixels) : il n'a besoin d'aucun mipmap.
      */
     private static void smooth(ResourceLocation texture) {
-        if (SMOOTHED.contains(texture)) return;
-
-        var loaded = Minecraft.getInstance().getTextureManager().getTexture(texture, null);
-        if (loaded == null) return;
-
-        int id = loaded.getId();
-        if (id <= 0) return;
-
-        GlStateManager._bindTexture(id);
-
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12.GL_TEXTURE_MAX_LEVEL, 0);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        // ET SURTOUT BLOQUER LE REPLIEMENT : GL repete une texture par defaut, et un filtrage
-        // lineaire au bord lit alors le cote OPPOSE. L'icone des reglages est la seule dont le
-        // dessin touche les quatre bords (son engrenage les remplit), donc la seule ou ca se
-        // voyait : un liseré blanc se dessinait sur le cadre de son image — le joueur : « on voit
-        // une distinction entre l'image de l'icone et la couleur de fond ». Avec
-        // CLAMP_TO_EDGE, le bord repete sa propre valeur.
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-        GlStateManager._bindTexture(0);
-
-        // Note SEULEMENT une fois le reglage pose : la premiere image d'un ecran arrive AVANT que
-        // la texture soit chargee par le gestionnaire, et l'ancienne version notait la texture
-        // comme faite juste avant de sortir — les icones restaient donc au plus proche voisin
-        // pour toute la session (« les bords sont pixelises »). Mesure : 88 -> 214 d'un pixel a
-        // l'autre, sans aucune valeur intermediaire.
-        SMOOTHED.add(texture);
+        cn.academy.client.gui.GuiTextures.smooth(texture);
     }
 
     private void imageAlpha(GuiGraphics graphics, ResourceLocation texture, double x,

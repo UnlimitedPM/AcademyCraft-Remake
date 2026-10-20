@@ -868,4 +868,10 @@ public class TutorialScreen extends CGuiScreen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    /** Fermer l'application rend le terminal, qui n'a jamais ete ferme. */
+    @Override
+    public void onClose() {
+        AppScreens.close();
+    }
 }

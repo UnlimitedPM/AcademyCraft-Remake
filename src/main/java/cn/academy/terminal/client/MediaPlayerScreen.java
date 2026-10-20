@@ -516,4 +516,10 @@ public class MediaPlayerScreen extends Screen {
         return MediaPlayerScreen.class.getResource(
                 "/assets/" + location.getNamespace() + "/" + location.getPath()) != null;
     }
+
+    /** Fermer l'application rend le terminal, qui n'a jamais ete ferme. */
+    @Override
+    public void onClose() {
+        AppScreens.close();
+    }
 }
