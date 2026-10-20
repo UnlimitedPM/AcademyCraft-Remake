@@ -136,21 +136,32 @@ public class TerminalScreen extends Screen {
      * La part de la hauteur d'ecran que prend la page.
      *
      * <p>L'original la posait en unites du monde, devant un regard a 50 degres : sa taille a
-     * l'ecran suivait donc celle de la fenetre. Ici la meme regle, en clair : les trois quarts
-     * de la hauteur, comme son panneau vu de biais.
+     * l'ecran suivait donc celle de la fenetre. La valeur est ajustee sur SA capture, cote par
+     * cote : le corps visible du panneau y fait 410 sur 446 unites d'interface.
      */
-    private static final double VIEW_HEIGHT_PART = 0.80;
+    private static final double VIEW_HEIGHT_PART = 0.727;
 
-    /** Sa place : trois quarts a droite, un peu au-dessus du milieu — la ou son regard la posait. */
-    private static final double VIEW_X = 0.74;
-    private static final double VIEW_Y = 0.52;
+    /** Sa place, mesuree sur la meme capture : son centre tombe a 76 % de la largeur, 49 % de la hauteur. */
+    private static final double VIEW_X = 0.764;
+    private static final double VIEW_Y = 0.468;
 
-    /** Les angles de l'original : son lacet, son tangage, son roulis, et le mouvement de la souris. */
-    private static final double BASE_YAW = 15.0;
+    /**
+     * L'aplatissement vertical de la page.
+     *
+     * <p>C'est ce qui manque a une pose affine : chez lui la page est vue en perspective, donc
+     * son cote droit (le plus loin) est plus court que le gauche et la page parait moins haute
+     * qu'elle n'est large. Sans ce facteur, le panneau du port mesure 521 unites de haut pour
+     * 430 de large, contre 446 pour 410 chez lui — la page deborde vers le bas et l'ecran ne se
+     * ressemble plus.
+     */
+    private static final double VIEW_SQUASH_Y = 0.842;
+
+    /** Les angles de l'original, tels quels : son lacet, son tangage, son roulis. */
+    private static final double BASE_YAW = -18.0;
     private static final double YAW_SWING = 4.0;
-    private static final double BASE_PITCH = 19.0;
+    private static final double BASE_PITCH = 7.0;
     private static final double PITCH_SWING = 4.0;
-    private static final double BASE_ROLL = 0.8;
+    private static final double BASE_ROLL = -1.6;
 
     /** Le curseur glisse vers sa cible a cette vitesse, en unites par seconde. */
     private static final double BALANCE_SPEED = 3000.0;
@@ -237,6 +248,13 @@ public class TerminalScreen extends Screen {
         graphics.pose().pushPose();
         graphics.pose().mulPoseMatrix(sceneMatrix(buffX, buffY));
 
+        // Le fond se pose DEUX FOIS, exprès. Mesure sur sa capture : le corps du panneau y vaut
+        // (94 ; 105 ; 70) sur une herbe a (72 ; 90 ; 36), soit une opacite de 0,36 — alors que
+        // back.png n'en porte que 0,20. Deux passages donnent exactement 1 - 0,8^2 = 0,36, et
+        // c'est aussi ce que fait l'original (ses bords et son bandeau ressortent plus francs
+        // que les notres). Un seul passage donne (85 ; 99 ; 56), le panneau « trop transparent »
+        // qu'il a signale deux fois.
+        image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 268, 327);
         image(graphics, TEX_BACK, 0, 0, PAGE_W, PAGE_H, 268, 327);
         drawHeader(graphics);
         drawApps(graphics, buffX, buffY);
@@ -470,7 +488,7 @@ public class TerminalScreen extends Screen {
         // l'inverse penche les cotes et laisse les bords horizontaux.
         scene.rotateX((float) Math.toRadians(pitch));
         scene.rotateY((float) Math.toRadians(yaw));
-        scene.scale((float) viewScale(), (float) viewScale(), 1.0f);
+        scene.scale((float) viewScale(), (float) (viewScale() * VIEW_SQUASH_Y), 1.0f);
         scene.translate((float) (-PAGE_W / 2.0), (float) (-PAGE_H / 2.0), 0.0f);
         return scene;
     }
