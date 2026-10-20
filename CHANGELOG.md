@@ -55,6 +55,12 @@ loot table, the whole game in four languages, and a config file that tunes the p
   it can then neither be cast nor placed on a key — the 1.12.2's `enabled = false`, in one list
   instead of thirty files. Every option is commented in French then in English, every number is
   bounded, and a table without exactly six values falls back to the default instead of crashing.
+- **The data terminal's key acts on release, as the original's did.** Holding it no longer opened
+  and closed the page in a loop: vanilla hands a held key's *repeats* to the open screen, and every
+  repetition that closed the page turned the next one into a click that reopened it — thirty
+  milliseconds a round. The key is now read physically and toggled once per press, open on release
+  and close on release, exactly like the 1.12.2 `onKeyUp`; pressing it while typing in the page's
+  chat no longer closes the page either.
 - **Tests**: 170 in-game tests, 879 unit tests.
 
 ### Francais
@@ -113,6 +119,13 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   plus sur une touche — le `enabled = false` de la 1.12.2, en une liste au lieu de trente
   fichiers. Chaque reglage est commente en francais puis en anglais, chaque nombre est borne, et
   une table qui n'a pas exactement six valeurs retombe sur le defaut au lieu de planter.
+- **La touche du terminal de donnees agit au relachement**, comme celle de l'original. La garder
+  enfoncee n'ouvre plus et ne referme plus la page en boucle : le jeu livre les REPETITIONS d'une
+  touche tenue a l'ecran ouvert, et chaque repetition qui refermait la page transformait la
+  suivante en clic qui la rouvrait — trente millisecondes par tour. La touche est maintenant lue
+  physiquement et basculee une fois par appui : ouverture au relachement, fermeture au relachement,
+  exactement le `onKeyUp` de la 1.12.2 ; et l'appuyer pendant qu'on ecrit dans le chat de la page
+  ne la referme plus.
 - **Des tests** : 170 tests en jeu, 879 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers

@@ -246,6 +246,16 @@ public class TerminalScreen extends Screen {
     private double chatPointerX;
     private double chatPointerY;
 
+    /**
+     * Une saisie de chat est-elle ouverte dans la page ?
+     *
+     * <p>La touche du terminal y ecrit (c'est une touche comme une autre) : elle ne doit donc
+     * pas refermer la page pendant qu'on tape.
+     */
+    public boolean isTypingChat() {
+        return chatMode;
+    }
+
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
         this.apps = installedApps();
@@ -360,10 +370,6 @@ public class TerminalScreen extends Screen {
             return true;
         }
 
-        if (keyCode == TerminalKeyBindings.OPEN_TERMINAL.getKey().getValue()) {
-            onClose();
-            return true;
-        }
         if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
             // La touche qui ouvre le chat produit AUSSI son caractere (T ecrivait « t »). On avale
             // le premier caractere, et on note l'instant pour qu'une repetition de la meme touche
