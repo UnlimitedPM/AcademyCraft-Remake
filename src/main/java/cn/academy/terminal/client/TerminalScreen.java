@@ -26,7 +26,6 @@ import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
-import org.lwjgl.opengl.GL30;
 
 import java.time.LocalTime;
 import java.util.List;
@@ -138,7 +137,7 @@ public class TerminalScreen extends Screen {
 
     /** Le halo de la souris : 20 a 24 de cote, un peu plus quand une case est visee. */
     private static final double CURSOR_BASE = 20.0;
-    private static final int CURSOR_ALPHA = 180;
+    private static final int CURSOR_ALPHA = 255;
 
     /** Le decalage d'apparition des cases, et sa duree. */
     private static final double APPEAR_STEP = 0.1;
@@ -152,6 +151,18 @@ public class TerminalScreen extends Screen {
      */
     private static final int CELL_STEPS = 4;
     private static final int ICON_STEPS = 4;
+
+    /**
+     * De combien la plaque d'une case est ECLAIREE avant d'etre posee.
+     *
+     * <p>Le joueur : « le fond gris des app est trop transparent ». Mesure chez l'original :
+     * sa plaque ne vaut que (90 ; 94 ; 82) sur une page a (85 ; 94 ; 65), et la sienne est
+     * pourtant un PNG gris de 91 a 36 % d'opacite — c'est bien ce que donne le dessin en deux
+     * passages. Une plaque plus DENSE n'y changerait rien (son gris est deja la valeur du fond),
+     * donc la seule facon de la faire ressortir est de l'eclairer : la teinte multiplie la
+     * couleur de la texture, et 1,3 amene le corps a environ (117 ; 120 ; 112).
+     */
+    private static final float PLATE_TINT = 1.3f;
 
     // ------------------------------------------------------------------
     // La camera de l'original : sa place devant l'oeil, ses angles, son champ.
@@ -629,13 +640,14 @@ public class TerminalScreen extends Screen {
      * appels.
      */
     private void imageProjected(GuiGraphics graphics, ResourceLocation texture, double x,
-                                double y, double width, double height, int alpha, int steps) {
+                                double y, double width, double height, int alpha, float tint,
+                                int steps) {
         if (alpha <= 0) return;
 
         graphics.flush();
         RenderSystem.setShaderTexture(0, texture);
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1f, 1f, 1f, alpha / 255f);
+        RenderSystem.setShaderColor(tint, tint, tint, alpha / 255f);
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
@@ -724,9 +736,11 @@ public class TerminalScreen extends Screen {
             boolean hovered = index == selected;
 
             // La plaque de la case passe par le maillage projete, pas par la pose affine : elle
-            // doit se resserrer avec la page (voir `imageProjected`).
+            // doit se resserrer avec la page (voir `imageProjected`). Elle est LISSEE, comme les
+            // icones : a 0,83 d'echelle son liseré sortait en escalier.
+            smooth(hovered ? TEX_APP_HIGHLIGHT : TEX_APP);
             imageProjected(graphics, hovered ? TEX_APP_HIGHLIGHT : TEX_APP, x, y, CELL, CELL,
-                    (int) Math.round(255 * appear), CELL_STEPS);
+                    (int) Math.round(255 * appear), PLATE_TINT, CELL_STEPS);
 
             App app = apps.get(index);
             int iconAlpha = (int) Math.round(255 * (hovered ? 0.8 : 0.6) * appear);
@@ -735,7 +749,7 @@ public class TerminalScreen extends Screen {
             // voisin (c'est ce que fait son interface, et les traits fins y restent nets).
             smooth(app.getIcon());
             imageProjected(graphics, app.getIcon(), x + ICON_X, y + ICON_Y, ICON_SIZE,
-                    ICON_SIZE, iconAlpha, ICON_STEPS);
+                    ICON_SIZE, iconAlpha, 1.0f, ICON_STEPS);
 
             double textPart = hovered ? 0.1 + 0.72 * appear : 0.1 + 0.1 * appear;
             // Le document centre le nom dans sa case de 151 (son TextBox dit `align=CENTER`) ;
@@ -1077,37 +1091,38 @@ public class TerminalScreen extends Screen {
      * <p>On pose les parametres du sampler a la main plutot que par {@code AbstractTexture.setFilter} :
      * celui-ci rappelle {@code TextureUtil.prepareImage}, qui REOUVRE les niveaux avec des donnees
      * nulles et VIDE la texture (vecu sur {@code line.png}). Ici rien n'est realloue.
+     *
+     * <p>LINEAIRE SIMPLE, sans mipmaps. Les mipmaps avaient ete essayes pour « enlever les
+     * escaliers », et c'est eux qui les ont crees : une icone de 110 px dessinee sur 94 lit
+     * 1,18 texel par pixel, donc le filtre trilineaire melange deja le niveau HUIT fois plus
+     * petit (55 px), et le dessin sort par gros blocs — « les icones sont pas belles comme dans
+     * le vrai mod, comme si les bords etaient pixelises ». Le vrai mod, lui, dessine ses icones
+     * a l'echelle 1 (page de 640 unites sur 640 pixels) : il n'a besoin d'aucun mipmap. Le
+     * lineaire seul donne ici une image douce et nette, sans marches.
      */
     private static void smooth(ResourceLocation texture) {
-        if (!SMOOTHED.add(texture)) return;
+        if (SMOOTHED.contains(texture)) return;
 
         var loaded = Minecraft.getInstance().getTextureManager().getTexture(texture, null);
         if (loaded == null) return;
 
         int id = loaded.getId();
+        if (id <= 0) return;
+
         GlStateManager._bindTexture(id);
 
-        // Les MIPMAPS sont ce qui enleve vraiment les escaliers : une icone de 110 px dessinee
-        // sur ~85 px ne lit que quatre texels par pixel, et le filtrage lineaire seul n'y peut
-        // rien. On autorise les niveaux, on les fabrique, puis on demande un filtrage ENTRE deux
-        // niveaux (le joueur a demande « un peu plus fort » que le lineaire simple).
-        // A la main, pas par AbstractTexture.setFilter : celui-ci rappelle prepareImage, qui
-        // reouvre les niveaux avec des donnees nulles et VIDERait la texture.
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12.GL_TEXTURE_MAX_LEVEL, 4);
-        GL30.glGenerateMipmap(GL11.GL_TEXTURE_2D);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER,
-                GL11.GL_LINEAR_MIPMAP_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12.GL_TEXTURE_MAX_LEVEL, 0);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        // Et le filtrage ANISOTROPE au maximum : la page est vue de biais, donc l'icone est
-        // compressee sur un axe et le filtrage trilineaire laisse encore des marches dans cette
-        // direction. Le joueur a demande « encore plus fort ». Si le pilote ne connait pas
-        // l'extension, GL ignore simplement le reglage.
-        GL11.glTexParameterf(GL11.GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 16.0f);
         GlStateManager._bindTexture(0);
-    }
 
-    /** {@code GL_TEXTURE_MAX_ANISOTROPY_EXT} : absent de GL11, la valeur est celle de l'extension. */
-    private static final int GL_TEXTURE_MAX_ANISOTROPY = 0x84FE;
+        // Note SEULEMENT une fois le reglage pose : la premiere image d'un ecran arrive AVANT que
+        // la texture soit chargee par le gestionnaire, et l'ancienne version notait la texture
+        // comme faite juste avant de sortir — les icones restaient donc au plus proche voisin
+        // pour toute la session (« les bords sont pixelises »). Mesure : 88 -> 214 d'un pixel a
+        // l'autre, sans aucune valeur intermediaire.
+        SMOOTHED.add(texture);
+    }
 
     private void imageAlpha(GuiGraphics graphics, ResourceLocation texture, double x,
                             double y, double width, double height, int texWidth,
