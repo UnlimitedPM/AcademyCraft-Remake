@@ -1,36 +1,45 @@
 package cn.academy.misc.media.client;
 
 import cn.academy.misc.media.Media;
+import com.mojang.blaze3d.audio.Channel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
-import net.minecraft.client.resources.sounds.TickableSoundInstance;
+import net.minecraft.client.sounds.ChannelAccess;
+import net.minecraft.client.sounds.SoundEngine;
+import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import javax.annotation.Nullable;
+import java.lang.reflect.Field;
+import java.util.Map;
+
 /**
  * Le lecteur du client : un morceau a la fois, avec sa pause et son volume.
  *
- * <p>Portage de {@code MediaBackend} : lancer un morceau, le mettre en attente, le reprendre
- * ou il en etait, l'arreter, et <b>son propre volume</b>. L'original ne passait pas par le
- * moteur de son du jeu — il prenait son `SoundSystem` par reflexion pour ouvrir une source en
- * flux, avec un volume a lui. Le port passe par le moteur, mais garde l'essentiel : la source
- * <b>MASTER</b> et un volume propre, pour que la musique du jeu puisse etre coupee sans couper
- * le lecteur.
+ * <p>Portage de {@code MediaBackend}, et <b>par le meme chemin que lui</b>. L'original ne
+ * passait pas par l'interface de sons du jeu : il prenait son {@code SoundSystem} (la
+ * bibliotheque paulscode) par reflexion, ouvrait sa propre source en flux, et commandait
+ * cette source — {@code setVolume} pour le volume, {@code pause} / {@code play} pour la pause
+ * et la reprise. La source OpenAL garde sa position quand on la met en pause, donc la reprise
+ * repart exactement ou l'on s'etait arrete ; le temps affiche venait de
+ * {@code millisecondsPlayed}.
  *
- * <h2>Le volume et la pause, par le meme chemin</h2>
+ * <h2>La meme chose en 1.20.1</h2>
  *
- * Un son ordinaire n'est regle qu'une fois, au lancement : le moteur ne relit plus son volume
- * ensuite. Une {@link TickableSoundInstance}, si : a chaque tick, {@code SoundEngine} refait
- * {@code setVolume(getVolume())} sur le canal (voir {@code tickNonPaused}). C'est donc une
- * instance a tick que joue le lecteur, et c'est ce qui rend la glissiere de volume vivante.
+ * <p>La 1.13 a remplace paulscode par sa propre bibliotheque, {@code com.mojang.blaze3d.audio}.
+ * Mais le principe tient toujours : le moteur garde un <b>canal</b> par son, et ce canal sait
+ * se mettre en pause, repartir et changer de volume ({@code Channel.pause}, {@code unpause},
+ * {@code setVolume}). Le lecteur va donc le chercher — {@code SoundEngine.instanceToChannel},
+ * par reflexion, exactement comme l'original allait chercher son {@code sndSystem} — et lui
+ * parle directement.
  *
- * <p>La <b>pause</b> est le vrai sujet : le moteur ne sait pas reprendre un flux a une
- * position. Le lecteur arrete donc le son et retient sa position, puis le <b>rejoue depuis le
- * debut, muet</b>, en rendant le volume des que l'horloge atteint cette position — c'est le
- * seul moyen de reprendre exactement ou l'on s'etait arrete, et le rattrapage est silencieux.
+ * <p>C'est ce qui rend les deux comportements corrects : une pause qui <b>reprend a la bonne
+ * position</b> sans rien rejouer, et une glissiere de volume qui agit <b>tout de suite</b> (un
+ * son ordinaire n'est regle qu'une fois, au lancement, par l'interface publique du moteur).
  *
  * <p>Le morceau se joue sans position ni attenuation : il s'entend partout, ce qui est le
  * propre d'une musique. Comme l'original, il <b>coupe la musique du jeu</b> tant qu'il joue.
@@ -38,23 +47,22 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public final class ClientMediaPlayer {
 
+    /** Le champ du moteur de son, et celui de ses canaux : les deux prises de l'original. */
+    private static final Field SOUND_ENGINE = field(SoundManager.class, "soundEngine");
+    private static final Field CHANNELS = field(SoundEngine.class, "instanceToChannel");
+
     private static MediaSound current;
     private static Media playing;
+
+    /** Le canal du moteur pour ce morceau : c'est lui qui porte la pause et le volume. */
+    @Nullable
+    private static ChannelAccess.ChannelHandle channel;
 
     /** Le volume du lecteur, de zero a un : celui de sa glissiere, pas celui du jeu. */
     private static float volume = 1.0f;
 
-    /** L'instant du lancement, en nanosecondes : c'est l'horloge du flux. */
+    /** L'instant du lancement, en nanosecondes : c'est l'horloge de la position affichee. */
     private static long startedNano;
-
-    /**
-     * La position de depart du flux, en secondes.
-     *
-     * <p>Elle vaut zero pour un morceau lance, et la position de la pause pour un morceau
-     * repris : le flux repart toujours du debut, donc c'est lui qui doit rester muet jusqu'a
-     * cette position, tandis que la position affichee part de la.
-     */
-    private static float resumedFrom;
 
     /** La position de la pause, ou -1 quand le morceau tourne. */
     private static float pausedAt = -1f;
@@ -64,12 +72,11 @@ public final class ClientMediaPlayer {
     /**
      * Le son du lecteur.
      *
-     * <p>Il est a tick, donc le moteur relit son volume a chaque tick : c'est ce qui fait
-     * vivre la glissiere, et c'est aussi ce qui rend le son audible pile a la bonne position
-     * quand un morceau reprend apres une pause.
+     * <p>Rien de particulier : c'est un son comme les autres, sur la source MASTER (pour que
+     * la glissiere « Musique » du jeu ne le coupe pas). C'est son <b>canal</b> qui est
+     * commande a la main.
      */
-    private static final class MediaSound extends AbstractSoundInstance
-            implements TickableSoundInstance {
+    private static final class MediaSound extends AbstractSoundInstance {
 
         MediaSound(ResourceLocation location) {
             super(location, SoundSource.MASTER, SoundInstance.createUnseededRandom());
@@ -79,29 +86,7 @@ public final class ClientMediaPlayer {
 
         @Override
         public float getVolume() {
-            // Muet pendant le rattrapage d'une reprise, audible ensuite.
-            return soundElapsed() >= resumedFrom ? volume : 0.0f;
-        }
-
-        /**
-         * Un son muet peut quand meme demarrer.
-         *
-         * <p>Sans cela, le moteur refuse de le lancer (« volume was zero ») et la reprise
-         * apres une pause n'aurait jamais de rattrapage a faire.
-         */
-        @Override
-        public boolean canStartSilent() {
-            return true;
-        }
-
-        @Override
-        public void tick() {
-            // La position et le volume se lisent a la volee : rien a faire ici.
-        }
-
-        @Override
-        public boolean isStopped() {
-            return false;
+            return volume;
         }
     }
 
@@ -110,19 +95,13 @@ public final class ClientMediaPlayer {
         if (media == null) return;
         stop();
         playing = media;
-        start(0.0f);
+        start();
     }
 
-    /**
-     * Le meme morceau, a partir d'une position.
-     *
-     * <p>Le flux repart du debut et reste muet jusqu'a cette position : c'est le prix du
-     * moteur du jeu, qui ne sait pas se placer dans un son.
-     */
-    private static void start(float from) {
-        resumedFrom = Math.max(0.0f, from);
+    private static void start() {
         startedNano = System.nanoTime();
         pausedAt = -1.0f;
+        channel = null;
 
         current = new MediaSound(playing.sound());
 
@@ -130,20 +109,62 @@ public final class ClientMediaPlayer {
         // chaque passage de son planificateur.
         Minecraft.getInstance().getMusicManager().stopPlaying();
         Minecraft.getInstance().getSoundManager().play(current);
+
+        // Le canal vient d'etre cree : on y pose le volume du lecteur.
+        ChannelAccess.ChannelHandle handle = channel();
+        if (handle != null) handle.execute(ch -> ch.setVolume(volume));
     }
 
-    /** Met le morceau en attente, a la position ou il est. */
+    /**
+     * Le canal du moteur pour le morceau en cours, ou {@code null}.
+     *
+     * <p>Le moteur tient {@code SoundEngine.instanceToChannel}, une table de son vers son
+     * canal ; la cle est le son lui-meme. Tout est prive, d'ou la reflexion — c'est le meme
+     * geste que l'original, qui allait chercher le {@code SoundSystem} du jeu.
+     */
+    @Nullable
+    private static ChannelAccess.ChannelHandle channel() {
+        if (channel != null) return channel;
+        if (current == null || SOUND_ENGINE == null || CHANNELS == null) return null;
+
+        try {
+            Object engine = SOUND_ENGINE.get(Minecraft.getInstance().getSoundManager());
+            Object table = engine == null ? null : CHANNELS.get(engine);
+            if (table instanceof Map<?, ?> channels) {
+                Object found = channels.get(current);
+                if (found instanceof ChannelAccess.ChannelHandle handle) {
+                    channel = handle;
+                    // Le moteur a pose le volume du son multiplie par celui de la source ;
+                    // le gain de l'ecouteur porte deja ce dernier, donc on repose le notre.
+                    handle.execute(ch -> ch.setVolume(volume));
+                }
+            }
+        } catch (IllegalAccessException | RuntimeException e) {
+            // Sans le canal, le morceau se joue quand meme : seule la pause perd son effet.
+            return null;
+        }
+        return channel;
+    }
+
+    /** Met le morceau en attente, exactement la ou il est. */
     private static void pause() {
         if (playing == null || pausedAt >= 0.0f) return;
 
         pausedAt = position();
-        stopSound();
+        ChannelAccess.ChannelHandle handle = channel();
+        if (handle != null) handle.execute(Channel::pause);
     }
 
-    /** Reprend le morceau la ou la pause l'a laisse. */
+    /** Reprend le morceau la ou la pause l'a laisse : le canal n'a pas bouge. */
     private static void resume() {
         if (playing == null || pausedAt < 0.0f) return;
-        start(pausedAt);
+
+        ChannelAccess.ChannelHandle handle = channel();
+        if (handle != null) handle.execute(Channel::unpause);
+
+        // L'horloge repart de la position de la pause : la source, elle, n'a jamais avance.
+        startedNano = System.nanoTime() - (long) (pausedAt * 1_000_000_000.0f);
+        pausedAt = -1.0f;
     }
 
     /** Bascule entre lecture et attente, sur le morceau en cours. */
@@ -166,7 +187,6 @@ public final class ClientMediaPlayer {
         stopSound();
         playing = null;
         pausedAt = -1.0f;
-        resumedFrom = 0.0f;
     }
 
     private static void stopSound() {
@@ -174,6 +194,7 @@ public final class ClientMediaPlayer {
             Minecraft.getInstance().getSoundManager().stop(current);
             current = null;
         }
+        channel = null;
     }
 
     /** Le volume du lecteur, de zero a un. */
@@ -182,29 +203,28 @@ public final class ClientMediaPlayer {
     }
 
     /**
-     * Regle le volume du lecteur.
+     * Regle le volume du lecteur, et le fait entendre tout de suite.
      *
-     * <p>Rien a signaler au moteur : le son est a tick, donc il relit ce volume tout seul au
-     * tick suivant.
+     * <p>Le canal est commande directement : l'interface publique du moteur ne regle un son
+     * qu'au lancement, et {@code updateCategoryVolume(MASTER, …)} ne touche que le gain de
+     * l'ecouteur — c'est pour cela que la glissiere ne faisait rien jusqu'ici.
      */
     public static void setVolume(float value) {
         volume = Math.max(0.0f, Math.min(1.0f, value));
+
+        ChannelAccess.ChannelHandle handle = channel();
+        if (handle != null) handle.execute(ch -> ch.setVolume(volume));
     }
 
     /**
      * La position du morceau, en secondes.
      *
-     * <p>C'est l'horloge du lecteur, pas celle du morceau : elle s'arrete pendant une pause,
-     * et elle reprend la ou elle s'etait arretee.
+     * <p>C'est l'horloge du lecteur : elle s'arrete pendant une pause, et reprend la ou elle
+     * s'etait arretee. La source, elle, ne bouge pas.
      */
     public static float position() {
         if (playing == null) return 0.0f;
         if (pausedAt >= 0.0f) return pausedAt;
-        return resumedFrom + soundElapsed();
-    }
-
-    /** Depuis combien de temps le flux du moteur joue, en secondes — zero apres une reprise. */
-    private static float soundElapsed() {
         return (System.nanoTime() - startedNano) / 1_000_000_000.0f;
     }
 
@@ -229,5 +249,17 @@ public final class ClientMediaPlayer {
     /** Le morceau en cours, ou {@code null}. */
     public static Media current() {
         return playing;
+    }
+
+    /** Un champ prive par son nom, ou {@code null} si le jeu l'a deplace. */
+    @Nullable
+    private static Field field(Class<?> owner, String name) {
+        try {
+            Field found = owner.getDeclaredField(name);
+            found.setAccessible(true);
+            return found;
+        } catch (NoSuchFieldException | RuntimeException e) {
+            return null;
+        }
     }
 }
