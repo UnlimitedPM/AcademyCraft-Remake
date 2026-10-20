@@ -15,7 +15,6 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
@@ -25,7 +24,9 @@ import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.opengl.GL11;
 
+import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -209,11 +210,9 @@ public class TerminalScreen extends Screen {
     private double buffX = SELECT_W / 2;
     private double buffY = SELECT_H / 2;
 
-    /** La page que le chat recouvre : dessinee par l'overlay, elle reprend la main ensuite. */
-    private static TerminalScreen ghost;
-
-    /** La page qui doit revenir au tick suivant, une fois le chat ferme. */
-    private static TerminalScreen pendingResume;
+    /** La saisie du chat, tant qu'elle est ouverte : la page la prend elle-meme. */
+    private boolean chatMode;
+    private String chatText = "";
 
     public TerminalScreen() {
         super(Component.translatable("ac.terminal.title"));
@@ -302,61 +301,71 @@ public class TerminalScreen extends Screen {
      * {@code IN_GAME}) : ouvert, c'est donc a la page de reconnaitre SA touche. C'est ce que
      * faisait l'original, dont la meme touche allumait et eteignait l'overlay.
      *
-     * <p>Le chat s'ouvre par-dessus (le terminal est un calque, il ne met pas le jeu en pause) et
-     * revient a sa fermeture : c'est `chatReturn`, lu par {@code TerminalKeyBindings}.
+     * <p>LE CHAT SE TAPE ICI, sans changer d'ecran. Passer par un {@code ChatScreen} obligeait a
+     * fermer la page : Minecraft reprenait alors le pointeur (retour au centre de la fenetre) et
+     * la page revenait une image plus tard — le joueur voyait la page clignoter et sa souris
+     * sauter, « moi si possible je voudrais que ca ne le fasse juste pas du tout ». La page prend
+     * donc la saisie elle-meme : Entree envoie, Echap annule, Retour arriere efface.
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (chatMode) {
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                sendChat();
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                chatMode = false;
+                chatText = "";
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_BACKSPACE && !chatText.isEmpty()) {
+                chatText = chatText.substring(0, chatText.length() - 1);
+                return true;
+            }
+            return true;
+        }
+
         if (keyCode == TerminalKeyBindings.OPEN_TERMINAL.getKey().getValue()) {
-            ghost = null;
-            pendingResume = null;
             onClose();
             return true;
         }
         if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
-            // Le chat s'ouvre PAR-DESSUS : la page reste affichee (c'est un calque, elle ne met
-            // pas le jeu en pause) et c'est TerminalGhostOverlay qui la dessine pendant la
-            // saisie. Le terminal revient a la fermeture du chat, avec son defilement et son
-            // curseur.
-            ghost = this;
-            minecraft.setScreen(new ChatScreen(""));
+            chatMode = true;
+            chatText = "";
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    /** La page a l'ecran pendant que le chat est ouvert, ou null. */
-    public static TerminalScreen ghost() {
-        return ghost;
+    @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (!chatMode) return super.charTyped(codePoint, modifiers);
+        if (chatText.length() < 250 && !Character.isISOControl(codePoint)) {
+            chatText += codePoint;
+        }
+        return true;
     }
 
-    /**
-     * Demande la reprise de la page au tick suivant.
-     *
-     * <p>PAS un {@code setScreen} immediat : la demande arrive depuis {@code ScreenEvent.Closing},
-     * donc pendant que le chat se ferme, et le jeu ecraserait notre ecran en terminant sa propre
-     * fermeture. Le joueur l'a vu : « si on le referme en faisant Echap ca ferme aussi la page du
-     * terminal ». La reprise est donc consommee au tick suivant, quand plus personne n'ecrit.
-     */
-    public static void requestResume() {
-        pendingResume = ghost;
+    /** Envoie ce qui est tape : une commande si la ligne commence par « / ». */
+    private void sendChat() {
+        String text = chatText.trim();
+        chatMode = false;
+        chatText = "";
+        if (text.isEmpty() || minecraft == null || minecraft.player == null) return;
+        if (text.startsWith("/")) {
+            minecraft.player.connection.sendCommand(text.substring(1));
+        } else {
+            minecraft.player.connection.sendChat(text);
+        }
     }
 
-    /** La page qui doit reprendre la main, une seule fois. */
-    public static TerminalScreen takeResume() {
-        TerminalScreen was = pendingResume;
-        pendingResume = null;
-        return was;
-    }
-
-    /** Le chat est encore ouvert : la demande attend le tick suivant. */
-    public static void keepResume(TerminalScreen page) {
-        pendingResume = page;
-    }
-
-    /** La page a repris la main : son calque n'a plus rien a dessiner. */
-    public static void clearGhost() {
-        ghost = null;
+    /** La ligne de saisie, posee en bas de l'ecran comme celle du jeu. */
+    private void drawChatInput(GuiGraphics graphics) {
+        int top = height - 14;
+        graphics.fill(2, top, width - 2, height - 2, 0x80000000);
+        String caret = (System.currentTimeMillis() / 500L) % 2L == 0L ? "_" : "";
+        AcademyFonts.drawTop(graphics, font, chatText + caret, 4, top + 3, 0xFFFFFFFF, 10);
     }
 
     @Override
@@ -452,6 +461,10 @@ public class TerminalScreen extends Screen {
 
         drawCursor(graphics, buffX, buffY);
 
+        if (chatMode) {
+            drawChatInput(graphics);
+        }
+
         graphics.setColor(1f, 1f, 1f, 1f);
     }
 
@@ -540,19 +553,21 @@ public class TerminalScreen extends Screen {
         text(graphics, countText(), COUNT_X, COUNT_Y, COUNT_W, COUNT_CELL, COUNT_COLOUR, true);
     }
 
-    /** « 3 Apps, 14:36 » : le compte des applications, puis l'heure du monde. */
+    /**
+     * « 3 Apps, 14:36 » : le compte des applications, puis l'heure REELLE de l'ordinateur.
+     *
+     * <p>L'original affichait l'heure du MONDE (fuseau de Minecraft). Le joueur a demande
+     * l'heure de son PC : « a cote du nombre d'app installees, que ca ecrive l'heure reelle sur
+     * notre ordinateur ». C'est donc {@link LocalTime#now()}, au format 24 heures.
+     */
     private String countText() {
         String count = Component.translatable("ac.gui.terminal.appcount", apps.size()).getString();
-
-        if (minecraft == null || minecraft.level == null) return count;
-
-        int time = (int) (minecraft.level.getDayTime() % 24000);
-        return count + ", " + two(time / 1000) + ":" + two((time % 1000) * 60 / 1000);
+        return count + ", " + CLOCK.format(LocalTime.now());
     }
 
-    private static String two(int value) {
-        return value < 10 ? "0" + value : String.valueOf(value);
-    }
+    /** Le format de l'horloge : 24 heures, deux chiffres partout, comme l'original. */
+    private static final java.time.format.DateTimeFormatter CLOCK =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm");
 
     /**
      * La grille des applications, avec l'apparition en decalage et l'eclairage de la case
@@ -586,7 +601,10 @@ public class TerminalScreen extends Screen {
 
             App app = apps.get(index);
             int iconAlpha = (int) Math.round(255 * (hovered ? 0.8 : 0.6) * appear);
-            imageAlpha(graphics, app.getIcon(), x + ICON_X, y + ICON_Y, ICON_SIZE, ICON_SIZE,
+            // Les icones se dessinent LISSEES : le joueur voyait « des escaliers en trop » et
+            // les trouve anticrenelees chez l'original. Le reste de la page garde le plus proche
+            // voisin (c'est ce que fait son interface, et les traits fins y restent nets).
+            iconImage(graphics, app.getIcon(), x + ICON_X, y + ICON_Y, ICON_SIZE, ICON_SIZE,
                     app.getIconSize(), app.getIconSize(), iconAlpha);
 
             double textPart = hovered ? 0.1 + 0.72 * appear : 0.1 + 0.1 * appear;
@@ -910,6 +928,39 @@ public class TerminalScreen extends Screen {
     private void image(GuiGraphics graphics, ResourceLocation texture, double x, double y,
                        double width, double height, int texWidth, int texHeight) {
         imageAlpha(graphics, texture, x, y, width, height, texWidth, texHeight, 255);
+    }
+
+    /** Une icone d'application, LISSEE (voir {@link #smooth(ResourceLocation)}). */
+    private void iconImage(GuiGraphics graphics, ResourceLocation texture, double x, double y,
+                           double width, double height, int texWidth, int texHeight, int alpha) {
+        smooth(texture);
+        imageAlpha(graphics, texture, x, y, width, height, texWidth, texHeight, alpha);
+    }
+
+    /** Les textures deja passees en filtrage lineaire (une fois chacune). */
+    private static final java.util.Set<ResourceLocation> SMOOTHED = new java.util.HashSet<>();
+
+    /**
+     * Passe une texture en filtrage LINEAIRE.
+     *
+     * <p>Le joueur : « les icones des app dans le vrai mod ont un anti aliasing dessus, la je vois
+     * des escaliers en trop ». Un blit de GUI echantillonne au plus proche voisin, donc une icone
+     * de 110 pixels dessinee plus petite sort en escalier.
+     *
+     * <p>On pose les parametres du sampler a la main plutot que par {@code AbstractTexture.setFilter} :
+     * celui-ci rappelle {@code TextureUtil.prepareImage}, qui REOUVRE les niveaux avec des donnees
+     * nulles et VIDE la texture (vecu sur {@code line.png}). Ici rien n'est realloue.
+     */
+    private static void smooth(ResourceLocation texture) {
+        if (!SMOOTHED.add(texture)) return;
+
+        var loaded = Minecraft.getInstance().getTextureManager().getTexture(texture, null);
+        if (loaded == null) return;
+
+        GlStateManager._bindTexture(loaded.getId());
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        GlStateManager._bindTexture(0);
     }
 
     private void imageAlpha(GuiGraphics graphics, ResourceLocation texture, double x,
