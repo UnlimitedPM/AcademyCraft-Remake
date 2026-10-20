@@ -38,9 +38,10 @@ import java.util.Map;
  * </ul>
  *
  * <p>L'original separait lecture et pause ; le moteur de son du jeu ne sait pas reprendre un
- * son a une position, donc le bouton <b>arrete</b> le morceau au lieu de le mettre en
- * attente — c'est le seul ecart, et il est visible : l'icone montre une pause pendant la
- * lecture, comme chez lui.
+ * son a une position, donc le port <b>rejoue le morceau muet</b> depuis le debut et rend le
+ * volume a la position de la pause : la lecture reprend exactement ou elle s'etait arretee
+ * (voir {@code ClientMediaPlayer}). L'icone montre une pause pendant la lecture, comme chez
+ * lui.
  *
  * <p>Comme l'original, fermer l'ecran <b>n'arrete pas</b> la musique, et le jeu ne se met pas
  * en pause : c'est le client qui joue le morceau.
@@ -176,7 +177,10 @@ public class MediaPlayerScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // La carte de l'original flotte sur le jeu : pas de fond plein ecran.
+        // Le fond des conteneurs du jeu : la carte de l'original flotte dessus, comme
+        // l'ecran d'un coffre ou d'une machine.
+        renderBackground(graphics);
+
         double pageX = pageX(mouseX);
         double pageY = pageY(mouseY);
 
@@ -205,15 +209,18 @@ public class MediaPlayerScreen extends Screen {
                     TITLE_X, TITLE_Y, TITLE_W, CELL_TITLE, TITLE_COLOUR, true);
         }
 
-        // Les deux boutons : lecture (ou pause) puis arret.
+        // Les deux boutons : lecture ou pause puis arret. L'icone est une pause tant que le
+        // morceau avance, une fleche des qu'il est en attente.
         boolean hoverPop = inside(pageX, pageY, POP_X, BTN_Y, BTN_W, BTN_H);
         boolean hoverStop = inside(pageX, pageY, STOP_X, BTN_Y, BTN_W, BTN_H);
-        imageAlpha(graphics, playing ? TEX_PAUSE : TEX_PLAY, POP_X, BTN_Y, BTN_W, BTN_H,
+        boolean advancing = playing && !ClientMediaPlayer.isPaused();
+        imageAlpha(graphics, advancing ? TEX_PAUSE : TEX_PLAY, POP_X, BTN_Y, BTN_W, BTN_H,
                 50, 42, hoverPop ? BUTTON_HOVER : BUTTON_IDLE);
         imageAlpha(graphics, TEX_STOP, STOP_X, BTN_Y, BTN_W, BTN_H, 50, 42,
                 hoverStop ? BUTTON_HOVER : BUTTON_IDLE);
 
-        // Le temps ecoule, a droite de la barre.
+        // Le temps ecoule, a droite de la barre. Il s'arrete pendant une pause, comme chez
+        // l'original, qui dessinait le `playedTime` de son lecteur.
         float elapsed = ClientMediaPlayer.elapsedSeconds();
         text(graphics, format(elapsed), TIME_X, TIME_Y, TIME_W, CELL_TIME, TIME_COLOUR, true);
     }
@@ -372,10 +379,13 @@ public class MediaPlayerScreen extends Screen {
         scroll = (int) Math.round(part * maxScroll());
     }
 
-    /** Le bouton lecture : il coupe le morceau en cours, ou relance le dernier. */
+    /**
+     * Le bouton lecture : il met le morceau en attente ou le reprend, et le lance s'il n'y en
+     * a pas — c'est l'ordre de l'original, qui reprenait son dernier morceau joue.
+     */
     private void togglePlay() {
         if (ClientMediaPlayer.current() != null) {
-            ClientMediaPlayer.stop();
+            ClientMediaPlayer.togglePause();
             return;
         }
 
