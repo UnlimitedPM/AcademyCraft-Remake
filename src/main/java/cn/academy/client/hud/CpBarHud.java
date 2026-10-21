@@ -222,11 +222,15 @@ public final class CpBarHud {
      *
      * <p>Le trou se fait ici sans shader, et c'est le FOND qu'on peint dans la forme de l'icone :
      * chez l'original, ce qu'on voit dans le creux n'est pas le monde seul mais le monde AVEC la
-     * plaque de la barre par-dessus, a 50 % d'un gris 52. Le melange
-     * {@code CONSTANT_COLOR / ONE_MINUS_SRC_ALPHA} ecrit exactement cette couleur-la dans la forme
-     * de l'icone — sa propre teinte ne compte pas, seule son opacite, comme dans son fragment
-     * shader. Un effacement pur ({@code ZERO / ONE_MINUS_SRC_ALPHA}) donnerait du NOIR : le fond
-     * du jeu a deja ete compose, et le multiplier par zero ne le rend pas.
+     * plaque de la barre par-dessus. Le melange {@code CONSTANT_COLOR / ONE_MINUS_SRC_ALPHA} ecrit
+     * cette couleur-la dans la forme de l'icone — la teinte de l'icone ne compte pas, seule son
+     * opacite, comme dans son fragment shader. Un effacement pur ({@code ZERO /
+     * ONE_MINUS_SRC_ALPHA}) donnerait du NOIR : le fond du jeu a deja ete compose, et le multiplier
+     * par zero ne le rend pas.
+     *
+     * <p>Et la plaque n'est ecrite qu'a SON opacite (128 sur 255) : le remplissage de la barre se
+     * lit donc encore dessous, ce qui est exactement ce que faisait l'original — son creux laissait
+     * voir le monde a travers la plaque. Pleine, la forme faisait une tache noire.
      *
      * <p>Il faut ecrire la geometrie nous-memes : le type de rendu d'un {@code blit} de GUI
      * repose son propre melange a chaque envoi, et effacerait le notre. D'ou le {@code flush()}
@@ -257,8 +261,9 @@ public final class CpBarHud {
         // L'icone doit etre BLANCHE : seule son opacite compte, comme dans le fragment shader de
         // l'original. Or ses pixels sont bleus (196, 225, 255), et le melange {@code CONSTANT_COLOR}
         // multiplie la couleur de la source avant de l'ecrire. On pousse donc les trois canaux
-        // au-dela de un pour les saturer : le blanc ecrit alors exactement la couleur du fond.
-        RenderSystem.setShaderColor(2.0f, 1.5f, 1.2f, 1.0f);
+        // au-dela de un pour les saturer : le blanc ecrit alors exactement la couleur du fond. Et
+        // l'opacite est celle de la plaque, pour que la barre se lise encore dans la forme.
+        RenderSystem.setShaderColor(2.0f, 1.5f, 1.2f, CpBarVisuals.EMBLEM_COVERAGE);
         RenderSystem.setShaderTexture(0, icon);
 
         BufferBuilder buffer = Tesselator.getInstance().getBuilder();
