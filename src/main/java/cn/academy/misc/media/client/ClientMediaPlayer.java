@@ -5,19 +5,24 @@ import cn.academy.misc.media.Media;
 import com.mojang.blaze3d.audio.Channel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.AbstractSoundInstance;
+import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.client.sounds.AudioStream;
 import net.minecraft.client.sounds.ChannelAccess;
+import net.minecraft.client.sounds.SoundBufferLibrary;
 import net.minecraft.client.sounds.SoundEngine;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import javax.annotation.Nullable;
+import javax.sound.sampled.AudioFormat;
 import java.lang.reflect.Field;
 import java.util.Map;
 
@@ -71,6 +76,20 @@ public final class ClientMediaPlayer {
     /** La position de la pause, ou -1 quand le morceau tourne. */
     private static float pausedAt = -1f;
 
+    /**
+     * La position du morceau au moment d'une deconnexion, ou -1 quand il n'y en a pas eu.
+     *
+     * <p>Partir du monde arrete tous les sons du jeu ({@code Minecraft.clearLevel} appelle
+     * {@code soundManager.stop()}), et le canal du morceau meurt avec eux. Le lecteur retient donc
+     * ou il en etait, et le morceau repart de la au retour — c'est ce que le joueur attendait :
+     * « si on ecoute de la musique et qu'on se deconnecte pendant qu'on l'ecoutait, quand on se
+     * reconnecte, la musique ne reprend pas de la ou on l'avait laissee ».
+     */
+    private static float suspendedAt = -1f;
+
+    /** Vrai quand le morceau TOURNAIT au moment de la deconnexion, faux s'il etait en attente. */
+    private static boolean suspendedPlaying;
+
     private ClientMediaPlayer() {}
 
     /**
@@ -79,18 +98,94 @@ public final class ClientMediaPlayer {
      * <p>Rien de particulier : c'est un son comme les autres, sur la source MASTER (pour que
      * la glissiere « Musique » du jeu ne le coupe pas). C'est son <b>canal</b> qui est
      * commande a la main.
+     *
+     * <p>Il sait aussi reprendre ailleurs qu'au debut : voir {@link #skip}.
      */
     private static final class MediaSound extends AbstractSoundInstance {
 
-        MediaSound(ResourceLocation location) {
+        /** Les secondes a passer avant de vraiment commencer a jouer : zero au lancement. */
+        private final float skip;
+
+        MediaSound(ResourceLocation location, float skip) {
             super(location, SoundSource.MASTER, SoundInstance.createUnseededRandom());
             this.attenuation = SoundInstance.Attenuation.NONE;
             this.relative = true;
+            this.skip = skip;
         }
 
         @Override
         public float getVolume() {
             return volume;
+        }
+
+        /**
+         * Le flux du morceau, avance de {@link #skip} secondes.
+         *
+         * <p>Le moteur ne sait pas se deplacer dans un flux : il ouvre le fichier et lit. Pour
+         * reprendre au milieu, on lui donne donc un flux qui <b>lit et jette</b> ce qu'il faut
+         * avant de rendre la main. C'est ce qui rend une reprise possible apres une deconnexion —
+         * la seule autre solution etait de tout rejouer depuis le debut.
+         */
+        @Override
+        public java.util.concurrent.CompletableFuture<AudioStream> getStream(
+                SoundBufferLibrary library, Sound sound, boolean looping) {
+            return super.getStream(library, sound, looping)
+                    .thenApply(stream -> skip <= 0.05f
+                            ? stream : new SkippingStream(stream, skip));
+        }
+    }
+
+    /**
+     * Un flux qui commence ailleurs qu'a zero.
+     *
+     * <p>Il decode et jette la tete du morceau a la premiere lecture — le moteur n'attache un flux
+     * qu'une fois, et compte sur sa premiere lecture pour remplir son tampon : rendre {@code null}
+     * laisserait la source sans rien a jouer, et elle ne s'en remettrait pas.
+     */
+    private static final class SkippingStream implements AudioStream {
+
+        private final AudioStream inner;
+        private long remainingBytes;
+
+        SkippingStream(AudioStream inner, float seconds) {
+            this.inner = inner;
+            AudioFormat format = inner.getFormat();
+            long bytesPerFrame = (long) format.getChannels()
+                    * Math.max(1, format.getSampleSizeInBits() / 8);
+            long perSecond = (long) format.getSampleRate() * bytesPerFrame;
+
+            // Le saut tombe sur une FRAME entiere : couper au milieu d'un echantillon stереo fait
+            // refuser le tampon par OpenAL (« Assigning buffer data: Invalid parameter »), et le
+            // morceau repart alors sans un son.
+            this.remainingBytes = Math.round(perSecond * seconds) / bytesPerFrame * bytesPerFrame;
+        }
+
+        @Override
+        public AudioFormat getFormat() {
+            return inner.getFormat();
+        }
+
+        @Override
+        public java.nio.ByteBuffer read(int size) throws java.io.IOException {
+            while (remainingBytes > 0) {
+                java.nio.ByteBuffer skipped = inner.read(size);
+                if (skipped == null) return null;
+
+                int available = skipped.remaining();
+                if (available <= remainingBytes) {
+                    remainingBytes -= available;
+                    continue;
+                }
+                skipped.position(skipped.position() + (int) remainingBytes);
+                remainingBytes = 0;
+                return skipped;
+            }
+            return inner.read(size);
+        }
+
+        @Override
+        public void close() throws java.io.IOException {
+            inner.close();
         }
     }
 
@@ -99,24 +194,70 @@ public final class ClientMediaPlayer {
         if (media == null) return;
         stop();
         playing = media;
-        start();
+        pausedAt = -1.0f;
+        begin(0.0f);
     }
 
-    private static void start() {
-        startedNano = System.nanoTime();
-        pausedAt = -1.0f;
+    /**
+     * Le debut d'un morceau, ou sa reprise en cours de route.
+     *
+     * @param from la seconde ou commencer, zero pour le debut
+     */
+    private static void begin(float from) {
+        // L'horloge repart de la position demandee : l'affichage et le son disent la meme chose.
+        startedNano = System.nanoTime() - (long) (from * 1_000_000_000.0f);
         channel = null;
 
-        current = new MediaSound(playing.sound());
+        current = new MediaSound(playing.sound(), from);
 
         // La musique du jeu se tait pendant le morceau : c'est ce que faisait l'original a
         // chaque passage de son planificateur.
         Minecraft.getInstance().getMusicManager().stopPlaying();
         Minecraft.getInstance().getSoundManager().play(current);
 
-        // Le canal vient d'etre cree : on y pose le volume du lecteur.
+        // Le canal vient d'etre cree : on y pose le volume du lecteur, ou la pause qui l'habite.
         ChannelAccess.ChannelHandle handle = channel();
-        if (handle != null) handle.execute(ch -> ch.setVolume(volume));
+        if (handle == null) return;
+        if (pausedAt >= 0.0f) {
+            hold(handle);
+        } else {
+            handle.execute(ch -> ch.setVolume(volume));
+        }
+    }
+
+    /**
+     * Le joueur quitte le monde : l'horloge s'arrete et la position est retenue.
+     *
+     * <p>Sans cela le conteur continuait de tourner pendant tout le temps passe au menu — le
+     * joueur l'avait remarque : « j'ai l'impression que quand on se deconnecte, le conteur tourne
+     * encore en arriere plan » — et le morceau reprenait, au retour, a une position qui n'existait
+     * nulle part.
+     */
+    public static void suspend() {
+        if (playing == null) {
+            suspendedAt = -1f;
+            return;
+        }
+
+        suspendedPlaying = pausedAt < 0.0f;
+        suspendedAt = position();
+        if (suspendedPlaying) pausedAt = suspendedAt;
+    }
+
+    /**
+     * Le joueur revient : le morceau reprend ou il s'etait arrete.
+     *
+     * <p>Le canal precedent est mort avec le monde, d'ou un morceau rejoue — mais rejoue
+     * <b>depuis la position retenue</b>, pas depuis le debut. Un morceau qui etait en attente
+     * revient en attente, muet et immobile, et sa touche le reprend ou il en etait.
+     */
+    public static void resumeAfterLogin() {
+        if (playing == null || suspendedAt < 0.0f) return;
+
+        float at = suspendedAt;
+        suspendedAt = -1f;
+        pausedAt = suspendedPlaying ? -1.0f : at;
+        begin(at);
     }
 
     /**
@@ -259,6 +400,18 @@ public final class ClientMediaPlayer {
             if (event.phase != TickEvent.Phase.END) return;
             keepPaused();
         }
+
+        /** Le monde quitte : l'horloge s'arrete, et la position est retenue. */
+        @SubscribeEvent
+        public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+            suspend();
+        }
+
+        /** Le monde rejoint : le morceau reprend ou il s'etait arrete. */
+        @SubscribeEvent
+        public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
+            resumeAfterLogin();
+        }
     }
 
     /** Vrai quand un morceau est en attente. */
@@ -271,6 +424,7 @@ public final class ClientMediaPlayer {
         stopSound();
         playing = null;
         pausedAt = -1.0f;
+        suspendedAt = -1f;
     }
 
     private static void stopSound() {
