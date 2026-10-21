@@ -72,6 +72,18 @@ public final class KeyHintVisuals {
     public static final int CONTENT_SHIFT_X = -78;
 
     /**
+     * Le meme decalage vertical, mesure contre une capture du vrai mod : trois unites plus haut.
+     *
+     * <p>Posee a cote de la capture de la 1.12.2 (meme fenetre, meme echelle d'interface), la
+     * colonne du port tombait deux pixels trop bas sur les quatre lignes — la plaque, le capuchon
+     * et le cadre, pas seulement l'icone. Le joueur : « les cadres des competences ne sont pas
+     * exactement au bon endroit ... un peu trop a droite et en bas ». Trois unites font deux
+     * pixels a l'echelle 3, et c'est la mesure. En dessous de l'unite, la correction n'a plus de
+     * sens : la place vient de la config du joueur.
+     */
+    public static final int CONTENT_SHIFT_Y = -3;
+
+    /**
      * De combien une COLONNE recule par rapport a la precedente, en unites.
      *
      * <p>C'est le pas de l'original : {@code GL11.glTranslated(-200 - availIdx * 200, y, 0)}.

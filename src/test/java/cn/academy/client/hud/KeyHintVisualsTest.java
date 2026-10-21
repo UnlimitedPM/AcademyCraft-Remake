@@ -149,6 +149,15 @@ class KeyHintVisualsTest {
     }
 
     @Test
+    void leBlocRemonteDeLaCorrectionMesuree() {
+        // Posee a cote d'une capture du vrai mod (meme fenetre, meme echelle d'interface), la
+        // colonne tombait deux pixels trop bas sur ses quatre lignes — plaque, capuchon et cadre,
+        // pas seulement l'icone. Trois unites valent ces deux pixels a l'echelle 3 : c'est la
+        // mesure, et c'est le seul chiffre de ce fichier qui ne vient pas de l'original.
+        assertEquals(-3, KeyHintVisuals.CONTENT_SHIFT_Y);
+    }
+
+    @Test
     void laColonneDesDirectionsMetLAvantEnHaut() {
         // Le port LIT les touches dans l'ordre gauche, droite, avant, arriere (celui de sa visee),
         // mais la colonne se lit comme la croix ZQSD : l'avant en haut, puis gauche, arriere,

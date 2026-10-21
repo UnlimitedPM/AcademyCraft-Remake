@@ -39,10 +39,26 @@ public final class KeyHintHud {
     private static final int PLATE_TEX_W = 256;
     private static final int PLATE_TEX_H = 83;
 
-    /** La taille de la police du jeu, en pixels : c'est elle qui donne l'echelle du texte. */
-    private static final float FONT_SIZE = 9.0f;
-    /** La taille de l'etiquette chez l'original ({@code new FontOption(32, ...)}). */
-    private static final float LABEL_SIZE = 32.0f;
+    /**
+     * La cellule de l'etiquette du capuchon, en unites : le {@code new FontOption(32, CENTER, ...)}
+     * de l'original.
+     *
+     * <p>C'est la CELLULE, et non un facteur d'echelle : le port dessinait un texte de 10 pixels
+     * grossi de 32/9 (le rapport de la police du JEU), qui sortait donc 11 % trop gros et trois
+     * pixels trop bas — le joueur : « avec la nouvelle police d'ecriture les lettres pour les
+     * competences sont decalees ». La police du mod se demande en cellules, comme chez l'original.
+     */
+    private static final int LABEL_CELL = 32;
+
+    /**
+     * Le micro-decalage vertical de l'etiquette, en unites.
+     *
+     * <p>Mesure sur les captures : avec la cellule seule, l'encre de la lettre tombait huit
+     * unites sous le haut du capuchon la ou le vrai mod la pose a sept (un pixel a l'echelle 3,
+     * deux unites). C'est le seul reglage de ce fichier qui ne vient pas d'un nombre de
+     * l'original : il vient de la comparaison des deux captures, cote a cote.
+     */
+    private static final int LABEL_LIFT = -2;
 
     /** La duree du fondu d'apparition, en secondes (le {@code 0.3} de l'original). */
     private static final double FADE_TIME = 0.3;
@@ -98,6 +114,10 @@ public final class KeyHintHud {
         pose.pushPose();
         pose.translate(left, top, 0);
         pose.scale(KeyHintVisuals.SCALE, KeyHintVisuals.SCALE, 1.0f);
+        // Le bloc entier remonte de trois unites : c'est la correction mesuree contre la capture du
+        // vrai mod (voir KeyHintVisuals.CONTENT_SHIFT_Y). Elle porte sur le CONTENU, donc l'apercu
+        // de l'ecran de reglage ne bouge pas.
+        pose.translate(0, KeyHintVisuals.CONTENT_SHIFT_Y, 0);
 
         // La PREMIERE colonne : les quatre touches d'aptitude. L'original reculait toute sa
         // colonne avant de dessiner, sinon plaque, cadre et icone mordent sur le bord droit de
@@ -316,29 +336,24 @@ public final class KeyHintHud {
     /**
      * L'etiquette du capuchon, centree dessus.
      *
-     * <p>L'original la dessinait avec une police de 32 unites, dans l'espace du rappel : le
-     * texte se remet donc a l'echelle de cette police, sinon la pose du rappel ne laisserait
-     * que quelques pixels.
+     * <p>Elle se pose par le HAUT DE SA CELLULE ({@code AcademyFonts.drawTop}), la convention des
+     * widgets de l'original : le centre de la cellule tombe donc sur le centre du capuchon, et le
+     * dessin de la lettre suit ses propres metriques. L'ancien calcul passait par une pose mise a
+     * l'echelle d'un facteur fractionnaire, qui deplacait la lettre et l'epaississait.
      */
     private static void drawLabel(GuiGraphics graphics, String text, int rowY, float fade) {
         var font = Minecraft.getInstance().font;
-        float scale = LABEL_SIZE / FONT_SIZE;
-        int width = cn.academy.client.gui.AcademyFonts.width(font, text);
+        int width = cn.academy.client.gui.AcademyFonts.width(font, text, LABEL_CELL);
+        int left = KeyHintVisuals.CAP_X + KeyHintVisuals.CAP_SIZE / 2 - width / 2;
+        int top = rowY + KeyHintVisuals.CAP_Y
+                + (KeyHintVisuals.CAP_SIZE - LABEL_CELL) / 2 + LABEL_LIFT;
 
-        PoseStack pose = graphics.pose();
-        pose.pushPose();
-        pose.translate(
-                KeyHintVisuals.CAP_X + KeyHintVisuals.CAP_SIZE / 2.0f - width * scale / 2.0f,
-                rowY + KeyHintVisuals.CAP_Y + KeyHintVisuals.CAP_SIZE / 2.0f - FONT_SIZE * scale / 2.0f,
-                0);
-        pose.scale(scale, scale, 1.0f);
         // La police du mod multiplie chaque glyphe par la teinte DU MOMENT : c'est par elle que
         // le fondu passe pour le texte (les images, elles, ont leur alpha par le blit).
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, fade);
-        cn.academy.client.gui.AcademyFonts.draw(graphics, font, text, 0, 0,
-            KeyHintVisuals.LABEL_COLOR, false);
+        cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, text, left, top,
+                KeyHintVisuals.LABEL_COLOR, LABEL_CELL);
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        pose.popPose();
     }
 
     private static ResourceLocation capTexture(KeyHintVisuals.Cap cap, String label) {

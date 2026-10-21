@@ -143,10 +143,13 @@ loot table, the whole game in four languages, and a config file that tunes the p
   units apart; the port had lost the second one. It opens **only once the skill is running**:
   the storm wing adds its four keys when its wings open (`initKeys()` right after
   `state = STATE_ACTIVE`) and forgets them when it closes, so nothing shows up while it charges.
-- **The grey of a cooldown is the original's grey.** Its veil was drawn at a quarter of its
-  strength: a `blit` leaves its own colour — and its alpha — on the shader, and `fill` multiplies
-  its colour by that one, so thirty percent became twelve. Drawn at the real thirty percent, the
-  square is as light as the 1.12.2's.
+- **The hint sits where the original sits, and its letters are centred.** Put next to a capture
+  of the 1.12.2 (same window, same interface scale), the whole block — plate, cap and frame, not
+  just the icon — landed **two pixels too low**, and its key letters were **eleven percent too
+  big and a pixel low**: the label was drawn as a ten-pixel text scaled by 32/9, the ratio of the
+  *game's* font, instead of asking the mod's own font for a 32-cell as `FontOption(32)` did. The
+  block now lifts by the measured three units, and the letter takes its cell's metrics, so it is
+  centred in its cap like the original's.
 - **The F4 menu is the original's again.** The port had translated it, with computed columns;
   the player no longer recognised his own menu. Its lines are now the 1.12.2 ones **word for
   word**: `AcademyCraft developer info`, `Skill status`, the internal names (`electromaster`,
@@ -307,6 +310,14 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   competence **en marche** : les ailes de tempete n'ajoutent leurs quatre touches qu'a
   l'ouverture des ailes (`initKeys()` juste apres `state = STATE_ACTIVE`) et les oublient en se
   refermant, donc rien n'apparait pendant la charge.
+- **Le bloc est a sa place, et ses lettres sont centrees.** Pose a cote d'une capture de la
+  1.12.2 (meme fenetre, meme echelle d'interface), le bloc entier — plaque, capuchon et cadre, pas
+  seulement l'icone — tombait **deux pixels trop bas**, et ses lettres de touche etaient **onze
+  pour cent trop grosses et un pixel trop bas** : l'etiquette etait dessinee comme un texte de dix
+  pixels grossi de 32/9, le rapport de la police du *jeu*, au lieu de demander a la police du mod
+  une cellule de 32 comme le faisait `FontOption(32)`. Le bloc remonte des trois unites mesurees,
+  et la lettre prend les metriques de sa cellule : elle est centree dans son capuchon comme chez
+  l'original.
 - **Le gris d'une recharge est celui de l'original.** Le voile etait dessine au quart de sa
   force : un `blit` laisse sa propre couleur — et son alpha — sur le shader, et `fill` multiplie
   sa couleur par celle-la, donc trente pour cent devenaient douze. Dessine au vrai trente pour
