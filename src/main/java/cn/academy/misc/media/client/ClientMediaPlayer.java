@@ -76,25 +76,21 @@ public final class ClientMediaPlayer {
     /** La position de la pause, ou -1 quand le morceau tourne. */
     private static float pausedAt = -1f;
 
-    /**
-     * La position du morceau au moment d'une deconnexion, ou -1 quand il n'y en a pas eu.
-     *
-     * <p>Partir du monde arrete tous les sons du jeu ({@code Minecraft.clearLevel} appelle
-     * {@code soundManager.stop()}), et le canal du morceau meurt avec eux. Le lecteur retient donc
-     * ou il en etait, et le morceau repart de la au retour — c'est ce que le joueur attendait :
-     * « si on ecoute de la musique et qu'on se deconnecte pendant qu'on l'ecoutait, quand on se
-     * reconnecte, la musique ne reprend pas de la ou on l'avait laissee ».
-     */
-    private static float suspendedAt = -1f;
-
-    /** Vrai quand le morceau TOURNAIT au moment de la deconnexion, faux s'il etait en attente. */
-    private static boolean suspendedPlaying;
-
     /** Vrai quand le jeu est en pause : le moteur a donc mis tous ses sons en attente. */
     private static boolean gamePaused;
 
     /** Vrai quand c'est le JEU qui a mis le morceau en attente, et non le joueur. */
     private static boolean pausedByGame;
+
+    /**
+     * Vrai quand le morceau n'a plus de son vivant.
+     *
+     * <p>Quitter un monde arrete tous les sons du jeu : le canal du morceau meurt, et le lecteur
+     * garde pourtant son morceau en memoire. Tant que ce drapeau est leve, une reprise ne peut donc
+     * pas se contenter de « demettre en pause » le canal — il faut rejouer le morceau, et depuis la
+     * position retenue (voir {@link #resume}).
+     */
+    private static boolean detached;
 
     private ClientMediaPlayer() {}
 
@@ -213,6 +209,7 @@ public final class ClientMediaPlayer {
         // L'horloge repart de la position demandee : l'affichage et le son disent la meme chose.
         startedNano = System.nanoTime() - (long) (from * 1_000_000_000.0f);
         channel = null;
+        detached = false;
 
         current = new MediaSound(playing.sound(), from);
 
@@ -232,38 +229,24 @@ public final class ClientMediaPlayer {
     }
 
     /**
-     * Le joueur quitte le monde : l'horloge s'arrete et la position est retenue.
+     * Le joueur quitte le monde : l'horloge s'arrete, la position est retenue, et le morceau passe
+     * <b>en attente</b>.
      *
      * <p>Sans cela le conteur continuait de tourner pendant tout le temps passe au menu — le
      * joueur l'avait remarque : « j'ai l'impression que quand on se deconnecte, le conteur tourne
      * encore en arriere plan » — et le morceau reprenait, au retour, a une position qui n'existait
      * nulle part.
+     *
+     * <p>Et il passe en attente, pas en lecture : c'est ce que le joueur prefere — « je ne veux pas
+     * que quand je relance mon monde la musique se reactive toute seule, je prefere qu'elle soit en
+     * pause et la ou je l'avais laissee ». Le son, lui, est bel et bien mort : quitter un monde
+     * arrete tous ceux du jeu, d'ou {@link #detached}.
      */
     public static void suspend() {
-        if (playing == null) {
-            suspendedAt = -1f;
-            return;
-        }
+        if (playing == null) return;
 
-        suspendedPlaying = pausedAt < 0.0f;
-        suspendedAt = position();
-        if (suspendedPlaying) pausedAt = suspendedAt;
-    }
-
-    /**
-     * Le joueur revient : le morceau reprend ou il s'etait arrete.
-     *
-     * <p>Le canal precedent est mort avec le monde, d'ou un morceau rejoue — mais rejoue
-     * <b>depuis la position retenue</b>, pas depuis le debut. Un morceau qui etait en attente
-     * revient en attente, muet et immobile, et sa touche le reprend ou il en etait.
-     */
-    public static void resumeAfterLogin() {
-        if (playing == null || suspendedAt < 0.0f) return;
-
-        float at = suspendedAt;
-        suspendedAt = -1f;
-        pausedAt = suspendedPlaying ? -1.0f : at;
-        begin(at);
+        if (pausedAt < 0.0f) pausedAt = position();
+        detached = true;
     }
 
     /**
@@ -311,9 +294,25 @@ public final class ClientMediaPlayer {
         if (handle != null) hold(handle);
     }
 
-    /** Reprend le morceau la ou la pause l'a laisse : le canal n'a pas bouge. */
+    /**
+     * Reprend le morceau la ou la pause l'a laisse.
+     *
+     * <p>Deux cas, et c'est ce qui fait marcher la reconnexion : si le son est toujours vivant, le
+     * canal n'a pas bouge et il suffit de le demettre en pause ; s'il est mort — on a quitte le
+     * monde entre-temps — il faut <b>rejouer</b> le morceau, et depuis la position retenue, pas
+     * depuis le debut.
+     */
     private static void resume() {
         if (playing == null || pausedAt < 0.0f) return;
+
+        float at = pausedAt;
+        pausedAt = -1.0f;
+
+        if (detached) {
+            detached = false;
+            begin(at);
+            return;
+        }
 
         ChannelAccess.ChannelHandle handle = channel();
         if (handle != null) {
@@ -325,8 +324,7 @@ public final class ClientMediaPlayer {
         }
 
         // L'horloge repart de la position de la pause : la source, elle, n'a jamais avance.
-        startedNano = System.nanoTime() - (long) (pausedAt * 1_000_000_000.0f);
-        pausedAt = -1.0f;
+        startedNano = System.nanoTime() - (long) (at * 1_000_000_000.0f);
     }
 
     /**
@@ -370,7 +368,7 @@ public final class ClientMediaPlayer {
      * elle ne coute rien, et un canal deja en pause ne bouge pas.
      */
     private static void keepPaused() {
-        if (playing == null || pausedAt < 0.0f) return;
+        if (playing == null || pausedAt < 0.0f || detached) return;
 
         ChannelAccess.ChannelHandle handle = channel();
         if (handle != null) hold(handle);
@@ -408,16 +406,10 @@ public final class ClientMediaPlayer {
             keepPaused();
         }
 
-        /** Le monde quitte : l'horloge s'arrete, et la position est retenue. */
+        /** Le monde quitte : l'horloge s'arrete, la position est retenue, et le morceau passe en attente. */
         @SubscribeEvent
         public static void onLogout(ClientPlayerNetworkEvent.LoggingOut event) {
             suspend();
-        }
-
-        /** Le monde rejoint : le morceau reprend ou il s'etait arrete. */
-        @SubscribeEvent
-        public static void onLogin(ClientPlayerNetworkEvent.LoggingIn event) {
-            resumeAfterLogin();
         }
     }
 
@@ -487,8 +479,8 @@ public final class ClientMediaPlayer {
         stopSound();
         playing = null;
         pausedAt = -1.0f;
-        suspendedAt = -1f;
         pausedByGame = false;
+        detached = false;
     }
 
     private static void stopSound() {

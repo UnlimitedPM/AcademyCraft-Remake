@@ -115,10 +115,11 @@ loot table, the whole game in four languages, and a config file that tunes the p
 - **The reader's volume is remembered.** It is written to the client config
   (`academy-client.toml`, `media.volume`) when the slider is released, and read back at startup:
   no need to set it again every time.
-- **The track survives a reconnection.** Leaving a world stops every sound of the game, the
-  track's channel included, and the clock kept running at the menu. Leaving now freezes the clock
-  and remembers the position; coming back replays the track *from that position* — the engine
-  cannot seek in a stream, so it is handed one that reads and throws away the head of the track.
+- **The track survives a reconnection, and waits for you.** Leaving a world stops every sound of
+  the game, the track's channel included, and the clock kept running at the menu. Leaving now
+  freezes the clock and remembers the position, and the track comes back **paused** where it was
+  left — pressing play resumes it from there, not from the start (the engine cannot seek in a
+  stream, so it is handed one that reads and throws away the head of the track).
 - **Tests**: 171 in-game tests, 893 unit tests.
 
 ### Francais
@@ -242,11 +243,11 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
 - **Le volume du lecteur est retenu.** Il s'ecrit dans la config du client
   (`academy-client.toml`, `media.volume`) quand on lache la glissiere, et se relit au demarrage :
   plus besoin de le regler a chaque fois.
-- **Le morceau survit a une reconnexion.** Quitter un monde arrete tous les sons du jeu, le canal
-  du morceau compris, et l'horloge continuait de tourner au menu. La deconnexion fige maintenant
-  l'horloge et retient la position ; le retour rejoue le morceau **depuis cette position** — le
-  moteur ne sait pas se deplacer dans un flux, on lui en donne donc un qui lit et jette la tete du
-  morceau.
+- **Le morceau survit a une reconnexion, et il attend.** Quitter un monde arrete tous les sons du
+  jeu, le canal du morceau compris, et l'horloge continuait de tourner au menu. La deconnexion
+  fige maintenant l'horloge et retient la position, et le morceau revient **en pause** la ou il en
+  etait — le bouton lecture le reprend de la, et non du debut (le moteur ne sait pas se deplacer
+  dans un flux, on lui en donne donc un qui lit et jette la tete du morceau).
 - **Des tests** : 171 tests en jeu, 893 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
