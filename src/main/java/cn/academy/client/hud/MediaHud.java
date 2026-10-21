@@ -91,31 +91,43 @@ public final class MediaHud {
         pose.popPose();
     }
 
-    /** Le titre du morceau, et sa position : deux lignes, chacune calee par son bas. */
+    /**
+     * Le titre du morceau, et sa position : deux lignes, chacune calee par son bas.
+     *
+     * <p>Les deux tailles sont celles du document, en pixels d'ecran : dix pour le titre, huit et
+     * demi pour la duree. Le port les passait par {@code plainFontScale}, qui ramene toute taille
+     * a onze douziemes d'elle-meme (la cellule de l'interface fait dix la ou l'original en compte
+     * douze) — un reglage fait pour le panneau de personnalisation, et qui rendait ces deux lignes
+     * un sixieme trop petites. Le joueur : « le texte qui indique le temps ecoute de la musique et
+     * son titre sont trop petits par rapport a la vraie taille du texte dans le vrai mod ».
+     */
     private static void drawText(GuiGraphics graphics, Media media, float elapsed) {
         // Le titre du morceau est une cle de traduction : c'est la langue du joueur qui
         // l'ecrit, comme dans l'original.
         drawLine(graphics,
                 net.minecraft.network.chat.Component.translatable(media.titleKey()).getString(),
                 CustomizeUiLayout.MEDIA_TITLE_X, CustomizeUiLayout.MEDIA_TITLE_BOTTOM,
-                CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT));
+                CustomizeUiLayout.MEDIA_TITLE_FONT);
         drawLine(graphics, MediaHudVisuals.formatTime(elapsed),
                 CustomizeUiLayout.MEDIA_TIME_X, CustomizeUiLayout.MEDIA_TIME_BOTTOM,
-                CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TIME_FONT));
+                CustomizeUiLayout.MEDIA_TIME_FONT);
     }
 
     /**
      * Une ligne du lecteur.
      *
-     * <p>Le bas de la boite est retire avec la hauteur de ligne de la <b>police</b>, et non
-     * celle du xml : c'est celle-la qui est dessinee, et l'ecart se voit (le titre tombait sur
-     * la barre).
+     * <p>La cellule se pose sur le bas de sa boite, sa hauteur retiree : c'est le
+     * {@code heightAlign = BOTTOM} du document, et c'est ce qui met la ligne de base a deux pixels
+     * du bas. Elle se dessine a la cellule de l'interface, puis se ramene a la taille du document.
      */
-    private static void drawLine(GuiGraphics graphics, String text, int x, float bottom, float scale) {
+    private static void drawLine(GuiGraphics graphics, String text, int x, float bottom,
+                                 float size) {
         var font = Minecraft.getInstance().font;
         PoseStack pose = graphics.pose();
         pose.pushPose();
-        pose.translate(x, Math.round(bottom - font.lineHeight), 0);
+        pose.translate(x, Math.round(bottom - size), 0);
+
+        float scale = size / cn.academy.client.gui.AcademyFonts.GUI_SIZE;
         pose.scale(scale, scale, 1.0f);
         cn.academy.client.gui.AcademyFonts.draw(graphics, font, text, 0, 0, TEXT_COLOR, false);
         pose.popPose();

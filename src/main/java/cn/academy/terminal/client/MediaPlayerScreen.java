@@ -58,6 +58,22 @@ public class MediaPlayerScreen extends Screen {
     /** L'echelle que le document donne a sa page : 650 sur 504 devient 208 sur 161. */
     private static final double PAGE_SCALE = 0.32;
 
+    /**
+     * Les tailles de police du document, telles quelles.
+     *
+     * <p>Le port les avait rabotees a trente-trois — trente-six pour le titre, trente-cinq pour
+     * celui d'une rangee — en croyant depasser la gravure des glyphes. C'etait faux : la gravure
+     * fait trente-trois unites de haut, et un glyphe dessine a trente-six n'est donc agrandi que
+     * d'un dixieme, dans une page elle-meme reduite a un tiers — il reste plus fin que l'ecran. Le
+     * joueur l'a vu tout de suite : « le texte qui indique le temps ecoute de la musique et son
+     * titre sont trop petits par rapport a la vraie taille du texte dans le vrai mod ».
+     */
+    private static final int CELL_TITLE = 36;
+    private static final int CELL_ROW_TITLE = 35;
+    private static final int CELL_ROW_TIME = 28;
+    private static final int CELL_ROW_DESC = 27;
+    private static final int CELL_TIME = 30;
+
     /** Les deux boutons, cote a cote sous le titre. */
     private static final double BTN_W = 50.0;
     private static final double BTN_H = 42.0;
@@ -70,6 +86,16 @@ public class MediaPlayerScreen extends Screen {
     private static final double TITLE_X = PAGE_W - TITLE_W - 50.0;
     private static final double TITLE_Y = 77.81148148148147;
     private static final double TITLE_H = 30.0;
+
+    /**
+     * Ou le titre se pose vraiment : en BAS de sa boite, comme le document le demande.
+     *
+     * <p>Son {@code heightAlign} vaut {@code BOTTOM}, et LambdaLib2 place une ligne a
+     * {@code (hauteur - taille) x facteur} du haut de sa boite — donc a moins six unites quand la
+     * cellule de trente-six deborde la boite de trente. Le port la posait en haut, et le titre
+     * sortait six unites trop bas.
+     */
+    private static final double TITLE_TOP = TITLE_Y + TITLE_H - CELL_TITLE;
 
     /** Le volume : son fond, puis son curseur, qui glisse de son bord a l'autre. */
     private static final double VOLUME_X = 179.6875;
@@ -114,19 +140,15 @@ public class MediaPlayerScreen extends Screen {
     private static final double ROW_TITLE_Y = 1.0;
     private static final double ROW_TITLE_W = 300.0;
     private static final double ROW_TITLE_H = 30.0;
+
+    /** Le titre d'une rangee, centre dans sa boite : c'est son {@code heightAlign} CENTER. */
+    private static final double ROW_TITLE_TOP = ROW_TITLE_Y + (ROW_TITLE_H - CELL_ROW_TITLE) / 2.0;
     private static final double ROW_DESC_X = 66.125;
     private static final double ROW_DESC_Y = 29.0;
     private static final double ROW_DESC_W = 300.0;
     private static final double ROW_DESC_H = 23.0;
     private static final double ROW_TIME_W = 70.0;
     private static final double ROW_TIME_X = ROW_W - ROW_TIME_W - 6.0;
-
-    /** Les tailles de police du document, bornees par la gravure des glyphes du port. */
-    private static final int CELL_TITLE = 33;   // 36
-    private static final int CELL_ROW_TITLE = 33;   // 35
-    private static final int CELL_ROW_TIME = 28;
-    private static final int CELL_ROW_DESC = 27;
-    private static final int CELL_TIME = 30;
 
     /** Les couleurs du document : du blanc, a l'opacite qu'il demande. */
     private static final int TITLE_COLOUR = 0x99FFFFFF;
@@ -203,10 +225,10 @@ public class MediaPlayerScreen extends Screen {
         Media media = ClientMediaPlayer.current();
         boolean playing = media != null;
 
-        // Le titre, cale a droite dans sa boite.
+        // Le titre, cale a droite dans sa boite, et pose en bas de celle-ci.
         if (playing) {
             text(graphics, Component.translatable(media.titleKey()).getString(),
-                    TITLE_X, TITLE_Y, TITLE_W, CELL_TITLE, TITLE_COLOUR, true);
+                    TITLE_X, TITLE_TOP, TITLE_W, CELL_TITLE, TITLE_COLOUR, true);
         }
 
         // Les deux boutons : lecture ou pause puis arret. L'icone est une pause tant que le
@@ -266,7 +288,7 @@ public class MediaPlayerScreen extends Screen {
                     ROW_ICON, ROW_ICON, 64, 64);
 
             String name = Component.translatable(media.titleKey()).getString();
-            text(graphics, name, AREA_X + ROW_TITLE_X, top + ROW_TITLE_Y, ROW_TITLE_W,
+            text(graphics, name, AREA_X + ROW_TITLE_X, top + ROW_TITLE_TOP, ROW_TITLE_W,
                     CELL_ROW_TITLE, ROW_TITLE_COLOUR, false);
 
             String desc = Component.translatable(media.descKey()).getString();
