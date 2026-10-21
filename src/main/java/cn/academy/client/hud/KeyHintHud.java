@@ -51,14 +51,17 @@ public final class KeyHintHud {
     private static final int LABEL_CELL = 32;
 
     /**
-     * Le micro-decalage vertical de l'etiquette, en unites.
+     * Le micro-decalage de l'etiquette, en unites.
      *
      * <p>Mesure sur les captures : avec la cellule seule, l'encre de la lettre tombait huit
      * unites sous le haut du capuchon la ou le vrai mod la pose a sept (un pixel a l'echelle 3,
-     * deux unites). C'est le seul reglage de ce fichier qui ne vient pas d'un nombre de
-     * l'original : il vient de la comparaison des deux captures, cote a cote.
+     * deux unites) — c'est {@link #LABEL_LIFT}. Et elle etait un pixel trop a droite : la police
+     * du port est un peu plus large que celle de l'original (elle est gravee avec un poids de
+     * 0,3), donc une lettre centree par sa largeur deborde plus a droite. Le joueur : « les
+     * lettres dans les casses sont a la bonne hauteur mais pas assez a gauche ».
      */
     private static final int LABEL_LIFT = -2;
+    private static final int LABEL_LIFT_X = -2;
 
     /** La duree du fondu d'apparition, en secondes (le {@code 0.3} de l'original). */
     private static final double FADE_TIME = 0.3;
@@ -274,12 +277,20 @@ public final class KeyHintHud {
             drawGlow(graphics, y, state.glow, glow);
         }
 
+        // L'ICONE au plus proche voisin, comme tout le rappel : l'arbre des competences et l'ecran
+        // du developpeur la passent en lisse (une fois pour toutes), et le rappel la dessinait donc
+        // floué — « les competences sont un peu flou, et on voit des pixels qui devraient etre en
+        // semi transparence qui ne le sont pas ». On lui rend son filtre apres, sinon ces deux
+        // ecrans-la perdraient leur lissage.
+        boolean smoothed = cn.academy.client.gui.cgui.CGuiShaders.isLinear(icon);
+        cn.academy.client.gui.GuiTextures.nearest(icon);
         blit(graphics, icon,
                 KeyHintVisuals.ICON_X, y + KeyHintVisuals.ICON_Y,
                 KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
                 0, 0, KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
                 KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE, 0xFFFFFF,
                 KeyHintVisuals.iconAlpha(state, remaining, wave) * fade);
+        if (smoothed) cn.academy.client.gui.GuiTextures.linear(icon);
 
         // La recharge qui reste : l'original assombrissait le bas de l'icone d'autant, en plus
         // de l'estomper entierement (voir COOLDOWN_ICON_ALPHA).
@@ -301,36 +312,42 @@ public final class KeyHintHud {
     }
 
     /**
-     * Le halo de l'etat : un filet de la couleur de l'etat autour de l'icone.
+     * Le halo de l'etat : les huit images de lueur de l'original, avec leurs pixels transparents.
      *
-     * <p>L'original posait la les huit morceaux de {@code ACRenderingHelper.drawGlow}
-     * ({@code glow_left|right|up|down|ru|rd|lu|ld}, quatre cotes et quatre coins). Ces images
-     * sont des DEGRADES de 32 pixels d'epaisseur : ecrasees dans les cinq unites du halo — un
-     * pixel a l'ecran — elles ne donnent qu'une tache douce. Le joueur l'a dit tout de suite :
-     * « le bleu qui entoure les competences n'est pas parfait, comme s'il etait flou au lieu de
-     * vraiment faire une petite ligne ». Le halo est donc un FILET uni de la couleur de l'etat,
-     * ce que ces huit images dessinaient de toute facon a cette taille. C'est le seul ecart
-     * d'aspect connu de cet element.
+     * <p>Quatre cotes ({@code glow_left}, {@code right}, {@code up}, {@code down}) et quatre coins
+     * ({@code ru}, {@code rd}, {@code lu}, {@code ld}). Ce sont des DEGRADES : mesure sur
+     * {@code glow_left.png}, 32x166 dont l'alpha va de 22 a 195 d'un bord a l'autre. Le port les
+     * avait remplacees une fois par un filet uni — le halo paraissait alors « flou plutot qu'une
+     * petite ligne » —, et le joueur a redemande les degrades : « tu n'as pas mis les pixels bleu
+     * transparent. Pareil pour le orange ». Entre les deux, la vraie difference est le FILTRAGE :
+     * un degrade resserre dans cinq unites (un pixel a l'ecran) lu en lisse n'est qu'une tache,
+     * lu au plus proche voisin il donne la petite ligne liseree de l'original.
      */
     private static void drawGlow(GuiGraphics graphics, int rowY, int rgb, float alpha) {
         int s = KeyHintVisuals.GLOW_SIZE;
         int x = KeyHintVisuals.ICON_X;
         int y = rowY + KeyHintVisuals.ICON_Y;
         int w = KeyHintVisuals.ICON_SIZE;
-        int colour = KeyHintVisuals.withAlpha(0xFF000000 | rgb, alpha);
 
-        // La couleur du shader multiplie celle de `fill` : un blit precedent y laisse son alpha.
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        quad(graphics, "left", x - s, y, s, w, rgb, alpha);
+        quad(graphics, "right", x + w, y, s, w, rgb, alpha);
+        quad(graphics, "up", x, y - s, w, s, rgb, alpha);
+        quad(graphics, "down", x, y + w, w, s, rgb, alpha);
+        quad(graphics, "ru", x + w, y - s, s, s, rgb, alpha);
+        quad(graphics, "rd", x + w, y + w, s, s, rgb, alpha);
+        quad(graphics, "lu", x - s, y - s, s, s, rgb, alpha);
+        quad(graphics, "ld", x - s, y + w, s, s, rgb, alpha);
+    }
 
-        // Les quatre cotes, puis les quatre coins : huit morceaux, comme l'original.
-        graphics.fill(x - s, y, x, y + w, colour);
-        graphics.fill(x + w, y, x + w + s, y + w, colour);
-        graphics.fill(x, y - s, x + w, y, colour);
-        graphics.fill(x, y + w, x + w, y + w + s, colour);
-        graphics.fill(x + w, y - s, x + w + s, y, colour);
-        graphics.fill(x + w, y + w, x + w + s, y + w + s, colour);
-        graphics.fill(x - s, y - s, x, y, colour);
-        graphics.fill(x - s, y + w, x, y + w + s, colour);
+    /** Un morceau du halo : l'image entiere, teintee de la couleur de l'etat. */
+    private static void quad(GuiGraphics graphics, String part, int x, int y, int width, int height,
+                             int rgb, float alpha) {
+        blit(graphics, glowTexture(part), x, y, width, height, 0, 0, 1, 1, 1, 1, rgb, alpha);
+    }
+
+    private static ResourceLocation glowTexture(String part) {
+        return nearest(ResourceLocation.fromNamespaceAndPath("academy",
+                "textures/guis/glow_" + part + ".png"));
     }
 
     /**
@@ -344,7 +361,7 @@ public final class KeyHintHud {
     private static void drawLabel(GuiGraphics graphics, String text, int rowY, float fade) {
         var font = Minecraft.getInstance().font;
         int width = cn.academy.client.gui.AcademyFonts.width(font, text, LABEL_CELL);
-        int left = KeyHintVisuals.CAP_X + KeyHintVisuals.CAP_SIZE / 2 - width / 2;
+        int left = KeyHintVisuals.CAP_X + KeyHintVisuals.CAP_SIZE / 2 - width / 2 + LABEL_LIFT_X;
         int top = rowY + KeyHintVisuals.CAP_Y
                 + (KeyHintVisuals.CAP_SIZE - LABEL_CELL) / 2 + LABEL_LIFT;
 
@@ -357,7 +374,19 @@ public final class KeyHintHud {
     }
 
     private static ResourceLocation capTexture(KeyHintVisuals.Cap cap, String label) {
-        return texture(KeyHintVisuals.capTexture(cap, label));
+        return nearest(texture(KeyHintVisuals.capTexture(cap, label)));
+    }
+
+    /**
+     * Une texture du rappel, lue au plus proche voisin.
+     *
+     * <p>C'est le filtrage de l'original : ses icones sont des dessins au pixel, et un degradé
+     * resserre dans un pixel d'ecran doit rester lisible. Le rappel pose ce filtre a chaque image
+     * parce que d'autres ecrans passent les memes images en lisse ({@code CGuiShaders.linear}).
+     */
+    private static ResourceLocation nearest(ResourceLocation texture) {
+        cn.academy.client.gui.GuiTextures.nearest(texture);
+        return texture;
     }
 
     /** Un gris a trois canaux egaux, pour la teinte du capuchon. */

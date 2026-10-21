@@ -131,10 +131,15 @@ loot table, the whole game in four languages, and a config file that tunes the p
   ticks, the storm wing before its wings open, and the railgun with an ingot in hand. The halo is
   the original's: eight glow images around the icon box, tinted with the state's colour, drawn
   in front of the icon. The 0,3 s fade-in is there too, and the key cap greys out while the
-  skill is on cooldown (`!canUseAbility || tickLeft > 0`), which the port forgot. The halo is a
-  **plain line** and not the original's eight glow images: those are 32-pixel gradients, and
-  squeezed into the five units of the halo — one pixel — they only gave a blurred smudge
-  ("*comme s'il était flou au lieu de vraiment faire une petite ligne*").
+  skill is on cooldown (`!canUseAbility || tickLeft > 0`), which the port forgot. The halo is the
+  original's eight glow images, with their transparent pixels: a first pass had replaced them by
+  a plain line, and the player asked for the gradients back ("*tu n'as pas mis les pixels bleu
+  transparent. Pareil pour le orange*"). The real cause of their smudge was the **filtering**:
+  the skill tree and the developer screen hand their icons to `CGuiShaders.linear`, once for good,
+  so the hint inherited a smoothed texture — blurred icons, a smeared halo, and semi-transparent
+  pixels that were not. The hint now reads every texture — glow, plate, cap, frame, icon — at the
+  nearest neighbour, as the original did, and gives the icons back their smoothing afterwards for
+  those two screens.
 - **The direction column is back.** A skill that reads the four movement keys — the teleport's
   flashing, the storm wing — opens a **second column** to the left of the first: four rows with
   the W/A/S/D caps (read like the cross, the forward key on top), the flashing's own four icons
@@ -149,7 +154,8 @@ loot table, the whole game in four languages, and a config file that tunes the p
   big and a pixel low**: the label was drawn as a ten-pixel text scaled by 32/9, the ratio of the
   *game's* font, instead of asking the mod's own font for a 32-cell as `FontOption(32)` did. The
   block now lifts by the measured three units, and the letter takes its cell's metrics, so it is
-  centred in its cap like the original's.
+  centred in its cap like the original's — and then two units to the left, because the player
+  still read it a pixel too far right.
 - **The F4 menu is the original's again.** The port had translated it, with computed columns;
   the player no longer recognised his own menu. Its lines are now the 1.12.2 ones **word for
   word**: `AcademyCraft developer info`, `Skill status`, the internal names (`electromaster`,
@@ -297,9 +303,15 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   est celui de l'original : huit images de lueur autour de la boite de l'icone, teintees de la
   couleur de l'etat, posees devant l'icone. Le fondu d'apparition de 0,3 s est la aussi, et le
   capuchon grise pendant la recharge (`!canUseAbility || tickLeft > 0`), que le port avait oublie.
-  Le halo est un **filet uni** et non les huit images de lueur de l'original : ce sont des
-  degrades de 32 pixels, et ecrases dans les cinq unites du halo — un pixel — ils ne donnaient
-  qu'une tache floue (« comme s'il etait flou au lieu de vraiment faire une petite ligne »).
+  Le halo est fait des huit images de lueur de l'original, avec leurs pixels transparents : un
+  premier passage les avait remplacees par un filet uni, et le joueur a redemande les degrades
+  (« tu n'as pas mis les pixels bleu transparent. Pareil pour le orange »). La vraie cause de
+  leur tache etait le **filtrage** : l'arbre des competences et l'ecran du developpeur passent
+  leurs icones a `CGuiShaders.linear`, une fois pour toutes, et le rappel heritait donc d'une
+  texture lissée — icones floues, halo baveux, et des pixels semi-transparents qui ne l'etaient
+  plus. Le rappel lit maintenant toutes ses textures — lueur, plaque, capuchon, cadre, icone — au
+  plus proche voisin, comme l'original, et rend leur lissage aux icones apres coup pour ces deux
+  ecrans-la.
 - **La colonne des directions est revenue.** Une competence qui lit les quatre touches de
   deplacement — le scintillement du teleporteur, les ailes de tempete — ouvre une **seconde
   colonne** a gauche de la premiere : quatre lignes avec les capuchons W/A/S/D (lues comme la
@@ -317,7 +329,8 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   pixels grossi de 32/9, le rapport de la police du *jeu*, au lieu de demander a la police du mod
   une cellule de 32 comme le faisait `FontOption(32)`. Le bloc remonte des trois unites mesurees,
   et la lettre prend les metriques de sa cellule : elle est centree dans son capuchon comme chez
-  l'original.
+  l'original — puis deux unites plus a gauche, parce que le joueur la lisait encore un pixel trop
+  a droite.
 - **Le gris d'une recharge est celui de l'original.** Le voile etait dessine au quart de sa
   force : un `blit` laisse sa propre couleur — et son alpha — sur le shader, et `fill` multiplie
   sa couleur par celle-la, donc trente pour cent devenaient douze. Dessine au vrai trente pour

@@ -56,6 +56,43 @@ public final class GuiTextures {
     }
 
     /**
+     * Au plus proche voisin, SANS rien retenir : l'appelant decide a chaque image.
+     *
+     * <p>Sert au rappel des touches, qui doit lire ses textures comme l'original le faisait
+     * (Minecraft au plus proche voisin) **meme quand un autre ecran les a passees en lineaire** :
+     * l'arbre des competences et l'ecran du developpeur appellent {@code CGuiShaders.linear} sur
+     * les icones, une fois pour toutes, et le rappel les dessinait donc floues — « les competences
+     * sont un peu flou ». Ne rien retenir est le point : le rappel pose son filtre, dessine, puis
+     * rend a la texture celui que les autres ecrans lui avaient donne.
+     */
+    public static void nearest(ResourceLocation texture) {
+        applyNow(texture, false);
+    }
+
+    /** Filtrage lineaire, SANS rien retenir : le pendant de {@link #nearest}. */
+    public static void linear(ResourceLocation texture) {
+        applyNow(texture, true);
+    }
+
+    /** Pose les parametres du sampler tout de suite, sans passer par les ensembles ci-dessus. */
+    private static void applyNow(ResourceLocation texture, boolean linear) {
+        var loaded = Minecraft.getInstance().getTextureManager().getTexture(texture, null);
+        if (loaded == null) return;
+        int id = loaded.getId();
+        if (id <= 0) return;
+
+        GlStateManager._bindTexture(id);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL12.GL_TEXTURE_MAX_LEVEL, 0);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER,
+                linear ? GL11.GL_LINEAR : GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER,
+                linear ? GL11.GL_LINEAR : GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
+        GlStateManager._bindTexture(0);
+    }
+
+    /**
      * Pose les parametres du sampler, et rend false si la texture n'est pas encore chargee.
      *
      * <p>La premiere image d'un ecran arrive AVANT que le gestionnaire ait charge la texture : ne

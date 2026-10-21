@@ -125,6 +125,17 @@ public final class CGuiShaders {
     }
 
     /**
+     * Cet ecran a-t-il demande le lissage de cette texture ?
+     *
+     * <p>Le rappel des touches dessine les memes icones et doit les lire au plus proche voisin,
+     * comme l'original ; il pose donc son filtre, dessine, puis rend a la texture celui que
+     * l'arbre lui avait donne — c'est a cette question qu'il repond.
+     */
+    public static boolean isLinear(@Nullable ResourceLocation texture) {
+        return texture != null && LINEAR.contains(texture);
+    }
+
+    /**
      * Un trait de l'arbre, dessine dans le repere courant : l'axe des abscisses suit le trait (de
      * zero a sa longueur), celui des ordonnees le traverse (de zero a son epaisseur).
      *
