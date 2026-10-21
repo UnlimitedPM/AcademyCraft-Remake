@@ -245,6 +245,16 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         line.add(bracket("[", field.transform.x - 4));
         line.add(bracket("]", field.transform.x + field.transform.width + 2));
 
+        // LE NOM S'ARRETE AU CROCHET. Sa boite de quarante unites va jusqu'a la colonne des valeurs,
+        // et le crochet ouvrant mord quatre unites dedans : un libelle qui remplit sa boite passe
+        // donc SOUS le crochet. L'anglais tenait tout juste (« Password » fait trente unites avec le
+        // crochet a trente-six) ; « Mot de passe » en fait quarante, et le joueur a vu le texte
+        // toucher le champ. La boite s'arrete maintenant ou le crochet commence, ce qui ne change
+        // rien aux libelles courts (ils sont alignes a gauche) et laisse les longs defiler
+        // (voir {@code MarqueeText}) au lieu de passer dessous.
+        CWidget name = line.child("key");
+        if (name != null) name.transform.width = field.transform.x - 4;
+
         if (view != null) view.onConfirm(field, onEdit);
         return line;
     }

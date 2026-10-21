@@ -332,27 +332,32 @@ public abstract class CGuiScreen extends Screen {
         int cell = cn.academy.client.gui.AcademyFonts.cell(box.fontSize * widget.absScale);
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
-        int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content, cell);
-        int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
-            case "CENTER" -> x + (w - textWidth) / 2;
-            case "RIGHT" -> x + w - textWidth;
-            default -> x;
-        };
-        int textY = switch (box.heightAlign.toUpperCase(java.util.Locale.ROOT)) {
-            case "CENTER" -> y + Math.max(0, h - cell) / 2;
-            case "BOTTOM" -> y + Math.max(0, h - cell);
-            default -> y;
-        };
 
         // Pose par le haut de sa cellule, comme le `TextBox` de l'original : voir CGuiView.
+        //
+        // Et un texte qui ne tient pas dans sa boite ne sort plus de sa boite : il retrecit un peu,
+        // et au-dela il defile, au lieu de deborder sur la colonne voisine. Voir
+        // {@link cn.academy.client.gui.MarqueeText}, qui decide et qui dessine.
+        var marquee = cn.academy.client.gui.MarqueeText.plan(font, content, box.align,
+                box.heightAlign, x, y, w, h, cell, box.allowEdit && editable);
+
         if (!content.isEmpty()) {
-            cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, content, textX, textY, colour,
-                    cell);
+            if (marquee.scroll()) {
+                cn.academy.client.gui.MarqueeText.drawScrolled(graphics, font, content,
+                        marquee.x(), marquee.y(), w, marquee.cell(), colour,
+                        cn.academy.client.gui.AcademyFonts.width(font, content, marquee.cell()) - w);
+            } else {
+                cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, content, marquee.x(),
+                        marquee.y(), colour, marquee.cell());
+            }
         }
 
-        // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
+        // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier. Un champ
+        // qui a le clavier n'est ni retreci ni defile, donc sa position est celle du texte.
         if (editable && (System.currentTimeMillis() / 500) % 2 == 0) {
-            graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + cell, colour);
+            int textWidth = cn.academy.client.gui.AcademyFonts.width(font, content, marquee.cell());
+            graphics.fill(marquee.x() + textWidth + 1, marquee.y(), marquee.x() + textWidth + 2,
+                    marquee.y() + marquee.cell(), colour);
         }
     }
 
