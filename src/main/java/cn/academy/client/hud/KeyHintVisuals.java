@@ -117,9 +117,10 @@ public final class KeyHintVisuals {
     /**
      * L'epaisseur du halo autour de l'icone, en unites (le {@code size} de l'original).
      *
-     * <p>Un halo de {@code ACRenderingHelper.drawGlow} n'est pas un degrade : c'est un cadre de
-     * huit images ({@code textures/guis/glow_left|right|up|down|ru|rd|lu|ld.png}), quatre cotes
-     * et quatre coins, posees autour de la boite et teintees de la couleur de l'etat.
+     * <p>L'original posait la huit images de degrade ({@code glow_left|right|up|down|ru|rd|lu|ld}),
+     * quatre cotes et quatre coins. A cette epaisseur elles ne font qu'un pixel : le port dessine
+     * donc un filet UNI de la couleur de l'etat, qui est ce qu'on y voit — le joueur a demande une
+     * « petite ligne » et non un halo flou.
      */
     public static final int GLOW_SIZE = 5;
 

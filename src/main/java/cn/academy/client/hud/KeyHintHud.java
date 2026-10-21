@@ -281,36 +281,36 @@ public final class KeyHintHud {
     }
 
     /**
-     * Le halo de l'etat : les huit morceaux de {@code ACRenderingHelper.drawGlow}.
+     * Le halo de l'etat : un filet de la couleur de l'etat autour de l'icone.
      *
-     * <p>Quatre cotes (`glow_left`, `right`, `up`, `down`) et quatre coins (`ru`, `rd`, `lu`,
-     * `ld`), chacun une image teintee de la couleur de l'etat. Les images sont celles de
-     * l'original, au bit pres — elles etaient livrees dans le port sans que personne ne les
-     * lise.
+     * <p>L'original posait la les huit morceaux de {@code ACRenderingHelper.drawGlow}
+     * ({@code glow_left|right|up|down|ru|rd|lu|ld}, quatre cotes et quatre coins). Ces images
+     * sont des DEGRADES de 32 pixels d'epaisseur : ecrasees dans les cinq unites du halo — un
+     * pixel a l'ecran — elles ne donnent qu'une tache douce. Le joueur l'a dit tout de suite :
+     * « le bleu qui entoure les competences n'est pas parfait, comme s'il etait flou au lieu de
+     * vraiment faire une petite ligne ». Le halo est donc un FILET uni de la couleur de l'etat,
+     * ce que ces huit images dessinaient de toute facon a cette taille. C'est le seul ecart
+     * d'aspect connu de cet element.
      */
     private static void drawGlow(GuiGraphics graphics, int rowY, int rgb, float alpha) {
         int s = KeyHintVisuals.GLOW_SIZE;
         int x = KeyHintVisuals.ICON_X;
         int y = rowY + KeyHintVisuals.ICON_Y;
         int w = KeyHintVisuals.ICON_SIZE;
+        int colour = KeyHintVisuals.withAlpha(0xFF000000 | rgb, alpha);
 
-        quad(graphics, "left", x - s, y, s, w, rgb, alpha);
-        quad(graphics, "right", x + w, y, s, w, rgb, alpha);
-        quad(graphics, "up", x, y - s, w, s, rgb, alpha);
-        quad(graphics, "down", x, y + w, w, s, rgb, alpha);
-        quad(graphics, "ru", x + w, y - s, s, s, rgb, alpha);
-        quad(graphics, "rd", x + w, y + w, s, s, rgb, alpha);
-        quad(graphics, "lu", x - s, y - s, s, s, rgb, alpha);
-        quad(graphics, "ld", x - s, y + w, s, s, rgb, alpha);
-    }
+        // La couleur du shader multiplie celle de `fill` : un blit precedent y laisse son alpha.
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-    private static void quad(GuiGraphics graphics, String part, int x, int y, int width, int height,
-                             int rgb, float alpha) {
-        blit(graphics, glowTexture(part), x, y, width, height, 0, 0, 1, 1, 1, 1, rgb, alpha);
-    }
-
-    private static ResourceLocation glowTexture(String part) {
-        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/glow_" + part + ".png");
+        // Les quatre cotes, puis les quatre coins : huit morceaux, comme l'original.
+        graphics.fill(x - s, y, x, y + w, colour);
+        graphics.fill(x + w, y, x + w + s, y + w, colour);
+        graphics.fill(x, y - s, x + w, y, colour);
+        graphics.fill(x, y + w, x + w, y + w + s, colour);
+        graphics.fill(x + w, y - s, x + w + s, y, colour);
+        graphics.fill(x + w, y + w, x + w + s, y + w + s, colour);
+        graphics.fill(x - s, y - s, x, y, colour);
+        graphics.fill(x - s, y + w, x, y + w + s, colour);
     }
 
     /**

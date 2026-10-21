@@ -131,7 +131,10 @@ loot table, the whole game in four languages, and a config file that tunes the p
   ticks, the storm wing before its wings open, and the railgun with an ingot in hand. The halo is
   the original's: eight glow images around the icon box, tinted with the state's colour, drawn
   in front of the icon. The 0,3 s fade-in is there too, and the key cap greys out while the
-  skill is on cooldown (`!canUseAbility || tickLeft > 0`), which the port forgot.
+  skill is on cooldown (`!canUseAbility || tickLeft > 0`), which the port forgot. The halo is a
+  **plain line** and not the original's eight glow images: those are 32-pixel gradients, and
+  squeezed into the five units of the halo — one pixel — they only gave a blurred smudge
+  ("*comme s'il était flou au lieu de vraiment faire une petite ligne*").
 - **The direction column is back.** A skill that reads the four movement keys — the teleport's
   flashing, the storm wing — opens a **second column** to the left of the first: four rows with
   the W/A/S/D caps (read like the cross, the forward key on top), the flashing's own four icons
@@ -291,6 +294,9 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   est celui de l'original : huit images de lueur autour de la boite de l'icone, teintees de la
   couleur de l'etat, posees devant l'icone. Le fondu d'apparition de 0,3 s est la aussi, et le
   capuchon grise pendant la recharge (`!canUseAbility || tickLeft > 0`), que le port avait oublie.
+  Le halo est un **filet uni** et non les huit images de lueur de l'original : ce sont des
+  degrades de 32 pixels, et ecrases dans les cinq unites du halo — un pixel — ils ne donnaient
+  qu'une tache floue (« comme s'il etait flou au lieu de vraiment faire une petite ligne »).
 - **La colonne des directions est revenue.** Une competence qui lit les quatre touches de
   deplacement — le scintillement du teleporteur, les ailes de tempete — ouvre une **seconde
   colonne** a gauche de la premiere : quatre lignes avec les capuchons W/A/S/D (lues comme la
