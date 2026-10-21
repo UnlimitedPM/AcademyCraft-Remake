@@ -61,14 +61,14 @@ loot table, the whole game in four languages, and a config file that tunes the p
   milliseconds a round. The key is now read physically and toggled once per press, open on release
   and close on release, exactly like the 1.12.2 `onKeyUp`; pressing it while typing in the page's
   chat no longer closes the page either.
-- **No text leaves its box any more.** In the machines a label's width comes from the original's
-  own layout document, written for English; in French, "Mot de passe" is wider than "Password" and
-  ran over the password field. A text that does not fit now shrinks by up to a fifth of its cell —
-  eight units going to 6.7 is invisible, a scroll to win four pixels is not — and beyond that it is
-  clipped to its box and **scrolls** (pause, one pixel every 25 ms, pause, back to the start), which
-  is what the player asked for. A field being typed in never moves. The name column of an editable
-  row also stops where its bracket starts, instead of running underneath it.
-- **Tests**: 170 in-game tests, 892 unit tests.
+- **No text leaves its box any more — it scrolls.** In the machines a label's width comes from the
+  original's own layout document, written for English; in French, "Mot de passe" is wider than
+  "Password" and ran over the password field. A text that does not fit is now clipped to its box and
+  **scrolls**: a pause to read the start, one pixel every 25 ms, a pause at the end, then back to the
+  beginning. It keeps its size — a shrunk label reads badly, a scrolling one reads in full. A field
+  being typed in never moves. The name column of an editable row also stops where its bracket
+  starts, instead of running underneath it.
+- **Tests**: 170 in-game tests, 887 unit tests.
 
 ### Francais
 
@@ -133,15 +133,14 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   physiquement et basculee une fois par appui : ouverture au relachement, fermeture au relachement,
   exactement le `onKeyUp` de la 1.12.2 ; et l'appuyer pendant qu'on ecrit dans le chat de la page
   ne la referme plus.
-- **Plus aucun texte ne sort de sa boite.** Dans les machines, la largeur d'un libelle vient du
-  document de mise en page de l'original, ecrit pour l'anglais ; en francais, « Mot de passe » est
-  plus large que « Password » et passait par-dessus le champ du mot de passe. Un texte qui ne tient
-  pas retrecit maintenant jusqu'a un cinquieme de sa cellule — huit unites qui passent a 6,7 ne se
-  voient pas, un defilement pour gagner quatre pixels, si — et au-dela il est coupe a sa boite et
-  **defile** (pause, un pixel toutes les 25 ms, pause, retour au debut), comme le joueur l'a demande.
-  Un champ en cours de saisie ne bouge jamais. La colonne des noms d'une ligne modifiable s'arrete
-  aussi la ou commence son crochet, au lieu de passer dessous.
-- **Des tests** : 170 tests en jeu, 892 tests unitaires.
+- **Plus aucun texte ne sort de sa boite : il defile.** Dans les machines, la largeur d'un libelle
+  vient du document de mise en page de l'original, ecrit pour l'anglais ; en francais, « Mot de passe »
+  est plus large que « Password » et passait par-dessus le champ du mot de passe. Un texte qui ne tient
+  pas est maintenant coupe a sa boite et **defile** : une pause pour lire le debut, un pixel toutes les
+  25 ms, une pause a la fin, puis retour au debut. Il garde sa taille — un libelle retreci se lit mal,
+  un libelle qui defile se lit en entier. Un champ en cours de saisie ne bouge jamais. La colonne des
+  noms d'une ligne modifiable s'arrete aussi la ou commence son crochet, au lieu de passer dessous.
+- **Des tests** : 170 tests en jeu, 887 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 

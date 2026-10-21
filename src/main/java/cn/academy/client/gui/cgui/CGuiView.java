@@ -788,36 +788,39 @@ public final class CGuiView {
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
         var font = screen.getMinecraft().font;
+        int textWidth = AcademyFonts.width(font, content, cell);
+        int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
+            case "CENTER" -> x + (w - textWidth) / 2;
+            case "RIGHT" -> x + w - textWidth;
+            default -> x;
+        };
+        int textY = switch (box.heightAlign.toUpperCase(java.util.Locale.ROOT)) {
+            case "CENTER" -> y + Math.max(0, h - cell) / 2;
+            case "BOTTOM" -> y + Math.max(0, h - cell);
+            default -> y;
+        };
 
         // Pose par le haut de sa cellule, comme le `TextBox` de l'original :
         // `(height - fontSize) x heightAlign.factor`. Avec la ligne de base du jeu, tout le texte
         // des pages tombait un pixel trop bas, et le joueur l'a vu.
         //
-        // ET UN TEXTE QUI NE TIENT PAS DANS SA BOITE NE SORT PLUS DE SA BOITE : la largeur d'un
-        // libelle vient du document de l'original, ecrit pour l'anglais ; en francais le meme
-        // libelle est plus large, et il passait par-dessus la colonne voisine (le joueur, sur
-        // l'ecran du noeud : « le texte deborde sur l'emplacement du mot de passe »). Il retrecit
-        // un peu, et au-dela il defile. Voir {@link MarqueeText}, qui decide et qui dessine.
-        MarqueeText.Plan plan = MarqueeText.plan(font, content, box.align, box.heightAlign,
-                x, y, w, h, cell, box.allowEdit && editable);
-
+        // ET UN TEXTE QUI NE TIENT PAS DANS SA BOITE DEFILE : la boite d'un libelle vient du
+        // document de l'original, qui a ete ecrit pour l'anglais ; en francais le meme libelle est
+        // plus large, et il passait par-dessus la colonne voisine (le joueur, sur l'ecran du noeud :
+        // « le texte deborde sur l'emplacement du mot de passe »). Voir {@link MarqueeText}.
+        boolean overflows = textWidth > w;
         if (!content.isEmpty()) {
-            if (plan.scroll()) {
-                MarqueeText.drawScrolled(graphics, font, content, plan.x(), plan.y(), w,
-                        plan.cell(), colour,
-                        AcademyFonts.width(font, content, plan.cell()) - w);
+            if (overflows) {
+                MarqueeText.drawScrolled(graphics, font, content, x, textY, w, cell, colour,
+                        textWidth - w, box.allowEdit && editable);
             } else {
-                AcademyFonts.drawTop(graphics, font, content, plan.x(), plan.y(), colour,
-                        plan.cell());
+                AcademyFonts.drawTop(graphics, font, content, textX, textY, colour, cell);
             }
         }
 
-        // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier. Un champ
-        // qui a le clavier n'est ni retreci ni defile, donc sa position est celle du texte.
+        // Le curseur du champ : un trait apres la derniere lettre, tant qu'il a le clavier.
         if (editable && (System.currentTimeMillis() / 500) % 2 == 0) {
-            int textWidth = AcademyFonts.width(font, content, plan.cell());
-            graphics.fill(plan.x() + textWidth + 1, plan.y(), plan.x() + textWidth + 2,
-                    plan.y() + plan.cell(), colour);
+            graphics.fill(textX + textWidth + 1, textY, textX + textWidth + 2, textY + cell, colour);
         }
     }
 
