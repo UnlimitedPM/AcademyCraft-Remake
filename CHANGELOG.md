@@ -96,7 +96,19 @@ loot table, the whole game in four languages, and a config file that tunes the p
   Chinese; they are now written in the three other languages of the mod, tags (`![key …]`,
   `![image …]`) intact, and a unit test fails if a language lacks one of the thirteen pages or
   still carries the English title.
-- **Tests**: 171 in-game tests, 891 unit tests.
+- **The skill tree app is the original's page now.** The port had invented a flat list of
+  categories where the 1.12.2 drew its tree; the app now reads the very same page as the
+  developer machine (`rework/page_developer`), with the player's ability on the left, the circuit
+  backdrop on the right, every node in its place, its icon in a disc, its experience filling the
+  ring, and the link that pulls it from the skill it depends on. Clicking a node opens the same
+  fiche the machine opens — name, level, experience, description, and what is still missing to
+  learn it — and, as in the original, the app teaches nothing: no button, because the machine is
+  what has the energy and the right to teach. The tree itself is one piece of code now
+  (`SkillTreeView`), shown twice, which is exactly how the original did it.
+- **A pause stays a pause.** Pausing a track in the terminal and closing the screen started it
+  again: vanilla's `setScreen(null)` calls `SoundManager.resume()`, which unpauses *every* channel
+  of the engine, the mod's own included. The reader now puts its channel back on pause after it.
+- **Tests**: 171 in-game tests, 893 unit tests.
 
 ### Francais
 
@@ -198,7 +210,21 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   anglais et en chinois ; elles sont ecrites dans les trois autres langues du mod, balises
   (`![key …]`, `![image …]`) intactes, et un test unitaire echoue si une langue perd une des treize
   pages ou garde le titre anglais.
-- **Des tests** : 171 tests en jeu, 891 tests unitaires.
+- **L'application Arbre de competences est la page de l'original.** Le port avait invente une
+  liste plate de categories la ou la 1.12.2 dessinait son arbre ; l'application lit maintenant la
+  **meme** page que la machine du developpeur (`rework/page_developer`) : l'aptitude du joueur
+  a gauche, le fond de circuit a droite, chaque competence a sa place, son icone dans un disque,
+  son experience qui remplit l'anneau, et le trait qui la tire de celle dont elle depend. Cliquer
+  un noeud ouvre la meme fiche que la machine — nom, niveau, experience, description, et ce qui
+  manque encore pour l'apprendre — et, comme dans l'original, l'application n'apprend rien : aucun
+  bouton, parce que c'est la machine qui a l'energie et le droit d'enseigner. L'arbre lui-meme
+  n'est plus qu'un seul morceau de code (`SkillTreeView`), montre deux fois — exactement ce que
+  faisait l'original.
+- **Une pause reste une pause.** Mettre un morceau en pause dans le terminal puis refermer
+  l'ecran le relancait : le `setScreen(null)` de Minecraft appelle `SoundManager.resume()`, qui
+  remet en marche **tous** les canaux du moteur, celui du mod compris. Le lecteur repose
+  maintenant sa pause apres lui.
+- **Des tests** : 171 tests en jeu, 893 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 

@@ -1,5 +1,6 @@
 package cn.academy;
 
+import cn.academy.client.gui.cgui.SkillTreeView;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -24,17 +25,17 @@ class DeveloperScreenTest {
     @Test
     @DisplayName("le trait d'une competence apprise garde toute son opacite")
     void leTraitApprisRestePlein() {
-        assertEquals(LEARNED, DeveloperScreen.linkDim(LEARNED, true), 1.0e-9);
+        assertEquals(LEARNED, SkillTreeView.linkDim(LEARNED, true), 1.0e-9);
     }
 
     @Test
     @DisplayName("le trait d'une competence a prendre est attenue a quatre dixiemes")
     void leTraitNonApprisEstAttenue() {
-        assertEquals(0.28, DeveloperScreen.linkDim(IN_REACH, false), 1.0e-9,
+        assertEquals(0.28, SkillTreeView.linkDim(IN_REACH, false), 1.0e-9,
                 "sept dixiemes de noeud, et les quatre dixiemes du trait");
-        assertEquals(0.10, DeveloperScreen.linkDim(OUT_OF_REACH, false), 1.0e-9,
+        assertEquals(0.10, SkillTreeView.linkDim(OUT_OF_REACH, false), 1.0e-9,
                 "un quart de noeud, et les quatre dixiemes du trait");
-        assertEquals(DeveloperScreen.LINK_UNLEARNED, DeveloperScreen.linkDim(1.0, false), 1.0e-9);
+        assertEquals(SkillTreeView.LINK_UNLEARNED, SkillTreeView.linkDim(1.0, false), 1.0e-9);
     }
 
     @Test

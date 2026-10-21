@@ -1,5 +1,6 @@
 package cn.academy.misc.media.client;
 
+import cn.academy.AcademyCraft;
 import cn.academy.misc.media.Media;
 import com.mojang.blaze3d.audio.Channel;
 import net.minecraft.client.Minecraft;
@@ -12,6 +13,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -174,6 +178,46 @@ public final class ClientMediaPlayer {
             resume();
         } else {
             pause();
+        }
+    }
+
+    /**
+     * Le morceau en attente le reste, meme quand le moteur remet tout en marche.
+     *
+     * <p>{@code Minecraft.setScreen(null)} appelle {@code soundManager.resume()}, qui remet en
+     * marche <b>tous</b> les canaux du moteur — le notre compris. Fermer un ecran, n'importe lequel,
+     * relancait donc la musique mise en pause dans le terminal, alors que le port la croyait
+     * toujours en attente : le bouton montrait lecture et l'horloge ne bougeait plus, mais le son,
+     * lui, repartait — le joueur : « si je referme le data terminal, la musique se relance d'elle
+     * meme ».
+     *
+     * <p>Le moteur ne demande pas son avis au son : il n'y a donc pas d'autre facon de tenir la
+     * pause que de la reposer apres lui. C'est une commande sur le canal, pas un rechargement :
+     * elle ne coute rien, et un canal deja en pause ne bouge pas.
+     */
+    private static void keepPaused() {
+        if (playing == null || pausedAt < 0.0f) return;
+
+        ChannelAccess.ChannelHandle handle = channel();
+        if (handle != null) handle.execute(Channel::pause);
+    }
+
+    /**
+     * Le battement du lecteur : une tache par tick, et seulement quand un morceau est en attente.
+     *
+     * <p>C'est un abonne distinct, et pas le lecteur lui-meme, parce que Forge ne veut pas
+     * d'abonnement sur une classe qui n'a pas de constructeur public : celui du lecteur est prive,
+     * comme il se doit pour une classe qui n'est qu'un etat statique.
+     */
+    @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
+    public static final class Keeping {
+
+        private Keeping() {}
+
+        @SubscribeEvent
+        public static void onClientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) return;
+            keepPaused();
         }
     }
 

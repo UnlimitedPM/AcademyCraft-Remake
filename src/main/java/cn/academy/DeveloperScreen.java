@@ -10,16 +10,16 @@ import cn.academy.ability.develop.condition.LearningCondition;
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiShaders;
 import cn.academy.client.gui.cgui.CWidget;
-import net.minecraft.Util;
+import cn.academy.client.gui.cgui.GuiPageHost;
+import cn.academy.client.gui.cgui.GuiSurface;
+import cn.academy.client.gui.cgui.SkillTreeView;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * L'ecran du developpeur d'aptitudes : l'arbre des competences de l'original.
@@ -67,55 +67,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final String AREA = "parent_right/area";
     private static final String ABILITY_PANEL = "parent_left/panel_ability";
     private static final String MACHINE_PANEL = "parent_left/panel_machine";
-
-    /**
-     * La boite d'un noeud, et le trait qui le relie a son parent.
-     *
-     * <p>Le trait s'arrete a {@code 12,2} du centre de chaque noeud alors que le disque en fait
-     * {@code 11,5} : il ne mord donc jamais dessus, et c'est pour cela que l'ordre de leur dessin ne
-     * se voit pas.
-     */
-    private static final double NODE_BOX = 16.0;
-    private static final double LINK_INSET = 12.2;
-    private static final double LINK_WIDTH = 5.5;
-    private static final double LINK_FADE = 5.0;
-
-    /**
-     * Ce qui reste a l'opacite d'un trait quand la competence n'est pas apprise : quatre dixiemes.
-     *
-     * <p>C'est le facteur de l'original — {@code mAlpha * (if (learned) 1.0 else 0.4)} — et il
-     * manquait au port : un trait se dessinait a l'opacite de son noeud, deux fois et demie trop
-     * clair des que la competence n'etait pas apprise. Le joueur a compare les deux versions cote a
-     * cote : « la luminosite des elements n'est pas la meme pour les 2 ».
-     */
-    static final double LINK_UNLEARNED = 0.4;
-
-    /** L'apparition : un fondu par noeud, decale de son rang de huit centiemes de seconde. */
-    private static final double APPEAR_STEP = 0.08;
-    private static final double APPEAR_SPEED = 10.0;
-
-    /** Le survol : un cinquieme de plus, atteint en un dixieme de seconde. */
-    private static final double HOVER_SCALE = 1.2;
-    private static final double HOVER_TRANSIT = 0.1;
-
-    /** Le relief : tout l'arbre se decale de dix unites au plus, en sens inverse de la souris. */
-    private static final double PARALLAX = 10.0;
-
-    /**
-     * Le fond de la zone de l'arbre.
-     *
-     * <p>L'image se dessine un centieme plus grande que la zone, et c'est <b>ce centieme</b> qui la fait
-     * glisser : le relief de l'arbre, c'est le rapport entre ces quelques dixiemes d'unite et les dix
-     * unites que parcourent les noeuds.
-     */
-    private static final String AREA_BACKDROP =
-            "academy:textures/guis/effect/effect_developer_background.png";
-    private static final double BACKDROP_SLIDE = 0.01;
-    private static final double BACKDROP_WINDOW = 1.0 / 1.01;
-
-    /** La surface : un voile noir, ouvert et referme en un cinquieme de seconde. */
-    private static final int VEIL_ALPHA = 178;
-    private static final double VEIL_FADE = 0.2;
 
     /** Le bouton de l'original : son image, sa taille dessinee, et ses deux teintes. */
     private static final String BUTTON_TEXTURE = "academy:textures/guis/developer/button.png";
@@ -174,44 +125,32 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double SURFACE_ICON_SIZE = 27.0;
 
     /**
-     * Un noeud de l'arbre, et de quoi l'animer.
+     * L'arbre des competences, et la fiche qui s'ouvre dessus.
      *
-     * <p>{@code dim} est l'opacite que l'original donne a une competence selon son etat : pleine si
-     * elle est apprise, sept dixiemes si celle dont elle depend l'est — elle est alors a portee — et
-     * un quart sinon, c'est-a-dire a peine visible. Toute la progression se lit la, sans un mot.
+     * <p>Les deux vivent maintenant hors de cet ecran — voir {@link SkillTreeView} et
+     * {@link GuiSurface} — parce que l'application du terminal les montre aussi, sans machine et
+     * sans apprentissage. C'est exactement ce que faisait l'original, dont les deux ecrans
+     * passaient par le meme {@code Common.initialize}.
      */
-    private static final class Node {
-        final Skill skill;
-        final CWidget widget;
-        final boolean learned;
-        final double dim;
-        final double born;
-        boolean hovered;
-        double since;
-
-        Node(Skill skill, CWidget widget, boolean learned, double dim, double born) {
-            this.skill = skill;
-            this.widget = widget;
-            this.learned = learned;
-            this.dim = dim;
-            this.born = born;
-            this.since = born;
+    private final GuiPageHost host = new GuiPageHost() {
+        @Override
+        public CWidget page() {
+            return pageWindow(PAGE);
         }
-    }
 
-    private final List<Node> nodes = new ArrayList<>();
+        @Override
+        public void onClick(CWidget widget, Runnable action) {
+            DeveloperScreen.this.onClick(widget, action);
+        }
 
-    /** Ce que l'arbre montre, sous forme de phrase comparable : voir {@link #signature()}. */
-    private String signature = "";
+        @Override
+        public void reflow() {
+            DeveloperScreen.this.reflow();
+        }
+    };
 
-    /** L'instant d'ouverture, en secondes : c'est l'origine de tous les fondus. */
-    private double opened;
-
-    /** La surface ouverte, s'il y en a une, et son propre fondu. */
-    @Nullable
-    private CWidget surface;
-    private double surfaceSince;
-    private boolean surfaceClosing;
+    private final SkillTreeView tree = new SkillTreeView(host);
+    private final GuiSurface veil = new GuiSurface(host, PAGE_WIDTH, PAGE_HEIGHT);
 
     public DeveloperScreen(DeveloperMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -284,11 +223,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         page.transform.alignWidth = "LEFT";
         page.transform.alignHeight = "TOP";
 
-        opened = now();
         buildAbilityPanel(page);
         buildMachinePanel(page);
-        buildTree(page);
-
+        buildAptitude(page);
         // La bobine magnetique change l'ecran : l'original ne montrait plus l'arbre du tout et laissait
         // la place a la console du changement d'aptitude. Le port pose la meme question, sous forme de
         // surface, et c'est ce que le joueur tient en main qui decide — comme chez l'original.
@@ -442,8 +379,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      */
     private void buildConsole(CWidget area) {
         area.children().clear();
-        // La console dit aussi ce qu'elle montre : sans cela, `refresh` la rebatirait a chaque image.
-        signature = signature();
 
         List<String> lines = consoleText();
         double top = CONSOLE_DY - (lines.size() - 1) * CONSOLE_LINE / 2.0;
@@ -504,14 +439,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     }
 
     /**
-     * L'arbre : un noeud par competence, et un trait par parente.
+     * La zone de droite : l'arbre, ou la console quand le joueur n'a encore aucune aptitude.
      *
-     * <p>Toutes les competences de la categorie ne s'y trouvent pas. Une competence n'apparait que si
-     * elle vaut la peine d'etre montree — si le joueur a le niveau pour elle, s'il l'a deja apprise, ou
-     * si celle dont elle depend est apprise. C'est {@link LearningHelper} qui en decide, et l'original
-     * s'en servait exactement de meme : l'arbre s'ouvre au fur et a mesure.
+     * <p>L'arbre lui-meme vit hors de cet ecran, dans {@link SkillTreeView} : l'application du
+     * terminal montre le meme, sans machine. Ici il reste a decider ce qui prend la place quand il
+     * n'y a rien a dessiner — et c'est la console de l'original, qui dit au joueur comment entrer
+     * dans le mod. Le passage se fait tout seul une fois la premiere aptitude apprise, puisque
+     * l'ecran rebatit des que l'aptitude change.
      */
-    private void buildTree(CWidget page) {
+    private void buildAptitude(CWidget page) {
         // La zone se prend par la PAGE, et non par `widget("area")` : celui-ci passe par la vue, qui
         // n'existe pas encore quand la page se construit. Le joueur voyait donc, a la place de la
         // console, le vieux message « ask a developer for one » — la console ne s'affichait jamais.
@@ -519,129 +455,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         CWidget area = right == null ? null : right.child("area");
         if (area == null) return;
 
-        // Sans aucune aptitude, il n'y a pas d'arbre a montrer : la console prend la place, et
-        // c'est elle qui dit au joueur comment entrer dans le mod. Le passage se fait tout seul
-        // une fois la premiere aptitude apprise, puisque l'ecran rebatit des que l'aptitude change.
-        if (category() == null) {
-            buildConsole(area);
-            return;
-        }
-        nodes.clear();
-
-        area.children().clear();
-
-        // Le fond de la zone, sur la zone elle-meme : voir {@link #drawAreaBackdrop} pour ce qu'il a
-        // fallu comprendre avant de le mettre la.
-        if (area.texture == null) area.texture = new CWidget.DrawTexture();
-        area.texture.texture = AREA_BACKDROP;
-        area.texture.u0 = slide(0);
-        area.texture.v0 = slide(0);
-        area.texture.u1 = area.texture.u0 + BACKDROP_WINDOW;
-        area.texture.v1 = area.texture.v0 + BACKDROP_WINDOW;
-
         Category category = category();
+        AbilityData data = ClientAbilityData.get();
         if (category == null) {
-            area.add(message("academy.developer.no_category"));
-            signature = signature();
+            buildConsole(area);
+            tree.note(null, data);
             return;
         }
 
-        AbilityData data = ClientAbilityData.get();
-        int index = 0;
-        for (Skill skill : category.getSkills()) {
-            if (!LearningHelper.canBePotentiallyLearned(data, skill)) continue;
-
-            boolean learned = data.isSkillLearned(skill);
-            Node node = new Node(skill, node(skill.getName()), learned,
-                    dim(data, skill, learned), APPEAR_STEP * index);
-            area.add(node.widget);
-            onClick(node.widget, () -> openSkill(skill));
-
-            // Le trait vers le parent : il part du noeud et vise le centre de l'autre, en s'arretant a
-            // douze unites et demie de chacun des deux.
-            Skill parent = skill.getParent();
-            if (parent != null) node.widget.line = link(skill, parent);
-
-            nodes.add(node);
-            index++;
-        }
-
-        // Le trait connait le noeud d'ou il part : son survol ecarte le premier bout, comme celui du
-        // noeud qui le porte ecarte le second. Sans cela, le disque grossi passait par-dessus le bout
-        // et le joueur voyait le trait au travers du cerne de progression.
-        Map<Skill, CWidget> bySkill = new HashMap<>();
-        for (Node node : nodes) bySkill.put(node.skill, node.widget);
-        for (Node node : nodes) {
-            if (node.widget.line == null) continue;
-            Skill parent = node.skill.getParent();
-            node.widget.line.source = parent == null ? null : bySkill.get(parent);
-        }
-
-        signature = signature();
-    }
-
-    /** L'opacite d'un noeud : voir {@link Node}. */
-    private static double dim(AbilityData data, Skill skill, boolean learned) {
-        if (learned) return 1.0;
-        Skill parent = skill.getParent();
-        return parent == null || data.isSkillLearned(parent) ? 0.7 : 0.25;
-    }
-
-    private static CWidget node(String name) {
-        CWidget node = new CWidget("skill_" + name);
-        node.transform.width = NODE_BOX;
-        node.transform.height = NODE_BOX;
-        node.transform.alignWidth = "LEFT";
-        node.transform.alignHeight = "TOP";
-        node.transform.scale = 1.0;
-        node.disc = new CWidget.Disc();
-        return node;
-    }
-
-    /**
-     * Le trait qui relie une competence a celle dont elle depend, dans les unites de son noeud.
-     *
-     * <p>Le repere est celui de la boite du noeud : son centre est donc a huit unites, et le vecteur
-     * vers le parent se lit directement dans les coordonnees de l'arbre — celles que les classes de
-     * categorie ont reprises de l'original. Les deux bouts reculent de {@code 12,2} le long de ce
-     * vecteur, et c'est ce qui laisse les deux disques degages.
-     */
-    private static CWidget.Line link(Skill skill, Skill parent) {
-        double dx = parent.getGuiX() - skill.getGuiX();
-        double dy = parent.getGuiY() - skill.getGuiY();
-        double norm = Math.sqrt(dx * dx + dy * dy);
-        double half = NODE_BOX / 2;
-
-        CWidget.Line line = new CWidget.Line();
-        line.thickness = LINK_WIDTH;
-        line.progress = 0;
-        line.x0 = half;
-        line.y0 = half;
-        line.x1 = half;
-        line.y1 = half;
-        if (norm <= 0) return line;
-
-        double ux = dx / norm * LINK_INSET;
-        double uy = dy / norm * LINK_INSET;
-        line.x0 = dx + half - ux;
-        line.y0 = dy + half - uy;
-        line.x1 = half + ux;
-        line.y1 = half + uy;
-        return line;
-    }
-
-    /** Le peu qui se dit quand le joueur n'a encore aucune aptitude. */
-    private static CWidget message(String key) {
-        CWidget box = new CWidget("message");
-        box.transform.width = 200;
-        box.transform.height = 12;
-        box.transform.alignWidth = "CENTER";
-        box.transform.alignHeight = "CENTER";
-        box.text = new CWidget.TextBox();
-        box.text.content = Component.translatable(key).getString();
-        box.text.align = "CENTER";
-        box.text.heightAlign = "CENTER";
-        return box;
+        tree.build(category, data, this::openSkill);
     }
 
     /** L'icone d'une categorie : celle de ses pages, sous {@code guis/icons}. */
@@ -667,176 +489,38 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     // ------------------------------------------------------------------
 
     /**
-     * Ce qui bouge a chaque image : le relief, le survol, les fondus, et le trait qui pousse.
+     * Ce qui bouge a chaque image : les panneaux, le voile de la fiche ouverte, et l'arbre.
      *
-     * <p>Les positions se posent ici, apres que le placement les a lues — les noeuds sont donc dessines
-     * avec la place de l'image precedente, en retard d'une image. Cela ne se voit pas : un soixantieme
-     * de seconde, sur un deplacement de dix unites au total. L'echelle du survol, elle, se lit au
-     * dessin et s'applique donc tout de suite.
+     * <p>L'arbre vit dans {@link SkillTreeView} : c'est lui qui connait le relief, le survol, les
+     * fondus et le trait qui pousse, et c'est ce qui permet a l'application du terminal d'en montrer
+     * exactement le meme.
      */
     @Override
     protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
         refresh();
-        animateSurface();
-        if (nodes.isEmpty()) return;
-
-        double time = now();
-        // Le relief se lit sur l'ecran entier, pas sur la zone de l'arbre : c'est ce que faisait
-        // l'original, et c'est ce qui fait que le fond bouge meme quand la souris est sur le panneau.
-        double dx = clamp01(mouseX / Math.max(1, width)) - 0.5;
-        double dy = clamp01(mouseY / Math.max(1, height)) - 0.5;
-
-        drawAreaBackdrop(dx, dy);
-        if (nodes.isEmpty()) return;
-
-        // Le survol ne compte pas tant qu'une surface est ouverte : elle est modale, et un noeud ne doit
-        // ni s'allumer ni repondre a travers son voile.
-        boolean blocked = surface != null;
-        AbilityData data = ClientAbilityData.get();
-
-        for (Node node : nodes) {
-            node.widget.transform.x = node.skill.getGuiX() - dx * PARALLAX;
-            node.widget.transform.y = node.skill.getGuiY() - dy * PARALLAX;
-
-            boolean hovered = !blocked && node.widget.isPointWithin(mouseX, mouseY);
-            if (hovered != node.hovered) {
-                node.hovered = hovered;
-                node.since = time;
-            }
-
-            double transit = clamp01((time - node.since) / HOVER_TRANSIT);
-            double scale = node.hovered
-                    ? lerp(1.0, HOVER_SCALE, transit)
-                    : lerp(HOVER_SCALE, 1.0, transit);
-
-            double dt = Math.max(0, time - opened - node.born);
-            CWidget.Disc disc = node.widget.disc;
-            if (disc != null) {
-                disc.icon = node.skill.getHintIcon().toString();
-                disc.drawScale = scale;
-                // L'anneau dit l'experience acquise, et l'icone grisee dit que la competence n'est pas
-                // encore apprise. Les deux tiennent dans le meme noeud, et c'est ce qui fait qu'on lit
-                // l'arbre d'un coup d'oeil : ce qui brille appartient au joueur, ce qui grisonne reste a
-                // prendre.
-                disc.drawFill = node.learned;
-                disc.fill = data.getSkillExp(node.skill);
-                disc.grey = !node.learned;
-                disc.backAlpha = alpha(node.dim * APPEAR_SPEED * dt);
-                disc.iconAlpha = alpha(node.dim * APPEAR_SPEED * (dt - APPEAR_STEP));
-            }
-            if (node.widget.line != null) {
-                node.widget.line.progress = clamp01(LINK_FADE * dt);
-                node.widget.line.alpha = alpha(LINK_FADE * dt * linkDim(node.dim, node.learned));
-            }
-        }
+        veil.animate();
+        tree.frame(ClientAbilityData.get(), mouseX, mouseY, width, height, veil.opened());
     }
 
-    /**
-     * L'opacite d'un trait : celle de son noeud, et le facteur des competences non apprises.
-     *
-     * <p>Voir {@link #LINK_UNLEARNED}. Une competence apprise garde son trait plein ; toutes les
-     * autres le portent a quatre dixiemes, qu'elles soient a portee (sept dixiemes) ou non (un quart).
-     */
-    static double linkDim(double dim, boolean learned) {
-        return dim * (learned ? 1.0d : LINK_UNLEARNED);
-    }
-
-    /** Une opacite de zero a 255, bornee. */
-    private static int alpha(double fraction) {
-        return (int) Math.round(clamp01(fraction) * 255);
-    }
-
-    /**
-     * Fait glisser le fond de la zone de l'arbre dans son cadre.
-     *
-     * <p>C'est l'image de l'original — {@code effect_developer_background} — un centieme plus
-     * <b>grande</b> que la zone : elle deborde donc de cette marge, et la fenetre s'y deplace au rythme
-     * de la souris. Elle ne bouge presque pas : juste assez pour que la zone paraisse posee devant
-     * quelque chose. Les noeuds, eux, se deplacent de dix unites, et c'est ce decalage entre les deux
-     * qui fait le relief.
-     *
-     * <p>ELLE AVAIT DISPARU, ET LE JOUEUR L'A VU DEUX FOIS. D'abord parce qu'elle n'etait pas dessinee
-     * du tout ; ensuite parce qu'elle etait dessinee <b>avant tous les widgets</b>, donc sous le fond du
-     * panneau — une image noire a moitie — et sous les ornements du panneau de droite. Le joueur l'a
-     * dit a sa facon : « je me demande si ce n'est pas parce que l'effet de noir dans le fond passe par
-     * devant et qu'il le cache ». C'etait exactement cela, sauf que le noir en question n'est pas celui
-     * de l'ecran mais celui de la page.
-     *
-     * <p>Elle est maintenant posee <b>sur le widget de la zone</b>, comme l'original qui la dessinait
-     * depuis l'evenement d'image de cette meme zone. Le moteur dessine la texture d'un widget avant ses
-     * enfants : l'image se retrouve donc entre le fond de la page et les noeuds, a sa place exacte.
-     */
-    private void drawAreaBackdrop(double dx, double dy) {
-        CWidget area = widget("area");
-        if (area == null || area.texture == null) return;
-
-        area.texture.u0 = slide(dx * BACKDROP_SLIDE);
-        area.texture.v0 = slide(dy * BACKDROP_SLIDE);
-        area.texture.u1 = area.texture.u0 + BACKDROP_WINDOW;
-        area.texture.v1 = area.texture.v0 + BACKDROP_WINDOW;
-    }
-
-    /**
-     * Ou la fenetre s'ouvre dans l'image.
-     *
-     * <p>L'original ne la fait pas partir du bord : elle se pose a un demi-centieme du centre, ce qui
-     * laisse de quoi glisser d'un cote comme de l'autre. C'est son {@code scale()}.
-     */
-    private static double slide(double offset) {
-        return (offset - 0.5) * BACKDROP_WINDOW + 0.5;
-    }
-
-    private static double lerp(double from, double to, double progress) {
-        return from + (to - from) * progress;
-    }
-
-    private static double clamp01(double value) {
-        return Math.max(0, Math.min(1, value));
-    }
-
-    private static double now() {
-        return Util.getMillis() / 1000.0;
-    }
-
-    /**
-     * Ce que l'arbre montre, sous forme d'une phrase comparable.
-     *
-     * <p>L'original rebatissait tout son ecran apres un apprentissage, par un evenement. Le port
-     * regarde plutot ce qui a change : le niveau de la categorie, et quelles competences sont apprises.
-     * Tant que rien de tout cela ne bouge, l'arbre ne se refait pas — et des qu'une competence
-     * s'ouvre, un noeud de plus apparait et son fondu repart pour lui.
-     */
-    private String signature() {
-        Category category = category();
-        if (category == null) return "-";
-        AbilityData data = ClientAbilityData.get();
-
-        StringBuilder out = new StringBuilder(category.getName());
-        out.append('/').append(data.getCategoryLevel(category)).append('/');
-        for (Skill skill : category.getSkills()) {
-            out.append(data.isSkillLearned(skill) ? '+' : '-');
-        }
-        return out.toString();
-    }
-
-    /** Rebatit l'arbre si ce qu'il montre a change. */
+    /** Rebatit l'arbre et les panneaux si ce qu'ils montrent a change. */
     private void refresh() {
-        String current = signature();
-        if (current.equals(signature)) return;
-
         CWidget page = pageWindow(PAGE);
         if (page == null) return;
+
+        Category category = category();
+        AbilityData data = ClientAbilityData.get();
+        if (tree.unchanged(category, data)) return;
 
         // Les deux panneaux de gauche portent l'aptitude du joueur : ils changent avec elle, et
         // sans ce repose le panneau continuerait d'annoncer « No ability » apres la premiere
         // aptitude, jusqu'a la prochaine ouverture de l'ecran.
         buildAbilityPanel(page);
         buildMachinePanel(page);
-        buildTree(page);
+        buildAptitude(page);
         // Les noeuds qui viennent de naitre n'ont pas encore de place : sans ce repose, ils se
         // dessineraient tous au coin, le temps d'une image.
         reflow();
-        // Et si une surface est ouverte, l'arbre reste dessine SOUS son voile : c'est ce que faisait
+        // Et si une fiche est ouverte, l'arbre reste dessine SOUS son voile : c'est ce que faisait
         // l'original, dont le voile couvrait tout l'ecran sans rien cacher — le joueur : « quand on
         // lit ce que fait l'attaque, on doit quand meme voir l'interface de base derriere (avec
         // toutes les competences, leur cercle d'xp etc) ».
@@ -1110,50 +794,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     }
 
     /**
-     * Ouvre une surface sur la page.
+     * Ouvre une fiche sur la page.
      *
-     * <p>Elle s'y pose en <b>dernier</b>, donc au-dessus de tout le reste. Et tant qu'elle est ouverte,
-     * l'arbre ne se dessine plus : le moteur donne un clic au widget le plus <b>ancien</b> de ses freres,
-     * c'est-a-dire a celui du fond, et un noeud prendrait le clic destine a la surface. L'original
-     * laissait son arbre visible sous un voile a sept dixiemes ; ici il s'efface, et c'est le prix de
-     * cette regle-la.
+     * <p>C'est {@link GuiSurface} qui la pose en <b>dernier</b> dans la page, donc au-dessus de tout
+     * le reste, et qui la referme au premier clic.
      */
     private void open(CWidget content) {
-        CWidget page = pageWindow(PAGE);
-        if (page == null) return;
-
-        closeSurface();
-
-        surface = new CWidget("surface");
-        surface.transform.width = PAGE_WIDTH;
-        surface.transform.height = PAGE_HEIGHT;
-        surface.transform.x = 0;
-        surface.transform.y = 0;
-        surface.transform.alignWidth = "LEFT";
-        surface.transform.alignHeight = "TOP";
-        surface.texture = new CWidget.DrawTexture();
-        surface.texture.red = 0;
-        surface.texture.green = 0;
-        surface.texture.blue = 0;
-        surface.texture.alpha = 0;
-
-        // Le contenu prend la BOITE DE LA PAGE. Sans cela il n'a ni largeur ni hauteur — c'est le
-        // defaut d'un widget neuf — et ses textes, qui s'accrochent au CENTRE de leur parent, se
-        // posaient alors sur le coin haut-gauche de la page : ceux dont le y est negatif, c'est-a-dire
-        // le nom, le niveau et la DESCRIPTION, tombaient au-dessus du bord et ne se voyaient pas. Le
-        // joueur l'a dit ainsi : « quand je click sur un pouvoir, je n'ai pas la description ».
-        content.transform.width = PAGE_WIDTH;
-        content.transform.height = PAGE_HEIGHT;
-        content.transform.alignWidth = "LEFT";
-        content.transform.alignHeight = "TOP";
-        surface.add(content);
-
-        page.add(surface);
-        onClick(surface, this::beginClose);
-        reflow();
-
-        surfaceSince = now();
-        surfaceClosing = false;
+        veil.open(content);
     }
 
     /**
@@ -1167,36 +814,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (super.mouseClicked(mouseX, mouseY, button)) return true;
-        if (surface != null && !surfaceClosing && button == 0) {
-            beginClose();
+        if (veil.opened() && button == 0) {
+            veil.beginClose();
             return true;
         }
         return false;
     }
 
-    /** Referme la surface, en la faisant d'abord s'effacer. */
+    /** Referme la fiche, en la faisant d'abord s'effacer. */
     private void beginClose() {
-        if (surface == null || surfaceClosing) return;
-        surfaceClosing = true;
-        surfaceSince = now();
-    }
-
-    private void closeSurface() {
-        CWidget page = pageWindow(PAGE);
-        if (surface != null && page != null) page.remove(surface);
-        surface = null;
-        surfaceClosing = false;
-    }
-
-    /** Le fondu de la surface : elle monte a sept dixiemes, et redescend quand on la referme. */
-    private void animateSurface() {
-        if (surface == null || surface.texture == null) return;
-
-        double progress = clamp01((now() - surfaceSince) / VEIL_FADE);
-        double alpha = surfaceClosing ? 1 - progress : progress;
-        surface.texture.alpha = (int) Math.round(alpha * VEIL_ALPHA);
-
-        if (surfaceClosing && progress >= 1) closeSurface();
+        veil.beginClose();
     }
 
     // ------------------------------------------------------------------
