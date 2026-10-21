@@ -73,12 +73,14 @@ public final class CpBarVisuals {
      *
      * <p>Chez l'original, le creux laissait voir le monde a travers la plaque — donc quelque chose
      * de sombre, et l'embleme se lisait comme un gris tres peu transparent. Ici il n'y a pas de
-     * monde sous le remplissage : la forme se pose sur la barre, qui est claire, et la meme
-     * opacite (0,50) donnait alors une silhouette delavee — « trop transparent » a dit le joueur,
-     * apres l'avoir trouvee « noire » a pleine couverture. Huit dixiemes tombent entre les deux :
-     * la forme reste sombre, et la barre s'y devine encore.
+     * monde sous le remplissage : la forme se pose sur la barre, qui est claire.
+     *
+     * <p>REMIS A 1 SUR DEMANDE DU JOUEUR (21/10) : « pour l'instant remet le a 1, on verra plus
+     * tard ». Les deux autres essais sont gardes en memoire — 0,50 donnait une silhouette delavee
+     * (« trop transparent ») et 0,8 un entre-deux qu'il n'a pas retenu. C'est le seul chiffre a
+     * tourner si l'envie revient.
      */
-    public static final float EMBLEM_COVERAGE = 0.8f;
+    public static final float EMBLEM_COVERAGE = 1.0f;
 
     /**
      * Le rappel des prereglages, sous la barre : quatre carres numerotes.

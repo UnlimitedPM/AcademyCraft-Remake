@@ -175,8 +175,8 @@ loot table, the whole game in four languages, and a config file that tunes the p
   the bar's plate behind it; the port had recorded that as an accepted gap. It is drawn now, in the
   same place and size (65 units at 857 by 43), by painting the plate's own grey in the icon's shape
   — the icon's tint is pushed to white first, because only its opacity is supposed to count. Its
-  coverage is eight tenths: full, the shape was a black blot, and at the plate's own 0,50 it was
-  too see-through (both, the player said).
+  coverage is full for now: the player wanted it darker than a see-through watermark and asked to
+  leave the question there ("*pour l'instant remet le a 1, on verra plus tard*").
 - **Tests**: 171 in-game tests, 905 unit tests.
 
 ### Francais
@@ -370,9 +370,9 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   se voyait a travers, avec la plaque de la barre derriere ; le port avait note cet ecart comme
   assume. Il est dessine maintenant, a la meme place et a la meme taille (65 unites a 857 par 43),
   en peignant le gris de la plaque dans la forme de l'icone — la teinte de l'icone est d'abord
-  poussee au blanc, puisque seule son opacite doit compter. La couverture vaut huit dixiemes :
-  pleine, la forme faisait une tache noire, et a l'opacite de la plaque (0,50) elle etait trop
-  transparente — les deux reproches du joueur.
+  poussee au blanc, puisque seule son opacite doit compter. La couverture est pleine pour
+  l'instant : le joueur la voulait plus sombre qu'un filigrane, et a demande de laisser la
+  question la (« pour l'instant remet le a 1, on verra plus tard »).
 - **Des tests** : 171 tests en jeu, 905 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
