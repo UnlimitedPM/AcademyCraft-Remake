@@ -1,5 +1,76 @@
 # Changelog
 
+## 0.2.0 - le HUD au complet et tout le jeu traduit / the finished HUD, the whole game translated
+
+### English
+
+Everything of 0.1.5, plus the two display items of the player's list, the whole game reading in
+four languages, and a media player that survives leaving a world.
+
+- **The control hint is the original's.** Its rows carry the three states of `KeyHintUI`: at rest
+  the icon sits at 70 %, a running skill gets a **blue** halo and breathes, a preparation gets an
+  **orange** one — the original's own rule, which is the other way round from what a reader
+  expects. The halo is its eight glow images, read at the nearest neighbour so their gradients
+  keep their transparent pixels; skill icons are crisp again (the skill tree and the developer
+  screen used to hand them, once and for all, to a linear filter the hint then inherited). The
+  four direction keys of the flashing and of the storm wing open their own column on the left,
+  in the cross' order, and only once the skill is running. The grey of a cooldown is the
+  original's thirty per cent, and the whole block sits where the 1.12.2's sits, letters included.
+- **The CP bar says which preset you are on, and carries your power's emblem.** A preset switch
+  shows the original's four numbered squares under the bar for two seconds, the one in service
+  ringed; and the category's icon is cut into the bar's fill as `cpbar_cp.frag` did, so the
+  silhouette of your power shows through.
+- **The F4 menu is the original's again**, word for word — internal names, the seven spaces after
+  `CP:`, `CPData.*`, numbers written with the system's decimal separator. The translation that had
+  been invented for it is gone, with its fourteen language keys.
+- **Text that does not fit now scrolls** instead of shrinking: a long line in a machine, in a
+  field or in a list runs leftwards inside its box, at its normal size.
+- **Everything is translated.** The thirteen tutorial pages exist in French, German and Spanish
+  as well, and the whole interface is keyed — a test compares the five language files key by
+  key, placeholder by placeholder.
+- **The media player remembers.** Leaving a world freezes its clock and the track comes back
+  **paused** where it was, and its volume is kept in the client config.
+- **A machine gives back what it holds when you break it**, through one helper shared by all of
+  them (multiblocks included: only the block carrying the block entity drops).
+- **No more red chat messages**: a refusal — power off, not learnt, too few points, overloaded,
+  jammed, on cooldown — is silent.
+- **Tests**: 171 in-game tests, 905 unit tests.
+
+### Francais
+
+Tout le 0.1.5, plus les deux points d'affichage de la liste du joueur, tout le jeu en quatre
+langues, et un lecteur de media qui survit a la sortie d'un monde.
+
+- **Le rappel des touches est celui de l'original.** Ses lignes portent les trois etats de
+  `KeyHintUI` : au repos l'icone reste a 70 %, une competence qui s'execute prend un halo **bleu**
+  et respire, une preparation un halo **orange** — la regle de l'original, a l'inverse de ce qu'on
+  attend. Le halo est fait de ses huit images de lueur, lues au plus proche voisin pour que leurs
+  degrades gardent leurs pixels transparents ; les icones des competences redeviennent nettes
+  (l'arbre et l'ecran du developpeur les passaient, une fois pour toutes, a un filtre lisse dont
+  le rappel heritait). Les quatre touches de direction du scintillement et des ailes de tempete
+  ouvrent leur propre colonne a gauche, dans l'ordre de la croix, et seulement quand la competence
+  tourne. Le gris d'une recharge est le trente pour cent de l'original, et le bloc entier tombe ou
+  tombe celui de la 1.12.2, lettres comprises.
+- **La barre de CP dit sur quel prereglage on est, et porte l'embleme de votre pouvoir.** Un
+  changement de prereglage affiche deux secondes les quatre carres numerotes de l'original sous
+  la barre, celui en service entoure ; et l'icone de la categorie est decoupee dans le remplissage
+  comme le faisait `cpbar_cp.frag`, donc la silhouette du pouvoir se lit a travers.
+- **Le menu F4 est redevenu celui de l'original**, mot pour mot — noms internes, les sept espaces
+  apres `CP:`, les `CPData.*`, les nombres ecrits avec le separateur decimal du systeme. La
+  traduction inventee pour lui est partie, avec ses quatorze cles de langue.
+- **Le texte qui ne rentre pas defile** au lieu de retrecir : une longue ligne dans une machine,
+  un champ ou une liste court vers la gauche dans sa boite, a sa taille normale.
+- **Tout est traduit.** Les treize pages de tutoriel existent aussi en francais, allemand et
+  espagnol, et toute l'interface passe par des cles — un test compare les cinq fichiers de langue
+  cle par cle et placeholder par placeholder.
+- **Le lecteur de media se souvient.** Quitter un monde fige son horloge et le morceau revient
+  **en pause** la ou il en etait ; son volume est garde dans la config du client.
+- **Une machine rend son contenu quand on la casse**, par un seul helper partage par toutes
+  (multiblocs compris : seul le bloc porteur du block entity jette).
+- **Plus de messages rouges dans le chat** : un refus — pouvoir eteint, non appris, points trop
+  justes, surcharge, brouillage, recharge — est silencieux.
+- **Des tests** : 171 tests en jeu, 905 tests unitaires.
+
 ## 0.1.5 - l'imag phase liquide / the imag phase liquid
 
 ### English
