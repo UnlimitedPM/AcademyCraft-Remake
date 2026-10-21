@@ -322,32 +322,15 @@ public final class KeyHintHud {
      * transparent. Pareil pour le orange ». Entre les deux, la vraie difference est le FILTRAGE :
      * un degrade resserre dans cinq unites (un pixel a l'ecran) lu en lisse n'est qu'une tache,
      * lu au plus proche voisin il donne la petite ligne liseree de l'original.
+     *
+     * <p>Le dessin lui-meme vit dans {@code GlowSprites} : c'est le meme halo qui entoure le
+     * numero du prereglage en service, sous la barre de CP.
      */
     private static void drawGlow(GuiGraphics graphics, int rowY, int rgb, float alpha) {
-        int s = KeyHintVisuals.GLOW_SIZE;
-        int x = KeyHintVisuals.ICON_X;
-        int y = rowY + KeyHintVisuals.ICON_Y;
-        int w = KeyHintVisuals.ICON_SIZE;
-
-        quad(graphics, "left", x - s, y, s, w, rgb, alpha);
-        quad(graphics, "right", x + w, y, s, w, rgb, alpha);
-        quad(graphics, "up", x, y - s, w, s, rgb, alpha);
-        quad(graphics, "down", x, y + w, w, s, rgb, alpha);
-        quad(graphics, "ru", x + w, y - s, s, s, rgb, alpha);
-        quad(graphics, "rd", x + w, y + w, s, s, rgb, alpha);
-        quad(graphics, "lu", x - s, y - s, s, s, rgb, alpha);
-        quad(graphics, "ld", x - s, y + w, s, s, rgb, alpha);
-    }
-
-    /** Un morceau du halo : l'image entiere, teintee de la couleur de l'etat. */
-    private static void quad(GuiGraphics graphics, String part, int x, int y, int width, int height,
-                             int rgb, float alpha) {
-        blit(graphics, glowTexture(part), x, y, width, height, 0, 0, 1, 1, 1, 1, rgb, alpha);
-    }
-
-    private static ResourceLocation glowTexture(String part) {
-        return nearest(ResourceLocation.fromNamespaceAndPath("academy",
-                "textures/guis/glow_" + part + ".png"));
+        cn.academy.client.gui.GlowSprites.draw(graphics,
+                KeyHintVisuals.ICON_X, rowY + KeyHintVisuals.ICON_Y,
+                KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
+                KeyHintVisuals.GLOW_SIZE, rgb, alpha);
     }
 
     /**

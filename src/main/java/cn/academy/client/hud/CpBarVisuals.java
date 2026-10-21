@@ -46,6 +46,63 @@ public final class CpBarVisuals {
     public static final float FILL_SPAN = 0.8f;
 
     /**
+     * L'embleme du pouvoir, decoupe DANS le remplissage.
+     *
+     * <p>L'original perlait la barre avec l'icone de la categorie : son {@code cpbar_cp.frag}
+     * multiplie l'opacite du remplissage par {@code 1 - icone.a}, dans une boite de 65 unites
+     * posee a {@code (857, 43)}. La silhouette du pouvoir se lit donc en creux dans la barre.
+     * Chaque categorie a son icone a elle ({@code abilities/<nom>/icon_overlay.png}).
+     */
+    public static final int ICON_X = 857;
+    public static final int ICON_Y = 43;
+    public static final int ICON_SIZE = 65;
+
+    /**
+     * La couleur du FOND de la barre, celle qui se voit dans le creux de l'embleme.
+     *
+     * <p>Mesuree sur {@code back_normal.png} : un gris 52, a 128 d'opacite partout ou la plaque
+     * est posee. C'est ce que l'original laissait voir dans la decoupe de son icone — le monde,
+     * avec la plaque par-dessus —, et c'est donc cette couleur-la qu'on ecrit dans la forme.
+     */
+    public static final float PLATE_RED = 52f / 255f;
+    public static final float PLATE_GREEN = 52f / 255f;
+    public static final float PLATE_BLUE = 52f / 255f;
+
+    /**
+     * Le rappel des prereglages, sous la barre : quatre carres numerotes.
+     *
+     * <p>C'est le {@code drawPresetHint} de l'original — {@code x0 = 580}, {@code y0 = 136},
+     * carres de 52 tous les 62 — dessine pendant deux secondes apres un changement de
+     * prereglage. Il sort volontairement du cadre de l'image (qui fait 147 de haut) : chez lui
+     * aussi, rien ne le coupait.
+     */
+    public static final int PRESET_X = 580;
+    public static final int PRESET_Y = 136;
+    public static final int PRESET_SIZE = 52;
+    public static final int PRESET_STEP = 62;
+    public static final long PRESET_HOLD_MS = 2000L;
+
+    /** La cellule du numero, et sa hauteur dans le carre : {@code FontOption(46)} a {@code y + 5}. */
+    public static final int PRESET_CELL = 46;
+    public static final int PRESET_LABEL_LIFT = 5;
+
+    /** L'epaisseur du halo du carre en service, celle de l'original. */
+    public static final int PRESET_GLOW = 5;
+
+    /** Le fond d'un carre : un gris sombre translucide. */
+    public static final int PRESET_BACK_RGB = 0x303030;
+    /** Le numero, blanc. */
+    public static final int PRESET_TEXT_RGB = 0xFFFFFF;
+    /** Le halo du carre en service, blanc. */
+    public static final float PRESET_GLOW_ALPHA = 200f / 255f;
+
+    /** L'opacite du rappel estimes par l'original : le coefficient final de son fondu. */
+    public static final float PRESET_ALPHA_SCALE = 0.75f;
+
+    /** Le delai, en millisecondes, avant lequel un premier rappel apparait sans fondu. */
+    public static final long PRESET_FADE_AFTER_MS = 3000L;
+
+    /**
      * La vitesse de l'animation, celle de l'original : deux unites de progression par seconde.
      *
      * <p>Chez lui, {@code CP_BALANCE_SPEED} et {@code O_BALANCE_SPEED} valent tous deux 2,0.
@@ -105,6 +162,19 @@ public final class CpBarVisuals {
         return fillLeft(progress) + CUT * row / (double) FILL_H;
     }
 
+    /**
+     * Le bord gauche de la boite de l'embleme, ramene DANS le remplissage.
+     *
+     * <p>A barre presque vide, la coupe en biais du remplissage passe a droite du coin
+     * haut-gauche de la boite de l'icone (860 contre 857, sur les dernieres lignes) : percer
+     * l'icone entiere y enleverait aussi le fond de la barre. L'original n'avait pas ce
+     * probleme — son shader ne touchait qu'aux texels du remplissage —, donc on ramene le bord
+     * de la boite sur celui du remplissage : le trou reste dans la barre, comme chez lui.
+     */
+    public static double emblemLeft(float progress) {
+        return Math.max(ICON_X, fillLeftAt(progress, FILL_H - 1));
+    }
+
     /** La largeur de la surcharge, en pixels d'image : elle pousse vers la gauche. */
     public static double overloadWidth(float overload) {
         return OVER_W * clamp01(overload);
@@ -126,7 +196,42 @@ public final class CpBarVisuals {
     }
 
     /**
-     * La valeur affichee, avancee vers la valeur reelle d'au plus {@code step}.
+     * L'opacite du rappel des prereglages, pour un temps ecoule.
+     *
+     * <p>Portage de la courbe du {@code drawPresetHint} de l'original : le rappel sort en
+     * fondu sur le premier cinquieme de sa duree <b>seulement s'il n'y en a pas eu un autre</b>
+     * depuis trois secondes (sinon deux rappels qui se suivent clignoteraient), et son dernier
+     * cinquieme s'efface. Le tout est ramene a 0,75, ce qui le garde lisible sans ecraser la
+     * barre.
+     *
+     * @param elapsedMs temps depuis CE changement de prereglage
+     * @param sinceLastMs temps depuis le precedent, ou {@link Long#MAX_VALUE} s'il n'y en a pas
+     */
+    public static float presetHintAlpha(long elapsedMs, long sinceLastMs) {
+        if (elapsedMs < 0 || elapsedMs >= PRESET_HOLD_MS) return 0.0f;
+        double progress = elapsedMs / (double) PRESET_HOLD_MS;
+        double alpha;
+        if (sinceLastMs > PRESET_FADE_AFTER_MS && progress < 0.2) {
+            alpha = progress / 0.2;
+        } else if (progress > 0.8) {
+            alpha = (1.0 - progress) / 0.2;
+        } else {
+            alpha = 1.0;
+        }
+        return (float) Math.max(0.0, Math.min(alpha, 1.0) * PRESET_ALPHA_SCALE);
+    }
+
+    /**
+     * L'opacite du NUMERO d'un carre : quatre cinquiemes de celle du rappel, jamais nulle.
+     *
+     * <p>L'original ecrivait {@code max(0.05, alpha * 0.8)} : le chiffre reste lisible meme
+     * quand le carre s'efface, ce qui evite un clignotement d'un dixieme de seconde.
+     */
+    public static float presetLabelAlpha(float hintAlpha) {
+        return Math.max(0.05f, hintAlpha * 0.8f);
+    }
+
+    /** La valeur affichee, avancee vers la valeur reelle d'au plus {@code step}.
      *
      * <p>Portage exact du {@code balance} de l'original : un pas lineaire, jamais de
      * depassement, et le meme pas dans les deux sens. C'est ce qui donne a la barre un mouvement
@@ -153,6 +258,12 @@ public final class CpBarVisuals {
      */
     public static float alphaOf(int rgb) {
         return ((rgb >>> 24) & 0xFF) / 255.0f;
+    }
+
+    /** La meme couleur, a une opacite donnee (de 0 a 1) : RGBA sur l'octet de tete. */
+    public static int withAlpha(int rgb, float alpha) {
+        int a = Math.round(Math.max(0.0f, Math.min(1.0f, alpha)) * 255.0f);
+        return (a << 24) | (rgb & 0xFFFFFF);
     }
 
     /** La couleur d'un canal alpha compris, entre deux arrets. */

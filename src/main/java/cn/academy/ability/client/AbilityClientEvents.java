@@ -190,6 +190,10 @@ public class AbilityClientEvents {
             // Et ses eclairs de sol, qui attendaient peut-etre leur tour : ils appartiennent au
             // monde ou la foudre est tombee. Voir GroundArcs.
             GroundArcs.clear();
+            // Et l'horloge du rappel des prereglages : un monde quitte n'a plus de prereglage en
+            // service, et la prochaine connexion ne doit pas faire clignoter le rappel. Voir
+            // ClientPresetData.
+            cn.academy.ability.preset.client.ClientPresetData.reset();
         }
 
         // LA PAUSE NE PILOTE RIEN.

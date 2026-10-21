@@ -144,6 +144,60 @@ class CpBarVisualsTest {
                 "un temps negatif ne fait pas reculer la barre");
     }
 
+    @Test
+    void leRappelDesPrereglagesSortEtRentreEnDeuxSecondes() {
+        long far = Long.MAX_VALUE;
+        // Le premier rappel nait en fondu sur le premier cinquieme de sa duree, puis tient, puis
+        // s'efface sur le dernier cinquieme — la courbe du drawPresetHint de l'original.
+        assertEquals(0.0f, CpBarVisuals.presetHintAlpha(0L, far), 1e-6, "a l'instant du changement");
+        assertEquals(0.75f * 0.5f, CpBarVisuals.presetHintAlpha(200L, far), 1e-6, "un dixieme");
+        assertEquals(0.75f, CpBarVisuals.presetHintAlpha(1000L, far), 1e-6, "au milieu, plein");
+        assertEquals(0.75f * 0.5f, CpBarVisuals.presetHintAlpha(1800L, far), 1e-6, "neuf dixiemes");
+        assertEquals(0.0f, CpBarVisuals.presetHintAlpha(CpBarVisuals.PRESET_HOLD_MS, far), 1e-6,
+                "et il s'arrete net au bout de deux secondes");
+
+        // Deux changements coup sur coup : le second n'a pas de fondu d'entree, sinon la barre
+        // clignoterait a chaque appui repete de la touche.
+        assertEquals(0.75f, CpBarVisuals.presetHintAlpha(100L, 100L), 1e-6);
+
+        // Le numero reste lisible meme quand le carre s'efface.
+        assertEquals(0.05f, CpBarVisuals.presetLabelAlpha(0.0f), 1e-6);
+        assertEquals(0.6f, CpBarVisuals.presetLabelAlpha(0.75f), 1e-6);
+    }
+
+    @Test
+    void lesQuatreCarresDuRappelNeSeChevauchentPas() {
+        // 580 et 62 chez l'original : quatre carres de 52, espaces de 10.
+        assertTrue(CpBarVisuals.PRESET_X + 3 * CpBarVisuals.PRESET_STEP + CpBarVisuals.PRESET_SIZE
+                        <= CpBarVisuals.TEX_W,
+                "le quatrieme carre tient dans la largeur de l'image");
+        assertTrue(CpBarVisuals.PRESET_STEP > CpBarVisuals.PRESET_SIZE,
+                "les carres sont separes, pas colles");
+    }
+
+    @Test
+    void lEmblemeDuPouvoirTombeDansLeRemplissage() {
+        // Le trou de l'original (cpbar_cp.frag) : une boite de 65 posee a (857, 43), donc dans le
+        // remplissage (47..930 x 30..114) et couverte meme quand il est au plus court.
+        assertTrue(CpBarVisuals.ICON_X >= CpBarVisuals.FILL_X, "l'embleme est dans le remplissage");
+        assertTrue(CpBarVisuals.ICON_X + CpBarVisuals.ICON_SIZE
+                        <= CpBarVisuals.FILL_X + CpBarVisuals.FILL_W,
+                "et il ne depasse pas son bord droit");
+        assertTrue(CpBarVisuals.ICON_Y >= CpBarVisuals.FILL_Y, "ni en haut");
+        assertTrue(CpBarVisuals.ICON_Y + CpBarVisuals.ICON_SIZE
+                        <= CpBarVisuals.FILL_Y + CpBarVisuals.FILL_H,
+                "ni en bas");
+        double shortest = CpBarVisuals.fillLeftAt(0.0f, CpBarVisuals.FILL_H - 1);
+        assertTrue(shortest <= CpBarVisuals.ICON_X + 4,
+                "meme au plus court, la coupe ne mord que le coin de la boite de l'embleme");
+        // Et c'est pour ce coin-la que le dessin ramene le bord de la boite sur celui du
+        // remplissage : a barre vide, le trou ne doit pas deborder dans le fond.
+        assertEquals(CpBarVisuals.ICON_X, CpBarVisuals.emblemLeft(1.0f), 1e-6, "barre pleine");
+        assertEquals(CpBarVisuals.ICON_X, CpBarVisuals.emblemLeft(0.5f), 1e-6, "a moitie");
+        assertTrue(CpBarVisuals.emblemLeft(0.0f) > CpBarVisuals.ICON_X,
+                "barre vide : le bord est ramene dans le remplissage");
+    }
+
     private static int alpha(int argb) {
         return (argb >>> 24) & 0xFF;
     }

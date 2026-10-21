@@ -1,5 +1,7 @@
 package cn.academy.ability;
 
+import net.minecraft.resources.ResourceLocation;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -86,6 +88,20 @@ public class Category {
     /** La teinte de la categorie, ARGB. */
     public final int getColorStyle() {
         return colorStyle;
+    }
+
+    /**
+     * L'embleme du pouvoir, celui qui se decoupe dans la barre de CP.
+     *
+     * <p>C'est {@code initOverlayIcon()} de l'original : {@code abilities/<nom>/icon_overlay},
+     * une image dont seule l'opacite sert — son {@code cpbar_cp.frag} fait
+     * {@code alpha *= 1 - icone.a}, donc la silhouette du pouvoir apparait en creux dans le
+     * remplissage. Vecmanip la livre en 32 pixels, les trois autres en 64 : le port les etire
+     * toutes dans la meme boite, comme lui.
+     */
+    public ResourceLocation getOverlayIcon() {
+        return ResourceLocation.fromNamespaceAndPath("academy",
+                "textures/abilities/" + name + "/icon_overlay.png");
     }
 
     public List<Skill> getSkills() {

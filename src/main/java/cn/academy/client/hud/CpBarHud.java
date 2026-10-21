@@ -1,14 +1,28 @@
 package cn.academy.client.hud;
 
 import cn.academy.ability.AbilityData;
+import cn.academy.ability.Category;
+import cn.academy.ability.CategoryManager;
 import cn.academy.ability.client.ClientAbilityData;
+import cn.academy.ability.preset.client.ClientPresetData;
+import cn.academy.command.AimCommandSpec;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL14;
 
 /**
  * Dessine le temoin de points de controle : la barre de CP, a sa place configuree.
@@ -112,7 +126,12 @@ public final class CpBarHud {
                     0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, BACK_ALPHA);
             drawOverloadBand(graphics, bufferedOverload);
             drawFill(graphics, bufferedCp);
+            drawPowerEmblem(graphics, bufferedCp);
         }
+
+        // Le rappel des prereglages se pose apres le reste, dans les deux etats : chez l'original
+        // aussi il vivait en dehors du choix entre barre normale et surcharge.
+        drawPresetHint(graphics);
 
         // La couleur du shader teinte TOUT ce qui suit tant qu'on ne la remet pas : sans cette
         // ligne, le texte du HUD dessine apres sortirait colore.
@@ -190,6 +209,124 @@ public final class CpBarHud {
         float pulse = 0.3f + 0.35f * (float) (Math.sin(Util.getMillis() / 200.0) + 1.0);
         blit(graphics, HIGHLIGHT, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
                 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, Math.min(pulse, 1.0f));
+    }
+
+    /**
+     * L'embleme du pouvoir, decoupe DANS le remplissage.
+     *
+     * <p>L'original n'ajoutait pas une image par-dessus sa barre : son {@code cpbar_cp.frag}
+     * multipliait l'opacite du remplissage par {@code 1 - icone.a}, si bien que la silhouette du
+     * pouvoir apparaissait <b>en creux</b>, avec le fond de la barre — donc le monde — a travers.
+     * Le portage s'en tenait a « l'ecart assume » de ne pas l'avoir ; le joueur l'a demande :
+     * « on est cense avoir une petite icone en plus pour nous indiquer quel pouvoir on possede ».
+     *
+     * <p>Le trou se fait ici sans shader, et c'est le FOND qu'on peint dans la forme de l'icone :
+     * chez l'original, ce qu'on voit dans le creux n'est pas le monde seul mais le monde AVEC la
+     * plaque de la barre par-dessus, a 50 % d'un gris 52. Le melange
+     * {@code CONSTANT_COLOR / ONE_MINUS_SRC_ALPHA} ecrit exactement cette couleur-la dans la forme
+     * de l'icone — sa propre teinte ne compte pas, seule son opacite, comme dans son fragment
+     * shader. Un effacement pur ({@code ZERO / ONE_MINUS_SRC_ALPHA}) donnerait du NOIR : le fond
+     * du jeu a deja ete compose, et le multiplier par zero ne le rend pas.
+     *
+     * <p>Il faut ecrire la geometrie nous-memes : le type de rendu d'un {@code blit} de GUI
+     * repose son propre melange a chaque envoi, et effacerait le notre. D'ou le {@code flush()}
+     * avant — tout ce qui a ete empile doit deja etre a l'ecran.
+     */
+    private static void drawPowerEmblem(GuiGraphics graphics, float progress) {
+        Category power = AimCommandSpec.activePower(ClientAbilityData.get(),
+                CategoryManager.INSTANCE.getCategories());
+        if (power == null) return;
+
+        ResourceLocation icon = power.getOverlayIcon();
+        cn.academy.client.gui.GuiTextures.nearest(icon);
+        graphics.flush();
+
+        int x0 = (int) Math.ceil(CpBarVisuals.emblemLeft(progress));
+        int y0 = CpBarVisuals.ICON_Y;
+        int x1 = CpBarVisuals.ICON_X + CpBarVisuals.ICON_SIZE;
+        int y1 = y0 + CpBarVisuals.ICON_SIZE;
+        float u0 = (x0 - CpBarVisuals.ICON_X) / (float) CpBarVisuals.ICON_SIZE;
+
+        Matrix4f matrix = graphics.pose().last().pose();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFunc(GlStateManager.SourceFactor.CONSTANT_COLOR,
+                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        GL14.glBlendColor(CpBarVisuals.PLATE_RED, CpBarVisuals.PLATE_GREEN,
+                CpBarVisuals.PLATE_BLUE, 1.0f);
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        // L'icone doit etre BLANCHE : seule son opacite compte, comme dans le fragment shader de
+        // l'original. Or ses pixels sont bleus (196, 225, 255), et le melange {@code CONSTANT_COLOR}
+        // multiplie la couleur de la source avant de l'ecrire. On pousse donc les trois canaux
+        // au-dela de un pour les saturer : le blanc ecrit alors exactement la couleur du fond.
+        RenderSystem.setShaderColor(2.0f, 1.5f, 1.2f, 1.0f);
+        RenderSystem.setShaderTexture(0, icon);
+
+        BufferBuilder buffer = Tesselator.getInstance().getBuilder();
+        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        buffer.vertex(matrix, x0, y0, 0.0f).uv(u0, 0.0f).endVertex();
+        buffer.vertex(matrix, x0, y1, 0.0f).uv(u0, 1.0f).endVertex();
+        buffer.vertex(matrix, x1, y1, 0.0f).uv(1.0f, 1.0f).endVertex();
+        buffer.vertex(matrix, x1, y0, 0.0f).uv(1.0f, 0.0f).endVertex();
+        Tesselator.getInstance().end();
+
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        RenderSystem.defaultBlendFunc();
+    }
+
+    /**
+     * Le rappel des prereglages : quatre carres numerotes sous la barre, celui en service entoure.
+     *
+     * <p>C'est le {@code drawPresetHint} de l'original, montre deux secondes apres un changement
+     * de prereglage et pas une image de plus. Il repond a une question que le HUD ne disait pas :
+     * « quand on change de prereglage, dans le CP indicator on est cense voir dans quel prereglage
+     * on se trouve ».
+     */
+    private static void drawPresetHint(GuiGraphics graphics) {
+        long switched = ClientPresetData.switchAt();
+        if (switched < 0L) return;
+
+        long now = Util.getMillis();
+        long previous = ClientPresetData.previousSwitchAt();
+        float alpha = CpBarVisuals.presetHintAlpha(now - switched,
+                previous < 0L ? Long.MAX_VALUE : switched - previous);
+        if (alpha <= 0.0f) return;
+
+        int current = ClientPresetData.get().getCurrentId();
+        int back = CpBarVisuals.withAlpha(CpBarVisuals.PRESET_BACK_RGB, alpha);
+        int text = CpBarVisuals.withAlpha(CpBarVisuals.PRESET_TEXT_RGB,
+                CpBarVisuals.presetLabelAlpha(alpha));
+
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        int size = CpBarVisuals.PRESET_SIZE;
+        Font font = Minecraft.getInstance().font;
+        // Le numero : la cellule de 46 de l'original, bornee par la gravure, donc grossie
+        // dans la pose pour retrouver sa taille.
+        int cell = cn.academy.client.gui.AcademyFonts.cell(CpBarVisuals.PRESET_CELL);
+        float scale = CpBarVisuals.PRESET_CELL / (float) cell;
+
+        for (int i = 0; i < 4; i++) {
+            int x = CpBarVisuals.PRESET_X + i * CpBarVisuals.PRESET_STEP;
+            int y = CpBarVisuals.PRESET_Y;
+
+            graphics.fill(x, y, x + size, y + size, back);
+
+            String label = String.valueOf(i + 1);
+            double width = cn.academy.client.gui.AcademyFonts.width(font, label, cell) * scale;
+            var pose = graphics.pose();
+            pose.pushPose();
+            pose.translate(x + size / 2.0 - width / 2.0, y + CpBarVisuals.PRESET_LABEL_LIFT, 0.0);
+            pose.scale(scale, scale, 1.0f);
+            cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, label, 0, 0, text, cell);
+            pose.popPose();
+
+            if (i == current) {
+                cn.academy.client.gui.GlowSprites.draw(graphics, x, y, size, size,
+                        CpBarVisuals.PRESET_GLOW, CpBarVisuals.PRESET_TEXT_RGB,
+                        CpBarVisuals.PRESET_GLOW_ALPHA * Math.min(1.0f, alpha / CpBarVisuals.PRESET_ALPHA_SCALE));
+            }
+        }
+
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
     }
 
     /**

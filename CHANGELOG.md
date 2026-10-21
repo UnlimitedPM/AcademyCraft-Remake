@@ -163,7 +163,19 @@ loot table, the whole game in four languages, and a config file that tunes the p
   `CPData.canUseAbility`, `CPData.activated`, `CPData.addMaxCP`, `CPData.interfering` and
   ` AData.levelProgress`, numbers written with the system's decimal separator as they were then.
   The fourteen language keys that only existed for that translation are gone from the five files.
-- **Tests**: 171 in-game tests, 900 unit tests.
+- **The CP bar says which preset you are on.** Changing preset shows the original's four numbered
+  squares under the bar for two seconds, the one in service ringed with a white halo — a question
+  the port's HUD left unanswered ("*quand on change de preset, dans le CP indicator on est cense
+  voir dans quel preset on se trouve*"). Same geometry as 1.12.2's `drawPresetHint` (squares of 52
+  every 62, from 580 by 136), its fade-in only when no other switch happened within three seconds,
+  and its text that never goes fully transparent. The clock is read on the server's preset sync, so
+  a switch coming from the presets screen or from a category change shows it too.
+- **The CP bar carries your power's emblem.** The original cut the category's icon out of the bar
+  with `cpbar_cp.frag` (`alpha *= 1 - icon.a`), so the silhouette of your power showed through with
+  the bar's plate behind it; the port had recorded that as an accepted gap. It is drawn now, in the
+  same place and size (65 units at 857 by 43), by painting the plate's own grey in the icon's shape
+  — the icon's tint is pushed to white first, because only its opacity is supposed to count.
+- **Tests**: 171 in-game tests, 905 unit tests.
 
 ### Francais
 
@@ -343,7 +355,21 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   ` AData.levelProgress`, les nombres ecrits avec le separateur decimal du systeme comme a
   l'epoque. Les quatorze cles de langue qui n'existaient que pour cette traduction ont quitte les
   cinq fichiers.
-- **Des tests** : 171 tests en jeu, 900 tests unitaires.
+- **La barre de CP dit sur quel prereglage on est.** Un changement de prereglage affiche pendant
+  deux secondes les quatre carres numerotes de l'original sous la barre, celui en service entoure
+  d'un halo blanc — une question que le HUD du port laissait sans reponse (« quand on change de
+  preset, dans le CP indicator on est cense voir dans quel preset on se trouve »). Meme geometrie
+  que le `drawPresetHint` de la 1.12.2 (carres de 52 tous les 62, a partir de 580 par 136), meme
+  fondu d'entree qui ne se fait que si aucun autre changement n'a eu lieu depuis trois secondes,
+  et meme chiffre qui ne s'efface jamais tout a fait. L'horloge se lit sur la synchronisation du
+  serveur : un changement venu de l'ecran des prereglages ou d'une categorie s'affiche donc aussi.
+- **La barre de CP porte l'embleme de votre pouvoir.** L'original decoupait l'icone de la
+  categorie DANS la barre (`cpbar_cp.frag` : `alpha *= 1 - icone.a`), donc la silhouette du pouvoir
+  se voyait a travers, avec la plaque de la barre derriere ; le port avait note cet ecart comme
+  assume. Il est dessine maintenant, a la meme place et a la meme taille (65 unites a 857 par 43),
+  en peignant le gris de la plaque dans la forme de l'icone — la teinte de l'icone est d'abord
+  poussee au blanc, puisque seule son opacite doit compter.
+- **Des tests** : 171 tests en jeu, 905 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 
