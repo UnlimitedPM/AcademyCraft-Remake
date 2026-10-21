@@ -170,6 +170,9 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
             }
 
             if (part == MatrixPart.B_F_R) {
+                // La base porte le block entity : c'est elle qui rend ce que le Matrix rangeait.
+                MachineDrops.dropContents(level, pos);
+
                 // La base part, on nettoie tout le reste en silence
                 for (MatrixPart p : MatrixPart.values()) {
                     if (p == MatrixPart.B_F_R) continue;

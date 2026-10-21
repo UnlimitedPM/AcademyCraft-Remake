@@ -108,6 +108,10 @@ public class WindgenMainBlock extends HorizontalDirectionalBlock implements Enti
             Part part = state.getValue(PART);
 
             if (part == Part.CENTER) {
+                // Ce que le rotor contenait (l'helice, et ce qu'on y a range) retombe au sol :
+                // casser l'eolienne perdait l'helice avec le block entity.
+                MachineDrops.dropContents(level, pos);
+
                 // Le centre part, on nettoie les bouts en silence
                 BlockPos front = pos.relative(facing);
                 BlockPos back = pos.relative(facing.getOpposite());

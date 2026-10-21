@@ -35,7 +35,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * seule eolienne.
  */
 public class WindgenMainBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity
-        implements MenuProvider {
+        implements MenuProvider, cn.academy.StoresItems {
 
     public static final int SLOT_FAN = 0;
 

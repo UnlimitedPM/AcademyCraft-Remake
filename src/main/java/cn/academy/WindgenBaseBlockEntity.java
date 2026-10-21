@@ -48,7 +48,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * decoratif, et c'est pour cela que 40 piliers sont autorises.
  */
 public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity
-        implements MenuProvider, EnergyGenerator {
+        implements MenuProvider, EnergyGenerator, cn.academy.StoresItems {
 
     /** Emplacement de l'objet a recharger. L'helice se met dans le rotor, pas ici. */
     public static final int SLOT_CHARGE = 0;

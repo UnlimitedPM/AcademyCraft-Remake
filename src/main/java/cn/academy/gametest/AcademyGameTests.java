@@ -9300,4 +9300,38 @@ public final class AcademyGameTests {
 
         helper.succeed();
     }
+
+    /**
+     * Casser une machine rend ce qu'elle rangeait.
+     *
+     * <p>Bug signale par le joueur : « si on a des items dedans et qu'on casse la machine, elle ne
+     * refait pas tomber les items qu'elle stockait ». Aucune machine ne rendait son inventaire, et le
+     * block entity disparaissait avec lui. Le test pose une machine, y range une pile, la casse comme
+     * le ferait un joueur ({@code destroyBlock} sans drop du bloc), et compte les objets au sol.
+     */
+    @GameTest(template = "empty")
+    public static void casserUneMachineRendSonContenu(GameTestHelper helper) {
+        BlockPos rel = new BlockPos(2, 1, 2);
+        helper.setBlock(rel, ModBlocks.METAL_FORMER.get());
+        var former = (cn.academy.MetalFormerBlockEntity) helper.getBlockEntity(rel);
+
+        int amount = 7;
+        former.getInventory().setStackInSlot(0,
+                new ItemStack(ModItems.CONSTRAINT_INGOT.get(), amount));
+
+        BlockPos abs = helper.absolutePos(rel);
+        helper.getLevel().destroyBlock(abs, false);
+
+        int dropped = 0;
+        for (net.minecraft.world.entity.item.ItemEntity item : helper.getLevel()
+                .getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                        new net.minecraft.world.phys.AABB(abs).inflate(3.0d))) {
+            if (item.getItem().is(ModItems.CONSTRAINT_INGOT.get())) {
+                dropped += item.getItem().getCount();
+            }
+        }
+        assertTrue(helper, dropped == amount,
+                "la machine cassee doit rendre ses " + amount + " lingots, rendus = " + dropped);
+        helper.succeed();
+    }
 }

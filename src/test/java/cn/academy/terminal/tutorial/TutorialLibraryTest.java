@@ -37,26 +37,49 @@ class TutorialLibraryTest {
                 "le pont d'energie n'est pas livre : il n'existait qu'avec un mod d'energie");
     }
 
-    @Test
-    void chaqueTutorielEstEcritDansLesDeuxLangues() {
-        for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
-            TutorialText english = TutorialLibrary.load(entry.id(), "en_us");
-            assertFalse(english.isEmpty(), "contenu anglais manquant : " + entry.id());
-            assertTrue(english.title().length() > 2, "titre anglais manquant : " + entry.id());
-            assertTrue(english.content().length() > 20,
-                    "contenu anglais trop court : " + entry.id());
+    /** Les langues livrees avec le mod, celles des fichiers de {@code lang/}. */
+    private static final java.util.List<String> LANGUAGES =
+            java.util.List.of("en_us", "fr_fr", "de_de", "es_es", "zh_cn");
 
-            TutorialText chinese = TutorialLibrary.load(entry.id(), "zh_cn");
-            assertFalse(chinese.isEmpty(), "contenu chinois manquant : " + entry.id());
-            assertFalse(chinese.content().contains("![content]"),
-                    "la balise ne doit pas rester dans le texte : " + entry.id());
+    @Test
+    void chaqueTutorielEstEcritDansLesCinqLangues() {
+        // Le joueur a vu le trou : le MisakaCloud parlait anglais en francais, parce que les pages
+        // n'existaient qu'en en_us et zh_cn. Une langue sans fichier retombe sur l'anglais SANS RIEN
+        // DIRE, donc l'oubli se verifie ici.
+        java.util.List<String> missing = new java.util.ArrayList<>();
+        for (String language : LANGUAGES) {
+            for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
+                TutorialText text = TutorialLibrary.load(entry.id(), language);
+                // Un titre chinois tient en deux caracteres (« 资源 ») : c'est le fait qu'il soit
+                // VIDE qui compte, pas sa longueur.
+                if (text.isEmpty() || text.title().isBlank() || text.content().length() <= 20) {
+                    missing.add(language + "/" + entry.id());
+                }
+                assertFalse(text.content().contains("![content]"),
+                        "la balise ne doit pas rester dans le texte : " + language + "/"
+                                + entry.id());
+            }
+        }
+        assertTrue(missing.isEmpty(), "pages absentes ou vides : " + missing);
+    }
+
+    @Test
+    void uneVersionTraduiteNeRecopiePasLAnglais() {
+        // Un titre suffit comme temoin : c'est lui qu'on lit dans la liste du MisakaCloud.
+        for (String language : java.util.List.of("fr_fr", "de_de", "es_es")) {
+            for (TutorialLibrary.Entry entry : TutorialLibrary.entries()) {
+                String english = TutorialLibrary.load(entry.id(), "en_us").title();
+                String translated = TutorialLibrary.load(entry.id(), language).title();
+                assertFalse(translated.equals(english), language + "/" + entry.id()
+                        + " porte encore le titre anglais « " + english + " »");
+            }
         }
     }
 
     @Test
     void uneLangueInconnueRetombeSurLAnglais() {
         // Comme l'original : un tutoriel traduit a moitie ne doit pas disparaitre.
-        TutorialText fallback = TutorialLibrary.load("welcome", "fr_fr");
+        TutorialText fallback = TutorialLibrary.load("welcome", "xx_yy");
 
         assertFalse(fallback.isEmpty(), "la langue de repli est l'anglais");
         assertEquals(TutorialLibrary.load("welcome", "en_us").title(), fallback.title());

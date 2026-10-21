@@ -83,7 +83,20 @@ loot table, the whole game in four languages, and a config file that tunes the p
   "AcademyCraft developer info", "Ability not acquired", "Skill status", "[not learned]",
   "Level" — is translated too, while its measurements keep the original's own field names (`CP:`,
   `Overload:`, `CPData.*`): that is what a developer compares against the sources.
-- **Tests**: 170 in-game tests, 890 unit tests.
+- **Breaking a machine gives its contents back.** Every machine held an inventory and none of them
+  dropped it: the block entity went away with whatever was inside. Each machine now empties its
+  inventory on the ground in its `onRemove` — the hook vanilla's furnace uses, which also covers
+  blocks pushed by pistons or replaced — through `MachineDrops`, and the multi-block machines drop
+  once, from the part that carries the block entity. The wind generator's fan was lost the same way.
+- **The F4 menu is translated, whole.** Labels, yes and no, the category name and every skill name
+  now follow the player's language (`ac.debug.*` and the usual `getDisplayKey`), with the value
+  column computed instead of written by hand in each format: French, German and Spanish no longer
+  mix `threatening_teleport` into a French screen.
+- **MisakaCloud speaks French, German and Spanish.** Its thirteen pages existed only in English and
+  Chinese; they are now written in the three other languages of the mod, tags (`![key …]`,
+  `![image …]`) intact, and a unit test fails if a language lacks one of the thirteen pages or
+  still carries the English title.
+- **Tests**: 171 in-game tests, 891 unit tests.
 
 ### Francais
 
@@ -171,7 +184,21 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   aptitude acquise », « État des compétences », « [non apprise] », « Niveau » — est traduit aussi,
   tandis que ses mesures gardent les noms de champs de l'original (`CP:`, `Overload:`, `CPData.*`) :
   c'est ce qu'un developeur compare aux sources.
-- **Des tests** : 170 tests en jeu, 890 tests unitaires.
+- **Casser une machine rend son contenu.** Toutes les machines rangeaient des objets et aucune ne
+  les rendait : le block entity disparaissait avec ce qu'il contenait. Chaque machine vide maintenant
+  son inventaire au sol dans son `onRemove` — le point d'accroche du four de Minecraft, qui couvre
+  aussi un bloc pousse par un piston ou remplace — par `MachineDrops`, et les machines multiblocs
+  ne le font qu'une fois, depuis la partie qui porte le block entity. L'helice de l'eolienne se
+  perdait de la meme facon.
+- **Le menu F4 est traduit en entier.** Libelles, oui et non, nom de la categorie et nom de CHAQUE
+  competence suivent maintenant la langue du joueur (`ac.debug.*` et les `getDisplayKey` habituels),
+  et la colonne des valeurs se calcule au lieu d'etre ecrite a la main dans chaque format : le
+  francais, l'allemand et l'espagnol ne melangent plus `threatening_teleport` a un ecran francais.
+- **Le MisakaCloud parle francais, allemand et espagnol.** Ses treize pages n'existaient qu'en
+  anglais et en chinois ; elles sont ecrites dans les trois autres langues du mod, balises
+  (`![key …]`, `![image …]`) intactes, et un test unitaire echoue si une langue perd une des treize
+  pages ou garde le titre anglais.
+- **Des tests** : 171 tests en jeu, 891 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 

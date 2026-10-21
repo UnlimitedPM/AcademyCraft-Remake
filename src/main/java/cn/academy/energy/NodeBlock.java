@@ -124,6 +124,7 @@ public class NodeBlock extends Block implements EntityBlock {
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && level instanceof ServerLevel server) {
+            cn.academy.MachineDrops.dropContents(level, pos);
             ImagNetworkData.get(server).removeNode(pos);
         }
         super.onRemove(state, level, pos, newState, isMoving);

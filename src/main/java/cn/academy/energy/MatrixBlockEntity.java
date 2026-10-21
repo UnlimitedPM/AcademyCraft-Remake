@@ -60,7 +60,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * {@code null} pour les sept autres. Sans cela on aurait huit block entities
  * pour un seul Matrix, chacun avec son propre tampon.
  */
-public class MatrixBlockEntity extends BlockEntity implements MenuProvider {
+public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.academy.StoresItems {
 
     public static final int SLOT_PLATE_FIRST = 0;
     public static final int SLOT_PLATE_COUNT = 3;

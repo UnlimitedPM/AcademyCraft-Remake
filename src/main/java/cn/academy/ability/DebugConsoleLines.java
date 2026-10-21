@@ -39,22 +39,44 @@ public final class DebugConsoleLines {
     /** Le mot devant le niveau d'aptitude. */
     public static final String LEVEL = "Level %s";
 
+    /** Les libelles des mesures, en anglais ; les autres langues les traduisent. */
+    public static final String CP = "CP:";
+    public static final String OVERLOAD = "Overload:";
+    public static final String CAN_USE = "Can use ability:";
+    public static final String ACTIVATED = "Ability on:";
+    public static final String ADD_CP = "CP bonus:";
+    public static final String INTERFERING = "Jammed:";
+    public static final String PROGRESS = "Level progress:";
+
     /**
-     * Les cles de langue de ces quatre textes.
+     * Les cles de langue de ces textes.
      *
      * <p>Le menu F4 restait anglais : ses mots etaient des constantes, et rien ne les traduisait.
-     * Les mesures, elles, gardent leur nom technique ({@code CP:}, {@code Overload:},
-     * {@code CPData.*}) : ce sont les champs de l'original, et un joueur qui compare ce qu'il lit
-     * a ce qu'il trouve dans les sources doit les reconnaitre.
+     * Le joueur a demande qu'il soit traduit EN ENTIER — « le melange entre francais et anglais me
+     * fait penser qu'il aurait ete plus simple de laisser en anglais direct ». Le nom de la
+     * categorie et celui des competences passent donc par leurs cles habituelles
+     * ({@code getDisplayKey}), et les mesures par les leurs.
      */
     public static final String KEY_TITLE = "ac.debug.title";
     public static final String KEY_NO_CATEGORY = "ac.debug.no_category";
     public static final String KEY_SKILL_STATUS = "ac.debug.skill_status";
     public static final String KEY_NOT_LEARNED = "ac.debug.not_learned";
     public static final String KEY_LEVEL = "ac.debug.level";
+    public static final String KEY_CP = "ac.debug.cp";
+    public static final String KEY_OVERLOAD = "ac.debug.overload";
+    public static final String KEY_CAN_USE = "ac.debug.can_use";
+    public static final String KEY_ACTIVATED = "ac.debug.activated";
+    public static final String KEY_ADD_CP = "ac.debug.add_cp";
+    public static final String KEY_INTERFERING = "ac.debug.interfering";
+    public static final String KEY_PROGRESS = "ac.debug.progress";
+    public static final String KEY_YES = "ac.debug.yes";
+    public static final String KEY_NO = "ac.debug.no";
 
     /** La largeur de la colonne des noms de competences, chez l'original. */
     public static final int SKILL_COLUMN = 30;
+
+    /** La colonne ou commencent les valeurs d'une mesure, libelle compris. */
+    public static final int LABEL_COLUMN = 22;
 
     private DebugConsoleLines() {
     }
@@ -89,22 +111,46 @@ public final class DebugConsoleLines {
         float addCp = data.getAddMaxControlPoint();
         float addOverload = data.getAddMaxOverload();
 
-        lines.add(category.getName());
+        // Le nom de la categorie se traduit comme dans l'arbre des competences.
+        lines.add(translate == null ? category.getName() : translate.apply(category.getDisplayKey()));
         lines.add(String.format(Locale.ROOT, text(KEY_LEVEL, LEVEL, translate),
                 Integer.toString(data.getCategoryLevel(category))));
-        lines.add(String.format(Locale.ROOT, "CP:       %.0f/%.0f(%.1f+%.1f)",
-                data.getControlPoint(), data.getMaxControlPoint(),
-                data.getRawMaxControlPoint(), addCp));
-        lines.add(String.format(Locale.ROOT, "Overload: %.0f/%.0f(%.1f+%.1f)",
-                data.getOverload(), data.getMaxOverload(),
-                data.getMaxOverload() - addOverload, addOverload));
-        lines.add("CPData.canUseAbility: " + canUseAbility(data));
-        lines.add("CPData.activated: " + data.isActivated());
-        lines.add("CPData.addMaxCP: " + decimal(addCp));
-        lines.add("CPData.interfering: " + data.isInterfered());
-        lines.add(String.format(Locale.ROOT, " AData.levelProgress: %.2f%%",
-                data.getLevelProgress(category) * 100.0f));
+        lines.add(measure(text(KEY_CP, CP, translate),
+                String.format(Locale.ROOT, "%.0f/%.0f(%.1f+%.1f)",
+                        data.getControlPoint(), data.getMaxControlPoint(),
+                        data.getRawMaxControlPoint(), addCp)));
+        lines.add(measure(text(KEY_OVERLOAD, OVERLOAD, translate),
+                String.format(Locale.ROOT, "%.0f/%.0f(%.1f+%.1f)",
+                        data.getOverload(), data.getMaxOverload(),
+                        data.getMaxOverload() - addOverload, addOverload)));
+        lines.add(measure(text(KEY_CAN_USE, CAN_USE, translate),
+                yesNo(canUseAbility(data), translate)));
+        lines.add(measure(text(KEY_ACTIVATED, ACTIVATED, translate),
+                yesNo(data.isActivated(), translate)));
+        lines.add(measure(text(KEY_ADD_CP, ADD_CP, translate), decimal(addCp)));
+        lines.add(measure(text(KEY_INTERFERING, INTERFERING, translate),
+                yesNo(data.isInterfered(), translate)));
+        lines.add(measure(text(KEY_PROGRESS, PROGRESS, translate),
+                String.format(Locale.ROOT, "%.2f%%", data.getLevelProgress(category) * 100.0f)));
         return lines;
+    }
+
+    /**
+     * Une mesure, son libelle aligne a la colonne des valeurs.
+     *
+     * <p>L'original ecrivait ses espaces a la main dans chaque format ({@code "CP:       "}); avec
+     * des libelles traduits, leurs longueurs changent, donc la colonne se calcule. Un libelle plus
+     * long que la colonne pousse la valeur au lieu d'etre coupe : rien ne doit disparaitre.
+     */
+    private static String measure(String label, String value) {
+        StringBuilder out = new StringBuilder(label);
+        out.append(" ".repeat(Math.max(1, LABEL_COLUMN - label.length())));
+        return out.append(value).toString();
+    }
+
+    /** Un booleen, dans la langue du joueur. */
+    private static String yesNo(boolean value, Function<String, String> translate) {
+        return value ? text(KEY_YES, "true", translate) : text(KEY_NO, "false", translate);
     }
 
     /**
@@ -140,14 +186,18 @@ public final class DebugConsoleLines {
         boolean named = categories.size() > 1;
         for (Category category : categories) {
             if (named) {
-                lines.add(category.getName());
+                lines.add(translate == null
+                        ? category.getName()
+                        : translate.apply(category.getDisplayKey()));
             }
             for (Skill skill : category.getSkills()) {
-                String name = skill.getName();
+                // Le nom AFFICHE, celui de l'arbre des competences : sans ca, le menu montrait
+                // `threatening_teleport` au milieu d'un ecran francais.
+                String name = translate == null
+                        ? skill.getName()
+                        : translate.apply(skill.getDisplayKey());
                 StringBuilder row = new StringBuilder(name);
-                for (int i = name.length(); i < SKILL_COLUMN; i++) {
-                    row.append(' ');
-                }
+                row.append(" ".repeat(Math.max(1, SKILL_COLUMN - name.length())));
                 row.append(data.isSkillLearned(skill)
                         ? String.format(Locale.ROOT, "%.1f%%", data.getSkillExp(skill) * 100.0f)
                         : notLearned);

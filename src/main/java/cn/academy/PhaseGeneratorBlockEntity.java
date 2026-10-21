@@ -50,7 +50,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * d'energie directement, comme les autres generateurs.
  */
 public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity
-        implements MenuProvider, EnergyGenerator {
+        implements MenuProvider, EnergyGenerator, cn.academy.StoresItems {
 
     public static final int SLOT_LIQUID_IN = 0;
     public static final int SLOT_LIQUID_OUT = 1;

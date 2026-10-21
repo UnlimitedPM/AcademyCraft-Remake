@@ -56,7 +56,8 @@ import net.minecraftforge.items.ItemStackHandler;
  * l'unite vide ne sont pas le meme objet dans le port : l'original jouait sur les
  * metadonnees d'un objet unique.
  */
-public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, EnergyReceiver {
+public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, EnergyReceiver,
+        cn.academy.StoresItems {
 
     public static final int SLOT_INPUT = 0;
     public static final int SLOT_OUTPUT = 1;

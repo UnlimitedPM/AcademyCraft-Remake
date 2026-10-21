@@ -27,23 +27,37 @@ class DebugConsoleLinesTest {
     }
 
     @Test
-    void unTraducteurChangeLesMotsEtPasLesMesures() {
-        // Le menu F4 etait anglais dans les cinq langues : ses mots sont maintenant des cles.
-        // Les mesures, elles, gardent leur nom technique — ce sont les champs de l'original.
+    void unTraducteurChangeTousLesMots() {
+        // Le menu F4 etait anglais dans les cinq langues : ses mots sont maintenant des cles,
+        // libelles des mesures compris, et les noms de categorie et de competence passent par les
+        // cles de l'arbre. Le joueur : « le melange entre francais et anglais me fait penser qu'il
+        // aurait ete plus simple de laisser en anglais direct ».
         java.util.function.Function<String, String> traducteur = cle -> switch (cle) {
             case DebugConsoleLines.KEY_TITLE -> "Infos developpeur";
             case DebugConsoleLines.KEY_LEVEL -> "Niveau %s";
             case DebugConsoleLines.KEY_SKILL_STATUS -> "Etat des competences";
             case DebugConsoleLines.KEY_NOT_LEARNED -> "[non apprise]";
-            default -> cle;
+            case DebugConsoleLines.KEY_CP -> "Reserve :";
+            case DebugConsoleLines.KEY_OVERLOAD -> "Surcharge :";
+            case DebugConsoleLines.KEY_CAN_USE -> "Utilisable :";
+            case DebugConsoleLines.KEY_ACTIVATED -> "Aptitude allumee :";
+            case DebugConsoleLines.KEY_ADD_CP -> "Bonus de reserve :";
+            case DebugConsoleLines.KEY_INTERFERING -> "Brouille :";
+            case DebugConsoleLines.KEY_PROGRESS -> "Progression :";
+            case DebugConsoleLines.KEY_YES -> "oui";
+            case DebugConsoleLines.KEY_NO -> "non";
+            default -> "TRADUIT:" + cle;
         };
 
-        Category category = new Category("electromaster");
+        Category category = new Category("test");
         List<String> info = DebugConsoleLines.info(new AbilityData(), category, traducteur);
 
         assertEquals("Infos developpeur", info.get(0));
+        assertEquals("TRADUIT:" + category.getDisplayKey(), info.get(1),
+                "le nom de la categorie passe par sa cle habituelle");
         assertEquals("Niveau 0", info.get(2), "le niveau suit la langue");
-        assertTrue(info.get(3).startsWith("CP:       "), "la mesure garde son nom : " + info.get(3));
+        assertTrue(info.get(3).startsWith("Reserve :"), info.get(3));
+        assertTrue(info.get(5).endsWith("non"), info.get(5));
 
         List<String> skills = DebugConsoleLines.skills(new AbilityData(), List.of(category),
                 traducteur);
@@ -59,26 +73,31 @@ class DebugConsoleLinesTest {
         List<String> lines = DebugConsoleLines.info(new AbilityData(), category);
 
         assertEquals(DebugConsoleLines.TITLE, lines.get(0));
-        assertEquals("electromaster", lines.get(1), "le nom interne de la categorie");
+        assertEquals("electromaster", lines.get(1), "le nom interne de la categorie, sans traducteur");
         assertEquals("Level 0", lines.get(2), "niveau de depart");
-        assertTrue(lines.get(3).startsWith("CP:       "),
-                "les deux points et six espaces de l'original : " + lines.get(3));
+        assertTrue(lines.get(3).startsWith("CP:"),
+                "le libelle de la reserve ouvre la ligne : " + lines.get(3));
         assertTrue(lines.get(3).contains("(") && lines.get(3).endsWith(")"),
                 "les CP montrent leur plafond separe, comme la surcharge : " + lines.get(3));
-        assertTrue(lines.get(4).startsWith("Overload: "), lines.get(4));
+        assertTrue(lines.get(4).startsWith("Overload:"), lines.get(4));
         assertTrue(lines.get(4).contains("(") && lines.get(4).endsWith(")"),
                 "la surcharge montre son maximum separe : " + lines.get(4));
-        assertEquals("CPData.canUseAbility: false", lines.get(5),
+        assertEquals(measure("Can use ability:", "false"), lines.get(5),
                 "sans categorie l'aptitude ne peut pas etre allumee, donc rien ne part");
-        assertEquals("CPData.activated: false", lines.get(6),
+        assertEquals(measure("Ability on:", "false"), lines.get(6),
                 "l'original ne montrait pas la surcharge ici, mais l'etat allume/eteint");
-        assertTrue(lines.get(7).startsWith("CPData.addMaxCP: "), lines.get(7));
-        assertEquals("CPData.interfering: false", lines.get(8));
-        assertTrue(lines.get(9).startsWith(" AData.levelProgress: "),
-                "l'espace de tete est celui de l'original : " + lines.get(9));
+        assertTrue(lines.get(7).startsWith("CP bonus:"), lines.get(7));
+        assertEquals(measure("Jammed:", "false"), lines.get(8));
+        assertTrue(lines.get(9).startsWith("Level progress:"),
+                "la progression du niveau ferme l'ecran : " + lines.get(9));
         assertTrue(lines.get(9).endsWith("%"), lines.get(9));
         assertEquals(10, lines.size(),
                 "l'original ne liste pas le maximum ajoute de surcharge, seulement celui des CP");
+    }
+
+    /** Une mesure telle que {@code DebugConsoleLines} l'ecrit : libelle aligne, puis la valeur. */
+    private static String measure(String label, String value) {
+        return label + " ".repeat(Math.max(1, DebugConsoleLines.LABEL_COLUMN - label.length())) + value;
     }
 
     @Test
@@ -102,8 +121,8 @@ class DebugConsoleLinesTest {
         String cp = lines.get(3);
         String overload = lines.get(4);
 
-        assertTrue(cp.matches("CP:       \\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"), cp);
-        assertTrue(overload.matches("Overload: \\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"),
+        assertTrue(cp.matches("CP: +\\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"), cp);
+        assertTrue(overload.matches("Overload: +\\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"),
                 overload);
     }
 
@@ -170,7 +189,7 @@ class DebugConsoleLinesTest {
                 "allumer le drapeau ne suffit pas : il faut aussi une categorie");
         assertTrue(data.isActivatedRaw(), "le drapeau brut, lui, a bien change");
 
-        assertEquals("CPData.canUseAbility: false",
+        assertEquals(measure("Can use ability:", "false"),
                 DebugConsoleLines.info(data, ElectromasterCategory.INSTANCE).get(5));
     }
 }

@@ -47,7 +47,8 @@ import net.minecraftforge.items.ItemStackHandler;
  * qui exposent du Forge Energy : c'est un ajout du port, l'original n'ayant que
  * le sans-fil, mais cela evite de devoir poser un noeud pour tester le bloc.
  */
-public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, EnergyGenerator {
+public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, EnergyGenerator,
+        cn.academy.StoresItems {
 
     public static final int SLOT_BATTERY = 0;
 

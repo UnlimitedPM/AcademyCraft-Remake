@@ -166,6 +166,7 @@ public class WindgenBaseBlock extends Block implements EntityBlock {
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && state.getValue(HALF) == DoubleBlockHalf.LOWER
                 && level instanceof ServerLevel server) {
+            MachineDrops.dropContents(level, pos);
             cn.academy.energy.NodeFinder.detach(server, pos);
         }
         super.onRemove(state, level, pos, newState, isMoving);

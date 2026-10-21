@@ -49,7 +49,7 @@ import net.minecraftforge.items.ItemStackHandler;
  * progresse donc pas lentement, il ne progresse pas du tout.
  */
 public class MetalFormerBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity
-        implements MenuProvider, EnergyReceiver {
+        implements MenuProvider, EnergyReceiver, cn.academy.StoresItems {
 
     public static final int SLOT_IN = 0;
     public static final int SLOT_OUT = 1;

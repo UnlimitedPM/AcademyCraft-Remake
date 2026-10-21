@@ -60,7 +60,8 @@ import net.minecraftforge.items.ItemStackHandler;
  * nom part avec la liste, comme dans l'original), mais rien de plus : s'en retirer fait de lui une
  * cible comme une autre.
  */
-public class AbilityInterfererBlockEntity extends BlockEntity implements MenuProvider, EnergyReceiver {
+public class AbilityInterfererBlockEntity extends BlockEntity implements MenuProvider, EnergyReceiver,
+        cn.academy.StoresItems {
 
     /** Emplacement de l'objet d'energie. */
     public static final int SLOT_BATTERY = 0;

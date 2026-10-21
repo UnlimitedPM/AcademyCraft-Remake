@@ -53,7 +53,8 @@ import net.minecraftforge.items.ItemStackHandler;
  * rapport a l'original, qui avait son propre systeme d'objets energetiques
  * ({@code IFItemManager}).
  */
-public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProvider {
+public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProvider,
+        cn.academy.StoresItems {
 
     public static final int SLOT_CHARGE_IN = 0;
     public static final int SLOT_CHARGE_OUT = 1;

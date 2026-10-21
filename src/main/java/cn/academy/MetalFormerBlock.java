@@ -95,6 +95,9 @@ public class MetalFormerBlock extends Block implements EntityBlock {
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
         if (!state.is(newState.getBlock()) && level instanceof ServerLevel server) {
+            // Ce que la machine contenait retombe au sol : sans ca, la casser perdait tout ce
+            // qu'elle rangeait (le joueur l'a vu sur toutes les machines).
+            MachineDrops.dropContents(level, pos);
             NodeFinder.detach(server, pos);
         }
         super.onRemove(state, level, pos, newState, isMoving);
