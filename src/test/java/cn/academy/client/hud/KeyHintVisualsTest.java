@@ -2,7 +2,9 @@ package cn.academy.client.hud;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -144,6 +146,24 @@ class KeyHintVisualsTest {
         assertEquals(-278, KeyHintVisuals.contentShift(1));
         assertEquals(KeyHintVisuals.CONTENT_SHIFT_X - 2 * KeyHintVisuals.COLUMN_STEP,
                 KeyHintVisuals.contentShift(2));
+    }
+
+    @Test
+    void laColonneDesDirectionsMetLAvantEnHaut() {
+        // Le port LIT les touches dans l'ordre gauche, droite, avant, arriere (celui de sa visee),
+        // mais la colonne se lit comme la croix ZQSD : l'avant en haut, puis gauche, arriere,
+        // droite. Le joueur : « normalement le Z est en haut, pas en 3e ».
+        assertArrayEquals(new int[] { 2, 0, 3, 1 }, KeyHintVisuals.DIRECTION_ROWS);
+        assertEquals(2, KeyHintVisuals.DIRECTION_ROWS[0], "l'avant est la direction 2 du port");
+
+        // C'est une permutation : chaque direction apparait une seule fois, sinon une ligne
+        // manquerait a l'appel sans que rien ne le dise.
+        boolean[] seen = new boolean[KeyHintVisuals.DIRECTIONS.length];
+        for (int index : KeyHintVisuals.DIRECTION_ROWS) {
+            assertTrue(index >= 0 && index < seen.length, "indice hors bornes : " + index);
+            assertFalse(seen[index], "direction en double : " + index);
+            seen[index] = true;
+        }
     }
 
     @Test

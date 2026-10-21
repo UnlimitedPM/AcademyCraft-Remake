@@ -120,7 +120,7 @@ public final class KeyHintHud {
         pose.popPose();
 
         // Et la SECONDE, celle des directions : voir drawDirectionColumn.
-        drawDirectionColumn(graphics, usable, wave, fade);
+        drawDirectionColumn(graphics, data, usable, wave, fade);
 
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         pose.popPose();
@@ -141,17 +141,25 @@ public final class KeyHintHud {
      * <p>La ligne s'allume de l'etat de sa touche : l'original rendait ACTIVE sur la direction
      * tenue et IDLE sur les autres, donc un halo bleu sur celle qui va partir.
      */
-    private static void drawDirectionColumn(GuiGraphics graphics, boolean usable, float wave,
-                                            float fade) {
+    private static void drawDirectionColumn(GuiGraphics graphics, AbilityData data,
+                                            boolean usable, float wave, float fade) {
         String skillName = directionalSkill();
         if (skillName == null) return;
         Skill skill = KeyHintVisuals.skillByName(skillName);
         if (skill == null) return;
+        // Les quatre carres n'apparaissent qu'une fois la competence UTILISABLE, c'est-a-dire
+        // en bleu. Chez l'original, les ailes de tempete n'enregistraient leurs touches de
+        // direction qu'au passage a l'etat ACTIF (`initKeys()` juste apres `state = STATE_ACTIVE`)
+        // et les oubliaient en se refermant ; pendant la charge, la colonne n'existait donc pas.
+        // Le joueur : « on voit les directions pendant que la competence est en chargement, donc
+        // en orange, alors que normalement ces carres n'apparaissent qu'une fois utilisable ».
+        if (KeyHintVisuals.stateOf(skill, data, false) != KeyHintVisuals.State.ACTIVE) return;
 
         PoseStack pose = graphics.pose();
         pose.pushPose();
         pose.translate(KeyHintVisuals.contentShift(1), 0, 0);
-        for (int i = 0; i < KeyHintVisuals.DIRECTIONS.length; i++) {
+        for (int row = 0; row < KeyHintVisuals.DIRECTION_ROWS.length; row++) {
+            int i = KeyHintVisuals.DIRECTION_ROWS[row];
             String path = KeyHintVisuals.directionIcon(skillName, i);
             ResourceLocation icon = path == null
                     ? skill.getHintIcon()
@@ -160,7 +168,7 @@ public final class KeyHintHud {
                     ? KeyHintVisuals.State.ACTIVE
                     : KeyHintVisuals.State.IDLE;
             drawRow(graphics, cn.academy.ability.client.AbilityClientEvents.directionKey(i), icon,
-                    state, 0f, i * KeyHintVisuals.ROW_STEP, usable, wave, fade);
+                    state, 0f, row * KeyHintVisuals.ROW_STEP, usable, wave, fade);
         }
         pose.popPose();
     }
@@ -258,6 +266,13 @@ public final class KeyHintHud {
         if (remaining <= 0f) return;
 
         int filled = Math.round(KeyHintVisuals.ICON_SIZE * remaining);
+        // Le melange n'est pas la seule chose que le dernier `blit` laisse derriere lui : il
+        // laisse aussi sa COULEUR au shader, donc son alpha (0,4 sur une icone en recharge).
+        // `fill` multiplie sa propre couleur par celle du moment (`ColorModulator`), d'ou un
+        // voile a 0,4 x 0,3 = 0,12 au lieu de 0,3 : le gris de la recharge sortait plus sombre
+        // que celui de l'original — c'est ce que le joueur a vu (« pas aussi clair que dans le
+        // vrai mod »). On remet la couleur a blanc opacque avant l'aplat.
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         graphics.fill(
                 KeyHintVisuals.ICON_X, y + KeyHintVisuals.ICON_Y + KeyHintVisuals.ICON_SIZE - filled,
                 KeyHintVisuals.ICON_X + KeyHintVisuals.ICON_SIZE,

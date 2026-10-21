@@ -192,9 +192,20 @@ public final class KeyHintVisuals {
 
     /**
      * Les quatre directions, dans l'ordre ou le port les lit ({@code options.keyLeft} puis
-     * {@code keyRight}, {@code keyUp}, {@code keyDown}) et ou l'original les numerotait.
+     * {@code keyRight}, {@code keyUp}, {@code keyDown}) — c'est l'ordre de la VISEe, celui que
+     * {@code AbilityClientEvents} transmet au serveur.
      */
     public static final String[] DIRECTIONS = { "a", "d", "w", "s" };
+
+    /**
+     * L'ordre des LIGNES de la colonne des directions : l'avant en haut, puis gauche, arriere,
+     * droite — la croix ZQSD se lit comme cela.
+     *
+     * <p>Ce sont les indices de {@link #DIRECTIONS} et de {@code directionHeld}, pas un ordre a
+     * part : le port lit les touches dans l'ordre gauche/droite/avant/arriere (celui de sa visee),
+     * donc l'avant y occupe la place 2. Le joueur : « normalement le Z est en haut, pas en 3e ».
+     */
+    public static final int[] DIRECTION_ROWS = { 2, 0, 3, 1 };
 
     /**
      * L'icone d'une direction, pour les competences qui en dessinent une par direction.

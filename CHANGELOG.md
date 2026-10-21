@@ -134,9 +134,16 @@ loot table, the whole game in four languages, and a config file that tunes the p
   skill is on cooldown (`!canUseAbility || tickLeft > 0`), which the port forgot.
 - **The direction column is back.** A skill that reads the four movement keys — the teleport's
   flashing, the storm wing — opens a **second column** to the left of the first: four rows with
-  the A/D/W/S caps, the flashing's own four icons (`abilities/teleporter/flashing/a|d|w|s`), and
-  the direction you are aiming lit in blue. The original registered those four keys in a separate
-  group and drew one column per group, 200 units apart; the port had lost the second one.
+  the W/A/S/D caps (read like the cross, the forward key on top), the flashing's own four icons
+  (`abilities/teleporter/flashing/a|d|w|s`), and the direction you are aiming lit in blue. The
+  original registered those four keys in a separate group and drew one column per group, 200
+  units apart; the port had lost the second one. It opens **only once the skill is running**:
+  the storm wing adds its four keys when its wings open (`initKeys()` right after
+  `state = STATE_ACTIVE`) and forgets them when it closes, so nothing shows up while it charges.
+- **The grey of a cooldown is the original's grey.** Its veil was drawn at a quarter of its
+  strength: a `blit` leaves its own colour — and its alpha — on the shader, and `fill` multiplies
+  its colour by that one, so thirty percent became twelve. Drawn at the real thirty percent, the
+  square is as light as the 1.12.2's.
 - **The F4 menu is the original's again.** The port had translated it, with computed columns;
   the player no longer recognised his own menu. Its lines are now the 1.12.2 ones **word for
   word**: `AcademyCraft developer info`, `Skill status`, the internal names (`electromaster`,
@@ -286,10 +293,18 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   capuchon grise pendant la recharge (`!canUseAbility || tickLeft > 0`), que le port avait oublie.
 - **La colonne des directions est revenue.** Une competence qui lit les quatre touches de
   deplacement — le scintillement du teleporteur, les ailes de tempete — ouvre une **seconde
-  colonne** a gauche de la premiere : quatre lignes avec les capuchons A/D/W/S, les quatre images
-  du scintillement (`abilities/teleporter/flashing/a|d|w|s`), et la direction visee allumee en
-  bleu. L'original enregistrait ces quatre touches dans un groupe a part et dessinait une colonne
-  par groupe, a 200 unites l'une de l'autre ; le port avait perdu la seconde.
+  colonne** a gauche de la premiere : quatre lignes avec les capuchons W/A/S/D (lues comme la
+  croix, la touche d'avance en haut), les quatre images du scintillement
+  (`abilities/teleporter/flashing/a|d|w|s`), et la direction visee allumee en bleu. L'original
+  enregistrait ces quatre touches dans un groupe a part et dessinait une colonne par groupe, a
+  200 unites l'une de l'autre ; le port avait perdu la seconde. Elle ne s'ouvre qu'une fois la
+  competence **en marche** : les ailes de tempete n'ajoutent leurs quatre touches qu'a
+  l'ouverture des ailes (`initKeys()` juste apres `state = STATE_ACTIVE`) et les oublient en se
+  refermant, donc rien n'apparait pendant la charge.
+- **Le gris d'une recharge est celui de l'original.** Le voile etait dessine au quart de sa
+  force : un `blit` laisse sa propre couleur — et son alpha — sur le shader, et `fill` multiplie
+  sa couleur par celle-la, donc trente pour cent devenaient douze. Dessine au vrai trente pour
+  cent, le carre est aussi clair que celui de la 1.12.2.
 - **Le menu F4 est redevenu celui de l'original.** Le port l'avait traduit, avec des colonnes
   calculees ; le joueur n'y reconnaissait plus son menu. Ses lignes sont maintenant celles de la
   1.12.2 **mot pour mot** : `AcademyCraft developer info`, `Skill status`, les noms internes
