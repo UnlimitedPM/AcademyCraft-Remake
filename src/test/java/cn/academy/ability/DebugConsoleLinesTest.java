@@ -27,6 +27,31 @@ class DebugConsoleLinesTest {
     }
 
     @Test
+    void unTraducteurChangeLesMotsEtPasLesMesures() {
+        // Le menu F4 etait anglais dans les cinq langues : ses mots sont maintenant des cles.
+        // Les mesures, elles, gardent leur nom technique — ce sont les champs de l'original.
+        java.util.function.Function<String, String> traducteur = cle -> switch (cle) {
+            case DebugConsoleLines.KEY_TITLE -> "Infos developpeur";
+            case DebugConsoleLines.KEY_LEVEL -> "Niveau %s";
+            case DebugConsoleLines.KEY_SKILL_STATUS -> "Etat des competences";
+            case DebugConsoleLines.KEY_NOT_LEARNED -> "[non apprise]";
+            default -> cle;
+        };
+
+        Category category = new Category("electromaster");
+        List<String> info = DebugConsoleLines.info(new AbilityData(), category, traducteur);
+
+        assertEquals("Infos developpeur", info.get(0));
+        assertEquals("Niveau 0", info.get(2), "le niveau suit la langue");
+        assertTrue(info.get(3).startsWith("CP:       "), "la mesure garde son nom : " + info.get(3));
+
+        List<String> skills = DebugConsoleLines.skills(new AbilityData(), List.of(category),
+                traducteur);
+        assertEquals("Infos developpeur", skills.get(0));
+        assertEquals("Etat des competences", skills.get(1));
+    }
+
+    @Test
     void lesInformationsPortentLesNomsDeLoriginal() {
         // Les libelles sont ceux de l'original, mot pour mot : c'est un ecran de developpeur, il
         // se lit dans ses captures a lui et pas dans une traduction.

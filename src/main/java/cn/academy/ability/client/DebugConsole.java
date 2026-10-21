@@ -59,9 +59,12 @@ public final class DebugConsole {
 
         AbilityData data = ClientAbilityData.get();
         List<Category> categories = playerCategories(data);
+        // Les mots du menu suivent la langue du joueur ; les mesures gardent leur nom technique.
+        java.util.function.Function<String, String> translate =
+                key -> net.minecraft.network.chat.Component.translatable(key).getString();
         List<String> lines = state == State.SKILLS
-                ? DebugConsoleLines.skills(data, categories)
-                : DebugConsoleLines.info(data, highest(categories));
+                ? DebugConsoleLines.skills(data, categories, translate)
+                : DebugConsoleLines.info(data, highest(categories), translate);
 
         int lineHeight = 10;
         int y = TOP;

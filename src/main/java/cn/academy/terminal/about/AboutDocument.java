@@ -94,13 +94,25 @@ public final class AboutDocument {
      */
     private final java.util.Map<String, List<String>> donation;
 
+    /**
+     * Les noms de role, par langue : {@code roles[fr_fr]["Programming"] = "Programmation"}.
+     *
+     * <p>Le document de l'original nommait ses roles en anglais et rien ne les traduisait —
+     * l'onglet des credits restait donc anglais dans les quatre langues du port. La table est
+     * indexee par le role ANGLAIS du document, ce qui laisse le document lisible et permet a une
+     * langue d'en oublier un : il s'affiche alors en anglais, comme le reste du document.
+     */
+    private final java.util.Map<String, java.util.Map<String, String>> roles;
+
     private AboutDocument(List<String> header, List<Staff> staff, List<String> donators,
-                          java.util.Map<String, List<String>> donation, String remake) {
+                          java.util.Map<String, List<String>> donation, String remake,
+                          java.util.Map<String, java.util.Map<String, String>> roles) {
         this.header = List.copyOf(header);
         this.staff = List.copyOf(staff);
         this.donators = List.copyOf(donators);
         this.donation = java.util.Map.copyOf(donation);
         this.remake = remake == null ? "" : remake;
+        this.roles = java.util.Map.copyOf(roles);
     }
 
     /**
@@ -134,7 +146,8 @@ public final class AboutDocument {
     }
 
     public static AboutDocument empty() {
-        return new AboutDocument(List.of(), List.of(), List.of(), java.util.Map.of(), "");
+        return new AboutDocument(List.of(), List.of(), List.of(), java.util.Map.of(), "",
+                java.util.Map.of());
     }
 
     /** Lit un document depuis un lecteur JSON. Les champs absents restent vides. */
@@ -163,7 +176,31 @@ public final class AboutDocument {
                 staff.add(new Staff(entry.get("role").getAsString(), strings(entry.getAsJsonArray("names"))));
             }
         }
-        return new AboutDocument(header, staff, donators, donation(root), string(root, "remake"));
+        return new AboutDocument(header, staff, donators, donation(root), string(root, "remake"),
+                roles(root));
+    }
+
+    /**
+     * Les noms de role par langue : {@code { "fr_fr": { "Programming": "Programmation", ... } }}.
+     *
+     * <p>Absent du document de l'original : c'est un ajout du port, dans la meme forme que
+     * {@code donation} — un objet par langue.
+     */
+    private static java.util.Map<String, java.util.Map<String, String>> roles(JsonObject root) {
+        JsonElement element = root.get("roles");
+        if (element == null || !element.isJsonObject()) return java.util.Map.of();
+        java.util.Map<String, java.util.Map<String, String>> out = new java.util.LinkedHashMap<>();
+        for (String lang : element.getAsJsonObject().keySet()) {
+            JsonElement table = element.getAsJsonObject().get(lang);
+            if (!table.isJsonObject()) continue;
+            java.util.Map<String, String> translated = new java.util.LinkedHashMap<>();
+            for (String role : table.getAsJsonObject().keySet()) {
+                JsonElement text = table.getAsJsonObject().get(role);
+                if (text.isJsonPrimitive()) translated.put(role, text.getAsString());
+            }
+            out.put(lang, java.util.Map.copyOf(translated));
+        }
+        return java.util.Map.copyOf(out);
     }
 
     /** Un champ texte du document, ou une chaine vide. */
@@ -220,6 +257,21 @@ public final class AboutDocument {
         if (lines != null) return lines;
         List<String> fallback = donation.get("en_us");
         return fallback == null ? List.of() : fallback;
+    }
+
+    /**
+     * Un role d'equipe, dans la langue demandee, ou en anglais s'il n'y est pas.
+     *
+     * <p>Indexe par le nom anglais du document : c'est ce que le fichier ecrit, et une langue
+     * qui oublie un role affiche celui-la plutot qu'une case vide.
+     */
+    public String role(String english, String lang) {
+        java.util.Map<String, String> table = roles.get(lang);
+        if (table != null) {
+            String translated = table.get(english);
+            if (translated != null && !translated.isBlank()) return translated;
+        }
+        return english;
     }
 
     public boolean isEmpty() {

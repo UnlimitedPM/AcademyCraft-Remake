@@ -129,6 +129,68 @@
       "",
       "",
       "]Lambda Innovation"
+    ],
+    "fr_fr": [
+      "Merci d'avoir joue a AcademyCraft !!",
+      "Si le mod vous a plu, vous pouvez nous soutenir via :",
+      "!!Patreon|https://www.patreon.com/WeAthFolD",
+      "Nous en ferons un mod encore plus interessant ! >3<",
+      "",
+      "",
+      "",
+      "]Lambda Innovation"
+    ],
+    "de_de": [
+      "Danke, dass du AcademyCraft spielst!!",
+      "Wenn dir der Mod gefallen hat, kannst du uns unterstutzen uber:",
+      "!!Patreon|https://www.patreon.com/WeAthFolD",
+      "Wir machen den Mod noch spannender! >3<",
+      "",
+      "",
+      "",
+      "]Lambda Innovation"
+    ],
+    "es_es": [
+      "Gracias por jugar a AcademyCraft!!",
+      "Si el mod te ha gustado, puedes apoyarnos en:",
+      "!!Patreon|https://www.patreon.com/WeAthFolD",
+      "Haremos el mod todavia mas interesante! >3<",
+      "",
+      "",
+      "",
+      "]Lambda Innovation"
     ]
+  },
+  "roles": {
+    "fr_fr": {
+      "Project Direction": "Direction du projet",
+      "Game Design": "Conception du jeu",
+      "Programming": "Programmation",
+      "Art": "Graphismes",
+      "QA": "Tests",
+      "Website": "Site web",
+      "Localization": "Traduction",
+      "GitHub Contributors": "Contributeurs GitHub"
+    },
+    "de_de": {
+      "Project Direction": "Projektleitung",
+      "Game Design": "Spieldesign",
+      "Programming": "Programmierung",
+      "Art": "Grafik",
+      "QA": "Tests",
+      "Website": "Webseite",
+      "Localization": "Lokalisierung",
+      "GitHub Contributors": "GitHub-Beitragende"
+    },
+    "es_es": {
+      "Project Direction": "Direccion del proyecto",
+      "Game Design": "Diseno de juego",
+      "Programming": "Programacion",
+      "Art": "Arte",
+      "QA": "Pruebas",
+      "Website": "Sitio web",
+      "Localization": "Localizacion",
+      "GitHub Contributors": "Colaboradores de GitHub"
+    }
   }
 }

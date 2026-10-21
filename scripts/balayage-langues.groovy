@@ -89,10 +89,18 @@ def body = {
       def pos = base.offset(2, 0, -4 + i)
       def block = blockRegistry.get(net.minecraft.resources.ResourceLocation.tryParse(id))
       if (block == null) { log("  " + id + " : bloc inconnu"); continue }
-      def holder = [null]
-      server.execute { holder[0] = sl.getBlockState(pos) }
-      Thread.sleep(120)
-      def old = holder[0]
+
+      // JAMAIS SUR UN BLOC EXISTANT. Un emplacement occupe, et la machine qu'on y pose
+      // remplace ce qui s'y trouvait — une partie d'une autre machine, par exemple. C'est
+      // arrive : le balayage a pose un bloc sur la base d'une eolienne du joueur, la base a
+      // pose sa moitie haute dans le pilier du dessus, et la colonne s'est retrouvee trouee —
+      // l'eolienne ne tournait plus (`complete` faux). Quatre cases d'air au-dessus, donc.
+      def clear = true
+      for (int dy = 0; dy <= 3; dy++) {
+        if (!sl.getBlockState(pos.above(dy)).isAir()) clear = false
+      }
+      if (!clear) { log("  " + id + " : emplacement occupe, saute"); continue }
+
       server.execute { sl.setBlockAndUpdate(pos, block.defaultBlockState()) }
       Thread.sleep(250)
       def hit = new net.minecraft.world.phys.BlockHitResult(
@@ -107,7 +115,7 @@ def body = {
         log("  " + id + " -> " + screen.getClass().getSimpleName() + " : " + overflows.size() + " debordement(s)")
         for (def line : overflows) log("      " + line)
       }
-      server.execute { if (old != null) sl.setBlockAndUpdate(pos, old) }
+      server.execute { sl.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()) }
       Thread.sleep(200)
     }
   }

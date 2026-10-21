@@ -205,8 +205,13 @@ public class AboutScreen extends Screen {
         }
 
         y += 2 * FONT;
+        // Le nom du role est traduit quand le document le donne dans la langue du joueur ; sinon
+        // il reste celui du fichier, en anglais. Et « Donators » est le titre de la section, donc
+        // il suit la meme regle.
+        String lang = minecraft == null ? "en_us" : minecraft.getLanguageManager().getSelected();
         for (AboutDocument.Staff entry : document.getStaff()) {
-            credits.add(new Line(entry.role(), centre - ROLE_GAP, y, (int) FONT, RIGHT, null));
+            credits.add(new Line(document.role(entry.role(), lang), centre - ROLE_GAP, y,
+                    (int) FONT, RIGHT, null));
             for (String name : entry.names()) {
                 credits.add(new Line(name, centre + ROLE_GAP, y, (int) FONT, LEFT, null));
                 y += FONT;
@@ -215,7 +220,8 @@ public class AboutScreen extends Screen {
         }
 
         y += FONT;
-        credits.add(new Line("Donators", centre, y, (int) FONT, CENTER, null));
+        credits.add(new Line(Component.translatable("ac.about.donators").getString(), centre, y,
+                (int) FONT, CENTER, null));
         y += 1.1 * FONT;
 
         // La cle de langue de l'original se decoupe sur ses « \n » litteraux ; on accepte aussi

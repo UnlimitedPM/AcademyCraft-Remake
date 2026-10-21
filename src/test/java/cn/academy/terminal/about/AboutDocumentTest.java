@@ -159,6 +159,38 @@ class AboutDocumentTest {
         assertThrows(UnsupportedOperationException.class, () -> document.getStaff().clear());
     }
 
+    @Test
+    void lesRolesSeTraduisentParLangue() {
+        String json = """
+                {
+                  "staff": [ { "role": "Programming", "names": ["x"] } ],
+                  "roles": { "fr_fr": { "Programming": "Programmation" } }
+                }
+                """;
+        AboutDocument document = AboutDocument.parse(json);
+
+        assertEquals("Programmation", document.role("Programming", "fr_fr"));
+        assertEquals("Programming", document.role("Programming", "de_de"),
+                "une langue sans table lit l'anglais du document");
+        assertEquals("Art", document.role("Art", "fr_fr"),
+                "un role oublie par la table reste en anglais");
+    }
+
+    @Test
+    void chaqueLangueLivreeALeTexteDesDons() {
+        // L'onglet des dons retombait sur l'anglais pour tout ce qui n'etait ni zh_cn ni en_us :
+        // le joueur l'a vu en francais. Les cinq langues du port ont donc leur texte.
+        AboutDocument document = AboutDocument.load();
+        String english = String.join(" ", document.donation("en_us"));
+        assertFalse(english.isBlank(), "l'anglais doit exister");
+
+        for (String lang : List.of("fr_fr", "de_de", "es_es")) {
+            String text = String.join(" ", document.donation(lang));
+            assertFalse(text.isBlank(), lang + " n'a pas de texte de dons");
+            assertFalse(text.equals(english), lang + " affiche encore l'anglais");
+        }
+    }
+
     private static int indexOf(List<AboutDocument.Line> lines, String text) {
         for (int i = 0; i < lines.size(); i++) {
             if (lines.get(i).text().equals(text)) return i;

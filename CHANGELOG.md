@@ -75,7 +75,15 @@ loot table, the whole game in four languages, and a config file that tunes the p
   "Erzeug.-Geschw.", "Nicht verbunden"), Spanish seven ("CAPACIDAD", "Nombre del nodo", "Alcance
   trans.", "Ancho de banda", "Teletransportador"); all of them scroll inside their box instead of
   running over the neighbouring column.
-- **Tests**: 170 in-game tests, 887 unit tests.
+- **The About screen and the F4 menu speak four languages.** The Donate tab only had text in
+  English and Chinese — the original's two — so French, German and Spanish read English; it now has
+  its own. The staff roles ("Programming", "Game Design"...) were English names in the credits
+  file: a `roles` table per language translates them, and a role a language forgets stays English.
+  The donator list gets its title from the language files ("Donateurs"), and the F4 menu —
+  "AcademyCraft developer info", "Ability not acquired", "Skill status", "[not learned]",
+  "Level" — is translated too, while its measurements keep the original's own field names (`CP:`,
+  `Overload:`, `CPData.*`): that is what a developer compares against the sources.
+- **Tests**: 170 in-game tests, 890 unit tests.
 
 ### Francais
 
@@ -154,7 +162,16 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   « Knotenname », « Sende-Reichw. », « FLÜSSIGKEIT », « Erzeug.-Geschw. », « Nicht verbunden »),
   l'espagnol sept (« CAPACIDAD », « Nombre del nodo », « Alcance trans. », « Ancho de banda »,
   « Teletransportador ») ; tous defilent dans leur boite au lieu de passer sur la colonne voisine.
-- **Des tests** : 170 tests en jeu, 887 tests unitaires.
+- **L'ecran A propos et le menu F4 parlent quatre langues.** L'onglet des dons n'avait de texte
+  qu'en anglais et en chinois — les deux de l'original — donc le francais, l'allemand et l'espagnol
+  lisaient l'anglais ; il a maintenant le sien. Les noms de role (« Programming », « Game Design »...)
+  etaient des noms anglais dans le fichier des credits : une table `roles` par langue les traduit, et
+  un role qu'une langue oublie reste en anglais. La liste des donateurs prend son titre dans les
+  fichiers de langue (« Donateurs »), et le menu F4 — « Infos développeur AcademyCraft », « Aucune
+  aptitude acquise », « État des compétences », « [non apprise] », « Niveau » — est traduit aussi,
+  tandis que ses mesures gardent les noms de champs de l'original (`CP:`, `Overload:`, `CPData.*`) :
+  c'est ce qu'un developeur compare aux sources.
+- **Des tests** : 170 tests en jeu, 890 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 
