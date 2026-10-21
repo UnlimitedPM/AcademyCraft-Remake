@@ -70,9 +70,17 @@ public final class AppScreens {
         open(app);
     }
 
-    /** Ferme une application : le terminal reprend la main, s'il en venait. */
+    /**
+     * Ferme une application : le terminal reprend la main, s'il en venait.
+     *
+     * <p>Et la pause du lecteur se repose <b>tout de suite</b> apres : rendre le jeu ou le terminal
+     * remet en marche tous les canaux du moteur de son, celui du mod compris. Le tick le rattrape,
+     * mais avec un trou de quelques dizaines de millisecondes, et le joueur l'entend — « le son
+     * reprend pendant une micro seconde ».
+     */
     public static void close() {
         Screen target = origin;
         origin = null;
         net.minecraft.client.Minecraft.getInstance().setScreen(target);
+        cn.academy.misc.media.client.ClientMediaPlayer.reassertPause();
     }}

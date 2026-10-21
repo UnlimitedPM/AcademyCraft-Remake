@@ -138,9 +138,14 @@ public final class ClientMediaPlayer {
                 Object found = channels.get(current);
                 if (found instanceof ChannelAccess.ChannelHandle handle) {
                     channel = handle;
-                    // Le moteur a pose le volume du son multiplie par celui de la source ;
-                    // le gain de l'ecouteur porte deja ce dernier, donc on repose le notre.
-                    handle.execute(ch -> ch.setVolume(volume));
+                    // Le moteur a pose le volume du son multiplie par celui de la source ; le gain
+                    // de l'ecouteur porte deja ce dernier, donc on repose le notre — ou zero, si le
+                    // morceau est en attente.
+                    if (pausedAt >= 0.0f) {
+                        hold(handle);
+                    } else {
+                        handle.execute(ch -> ch.setVolume(volume));
+                    }
                 }
             }
         } catch (IllegalAccessException | RuntimeException e) {
@@ -156,7 +161,7 @@ public final class ClientMediaPlayer {
 
         pausedAt = position();
         ChannelAccess.ChannelHandle handle = channel();
-        if (handle != null) handle.execute(Channel::pause);
+        if (handle != null) hold(handle);
     }
 
     /** Reprend le morceau la ou la pause l'a laisse : le canal n'a pas bouge. */
@@ -164,11 +169,33 @@ public final class ClientMediaPlayer {
         if (playing == null || pausedAt < 0.0f) return;
 
         ChannelAccess.ChannelHandle handle = channel();
-        if (handle != null) handle.execute(Channel::unpause);
+        if (handle != null) {
+            float gain = volume;
+            handle.execute(ch -> {
+                ch.setVolume(gain);
+                ch.unpause();
+            });
+        }
 
         // L'horloge repart de la position de la pause : la source, elle, n'a jamais avance.
         startedNano = System.nanoTime() - (long) (pausedAt * 1_000_000_000.0f);
         pausedAt = -1.0f;
+    }
+
+    /**
+     * Met le canal en attente <b>et</b> a zero.
+     *
+     * <p>Les deux, et pas seulement la pause : le moteur remet tous ses canaux en marche quand un
+     * ecran se ferme, et le temps qu'on le remette en pause, la source avait deja repris — « le son
+     * reprend pendant une micro seconde mais ca s'entend a l'oreille ». Le gain a zero, lui, le
+     * moteur n'y touche jamais : meme si la source repart, elle repart muette, et la pause reposee
+     * juste apres ne se voit plus. C'est ce qui rend la reprise fiable au lieu d'etre probable.
+     */
+    private static void hold(ChannelAccess.ChannelHandle handle) {
+        handle.execute(ch -> {
+            ch.setVolume(0.0f);
+            ch.pause();
+        });
     }
 
     /** Bascule entre lecture et attente, sur le morceau en cours. */
@@ -199,7 +226,20 @@ public final class ClientMediaPlayer {
         if (playing == null || pausedAt < 0.0f) return;
 
         ChannelAccess.ChannelHandle handle = channel();
-        if (handle != null) handle.execute(Channel::pause);
+        if (handle != null) hold(handle);
+    }
+
+    /**
+     * Repose la pause <b>tout de suite</b> apres la fermeture d'un ecran.
+     *
+     * <p>Le tick suffit a tenir la pause, mais pas a la tenir sans un trou : entre le moment ou le
+     * moteur remet ses canaux en marche et le tick suivant, il s'ecoule jusqu'a cinquante
+     * millisecondes — le joueur l'entend. Les ecrans du mod appellent donc ceci des que leur
+     * {@code setScreen} a rendu la main : la pause se repose dans la meme passe du moteur de son,
+     * et le gain reste a zero de bout en bout.
+     */
+    public static void reassertPause() {
+        keepPaused();
     }
 
     /**
@@ -257,7 +297,12 @@ public final class ClientMediaPlayer {
         volume = Math.max(0.0f, Math.min(1.0f, value));
 
         ChannelAccess.ChannelHandle handle = channel();
-        if (handle != null) handle.execute(ch -> ch.setVolume(volume));
+        // Une glissiere ne reveille pas un morceau en attente : elle regle le volume qu'il aura en
+        // reprenant, et reste donc muette tant qu'il est en pause.
+        if (handle != null) {
+            float gain = pausedAt >= 0.0f ? 0.0f : volume;
+            handle.execute(ch -> ch.setVolume(gain));
+        }
     }
 
     /**

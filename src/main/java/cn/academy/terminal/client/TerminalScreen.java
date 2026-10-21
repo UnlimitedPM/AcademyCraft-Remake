@@ -458,6 +458,23 @@ public class TerminalScreen extends Screen {
                 GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
     }
 
+    /**
+     * Fermer le terminal rend le jeu, et rendre le jeu remet tous les sons du moteur en marche.
+     *
+     * <p>C'est {@code Minecraft.setScreen(null)} qui appelle {@code soundManager.resume()}, pour
+     * <b>tous</b> les canaux — celui du lecteur media compris. Une musique mise en pause dans le
+     * terminal repartait donc, mais pas tout a fait : il s'ecoulait le temps d'un tick avant que
+     * le lecteur ne la remette en attente, et le joueur entendait ce trou — « le son reprend
+     * pendant une micro seconde mais ca s'entend a l'oreille ». La pause se repose ici des que
+     * l'ecran a rendu la main, dans la meme passe du moteur de son, et le gain reste a zero de
+     * bout en bout.
+     */
+    @Override
+    public void onClose() {
+        super.onClose();
+        cn.academy.misc.media.client.ClientMediaPlayer.reassertPause();
+    }
+
     private static ResourceLocation texture(String name) {
         return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
                 "textures/guis/data_terminal/" + name);
