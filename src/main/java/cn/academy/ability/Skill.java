@@ -803,6 +803,34 @@ public abstract class Skill {
     }
 
     /**
+     * Les trois etats que le rappel des touches sait montrer, portage de {@code DelegateState}.
+     *
+     * <p>L'original en avait trois, avec leur couleur : {@code IDLE} au repos, {@code CHARGE}
+     * (halo orange) et {@code ACTIVE} (halo bleu), et c'est <b>le contexte vivant</b> qui les
+     * decidait. Sa regle exacte ({@code Skill.ContextKeyDelegate.getState}) : pas de contexte,
+     * {@code IDLE} ; un contexte qui sait se decrire ({@code IStateProvider}), le sien ; sinon
+     * {@code ACTIVE}. Autrement dit <b>une competence en cours est BLEUE par defaut</b>, et
+     * l'orange est reserve a ce que la competence declare elle-meme (la preparation du canon a
+     * plasma, les cinq premiers ticks de l'onde de choc). Le port avait inverse les deux.
+     */
+    public enum HintState { IDLE, CHARGE, ACTIVE }
+
+    /**
+     * L'etat du rappel des touches pendant que cette competence est <b>ouverte</b>.
+     *
+     * <p>Defaut : {@code ACTIVE}, comme l'original pour tout contexte qui ne dit rien. Les
+     * competences qui ont une vraie phase de preparation le declarent — voir les {@code getState}
+     * de la 1.12.2 ({@code PlasmaCannon}, {@code Groundshock}, {@code StormWing}).
+     *
+     * <p>A n'appeler que sur une competence ouverte : hors d'un maintien, l'etat est {@code IDLE}.
+     *
+     * @param ticks l'age du maintien, en ticks
+     */
+    public HintState hintState(AbilityData data, int ticks) {
+        return HintState.ACTIVE;
+    }
+
+    /**
      * Cette competence ouvre-t-elle un ecran au lieu de partir ?
      *
      * <p>Une seule le fait, la teleportation a la marque : sa touche ouvre la liste des

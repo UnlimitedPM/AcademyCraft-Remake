@@ -1,5 +1,6 @@
 package cn.academy.client.hud;
 
+import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
@@ -209,21 +210,29 @@ public final class KeyHintVisuals {
     }
 
     /**
-     * L'etat d'une competence rangee sur une touche, tel que l'original le lisait sur son
-     * delegue : au repos, en charge ({@link State#CHARGE}, halo orange) ou en cours
-     * d'execution ({@link State#ACTIVE}, halo bleu).
+     * L'etat d'une competence rangee sur une touche : au repos, en preparation ({@link State#CHARGE},
+     * halo orange) ou en cours d'execution ({@link State#ACTIVE}, halo bleu).
      *
-     * <p>La distinction se lit chez le client : une charge ouverte ({@code ClientCharge}) qui
-     * n'est pas un maintien est une charge, un maintien est une execution. C'est la traduction
-     * la plus proche des {@code getState} de l'original, qui repondaient par competence
-     * (canon a plasma : CHARGE jusqu'a sa fenetre, ACTIVE ensuite ; ailes : ACTIVE en vol).
+     * <p>C'est la regle de l'original, et le port l'avait INVERSEE : la-bas, un contexte vivant
+     * rend {@code ACTIVE} (bleu) et <b>seules</b> les competences qui declarent une preparation
+     * rendent {@code CHARGE} ({@code PlasmaCannon} avant sa fenetre, {@code Groundshock} sur ses
+     * cinq premiers ticks, {@code StormWing} avant l'ouverture des ailes). Le scintillement, le
+     * meltdowner, le railgun charge, un maintien : tout cela etait donc BLEU. L'orange n'apparait
+     * que la ou la competence le dit, et pendant l'armement du railgun (le seul geste que
+     * l'original colorait ainsi sans ouvrir de contexte).
      */
-    public static State stateOf(String skillName) {
-        if (skillName == null || !cn.academy.ability.client.ClientCharge.isOpen(skillName)) {
-            return State.IDLE;
+    public static State stateOf(Skill skill, AbilityData data, boolean armed) {
+        if (skill == null) return State.IDLE;
+        if (!cn.academy.ability.client.ClientCharge.isOpen(skill.getName())) {
+            return armed ? State.CHARGE : State.IDLE;
         }
-        return cn.academy.ability.client.ClientCharge.isSustained(skillName)
-                ? State.ACTIVE : State.CHARGE;
+        Skill.HintState state = skill.hintState(data,
+                cn.academy.ability.client.ClientCharge.getTicks(skill.getName()));
+        return switch (state) {
+            case CHARGE -> State.CHARGE;
+            case ACTIVE -> State.ACTIVE;
+            default -> State.IDLE;
+        };
     }
 
     /** De quel genre de touche il s'agit : c'est l'image du capuchon qui change. */

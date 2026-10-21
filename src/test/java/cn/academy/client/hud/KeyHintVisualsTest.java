@@ -85,24 +85,56 @@ class KeyHintVisualsTest {
     }
 
     @Test
-    void lEtatDUneToucheSeLitSurSaCharge() {
-        assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf(null));
-        assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf("arc_gen"),
-                "aucune charge ouverte : au repos");
-        cn.academy.ability.client.ClientCharge.begin("arc_gen", 40);
+    void uneCompetenceOuvertePorteLeHaloBleu() {
+        // La regle de l'original : un contexte vivant rend ACTIVE (BLEU), et l'orange est reserve
+        // a ce que la competence declare. Le port avait l'inverse — il colorait toute charge en
+        // orange — et le joueur l'a vu tout de suite.
+        cn.academy.ability.AbilityData data = new cn.academy.ability.AbilityData();
+        cn.academy.ability.Skill meltdowner = cn.academy.ability.meltdowner.MeltdownerCategory.MELTDOWNER;
+
+        assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf(null, data, false));
+        assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf(meltdowner, data, false),
+                "aucun maintien ouvert : au repos");
+        assertEquals(KeyHintVisuals.State.CHARGE, KeyHintVisuals.stateOf(meltdowner, data, true),
+                "l'armement du railgun est une PREPARATION, sans contexte ouvert");
+
+        cn.academy.ability.client.ClientCharge.begin(meltdowner.getName(), 40);
         try {
-            assertEquals(KeyHintVisuals.State.CHARGE, KeyHintVisuals.stateOf("arc_gen"));
-            assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf("charging"),
+            assertEquals(KeyHintVisuals.State.ACTIVE,
+                    KeyHintVisuals.stateOf(meltdowner, data, false),
+                    "une charge en cours est BLEUE, comme tout contexte vivant");
+            assertEquals(KeyHintVisuals.State.IDLE,
+                    KeyHintVisuals.stateOf(KeyHintVisuals.skillByName("charging"), data, false),
                     "la charge d'une competence ne touche pas les autres");
         } finally {
-            cn.academy.ability.client.ClientCharge.end("arc_gen");
+            cn.academy.ability.client.ClientCharge.end(meltdowner.getName());
         }
-        cn.academy.ability.client.ClientCharge.beginSustained("storm_wing");
+    }
+
+    @Test
+    void lesCompetencesQuiDeclarentUnePreparationSontOrange() {
+        // Les trois {@code getState} de l'original : l'onde de choc sur ses cinq premiers ticks,
+        // le canon a plasma avant sa fenetre, les ailes avant de s'ouvrir.
+        assertEquals(KeyHintVisuals.State.CHARGE, openAt(cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK, 3));
+        assertEquals(KeyHintVisuals.State.ACTIVE, openAt(cn.academy.ability.vecmanip.VecmanipCategory.GROUNDSHOCK, 5));
+
+        assertEquals(KeyHintVisuals.State.CHARGE, openAt(cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON, 10));
+        assertEquals(KeyHintVisuals.State.ACTIVE, openAt(cn.academy.ability.vecmanip.VecmanipCategory.PLASMA_CANNON, 60));
+
+        assertEquals(KeyHintVisuals.State.CHARGE, openAt(cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING, 70));
+        assertEquals(KeyHintVisuals.State.ACTIVE, openAt(cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING, 71));
+    }
+
+    /** L'etat d'une competence ouverte depuis {@code ticks} ticks. */
+    private static KeyHintVisuals.State openAt(cn.academy.ability.Skill skill, int ticks) {
+        cn.academy.ability.client.ClientCharge.begin(skill.getName(), 0);
         try {
-            assertEquals(KeyHintVisuals.State.ACTIVE, KeyHintVisuals.stateOf("storm_wing"),
-                    "un maintien est une execution, pas une charge");
+            for (int i = 0; i < ticks; i++) {
+                cn.academy.ability.client.ClientCharge.tick(skill.getName());
+            }
+            return KeyHintVisuals.stateOf(skill, new cn.academy.ability.AbilityData(), false);
         } finally {
-            cn.academy.ability.client.ClientCharge.end("storm_wing");
+            cn.academy.ability.client.ClientCharge.end(skill.getName());
         }
     }
 

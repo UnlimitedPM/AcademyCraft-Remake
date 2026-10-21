@@ -931,6 +931,20 @@ public class AbilityClientEvents {
         return index >= 0 && index < directionHeld.length && directionHeld[index];
     }
 
+    /**
+     * Les ticks d'armement qui restent sur cette touche d'aptitude, ou zero.
+     *
+     * <p>Sert au rappel des touches : l'original montrait l'icone du railgun en PRÉPARATION
+     * (halo orange) pendant son armement, et au repos ensuite — c'est le seul geste colore de
+     * cette facon sans ouvrir de maintien. Voir {@code Skill#getArmingTicks}.
+     */
+    public static int armingTicks(int presetSlot) {
+        for (Binding binding : BINDINGS) {
+            if (binding.presetSlot == presetSlot) return binding.arming;
+        }
+        return 0;
+    }
+
     private static void send(Category category, Skill skill, Phase phase) {
         AbilityNetwork.CHANNEL.sendToServer(
                 new ActivateSkillPacket(category.getCategoryId(), skill.getId(), phase));

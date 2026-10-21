@@ -122,18 +122,29 @@ loot table, the whole game in four languages, and a config file that tunes the p
   left — pressing play resumes it from there, not from the start (the engine cannot seek in a
   stream, so it is handed one that reads and throws away the head of the track).
 - **The control hint shows what a skill is doing.** Each row of the ability hint carries the
-  three states of `KeyHintUI` now: at rest the icon sits at 70 % and does not move; a skill you
-  are **charging** gets an orange halo and its icon breathes between 40 % and 100 %; one that is
-  **running** (a hold, a flight) gets a blue one. The halo is the original's own: eight glow
-  images around the icon box, tinted with the state's colour, drawn in front of the icon. The
-  0,3 s fade-in is there too, and the key cap greys out while the skill is on cooldown
-  (`!canUseAbility || tickLeft > 0`), which the port forgot.
+  three states of `KeyHintUI` now: at rest the icon sits at 70 % and does not move; a skill that
+  is **running** — a charge you are holding, a hold, a flight — gets a **blue** halo and its icon
+  breathes between 40 % and 100 %; a skill in its **preparation** gets an **orange** one. That is
+  the original's own rule, and it is the other way round from what a reader expects: in 1.12.2
+  any living context answered `ACTIVE` (blue), and only the skills that declared a preparation
+  answered `CHARGE` — the plasma cannon before its window, the ground shock on its first five
+  ticks, the storm wing before its wings open, and the railgun with an ingot in hand. The halo is
+  the original's: eight glow images around the icon box, tinted with the state's colour, drawn
+  in front of the icon. The 0,3 s fade-in is there too, and the key cap greys out while the
+  skill is on cooldown (`!canUseAbility || tickLeft > 0`), which the port forgot.
 - **The direction column is back.** A skill that reads the four movement keys — the teleport's
   flashing, the storm wing — opens a **second column** to the left of the first: four rows with
   the A/D/W/S caps, the flashing's own four icons (`abilities/teleporter/flashing/a|d|w|s`), and
   the direction you are aiming lit in blue. The original registered those four keys in a separate
   group and drew one column per group, 200 units apart; the port had lost the second one.
-- **Tests**: 171 in-game tests, 901 unit tests.
+- **The F4 menu is the original's again.** The port had translated it, with computed columns;
+  the player no longer recognised his own menu. Its lines are now the 1.12.2 ones **word for
+  word**: `AcademyCraft developer info`, `Skill status`, the internal names (`electromaster`,
+  `arc_gen` — not the tree's translated ones), `CP:` followed by its seven spaces,
+  `CPData.canUseAbility`, `CPData.activated`, `CPData.addMaxCP`, `CPData.interfering` and
+  ` AData.levelProgress`, numbers written with the system's decimal separator as they were then.
+  The fourteen language keys that only existed for that translation are gone from the five files.
+- **Tests**: 171 in-game tests, 900 unit tests.
 
 ### Francais
 
@@ -263,19 +274,31 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   etait — le bouton lecture le reprend de la, et non du debut (le moteur ne sait pas se deplacer
   dans un flux, on lui en donne donc un qui lit et jette la tete du morceau).
 - **Le rappel des touches dit ce que fait la competence.** Chaque ligne porte maintenant les
-  trois etats de `KeyHintUI` : au repos l'icone reste a 70 % et ne bouge pas ; une competence en
-  **cours de charge** prend un halo orange et son icone respire entre 40 et 100 % ; une qui
-  **s'execute** (un maintien, un vol) prend un halo bleu. Le halo est celui de l'original : huit
-  images de lueur autour de la boite de l'icone, teintees de la couleur de l'etat, posees devant
-  l'icone. Le fondu d'apparition de 0,3 s est la aussi, et le capuchon grise pendant la recharge
-  (`!canUseAbility || tickLeft > 0`), que le port avait oublie.
+  trois etats de `KeyHintUI` : au repos l'icone reste a 70 % et ne bouge pas ; une competence qui
+  **s'execute** — une charge qu'on tient, un maintien, un vol — prend un halo **bleu** et son
+  icone respire entre 40 et 100 % ; une competence en **preparation** prend un halo **orange**.
+  C'est la regle de l'original, et elle est a l'inverse de ce qu'on attend : en 1.12.2 tout
+  contexte vivant repondait `ACTIVE` (bleu), et seules les competences qui declaraient une
+  preparation repondaient `CHARGE` — le canon a plasma avant sa fenetre, l'onde de choc sur ses
+  cinq premiers ticks, les ailes avant de s'ouvrir, et le railgun avec un lingot en main. Le halo
+  est celui de l'original : huit images de lueur autour de la boite de l'icone, teintees de la
+  couleur de l'etat, posees devant l'icone. Le fondu d'apparition de 0,3 s est la aussi, et le
+  capuchon grise pendant la recharge (`!canUseAbility || tickLeft > 0`), que le port avait oublie.
 - **La colonne des directions est revenue.** Une competence qui lit les quatre touches de
   deplacement — le scintillement du teleporteur, les ailes de tempete — ouvre une **seconde
   colonne** a gauche de la premiere : quatre lignes avec les capuchons A/D/W/S, les quatre images
   du scintillement (`abilities/teleporter/flashing/a|d|w|s`), et la direction visee allumee en
   bleu. L'original enregistrait ces quatre touches dans un groupe a part et dessinait une colonne
   par groupe, a 200 unites l'une de l'autre ; le port avait perdu la seconde.
-- **Des tests** : 171 tests en jeu, 901 tests unitaires.
+- **Le menu F4 est redevenu celui de l'original.** Le port l'avait traduit, avec des colonnes
+  calculees ; le joueur n'y reconnaissait plus son menu. Ses lignes sont maintenant celles de la
+  1.12.2 **mot pour mot** : `AcademyCraft developer info`, `Skill status`, les noms internes
+  (`electromaster`, `arc_gen`, et non ceux de l'arbre), `CP:` suivi de ses sept espaces,
+  `CPData.canUseAbility`, `CPData.activated`, `CPData.addMaxCP`, `CPData.interfering` et
+  ` AData.levelProgress`, les nombres ecrits avec le separateur decimal du systeme comme a
+  l'epoque. Les quatorze cles de langue qui n'existaient que pour cette traduction ont quitte les
+  cinq fichiers.
+- **Des tests** : 171 tests en jeu, 900 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
 

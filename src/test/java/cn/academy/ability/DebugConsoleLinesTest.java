@@ -14,6 +14,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>C'est la seule fenetre ou les points de controle et la surcharge se lisent en jeu ; il vaut
  * donc mieux que ses lignes soient justes Avant d'etre jolies.
+ *
+ * <p>Et ce sont celles de l'original, <b>mot pour mot</b> : le port les avait traduites, avec des
+ * colonnes calculees, et le joueur n'y a plus reconnu son menu F4. Les noms internes des
+ * competences ({@code arc_gen}) en font partie — c'est un ecran de developpeur.
  */
 class DebugConsoleLinesTest {
 
@@ -22,104 +26,45 @@ class DebugConsoleLinesTest {
         List<String> lines = DebugConsoleLines.info(new AbilityData(), null);
 
         assertEquals(2, lines.size());
-        assertEquals(DebugConsoleLines.TITLE, lines.get(0));
-        assertEquals(DebugConsoleLines.NO_CATEGORY, lines.get(1));
-    }
-
-    @Test
-    void unTraducteurChangeTousLesMots() {
-        // Le menu F4 etait anglais dans les cinq langues : ses mots sont maintenant des cles,
-        // libelles des mesures compris, et les noms de categorie et de competence passent par les
-        // cles de l'arbre. Le joueur : « le melange entre francais et anglais me fait penser qu'il
-        // aurait ete plus simple de laisser en anglais direct ».
-        java.util.function.Function<String, String> traducteur = cle -> switch (cle) {
-            case DebugConsoleLines.KEY_TITLE -> "Infos developpeur";
-            case DebugConsoleLines.KEY_LEVEL -> "Niveau %s";
-            case DebugConsoleLines.KEY_SKILL_STATUS -> "Etat des competences";
-            case DebugConsoleLines.KEY_NOT_LEARNED -> "[non apprise]";
-            case DebugConsoleLines.KEY_CP -> "Reserve :";
-            case DebugConsoleLines.KEY_OVERLOAD -> "Surcharge :";
-            case DebugConsoleLines.KEY_CAN_USE -> "Utilisable :";
-            case DebugConsoleLines.KEY_ACTIVATED -> "Aptitude allumee :";
-            case DebugConsoleLines.KEY_ADD_CP -> "Bonus de reserve :";
-            case DebugConsoleLines.KEY_INTERFERING -> "Brouille :";
-            case DebugConsoleLines.KEY_PROGRESS -> "Progression :";
-            case DebugConsoleLines.KEY_YES -> "oui";
-            case DebugConsoleLines.KEY_NO -> "non";
-            default -> "TRADUIT:" + cle;
-        };
-
-        Category category = new Category("test");
-        List<String> info = DebugConsoleLines.info(new AbilityData(), category, traducteur);
-
-        assertEquals("Infos developpeur", info.get(0));
-        assertEquals("TRADUIT:" + category.getDisplayKey(), info.get(1),
-                "le nom de la categorie passe par sa cle habituelle");
-        assertEquals("Niveau 0", info.get(2), "le niveau suit la langue");
-        assertTrue(info.get(3).startsWith("Reserve :"), info.get(3));
-        assertTrue(info.get(5).endsWith("non"), info.get(5));
-
-        List<String> skills = DebugConsoleLines.skills(new AbilityData(), List.of(category),
-                traducteur);
-        assertEquals("Infos developpeur", skills.get(0));
-        assertEquals("Etat des competences", skills.get(1));
+        assertEquals("AcademyCraft developer info", lines.get(0));
+        assertEquals("Ability not acquired", lines.get(1));
     }
 
     @Test
     void lesInformationsPortentLesNomsDeLoriginal() {
-        // Les libelles sont ceux de l'original, mot pour mot : c'est un ecran de developpeur, il
-        // se lit dans ses captures a lui et pas dans une traduction.
+        // Les libelles sont ceux de l'original, espaces compris : "CP:" puis SEPT espaces, le
+        // reste de la ligne etant le nombre. Une traduction ou une colonne calculee changeait
+        // l'aspect de l'ecran, et c'est ce que le joueur a vu.
         Category category = new Category("electromaster");
         List<String> lines = DebugConsoleLines.info(new AbilityData(), category);
 
-        assertEquals(DebugConsoleLines.TITLE, lines.get(0));
-        assertEquals("electromaster", lines.get(1), "le nom interne de la categorie, sans traducteur");
+        assertEquals(10, lines.size());
+        assertEquals("AcademyCraft developer info", lines.get(0));
+        assertEquals("electromaster", lines.get(1), "le nom INTERNE de la categorie");
         assertEquals("Level 0", lines.get(2), "niveau de depart");
-        assertTrue(lines.get(3).startsWith("CP:"),
-                "le libelle de la reserve ouvre la ligne : " + lines.get(3));
-        assertTrue(lines.get(3).contains("(") && lines.get(3).endsWith(")"),
-                "les CP montrent leur plafond separe, comme la surcharge : " + lines.get(3));
-        assertTrue(lines.get(4).startsWith("Overload:"), lines.get(4));
-        assertTrue(lines.get(4).contains("(") && lines.get(4).endsWith(")"),
-                "la surcharge montre son maximum separe : " + lines.get(4));
-        assertEquals(measure("Can use ability:", "false"), lines.get(5),
-                "sans categorie l'aptitude ne peut pas etre allumee, donc rien ne part");
-        assertEquals(measure("Ability on:", "false"), lines.get(6),
-                "l'original ne montrait pas la surcharge ici, mais l'etat allume/eteint");
-        assertTrue(lines.get(7).startsWith("CP bonus:"), lines.get(7));
-        assertEquals(measure("Jammed:", "false"), lines.get(8));
-        assertTrue(lines.get(9).startsWith("Level progress:"),
-                "la progression du niveau ferme l'ecran : " + lines.get(9));
+        assertTrue(lines.get(3).startsWith("CP:       "),
+                "le libelle et ses sept espaces : [" + lines.get(3) + "]");
+        assertTrue(lines.get(4).startsWith("Overload: "),
+                "la surcharge, elle, n'a qu'un espace : [" + lines.get(4) + "]");
+        assertEquals("CPData.canUseAbility: false", lines.get(5));
+        assertEquals("CPData.activated: false", lines.get(6),
+                "l'original montrait l'etat allume/eteint, et non la surcharge");
+        assertTrue(lines.get(7).startsWith("CPData.addMaxCP: "), lines.get(7));
+        assertEquals("CPData.interfering: false", lines.get(8));
+        assertTrue(lines.get(9).startsWith(" AData.levelProgress: "),
+                "la ligne de progression commence par une espace : [" + lines.get(9) + "]");
         assertTrue(lines.get(9).endsWith("%"), lines.get(9));
-        assertEquals(10, lines.size(),
-                "l'original ne liste pas le maximum ajoute de surcharge, seulement celui des CP");
-    }
-
-    /** Une mesure telle que {@code DebugConsoleLines} l'ecrit : libelle aligne, puis la valeur. */
-    private static String measure(String label, String value) {
-        return label + " ".repeat(Math.max(1, DebugConsoleLines.LABEL_COLUMN - label.length())) + value;
     }
 
     @Test
-    void lesAjoutsSontEcritsAvecCinqDecimalesAuPlus() {
-        // Le maximum ajoute grandit par petites touches, jusqu'a sept decimales : a ce compte
-        // la ligne ne dit plus rien. Cinq suffisent, et les zeros inutiles s'en vont.
-        assertEquals("0", DebugConsoleLines.decimal(0.0f));
-        assertEquals("0.71624", DebugConsoleLines.decimal(0.7162399f));
-        assertEquals("33.19888", DebugConsoleLines.decimal(33.198875f));
-        assertEquals("7", DebugConsoleLines.decimal(7.0f));
-        assertEquals("70.7", DebugConsoleLines.decimal(70.699999f));
-    }
-
-    @Test
-    void lesDeuxParenthesesNOntQuUneDecimale() {
-        // Les lignes CP et Overload, elles, montrent une seule decimale, comme l'original :
-        // c'est le detail du texte qu'on lit en jouant, pas la donnee brute des lignes
-        // CPData.addMax* qui suivent.
+    void lesDeuxParenthusesNOntQuUneDecimale() {
+        // Les lignes CP et Overload montrent une seule decimale, et le nombre brut d'une ligne
+        // `CPData.addMax*` aucun arrondi. Le separateur suit la locale du systeme, comme chez
+        // l'original : on compare donc les chiffres, pas la virgule.
         List<String> lines = DebugConsoleLines.info(new AbilityData(),
                 ElectromasterCategory.INSTANCE);
-        String cp = lines.get(3);
-        String overload = lines.get(4);
+        String cp = lines.get(3).replace(',', '.');
+        String overload = lines.get(4).replace(',', '.');
 
         assertTrue(cp.matches("CP: +\\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"), cp);
         assertTrue(overload.matches("Overload: +\\d+/\\d+\\(\\d+\\.\\d\\+\\d+\\.\\d\\)"),
@@ -134,8 +79,8 @@ class DebugConsoleLinesTest {
         Category category = ElectromasterCategory.INSTANCE;
         List<String> lines = DebugConsoleLines.skills(new AbilityData(), List.of(category));
 
-        assertEquals(DebugConsoleLines.TITLE, lines.get(0));
-        assertEquals(DebugConsoleLines.SKILL_STATUS, lines.get(1));
+        assertEquals("AcademyCraft developer info", lines.get(0));
+        assertEquals("Skill status", lines.get(1));
         assertEquals(category.getSkills().size() + 2, lines.size(),
                 "deux lignes de titre, puis une par competence");
         assertFalse(category.getSkills().isEmpty(), "le lecteur a bien des competences");
@@ -146,9 +91,13 @@ class DebugConsoleLinesTest {
             assertTrue(row.startsWith(name), row);
             assertTrue(row.length() >= DebugConsoleLines.SKILL_COLUMN + 1, row);
             assertTrue(row.substring(DebugConsoleLines.SKILL_COLUMN)
-                    .equals(DebugConsoleLines.NOT_LEARNED)
+                    .equals("[not learned]")
                     || row.substring(DebugConsoleLines.SKILL_COLUMN).endsWith("%"), row);
         }
+
+        // Le NOM INTERNE, pas celui de l'arbre : c'est ce qui en fait un ecran de developpeur.
+        assertEquals("arc_gen", category.getSkills().get(0).getName());
+        assertTrue(lines.get(2).startsWith("arc_gen "), lines.get(2));
     }
 
     @Test
@@ -160,13 +109,11 @@ class DebugConsoleLinesTest {
         Category autre = new Category("vecmanip");
 
         List<String> seule = DebugConsoleLines.skills(new AbilityData(), List.of(electromaster));
-        assertEquals(DebugConsoleLines.SKILL_STATUS, seule.get(1),
-                "une seule categorie : pas de titre, comme avant");
+        assertEquals("Skill status", seule.get(1), "une seule categorie : pas de titre");
         assertEquals(electromaster.getSkills().size() + 2, seule.size());
 
         List<String> deux = DebugConsoleLines.skills(new AbilityData(),
                 List.of(electromaster, autre));
-        // Deux lignes de titre, puis le nom de chaque categorie suivi de ses competences.
         assertEquals(2 + (1 + electromaster.getSkills().size()) + 1, deux.size(),
                 "la seconde categorie est vide dans ce test, mais elle s'annonce");
         assertEquals("electromaster", deux.get(2));
@@ -189,7 +136,7 @@ class DebugConsoleLinesTest {
                 "allumer le drapeau ne suffit pas : il faut aussi une categorie");
         assertTrue(data.isActivatedRaw(), "le drapeau brut, lui, a bien change");
 
-        assertEquals(measure("Can use ability:", "false"),
+        assertEquals("CPData.canUseAbility: false",
                 DebugConsoleLines.info(data, ElectromasterCategory.INSTANCE).get(5));
     }
 }

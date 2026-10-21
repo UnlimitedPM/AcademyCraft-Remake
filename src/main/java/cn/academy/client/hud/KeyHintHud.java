@@ -198,7 +198,9 @@ public final class KeyHintHud {
 
         drawRow(graphics, AbilityKeyBindings.abilityKey(slot),
                 skill == null ? null : skill.getHintIcon(),
-                KeyHintVisuals.stateOf(name), remaining, y, usable, wave, fade);
+                KeyHintVisuals.stateOf(skill, data,
+                        cn.academy.ability.client.AbilityClientEvents.armingTicks(slot) > 0),
+                remaining, y, usable, wave, fade);
     }
 
     /** Une ligne : la plaque, le capuchon, la competence, son halo, et la recharge qui reste. */

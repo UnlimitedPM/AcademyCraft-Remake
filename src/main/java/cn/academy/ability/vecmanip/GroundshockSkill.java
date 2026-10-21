@@ -83,6 +83,15 @@ public class GroundshockSkill extends Skill {
     /** En dessous, le coup ne part pas : {@code localTick >= 5} chez l'original. */
     public static final int MIN_TICKS = 5;
 
+    /**
+     * En dessous, le rappel des touches montre une PREPARATION (halo orange).
+     *
+     * <p>Le {@code 5} de {@code GroundshockContext.getState}, ecrit a part de
+     * {@link #MIN_TICKS} : les deux valent cinq aujourd'hui, mais l'un decide du coup et
+     * l'autre de la couleur.
+     */
+    public static final int CHARGE_TICKS = 5;
+
     /** Un bloc du sol sur trois est reellement casse : {@code groundBreakProb}. */
     public static final double GROUND_BREAK_PROB = 0.3;
 
@@ -198,6 +207,20 @@ public class GroundshockSkill extends Skill {
     @Override
     public int getMaxChargeTicks(AbilityData data) {
         return 0;
+    }
+
+    /**
+     * Les cinq premiers ticks sont une PREPARATION, le reste est l'onde elle-meme.
+     *
+     * <p>C'est le {@code getState} de {@code GroundshockContext} : {@code if (localTick < 5)
+     * CHARGE else ACTIVE}. Le rappel des touches montre donc le halo orange pendant qu'on
+     * arme le poing, puis le bleu. Le port avait l'inverse partout — voir
+     * {@link Skill.HintState}. Le 5 est celui de l'original, et il ne bouge pas avec
+     * {@code MIN_TICKS} (5 aussi, mais par hasard : ce sont deux nombres differents).
+     */
+    @Override
+    public HintState hintState(AbilityData data, int ticks) {
+        return ticks < CHARGE_TICKS ? HintState.CHARGE : HintState.ACTIVE;
     }
 
     /**

@@ -214,6 +214,18 @@ public class PlasmaCannonSkill extends Skill {
         return (int) chargeTime(data);
     }
 
+    /**
+     * La charge est une PREPARATION, le vol est l'execution.
+     *
+     * <p>Le {@code getState} de {@code PlasmaCannonContext} : {@code if (localTicker < chargeTime)
+     * CHARGE else ACTIVE}. Halo orange tant que la boule se forme, bleu pendant qu'elle vole —
+     * et c'est bien la borne de la charge, pas celle du tir.
+     */
+    @Override
+    public HintState hintState(AbilityData data, int ticks) {
+        return ticks < chargeTicks(data) ? HintState.CHARGE : HintState.ACTIVE;
+    }
+
     /** Ce que la charge coute par tick, plus cher quand on sait faire. */
     public float chargeCost(AbilityData data) {
         return lerp(TICK_CP_MIN_EXP, TICK_CP_MAX_EXP, data.getSkillExp(this));

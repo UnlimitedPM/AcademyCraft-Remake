@@ -177,6 +177,18 @@ public class StormWingSkill extends Skill {
         return heldTicks > chargeTicks(data);
     }
 
+    /**
+     * La charge est une PREPARATION, le vol est l'execution.
+     *
+     * <p>Le {@code getState} du delegue de {@code StormWing} : {@code if (ctx.getState ==
+     * STATE_ACTIVE) ACTIVE else CHARGE}. Halo orange pendant que les ailes se forment, bleu
+     * une fois en vol.
+     */
+    @Override
+    public HintState hintState(AbilityData data, int ticks) {
+        return opened(data, ticks) ? HintState.ACTIVE : HintState.CHARGE;
+    }
+
     /** Et est-ce le tick qui vient de les ouvrir ? C'est la que le souffle part. */
     public boolean opensThisTick(AbilityData data, int heldTicks) {
         return heldTicks == chargeTicks(data) + 1;

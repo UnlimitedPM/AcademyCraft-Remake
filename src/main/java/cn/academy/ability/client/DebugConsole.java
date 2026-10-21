@@ -59,12 +59,12 @@ public final class DebugConsole {
 
         AbilityData data = ClientAbilityData.get();
         List<Category> categories = playerCategories(data);
-        // Les mots du menu suivent la langue du joueur ; les mesures gardent leur nom technique.
-        java.util.function.Function<String, String> translate =
-                key -> net.minecraft.network.chat.Component.translatable(key).getString();
+        // Les lignes sont celles de l'original, mot pour mot : noms internes des competences et
+        // de la categorie compris. Aucune traduction ici — c'est un ecran de developpeur, et le
+        // joueur a reconnu tout de suite qu'il n'y reconnaissait plus son menu F4.
         List<String> lines = state == State.SKILLS
-                ? DebugConsoleLines.skills(data, categories, translate)
-                : DebugConsoleLines.info(data, highest(categories), translate);
+                ? DebugConsoleLines.skills(data, categories)
+                : DebugConsoleLines.info(data, highest(categories));
 
         int lineHeight = 10;
         int y = TOP;
