@@ -17,14 +17,18 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>Une ligne par touche d'aptitude, posee a la place que la config lui donne. Elle montre le
  * <b>capuchon</b> de la touche, l'<b>icone</b> de la competence que le prereglage en service y a
- * rangee, et la <b>recharge</b> qui reste (le bas de l'icone s'assombrit). C'est le portage de
- * {@code KeyHintUI} : ses mesures, son echelle et ses textures sont les siennes, et tout est
- * dans {@link KeyHintVisuals}, qui se relit en JUnit.
+ * rangee, son <b>halo d'etat</b> (orange en charge, bleu en execution) et la <b>recharge</b> qui
+ * reste (le bas de l'icone s'assombrit). C'est le portage de {@code KeyHintUI} : ses mesures,
+ * son echelle et ses textures sont les siennes, et tout est dans {@link KeyHintVisuals}, qui se
+ * relit en JUnit.
  *
- * <p>Deux choses que l'original faisait et qui manquent : le fondu de 0,3 s a l'apparition, et
- * le halo clignotant autour d'une competence utilisable (son {@code drawGlow}, qui demandait le
- * moteur de rendu de lambdalib2). Le reste y est, y compris le gris du capuchon quand
- * l'aptitude ne peut pas servir — surcharge ou brouillage.
+ * <p>Une <b>seconde colonne</b> s'ouvre a gauche de la premiere quand la competence tenue lit les
+ * quatre directions (le scintillement, les ailes de tempete) : c'est la colonne ZQSD de
+ * l'original, qui enregistrait quatre touches de plus dans un groupe a part. Voir
+ * {@link #drawDirectionColumn}.
+ *
+ * <p>Une chose de l'original manque encore : le fondu de 0,3 s a l'apparition du rappel (il ne
+ * s'affiche qu'avec l'aptitude allumee, donc le fondu se voit a chaque allumage).
  */
 public final class KeyHintHud {
 
@@ -39,6 +43,14 @@ public final class KeyHintHud {
     private static final float FONT_SIZE = 9.0f;
     /** La taille de l'etiquette chez l'original ({@code new FontOption(32, ...)}). */
     private static final float LABEL_SIZE = 32.0f;
+
+    /** La duree du fondu d'apparition, en secondes (le {@code 0.3} de l'original). */
+    private static final double FADE_TIME = 0.3;
+
+    /** L'heure (au sens d'{@link cn.academy.ability.client.EffectClock}) de la derniere image. */
+    private static double lastFrame = -1;
+    /** L'heure ou le rappel est reapparu : c'est de la que part son fondu. */
+    private static double showTime;
 
     private KeyHintHud() {}
 
@@ -64,6 +76,21 @@ public final class KeyHintHud {
         // barre, qui s'efface des le delai ecoule.
         boolean usable = !data.isOverloadRecovering() && !data.isInterfered();
 
+        // La respiration des etats (halo orange en charge, bleu en execution, voir
+        // KeyHintVisuals.State) : l'original la lisait sur son GameTimer, donc sur le temps
+        // REEL. Le port lit EffectClock, qui est le meme temps moins les pauses — sinon la
+        // pulsation continuerait derriere le menu d'Echap, ce que le joueur a deja signale
+        // pour les arcs.
+        double now = cn.academy.ability.client.EffectClock.now() / 1000.0;
+        float wave = KeyHintVisuals.sinWave(now);
+
+        // Le fondu d'apparition de 0,3 s : l'original le declenchait quand une image s'ecoulait
+        // plus de 0,3 s apres la precedente, c'est-a-dire quand le rappel REVIENT (aptitude
+        // rallumee, ou element qui reapparait). Sans lui, le rappel se pose d'un coup.
+        if (now - lastFrame > FADE_TIME) showTime = now;
+        lastFrame = now;
+        float fade = (float) Math.min(1.0, (now - showTime) / FADE_TIME);
+
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
 
@@ -71,10 +98,12 @@ public final class KeyHintHud {
         pose.pushPose();
         pose.translate(left, top, 0);
         pose.scale(KeyHintVisuals.SCALE, KeyHintVisuals.SCALE, 1.0f);
-        // L'original reculait toute sa colonne de lignes avant de dessiner : sans ce decalage,
-        // plaque, cadre et icone mordent sur le bord droit de l'ecran (voir
-        // KeyHintVisuals.CONTENT_SHIFT_X, ou le chiffre est explique).
-        pose.translate(KeyHintVisuals.CONTENT_SHIFT_X, 0, 0);
+
+        // La PREMIERE colonne : les quatre touches d'aptitude. L'original reculait toute sa
+        // colonne avant de dessiner, sinon plaque, cadre et icone mordent sur le bord droit de
+        // l'ecran (voir KeyHintVisuals.CONTENT_SHIFT_X, ou le chiffre est explique).
+        pose.pushPose();
+        pose.translate(KeyHintVisuals.contentShift(0), 0, 0);
 
         // Seules les touches qui portent une competence s'affichent, et elles se suivent sans
         // trou : c'est ce que faisait l'original, qui ne parcourait que ses delegues existants
@@ -85,38 +114,117 @@ public final class KeyHintHud {
         }
         int row = 0;
         for (int slot : KeyHintVisuals.visibleSlots(names)) {
-            drawRow(graphics, data, slot, row * KeyHintVisuals.ROW_STEP, usable);
+            drawSlotRow(graphics, data, slot, row * KeyHintVisuals.ROW_STEP, usable, wave, fade);
             row++;
         }
+        pose.popPose();
+
+        // Et la SECONDE, celle des directions : voir drawDirectionColumn.
+        drawDirectionColumn(graphics, usable, wave, fade);
 
         RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         pose.popPose();
         RenderSystem.disableBlend();
     }
 
-    /** Une ligne : la plaque, le capuchon, la competence, et la recharge qui reste. */
-    private static void drawRow(GuiGraphics graphics, AbilityData data, int slot, int y,
-                                boolean usable) {
-        blit(graphics, PLATE, 0, y, KeyHintVisuals.PLATE_W, KeyHintVisuals.PLATE_H,
-                0, 0, PLATE_TEX_W, PLATE_TEX_H, PLATE_TEX_W, PLATE_TEX_H, 0xFFFFFF, 1.0f);
+    /**
+     * La colonne des quatre directions, ouverte seulement par une competence qui s'en sert.
+     *
+     * <p>C'est la deuxieme colonne de l'original, celle qui manquait au port : ses competences
+     * <b>enregistraient quatre touches de plus</b> dans un groupe a part ({@code KEY_GROUP}), une
+     * par direction de deplacement, et {@code KeyHintUI} dessinait <b>une colonne par groupe</b>
+     * — d'ou un deplacement de 200 unites par groupe. Le scintillement s'en sert pour ses quatre
+     * sauts (A, D, W, S, chacune avec son image) et les ailes de tempete pour se diriger (meme
+     * icone sur les quatre lignes). Le joueur decrit ces lignes comme « les carres des
+     * competences a directions (ZQSD) ».
+     *
+     * <p>La ligne s'allume de l'etat de sa touche : l'original rendait ACTIVE sur la direction
+     * tenue et IDLE sur les autres, donc un halo bleu sur celle qui va partir.
+     */
+    private static void drawDirectionColumn(GuiGraphics graphics, boolean usable, float wave,
+                                            float fade) {
+        String skillName = directionalSkill();
+        if (skillName == null) return;
+        Skill skill = KeyHintVisuals.skillByName(skillName);
+        if (skill == null) return;
 
-        KeyMapping key = AbilityKeyBindings.abilityKey(slot);
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.translate(KeyHintVisuals.contentShift(1), 0, 0);
+        for (int i = 0; i < KeyHintVisuals.DIRECTIONS.length; i++) {
+            String path = KeyHintVisuals.directionIcon(skillName, i);
+            ResourceLocation icon = path == null
+                    ? skill.getHintIcon()
+                    : ResourceLocation.fromNamespaceAndPath("academy", path);
+            KeyHintVisuals.State state = cn.academy.ability.client.AbilityClientEvents.directionHeld(i)
+                    ? KeyHintVisuals.State.ACTIVE
+                    : KeyHintVisuals.State.IDLE;
+            drawRow(graphics, cn.academy.ability.client.AbilityClientEvents.directionKey(i), icon,
+                    state, 0f, i * KeyHintVisuals.ROW_STEP, usable, wave, fade);
+        }
+        pose.popPose();
+    }
+
+    /**
+     * La competence tenue qui ecoute les directions, ou {@code null}.
+     *
+     * <p>Deux competences du port lisent les touches de deplacement (le scintillement et les
+     * ailes de tempete) ; c'est leur maintien ouvert qui dit que la colonne a quelque chose a
+     * montrer, et c'est lui qui donne les icones.
+     */
+    private static String directionalSkill() {
+        for (String name : cn.academy.ability.client.ClientCharge.openSkills()) {
+            Skill skill = KeyHintVisuals.skillByName(name);
+            if (skill != null && skill.listensToDirections()) return name;
+        }
+        return null;
+    }
+
+    /** Une ligne de la premiere colonne : la competence rangee sur cette touche. */
+    private static void drawSlotRow(GuiGraphics graphics, AbilityData data, int slot, int y,
+                                    boolean usable, float wave, float fade) {
+        String name = ClientPresetData.skillAt(slot);
+        Skill skill = KeyHintVisuals.skillByName(name);
+
+        // La duree vient de la donnee du JOUEUR (celle qui a ete posee), et non de la courbe :
+        // trois competences posent leur recharge depuis leur effet et n'annoncent aucune duree
+        // (voir AbilityData.getCooldownTotal), donc leur icone ne s'estompait jamais.
+        float remaining = 0f;
+        if (skill != null) {
+            int total = data.getCooldownTotal(skill);
+            if (total <= 0) total = skill.getCooldownTicks(data);
+            remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill), total);
+        }
+
+        drawRow(graphics, AbilityKeyBindings.abilityKey(slot),
+                skill == null ? null : skill.getHintIcon(),
+                KeyHintVisuals.stateOf(name), remaining, y, usable, wave, fade);
+    }
+
+    /** Une ligne : la plaque, le capuchon, la competence, son halo, et la recharge qui reste. */
+    private static void drawRow(GuiGraphics graphics, KeyMapping key, ResourceLocation icon,
+                                KeyHintVisuals.State state, float remaining, int y,
+                                boolean usable, float wave, float fade) {
+        blit(graphics, PLATE, 0, y, KeyHintVisuals.PLATE_W, KeyHintVisuals.PLATE_H,
+                0, 0, PLATE_TEX_W, PLATE_TEX_H, PLATE_TEX_W, PLATE_TEX_H, 0xFFFFFF, fade);
+
         boolean mouse = key.getKey().getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE;
         int button = key.getKey().getValue();
         String label = key.getTranslatedKeyMessage().getString();
         KeyHintVisuals.Cap cap = KeyHintVisuals.cap(mouse, button);
 
-        // Le capuchon, gris quand l'aptitude ne peut pas servir (comme l'original).
-        float capTint = usable ? 1.0f : 0.7f;
+        // Le capuchon, gris quand l'aptitude ne peut pas servir OU quand la competence est en
+        // recharge (comme l'original, qui testait les deux ensemble).
+        float capTint = KeyHintVisuals.capTint(usable, remaining);
         blit(graphics, capTexture(cap, label),
                 KeyHintVisuals.CAP_X, y + KeyHintVisuals.CAP_Y,
                 KeyHintVisuals.CAP_SIZE, KeyHintVisuals.CAP_SIZE,
                 0, 0, 50, 48, 50, 48,
-                gray(capTint), 1.0f);
+                gray(capTint), fade);
 
         String capLabel = KeyHintVisuals.capLabel(cap, label, button);
         if (!capLabel.isEmpty()) {
-            drawLabel(graphics, capLabel, y);
+            drawLabel(graphics, capLabel, y, fade);
         }
 
         // Le cadre de l'icone, puis l'icone de la competence rangee sur cette touche.
@@ -124,25 +232,24 @@ public final class KeyHintHud {
                 KeyHintVisuals.FRAME_X, y + KeyHintVisuals.FRAME_Y,
                 KeyHintVisuals.FRAME_SIZE, KeyHintVisuals.FRAME_SIZE,
                 0, 0, KeyHintVisuals.FRAME_SIZE, KeyHintVisuals.FRAME_SIZE,
-                KeyHintVisuals.FRAME_SIZE, KeyHintVisuals.FRAME_SIZE, 0xFFFFFF, 1.0f);
+                KeyHintVisuals.FRAME_SIZE, KeyHintVisuals.FRAME_SIZE, 0xFFFFFF, fade);
 
-        Skill skill = KeyHintVisuals.skillByName(ClientPresetData.skillAt(slot));
-        if (skill == null) return;
+        if (icon == null) return;
 
-        // La duree vient de la donnee du JOUEUR (celle qui a ete posee), et non de la courbe :
-        // trois competences posent leur recharge depuis leur effet et n'annoncent aucune duree
-        // (voir AbilityData.getCooldownTotal), donc leur icone ne s'estompait jamais.
-        int total = data.getCooldownTotal(skill);
-        if (total <= 0) total = skill.getCooldownTicks(data);
-        float remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill), total);
+        // Le halo de l'etat, AVANT l'icone : c'est un cadre de huit images posees autour de sa
+        // boite, et l'icone doit passer par-dessus. Orange en charge, bleu en execution, rien au
+        // repos ni pendant une recharge.
+        float glow = KeyHintVisuals.glowAlpha(state, remaining, wave) * fade;
+        if (glow > 0f) {
+            drawGlow(graphics, y, state.glow, glow);
+        }
 
-        ResourceLocation icon = skill.getHintIcon();
         blit(graphics, icon,
                 KeyHintVisuals.ICON_X, y + KeyHintVisuals.ICON_Y,
                 KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
                 0, 0, KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE,
                 KeyHintVisuals.ICON_SIZE, KeyHintVisuals.ICON_SIZE, 0xFFFFFF,
-                KeyHintVisuals.cooldownIconAlpha(remaining));
+                KeyHintVisuals.iconAlpha(state, remaining, wave) * fade);
 
         // La recharge qui reste : l'original assombrissait le bas de l'icone d'autant, en plus
         // de l'estomper entierement (voir COOLDOWN_ICON_ALPHA).
@@ -153,7 +260,40 @@ public final class KeyHintHud {
                 KeyHintVisuals.ICON_X, y + KeyHintVisuals.ICON_Y + KeyHintVisuals.ICON_SIZE - filled,
                 KeyHintVisuals.ICON_X + KeyHintVisuals.ICON_SIZE,
                 y + KeyHintVisuals.ICON_Y + KeyHintVisuals.ICON_SIZE,
-                KeyHintVisuals.COOLDOWN_OVERLAY);
+                KeyHintVisuals.withAlpha(KeyHintVisuals.COOLDOWN_OVERLAY, fade));
+    }
+
+    /**
+     * Le halo de l'etat : les huit morceaux de {@code ACRenderingHelper.drawGlow}.
+     *
+     * <p>Quatre cotes (`glow_left`, `right`, `up`, `down`) et quatre coins (`ru`, `rd`, `lu`,
+     * `ld`), chacun une image teintee de la couleur de l'etat. Les images sont celles de
+     * l'original, au bit pres — elles etaient livrees dans le port sans que personne ne les
+     * lise.
+     */
+    private static void drawGlow(GuiGraphics graphics, int rowY, int rgb, float alpha) {
+        int s = KeyHintVisuals.GLOW_SIZE;
+        int x = KeyHintVisuals.ICON_X;
+        int y = rowY + KeyHintVisuals.ICON_Y;
+        int w = KeyHintVisuals.ICON_SIZE;
+
+        quad(graphics, "left", x - s, y, s, w, rgb, alpha);
+        quad(graphics, "right", x + w, y, s, w, rgb, alpha);
+        quad(graphics, "up", x, y - s, w, s, rgb, alpha);
+        quad(graphics, "down", x, y + w, w, s, rgb, alpha);
+        quad(graphics, "ru", x + w, y - s, s, s, rgb, alpha);
+        quad(graphics, "rd", x + w, y + w, s, s, rgb, alpha);
+        quad(graphics, "lu", x - s, y - s, s, s, rgb, alpha);
+        quad(graphics, "ld", x - s, y + w, s, s, rgb, alpha);
+    }
+
+    private static void quad(GuiGraphics graphics, String part, int x, int y, int width, int height,
+                             int rgb, float alpha) {
+        blit(graphics, glowTexture(part), x, y, width, height, 0, 0, 1, 1, 1, 1, rgb, alpha);
+    }
+
+    private static ResourceLocation glowTexture(String part) {
+        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/glow_" + part + ".png");
     }
 
     /**
@@ -163,7 +303,7 @@ public final class KeyHintHud {
      * texte se remet donc a l'echelle de cette police, sinon la pose du rappel ne laisserait
      * que quelques pixels.
      */
-    private static void drawLabel(GuiGraphics graphics, String text, int rowY) {
+    private static void drawLabel(GuiGraphics graphics, String text, int rowY, float fade) {
         var font = Minecraft.getInstance().font;
         float scale = LABEL_SIZE / FONT_SIZE;
         int width = cn.academy.client.gui.AcademyFonts.width(font, text);
@@ -175,8 +315,12 @@ public final class KeyHintHud {
                 rowY + KeyHintVisuals.CAP_Y + KeyHintVisuals.CAP_SIZE / 2.0f - FONT_SIZE * scale / 2.0f,
                 0);
         pose.scale(scale, scale, 1.0f);
+        // La police du mod multiplie chaque glyphe par la teinte DU MOMENT : c'est par elle que
+        // le fondu passe pour le texte (les images, elles, ont leur alpha par le blit).
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, fade);
         cn.academy.client.gui.AcademyFonts.draw(graphics, font, text, 0, 0,
             KeyHintVisuals.LABEL_COLOR, false);
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
         pose.popPose();
     }
 

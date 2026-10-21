@@ -909,6 +909,28 @@ public class AbilityClientEvents {
         return new KeyMapping[] { options.keyLeft, options.keyRight, options.keyUp, options.keyDown };
     }
 
+    /**
+     * La touche de la direction numero {@code index}, ou {@code null}.
+     *
+     * <p>Le rappel des touches s'en sert pour ecrire son capuchon (A, D, W, S) dans sa colonne
+     * des directions : les quatre touches y sont les MEMES que celles qui visent, et non une
+     * copie — c'est ce qui fait que remapper son clavier se voit tout de suite dans le HUD.
+     */
+    public static KeyMapping directionKey(int index) {
+        KeyMapping[] keys = movementKeys();
+        return index < 0 || index >= keys.length ? null : keys[index];
+    }
+
+    /**
+     * La direction numero {@code index} est-elle tenue ?
+     *
+     * <p>C'est l'etat que le rappel des touches dessine : l'original allumait la ligne de la
+     * direction visee ({@code DelegateState.ACTIVE}) et laissait les trois autres au repos.
+     */
+    public static boolean directionHeld(int index) {
+        return index >= 0 && index < directionHeld.length && directionHeld[index];
+    }
+
     private static void send(Category category, Skill skill, Phase phase) {
         AbilityNetwork.CHANNEL.sendToServer(
                 new ActivateSkillPacket(category.getCategoryId(), skill.getId(), phase));

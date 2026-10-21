@@ -70,8 +70,161 @@ public final class KeyHintVisuals {
      */
     public static final int CONTENT_SHIFT_X = -78;
 
+    /**
+     * De combien une COLONNE recule par rapport a la precedente, en unites.
+     *
+     * <p>C'est le pas de l'original : {@code GL11.glTranslated(-200 - availIdx * 200, y, 0)}.
+     * Le port n'a longtemps eu qu'une colonne (les quatre touches d'aptitude) ; la seconde, celle
+     * des <b>directions</b> d'une competence qui s'en sert, se pose donc 200 unites plus a gauche.
+     */
+    public static final int COLUMN_STEP = 200;
+
     /** Le gris qui noircit le bas d'une icone en recharge : gris 0,6 a 30 %. */
     public static final int COOLDOWN_OVERLAY = 0x4C999999;
+
+    /**
+     * Les trois etats de l'original ({@code DelegateState}), avec SA couleur et SA pulsation.
+     *
+     * <p>C'est ce que le port n'avait pas : son icone etait soit pleine, soit estompee a 40 %,
+     * alors que l'original la faisait <b>respirer</b> et lui posait un halo de la couleur de
+     * l'etat. Le halo orange dit « en cours de charge », le bleu « en train de s'executer », et
+     * l'absence de halo « au repos ». Le joueur decrit le premier comme « le carre orange
+     * pleinement chargee, utilisable ».
+     */
+    public enum State {
+        /** Au repos : opacite 0,7 constante, aucun halo. */
+        IDLE(0.7f, 0x000000, false),
+        /** En charge : halo ORANGE, et l'icone respire entre 40 et 100 %. */
+        CHARGE(1.0f, 0xFFAD37, true),
+        /** En cours d'execution (un maintien, un vol) : halo BLEU, meme respiration. */
+        ACTIVE(1.0f, 0x46B3FF, true);
+
+        /** L'opacite de base de l'icone, avant la respiration. */
+        public final float alpha;
+        /** La couleur du halo, en RGB. Zero = aucun halo. */
+        public final int glow;
+        /** Vrai si l'etat fait respirer l'icone (et le halo). */
+        public final boolean pulse;
+
+        State(float alpha, int glow, boolean pulse) {
+            this.alpha = alpha;
+            this.glow = glow;
+            this.pulse = pulse;
+        }
+    }
+
+    /**
+     * L'epaisseur du halo autour de l'icone, en unites (le {@code size} de l'original).
+     *
+     * <p>Un halo de {@code ACRenderingHelper.drawGlow} n'est pas un degrade : c'est un cadre de
+     * huit images ({@code textures/guis/glow_left|right|up|down|ru|rd|lu|ld.png}), quatre cotes
+     * et quatre coins, posees autour de la boite et teintees de la couleur de l'etat.
+     */
+    public static final int GLOW_SIZE = 5;
+
+    /**
+     * La respiration des etats qui pulsent, entre 0,6 et 1,0.
+     *
+     * <p>Formule de l'original, gardee telle quelle : {@code 0.6 + (1 + sin((t % 100) / 50)) * 0.2}
+     * sur le temps en secondes. Son {@code MathHelper.sin} est une table ; {@link Math#sin} donne
+     * le meme nombre a un dix-millieme pres, et le decalage ne se voit pas sur un souffle.
+     */
+    public static float sinWave(double seconds) {
+        double phase = (seconds % 100.0) / 50.0;
+        return 0.6f + (float) ((1.0 + Math.sin(phase)) * 0.2);
+    }
+
+    /**
+     * L'opacite de l'icone : 40 % pendant une recharge (l'original), sinon celle de l'etat,
+     * respiree si l'etat respire.
+     */
+    public static float iconAlpha(State state, float remaining, float wave) {
+        if (state == null) state = State.IDLE;
+        if (remaining > 0f) return COOLDOWN_ICON_ALPHA;
+        float breathe = state.pulse ? wave : 1.0f;
+        return state.alpha * (0.4f + breathe * 0.6f);
+    }
+
+    /**
+     * L'opacite du halo de l'etat, ou zero s'il n'y a rien a allumer.
+     *
+     * <p>Trois cas : un etat sans halo (au repos), une icone en recharge, et un etat qui respire.
+     * L'original multipliait l'alpha de sa couleur par la respiration et la dessinait toujours ;
+     * une couleur d'alpha nul rendait donc la meme chose qu'un halo absent.
+     */
+    public static float glowAlpha(State state, float remaining, float wave) {
+        if (state == null || state.glow == 0 || remaining > 0f) return 0f;
+        return state.pulse ? wave : 1.0f;
+    }
+
+    /**
+     * La meme couleur, avec son opacite multipliee par {@code fade}.
+     *
+     * <p>Sert au fondu d'apparition du rappel : l'aplat gris d'une recharge est une couleur
+     * ARGB fixe, donc il ne suivrait pas le fondu des textures sans ce calcul.
+     */
+    public static int withAlpha(int argb, float fade) {
+        int alpha = Math.round(((argb >>> 24) & 0xFF) * Math.max(0f, Math.min(1f, fade)));
+        return (alpha << 24) | (argb & 0xFFFFFF);
+    }
+
+    /**
+     * La teinte du capuchon : gris 0,7 quand l'aptitude ne peut pas servir <b>ou</b> quand la
+     * competence est en recharge, blanche sinon.
+     *
+     * <p>L'original testait les deux ensemble ({@code !canUseAbility || data.getTickLeft() > 0}) ;
+     * le port ne grisait que pour l'aptitude, donc une touche en recharge gardait un capuchon
+     * eclatant alors que son icone etait deja eteinte.
+     */
+    public static float capTint(boolean usable, float remaining) {
+        return usable && remaining <= 0f ? 1.0f : 0.7f;
+    }
+
+    /**
+     * Le decalage d'une colonne : la premiere est celle de l'original, les suivantes reculent.
+     *
+     * <p>La colonne 0 est celle des quatre touches d'aptitude, la 1 celle des directions.
+     */
+    public static int contentShift(int column) {
+        return CONTENT_SHIFT_X - COLUMN_STEP * column;
+    }
+
+    /**
+     * Les quatre directions, dans l'ordre ou le port les lit ({@code options.keyLeft} puis
+     * {@code keyRight}, {@code keyUp}, {@code keyDown}) et ou l'original les numerotait.
+     */
+    public static final String[] DIRECTIONS = { "a", "d", "w", "s" };
+
+    /**
+     * L'icone d'une direction, pour les competences qui en dessinent une par direction.
+     *
+     * <p>Seul le scintillement a quatre images (l'original : {@code abilities/teleporter/
+     * flashing/a|d|w|s}) ; les ailes de tempete montrent leur propre icone sur les quatre
+     * lignes, ce que rend le {@code null} d'ici.
+     */
+    public static String directionIcon(String skillName, int index) {
+        if (!"flashing".equals(skillName)) return null;
+        if (index < 0 || index >= DIRECTIONS.length) return null;
+        return "textures/abilities/teleporter/flashing/" + DIRECTIONS[index] + ".png";
+    }
+
+    /**
+     * L'etat d'une competence rangee sur une touche, tel que l'original le lisait sur son
+     * delegue : au repos, en charge ({@link State#CHARGE}, halo orange) ou en cours
+     * d'execution ({@link State#ACTIVE}, halo bleu).
+     *
+     * <p>La distinction se lit chez le client : une charge ouverte ({@code ClientCharge}) qui
+     * n'est pas un maintien est une charge, un maintien est une execution. C'est la traduction
+     * la plus proche des {@code getState} de l'original, qui repondaient par competence
+     * (canon a plasma : CHARGE jusqu'a sa fenetre, ACTIVE ensuite ; ailes : ACTIVE en vol).
+     */
+    public static State stateOf(String skillName) {
+        if (skillName == null || !cn.academy.ability.client.ClientCharge.isOpen(skillName)) {
+            return State.IDLE;
+        }
+        return cn.academy.ability.client.ClientCharge.isSustained(skillName)
+                ? State.ACTIVE : State.CHARGE;
+    }
 
     /** De quel genre de touche il s'agit : c'est l'image du capuchon qui change. */
     public enum Cap {
@@ -122,18 +275,14 @@ public final class KeyHintVisuals {
 
     /**
      * L'opacite d'une icone dont la competence est en recharge : {@code alpha = 0.4f} chez
-     * l'original, quand sa recharge courait ({@code prog != 0}), et pleine opacite sinon.
+     * l'original, quand sa recharge courait ({@code prog != 0}), et celle de l'etat sinon —
+     * voir {@link #iconAlpha}.
      *
      * <p>C'est ce qui fait lire une competence indisponible d'un coup d'oeil : sans cet
      * estompage, une touche en recharge s'affiche aussi vive qu'une touche prete, et seule la
      * barre grise du bas le dit — le joueur appuie et se fait refuser.
      */
     public static final float COOLDOWN_ICON_ALPHA = 0.4f;
-
-    /** L'opacite de l'icone : pleine quand la competence est prete, 40 % pendant la recharge. */
-    public static float cooldownIconAlpha(float remaining) {
-        return remaining > 0f ? COOLDOWN_ICON_ALPHA : 1.0f;
-    }
 
     /**
      * Les rangs des touches a dessiner : celles qui portent une competence, dans l'ordre.

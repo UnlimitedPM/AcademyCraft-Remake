@@ -16,13 +16,117 @@ class KeyHintVisualsTest {
 
     @Test
     void lIconeSEstompePendantLaRecharge() {
-        // L'original dessinait l'icone a 40 % tant que la recharge courait (`alpha = 0.4f`),
-        // et pleine sinon : sans cet estompage, une competence en recharge a l'air prete.
-        assertEquals(1.0f, KeyHintVisuals.cooldownIconAlpha(0f), 0.0001f, "prete : pleine opacite");
-        assertEquals(0.4f, KeyHintVisuals.cooldownIconAlpha(0.01f), 0.0001f);
-        assertEquals(0.4f, KeyHintVisuals.cooldownIconAlpha(1f), 0.0001f);
+        // L'original dessinait l'icone a 40 % tant que la recharge courait (`alpha = 0.4f`), et
+        // celle de son etat sinon : sans cet estompage, une competence en recharge a l'air prete.
+        float wave = KeyHintVisuals.sinWave(0);
+        assertEquals(0.4f, KeyHintVisuals.iconAlpha(KeyHintVisuals.State.IDLE, 0.01f, wave), 0.0001f);
+        assertEquals(0.4f, KeyHintVisuals.iconAlpha(KeyHintVisuals.State.CHARGE, 1f, wave), 0.0001f);
         assertEquals(KeyHintVisuals.COOLDOWN_ICON_ALPHA,
-                KeyHintVisuals.cooldownIconAlpha(0.5f), 0.0001f);
+                KeyHintVisuals.iconAlpha(KeyHintVisuals.State.ACTIVE, 0.5f, wave), 0.0001f);
+        // Prete, l'icone prend l'opacite de son etat : 0,7 au repos (constant), et la respiration
+        // pour les deux autres.
+        assertEquals(0.7f, KeyHintVisuals.iconAlpha(KeyHintVisuals.State.IDLE, 0f, wave), 0.0001f);
+        assertEquals(0.7f, KeyHintVisuals.iconAlpha(KeyHintVisuals.State.IDLE, 0f, 1f), 0.0001f);
+        assertEquals(0.76f, KeyHintVisuals.iconAlpha(KeyHintVisuals.State.CHARGE, 0f, 0.6f), 0.0001f);
+        assertEquals(1.0f, KeyHintVisuals.iconAlpha(KeyHintVisuals.State.ACTIVE, 0f, 1f), 0.0001f);
+    }
+
+    @Test
+    void lesTroisEtatsOntLaCouleurDeLOriginal() {
+        // DelegateState de l'original : IDLE(0.7, transparent), CHARGE(1.0, 0xffffad37),
+        // ACTIVE(1.0, 0xff46b3ff), les deux derniers respirant. C'est le halo orange que le
+        // joueur appelle « le carre pleinement chargee, utilisable ».
+        assertEquals(0x000000, KeyHintVisuals.State.IDLE.glow);
+        assertEquals(0xFFAD37, KeyHintVisuals.State.CHARGE.glow);
+        assertEquals(0x46B3FF, KeyHintVisuals.State.ACTIVE.glow);
+        assertTrue(KeyHintVisuals.State.CHARGE.pulse && KeyHintVisuals.State.ACTIVE.pulse);
+        assertTrue(!KeyHintVisuals.State.IDLE.pulse, "l'etat de repos ne respire pas");
+    }
+
+    @Test
+    void laRespirationResteDansSesBornes() {
+        // Formule de l'original sur cent secondes : elle part de 0,8, monte a 1,0 vers les
+        // soixante-dix-huit secondes, et ne descend jamais sous 0,6.
+        assertEquals(0.8f, KeyHintVisuals.sinWave(0), 0.0001f);
+        assertEquals(1.0f, KeyHintVisuals.sinWave(50 * Math.PI / 2), 0.0001f);
+        for (double t = 0; t < 100; t += 0.5) {
+            float wave = KeyHintVisuals.sinWave(t);
+            assertTrue(wave >= 0.6f && wave <= 1.0f, "hors bornes a t=" + t + " : " + wave);
+        }
+    }
+
+    @Test
+    void leHaloNeSEclaireQueSurUnEtatQuiEnAMerite() {
+        assertEquals(0f, KeyHintVisuals.glowAlpha(KeyHintVisuals.State.IDLE, 0f, 1f));
+        assertEquals(0f, KeyHintVisuals.glowAlpha(KeyHintVisuals.State.CHARGE, 0.5f, 1f),
+                "une icone en recharge n'a pas de halo");
+        assertEquals(0.8f, KeyHintVisuals.glowAlpha(KeyHintVisuals.State.CHARGE, 0f, 0.8f), 0.0001f);
+        assertEquals(0.9f, KeyHintVisuals.glowAlpha(KeyHintVisuals.State.ACTIVE, 0f, 0.9f), 0.0001f);
+    }
+
+    @Test
+    void leCapuchonGrisSeDecideAvecLaRechargeAussi() {
+        // L'original : `!canUseAbility || data.getTickLeft() > 0`. Le port ne regardait que
+        // l'aptitude, donc une touche en recharge gardait un capuchon eclatant.
+        assertEquals(1.0f, KeyHintVisuals.capTint(true, 0f), 0.0001f);
+        assertEquals(0.7f, KeyHintVisuals.capTint(true, 5f), 0.0001f);
+        assertEquals(0.7f, KeyHintVisuals.capTint(false, 0f), 0.0001f);
+    }
+
+    @Test
+    void leFonduDOpaciteGardeLaCouleur() {
+        // Le fondu d'apparition touche l'aplat gris d'une recharge comme les textures : seule
+        // l'opacite bouge, les trois canaux de couleur ne doivent pas s'en meler.
+        assertEquals(0x4C999999, KeyHintVisuals.withAlpha(KeyHintVisuals.COOLDOWN_OVERLAY, 1f));
+        assertEquals(0x00999999, KeyHintVisuals.withAlpha(KeyHintVisuals.COOLDOWN_OVERLAY, 0f));
+        assertEquals(0x26999999, KeyHintVisuals.withAlpha(KeyHintVisuals.COOLDOWN_OVERLAY, 0.5f));
+        assertEquals(0x4C999999, KeyHintVisuals.withAlpha(KeyHintVisuals.COOLDOWN_OVERLAY, 3f),
+                "un fondu ne depasse jamais son opacite de depart");
+    }
+
+    @Test
+    void lEtatDUneToucheSeLitSurSaCharge() {
+        assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf(null));
+        assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf("arc_gen"),
+                "aucune charge ouverte : au repos");
+        cn.academy.ability.client.ClientCharge.begin("arc_gen", 40);
+        try {
+            assertEquals(KeyHintVisuals.State.CHARGE, KeyHintVisuals.stateOf("arc_gen"));
+            assertEquals(KeyHintVisuals.State.IDLE, KeyHintVisuals.stateOf("charging"),
+                    "la charge d'une competence ne touche pas les autres");
+        } finally {
+            cn.academy.ability.client.ClientCharge.end("arc_gen");
+        }
+        cn.academy.ability.client.ClientCharge.beginSustained("storm_wing");
+        try {
+            assertEquals(KeyHintVisuals.State.ACTIVE, KeyHintVisuals.stateOf("storm_wing"),
+                    "un maintien est une execution, pas une charge");
+        } finally {
+            cn.academy.ability.client.ClientCharge.end("storm_wing");
+        }
+    }
+
+    @Test
+    void laColonneDesDirectionsReculeDUneColonne() {
+        assertEquals(KeyHintVisuals.CONTENT_SHIFT_X, KeyHintVisuals.contentShift(0));
+        assertEquals(-278, KeyHintVisuals.contentShift(1));
+        assertEquals(KeyHintVisuals.CONTENT_SHIFT_X - 2 * KeyHintVisuals.COLUMN_STEP,
+                KeyHintVisuals.contentShift(2));
+    }
+
+    @Test
+    void leScintillementAUneImageParDirection() {
+        // Seul le scintillement dessine une image par direction (les ailes de tempete montrent
+        // leur propre icone sur les quatre lignes) : c'est l'original.
+        assertEquals(java.util.List.of("a", "d", "w", "s"),
+                java.util.Arrays.asList(KeyHintVisuals.DIRECTIONS));
+        assertEquals("textures/abilities/teleporter/flashing/a.png",
+                KeyHintVisuals.directionIcon("flashing", 0));
+        assertEquals("textures/abilities/teleporter/flashing/s.png",
+                KeyHintVisuals.directionIcon("flashing", 3));
+        assertEquals(null, KeyHintVisuals.directionIcon("flashing", 4));
+        assertEquals(null, KeyHintVisuals.directionIcon("storm_wing", 0));
+        assertEquals(null, KeyHintVisuals.directionIcon(null, 0));
     }
 
     @Test
