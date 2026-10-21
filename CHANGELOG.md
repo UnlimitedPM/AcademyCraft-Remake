@@ -68,6 +68,13 @@ loot table, the whole game in four languages, and a config file that tunes the p
   beginning. It keeps its size — a shrunk label reads badly, a scrolling one reads in full. A field
   being typed in never moves. The name column of an editable row also stops where its bracket
   starts, instead of running underneath it.
+- **Every machine was measured in every language.** `scripts/balayage-langues.groovy` opens the
+  nine machine screens in English, French, German, Spanish and Chinese and compares each text's
+  width to its box. English and Chinese report none, French four ("Nom du nœud", "Mot de passe",
+  "Bande passante"), German eight ("KAPAZITÄT", "Knotenname", "Sende-Reichw.", "FLÜSSIGKEIT",
+  "Erzeug.-Geschw.", "Nicht verbunden"), Spanish seven ("CAPACIDAD", "Nombre del nodo", "Alcance
+  trans.", "Ancho de banda", "Teletransportador"); all of them scroll inside their box instead of
+  running over the neighbouring column.
 - **Tests**: 170 in-game tests, 887 unit tests.
 
 ### Francais
@@ -140,6 +147,13 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   25 ms, une pause a la fin, puis retour au debut. Il garde sa taille — un libelle retreci se lit mal,
   un libelle qui defile se lit en entier. Un champ en cours de saisie ne bouge jamais. La colonne des
   noms d'une ligne modifiable s'arrete aussi la ou commence son crochet, au lieu de passer dessous.
+- **Chaque machine a ete mesuree dans chaque langue.** `scripts/balayage-langues.groovy` ouvre les
+  neuf ecrans de machine en anglais, francais, allemand, espagnol et chinois, et compare la largeur
+  de chaque texte a celle de sa boite. L'anglais et le chinois n'en signalent aucun, le francais
+  quatre (« Nom du nœud », « Mot de passe », « Bande passante »), l'allemand huit (« KAPAZITÄT »,
+  « Knotenname », « Sende-Reichw. », « FLÜSSIGKEIT », « Erzeug.-Geschw. », « Nicht verbunden »),
+  l'espagnol sept (« CAPACIDAD », « Nombre del nodo », « Alcance trans. », « Ancho de banda »,
+  « Teletransportador ») ; tous defilent dans leur boite au lieu de passer sur la colonne voisine.
 - **Des tests** : 170 tests en jeu, 887 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers
