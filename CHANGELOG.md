@@ -111,7 +111,8 @@ loot table, the whole game in four languages, and a config file that tunes the p
 - **The clock stops with the game.** Escape pauses every sound of the engine, but the reader's
   clock kept running on its own: it now stops with `Minecraft.isPaused()` — the same flag that
   decides vanilla's `soundManager.pause()` — and starts again where it stopped, so the sound and
-  the time shown stay together.
+  the time shown stay together. Quitting the world *from* that menu no longer restarts the clock:
+  leaving lifts the pause too, and without a world nothing resumes.
 - **The reader's volume is remembered.** It is written to the client config
   (`academy-client.toml`, `media.volume`) when the slider is released, and read back at startup:
   no need to set it again every time.
@@ -239,7 +240,8 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
 - **Le chrono s'arrete avec le jeu.** Echap met tous les sons du moteur en pause, mais l'horloge du
   lecteur continuait de tourner toute seule : elle s'arrete maintenant avec `Minecraft.isPaused()`
   — le drapeau qui decide du `soundManager.pause()` de vanilla — et repart ou elle s'etait arretee,
-  donc le son et le temps affiche restent ensemble.
+  donc le son et le temps affiche restent ensemble. Et quitter le monde depuis ce menu ne relance
+  plus l'horloge : partir leve aussi la pause, et sans monde rien ne repart.
 - **Le volume du lecteur est retenu.** Il s'ecrit dans la config du client
   (`academy-client.toml`, `media.volume`) quand on lache la glissiere, et se relit au demarrage :
   plus besoin de le regler a chaque fois.

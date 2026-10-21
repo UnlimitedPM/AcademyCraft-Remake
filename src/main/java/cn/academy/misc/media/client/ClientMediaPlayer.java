@@ -437,17 +437,27 @@ public final class ClientMediaPlayer {
                 pausedAt = position();
                 pausedByGame = true;
             }
-        } else if (pausedByGame) {
-            // Le jeu rend la main : l'horloge repart de la ou la pause l'a laissee, et le son
-            // reprend son volume — la mise en attente l'avait mis a zero.
-            pausedByGame = false;
-            float at = pausedAt;
-            pausedAt = -1.0f;
-            startedNano = System.nanoTime() - (long) (at * 1_000_000_000.0f);
-
-            ChannelAccess.ChannelHandle handle = channel();
-            if (handle != null) handle.execute(ch -> ch.setVolume(volume));
+            return;
         }
+
+        if (!pausedByGame) return;
+        pausedByGame = false;
+
+        // QUITTER LE MONDE LEVE AUSSI CETTE PAUSE, et le morceau doit rester fige : partir en ayant
+        // le menu Echap ouvert aurait sinon relance l'horloge au menu principal, et le joueur
+        // retrouvait son morceau plus loin qu'il ne l'avait laisse — « si la musique est entrain de
+        // se jouer et que je ferme mon monde, elle tourne encore en fond au niveau du timer ». La
+        // deconnexion, elle, a deja fige la position : sans monde, rien ne repart.
+        if (detached || Minecraft.getInstance().level == null) return;
+
+        // Le jeu rend la main : l'horloge repart de la ou la pause l'a laissee, et le son reprend
+        // son volume — la mise en attente l'avait mis a zero.
+        float at = pausedAt;
+        pausedAt = -1.0f;
+        startedNano = System.nanoTime() - (long) (at * 1_000_000_000.0f);
+
+        ChannelAccess.ChannelHandle handle = channel();
+        if (handle != null) handle.execute(ch -> ch.setVolume(volume));
     }
 
     /**
