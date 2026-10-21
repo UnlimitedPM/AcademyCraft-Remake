@@ -108,6 +108,17 @@ loot table, the whole game in four languages, and a config file that tunes the p
 - **A pause stays a pause.** Pausing a track in the terminal and closing the screen started it
   again: vanilla's `setScreen(null)` calls `SoundManager.resume()`, which unpauses *every* channel
   of the engine, the mod's own included. The reader now puts its channel back on pause after it.
+- **The clock stops with the game.** Escape pauses every sound of the engine, but the reader's
+  clock kept running on its own: it now stops with `Minecraft.isPaused()` — the same flag that
+  decides vanilla's `soundManager.pause()` — and starts again where it stopped, so the sound and
+  the time shown stay together.
+- **The reader's volume is remembered.** It is written to the client config
+  (`academy-client.toml`, `media.volume`) when the slider is released, and read back at startup:
+  no need to set it again every time.
+- **The track survives a reconnection.** Leaving a world stops every sound of the game, the
+  track's channel included, and the clock kept running at the menu. Leaving now freezes the clock
+  and remembers the position; coming back replays the track *from that position* — the engine
+  cannot seek in a stream, so it is handed one that reads and throws away the head of the track.
 - **Tests**: 171 in-game tests, 893 unit tests.
 
 ### Francais
@@ -224,6 +235,18 @@ retravaillee, tout le jeu en quatre langues, et un fichier de config qui regle l
   l'ecran le relancait : le `setScreen(null)` de Minecraft appelle `SoundManager.resume()`, qui
   remet en marche **tous** les canaux du moteur, celui du mod compris. Le lecteur repose
   maintenant sa pause apres lui.
+- **Le chrono s'arrete avec le jeu.** Echap met tous les sons du moteur en pause, mais l'horloge du
+  lecteur continuait de tourner toute seule : elle s'arrete maintenant avec `Minecraft.isPaused()`
+  — le drapeau qui decide du `soundManager.pause()` de vanilla — et repart ou elle s'etait arretee,
+  donc le son et le temps affiche restent ensemble.
+- **Le volume du lecteur est retenu.** Il s'ecrit dans la config du client
+  (`academy-client.toml`, `media.volume`) quand on lache la glissiere, et se relit au demarrage :
+  plus besoin de le regler a chaque fois.
+- **Le morceau survit a une reconnexion.** Quitter un monde arrete tous les sons du jeu, le canal
+  du morceau compris, et l'horloge continuait de tourner au menu. La deconnexion fige maintenant
+  l'horloge et retient la position ; le retour rejoue le morceau **depuis cette position** — le
+  moteur ne sait pas se deplacer dans un flux, on lui en donne donc un qui lit et jette la tete du
+  morceau.
 - **Des tests** : 171 tests en jeu, 893 tests unitaires.
 
 ## 0.1.4 - l'arbre de competences et les deux developpeurs / the skill tree and the two developers

@@ -68,7 +68,7 @@ public final class ClientMediaPlayer {
     private static ChannelAccess.ChannelHandle channel;
 
     /** Le volume du lecteur, de zero a un : celui de sa glissiere, pas celui du jeu. */
-    private static float volume = 1.0f;
+    private static float volume = cn.academy.client.hud.HudConfig.mediaVolume();
 
     /** L'instant du lancement, en nanosecondes : c'est l'horloge de la position affichee. */
     private static long startedNano;
@@ -89,6 +89,12 @@ public final class ClientMediaPlayer {
 
     /** Vrai quand le morceau TOURNAIT au moment de la deconnexion, faux s'il etait en attente. */
     private static boolean suspendedPlaying;
+
+    /** Vrai quand le jeu est en pause : le moteur a donc mis tous ses sons en attente. */
+    private static boolean gamePaused;
+
+    /** Vrai quand c'est le JEU qui a mis le morceau en attente, et non le joueur. */
+    private static boolean pausedByGame;
 
     private ClientMediaPlayer() {}
 
@@ -398,6 +404,7 @@ public final class ClientMediaPlayer {
         @SubscribeEvent
         public static void onClientTick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
+            watchGamePause();
             keepPaused();
         }
 
@@ -414,6 +421,62 @@ public final class ClientMediaPlayer {
         }
     }
 
+    /**
+     * L'horloge s'arrete et repart avec la pause du jeu.
+     *
+     * <p>Le menu Echap met <b>tous</b> les sons du moteur en attente, celui du morceau compris : le
+     * son se tait donc bien, mais l'horloge du lecteur, elle, continuait de tourner — le joueur :
+     * « malgre le fait que la musique se mette bien en pause, le chrono lui continue de defiler au
+     * lieu de s'arreter avec le jeu ». Et ce n'etait pas qu'un affichage : au retour, le son
+     * reprenait a sa vraie position et l'horloge annoncait une autre seconde.
+     *
+     * <p>La pause du jeu se reconnait a {@code Minecraft.isPaused()} : c'est le meme drapeau que
+     * celui qui decide du {@code soundManager.pause()} de vanilla, donc l'horloge s'arrete
+     * exactement quand les sons s'arretent.
+     */
+    private static void watchGamePause() {
+        boolean paused = Minecraft.getInstance().isPaused();
+        if (paused == gamePaused) return;
+        gamePaused = paused;
+
+        if (playing == null) return;
+        if (paused) {
+            if (pausedAt < 0.0f) {
+                pausedAt = position();
+                pausedByGame = true;
+            }
+        } else if (pausedByGame) {
+            // Le jeu rend la main : l'horloge repart de la ou la pause l'a laissee, et le son
+            // reprend son volume — la mise en attente l'avait mis a zero.
+            pausedByGame = false;
+            float at = pausedAt;
+            pausedAt = -1.0f;
+            startedNano = System.nanoTime() - (long) (at * 1_000_000_000.0f);
+
+            ChannelAccess.ChannelHandle handle = channel();
+            if (handle != null) handle.execute(ch -> ch.setVolume(volume));
+        }
+    }
+
+    /**
+     * La config du client, relue quand elle arrive : c'est elle qui porte le volume du lecteur.
+     *
+     * <p>C'est un abonne de la meme classe, sur le bus MOD : la config se charge apres la
+     * construction du mod, donc le volume lu au demarrage peut etre celui par defaut.
+     */
+    @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD,
+            value = Dist.CLIENT)
+    public static final class Configuring {
+
+        private Configuring() {}
+
+        @SubscribeEvent
+        public static void onLoad(net.minecraftforge.fml.event.config.ModConfigEvent event) {
+            if (event.getConfig().getSpec() != cn.academy.client.hud.HudConfig.SPEC) return;
+            volume = cn.academy.client.hud.HudConfig.mediaVolume();
+        }
+    }
+
     /** Vrai quand un morceau est en attente. */
     public static boolean isPaused() {
         return playing != null && pausedAt >= 0.0f;
@@ -425,6 +488,7 @@ public final class ClientMediaPlayer {
         playing = null;
         pausedAt = -1.0f;
         suspendedAt = -1f;
+        pausedByGame = false;
     }
 
     private static void stopSound() {
@@ -457,6 +521,22 @@ public final class ClientMediaPlayer {
             float gain = pausedAt >= 0.0f ? 0.0f : volume;
             handle.execute(ch -> ch.setVolume(gain));
         }
+        saved = false;
+    }
+
+    /** Vrai quand le volume en memoire est deja ecrit dans la config. */
+    private static boolean saved = true;
+
+    /**
+     * Ecrit le volume choisi dans la config du client.
+     *
+     * <p>A l'instant ou l'on quitte la glissiere, et pas a chaque pixel de son glissement : la
+     * config se reecrit en entier, et la traîner de bout en bout l'ecrirait cent fois.
+     */
+    public static void saveVolume() {
+        if (saved) return;
+        saved = true;
+        cn.academy.client.hud.HudConfig.writeMediaVolume(volume);
     }
 
     /**

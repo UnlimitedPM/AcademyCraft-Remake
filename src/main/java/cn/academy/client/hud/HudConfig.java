@@ -24,6 +24,16 @@ public final class HudConfig {
 
     public static final ForgeConfigSpec SPEC;
 
+    /**
+     * Le volume du lecteur media, de zero a un.
+     *
+     * <p>Il vit ici parce que c'est la config du CLIENT, et que le volume appartient au joueur qui
+     * ecoute, pas au serveur : le joueur : « quand je me deco/reco le jeu garde en memoire
+     * l'intensite du volume que j'ai choisit, parce que devoir le rechanger a chaque fois c'est
+     * chiant ». Une preference de client va dans la config du client.
+     */
+    private static final ForgeConfigSpec.DoubleValue MEDIA_VOLUME;
+
     private static final Map<HudElement, ForgeConfigSpec.ConfigValue<List<? extends Double>>> VALUES =
             new EnumMap<>(HudElement.class);
 
@@ -54,6 +64,14 @@ public final class HudConfig {
         }
 
         builder.pop();
+
+        builder.comment("Le volume du lecteur media, de zero a un : il est retenu d'une session a",
+                        "l'autre, comme les reglages du jeu.",
+                        "The media player's volume, from zero to one; kept from one session to the next.")
+                .push("media");
+        MEDIA_VOLUME = builder.defineInRange("volume", 1.0d, 0.0d, 1.0d);
+        builder.pop();
+
         SPEC = builder.build();
     }
 
@@ -121,5 +139,26 @@ public final class HudConfig {
             // Ecrire la config peut echouer (disque plein, fichier verrouille) : le jeu ne
             // doit pas tomber pour autant, la place reste juste en memoire.
         }
+    }
+
+    /**
+     * Le volume du lecteur media tel qu'il a ete quitte.
+     *
+     * <p>Rend un quand la config n'est pas encore lue (au demarrage) : c'est le volume de l'original.
+     */
+    public static float mediaVolume() {
+        try {
+            return (float) (double) MEDIA_VOLUME.get();
+        } catch (Exception e) {
+            return 1.0f;
+        }
+    }
+
+    /** Ecrit le volume du lecteur media et sauvegarde : c'est la glissiere de l'application. */
+    public static void writeMediaVolume(float volume) {
+        // Arrondi au centieme : un flottant ecrit tel quel donne « 0.4000000059604645 » dans le
+        // fichier, et personne n'a envie de lire ca pour regler son volume.
+        MEDIA_VOLUME.set(Math.round(volume * 100.0f) / 100.0);
+        save();
     }
 }

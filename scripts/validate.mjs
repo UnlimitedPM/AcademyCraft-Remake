@@ -518,13 +518,20 @@ for (const file of hookFiles) {
     if (annotated) continue;
 
     // Appel direct (X.name() ) ou reference de methode (X::name).
+    //
+    // Le meme fichier compte aussi : une methode publique appelee par l'abonne de sa propre
+    // classe — le cas de tout ce qui pend a un evenement Forge — n'est pas du code mort. Sa
+    // DECLARATION est retiree avant la recherche, sans quoi elle se prendrait pour un appel.
+    const declaration = new RegExp(
+      `^[^\\n]*\\b${name}\\s*\\([^)]*\\)\\s*(?:throws[^\\n{]+)?\\{[^\\n]*$`, 'gm');
+    const inside = (readText(file) ?? '').replace(declaration, '');
     const outside = allSourceFiles
       .filter((f) => f !== file)
       .map((f) => readText(f) ?? '')
       .join('\n');
-    const called =
-      new RegExp(`(?:\\.|::)${name}\\s*(?:\\(|[,;)])`).test(outside) ||
-      new RegExp(`\\b${name}\\s*\\(`).test(outside);
+    const qualified = new RegExp(`(?:\\.|::)${name}\\s*(?:\\(|[,;)])`);
+    const bare = new RegExp(`\\b${name}\\s*\\(`);
+    const called = qualified.test(outside) || bare.test(outside) || bare.test(inside);
 
     if (called) add('OK', 'hook appele', `${fileLabel}#${name}`);
     else

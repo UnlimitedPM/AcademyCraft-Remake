@@ -384,6 +384,9 @@ public class MediaPlayerScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        // Le volume choisi part dans la config au moment ou l'on lache la glissiere — pas a chaque
+        // pixel de son glissement, la config se reecrivant en entier.
+        if (dragging == Drag.VOLUME) ClientMediaPlayer.saveVolume();
         dragging = Drag.NONE;
         return super.mouseReleased(mouseX, mouseY, button);
     }
@@ -542,6 +545,7 @@ public class MediaPlayerScreen extends Screen {
     /** Fermer l'application rend le terminal, qui n'a jamais ete ferme. */
     @Override
     public void onClose() {
+        ClientMediaPlayer.saveVolume();
         AppScreens.close();
     }
 }
