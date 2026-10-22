@@ -162,13 +162,15 @@ public final class TpMarkRenderer {
 
         // La position d'image, et non celle du tick : une creature visee bouge a chaque image, et
         // la marque qui la suit doit bouger avec elle. Et sur le regard, c'est la direction de la
-        // camera qui compte — c'est elle qui porte le curseur. Voir TeleportMark.interpolated.
-        Vec3 mark = TeleportMark.interpolated(event.getPartialTick(), camera,
+        // camera qui compte — c'est elle qui porte le curseur. Les PIEDS, eux, sont ceux du joueur
+        // et non ceux de la camera : en troisieme personne elle recule de quatre blocs, et la
+        // marque se dessinerait derriere le joueur. Voir TeleportMark.interpolated.
+        Vec3 at = TeleportMark.interpolated(event.getPartialTick(), shooterFeet(camera, event),
                 event.getCamera().getLookVector());
-        if (mark != null) {
+        if (at != null) {
             // Et legerement a gauche, pour l'oeil : voir GHOST_NUDGE. La boite n'y touche pas.
             drawMark(buffers, pose, camera, nudged(event.getCamera().getLeftVector(),
-                    mark.distanceTo(camera), mark));
+                    at.distanceTo(camera), at));
         }
 
         // Et les creatures que le geste traverserait : une boite rouge sur chacune, comme
@@ -189,6 +191,23 @@ public final class TpMarkRenderer {
         }
 
         buffers.endBatch();
+    }
+
+    /**
+     * Les pieds du tireur a l'instant de l'image : ceux du joueur, et non ceux de la camera.
+     *
+     * <p>En premiere personne les deux coincident — la camera est dans sa tete. En troisieme, elle
+     * recule de quatre blocs, et c'est cette distance-la qui faisait naitre le fantome derriere le
+     * joueur des que la marque s'approchait.
+     *
+     * <p>Sans joueur (menu, changement de monde), on retombe sur l'ancienne lecture : la camera
+     * moins la hauteur d'yeux relue au dernier tick. C'est faux en troisieme personne, mais il n'y a
+     * alors personne pour le voir.
+     */
+    private static Vec3 shooterFeet(Vec3 camera, RenderLevelStageEvent event) {
+        net.minecraft.client.player.LocalPlayer self = Minecraft.getInstance().player;
+        if (self != null) return self.getPosition(event.getPartialTick());
+        return camera.subtract(0, TeleportMark.eyeHeight(), 0);
     }
 
     /**

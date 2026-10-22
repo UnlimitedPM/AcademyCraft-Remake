@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Les decalages d'atterrissage des teleportations visees.
@@ -136,6 +137,26 @@ class LandingSiteTest {
     // ------------------------------------------------------------------
     // Le scintillement : la hauteur se lit sur le point d'impact
     // ------------------------------------------------------------------
+
+    @Test
+    void uneArriveeDansLaMatiereRemonteAuSommet() {
+        // Deux blocs de pierre empiles, et des pieds tombes au milieu du premier.
+        java.util.function.Predicate<BlockPos> stone = pos -> pos.getY() == 64 || pos.getY() == 65;
+
+        Vec3 inside = new Vec3(10.5, 64.08, 10.5);
+        assertEquals(new Vec3(10.5, 66.0, 10.5), LandingSite.aboveSurface(inside, stone),
+                "deux blocs pleins : les pieds se posent sur le deuxieme, pas dedans");
+
+        // Juste au-dessus, il n'y a plus rien a faire : la remontee ne touche pas un point libre.
+        Vec3 free = new Vec3(10.5, 66.0, 10.5);
+        assertEquals(free, LandingSite.aboveSurface(free, stone));
+
+        // Et une colonne entierement pleine ne fait pas grimper au ciel : la remontee est bornee.
+        java.util.function.Predicate<BlockPos> full = pos -> true;
+        double capped = LandingSite.aboveSurface(inside, full).y;
+        assertTrue(capped < 64.08 + LandingSite.LIFT_CLEARANCE + 1.0,
+                "la remontee est bornee, y=" + capped);
+    }
 
     @Test
     void leScintillementLitLaHauteurSurLePointDImpact() {

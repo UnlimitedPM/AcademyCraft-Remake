@@ -660,7 +660,7 @@ class SkillCurvesTest {
 
         // Regard vers +Z (lacet zero de Minecraft), sans inclinaison : avancer c'est aller
         // vers +Z, et la gauche d'un joueur qui regarde le sud, c'est l'est (+X).
-        Vec3 south = new Vec3(0, 0, 1);
+        float south = 0f;
 
         assertEquals(new Vec3(0, 0, 1),
                 round(cn.academy.ability.teleporter.FlashingSkill
@@ -675,8 +675,8 @@ class SkillCurvesTest {
                 round(cn.academy.ability.teleporter.FlashingSkill
                         .dashDirection(south, 0, cn.academy.ability.teleporter.FlashingSkill.RIGHT)));
 
-        // Regard vers l'est (+X) : les quatre directions tournent avec le joueur.
-        Vec3 east = new Vec3(1, 0, 0);
+        // Regard vers l'est (+X, lacet 270) : les quatre directions tournent avec le joueur.
+        float east = 270f;
         assertEquals(new Vec3(1, 0, 0),
                 round(cn.academy.ability.teleporter.FlashingSkill
                         .dashDirection(east, 0, cn.academy.ability.teleporter.FlashingSkill.FORWARD)));
@@ -708,11 +708,22 @@ class SkillCurvesTest {
                 round(cn.academy.ability.teleporter.FlashingSkill
                         .dashDirection(east, -89, cn.academy.ability.teleporter.FlashingSkill.LEFT)));
 
-        // Regard pile a la verticale : il n'y a plus d'horizon, et le nord prend le relais.
+        // Regard pile a la verticale : le saut devant part vers le bas, mais le CAP reste celui du
+        // joueur — c'est ce que le port perdait en lisant l'horizontale du regard, qui s'efface
+        // alors, et c'est ce qui envoyait le joueur a l'oppose de sa visee.
         assertEquals(new Vec3(0, -1, 0),
                 round(cn.academy.ability.teleporter.FlashingSkill
-                        .dashDirection(new Vec3(0, -1, 0), 90,
+                        .dashDirection(south, 90,
                                 cn.academy.ability.teleporter.FlashingSkill.FORWARD)));
+        // Dos au sud (lacet 180), les cotes sont inverses : la gauche du joueur est a l'OUEST.
+        assertEquals(new Vec3(-1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(180f, 90,
+                                cn.academy.ability.teleporter.FlashingSkill.LEFT)));
+        assertEquals(new Vec3(1, 0, 0),
+                round(cn.academy.ability.teleporter.FlashingSkill
+                        .dashDirection(180f, 90,
+                                cn.academy.ability.teleporter.FlashingSkill.RIGHT)));
 
         // Les directions sont celles de l'original, et rien d'autre.
         assertTrue(cn.academy.ability.teleporter.FlashingSkill.isDirection(1));

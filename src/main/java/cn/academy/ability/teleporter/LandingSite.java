@@ -178,4 +178,29 @@ public final class LandingSite {
         }
         return feet.add(0, LIFT, 0);
     }
+
+    /**
+     * Le meme point, mais <b>jamais dans un bloc</b> : s'il tombe dans la matiere, il remonte au
+     * sommet de la colonne qui l'occupe.
+     *
+     * <p>La hauteur du scintillement se lit sur le point d'impact, et ce point peut etre bas — la
+     * face laterale d'un bloc qui vous arrive aux genoux, un rebord qu'on vise du dessus. Les pieds
+     * tombaient alors dans la matiere : le joueur l'a vu le 22/10 — « parfois, quand je spam la TP
+     * en direction du sol, je peux etre teleporte un bloc dans le sol ».
+     *
+     * <p>Un point deja libre n'est pas touche : c'est une garantie, pas un reglage. La remontee
+     * s'arrete au bout de {@link #LIFT_CLEARANCE} blocs, pour qu'une colonne entierement pleine ne
+     * fasse pas grimper le joueur au ciel.
+     */
+    public static Vec3 aboveSurface(Vec3 feet, Predicate<BlockPos> blocked) {
+        double y = feet.y;
+        for (int i = 0; i < LIFT_CLEARANCE; i++) {
+            // Un centieme au-dessus, et non le point lui-meme : des pieds poses exactement sur une
+            // surface ne sont pas dedans, et le bloc qu'ils touchent est celui du dessous.
+            BlockPos at = BlockPos.containing(feet.x, y + 0.01, feet.z);
+            if (!blocked.test(at)) break;
+            y = at.getY() + 1.0;
+        }
+        return new Vec3(feet.x, y, feet.z);
+    }
 }

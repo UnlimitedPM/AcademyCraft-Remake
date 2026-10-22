@@ -327,20 +327,40 @@ public final class TeleportMark {
      * <p>Mais une marque posee sur la ligne du regard ne se glisse pas comme un point du monde : les
      * deux ticks qu'on interpolerait sont pris sur <b>deux regards differents</b>, et le glissement
      * passe par la <b>corde</b> de l'arc — la marque sort de la visee d'un cote, d'autant plus
-     * qu'elle est loin. Elle se redessine donc sur la ligne de la <b>camera</b>, la seule qui porte
-     * le curseur et connaisse l'orientation de l'image ; seule sa distance s'interpole, celle qui
-     * bouge vraiment d'un tick a l'autre.
+     * qu'elle est loin. Elle se redessine donc sur la ligne qui part des <b>pieds du tireur</b> le
+     * long de la visee de l'image ; seule sa distance s'interpole, celle qui bouge vraiment d'un
+     * tick a l'autre.
+     *
+     * <p>ET CES PIEDS-LA, PAS CEUX DE LA CAMERA. Ils coincident en premiere personne — la camera est
+     * dans la tete — mais pas du tout en troisieme, ou elle recule de quatre blocs : mesuree depuis
+     * elle, une marque a un bloc et demi se dessinait DERRIERE le joueur, et la marque reculait a
+     * mesure qu'on baissait le regard vers un bloc proche. Le joueur l'a vu le 22/10 : « le fantome
+     * apparait devant moi, puis il recule de plus en plus jusqu'a arriver derriere moi ». C'est
+     * l'appelant qui donne ces pieds, a l'instant de l'image.
      */
     @Nullable
-    public static Vec3 interpolated(double partialTick, Vec3 camera, Vector3f look) {
+    public static Vec3 interpolated(double partialTick, Vec3 feet, Vector3f look) {
         if (position == null) return null;
         if (previous == null) return position;
         if (!line) return previous.lerp(position, partialTick);
 
-        // Les pieds du tireur, vus de la camera : c'est de la que part la ligne.
-        Vec3 feet = camera.subtract(0, eyeHeight, 0);
         double distance = previousAlong + (along - previousAlong) * partialTick;
+        return onGazeLine(feet, look, distance);
+    }
+
+    /**
+     * Le point de la ligne des pieds, a cette distance le long de la visee.
+     *
+     * <p>Fonction pure, donc verifiable : la distance se mesure depuis les pieds DONNES, et c'est
+     * tout ce que le rendu demande.
+     */
+    public static Vec3 onGazeLine(Vec3 feet, Vector3f look, double distance) {
         return feet.add(look.x() * distance, look.y() * distance, look.z() * distance);
+    }
+
+    /** La hauteur d'yeux du tireur, relue au tick : le rendu s'en sert faute de joueur. */
+    public static double eyeHeight() {
+        return eyeHeight;
     }
 
     /** L'orientation du tireur, en degres. */

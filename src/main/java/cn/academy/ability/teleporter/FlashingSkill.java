@@ -198,17 +198,21 @@ public class FlashingSkill extends Skill {
      * regard, et qui s'incline du tangage — <b>sauf de cote</b>. Les deux directions de cote
      * partent d'un vecteur (0, 0, +-1) : une rotation autour de Z ne peut ni le monter ni le
      * descendre, donc elles restent a plat, et c'est exactement ce que faisait l'original.
-     * Fonction pure, donc verifiable : les quatre directions, leur miroir quand le joueur se
-     * retourne, et le fait que le regard ne les incline pas toutes.
+     *
+     * <p>LE LACET SE LIT SUR LE JOUEUR, et non sur l'horizontale de son regard. Le port prenait
+     * cette horizontale-la, qui s'efface quand on regarde pile en bas : viser le sol perdait le
+     * cap et prenait le nord a sa place, si bien qu'un saut partait a l'oppose de la visee. Le
+     * joueur l'a vu le 22/10 : « parfois, quand je spam la TP en direction du sol, je me
+     * teleporte carrement en allant en arriere alors que je vise devant ». L'original, lui,
+     * tournait par son {@code rotationYaw} et ne pouvait pas perdre le cap.
+     *
+     * <p>Fonction pure, donc verifiable : les quatre directions, leur miroir quand le joueur se
+     * retourne, le fait que le regard ne les incline pas toutes, et le cap garde a la verticale.
      */
-    public static Vec3 dashDirection(Vec3 look, double pitchDegrees, int direction) {
-        Vec3 flat = new Vec3(look.x, 0, look.z);
-        if (flat.lengthSqr() < 1.0E-6) {
-            // Regard pile a la verticale : il n'y a plus d'horizon a suivre, l'original
-            // prenait alors la direction du nord comme les autres competences.
-            flat = new Vec3(0, 0, 1);
-        }
-        flat = flat.normalize();
+    public static Vec3 dashDirection(float yawDegrees, double pitchDegrees, int direction) {
+        // Le lacet de Minecraft : zero regarde vers +Z, et il tourne vers -X en grandissant.
+        double yaw = Math.toRadians(yawDegrees);
+        Vec3 flat = new Vec3(-Math.sin(yaw), 0, Math.cos(yaw));
 
         Vec3 side = switch (direction) {
             case LEFT -> new Vec3(flat.z, 0, -flat.x);
@@ -249,7 +253,8 @@ public class FlashingSkill extends Skill {
     private Vec3 destination(Player player, AbilityData data, int direction, boolean lift) {
         Vec3 from = player.position();
         Vec3 eyes = player.getEyePosition(1.0f);
-        Vec3 end = eyes.add(dashDirection(player.getViewVector(1.0f), player.getXRot(), direction)
+        // Le cap se lit sur le joueur, pas sur l'horizontale de son regard : voir dashDirection.
+        Vec3 end = eyes.add(dashDirection(player.getYRot(), player.getXRot(), direction)
                 .scale(distance(data)));
 
         BlockHitResult blockHit = player.level().clip(new ClipContext(from, end,
@@ -276,6 +281,12 @@ public class FlashingSkill extends Skill {
                             .getCollisionShape(player.level(), pos).isEmpty();
             Vec3 feet = LandingSite.onImpactFeet(blockHit.getDirection(), blockHit.getLocation(),
                     blocked, player.getEyeHeight());
+            // Et JAMAIS dans un bloc. Lire la hauteur sur le point d'impact est la convention du
+            // scintillement, mais ce point peut etre bas — viser la face laterale d'un bloc qui
+            // nous arrive aux genoux —, et les pieds tombaient alors dans la matiere. Le joueur l'a
+            // vu le 22/10 : « parfois, quand je spam la TP en direction du sol, je peux etre
+            // teleporte un bloc dans le sol ». Voir LandingSite.aboveSurface.
+            feet = LandingSite.aboveSurface(feet, blocked);
             // Et l'on arrive un bloc au-dessus de la surface quand il reste la place : le saut se
             // paie d'une petite retombee, rendue lente par GravityCancellor. Voir LandingSite.lift.
             return lift ? LandingSite.lift(feet, blocked) : feet;

@@ -369,6 +369,30 @@ class TpMarkTest {
     }
 
     @Test
+    @DisplayName("la marque sur le regard se mesure depuis les pieds du tireur")
+    void laMarqueSurLeRegardSeMesureDepuisLesPieds() {
+        Vec3 feet = new Vec3(10, 64, 10);
+        // Le lacet zero regarde vers +Z : la ligne des pieds y avance tout droit.
+        Vector3f look = new Vector3f(0, 0, 1);
+
+        // A six blocs sur la ligne, c'est six blocs depuis les PIEDS donnes — c'est tout ce que
+        // le rendu demande, et c'est ce qui a casse en troisieme personne : la camera y recule de
+        // quatre blocs, et une marque mesuree depuis elle tombait derriere le joueur.
+        Vec3 at = TeleportMark.onGazeLine(feet, look, 6.0);
+        assertEquals(new Vec3(10, 64, 16), at);
+        assertEquals(6.0, at.distanceTo(feet), 1e-9);
+
+        // Les pieds de la camera, eux, sont quatre blocs en arriere : la meme distance y donne un
+        // point quatre blocs plus loin en arriere — la marque d'un bloc et demi passerait DERRIERE
+        // le joueur. C'est le bug signale le 22/10.
+        Vec3 behind = feet.add(0, 0, -4);
+        assertEquals(-2.5, TeleportMark.onGazeLine(behind, look, 1.5).z - feet.z, 1e-9,
+                "mesuree depuis la camera, une marque a un bloc et demi est derriere");
+        assertEquals(1.5, TeleportMark.onGazeLine(feet, look, 1.5).z - feet.z, 1e-9,
+                "mesuree depuis les pieds, elle est devant");
+    }
+
+    @Test
     @DisplayName("une marque finie ne se dessine nulle part, a aucun instant de l'image")
     void uneMarqueFinieNeSeDessinePas() {
         // Le rendu demande la position a l'instant de l'image, et pas a celui du tick, pour suivre
