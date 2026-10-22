@@ -15,6 +15,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
+import java.util.function.Predicate;
 
 /**
  * Competence chargee, portage de MarkTeleport : le joueur vise, la portee grandit tant
@@ -136,13 +137,28 @@ public class MarkTeleportSkill extends Skill {
     }
 
     /**
-     * Ou le joueur atterrirait apres {@code chargeTicks} ticks de visee.
+     * Ou le joueur atterrirait apres {@code chargeTicks} ticks de visee — saut d'un bloc compris.
      *
      * Portage de {@code getDest} : l'entite la plus proche l'emporte sur le bloc, le bloc
      * donne sa face regardee — avec le decalage qui fait atterrir sur la surface et non
      * dedans — et un regard dans le vide donne la portee maximale.
      */
     public Vec3 destination(Player player, AbilityData data, int chargeTicks) {
+        return destination(player, data, chargeTicks, true);
+    }
+
+    /**
+     * La meme destination, <b>sans</b> le saut d'un bloc : ce que montre le fantome.
+     *
+     * <p>Demande du joueur, 22/10 : le fantome marque l'endroit ou l'on <b>se tient</b>, et non
+     * celui d'ou l'on tombe — viser un bloc a l'air libre doit donc le poser au sol, pas un bloc
+     * au-dessus. Le saut reste l'affaire du saut ({@link #destination}).
+     */
+    public Vec3 markerPosition(Player player, AbilityData data, int chargeTicks) {
+        return destination(player, data, chargeTicks, false);
+    }
+
+    private Vec3 destination(Player player, AbilityData data, int chargeTicks, boolean lift) {
         float exp = data.getSkillExp(this);
         double reach = maxDistance(exp, data.getControlPoint(), chargeTicks, cpPerBlock(data));
 
@@ -168,11 +184,13 @@ public class MarkTeleportSkill extends Skill {
             // celui-la que le saut doit donner. Le dessus d'un bloc DEGAGE l'emporte sur la face
             // visee, pour qu'on se pose sur le dernier bloc d'un mur ou sur un bloc au-dessus de
             // soi — voir MarkTeleportLanding.
-            return MarkTeleportLanding.feet(blockHit.getDirection(), blockHit.getLocation(),
-                    blockHit.getBlockPos(),
-                    pos -> !player.level().getBlockState(pos)
-                            .getCollisionShape(player.level(), pos).isEmpty(),
-                    player.getEyeHeight());
+            Predicate<BlockPos> blocked = pos -> !player.level().getBlockState(pos)
+                    .getCollisionShape(player.level(), pos).isEmpty();
+            return lift
+                    ? MarkTeleportLanding.feet(blockHit.getDirection(), blockHit.getLocation(),
+                            blockHit.getBlockPos(), blocked, player.getEyeHeight())
+                    : MarkTeleportLanding.onSurface(blockHit.getDirection(), blockHit.getLocation(),
+                            blockHit.getBlockPos(), blocked, player.getEyeHeight());
         }
         // Rien devant : on s'arrete au bout du regard, mais <b>aux pieds</b> — une hauteur d'yeux
         // sous ce bout. C'est ce qui met les yeux du joueur, une fois arrive, exactement la ou le

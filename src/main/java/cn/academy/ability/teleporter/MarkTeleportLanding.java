@@ -48,7 +48,7 @@ public final class MarkTeleportLanding {
     }
 
     /**
-     * Le point d'atterrissage, <b>aux pieds</b>.
+     * Le point d'atterrissage, <b>aux pieds</b>, saut d'un bloc compris.
      *
      * @param face     la face regardee
      * @param point    le point d'impact du regard
@@ -58,14 +58,27 @@ public final class MarkTeleportLanding {
      */
     public static Vec3 feet(Direction face, Vec3 point, BlockPos pos,
                             Predicate<BlockPos> blocked, double eyeHeight) {
+        return lift(onSurface(face, point, pos, blocked, eyeHeight), blocked);
+    }
+
+    /**
+     * Le meme point, <b>sans</b> le saut d'un bloc : celui que montre le fantome.
+     *
+     * <p>Demande du joueur, 22/10 : « meme si je sais que le fantome utilise la meme formule que
+     * notre personnage [...], j'aimerais que si on vise un bloc a l'air libre, au lieu d'afficher le
+     * fantome avec un bloc de hauteur il s'affiche comme s'il touchait le sol ». Le fantome marque
+     * donc l'endroit ou l'on se <b>tient</b>, et le saut d'un bloc reste l'affaire du saut.
+     */
+    public static Vec3 onSurface(Direction face, Vec3 point, BlockPos pos,
+                                 Predicate<BlockPos> blocked, double eyeHeight) {
         BlockPos head = pos.above();
         // Le dessus du bloc, quand il est degage, l'emporte : on s'y tient, au centre du bloc.
         // Le centre evite de se poser sur l'arete quand on vise un cote.
         if (!blocked.test(head) && !blocked.test(head.above())) {
-            return lift(new Vec3(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5), blocked);
+            return new Vec3(pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5);
         }
         // Sinon la face visee, avec les decalages de toutes les teleportations visees.
-        return lift(LandingSite.onFeet(face, point, pos, blocked, eyeHeight), blocked);
+        return LandingSite.onFeet(face, point, pos, blocked, eyeHeight);
     }
 
     /**

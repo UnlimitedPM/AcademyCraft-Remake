@@ -442,7 +442,10 @@ public final class TeleportMark {
     @Nullable
     static Seat seat(Player player, Skill skill, int chargeTicks, int aimed) {
         if (skill == TeleporterCategory.MARK_TELEPORT) {
-            return new Seat(TeleporterCategory.MARK_TELEPORT.destination(player,
+            // La position du fantome est celle de l'atterrissage SANS le saut d'un bloc : il montre
+            // ou l'on se tient, pas d'ou l'on tombe (demande du joueur, 22/10). Voir
+            // MarkTeleportSkill.markerPosition.
+            return new Seat(TeleporterCategory.MARK_TELEPORT.markerPosition(player,
                     ClientAbilityData.get(), chargeTicks), COLOR_NORMAL, Shape.GHOST);
         }
         if (skill == TeleporterCategory.FLASHING && aimed != 0) {

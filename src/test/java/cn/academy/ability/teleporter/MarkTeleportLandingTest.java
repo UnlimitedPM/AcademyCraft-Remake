@@ -106,4 +106,32 @@ class MarkTeleportLandingTest {
 
         assertEquals(65.0, feet.y, 1e-9, "on reste a la surface du bloc");
     }
+
+    /**
+     * Le fantome se pose AU SOL, sans le saut d'un bloc.
+     *
+     * <p>Demande du joueur, 22/10 : le fantome marque l'endroit ou l'on se tient, pas celui d'ou
+     * l'on tombe. Le joueur, lui, arrive bien un bloc au-dessus.
+     */
+    @Test
+    void leFantomeSePoseSansLeSaut() {
+        Vec3 surface = MarkTeleportLanding.onSurface(Direction.NORTH, NORTH_FACE, BLOCK,
+                solid(BLOCK), EYES);
+        Vec3 feet = MarkTeleportLanding.feet(Direction.NORTH, NORTH_FACE, BLOCK,
+                solid(BLOCK), EYES);
+
+        assertEquals(65.0, surface.y, 1e-9, "le fantome touche le dessus du bloc");
+        assertEquals(66.0, feet.y, 1e-9, "le joueur, lui, arrive un bloc plus haut");
+        assertEquals(surface.x, feet.x, 1e-9, "et au meme endroit, en x");
+        assertEquals(surface.z, feet.z, 1e-9, "et au meme endroit, en z");
+
+        // Devant un mur, la meme difference d'un bloc : la colonne devant lui est libre.
+        Predicate<BlockPos> wall = solid(BLOCK, BLOCK.above());
+        assertEquals(64.08,
+                MarkTeleportLanding.onSurface(Direction.NORTH, NORTH_FACE, BLOCK, wall, EYES).y,
+                1e-9, "le fantome devant le mur, au sol");
+        assertEquals(65.08,
+                MarkTeleportLanding.feet(Direction.NORTH, NORTH_FACE, BLOCK, wall, EYES).y,
+                1e-9, "le joueur, un bloc au-dessus");
+    }
 }
