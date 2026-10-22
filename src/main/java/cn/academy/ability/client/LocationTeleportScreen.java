@@ -176,11 +176,22 @@ public class LocationTeleportScreen extends CGuiScreen {
     }
 
     private int addRow() {
-        return marks().size();
+        return canAdd() ? marks().size() : -1;
+    }
+
+    /**
+     * Peut-on encore poser une marque ? Six au plus, comme le panneau de l'original.
+     *
+     * <p>Au-dela, la ligne qui ajoute n'existe plus : c'est ce que le joueur a vu dans le vrai mod —
+     * « a partir du 6eme point de teleportation on ne peut pas en rajouter de nouveau » — et c'est
+     * le serveur qui tient la regle. Voir {@link LocationMark#MAX_MARKS}.
+     */
+    private boolean canAdd() {
+        return marks().size() < LocationMark.MAX_MARKS;
     }
 
     private int rowCount() {
-        return marks().size() + 1;
+        return marks().size() + (canAdd() ? 1 : 0);
     }
 
     private double age() {
@@ -253,7 +264,9 @@ public class LocationTeleportScreen extends CGuiScreen {
         for (int i = 0; i < marks().size(); i++) {
             list.add(markRow(elementTemplate, i));
         }
-        list.add(addRowTemplate(addTemplate, elementTemplate));
+        if (canAdd()) {
+            list.add(addRowTemplate(addTemplate, elementTemplate));
+        }
 
         shown = fingerprint();
     }

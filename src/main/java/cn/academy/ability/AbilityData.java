@@ -221,14 +221,20 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
-     * Pose une marque, a la suite.
+     * Pose une marque, a la suite — si la liste n'est pas pleine.
      *
-     * <p>Reprend {@code add} de l'original : le rang dans la liste <b>est</b> l'identifiant.
+     * <p>Reprend {@code add} de l'original : le rang dans la liste <b>est</b> l'identifiant. Et
+     * comme chez lui, la liste a une capacite : six marques, le nombre de lignes que son panneau
+     * montre. Voir {@link cn.academy.ability.teleporter.LocationMark#MAX_MARKS}.
+     *
+     * @return faux quand la liste est pleine et que rien n'a ete pose
      */
-    public void addMark(String name, String dimension, double x, double y, double z) {
+    public boolean addMark(String name, String dimension, double x, double y, double z) {
+        if (marks.size() >= cn.academy.ability.teleporter.LocationMark.MAX_MARKS) return false;
         marks.add(new cn.academy.ability.teleporter.LocationMark(
                 cn.academy.ability.teleporter.LocationMark.cleanName(name, marks.size()),
                 dimension, x, y, z));
+        return true;
     }
 
     /**

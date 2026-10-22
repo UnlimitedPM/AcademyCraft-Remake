@@ -21,6 +21,17 @@ public record LocationMark(String name, String dimension, double x, double y, do
     /** Longueur maximale d'un nom, pour qu'il tienne sur une ligne d'ecran. */
     public static final int MAX_NAME = 24;
 
+    /**
+     * Combien de marques un joueur peut poser : <b>six</b>.
+     *
+     * <p>Ce n'est pas un reglage invente : c'est la capacite du panneau de l'original. Sa liste
+     * montre six lignes de quatre-vingts unites, et la septieme — le champ qui ajoute — sort du
+     * cadre, ou l'on ne peut plus la cliquer. Le joueur l'a constate dans le vrai mod le 22/10 :
+     * « a partir du 6eme point de teleportation on ne peut pas en rajouter de nouveau ». Le port,
+     * lui, n'avait aucune limite.
+     */
+    public static final int MAX_MARKS = 6;
+
     /** La dimension d'un monde, sous la forme qui se sauvegarde. */
     public static String of(Level level) {
         return level.dimension().location().toString();
