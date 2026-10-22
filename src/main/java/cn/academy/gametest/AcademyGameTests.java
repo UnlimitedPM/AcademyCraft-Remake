@@ -5382,22 +5382,16 @@ public final class AcademyGameTests {
         zombie.moveTo(abs.getX() + 2.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
         level.addFreshEntity(zombie);
 
-        // A ZERO d'experience, le renvoi ne vaut que 60 % du coup : il ne le couvre donc pas, et
-        // le coup passe — amorti, mais porte. Le joueur a demande les deux, dans cet ordre : « on
-        // est juste cense ne pouvoir prendre litteralement aucun degats » puis « je prends bien
-        // aucun degats a 100 %, mais il ne faut pas que ce soit le cas quand le pouvoir est a 0 % ».
+        // Depuis le 22/10 le coup est absorbe EN ENTIER des 0 % d'experience : « normalement on ne
+        // doit pas pouvoir prendre des degats et ce meme des le depart ». Le renvoi ne rend alors
+        // que 60 % du coup, mais cela ne decide plus de ce que le porteur encaisse. Le joueur avait
+        // d'abord demande le contraire ; c'est sa derniere reponse qui fait foi.
         double reserveBefore = data.getControlPoint();
         var bare = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
                 player.damageSources().mobAttack(zombie), 10f);
         cn.academy.ability.AbilityEvents.onLivingAttack(bare);
-        assertFalse(helper, bare.isCanceled(),
-                "a 0 % d'experience, un renvoi de 60 % n'annule pas un coup de dix points");
-
-        var hurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
-                player.damageSources().mobAttack(zombie), 10f);
-        cn.academy.ability.AbilityEvents.onLivingHurt(hurt);
-        assertTrue(helper, Math.abs(4.0d - hurt.getAmount()) < 0.01d,
-                "10 points dont 60 % repartent : " + hurt.getAmount());
+        assertTrue(helper, bare.isCanceled(),
+                "a 0 % d'experience deja, un coup de dix points est absorbe en entier");
         assertTrue(helper, zombie.getHealth() < 15f && zombie.getHealth() > 13f,
                 "et l'attaquant encaisse les 6 points renvoyes : " + zombie.getHealth());
         assertClose(helper, 0.004d, data.getSkillExp(reflection),
@@ -5544,6 +5538,48 @@ public final class AcademyGameTests {
                 "et rend ce qu'il avait emprunte : le vol");
         assertTrue(helper, data.getChargingSkills().isEmpty(), "plus rien ne tient");
         assertFalse(helper, data.isActivated(), "et l'aptitude s'eteint, comme chez l'original");
+
+        player.getAbilities().mayfly = false;
+        helper.succeed();
+    }
+
+    /**
+     * Eteindre l'aptitude (la touche V) termine ce qui est en cours.
+     *
+     * <p>Le joueur, 22/10 : « si j'active un pouvoir et que j'appuie sur V, je ne peux plus faire
+     * de competence et pourtant la competence en cours continue quand meme ». La touche fermait
+     * bien la porte des <b>nouvelles</b> competences ({@code canUseAbility}), mais rien ne
+     * terminait celle qui courait : un maintien a bascule (reflexion, deviation, ailes) survivait
+     * a l'extinction, HUD compris.
+     */
+    @GameTest(template = "empty")
+    public static void eteindreLAptitudeTermineLesMaintiens(GameTestHelper helper) {
+        var wing = cn.academy.ability.vecmanip.VecmanipCategory.STORM_WING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(2, 1, 2), 290);
+
+        var player = ownPlayer(helper, "winged-and-off");
+        player.moveTo(abs.getX() + 0.5, abs.getY() + 20, abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(wing.getCategory(), 3);
+        data.learnSkill(wing);
+
+        assertTrue(helper, data.perform(wing.getCpCost(), wing.getOverloadCost(data)),
+                "le prix d'ouverture se paie");
+        wing.onStart(player, data);
+        data.beginCharge(wing);
+        assertTrue(helper, player.getAbilities().mayfly, "les ailes ouvrent le vol");
+        assertTrue(helper, data.isCharging(wing), "et le maintien est ouvert");
+
+        // La touche V, telle que le paquet la traite : la fin d'abord, l'extinction ensuite.
+        cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
+        data.setActivated(false);
+
+        assertFalse(helper, data.isCharging(wing), "eteindre l'aptitude termine le maintien");
+        assertFalse(helper, player.getAbilities().mayfly,
+                "et rend ce qu'il avait emprunte : le vol");
+        assertTrue(helper, data.getChargingSkills().isEmpty(), "plus rien ne tient");
 
         player.getAbilities().mayfly = false;
         helper.succeed();

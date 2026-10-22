@@ -185,6 +185,23 @@ public class AbilityEvents {
     }
 
     /**
+     * Termine tout ce qui est ouvert quand l'aptitude s'eteint.
+     *
+     * <p>Le joueur, 22/10 : « si j'active un pouvoir et que j'appuie sur V, je ne peux plus faire
+     * de competence et pourtant la competence en cours continue quand meme ». C'etait exact : la
+     * touche V ferme bien la porte des <b>nouvelles</b> competences ({@code canUseAbility}), mais
+     * rien ne terminait celles qui couraient — un maintien a bascule (reflexion, deviation,
+     * ailes) survivait donc a l'extinction de l'aptitude, et son HUD restait allume.
+     *
+     * <p>Le geste est celui du brouillage : chaque maintien par la fin ordinaire (il rend ce qu'il
+     * a emprunte et previent le client), chaque charge en cours annulee. Un seul chemin pour les
+     * deux, pour que l'extinction et le brouillage ne puissent pas diverger.
+     */
+    public static void endAllOnDeactivate(ServerPlayer player, AbilityData data) {
+        endInterfered(player, data);
+    }
+
+    /**
      * Termine les maintiens dont la competence n'est plus dans le prereglage <b>en service</b>.
      *
      * <p>Appele par {@code PresetActionPacket} apres chaque changement de prereglage ou chaque

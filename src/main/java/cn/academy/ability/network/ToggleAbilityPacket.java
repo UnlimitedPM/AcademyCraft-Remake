@@ -42,6 +42,14 @@ public class ToggleAbilityPacket {
             if (player == null) return;
 
             player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+                // Eteindre l'aptitude FERME ce qui est ouvert : sans cela un maintien a bascule
+                // survivait a la touche V tout en rendant les nouvelles competences impossibles,
+                // ce que le joueur a signale le 22/10. La fin passe par le geste du brouillage
+                // (fin ordinaire des maintiens, annulation des charges, message au client), et
+                // elle a lieu AVANT l'extinction pour que les effets de fin lisent encore l'etat.
+                if (!msg.activated) {
+                    cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
+                }
                 data.setActivated(msg.activated);
                 AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                         new SyncAbilityDataPacket(data));

@@ -65,19 +65,18 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * <p>La seconde est la partie de l'original que le port avait crue fausse, et qui ne l'est pas :
  * le <b>test anticipe</b> sur {@code LivingAttackEvent}. Le code prevoyait {@code reflectDamage >=
  * 1}, ce que le port jugeait trop large — un renvoi atteint 1 des qu'un coup depasse un point et
- * demi. Le joueur a tranche les deux fois, et la verite tient en trois phrases :
+ * demi. Le joueur a tranche, et sa derniere parole (22/10) est la plus simple :
  *
  * <ul>
- *   <li><b>a pleine experience</b>, la reflexion ne laisse rien passer du tout, et c'est ce qu'il
- *       attend — « quand on a le vecteur reflexion d'actif, on est juste cense ne pouvoir prendre
- *       litteralement aucun degats ». D'ou le test anticipe, qui annule le coup avant meme qu'il ne
- *       soit porte, donc sans recul ni rouge ;</li>
- *   <li><b>a zero</b>, il ne faut pas de cela : « je prends bien aucun degats a 100 %, mais il ne
- *       faut pas que ce soit le cas quand le pouvoir est a 0 % ». Le renvoi ne vaut alors que 60 %
- *       des degats, donc il les amortit sans les annuler — et le seuil est celui du port, celui qui
- *       compare le renvoi au coup, pas le {@code >= 1} de l'original ;</li>
- *   <li>et ce qui n'a pas <b>d'auteur</b> — la lave, le feu, une chute — est absorbe ou amorti,
- *       mais ne se paie pas : il n'y a personne a qui rendre le coup. Sans cette regle, la reserve
+ *   <li><b>tant que la veille est tenue, RIEN ne passe</b>, et cela des la premiere utilisation :
+ *       « normalement on ne doit pas pouvoir prendre des degats et ce meme des le depart ». C'est
+ *       un retournement du 22/10 : il avait d'abord demande le contraire pour 0 % d'experience
+ *       (« je prends bien aucun degats a 100 %, mais il ne faut pas que ce soit le cas quand le
+ *       pouvoir est a 0 % »). Le renvoi rend toujours 60 % a zero et 120 % au maximum, mais cela
+ *       ne decide plus de ce que le porteur encaisse. D'ou le test anticipe, qui annule le coup
+ *       avant meme qu'il ne soit porte, donc sans recul ni rouge ;</li>
+ *   <li>et ce qui n'a pas <b>d'auteur</b> — la lave, le feu, une chute — est absorbe aussi, mais
+ *       ne se paie pas : il n'y a personne a qui rendre le coup. Sans cette regle, la reserve
  *       fondait dans la lave, « comme si la reflexion essayait de renvoyer les degats a la lave, ce
  *       qui n'a pas de sens ».</li>
  * </ul>
@@ -140,18 +139,6 @@ public class VecReflectionSkill extends Skill {
 
     /** Le coup de scene : au-dela, l'original laissait passer sans rien tenter. */
     public static final float BIG_HIT = 9999f;
-
-    /**
-     * Le renvoi qui couvre le coup : au-dela, le coup est absorbe en entier.
-     *
-     * <p>C'est la part renvoyee qui doit valoir le coup ENTIER, et non le seuil d'un point de
-     * l'original : a 100 % d'experience la reflexion rend 120 % de ce qu'elle prend, donc rien ne
-     * passe ; a 0 % elle n'en rend que 60 %, donc elle amortit sans annuler. Le joueur a demande
-     * les deux, dans cet ordre : « on est juste cense ne pouvoir prendre litteralement aucun
-     * degats » puis « je prends bien aucun degats a 100 %, mais il ne faut pas que ce soit le cas
-     * quand le pouvoir est a 0 % ».
-     */
-    public static final float FULL_ABSORB = 1f;
 
     /**
      * La force de l'explosion d'une grosse boule de feu relancee.
@@ -375,14 +362,15 @@ public class VecReflectionSkill extends Skill {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return amount;
 
-        float reflected = amount * reflectRatio(data);
-        // Le renvoi d'un renvoi ne se paie pas et ne se renvoie pas : c'est le garde-fou de
+        // Meme regle que sur `onAttacked`, en second filet : tant que la veille est tenue, rien ne
+        // passe. Le renvoi d'un renvoi ne se paie pas et ne se renvoie pas — c'est le garde-fou de
         // l'original, celui qui evite la boucle entre deux reflets ou avec les epines d'un
-        // gardien.
-        if (reflecting) return reduce(event, amount - reflected);
-
-        reflect(player, data, event.getSource(), amount);
-        return reduce(event, amount - reflected);
+        // gardien —, mais il ne blesse pas davantage son porteur.
+        if (!reflecting) {
+            reflect(player, data, event.getSource(), amount);
+        }
+        event.setCanceled(true);
+        return 0f;
     }
 
     /**
@@ -395,27 +383,23 @@ public class VecReflectionSkill extends Skill {
      * moitie, d'ou ce que le joueur voyait : « on prend des degats visuellement » — le rouge et le
      * recul d'un coup qui ne coutait rien.
      *
-     * <p>Et il faut que le renvoi <b>couvre</b> le coup ({@link #FULL_ABSORB}) pour l'annuler : a
-     * 0 % d'experience il n'en rend que 60 %, et le coup suit alors son chemin ordinaire, amorti
-     * par la reduction ci-dessus.
+     * <p>Le refus ne depend pas de l'experience : le 22/10 le joueur a demande de ne prendre
+     * <b>aucun</b> degat « meme des le depart », ce qui retire le seuil de couverture que le port
+     * comparait a la part renvoyee. Le renvoi continue de rendre 60 a 120 % selon l'experience ;
+     * c'est ce qu'il rend, pas ce qu'il laisse passer.
      */
     @Override
     public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return false;
 
-        // Le renvoi d'un renvoi ne se renvoie pas : il est refuse s'il ne laissait rien passer,
-        // et rendu au jeu sinon. Meme garde-fou que dans onDamaged.
-        if (reflecting) return covers(data);
-        if (!covers(data)) return false;
-
-        reflect(player, data, event.getSource(), amount);
+        // Le renvoi d'un renvoi ne se renvoie pas, mais il ne passe pas non plus : c'est le
+        // garde-fou de l'original, celui qui evite la boucle entre deux reflets ou avec les epines
+        // d'un gardien.
+        if (!reflecting) {
+            reflect(player, data, event.getSource(), amount);
+        }
         return true;
-    }
-
-    /** Vrai quand la part renvoyee vaut le coup entier : le coup ne passe alors pas du tout. */
-    private boolean covers(AbilityData data) {
-        return reflectRatio(data) >= FULL_ABSORB;
     }
 
     /**
@@ -440,6 +424,14 @@ public class VecReflectionSkill extends Skill {
             data.performForced(resistCharge(data), 0f);
             data.addSkillExp(this, amount * EXP_PER_DAMAGE);
 
+            // Le son de la veille, A CHAQUE COUP rendu (22/10) : le joueur ne l'entendait que sur
+            // les entites renvoyees par le tick de la veille, jamais sur les coups encaisses. Il
+            // se pose sur le porteur, la ou la veille est ouverte.
+            if (player.level() instanceof ServerLevel level) {
+                cn.academy.sound.AcademySounds.playAt(level, player.position(),
+                        cn.academy.ModSounds.VECMANIP_VEC_REFLECTION, 0.5f, 1.0f);
+            }
+
             living.hurt(skillDamage(player),
                     scaled(amount * reflectRatio(data)));
             // Et l'onde du renvoi, devant le joueur et du cote de l'attaquant : l'original posait
@@ -453,21 +445,5 @@ public class VecReflectionSkill extends Skill {
         } finally {
             reflecting = false;
         }
-    }
-
-    /**
-     * Ce qu'il reste du coup, et son annulation quand la reflexion a tout couvert.
-     *
-     * <p>L'original rendait un montant negatif et posait l'annulation juste apres ; la 1.20.1
-     * ecrirait une vie negative, donc le port rend zero. Reste une difference assumee : chez
-     * l'original le test anticipe annulait le coup <b>avant</b> que la poussee de vanilla ne
-     * soit posee, ici l'annulation arrive apres, et la poussee subsiste.
-     */
-    private static float reduce(LivingHurtEvent event, float remaining) {
-        if (remaining <= 0f) {
-            event.setCanceled(true);
-            return 0f;
-        }
-        return remaining;
     }
 }
