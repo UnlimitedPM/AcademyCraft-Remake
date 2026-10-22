@@ -66,6 +66,20 @@ public class FlashingSkill extends Skill {
     /** Distance maximale, a l'experience maximale. */
     public static final double MAX_DISTANCE = 18.0;
 
+    /**
+     * Duree de la retombee lente qui suit un saut : quarante ticks, comme le
+     * {@code GravityCancellor} de l'original.
+     */
+    public static final int FALL_TICKS = 40;
+
+    /**
+     * Ce que le {@code GravityCancellor} rendait a la vitesse verticale, chaque tick.
+     *
+     * <p>La gravite d'un joueur vaut 0,08 : il reste donc un centieme par tick, et l'on descend
+     * doucement au lieu de tomber. C'est le chiffre de l'original, tel quel.
+     */
+    public static final double GRAVITY_LIFT = 0.072;
+
     public FlashingSkill() {
         super("flashing", 5);
     }
@@ -171,6 +185,11 @@ public class FlashingSkill extends Skill {
         player.fallDistance = 0.0f;
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_FLASHING, 1.0f);
 
+        // Et la retombee est LENTE : c'est le `GravityCancellor(player, 40)` de l'original,
+        // pose a chaque saut et reparti de zero quand on enchaine. Voir
+        // AbilityData.suspendGravity.
+        data.suspendGravity(FALL_TICKS);
+
         // 0,002 par saut, comme l'original.
         data.addSkillExp(this, 0.002f);
         // Et la chute qui suit n'est pas comptee, jusqu'au premier bloc touche : voir
@@ -223,6 +242,20 @@ public class FlashingSkill extends Skill {
      * sur ce qu'il a trouve. Faute de quoi on arrive au bout du saut, dans le vide.
      */
     public Vec3 destination(Player player, AbilityData data, int direction) {
+        return destination(player, data, direction, true);
+    }
+
+    /**
+     * La meme destination, <b>sans</b> le saut d'un bloc : ce que montre le fantome.
+     *
+     * <p>Comme pour la teleportation au marqueur (22/10), le fantome marque l'endroit ou l'on se
+     * tient, pas celui d'ou l'on tombe.
+     */
+    public Vec3 markerPosition(Player player, AbilityData data, int direction) {
+        return destination(player, data, direction, false);
+    }
+
+    private Vec3 destination(Player player, AbilityData data, int direction, boolean lift) {
         Vec3 from = player.position();
         Vec3 eyes = player.getEyePosition(1.0f);
         Vec3 end = eyes.add(dashDirection(player.getViewVector(1.0f), player.getXRot(), direction)
@@ -242,11 +275,19 @@ public class FlashingSkill extends Skill {
             return target.position().add(0, target.getEyeHeight(), 0);
         }
         if (blockHit.getType() == HitResult.Type.BLOCK) {
-            // Aux pieds, et non a hauteur de tete : le scintillement se pose la ou l'on se tient,
-            // comme la teleportation au marqueur. Voir LandingSite.onFeet.
-            return LandingSite.onFeet(blockHit.getDirection(), blockHit.getLocation(),
-                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos),
-                    player.getEyeHeight());
+            // La hauteur des faces verticales se lit sur le POINT D'IMPACT, et non sur le bloc :
+            // c'est la convention du scintillement chez l'original (`hitVec.y + 1.7`). Lue sur le
+            // bloc, elle posait le joueur dans le sol quand il visait le cote du bloc sur lequel il
+            // se tenait — le fantome disparaissait (teste en profondeur) et le saut arrivait sous
+            // terre. Voir LandingSite.onImpactFeet.
+            java.util.function.Predicate<net.minecraft.core.BlockPos> blocked = pos ->
+                    !player.level().getBlockState(pos)
+                            .getCollisionShape(player.level(), pos).isEmpty();
+            Vec3 feet = LandingSite.onImpactFeet(blockHit.getDirection(), blockHit.getLocation(),
+                    blocked, player.getEyeHeight());
+            // Et l'on arrive un bloc au-dessus de la surface quand il reste la place : le saut se
+            // paie d'une petite retombee, rendue lente par GravityCancellor. Voir LandingSite.lift.
+            return lift ? LandingSite.lift(feet, blocked) : feet;
         }
         // Dans le vide, comme la teleportation au marqueur : le bout du regard, une hauteur d'yeux
         // sous lui, pour que les yeux du joueur arrivent la ou il regardait.

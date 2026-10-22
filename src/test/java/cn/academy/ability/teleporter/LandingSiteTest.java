@@ -132,4 +132,44 @@ class LandingSiteTest {
         // (10, 66, 9), comme dans l'original qui ajoutait un bloc a y avant d'arrondir.
         assertEquals(new BlockPos(10, 66, 9), tested.get());
     }
+
+    // ------------------------------------------------------------------
+    // Le scintillement : la hauteur se lit sur le point d'impact
+    // ------------------------------------------------------------------
+
+    @Test
+    void leScintillementLitLaHauteurSurLePointDImpact() {
+        Vec3 impact = point(10.5, 64.5, 10.0);
+
+        // Fin du getDest de l'original : y = mop.hitVec.y + 1.7, et non le bas du bloc touche.
+        Vec3 flashing = LandingSite.onImpact(Direction.NORTH, impact, pos -> false);
+        assertEquals(9.4, flashing.z, 0.0001);
+        assertEquals(66.2, flashing.y, 0.0001);
+
+        // La teleportation au marqueur lit le bloc, elle : deux conventions, deux competences.
+        Vec3 marker = LandingSite.onBlockFace(Direction.NORTH, impact, BLOCK, pos -> false);
+        assertEquals(65.7, marker.y, 0.0001);
+
+        // Le dessus et le dessous, en revanche, se lisent pareil des deux cotes : le point
+        // d'impact y est la surface elle-meme.
+        assertEquals(LandingSite.onBlockFace(Direction.UP, impact, BLOCK, pos -> false),
+                LandingSite.onImpact(Direction.UP, impact, pos -> false));
+        assertEquals(LandingSite.onBlockFace(Direction.DOWN, impact, BLOCK, pos -> false),
+                LandingSite.onImpact(Direction.DOWN, impact, pos -> false));
+    }
+
+    @Test
+    void viserLeCoteDuBlocOuLOnSeTientNeDescendPasSousLaSurface() {
+        // Le bloc sur lequel on se tient : y = 63, surface a 64. On vise son cote nord, a
+        // 64,4 : les pieds tombent a 64,48, donc au-dessus de la surface.
+        Vec3 impact = point(10.5, 64.4, 10.0);
+        Vec3 feet = LandingSite.onImpactFeet(Direction.NORTH, impact, pos -> false, 1.62);
+        assertEquals(64.48, feet.y, 0.0001);
+
+        // Lus sur le bloc, les memes pieds tombaient a 63,08 : dans le sol, et le fantome
+        // n'y etait plus dessine. C'est le bug signale le 22/10.
+        Vec3 wrong = LandingSite.onFeet(Direction.NORTH, impact, new BlockPos(10, 63, 10),
+                pos -> false, 1.62);
+        assertEquals(63.08, wrong.y, 0.0001);
+    }
 }

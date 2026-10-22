@@ -39,6 +39,12 @@ public final class LandingSite {
     /** Face verticale encombree : on redescend d'un bloc et quart. */
     private static final double DUCK_UNDER = 1.25;
 
+    /** La hauteur du saut d'arrivee, quand la place le permet : un bloc plein. */
+    public static final double LIFT = 1.0;
+
+    /** Les blocs libres qu'il faut pour s'autoriser ce saut (le saut + la tete). */
+    public static final int LIFT_CLEARANCE = 3;
+
     private LandingSite() {
     }
 
@@ -101,5 +107,75 @@ public final class LandingSite {
     public static Vec3 onFeet(Direction face, Vec3 point, BlockPos pos,
                               Predicate<BlockPos> occupied, double eyeHeight) {
         return onBlockFace(face, point, pos, occupied).subtract(0, eyeHeight, 0);
+    }
+
+    /**
+     * Le meme point, mais dont la hauteur des faces verticales se lit sur le <b>point
+     * d'impact</b> et non sur le bloc touche.
+     *
+     * <p>C'est le scintillement, et c'est la fin de son {@code getDest} d'origine :
+     * {@code y = mop.hitVec.y + 1.7}. La teleportation au marqueur, elle, lit
+     * {@code mop.getBlockPos.getY + 1.7} — deux conventions differentes pour deux competences
+     * differentes, et les confondre met le joueur <b>dans le sol</b> : viser le cote du bloc sur
+     * lequel on se tient donnait un point un bloc sous la surface, ou le fantome disparaissait
+     * (il est teste en profondeur) et le saut arrivait sous terre. C'est ce que le joueur a vu le
+     * 22/10 : « parfois le phantome ne s'affiche pas, et si je me teleporte, je me teleporte dans
+     * le sol ».
+     */
+    public static Vec3 onImpact(Direction face, Vec3 point, Predicate<BlockPos> occupied) {
+        double x = point.x;
+        double y = point.y;
+        double z = point.z;
+
+        switch (face) {
+            case DOWN -> y -= UNDER_SLAB;
+            case UP -> y += ON_TOP;
+            case NORTH -> {
+                z -= IN_FRONT;
+                y += AT_HEAD;
+            }
+            case SOUTH -> {
+                z += IN_FRONT;
+                y += AT_HEAD;
+            }
+            case WEST -> {
+                x -= IN_FRONT;
+                y += AT_HEAD;
+            }
+            case EAST -> {
+                x += IN_FRONT;
+                y += AT_HEAD;
+            }
+            default -> {
+            }
+        }
+
+        if (face.getAxis().isHorizontal() && occupied.test(BlockPos.containing(x, y + 1.0, z))) {
+            y -= DUCK_UNDER;
+        }
+
+        return new Vec3(x, y, z);
+    }
+
+    /** Le meme point d'impact, mais aux pieds : voir {@link #onFeet}. */
+    public static Vec3 onImpactFeet(Direction face, Vec3 point, Predicate<BlockPos> occupied,
+                                    double eyeHeight) {
+        return onImpact(face, point, occupied).subtract(0, eyeHeight, 0);
+    }
+
+    /**
+     * Le saut d'un bloc, quand trois blocs sont libres a l'arrivee.
+     *
+     * <p>Demande du joueur : le scintillement et la teleportation au marqueur arrivent un bloc
+     * au-dessus de la surface, mais seulement s'il reste la place pour la tete. Le predicat est
+     * consulte sur la colonne du point, a partir de son bloc : si l'un des trois est occupe, aucun
+     * saut — mieux vaut arriver a la surface que la tete dans un plafond.
+     */
+    public static Vec3 lift(Vec3 feet, Predicate<BlockPos> blocked) {
+        BlockPos base = BlockPos.containing(feet);
+        for (int i = 0; i < LIFT_CLEARANCE; i++) {
+            if (blocked.test(base.above(i))) return feet;
+        }
+        return feet.add(0, LIFT, 0);
     }
 }

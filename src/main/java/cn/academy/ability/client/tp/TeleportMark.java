@@ -449,8 +449,10 @@ public final class TeleportMark {
                     ClientAbilityData.get(), chargeTicks), COLOR_NORMAL, Shape.GHOST);
         }
         if (skill == TeleporterCategory.FLASHING && aimed != 0) {
-            return new Seat(TeleporterCategory.FLASHING.destination(player, ClientAbilityData.get(),
-                    aimed), COLOR_NORMAL, Shape.GHOST);
+            // Sans le saut d'un bloc, comme la teleportation au marqueur : le fantome marque ou
+            // l'on se tient, pas d'ou l'on tombe. Voir FlashingSkill.markerPosition.
+            return new Seat(TeleporterCategory.FLASHING.markerPosition(player,
+                    ClientAbilityData.get(), aimed), COLOR_NORMAL, Shape.GHOST);
         }
         // Le depose au loin ne fait pas voyager son joueur : il pose le bloc qu'il tient sur la case
         // visee, et sa marque est donc une BOITE — celle de l'original, un bloc et deux dixiemes de

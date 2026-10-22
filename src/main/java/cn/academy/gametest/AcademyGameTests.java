@@ -4058,8 +4058,16 @@ public final class AcademyGameTests {
         assertTrue(helper, Math.abs(onWall.z - (wall.getZ() - 0.6)) < 0.01,
                 "soixante centimetres devant la face nord : z=" + onWall.z
                         + " pour un mur a " + wall.getZ());
-        assertTrue(helper, Math.abs(onWall.y - (wall.getY() + 0.08)) < 0.01,
-                "et les pieds au ras du sol du bloc vise : y=" + onWall.y);
+        // La hauteur, elle, se lit sur le POINT D'IMPACT — `hitVec.y + 1.7` dans l'original — et
+        // non sur le bloc touche : lue sur le bloc, la destination posait les pieds DANS LE SOL
+        // quand on visait le cote du bloc sur lequel on se tient (le fantome disparaissait, teste
+        // en profondeur, et le saut arrivait sous terre). Le rayon, lui, part des pieds et monte
+        // doucement vers les yeux : il touche le mur a peine au-dessus du sol, et le saut d'un
+        // bloc pose l'arrivee un peu plus haut que le sol — jamais dedans.
+        assertTrue(helper, onWall.y > abs.getY() + 1.0,
+                "un bloc de saut au-dessus du sol : y=" + onWall.y + " pour un sol a " + abs.getY());
+        assertTrue(helper, onWall.y < abs.getY() + 2.0,
+                "et pas davantage, sans quoi l'on sauterait par-dessus le mur : y=" + onWall.y);
 
         // --- Le saut, lui, part bien de la ou le joueur regarde : en se retournant, la meme
         // direction vise l'autre bout.

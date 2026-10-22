@@ -38,12 +38,6 @@ import java.util.function.Predicate;
  */
 public final class MarkTeleportLanding {
 
-    /** La hauteur du saut ajoute quand la place le permet : un bloc plein. */
-    public static final double LIFT = 1.0;
-
-    /** Les blocs libres qu'il faut pour s'autoriser ce saut (le saut + la tete). */
-    public static final int LIFT_CLEARANCE = 3;
-
     private MarkTeleportLanding() {
     }
 
@@ -58,7 +52,7 @@ public final class MarkTeleportLanding {
      */
     public static Vec3 feet(Direction face, Vec3 point, BlockPos pos,
                             Predicate<BlockPos> blocked, double eyeHeight) {
-        return lift(onSurface(face, point, pos, blocked, eyeHeight), blocked);
+        return LandingSite.lift(onSurface(face, point, pos, blocked, eyeHeight), blocked);
     }
 
     /**
@@ -79,19 +73,5 @@ public final class MarkTeleportLanding {
         }
         // Sinon la face visee, avec les decalages de toutes les teleportations visees.
         return LandingSite.onFeet(face, point, pos, blocked, eyeHeight);
-    }
-
-    /**
-     * Le saut d'un bloc, quand trois blocs sont libres a l'arrivee.
-     *
-     * <p>Le predicat est consulte sur la colonne du point, a partir de son bloc : si l'un des trois
-     * est occupe, aucun saut — mieux vaut arriver a la surface que la tete dans un plafond.
-     */
-    public static Vec3 lift(Vec3 feet, Predicate<BlockPos> blocked) {
-        BlockPos base = BlockPos.containing(feet);
-        for (int i = 0; i < LIFT_CLEARANCE; i++) {
-            if (blocked.test(base.above(i))) return feet;
-        }
-        return feet.add(0, LIFT, 0);
     }
 }

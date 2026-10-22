@@ -190,6 +190,30 @@ class AbilityDataTest {
     }
 
     // ------------------------------------------------------------------
+    // Retombee lente du scintillement (GravityCancellor)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("la retombee du scintillement ne se raccourcit pas et ne descend sous zero")
+    void laRetombeeLenteSeCompte() {
+        AbilityData data = new AbilityData();
+
+        assertEquals(0, data.getGravitySuspension(), "au repos, aucune retombee");
+
+        data.suspendGravity(40);
+        data.suspendGravity(10);
+        assertEquals(40, data.getGravitySuspension(), "un saut plus court ne raccourcit pas la retombee");
+
+        for (int i = 0; i < 40; i++) {
+            data.tickGravitySuspension();
+        }
+        assertEquals(0, data.getGravitySuspension(), "quarante ticks, quarante ticks de descente");
+
+        data.tickGravitySuspension();
+        assertEquals(0, data.getGravitySuspension(), "elle ne passe pas sous zero");
+    }
+
+    // ------------------------------------------------------------------
     // Persistance
     // ------------------------------------------------------------------
 

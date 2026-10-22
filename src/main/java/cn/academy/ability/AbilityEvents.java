@@ -86,6 +86,20 @@ public class AbilityEvents {
             // bloc, et c'est ce signal qui ouvre la fenetre d'atterrissage — voir
             // AbilityData.tickFallProtection et LANDING_GRACE_TICKS.
             data.tickFallProtection(player.fallDistance > 0f);
+            // Et la retombee du scintillement est LENTE : portage du GravityCancellor de
+            // l'original, qui rendait 0,072 de vitesse verticale par tick pendant quarante ticks.
+            // La gravite d'un joueur valant 0,08, il reste un centieme par tick — on descend au
+            // lieu de tomber. La vitesse se pose en fin de tick, comme les autres du port, et
+            // `hurtMarked` est ce qui la fait voir au client (sans lui il la corrigerait).
+            if (data.getGravitySuspension() > 0
+                    && !player.getAbilities().flying && !player.onGround()) {
+                var motion = player.getDeltaMovement();
+                player.setDeltaMovement(motion.x,
+                        motion.y + cn.academy.ability.teleporter.FlashingSkill.GRAVITY_LIFT,
+                        motion.z);
+                player.hurtMarked = true;
+            }
+            data.tickGravitySuspension();
             // Le surcout au maximum retire TOUT, et sur-le-champ.
             //
             // L'original postait un `OverloadEvent` au franchissement du plafond

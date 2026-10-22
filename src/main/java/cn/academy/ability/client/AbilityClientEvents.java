@@ -162,6 +162,8 @@ public class AbilityClientEvents {
             TeleportMark.end();
             TeleportAim.end();
             cn.academy.ability.client.tp.TpParticles.clear();
+            // Et la retombee du scintillement, qui n'a plus de joueur a entourer.
+            cn.academy.ability.client.tp.FlashingFall.clear();
             // Le sang de la chair arrachee appartient au monde lui aussi : il ne vit que dix
             // ticks, mais un monde quitte entre-temps en garderait les taches a l'ecran pour
             // rien. Voir BloodSplashes.
@@ -237,6 +239,10 @@ public class AbilityClientEvents {
         // Les etincelles de la teleportation vieillissent au meme rythme, et leur marque se
         // repose au tick suivant — voir TeleportMark et TpParticles.
         cn.academy.ability.client.tp.TpParticles.tick();
+        // Et les etincelles de la retombee du scintillement, qui tournent autour du joueur
+        // pendant qu'il descend : voir FlashingFall.
+        cn.academy.ability.client.tp.FlashingFall.tick(
+                net.minecraft.client.Minecraft.getInstance().player);
         // Les deux tornades de vecmanip avancent au meme rythme : ce qui s'efface s'efface, et ce
         // qui est mort s'en va — c'est aussi ce qui rattrape un maintien interrompu. Voir
         // VecmanipTornados.
@@ -864,6 +870,11 @@ public class AbilityClientEvents {
                 if (skill instanceof cn.academy.ability.teleporter.FlashingSkill) {
                     AbilityNetwork.CHANNEL.sendToServer(new FlashingPacket(
                             category.getCategoryId(), skill.getId(), i + 1));
+                    // Et la retombee du scintillement se voit chez son porteur : une gerbe au
+                    // depart, puis quelques etincelles pendant la descente lente. C'est un effet
+                    // LOCAL, comme le GravityCancellor de l'original. Voir FlashingFall.
+                    cn.academy.ability.client.tp.FlashingFall.begin(
+                            net.minecraft.client.Minecraft.getInstance().player);
                 }
                 aimed = 0;
             }
