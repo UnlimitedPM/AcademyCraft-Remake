@@ -67,10 +67,9 @@ public class LocationTeleportScreen extends CGuiScreen {
     private static final double ICON_IDLE = 0.7;
     private static final double ICON_HOVER = 1.0;
 
-    /** Le texte du fichier, son gris quand la marque ne mene nulle part, et le rouge du refus. */
+    /** Le texte du fichier, et son gris quand la marque ne mene nulle part. */
     private static final int TEXT_ON = 0xC1CFD5;
     private static final int TEXT_OFF = 0xA2A2A2;
-    private static final int TEXT_BAD = 0xE08080;
 
     // ------------------------------------------------------------------
     // L'explication : quatre lignes, et la boite qui les porte
@@ -120,6 +119,17 @@ public class LocationTeleportScreen extends CGuiScreen {
     private CWidget list;
     private CWidget info;
     private CWidget field;
+
+    /**
+     * Les deux modeles du fichier : la ligne d'une marque, et celle qui ajoute.
+     *
+     * <p>Il faut les GARDER : ils sont enfants de la liste, et refaire la liste commence par la
+     * vider. Les redemander par leur nom apres coup rendait {@code null} et faisait tomber le jeu a
+     * la premiere marque creee — le joueur l'a vu le 22/10 : « quand j'ai cree un nouveau marqueur,
+     * mon jeu a crash ».
+     */
+    private CWidget elementTemplate;
+    private CWidget addTemplate;
 
     private double scroll;
 
@@ -186,10 +196,10 @@ public class LocationTeleportScreen extends CGuiScreen {
     @Override
     protected void init() {
         // Les deux modeles du fichier ne se dessinent pas : ils servent a faire des copies.
-        CWidget element = find("elem_template");
-        CWidget add = find("add_template");
-        element.transform.doesDraw = false;
-        add.transform.doesDraw = false;
+        elementTemplate = find("elem_template");
+        addTemplate = find("add_template");
+        elementTemplate.transform.doesDraw = false;
+        addTemplate.transform.doesDraw = false;
 
         list = find("list");
         info = find("info");
@@ -216,7 +226,7 @@ public class LocationTeleportScreen extends CGuiScreen {
             info.add(line);
         }
 
-        rebuild(element, add);
+        rebuild();
     }
 
     /**
@@ -227,8 +237,13 @@ public class LocationTeleportScreen extends CGuiScreen {
      * liste change, d'ou qu'elle vienne. Sans cela, le joueur voyait ce qu'il a signale le 22/10 :
      * « quand je cree un nouveau point, ca ne met pas a jour la liste automatiquement » — et une
      * marque devenue inabordable gardait son texte clair, puisqu'elle avait ete peinte avant.
+     *
+     * <p>ET LES MODELES NE SE REDEMANDENT PAS PAR LEUR NOM : ils sont enfants de la liste, et vider
+     * la liste les emporte. Les redemander rendait {@code null} et faisait tomber le jeu a la
+     * premiere marque creee — le joueur l'a vu le 22/10 : « quand j'ai cree un nouveau marqueur,
+     * mon jeu a crash ».
      */
-    private void rebuild(CWidget element, CWidget add) {
+    private void rebuild() {
         forgetClicks();
         list.children().clear();
         field = null;
@@ -236,9 +251,9 @@ public class LocationTeleportScreen extends CGuiScreen {
         focus(null);
 
         for (int i = 0; i < marks().size(); i++) {
-            list.add(markRow(element, i));
+            list.add(markRow(elementTemplate, i));
         }
-        list.add(addRowTemplate(add, element));
+        list.add(addRowTemplate(addTemplate, elementTemplate));
 
         shown = fingerprint();
     }
@@ -269,7 +284,11 @@ public class LocationTeleportScreen extends CGuiScreen {
         CWidget jump = out.child("btn_teleport");
         if (!no.isEmpty()) {
             jump.transform.doesDraw = false;
-            text.text.color(TEXT_OFF, TEXT_OFF, TEXT_OFF);
+            // LE GRIS SE DONNE PAR CANAUX, jamais par la constante entiere : `color` les ecrit
+            // tels quels dans le rouge, le vert et le bleu, et 0xA2A2A2 dans un canal est ecrete a
+            // 255 — donc BLANC. C'est ce que le joueur a vu le 22/10 : « les points de TP ou je ne
+            // peux pas aller sont trop blancs, alors qu'ils doivent etre grises ».
+            text.text.color((TEXT_OFF >> 16) & 0xFF, (TEXT_OFF >> 8) & 0xFF, TEXT_OFF & 0xFF);
         } else {
             onClick(jump, () -> perform(index));
         }
@@ -502,7 +521,7 @@ public class LocationTeleportScreen extends CGuiScreen {
         // Les marques ont pu changer depuis la derniere image : ajout, oubli, ou simple
         // synchronisation. La liste se refait alors, avec ses gris a jour.
         if (!fingerprint().equals(shown)) {
-            rebuild(find("elem_template"), find("add_template"));
+            rebuild();
             layout();
         }
 
@@ -548,6 +567,14 @@ public class LocationTeleportScreen extends CGuiScreen {
                 if (child.texture != null) {
                     double icon = fade * (child.isPointWithin(mouseX, mouseY) ? ICON_HOVER
                             : ICON_IDLE);
+                    // LA TEINTE DES ICONES EST CELLE DU TEXTE, et non le blanc du fichier :
+                    // l'original remplacait la couleur de son `DrawTexture` par son TextNormal
+                    // (0xC1CFD5) des qu'il posait un bouton — voir son `wrapButton`. Le fichier,
+                    // lui, ne dit que « blanc », et le port le suivait : « les icones pour le TP ou
+                    // pour la suppression sont trop blanches » (joueur, 22/10).
+                    child.texture.red = (TEXT_ON >> 16) & 0xFF;
+                    child.texture.green = (TEXT_ON >> 8) & 0xFF;
+                    child.texture.blue = TEXT_ON & 0xFF;
                     child.texture.alpha = (int) Math.round(icon * 255);
                 }
                 // Le champ porte son opacite a lui : voir plus haut.
@@ -577,10 +604,11 @@ public class LocationTeleportScreen extends CGuiScreen {
             if (i >= lines.size()) continue;
 
             line.text.content = lines.get(i);
-            boolean last = i == lines.size() - 1;
-            int colour = last && lines.size() == HINT_LINES ? TEXT_BAD
-                    : (i == 0 ? TEXT_ON : TEXT_OFF);
-            line.text.color((colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF);
+            // UNE SEULE COULEUR pour les quatre renseignements, comme le `FontOption` unique du
+            // MessageTab de l'original. Le port les teintait differemment — la dimension d'un cote,
+            // le prix de l'autre, le refus en rouge — et le joueur l'a vu : « la couleur du texte
+            // qui indique les coordonnees etc n'est pas de la meme couleur ».
+            line.text.color((TEXT_ON >> 16) & 0xFF, (TEXT_ON >> 8) & 0xFF, TEXT_ON & 0xFF);
         }
     }
 
