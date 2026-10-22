@@ -167,6 +167,22 @@ public final class ObjModels {
     }
 
     /**
+     * Dessine un morceau de modele en <b>une seule passe</b>, sans recul de profondeur.
+     *
+     * <p>C'est ce qu'il faut a un objet qui <b>tourne</b>. Le recul de profondeur de
+     * {@link #behind} departage deux parois qui se recouvrent, mais il depend de l'angle sous
+     * lequel on regarde : sur une piece en mouvement, la face qui gagne change d'une image a
+     * l'autre, et ses bords se mettent a scintiller. Le joueur l'a vu sur les pales de l'eolienne
+     * (22/10) : « sur les bouts on voit une espece d'effet de vibrement », surtout en marchant.
+     *
+     * <p>Les pales sont un volume ferme : aucune de leurs faces n'a besoin d'etre reculee.
+     */
+    public static void drawSolid(ObjMesh mesh, String group, ResourceLocation texture, PoseStack pose,
+                                 MultiBufferSource buffers, int light, int overlay) {
+        draw(mesh.group(group), pose, buffers.getBuffer(type(texture)), light, overlay);
+    }
+
+    /**
      * Dessine un morceau de modele : les faces recouvertes d'abord, en recul, puis les autres.
      *
      * <p>L'ordre compte : le recul ne departage que ce qui est deja dessine.

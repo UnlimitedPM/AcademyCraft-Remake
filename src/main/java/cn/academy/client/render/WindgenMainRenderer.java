@@ -70,7 +70,12 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
             pose.translate(0.0d, HUB_Y, HUB_Z);
             // L'axe de l'helice : elle tourne dans le plan du nez, comme l'original.
             pose.mulPose(Axis.ZP.rotationDegrees(-spin));
-            ObjModels.draw(ObjModels.get(FAN_MODEL), FAN_GROUP, FAN_TEXTURE, pose, buffers, light, overlay);
+            // EN UNE SEULE PASSE. Les pales sont un volume ferme, et le recul de profondeur des
+            // faces arriere depend de l'angle de la camera : sur une piece qui tourne, la face qui
+            // l'emporte changeait d'une image a l'autre, et les bouts scintillaient — le joueur,
+            // le 22/10 : « sur les bouts on voit une espece d'effet de vibrement ».
+            ObjModels.drawSolid(ObjModels.get(FAN_MODEL), FAN_GROUP, FAN_TEXTURE, pose, buffers,
+                    light, overlay);
             pose.popPose();
         }
         pose.popPose();
