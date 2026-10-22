@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.2.1 - le teleporteur au complet, l'eolienne juste / the teleporter complete, the wind generator right
+
+### English
+
+Everything of 0.2.0, plus the four teleportations that were still off, the list of marks redone, and
+an eolienne whose blades no longer tremble.
+
+- **Flashing lands where you look.** Its height is read on the hit point, not on the block, so aiming
+  at the side of the block you stand on no longer puts you underground with an invisible ghost. The
+  ghost is measured from the **player's feet** (it used to be from the camera, which put it behind
+  you in third person), the heading is read on the **yaw** (looking straight down used to lose it and
+  send you backwards), the feet never land in a block, and the arrival takes the one-block hop
+  whenever the head is clear. The slow fall after a jump is the original's `GravityCancellor` (forty
+  ticks, +0.072 a tick) with sparks around the player, and the hold now lasts **three to fifteen
+  seconds** instead of three to seven and a half, growing with experience.
+- **Mark teleport** lands on top of a free-standing block, and its ghost shows where you stand
+  rather than where you fall from.
+- **The far deposit hits creatures too.** The port traced blocks only: aiming at a shulker with no
+  wall behind it missed. The original traced both in one ray.
+- **The list of marks is the original's again**: translucent borders (the blend was cut by the
+  previous fill), a list that rebuilds itself when the marks change and scrolls without spilling
+  under the panel, the four answers in one colour on four lines in a box that grows to fit them, the
+  `Add...` field with its cursor, unavailable marks greyed with the right grey and their icons in the
+  original's blue-grey, and no more crash when a mark is created. **Twelve marks** at most.
+- **Vecmanip**: the reflection absorbs every hit, even at 0 % experience, and veils play a single
+  sound per instant; the deviation sounds when you are hit. **V now ends the running skills.**
+- **The wind generator**: the blade area is the block in front of the nacelle with the hub excluded,
+  the angle is a **function of time read on a clock** (no more trembling while walking), the blades
+  draw in a single pass, and the area is checked every two ticks instead of twenty.
+- **Models no longer vanish** at the edge of the camera's field.
+- **Tests**: 175 in-game tests, 932 unit tests.
+
+### Francais
+
+Tout le 0.2.0, plus les quatre teleportations qui n'etaient pas encore justes, la liste des marques
+refaite, et une eolienne dont les pales ne tremblent plus.
+
+- **Le scintillement arrive ou l'on regarde.** Sa hauteur se lit sur le point d'impact et non sur le
+  bloc : viser le cote du bloc sur lequel on se tient ne pose plus dans le sol avec un fantome
+  invisible. Le fantome se mesure depuis les **pieds du joueur** (il se mesurait depuis la camera, ce
+  qui le mettait derriere soi en troisieme personne), le cap se lit sur le **lacet** (regarder pile
+  en bas le perdait et envoyait a l'oppose), les pieds ne tombent jamais dans un bloc, et l'arrivee
+  prend le saut d'un bloc quand la tete est degagee. La retombee lente qui suit un saut est le
+  `GravityCancellor` de l'original (quarante ticks, +0,072 par tick) avec des etincelles autour du
+  joueur, et le maintien dure desormais **de trois a quinze secondes** au lieu de trois a sept et
+  demie, en grandissant avec l'experience.
+- **La teleportation au marqueur** se pose sur le dessus d'un bloc degage, et son fantome montre ou
+  l'on se tient plutot que d'ou l'on tombe.
+- **Le depose au loin frappe aussi les creatures.** Le port ne tracait que les blocs : viser un
+  shulker sans mur derriere le manquait. L'original tracait les deux d'un seul rayon.
+- **La liste des marques est celle de l'original** : bordures translucides (le melange etait coupe
+  par l'aplat precedent), liste qui se refait quand les marques changent et defile sans deborder sous
+  le panneau, les quatre renseignements d'une seule couleur sur quatre lignes dans une boite qui
+  grandit pour les tenir, le champ `Add...` avec son curseur, les marques inabordables grisees du bon
+  gris et leurs icones dans le bleu-gris de l'original, et plus de plantage a la creation d'une
+  marque. **Douze marques** au plus.
+- **Vecmanip** : la reflexion absorbe tous les coups, meme a 0 % d'experience, et les voiles ne font
+  qu'un son par instant ; la deviation sonne quand on est frappe. **V termine les competences en
+  cours.**
+- **L'eolienne** : la zone des pales est le bloc devant la nacelle, moyeu exclu ; l'angle est une
+  **fonction du temps lue sur une horloge** (plus de tremblement en marchant) ; les pales se dessinent
+  en une seule passe ; et la zone se relit toutes les deux ticks au lieu de vingt.
+- **Les modeles ne disparaissent plus** au bord du champ de la camera.
+- **Tests** : 175 tests en jeu, 932 tests unitaires.
+
 ## 0.2.0 - le HUD au complet et tout le jeu traduit / the finished HUD, the whole game translated
 
 ### English
