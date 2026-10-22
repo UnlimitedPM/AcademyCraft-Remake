@@ -4,6 +4,7 @@ import cn.academy.WindgenMainBlock;
 import cn.academy.WindgenMainBlockEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import net.minecraft.Util;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -61,9 +62,14 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
         pose.mulPose(Axis.YP.rotationDegrees(degreesFor(state.getValue(WindgenMainBlock.FACING))));
 
         if (rotor.isFanInstalled() && rotor.isNoObstacle()) {
-            double seconds = rotor.getLevel() == null
-                    ? 0.0d
-                    : (rotor.getLevel().getGameTime() + partialTick) / 20.0d;
+            // L'INSTANT SE LIT SUR UNE HORLOGE, en millisecondes, et non sur le temps du monde.
+            //
+            // Le port prenait `(gameTime + partialTick) / 20` : un temps qui n'avance qu'au tick,
+            // et qu'une interpolation d'image est censee lisser. Le defaut est ailleurs — ce
+            // couple n'est pas garanti pour le rendu d'un block entity, et la moindre irregularite
+            // de l'interpolation se voyait comme un tremblement des pales des qu'on bougeait.
+            // L'original, lui, lisait `GameTimer.getTime()`, une horloge a lui : on fait pareil.
+            double seconds = Util.getMillis() / 1000.0d;
             float spin = rotor.advanceFan(seconds);
 
             pose.pushPose();
