@@ -44,9 +44,7 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
      *
      * L'original verifiait un carre de 15 sur 15, soit 7 blocs de part et d'autre
      * du centre. Il excluait le bloc central, parce que le rotor y posait une de
-     * ses propres parties ; ici la verification se fait deux blocs devant le
-     * rotor, donc plus rien du rotor ne tombe dans la zone et l'exclusion n'a
-     * plus lieu d'etre.
+     * ses propres parties : c'est ce que fait {@link #computeNoObstacle}.
      */
     private static final int BLADE_RADIUS = 7;
 
@@ -167,28 +165,37 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
      */
     public float advanceFan(double seconds) {
         if (fanFrame < 0.0d) fanFrame = seconds;
-        fanRotation = WindgenStructure.spin(fanRotation, seconds - fanFrame, isSpinning());
+        double dt = seconds - fanFrame;
         fanFrame = seconds;
+        fanRotation = WindgenStructure.advance(fanRotation, dt, isSpinning());
         return fanRotation;
     }
 
     /**
      * Verifie la zone balayee par les pales.
      *
-     * La zone est un carre vertical perpendiculaire a l'axe du rotor, a deux blocs
-     * devant celui-ci : les pales balaient un plan, pas un volume. Deux blocs
-     * parce que le rotor occupe deja trois blocs dans son axe, dont un devant le
-     * centre.
+     * La zone est un carre vertical perpendiculaire a l'axe du rotor, <b>dans le bloc qui precede
+     * le centre</b> — celui ou la nacelle porte le moyeu. C'est la geometrie de l'original, qui
+     * verifiait l'offset {@code (i, j, -1)} du multibloc, et il en excluait le point central, parce
+     * que le rotor lui-meme y pose une de ses parties.
+     *
+     * <p>Le port verifiait DEUX blocs devant le centre, et sans exclusion : la zone se trouvait
+     * donc un bloc trop loin, et un bloc pose juste devant les pales ne les arretait pas tandis
+     * qu'un bloc un cran plus loin les arretait. Le joueur l'a vu le 22/10 : « si on considere
+     * qu'il fait du 1x3, les pales sortent du 3, bah la maintenant l'eolienne regarde au 4eme bloc
+     * pour savoir si oui ou non les pales peuvent etre la ».
      */
     public static boolean computeNoObstacle(Level level, BlockPos pos, BlockState state) {
         if (!(state.getBlock() instanceof WindgenMainBlock)) return false;
 
         Direction facing = state.getValue(WindgenMainBlock.FACING);
         Direction side = facing.getClockWise();
-        BlockPos plane = pos.relative(facing, 2);
+        BlockPos plane = pos.relative(facing, 1);
 
         for (int along = -BLADE_RADIUS; along <= BLADE_RADIUS; along++) {
             for (int dy = -BLADE_RADIUS; dy <= BLADE_RADIUS; dy++) {
+                // Le moyeu : ce point tombe dans le bloc du rotor lui-meme, qui n'est pas de l'air.
+                if (along == 0 && dy == 0) continue;
                 BlockPos check = plane.relative(side, along).above(dy);
                 // Un chunk non charge est traite comme un obstacle : mieux vaut
                 // une eolienne a l'arret qu'une eolienne qui tourne a travers un

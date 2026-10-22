@@ -53,4 +53,30 @@ public final class WindgenStructure {
     public static float spin(float rotation, double dt, boolean complete) {
         return (float) ((rotation + spinSpeed(complete) * dt) % 360.0d);
     }
+
+    /**
+     * Le pas maximal d'une image, en secondes.
+     *
+     * <p>Un quart de seconde : bien plus qu'une image de jeu (un vingtieme), bien moins qu'un saut
+     * visible. Au-dela, l'eolienne a ete hors du champ pendant un moment, et rattraper le temps
+     * perdu la ferait tourner d'un coup.
+     */
+    public static final double MAX_STEP = 0.25d;
+
+    /**
+     * L'angle des pales apres le pas d'une image, sans jamais reculer.
+     *
+     * <p>C'est ce que demande le rendu, image par image : il peut appeler deux fois pour le meme
+     * instant — une eolienne dont la zone de dessin deborde de sa section est rendue par plusieurs
+     * passes — et le second appel a alors un pas <b>nul ou negatif</b>. Le port l'appliquait quand
+     * meme : l'angle reculait d'un cran, et le joueur voyait des <b>micro-freezes</b> dans la
+     * rotation (22/10).
+     *
+     * <p>Fonction pure, donc verifiable : un pas nul, un pas negatif et un pas enorme sont tous
+     * ramenes a quelque chose de visible.
+     */
+    public static float advance(float rotation, double dt, boolean spinning) {
+        if (!spinning || dt <= 0.0d) return rotation;
+        return spin(rotation, Math.min(dt, MAX_STEP), true);
+    }
 }

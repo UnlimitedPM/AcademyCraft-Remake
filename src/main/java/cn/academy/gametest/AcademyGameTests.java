@@ -1537,9 +1537,10 @@ public final class AcademyGameTests {
         assertTrue(helper, WindgenMainBlockEntity.computeNoObstacle(level, rotorPos, state),
                 "de l'air partout : les pales doivent etre degagees");
 
-        // Un bloc dans le plan, a cinq blocs du centre et trois blocs plus haut.
+        // Un bloc dans le plan, a cinq blocs du centre et trois blocs plus haut. Le plan est celui du
+        // bloc qui precede le centre — la ou la nacelle porte son moyeu — et non deux blocs devant.
         var side = facing.getClockWise();
-        BlockPos obstacle = rotorPos.relative(facing, 2).relative(side, 5).above(3);
+        BlockPos obstacle = rotorPos.relative(facing, 1).relative(side, 5).above(3);
         level.setBlock(obstacle, net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 3);
         assertFalse(helper, WindgenMainBlockEntity.computeNoObstacle(level, rotorPos, state),
                 "un bloc dans la zone doit arreter les pales");
@@ -1676,11 +1677,13 @@ public final class AcademyGameTests {
      */
     private static void clearBladeArea(ServerLevel level, BlockPos rotorCenter, net.minecraft.core.Direction facing) {
         final int radius = 7;
-        BlockPos plane = rotorCenter.relative(facing, 2);
+        BlockPos plane = rotorCenter.relative(facing, 1);
         net.minecraft.core.Direction side = facing.getClockWise();
 
         for (int along = -radius; along <= radius; along++) {
             for (int dy = -radius; dy <= radius; dy++) {
+                // Le moyeu est le bloc du rotor lui-meme : on n'y touche pas.
+                if (along == 0 && dy == 0) continue;
                 level.setBlock(plane.relative(side, along).above(dy),
                         net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
             }

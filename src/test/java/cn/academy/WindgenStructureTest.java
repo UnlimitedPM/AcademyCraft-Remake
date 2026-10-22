@@ -52,4 +52,24 @@ class WindgenStructureTest {
         // qui s'arrete remette ses pales a la verticale.
         assertEquals(123.0f, WindgenStructure.spin(123f, 2.0d, false), 0.001f);
     }
+
+    @Test
+    @DisplayName("le pas d'une image ne fait jamais reculer les pales")
+    void lePasDUneImageNeFaitJamaisReculer() {
+        // Le rendu peut appeler deux fois pour le meme instant — une zone de dessin qui deborde de
+        // sa section est rendue par plusieurs passes — et le second appel a alors un pas nul ou
+        // negatif. Applique tel quel, l'angle reculait d'un cran : ce sont les micro-freezes que le
+        // joueur a vus le 22/10.
+        assertEquals(90.0f, WindgenStructure.advance(90f, 0.0d, true), 0.001f, "un pas nul ne bouge rien");
+        assertEquals(90.0f, WindgenStructure.advance(90f, -0.05d, true), 0.001f,
+                "et un pas negatif ne recule pas");
+        assertEquals(90.0f, WindgenStructure.advance(90f, 0.05d, false), 0.001f,
+                "une eolienne a l'arret ne tourne pas");
+
+        // Une image ordinaire avance de son pas, et un long silence ne la fait pas bondir : le pas
+        // est borne au quart de seconde, soit quinze degres.
+        assertEquals(93.0f, WindgenStructure.advance(90f, 0.05d, true), 0.001f);
+        assertEquals(105.0f, WindgenStructure.advance(90f, 30.0d, true), 0.001f,
+                "trente secondes d'absence valent un quart de seconde");
+    }
 }
