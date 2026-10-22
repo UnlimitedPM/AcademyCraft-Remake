@@ -44,6 +44,17 @@ public abstract class CGuiScreen extends Screen {
     private final CWidget root;
     private final Map<CWidget, Runnable> clicks = new IdentityHashMap<>();
 
+    /**
+     * Les widgets dont les enfants se dessinent <b>decoupes</b> a leur cadre.
+     *
+     * <p>C'est ce qui fait qu'une liste qui defile ne deborde pas sous le panneau : sans decoupe, la
+     * ligne qui depasse sort de la boite, et le joueur la voit flotter ailleurs — « avec 7 points le
+     * 7eme debordait en dessous » (22/10). Le decoupage est un vrai {@code scissor}, donc une ligne a
+     * cheval est coupee au pixel pres, et non masquee en entier.
+     */
+    private final java.util.Set<CWidget> clipped =
+            java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+
     /** Le champ qui prend le clavier, ou {@code null}. */
     private CWidget focused;
 
@@ -129,6 +140,16 @@ public abstract class CGuiScreen extends Screen {
      */
     protected void forgetClicks() {
         clicks.clear();
+    }
+
+    /**
+     * Decouper les enfants de ce widget a son cadre : voir {@link #clipped}.
+     *
+     * <p>C'est au widget de le demander, parce que c'est lui qui sait s'il defile ses enfants : la
+     * liste des marques le fait, un panneau fixe non.
+     */
+    protected void clipTo(CWidget widget) {
+        if (widget != null) clipped.add(widget);
     }
 
     /** Ce que la touche Entree fait dans le champ : c'est l'ecran qui decide. */
@@ -229,11 +250,16 @@ public abstract class CGuiScreen extends Screen {
             graphics.pose().popPose();
         }
 
+        // Les enfants d'une liste qui defile se dessinent decoupes a son cadre : voir {@link #clipped}.
+        // Le decoupage se pose en coordonnees de l'ecran, hors de la pose du widget, et il coupe au
+        // pixel pres — une ligne a moitie sortie est coupee, pas escamotee.
+        boolean scissored = clipped.contains(widget) && w > 0 && h > 0;
+        if (scissored) graphics.enableScissor(x, y, x + w, y + h);
         for (CWidget child : widget.children()) {
             drawWidget(graphics, child, mouseX, mouseY);
         }
+        if (scissored) graphics.disableScissor();
     }
-
     /**
      * Une pose posee sur la position exacte d'un rectangle, dont l'etendue entiere sera etiree pour
      * couvrir la vraie : voir {@code CGuiView.exactQuad}, dont ce moteur est la copie.

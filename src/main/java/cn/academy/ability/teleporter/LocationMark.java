@@ -22,15 +22,14 @@ public record LocationMark(String name, String dimension, double x, double y, do
     public static final int MAX_NAME = 24;
 
     /**
-     * Combien de marques un joueur peut poser : <b>six</b>.
+     * Combien de marques un joueur peut poser : <b>douze</b>.
      *
-     * <p>Ce n'est pas un reglage invente : c'est la capacite du panneau de l'original. Sa liste
-     * montre six lignes de quatre-vingts unites, et la septieme — le champ qui ajoute — sort du
-     * cadre, ou l'on ne peut plus la cliquer. Le joueur l'a constate dans le vrai mod le 22/10 :
-     * « a partir du 6eme point de teleportation on ne peut pas en rajouter de nouveau ». Le port,
-     * lui, n'avait aucune limite.
+     * <p>L'original en laissait <b>six</b>, et ce n'etait pas une regle ecrite : sa liste montre six
+     * lignes de quatre-vingts unites, et la septieme — le champ qui ajoute — sortait du cadre, ou
+     * l'on ne pouvait plus la cliquer. Le joueur a d'abord demande la meme limite (22/10), puis
+     * douze, avec une liste qui defile et ne deborde plus sous le panneau.
      */
-    public static final int MAX_MARKS = 6;
+    public static final int MAX_MARKS = 12;
 
     /** La dimension d'un monde, sous la forme qui se sauvegarde. */
     public static String of(Level level) {

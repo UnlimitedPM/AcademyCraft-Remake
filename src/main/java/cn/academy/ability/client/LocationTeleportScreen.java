@@ -216,6 +216,11 @@ public class LocationTeleportScreen extends CGuiScreen {
         info = find("info");
         info.transform.doesDraw = false;
 
+        // La liste defile : ses enfants se dessinent decoupes a son cadre, sans quoi une ligne de
+        // trop sort sous le panneau. Le joueur l'a vu le 22/10 : « avec 7 points le 7eme debordait
+        // en dessous ». Voir CGuiScreen.clipped.
+        clipTo(list);
+
         // Le fichier ancre l'explication au bord droit de la racine, ce qui la pose autour du
         // milieu de l'ecran — donc par-dessus la liste. L'original la deplacait de toute facon au
         // moment de s'en servir, ligne par ligne ; le port la pose donc une fois pour toutes
@@ -540,6 +545,10 @@ public class LocationTeleportScreen extends CGuiScreen {
 
         menu.transform.height = MENU_HEIGHT * Math.min(1.0, age() / OPEN_SECONDS);
 
+        // Une marque oubliee raccourcit la liste : le defilement se ramene alors dans ses bornes,
+        // sinon les dernieres lignes resteraient hors du cadre.
+        scroll = Math.max(0.0, Math.min(maxScroll(), scroll));
+
         // Le defilement deplace toutes les lignes d'abord : c'est ce qui les met a leur place.
         for (CWidget row : list.children()) {
             row.transform.y = rowIndex(row) * (ROW_HEIGHT + ROW_SPACING) - scroll;
@@ -554,18 +563,15 @@ public class LocationTeleportScreen extends CGuiScreen {
             field.text.alpha((int) Math.round(Math.max(0.0, Math.min(1.0, alpha)) * 255));
         }
 
-        double top = list.absY;
-        double bottom = top + Math.min(list.transform.height, menu.transform.height - 18)
-                * list.absScale;
         int hovered = -1;
 
         for (CWidget row : list.children()) {
             int index = rowIndex(row);
             double fade = rowFade(index);
 
-            // Rien ne depasse de la liste : le moteur n'a pas d'ecran de decoupe, donc c'est la
-            // ligne elle-meme qui s'efface quand elle sort.
-            row.transform.doesDraw = fade > 0.0 && row.absY + row.absH > top && row.absY < bottom;
+            // La ligne ne s'efface que tant qu'elle nait : au-dela, c'est le decoupage de la liste
+            // qui la cache quand elle sort — la couper en entier laissait des trous au defilement.
+            row.transform.doesDraw = fade > 0.0;
             if (!row.transform.doesDraw) continue;
 
             boolean over = row.isPointWithin(mouseX, mouseY);

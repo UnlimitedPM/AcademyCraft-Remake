@@ -56,27 +56,26 @@ class LocationMarkTest {
     }
 
     @Test
-    void laListeSEntasseASixMarques() {
-        // C'est la capacite du panneau de l'original : sa liste montre six lignes, et la septieme —
-        // le champ qui ajoute — sort du cadre. Le joueur l'a constate le 22/10 : « a partir du 6eme
-        // point de teleportation on ne peut pas en rajouter de nouveau ».
+    void laListeSEntasseADouzeMarques() {
+        // Douze, a la demande du joueur (22/10) : six etait la capacite du panneau de l'original,
+        // dont la septieme ligne sortait du cadre. La liste defile desormais, et rien ne deborde.
         AbilityData data = new AbilityData();
         for (int i = 0; i < LocationMark.MAX_MARKS; i++) {
             assertTrue(data.addMark("point " + i, OVERWORLD, 0, 64, 0), "la marque " + (i + 1));
         }
-        assertEquals(6, data.getMarks().size());
-        assertEquals(6, LocationMark.MAX_MARKS, "six lignes, et pas une de plus");
+        assertEquals(12, data.getMarks().size());
+        assertEquals(12, LocationMark.MAX_MARKS, "douze places, et pas une de plus");
 
-        // Le septieme refus, et il ne pousse personne dans la liste.
-        assertFalse(data.addMark("de trop", OVERWORLD, 0, 64, 0), "la septieme est refusee");
-        assertEquals(6, data.getMarks().size());
-        assertNull(data.getMark(6), "et le rang 6 reste vide");
+        // La treizieme refuse, et elle ne pousse personne dans la liste.
+        assertFalse(data.addMark("de trop", OVERWORLD, 0, 64, 0), "la treizieme est refusee");
+        assertEquals(12, data.getMarks().size());
+        assertNull(data.getMark(12), "et le rang 12 reste vide");
 
         // Oublier une marque rend la place : c'est ce que le joueur verra, le champ revenant.
         data.removeMark(2);
         assertTrue(data.addMark("a nouveau", OVERWORLD, 0, 64, 0));
-        assertEquals(6, data.getMarks().size());
-        assertEquals("a nouveau", data.getMark(5).name(), "elle se pose a la suite");
+        assertEquals(12, data.getMarks().size());
+        assertEquals("a nouveau", data.getMark(11).name(), "elle se pose a la suite");
     }
 
     @Test
