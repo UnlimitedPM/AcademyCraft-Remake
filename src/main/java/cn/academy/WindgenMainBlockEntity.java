@@ -68,11 +68,17 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     /**
      * Cadence de revision de la zone balayee, en ticks.
      *
-     * La zone fait 225 blocs : la verifier a chaque tick serait du gaspillage,
-     * et la relire depuis l'ecran a chaque image encore plus. Le resultat est
-     * donc calcule ici et mis en cache.
+     * <p>Deux ticks, soit un dixieme de seconde : le joueur posait un bloc devant les pales et les
+     * voyait tourner encore une seconde (22/10) — « quand je pose un bloc au-dessus de l'eolienne,
+     * elle met beaucoup de temps avant de s'arreter ». Le port verifiait toutes les vingt ticks
+     * (une seconde), l'original toutes les dix (une demi-seconde) : c'est trop lent des qu'on
+     * regarde ce qu'on vient de poser.
+     *
+     * <p>Le cout n'est pas un probleme : la zone fait 225 blocs, donc 225 lectures d'etat tous les
+     * deux ticks — moins qu'une seule image de rendu. Et le resultat reste mis en cache : c'est lui
+     * que lisent l'ecran et le client, jamais la zone elle-meme.
      */
-    private static final int OBSTACLE_CHECK_INTERVAL = 20;
+    private static final int OBSTACLE_CHECK_INTERVAL = 2;
 
     private final ItemStackHandler inventory = new ItemStackHandler(1) {
         @Override
