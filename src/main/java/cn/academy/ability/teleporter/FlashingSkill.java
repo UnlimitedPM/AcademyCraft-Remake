@@ -102,10 +102,23 @@ public class FlashingSkill extends Skill {
         return lerp(250f, 180f, data.getSkillExp(this));
     }
 
-    /** Duree du maintien : de trois secondes a sept secondes et demie, comme l'original. */
+    /**
+     * Duree du maintien : de trois a <b>quinze</b> secondes.
+     *
+     * <p>L'original allait de trois a sept secondes et demie. Demande du joueur, 22/10 : « quand le
+     * pouvoir arrive a 100 %, on puisse se teleporter au moins 2 fois plus longtemps, donc que le
+     * timer soit plus grand mais pas le temps de chargement. Et je veut que ce soit progressif, pas
+     * juste a 100 % d'un coup ». D'ou quinze secondes a l'experience pleine — le double de l'ancien
+     * plafond —, et une montee qui suit l'experience au lieu de tomber d'un coup.
+     *
+     * <p>Ce que cela ne touche PAS : l'ouverture et sa recharge. Le maintien s'allonge, mais il se
+     * paie comme avant — l'ouverture en CP et en surcout, chaque saut en CP, et la meme recharge a
+     * la fermeture, qui reste la plus longue du port. Un maintien plus long ne donne donc pas de
+     * sauts gratuits, il donne le TEMPS d'en faire.
+     */
     @Override
     public int getMaxHoldTicks(AbilityData data) {
-        return (int) lerp(60f, 150f, data.getSkillExp(this));
+        return (int) lerp(60f, 300f, data.getSkillExp(this));
     }
 
     /**
@@ -267,8 +280,14 @@ public class FlashingSkill extends Skill {
         double entityDistance = target == null
                 ? Double.MAX_VALUE : target.position().distanceToSqr(from);
 
+        // La matiere, vue d'ici : c'est elle qui dit si un point est libre, et c'est la meme
+        // reponse pour les trois branches — d'ou le predicat pose une fois.
+        java.util.function.Predicate<net.minecraft.core.BlockPos> blocked = pos ->
+                !player.level().getBlockState(pos)
+                        .getCollisionShape(player.level(), pos).isEmpty();
+
         if (entityDistance < blockDistance && target != null) {
-            return target.position().add(0, target.getEyeHeight(), 0);
+            return clear(target.position().add(0, target.getEyeHeight(), 0), blocked, lift);
         }
         if (blockHit.getType() == HitResult.Type.BLOCK) {
             // La hauteur des faces verticales se lit sur le POINT D'IMPACT, et non sur le bloc :
@@ -276,24 +295,31 @@ public class FlashingSkill extends Skill {
             // bloc, elle posait le joueur dans le sol quand il visait le cote du bloc sur lequel il
             // se tenait — le fantome disparaissait (teste en profondeur) et le saut arrivait sous
             // terre. Voir LandingSite.onImpactFeet.
-            java.util.function.Predicate<net.minecraft.core.BlockPos> blocked = pos ->
-                    !player.level().getBlockState(pos)
-                            .getCollisionShape(player.level(), pos).isEmpty();
             Vec3 feet = LandingSite.onImpactFeet(blockHit.getDirection(), blockHit.getLocation(),
                     blocked, player.getEyeHeight());
-            // Et JAMAIS dans un bloc. Lire la hauteur sur le point d'impact est la convention du
-            // scintillement, mais ce point peut etre bas — viser la face laterale d'un bloc qui
-            // nous arrive aux genoux —, et les pieds tombaient alors dans la matiere. Le joueur l'a
-            // vu le 22/10 : « parfois, quand je spam la TP en direction du sol, je peux etre
-            // teleporte un bloc dans le sol ». Voir LandingSite.aboveSurface.
-            feet = LandingSite.aboveSurface(feet, blocked);
-            // Et l'on arrive un bloc au-dessus de la surface quand il reste la place : le saut se
-            // paie d'une petite retombee, rendue lente par GravityCancellor. Voir LandingSite.lift.
-            return lift ? LandingSite.lift(feet, blocked) : feet;
+            return clear(feet, blocked, lift);
         }
         // Dans le vide, comme la teleportation au marqueur : le bout du regard, une hauteur d'yeux
         // sous lui, pour que les yeux du joueur arrivent la ou il regardait.
-        return end.subtract(0, player.getEyeHeight(), 0);
+        return clear(end.subtract(0, player.getEyeHeight(), 0), blocked, lift);
+    }
+
+    /**
+     * Le point d'arrivee, rendu habitable : <b>jamais dans la matiere</b>, et un bloc au-dessus de
+     * la surface quand il reste la place.
+     *
+     * <p>Les trois branches y passent — la face touchee, la creature trouvee, le vide au bout du
+     * regard. Le joueur a signale le 22/10 qu'il arrivait encore « au travers du sol » a certains
+     * moments : la garde ne vit donc plus dans une seule branche, elle ferme la porte a toutes.
+     * Voir {@link LandingSite#aboveSurface} et {@link LandingSite#lift}.
+     */
+    private static Vec3 clear(Vec3 feet,
+                              java.util.function.Predicate<net.minecraft.core.BlockPos> blocked,
+                              boolean lift) {
+        Vec3 clear = LandingSite.aboveSurface(feet, blocked);
+        // Et l'on arrive un bloc au-dessus de la surface quand il reste la place pour la tete : le
+        // saut se paie d'une petite retombee, rendue lente par GravityCancellor.
+        return lift ? LandingSite.lift(clear, blocked) : clear;
     }
 
     /** Le saut tel que le paquet l'appelle : une direction, et rien d'autre. */

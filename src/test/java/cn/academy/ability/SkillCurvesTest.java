@@ -740,7 +740,12 @@ class SkillCurvesTest {
         assertEquals(60f, flashing.getCpCost(atExperience(flashing, 1f)), 0.0001f);
         assertBounds("surcout du scintillement", 250f, 180f, flashing::getOverloadCost, flashing);
         assertEquals(60, flashing.getMaxHoldTicks(atExperience(flashing, 0f)));
-        assertEquals(150, flashing.getMaxHoldTicks(atExperience(flashing, 1f)));
+        // Quinze secondes a l'experience pleine : le double de l'ancien plafond, demande par le
+        // joueur le 22/10. Et la montee suit l'experience, elle ne tombe pas d'un coup a 100 %.
+        assertEquals(300, flashing.getMaxHoldTicks(atExperience(flashing, 1f)));
+        assertEquals(180, flashing.getMaxHoldTicks(atExperience(flashing, 0.5f)),
+                "a mi-experience, mi-chemin — et pas encore le plafond");
+        // La recharge, elle, ne bouge pas : c'est le maintien qui s'allonge, pas l'attente.
         assertCooldownBounds("recharge du scintillement", flashing, 900, 400);
     }
 

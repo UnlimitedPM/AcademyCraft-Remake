@@ -4082,6 +4082,58 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le scintillement n'arrive <b>jamais dans la matiere</b>, quel que soit le regard.
+     *
+     * <p>Le joueur l'a signale le 22/10 : « a certain moment precis, j'arrive quand meme a passer
+     * au travers du sol ». La hauteur du scintillement se lit sur le point d'impact, qui peut etre
+     * bas — la face laterale d'un bloc, un rebord vise du dessus —, et les pieds tombaient alors
+     * dans la roche. La garde vit maintenant dans `FlashingSkill.clear`, donc sur les TROIS
+     * branches (face touchee, creature, vide), et ce test la tient : un plancher de pierre, le
+     * joueur dessus puis trois blocs au-dessus, et cinq regards du tout droit au plus bas.
+     */
+    @GameTest(template = "empty")
+    public static void leScintillementNArriveJamaisDansLaMatiere(GameTestHelper helper) {
+        var flashing = cn.academy.ability.teleporter.TeleporterCategory.FLASHING;
+        ServerLevel level = helper.getLevel();
+        BlockPos abs = helper.absolutePos(new BlockPos(2, 1, 2));
+
+        // Un plancher de pierre et de l'air au-dessus, dans le carre qui nous appartient.
+        for (int dx = 0; dx <= 4; dx++) {
+            for (int dz = 0; dz <= 4; dz++) {
+                helper.setBlock(new BlockPos(dx, 0, dz),
+                        net.minecraft.world.level.block.Blocks.STONE);
+                for (int dy = 1; dy <= 4; dy++) {
+                    helper.setBlock(new BlockPos(dx, dy, dz),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(flashing.getCategory(), 1);
+        data.learnSkill(flashing);
+        var player = ownPlayer(helper, "digger");
+
+        for (double haut : new double[] {0.0, 3.0}) {
+            for (int tangage : new int[] {0, 30, 60, 89, 90}) {
+                player.moveTo(abs.getX() + 0.5, abs.getY() + haut, abs.getZ() + 0.5, 0f, tangage);
+                net.minecraft.world.phys.Vec3 feet = flashing.destination(player, data,
+                        cn.academy.ability.teleporter.FlashingSkill.FORWARD);
+
+                BlockPos at = BlockPos.containing(feet.x, feet.y + 0.01, feet.z);
+                assertTrue(helper, level.getBlockState(at).getCollisionShape(level, at).isEmpty(),
+                        "des pieds dans la matiere, tangage " + tangage + " a " + haut
+                                + " bloc(s) : " + feet);
+                assertTrue(helper, feet.y > abs.getY(),
+                        "et jamais sous le plancher, tangage " + tangage + " a " + haut
+                                + " bloc(s) : " + feet);
+            }
+        }
+
+        helper.succeed();
+    }
+
+    /**
      * Une chute se paie, meme la passive du teleporteur apprise.
      *
      * <p>La theorie du repli dimensionnel annulait autrefois les degats de chute tant qu'elle
