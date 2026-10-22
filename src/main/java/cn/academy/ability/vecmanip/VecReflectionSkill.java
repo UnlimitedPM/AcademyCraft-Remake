@@ -294,10 +294,11 @@ public class VecReflectionSkill extends Skill {
                 EntityAffection.mark(entity);
             }
 
-            // Le son se pose sur ce qui vient d'etre retourne, comme la soeur inverse de la
-            // veille : l'original envoyait le meme message d'effet, a la meme position.
-            cn.academy.sound.AcademySounds.playAt(level, entity.position(),
-                    cn.academy.ModSounds.VECMANIP_VEC_REFLECTION, 0.5f, 1.0f);
+            // Le son se pose sur ce qui vient d'etre retourne, une seule fois par instant : un
+            // coup rendu au meme tick joue deja le sien, et deux emissions superposees
+            // s'entendaient comme un son deux fois trop fort. Voir VecmanipSounds.
+            VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_REFLECTION,
+                    entity.position());
 
             // Et l'onde du renvoi : deux anneaux, plus grands que ceux de la deviation, sur la
             // tete de ce qui vient de repartir. Voir VecWaves.
@@ -426,10 +427,11 @@ public class VecReflectionSkill extends Skill {
 
             // Le son de la veille, A CHAQUE COUP rendu (22/10) : le joueur ne l'entendait que sur
             // les entites renvoyees par le tick de la veille, jamais sur les coups encaisses. Il
-            // se pose sur le porteur, la ou la veille est ouverte.
+            // se pose sur le porteur, la ou la veille est ouverte — et une seule fois par
+            // instant, voir VecmanipSounds.
             if (player.level() instanceof ServerLevel level) {
-                cn.academy.sound.AcademySounds.playAt(level, player.position(),
-                        cn.academy.ModSounds.VECMANIP_VEC_REFLECTION, 0.5f, 1.0f);
+                VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_REFLECTION,
+                        player.position());
             }
 
             living.hurt(skillDamage(player),

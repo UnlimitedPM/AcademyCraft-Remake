@@ -257,9 +257,11 @@ public class VecDeviationSkill extends Skill {
             stop(level, entity);
 
             // Le son se pose sur l'entite arretee, comme le `MSG_PLAY` de l'original :
-            // c'est ce qui donne a la veille son rythme de petits claquements.
-            cn.academy.sound.AcademySounds.playAt(level, entity.position(),
-                    cn.academy.ModSounds.VECMANIP_VEC_DEVIATION, 0.5f, 1.0f);
+            // c'est ce qui donne a la veille son rythme de petits claquements. Une seule fois par
+            // instant, sinon deux entites d'un meme tick font un claquement deux fois plus fort
+            // (voir VecmanipSounds).
+            VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_DEVIATION,
+                    entity.position());
 
             // Et l'onde de l'arret : une seule, et petite, posee sur la tete de ce qui vient
             // d'etre fige — l'original en posait une ici meme. Voir VecWaves.
@@ -317,6 +319,14 @@ public class VecDeviationSkill extends Skill {
     public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return amount;
+
+        // Le claquement de la veille, AUSSI sur un coup encaisse (22/10) : le joueur ne
+        // l'entendait que sur les entites que la veille arretait, jamais quand un zombie le
+        // frappait. Il se pose sur le porteur, la ou la veille est ouverte.
+        if (player.level() instanceof ServerLevel level) {
+            VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_DEVIATION,
+                    player.position());
+        }
 
         data.performForced(damageCost(data, amount), 0f);
         data.addSkillExp(this, amount * EXP_PER_DAMAGE);
