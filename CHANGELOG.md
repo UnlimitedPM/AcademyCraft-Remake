@@ -34,7 +34,14 @@ four languages, and a media player that survives leaving a world.
   them (multiblocks included: only the block carrying the block entity drops).
 - **No more red chat messages**: a refusal — power off, not learnt, too few points, overloaded,
   jammed, on cooldown — is silent.
-- **Tests**: 171 in-game tests, 905 unit tests.
+- **The music is in the chests, and the factors go further.** The three tracks never dropped
+  anywhere: the port had only carried the induction factor's pool. Both pools are there now, and
+  the tracks fall in **every** structure of the game — the 41 chest tables of 1.20.1, village
+  chests included, minus the spawn bonus chest and the jungle temple's dispenser. The factors keep
+  their five original tables and gain the **End city**, the four **bastion** chests and the
+  **Nether fortress**. The tracks keep the original's odds (30 % per chest) despite there being
+  three of them: the empty entry weighs 70 against three at 10.
+- **Tests**: 172 in-game tests, 911 unit tests.
 
 ### Francais
 
@@ -69,7 +76,15 @@ langues, et un lecteur de media qui survit a la sortie d'un monde.
   (multiblocs compris : seul le bloc porteur du block entity jette).
 - **Plus de messages rouges dans le chat** : un refus — pouvoir eteint, non appris, points trop
   justes, surcharge, brouillage, recharge — est silencieux.
-- **Des tests** : 171 tests en jeu, 905 tests unitaires.
+- **La musique est dans les coffres, et les facteurs vont plus loin.** Les trois morceaux ne
+  tombaient nulle part : le port n'avait porte que le pool des facteurs d'induction. Les deux pools
+  sont la maintenant, et les morceaux tombent dans **toutes** les structures du jeu — les 41 tables
+  de coffre de la 1.20.1, coffres de village compris, moins le coffre de depart et le distributeur
+  du temple de la jungle. Les facteurs gardent leurs cinq tables d'origine et gagnent la **cite de
+  l'End**, les quatre coffres des **bastions** et la **forteresse du Nether**. Les morceaux gardent
+  la chance de l'original (30 % par coffre) malgre les trois objets : le vide pese 70 contre trois
+  a 10.
+- **Des tests** : 172 tests en jeu, 911 tests unitaires.
 
 ## 0.1.5 - l'imag phase liquide / the imag phase liquid
 
@@ -248,7 +263,14 @@ loot table, the whole game in four languages, and a config file that tunes the p
   — the icon's tint is pushed to white first, because only its opacity is supposed to count. Its
   coverage is full for now: the player wanted it darker than a see-through watermark and asked to
   leave the question there ("*pour l'instant remet le a 1, on verra plus tard*").
-- **Tests**: 171 in-game tests, 905 unit tests.
+- **The music is in the chests, and the factors go further.** The three tracks never dropped
+  anywhere: the port had only carried the induction factor's pool. Both pools are there now, and
+  the tracks fall in **every** structure of the game — the 41 chest tables of 1.20.1, village
+  chests included, minus the spawn bonus chest and the jungle temple's dispenser. The factors keep
+  their five original tables and gain the **End city**, the four **bastion** chests and the
+  **Nether fortress**. The tracks keep the original's odds (30 % per chest) despite there being
+  three of them: the empty entry weighs 70 against three at 10.
+- **Tests**: 172 in-game tests, 911 unit tests.
 
 ### Francais
 
