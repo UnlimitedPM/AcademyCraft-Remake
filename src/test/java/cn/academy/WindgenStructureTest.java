@@ -40,9 +40,9 @@ class WindgenStructureTest {
         assertEquals(0.0f, WindgenStructure.spinSpeed(false), 0.001f);
 
         // Une seconde : soixante degres. Six secondes : un tour complet, et on repart a zero.
-        assertEquals(60.0f, WindgenStructure.spin(0f, 1.0d, true), 0.001f);
-        assertEquals(0.0f, WindgenStructure.spin(0f, 6.0d, true), 0.001f);
-        assertEquals(180.0f, WindgenStructure.spin(45f, 2.25d, true), 0.001f);
+        assertEquals(60.0f, WindgenStructure.angleAt(1.0d, 0.0d, 0f, true), 0.001f);
+        assertEquals(0.0f, WindgenStructure.angleAt(6.0d, 0.0d, 0f, true), 0.001f);
+        assertEquals(180.0f, WindgenStructure.angleAt(2.25d, 0.0d, 45f, true), 0.001f);
     }
 
     @Test
@@ -50,26 +50,26 @@ class WindgenStructureTest {
     void uneEolienneArreteeNeReculePas() {
         // L'original accumulait l'angle cote client : c'est ce qui evite qu'une eolienne
         // qui s'arrete remette ses pales a la verticale.
-        assertEquals(123.0f, WindgenStructure.spin(123f, 2.0d, false), 0.001f);
+        assertEquals(123.0f, WindgenStructure.angleAt(2.0d, 0.0d, 123f, false), 0.001f);
     }
 
     @Test
-    @DisplayName("le pas d'une image ne fait jamais reculer les pales")
-    void lePasDUneImageNeFaitJamaisReculer() {
-        // Le rendu peut appeler deux fois pour le meme instant — une zone de dessin qui deborde de
-        // sa section est rendue par plusieurs passes — et le second appel a alors un pas nul ou
-        // negatif. Applique tel quel, l'angle reculait d'un cran : ce sont les micro-freezes que le
-        // joueur a vus le 22/10.
-        assertEquals(90.0f, WindgenStructure.advance(90f, 0.0d, true), 0.001f, "un pas nul ne bouge rien");
-        assertEquals(90.0f, WindgenStructure.advance(90f, -0.05d, true), 0.001f,
-                "et un pas negatif ne recule pas");
-        assertEquals(90.0f, WindgenStructure.advance(90f, 0.05d, false), 0.001f,
-                "une eolienne a l'arret ne tourne pas");
+    @DisplayName("l'angle est une fonction du temps, pas une accumulation d'images")
+    void lAngleEstUneFonctionDuTemps() {
+        // Le port ajoutait un pas a chaque image : deux images de durees differentes faisaient
+        // avancer les pales de deux facons differentes, et cela se voyait des qu'on bougeait — le
+        // decor glisse lisse, les pales non. Une fonction du temps, elle, ne peut pas deriver.
+        assertEquals(90.0f, WindgenStructure.angleAt(0.5d, 0.0d, 60f, true), 0.001f);
+        assertEquals(90.0f, WindgenStructure.angleAt(0.5d, 0.0d, 60f, true), 0.001f,
+                "deux rendus pour le meme instant donnent le meme angle");
+        assertEquals(120.0f, WindgenStructure.angleAt(1.0d, 0.0d, 60f, true), 0.001f,
+                "et l'angle suit le temps, que les images soient longues ou courtes");
 
-        // Une image ordinaire avance de son pas, et un long silence ne la fait pas bondir : le pas
-        // est borne au quart de seconde, soit quinze degres.
-        assertEquals(93.0f, WindgenStructure.advance(90f, 0.05d, true), 0.001f);
-        assertEquals(105.0f, WindgenStructure.advance(90f, 30.0d, true), 0.001f,
-                "trente secondes d'absence valent un quart de seconde");
+        // Un temps qui recule ne fait pas tourner les pales a l'envers : l'angle reste celui de
+        // l'ancre. C'est ce qui arrivait quand une passe de rendu arrivait en retard.
+        assertEquals(60.0f, WindgenStructure.angleAt(0.4d, 0.5d, 60f, true), 0.001f);
+
+        // A l'arret, l'angle ne bouge plus, quel que soit l'instant demande.
+        assertEquals(60.0f, WindgenStructure.angleAt(99.0d, 0.5d, 60f, false), 0.001f);
     }
 }

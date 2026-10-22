@@ -50,33 +50,30 @@ public final class WindgenStructure {
      * permet a une eolienne qui s'arrete de s'arreter *ou* elle est, au lieu de revenir
      * a la verticale a chaque revision de la structure.
      */
-    public static float spin(float rotation, double dt, boolean complete) {
-        return (float) ((rotation + spinSpeed(complete) * dt) % 360.0d);
-    }
-
     /**
-     * Le pas maximal d'une image, en secondes.
+     * L'angle des pales a un instant donne, mesure depuis une ancre.
      *
-     * <p>Un quart de seconde : bien plus qu'une image de jeu (un vingtieme), bien moins qu'un saut
-     * visible. Au-dela, l'eolienne a ete hors du champ pendant un moment, et rattraper le temps
-     * perdu la ferait tourner d'un coup.
+     * <p>C'est une <b>fonction du temps</b>, et non une accumulation d'une image a l'autre. Le port
+     * accumulait : chaque image ajoutait {@code vitesse x duree de l'image}, si bien qu'une image
+     * plus longue ou plus courte faisait avancer les pales d'un cran de plus ou de moins. A l'arret,
+     * cela ne se voyait pas ; en marchant ou en tournant la tete, le decor glisse parfaitement lisse
+     * et les pales, non — le joueur a decrit cette « sensation bizarre a l'ecran » le 22/10.
+     *
+     * <p>Une fonction du temps ne peut pas deriver : deux rendus pour le meme instant donnent le
+     * meme angle, et un temps qui recule (une passe de rendu en retard) ne fait pas tourner les
+     * pales a l'envers.
+     *
+     * <p>Fonction pure, donc verifiable.
+     *
+     * @param seconds       l'instant de l'image, en secondes
+     * @param anchorSeconds l'instant ou l'ancre a ete posee
+     * @param anchorAngle   l'angle a cet instant-la
+     * @param spinning      vrai si les pales tournent
      */
-    public static final double MAX_STEP = 0.25d;
-
-    /**
-     * L'angle des pales apres le pas d'une image, sans jamais reculer.
-     *
-     * <p>C'est ce que demande le rendu, image par image : il peut appeler deux fois pour le meme
-     * instant — une eolienne dont la zone de dessin deborde de sa section est rendue par plusieurs
-     * passes — et le second appel a alors un pas <b>nul ou negatif</b>. Le port l'appliquait quand
-     * meme : l'angle reculait d'un cran, et le joueur voyait des <b>micro-freezes</b> dans la
-     * rotation (22/10).
-     *
-     * <p>Fonction pure, donc verifiable : un pas nul, un pas negatif et un pas enorme sont tous
-     * ramenes a quelque chose de visible.
-     */
-    public static float advance(float rotation, double dt, boolean spinning) {
-        if (!spinning || dt <= 0.0d) return rotation;
-        return spin(rotation, Math.min(dt, MAX_STEP), true);
+    public static float angleAt(double seconds, double anchorSeconds, float anchorAngle,
+                                boolean spinning) {
+        if (!spinning) return ((anchorAngle % 360.0f) + 360.0f) % 360.0f;
+        double dt = Math.max(0.0d, seconds - anchorSeconds);
+        return (float) ((anchorAngle + SPIN_PER_SECOND * dt) % 360.0d);
     }
 }

@@ -111,8 +111,17 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     /** Angle des pales, en degres. */
     private float fanRotation;
 
-    /** Instant de la derniere image, en secondes, pour avancer l'angle du bon pas. */
-    private double fanFrame = -1.0d;
+    /**
+     * L'ancre de la rotation : l'instant et l'angle d'ou l'on compte.
+     *
+     * <p>L'angle est une fonction du temps (voir {@link WindgenStructure#angleAt}), pas une
+     * accumulation d'image en image : c'est ce qui le rend lisse quand les images n'ont pas toutes
+     * la meme duree — en marchant, en tournant la tete — et ce qui permet a l'eolienne de
+     * s'arreter ou elle est. L'ancre se repose des que l'etat change, ou si le temps recule.
+     */
+    private double fanAnchor = -1.0d;
+    private float fanAnchorAngle;
+    private boolean fanSpinning;
 
     public WindgenMainBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.WINDGEN_MAIN.get(), pos, state);
@@ -164,10 +173,15 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
      * de repartir de la verticale a chaque revision de la structure.
      */
     public float advanceFan(double seconds) {
-        if (fanFrame < 0.0d) fanFrame = seconds;
-        double dt = seconds - fanFrame;
-        fanFrame = seconds;
-        fanRotation = WindgenStructure.advance(fanRotation, dt, isSpinning());
+        boolean spinning = isSpinning();
+        if (fanAnchor < 0.0d || spinning != fanSpinning || seconds < fanAnchor) {
+            // L'etat vient de changer, ou le temps a recule : on repose l'ancre sur l'angle
+            // courant, pour que les pales repartent d'ou elles sont au lieu de sauter.
+            fanAnchorAngle = fanRotation;
+            fanAnchor = seconds;
+            fanSpinning = spinning;
+        }
+        fanRotation = WindgenStructure.angleAt(seconds, fanAnchor, fanAnchorAngle, spinning);
         return fanRotation;
     }
 
