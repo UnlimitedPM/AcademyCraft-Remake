@@ -7203,6 +7203,46 @@ public final class AcademyGameTests {
         helper.succeed();
     }
 
+    /**
+     * Les coffres de structure portent bien les deux pools du mod.
+     *
+     * <p>Le test JUnit fige les LISTES de tables ; celui-ci verifie que le crochet
+     * {@code LootTableLoadEvent} les a reellement posees, et que les noms de tables existent —
+     * une faute de frappe dans une liste ne se verrait sinon que dans un coffre vide, en jeu.
+     */
+    @GameTest(template = "empty")
+    public static void structureChestsCarryTheModPools(GameTestHelper helper) {
+        var lootData = helper.getLevel().getServer().getLootData();
+
+        for (ResourceLocation table : cn.academy.StructureLootTables.FACTOR_TABLES) {
+            var loaded = lootData.getElementOptional(LootDataType.TABLE, table);
+            assertTrue(helper, loaded.isPresent(), "table de facteur introuvable : " + table);
+            assertTrue(helper, hasPool(loaded.get(), "academy:induction_factor"),
+                    "le pool des facteurs manque dans " + table);
+        }
+
+        for (ResourceLocation table : cn.academy.StructureLootTables.MEDIA_TABLES) {
+            var loaded = lootData.getElementOptional(LootDataType.TABLE, table);
+            assertTrue(helper, loaded.isPresent(), "table de morceau introuvable : " + table);
+            assertTrue(helper, hasPool(loaded.get(), "academy:media"),
+                    "le pool des morceaux manque dans " + table);
+        }
+
+        // Et le temoin : une table qui n'est dans aucune des deux listes n'en porte aucun.
+        var bonus = lootData.getElementOptional(LootDataType.TABLE,
+                ResourceLocation.fromNamespaceAndPath("minecraft", "chests/spawn_bonus_chest"));
+        assertTrue(helper, bonus.isPresent(), "le coffre de depart doit exister");
+        assertFalse(helper, hasPool(bonus.get(), "academy:media"),
+                "le coffre de depart n'est pas une structure : il ne doit rien porter");
+
+        helper.succeed();
+    }
+
+    /** Cette table porte-t-elle un pool de ce nom ? */
+    private static boolean hasPool(net.minecraft.world.level.storage.loot.LootTable table, String name) {
+        return table.getPool(name) != null;
+    }
+
     /** Garde-fou : le registre de blocs du mod ne doit jamais etre vide. */
     @GameTest(template = "empty")
     public static void registryCountsAreSane(GameTestHelper helper) {
