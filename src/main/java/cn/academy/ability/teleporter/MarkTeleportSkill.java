@@ -31,6 +31,11 @@ import javax.annotation.Nullable;
  * position a hauteur d'yeux, un bloc donne la face regardee avec un decalage par face, et
  * un regard dans le vide donne la portee maximale. La verification de la tete, elle, fait
  * redescendre d'un bloc et quart quand le joueur ne passerait pas.
+ *
+ * <p>Un ecart assume depuis le 22/10 sur les blocs : quand le <b>dessus</b> du bloc vise est
+ * degage, on atterrit dessus au lieu de devant sa face. C'est ce qui permet de se poser sur le
+ * dernier bloc d'un mur, sur un bloc au-dessus de soi, ou sur l'eolienne sans se jeter en l'air.
+ * Voir {@link MarkTeleportLanding} pour la place demandee et le saut d'un bloc.
  */
 public class MarkTeleportSkill extends Skill {
 
@@ -160,9 +165,13 @@ public class MarkTeleportSkill extends Skill {
         }
         if (blockHit.getType() == HitResult.Type.BLOCK) {
             // Aux pieds, et non a hauteur de tete : c'est ce point que la marque montre, et c'est
-            // celui-la que le saut doit donner. Voir LandingSite.onFeet.
-            return LandingSite.onFeet(blockHit.getDirection(), blockHit.getLocation(),
-                    blockHit.getBlockPos(), pos -> !player.level().isEmptyBlock(pos),
+            // celui-la que le saut doit donner. Le dessus d'un bloc DEGAGE l'emporte sur la face
+            // visee, pour qu'on se pose sur le dernier bloc d'un mur ou sur un bloc au-dessus de
+            // soi — voir MarkTeleportLanding.
+            return MarkTeleportLanding.feet(blockHit.getDirection(), blockHit.getLocation(),
+                    blockHit.getBlockPos(),
+                    pos -> !player.level().getBlockState(pos)
+                            .getCollisionShape(player.level(), pos).isEmpty(),
                     player.getEyeHeight());
         }
         // Rien devant : on s'arrete au bout du regard, mais <b>aux pieds</b> — une hauteur d'yeux
