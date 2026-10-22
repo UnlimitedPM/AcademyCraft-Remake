@@ -51,6 +51,23 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     private static final int BLADE_RADIUS = 7;
 
     /**
+     * La boite dans laquelle le rendu des pales a le droit de se dessiner.
+     *
+     * <p>Sans elle, Minecraft n'autorise le rendu que dans la boite d'UN bloc, et les pales
+     * disparaissaient des que ce bloc sortait du champ — le joueur : « les helices de l'eolienne
+     * partent tres vite si je regarde un peu trop vers le bas ». L'original rendait cette boite
+     * infinie ; celle-ci fait la taille des pales, ce qui garde l'elimination quand l'eolienne est
+     * vraiment derriere soi. Voir {@link RenderBounds#windgenRotor}.
+     */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        double[] b = RenderBounds.windgenRotor(BLADE_RADIUS);
+        return new net.minecraft.world.phys.AABB(
+                worldPosition.getX() + b[0], worldPosition.getY() + b[1], worldPosition.getZ() + b[2],
+                worldPosition.getX() + b[3], worldPosition.getY() + b[4], worldPosition.getZ() + b[5]);
+    }
+
+    /**
      * Cadence de revision de la zone balayee, en ticks.
      *
      * La zone fait 225 blocs : la verifier a chaque tick serait du gaspillage,

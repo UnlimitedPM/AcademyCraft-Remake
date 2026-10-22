@@ -77,6 +77,24 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
     /** Cadence de verification des liens, en ticks. */
     private static final int CHECK_INTERVAL = 20;
 
+    /**
+     * La boite dans laquelle le rendu du Matrix a le droit de se dessiner.
+     *
+     * <p>Le multi-bloc est un cube de deux blocs dont l'ancrage est un COIN, et ses plaques
+     * flottent au-dessus : la boite d'un seul bloc ne couvrait donc qu'un huitieme de la machine,
+     * et le rendu disparaissait des que ce coin sortait du champ — le joueur : « le Matrix, si je
+     * regarde un peu trop haut en etant dessus, disparait visuellement du jeu ». L'original
+     * surchargeait deja cette boite ({@code BlockMulti.getRenderBB}). Voir
+     * {@link cn.academy.RenderBounds#matrix}.
+     */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        double[] b = cn.academy.RenderBounds.matrix(getBlockState().getValue(cn.academy.MatrixBlock.FACING));
+        return new net.minecraft.world.phys.AABB(
+                worldPosition.getX() + b[0], worldPosition.getY() + b[1], worldPosition.getZ() + b[2],
+                worldPosition.getX() + b[3], worldPosition.getY() + b[4], worldPosition.getZ() + b[5]);
+    }
+
     private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
         @Override
         public int getSlotLimit(int slot) {

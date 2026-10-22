@@ -68,6 +68,23 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     /** Cadence de synchronisation vers le client, en ticks. */
     private static final int SYNC_INTERVAL = 10;
 
+    /**
+     * La boite dans laquelle le rendu du developeur a le droit de se dessiner.
+     *
+     * <p>Le modele occupe trois blocs de profondeur et trois de haut, mais seul l'ancrage porte le
+     * block entity : la boite d'un bloc ne couvrait donc que le pied de la machine, et le rendu
+     * disparaissait des que ce pied sortait du champ. L'original surchargeait deja cette boite
+     * ({@code BlockMulti.getRenderBB}). Voir {@link cn.academy.RenderBounds#developer}.
+     */
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        double[] b = cn.academy.RenderBounds.developer(
+                getBlockState().getValue(cn.academy.DeveloperBlock.FACING));
+        return new net.minecraft.world.phys.AABB(
+                worldPosition.getX() + b[0], worldPosition.getY() + b[1], worldPosition.getZ() + b[2],
+                worldPosition.getX() + b[3], worldPosition.getY() + b[4], worldPosition.getZ() + b[5]);
+    }
+
     private final DeveloperType type;
 
     private double energy;
