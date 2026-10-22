@@ -119,6 +119,18 @@ public abstract class CGuiScreen extends Screen {
         return focused;
     }
 
+    /**
+     * Oublier tous les clics enregistres : a appeler quand un ecran refait ses widgets.
+     *
+     * <p>Les actions vivent dans une table a part, et un widget retire de l'arbre n'y perd pas la
+     * sienne : refaire une liste sans passer par ici laisserait une entree par ligne et par
+     * reconstruction. Voir {@code LocationTeleportScreen.rebuild}, qui refait sa liste des que les
+     * marques changent.
+     */
+    protected void forgetClicks() {
+        clicks.clear();
+    }
+
     /** Ce que la touche Entree fait dans le champ : c'est l'ecran qui decide. */
     protected void confirm(CWidget box) {
     }
@@ -184,12 +196,14 @@ public abstract class CGuiScreen extends Screen {
                         : argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
                                 widget.texture.blue);
                 if (widget.texture.texture == null) {
+                    blend();
                     fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH, colour);
                 } else {
                     drawTexture(graphics, widget, widget.texture.texture, exactX, exactY, colour);
                 }
             }
             if (tint != null && !tintTexture && tint[3] > 0) {
+                blend();
                 fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
                         argb(tint[3], tint[0], tint[1], tint[2]));
             }
@@ -201,6 +215,11 @@ public abstract class CGuiScreen extends Screen {
                         widget.outline.blue);
                 int line = Math.max(1, (int) Math.round(widget.outline.lineWidth
                         * widget.absScale));
+                // Le MELANGE, toujours. Les aplats et les cernes du fichier portent un alpha — le
+                // fond du panneau est a 128, son cerne a 158 — et sans melange ils sortent pleins.
+                // C'est ce que le joueur a vu le 22/10 : « les bordures devraient avoir des pixels
+                // semi-transparents et la ce n'est pas le cas ». Voir {@link #blend}.
+                blend();
                 outline(graphics, x, y, w, h, line, colour);
             }
             if (widget.text != null) {
@@ -348,6 +367,11 @@ public abstract class CGuiScreen extends Screen {
         //
         // Et un texte qui ne tient pas dans sa boite defile au lieu de deborder sur la colonne
         // voisine : voir {@link cn.academy.client.gui.MarqueeText}.
+        //
+        // Le MELANGE est rallume : `graphics.fill` le coupe en sortant (voir
+        // {@code CustomizeUiScreen.blend}), et sans lui l'alpha d'un texte — le fondu d'une ligne,
+        // l'opacite d'un champ — ne se voit pas du tout.
+        blend();
         boolean overflows = textWidth > w;
         if (!content.isEmpty()) {
             if (overflows) {

@@ -319,12 +319,14 @@ public final class CGuiView {
                         : argb(widget.texture.alpha, widget.texture.red, widget.texture.green,
                                 widget.texture.blue);
                 if (widget.texture.texture == null) {
+                    blend();
                     fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH, colour);
                 } else {
                     drawTexture(graphics, widget, widget.texture, exactX, exactY, colour);
                 }
             }
             if (tint != null && !widget.tint.affectTexture && tint[3] > 0) {
+                blend();
                 fillExact(graphics, widget, exactX, exactY, widget.absW, widget.absH,
                         argb(tint[3], tint[0], tint[1], tint[2]));
             }
@@ -336,6 +338,8 @@ public final class CGuiView {
                         widget.outline.blue);
                 int line = Math.max(1, (int) Math.round(widget.outline.lineWidth
                         * widget.absScale));
+                // Le melange, comme dans CGuiScreen : un cerne de fichier porte un alpha.
+                blend();
                 outline(graphics, x, y, w, h, line, colour);
             }
             if (widget.text != null) {
@@ -808,6 +812,10 @@ public final class CGuiView {
         // document de l'original, qui a ete ecrit pour l'anglais ; en francais le meme libelle est
         // plus large, et il passait par-dessus la colonne voisine (le joueur, sur l'ecran du noeud :
         // « le texte deborde sur l'emplacement du mot de passe »). Voir {@link MarqueeText}.
+        //
+        // Le melange, comme dans CGuiScreen : `graphics.fill` le coupe en sortant, et l'alpha d'un
+        // texte ne se verrait plus.
+        blend();
         boolean overflows = textWidth > w;
         if (!content.isEmpty()) {
             if (overflows) {

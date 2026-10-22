@@ -8,6 +8,7 @@ import cn.academy.ability.network.LocationTeleportPacket;
 import cn.academy.ability.teleporter.LocationMark;
 import cn.academy.ability.teleporter.LocationTeleportSkill;
 import cn.academy.ability.teleporter.TeleporterCategory;
+import cn.academy.client.gui.AcademyFonts;
 import cn.academy.client.gui.cgui.CGuiScreen;
 import cn.academy.client.gui.cgui.CWidget;
 import net.minecraft.client.gui.GuiGraphics;
@@ -16,6 +17,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -70,8 +72,45 @@ public class LocationTeleportScreen extends CGuiScreen {
     private static final int TEXT_OFF = 0xA2A2A2;
     private static final int TEXT_BAD = 0xE08080;
 
-    /** Combien de lignes une explication peut porter : ou, combien, et pourquoi pas. */
-    private static final int HINT_LINES = 3;
+    // ------------------------------------------------------------------
+    // L'explication : quatre lignes, et la boite qui les porte
+    // ------------------------------------------------------------------
+
+    /**
+     * Combien de lignes une explication peut porter : la dimension, les coordonnees, le prix, et le
+     * refus s'il y en a un. C'est le decoupage de l'original — sa {@code MessageTab} recevait une
+     * ligne par renseignement — et le joueur l'a redemande le 22/10 : « la dimension et les
+     * coordonnees devraient etre sur des lignes separees ».
+     */
+    private static final int HINT_LINES = 4;
+
+    /** La hauteur d'une ligne et la marge de la boite : les 42 et 20 de {@code MessageTab}. */
+    private static final double HINT_LINE = 42.0;
+    private static final double HINT_MARGIN = 20.0;
+
+    /** La taille de la police des explications : le {@code textSize} de {@code MessageTab}. */
+    private static final double HINT_FONT = 40.0;
+
+    /** L'espace entre le panneau et la boite d'explication, en unites du document. */
+    private static final double INFO_GAP = 5.0;
+
+    // ------------------------------------------------------------------
+    // Le champ d'ajout
+    // ------------------------------------------------------------------
+
+    /**
+     * Le texte du champ tant qu'on n'y ecrit pas : celui du document, mot pour mot.
+     *
+     * <p>Le port y mettait une traduction a lui ({@code name_hint}), si bien que la case ne
+     * ressemblait pas a celle de l'original : « la case qui permet de creer un nouveau point n'a pas
+     * le meme texte ». C'est ce « Add... »-la que l'original posait, et qu'il remettait a la fin de
+     * chaque saisie.
+     */
+    private static final String ADD_TEXT = "Add...";
+
+    /** L'opacite du champ : 0,4 au repos et 0,8 quand il a le clavier, comme l'original. */
+    private static final double ADD_IDLE = 0.4;
+    private static final double ADD_FOCUS = 0.8;
 
     private final Category category;
     private final Skill skill;
@@ -83,6 +122,9 @@ public class LocationTeleportScreen extends CGuiScreen {
     private CWidget field;
 
     private double scroll;
+
+    /** L'empreinte des marques affichees : des qu'elle change, la liste se refait. */
+    private String shown;
 
     public LocationTeleportScreen(Category category, Skill skill) {
         super(skill.getDisplayName(), DOCUMENT);
@@ -105,6 +147,22 @@ public class LocationTeleportScreen extends CGuiScreen {
     private List<LocationMark> marks() {
         AbilityData data = data();
         return data == null ? List.of() : data.getMarks();
+    }
+
+    /**
+     * Ce que la liste montre, en une chaine : ses noms, et ou ils menent.
+     *
+     * <p>C'est assez pour savoir qu'il faut la refaire, et c'est tout ce que l'ecran demande : une
+     * marque ajoutee, oubliee ou renommee change cette chaine, une marque immobile ne la change pas.
+     */
+    private String fingerprint() {
+        StringBuilder out = new StringBuilder();
+        for (LocationMark mark : marks()) {
+            out.append(mark.name()).append('|').append(mark.dimension()).append('|')
+                    .append(mark.x()).append('|').append(mark.y()).append('|')
+                    .append(mark.z()).append(';');
+        }
+        return out.toString();
     }
 
     private int addRow() {
@@ -141,32 +199,48 @@ public class LocationTeleportScreen extends CGuiScreen {
         // milieu de l'ecran — donc par-dessus la liste. L'original la deplacait de toute facon au
         // moment de s'en servir, ligne par ligne ; le port la pose donc une fois pour toutes
         // contre le bord GAUCHE du panneau, ou elle se lit comme une annotation de la ligne.
-        CWidget menu = find("menu");
         info.transform.alignWidth = "LEFT";
-        info.transform.x = menu.transform.x - info.transform.width - 5;
 
         // L'explication : une ligne de texte par renseignement, posee dans le panneau de droite.
         for (int i = 0; i < HINT_LINES; i++) {
             CWidget line = new CWidget("hint" + i);
-            line.transform.width = 335.83 - 40;
-            line.transform.height = 42;
-            line.transform.x = 20;
-            line.transform.y = 20 + i * 42;
+            line.transform.height = HINT_LINE;
             line.text = new CWidget.TextBox();
             line.text.align = "RIGHT";
             // Quarante : le `textSize` du MessageTab de l'original, en unites du document — donc un
             // peu moins de dix pixels une fois l'echelle de la racine (0,24) appliquee. Le port y
             // avait laisse la hauteur de sa ligne (quarante-deux), ce qui ne se voyait pas tant que
             // le moteur dessinait tout a la taille de l'interface.
-            line.text.fontSize = 40;
+            line.text.fontSize = HINT_FONT;
             line.text.heightAlign = "TOP";
             info.add(line);
         }
+
+        rebuild(element, add);
+    }
+
+    /**
+     * Refaire la liste : une ligne par marque, puis celle qui ajoute.
+     *
+     * <p>C'est l'{@code updateList} de l'original, appele apres chaque ajout et chaque oubli — sauf
+     * que l'original le declenchait sur la reponse du serveur, et que le port le fait des que la
+     * liste change, d'ou qu'elle vienne. Sans cela, le joueur voyait ce qu'il a signale le 22/10 :
+     * « quand je cree un nouveau point, ca ne met pas a jour la liste automatiquement » — et une
+     * marque devenue inabordable gardait son texte clair, puisqu'elle avait ete peinte avant.
+     */
+    private void rebuild(CWidget element, CWidget add) {
+        forgetClicks();
+        list.children().clear();
+        field = null;
+        // Le champ precedent n'existe plus : le clavier ne doit plus le chercher.
+        focus(null);
 
         for (int i = 0; i < marks().size(); i++) {
             list.add(markRow(element, i));
         }
         list.add(addRowTemplate(add, element));
+
+        shown = fingerprint();
     }
 
     /**
@@ -204,7 +278,14 @@ public class LocationTeleportScreen extends CGuiScreen {
         return out;
     }
 
-    /** La ligne qui ajoute : le second modele, son champ, et sa coche. */
+    /**
+     * La ligne qui ajoute : le second modele, son champ, et sa coche.
+     *
+     * <p>Le champ se conduit comme chez l'original : il porte « Add... » au repos, se vide et prend
+     * le clavier au clic, et remet son texte a la fin de la saisie. Son opacite dit aussi ou il en
+     * est — 0,4 au repos, 0,8 avec le clavier — et c'est cette difference-la, avec le curseur, qui
+     * indique qu'on peut ecrire.
+     */
     private CWidget addRowTemplate(CWidget add, CWidget element) {
         int index = addRow();
         CWidget out = new CWidget("row" + index);
@@ -214,19 +295,26 @@ public class LocationTeleportScreen extends CGuiScreen {
         out.tint = new CWidget.Tint();
 
         CWidget input = add.child("input_text").copy();
-        input.text.content = "";
-        input.text.allowEdit = true;
-        input.text.hint = Component.translatable(
-                "ac.ability.teleporter.location_teleport.name_hint").getString();
+        input.text.content = ADD_TEXT;
+        input.text.allowEdit = false;
+        input.text.hint = null;
         out.add(input);
         field = input;
 
         CWidget confirm = add.child("btn_confirm").copy();
         out.add(confirm);
 
-        onClick(out, () -> focus(field));
+        onClick(out, this::takeField);
         onClick(confirm, this::confirmInput);
         return out;
+    }
+
+    /** Un clic sur la ligne : le champ se vide et prend le clavier, comme chez l'original. */
+    private void takeField() {
+        if (field == null || field.text == null || field.text.allowEdit) return;
+        field.text.content = "";
+        field.text.allowEdit = true;
+        focus(field);
     }
 
     private static void send(LocationTeleportPacket.Action action, int markId, String name) {
@@ -240,11 +328,17 @@ public class LocationTeleportScreen extends CGuiScreen {
         onClose();
     }
 
-    /** Le champ valide : la marque est ajoutee sous le nom qu'il porte, puis il se vide. */
+    /**
+     * Le champ valide : la marque est ajoutee sous le nom qu'il porte, puis il reprend son repos.
+     *
+     * <p>Un champ qui n'a jamais pris le clavier ne valide rien : son contenu est encore
+     * « Add... », et l'envoyer creerait une marque portant ce nom-la.
+     */
     private void confirmInput() {
-        if (field == null || field.text == null) return;
+        if (field == null || field.text == null || !field.text.allowEdit) return;
         send(LocationTeleportPacket.Action.ADD, -1, field.text.content);
-        field.text.content = "";
+        field.text.content = ADD_TEXT;
+        field.text.allowEdit = false;
         focus(null);
     }
 
@@ -284,24 +378,95 @@ public class LocationTeleportScreen extends CGuiScreen {
                 LocationTeleportSkill.crossDimension(player, mark));
     }
 
-    /** L'explication d'une ligne : ou elle mene, ce qu'elle coute, et le refus s'il y en a un. */
+    /**
+     * L'explication d'une ligne, une ligne par renseignement comme l'original : la dimension, les
+     * coordonnees, le prix — puis le refus s'il y en a un.
+     *
+     * <p>Le port mettait la dimension et les coordonnees sur la meme ligne, et la boite ne
+     * grandissait pas : le texte y defilait au lieu de tenir. Le joueur l'a redemande le 22/10.
+     */
     private List<String> hint(int index) {
+        List<String> out = new ArrayList<>(HINT_LINES);
+
         if (index == addRow()) {
             Player player = player();
-            if (player == null) return List.of();
+            if (player == null) return out;
             var at = player.position();
-            return List.of(LocationMark.of(player.level()) + " " + coords(at.x, at.y, at.z));
+            out.add(dimensionName(player.level().dimension().location().toString()));
+            out.add(coords(at.x, at.y, at.z));
+            return out;
         }
 
         LocationMark mark = marks().get(index);
+        out.add(dimensionName(mark.dimension()));
+        out.add(coords(mark.x(), mark.y(), mark.z()));
+        out.add(Math.round(price(mark)) + " CP");
         String no = refusal(mark);
-        String cost = (int) price(mark) + " CP";
-        String where = mark.dimensionName() + " " + coords(mark.x(), mark.y(), mark.z());
-        return no.isEmpty() ? List.of(where, cost) : List.of(where, cost, no);
+        if (!no.isEmpty()) out.add(no);
+        return out;
+    }
+
+    /** La dimension sous sa forme courte : {@code overworld}, {@code the_nether}. */
+    private static String dimensionName(String dimension) {
+        return new LocationMark("", dimension, 0, 0, 0).dimensionName();
     }
 
     private static String coords(double x, double y, double z) {
         return "(" + Math.round(x) + ", " + Math.round(y) + ", " + Math.round(z) + ")";
+    }
+
+    /**
+     * La largeur et la hauteur de la boite d'explication, pour que le texte entier y tienne.
+     *
+     * <p>C'est le {@code updateText} de la {@code MessageTab} de l'original, au calcul pres : la
+     * largeur du plus long des textes, plus les deux marges, et une hauteur de ligne par texte. Le
+     * port laissait la largeur du fichier — 335 unites, ecrite pour l'anglais — et le moteur faisait
+     * donc defiler ce qui depassait au lieu de l'ecrire. Le joueur : « le carre avec les infos
+     * devrait grandir pour que le texte entier rentre dedans plutot que d'avoir du texte
+     * deroulant ».
+     */
+    private void sizeInfo(List<String> lines) {
+        double scale = info.absScale;
+        int cell = AcademyFonts.cell(HINT_FONT * Math.max(1.0E-4, scale));
+
+        int widest = 0;
+        for (String line : lines) {
+            widest = Math.max(widest, AcademyFonts.width(null, line, cell));
+        }
+
+        double[] size = infoSize(lines.size(), widest, scale);
+        info.transform.width = size[0];
+        info.transform.height = size[1];
+
+        CWidget menu = find("menu");
+        if (menu != null) {
+            info.transform.x = menu.transform.x - info.transform.width - INFO_GAP;
+        }
+
+        // Et les lignes se replacent dans la boite, alignees a droite comme chez l'original.
+        for (int i = 0; i < HINT_LINES; i++) {
+            CWidget line = info.child("hint" + i);
+            line.transform.x = HINT_MARGIN;
+            line.transform.y = HINT_MARGIN + i * HINT_LINE;
+            line.transform.width = Math.max(0.0, info.transform.width - 2 * HINT_MARGIN);
+        }
+    }
+
+    /**
+     * La taille de la boite d'explication, en unites du document : largeur et hauteur.
+     *
+     * <p>La largeur du plus long des textes, plus les deux marges ; une hauteur de ligne par texte.
+     * La mesure arrive en <b>pixels d'ecran</b> et ressort en unites du document, parce que c'est
+     * en unites que le fichier pose ses widgets — l'echelle est celle de la racine, 0,24.
+     *
+     * <p>Fonction pure, donc verifiable : c'est la regle du {@code MessageTab} de l'original, et
+     * c'est elle qui remplace la largeur figee du fichier — celle qui faisait defiler le texte.
+     */
+    public static double[] infoSize(int lines, int widestPixels, double scale) {
+        double perUnit = scale <= 0 ? 1.0 : scale;
+        double width = Math.max(0, widestPixels) / perUnit + 2 * HINT_MARGIN;
+        double height = lines * HINT_LINE + 2 * HINT_MARGIN;
+        return new double[] { width, height };
     }
 
     @Override
@@ -330,19 +495,32 @@ public class LocationTeleportScreen extends CGuiScreen {
     @Override
     protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
         CWidget menu = find("menu");
-        if (menu != null) {
-            menu.transform.height = MENU_HEIGHT * Math.min(1.0, age() / OPEN_SECONDS);
-        }
-
-        if (list == null || info == null) {
+        if (menu == null || list == null || info == null) {
             return;
         }
+
+        // Les marques ont pu changer depuis la derniere image : ajout, oubli, ou simple
+        // synchronisation. La liste se refait alors, avec ses gris a jour.
+        if (!fingerprint().equals(shown)) {
+            rebuild(find("elem_template"), find("add_template"));
+            layout();
+        }
+
+        menu.transform.height = MENU_HEIGHT * Math.min(1.0, age() / OPEN_SECONDS);
 
         // Le defilement deplace toutes les lignes d'abord : c'est ce qui les met a leur place.
         for (CWidget row : list.children()) {
             row.transform.y = rowIndex(row) * (ROW_HEIGHT + ROW_SPACING) - scroll;
         }
         layout();
+
+        // Le champ d'ajout dit ou il en est par son opacite, et prend le clavier au clic : c'est la
+        // meme regle que l'original (0,4 au repos, 0,8 avec le focus).
+        if (field != null && field.text != null) {
+            boolean editing = focused() == field;
+            double alpha = (editing ? ADD_FOCUS : ADD_IDLE) * rowFade(addRow());
+            field.text.alpha((int) Math.round(Math.max(0.0, Math.min(1.0, alpha)) * 255));
+        }
 
         double top = list.absY;
         double bottom = top + Math.min(list.transform.height, menu.transform.height - 18)
@@ -372,7 +550,10 @@ public class LocationTeleportScreen extends CGuiScreen {
                             : ICON_IDLE);
                     child.texture.alpha = (int) Math.round(icon * 255);
                 }
-                if (child.text != null) child.text.alpha((int) Math.round(fade * 255));
+                // Le champ porte son opacite a lui : voir plus haut.
+                if (child.text != null && child != field) {
+                    child.text.alpha((int) Math.round(fade * 255));
+                }
             }
         }
 
@@ -385,9 +566,10 @@ public class LocationTeleportScreen extends CGuiScreen {
         }
 
         CWidget row = rowWidget(hovered);
+        sizeInfo(lines);
         info.transform.y = row == null ? 0
                 : (row.absY - root().absY) / root().absScale;
-        info.transform.height = lines.size() * 42 + 40;
+        layout();
 
         for (int i = 0; i < HINT_LINES; i++) {
             CWidget line = info.child("hint" + i);
