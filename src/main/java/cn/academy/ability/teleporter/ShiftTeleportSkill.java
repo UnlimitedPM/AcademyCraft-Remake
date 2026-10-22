@@ -5,6 +5,7 @@ import cn.academy.ability.Skill;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -269,7 +270,35 @@ public class ShiftTeleportSkill extends Skill {
         Vec3 end = eye.add(look.scale(maxRange(data)));
         BlockHitResult hit = player.level().clip(new ClipContext(eye, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+
+        // ET LES CREATURES, comme le {@code traceLiving} de l'original, qui tracait les deux d'un
+        // seul rayon. Le port ne tracait que les blocs : viser une bete SANS MUR DERRIERE laissait
+        // la case visee au bout de la portee, et le coup partait sous elle — le joueur l'a vu le
+        // 22/10 avec un shulker : « si il n'y a pas de bloc derriere lui, alors l'attaque ne le
+        // frappe pas ». La ligne part des PIEDS et va au centre de la case visee ; sur trente-cinq
+        // blocs, la hauteur d'yeux qui la separe du regard suffit a passer dessous.
+        var struck = cn.academy.ability.TargetingUtil.findEntityHit(player, eye, end,
+                e -> e instanceof LivingEntity);
+        if (struck != null && (hit.getType() == HitResult.Type.MISS
+                || struck.getLocation().distanceToSqr(eye) < hit.getLocation().distanceToSqr(eye))) {
+            return fromEntity(struck.getEntity(), struck.getLocation());
+        }
         return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
+    }
+
+    /**
+     * La case visee quand le regard bute sur une <b>creature</b> : la sienne.
+     *
+     * <p>C'est la {@code getTraceDest} de l'original, dont le rayon rendait aussi les betes : la
+     * case visee etait alors celle ou la bete se tient, donc la ligne du coup s'arretait <b>sur
+     * elle</b> au lieu de la depasser. Le point, lui, est le point touche sur sa boite — c'est la
+     * que le bloc tombera, puisqu'un geste qui touche ne se plante pas.
+     *
+     * <p>Fonction pure, donc verifiable : la case vient de la position de la creature, rien d'autre.
+     */
+    public static Target fromEntity(Entity entity, Vec3 struck) {
+        BlockPos cell = BlockPos.containing(entity.getX(), entity.getY(), entity.getZ());
+        return new Target(cell, struck, Direction.DOWN, cell);
     }
 
     /**

@@ -4489,6 +4489,78 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le depose au loin frappe une bete <b>sans mur derriere elle</b>.
+     *
+     * <p>Le joueur l'a signale le 22/10 : « quand je vise un shulker, si il n'y a pas de bloc
+     * derriere lui, alors l'attaque ne le frappe pas ». Le port ne tracait que les blocs, la ou
+     * l'original tracait les deux d'un seul rayon ({@code traceLiving}) : sans mur, la case visee
+     * partait au bout de la portee, et la ligne du coup — qui part des <b>pieds</b> — passait sous
+     * la bete au lieu de la traverser.
+     *
+     * <p>Le shulker est la bete de ce test parce que c'est celle du rapport, et parce qu'elle ne
+     * bouge pas : sa boite ne peut pas s'ecarter entre le calcul de la cible et le coup.
+     */
+    @GameTest(template = "empty")
+    public static void leDeposeAuLoinFrappeUneBeteSansMurDerriere(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
+        var stone = net.minecraft.world.level.block.Blocks.STONE;
+        var air = net.minecraft.world.level.block.Blocks.AIR;
+        ServerLevel level = helper.getLevel();
+
+        int height = 170;
+        BlockPos floor = new BlockPos(2, 1, 2);
+        BlockPos abs = aboveTestArea(helper, floor, height);
+        BlockPos eyes = new BlockPos(floor.getX(), floor.getY() + height + 1, floor.getZ());
+        clearCorridor(helper, abs, 12);
+
+        // Un couloir d'air sur un sol de pierre — et AUCUN mur : c'est tout le sujet.
+        for (int dz = 0; dz <= 12; dz++) {
+            for (int dx = -2; dx <= 2; dx++) {
+                helper.setBlock(eyes.offset(dx, -2, dz), stone);
+                for (int dy = -1; dy <= 5; dy++) {
+                    helper.setBlock(eyes.offset(dx, dy, dz), air);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "piqueur");
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(stone));
+
+        // La bete a quatre blocs et demi, posee sur le sol, seule devant le vide.
+        var shulker = new net.minecraft.world.entity.monster.Shulker(
+                net.minecraft.world.entity.EntityType.SHULKER, level);
+        shulker.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 4.5f, 0f, 0f);
+        level.addFreshEntity(shulker);
+        float healthBefore = shulker.getHealth();
+
+        // Le regard se pose sur son centre, comme le ferait le joueur.
+        BlockPos sceau = new BlockPos(abs.getX(), abs.getY(), abs.getZ() + 4);
+        lookAt(player, sceau);
+
+        var data = new cn.academy.ability.AbilityData();
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+        data.setControlPoint(data.getMaxControlPoint());
+
+        // La case visee est la SIENNE, et pas le bout de la portee : c'est ce que le rayon de
+        // l'original donnait deja, et ce qui fait que la ligne du coup s'arrete sur elle.
+        var target = skill.target(player, data);
+        assertValue(helper, sceau, target.cell(),
+                "la case visee doit etre celle de la bete, pas le bout de la portee");
+
+        assertFalse(helper, skill.onRelease(player, data, 5), "le relachement termine le geste");
+
+        assertTrue(helper, healthBefore - shulker.getHealth() >= 15f,
+                "le shulker encaisse le geste sans mur derriere lui : " + shulker.getHealth()
+                        + " contre " + healthBefore);
+        assertTrue(helper, player.getMainHandItem().isEmpty(), "et le bloc a quitte la main");
+
+        shulker.discard();
+        helper.succeed();
+    }
+
+    /**
      * Le depose au loin : son bloc part, et ce qu'il croise encaisse.
      *
      * <p>La competence ne deplace personne — elle <b>pose</b> un bloc au loin, et frappe la ligne —
