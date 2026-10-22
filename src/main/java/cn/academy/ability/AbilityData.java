@@ -849,31 +849,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private int landedTicks;
 
     /**
-     * Les ticks de retombee LENTE qui restent, portage du {@code GravityCancellor} du scintillement.
-     *
-     * <p>Chaque saut du scintillement en repose quarante (voir {@code FlashingSkill.onHoldAction}) :
-     * pendant ce temps, la vitesse verticale remonte de {@code FlashingSkill.GRAVITY_LIFT} a chaque
-     * tick, ce qui annule presque la gravite et fait descendre doucement. Rien n'est sauvegarde :
-     * une retombee ne survit pas a un rechargement, et c'est voulu.
-     */
-    private int gravityTicks;
-
-    /** Arme la retombee lente du scintillement, sans raccourcir celle qui court deja. */
-    public void suspendGravity(int ticks) {
-        gravityTicks = Math.max(gravityTicks, ticks);
-    }
-
-    /** Ce qu'il reste de retombee lente. */
-    public int getGravitySuspension() {
-        return gravityTicks;
-    }
-
-    /** Un tick de retombee lente passe. */
-    public void tickGravitySuspension() {
-        if (gravityTicks > 0) gravityTicks--;
-    }
-
-    /**
      * Le temps laisse a un atterrissage pour se poser : deux ticks.
      *
      * <p>Le premier bloc touche ne leve donc plus la protection sur-le-champ, et c'est une demande

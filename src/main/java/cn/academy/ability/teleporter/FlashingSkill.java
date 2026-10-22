@@ -51,6 +51,11 @@ import net.minecraft.world.phys.Vec3;
  * remise a zero au moment du saut, comme le faisait le passage de l'original par
  * {@code setPositionAndUpdate}. Sans cela l'elan de la marche survit au saut et l'on
  * continue d'avancer apres etre arrive — on se deplace en plus de s'etre teleporte.
+ *
+ * <p>L'arrivee prend aussi le saut d'un bloc quand il reste la place pour la tete
+ * ({@link LandingSite#lift}), et la descente qui suit est <b>lente</b> : c'est le
+ * {@code GravityCancellor} de l'original, porte chez le client par {@code FlashingFall}, avec ses
+ * etincelles autour du joueur.
  */
 public class FlashingSkill extends Skill {
 
@@ -65,20 +70,6 @@ public class FlashingSkill extends Skill {
 
     /** Distance maximale, a l'experience maximale. */
     public static final double MAX_DISTANCE = 18.0;
-
-    /**
-     * Duree de la retombee lente qui suit un saut : quarante ticks, comme le
-     * {@code GravityCancellor} de l'original.
-     */
-    public static final int FALL_TICKS = 40;
-
-    /**
-     * Ce que le {@code GravityCancellor} rendait a la vitesse verticale, chaque tick.
-     *
-     * <p>La gravite d'un joueur vaut 0,08 : il reste donc un centieme par tick, et l'on descend
-     * doucement au lieu de tomber. C'est le chiffre de l'original, tel quel.
-     */
-    public static final double GRAVITY_LIFT = 0.072;
 
     public FlashingSkill() {
         super("flashing", 5);
@@ -185,10 +176,10 @@ public class FlashingSkill extends Skill {
         player.fallDistance = 0.0f;
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_FLASHING, 1.0f);
 
-        // Et la retombee est LENTE : c'est le `GravityCancellor(player, 40)` de l'original,
-        // pose a chaque saut et reparti de zero quand on enchaine. Voir
-        // AbilityData.suspendGravity.
-        data.suspendGravity(FALL_TICKS);
+        // Et la retombee est LENTE, mais chez le CLIENT : le port a deja appris deux fois qu'une
+        // vitesse posee par le serveur est reprise au tick suivant. C'est le
+        // `GravityCancellor(player, 40)` de l'original, arme par le client au depart du saut — voir
+        // FlashingFall, qui le pose et qui rend les etincelles.
 
         // 0,002 par saut, comme l'original.
         data.addSkillExp(this, 0.002f);
