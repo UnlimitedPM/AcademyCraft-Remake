@@ -43,7 +43,7 @@ import javax.annotation.Nullable;
  * emplacements de donnee sont ajoutes dans le meme ordre sur le serveur et sur le
  * client : c'est leur <b>ordre</b> qui les identifie, pas leur nom.
  */
-public class DeveloperMenu extends AbstractContainerMenu {
+public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.energy.WirelessMachine {
 
     /**
      * Decalage des boutons de competence.
@@ -391,5 +391,19 @@ public class DeveloperMenu extends AbstractContainerMenu {
         // garde, et c'est l'apprentissage lui-meme qui s'interrompt s'il le range.
         if (!(developer instanceof DeveloperBlockEntity be)) return true;
         return stillValid(access, player, be.getBlockState().getBlock());
+    }
+
+    /**
+     * La position de la machine, pour l'onglet sans fil.
+     *
+     * <p>Le developpeur est une machine comme les autres : l'original lui donnait le meme onglet, et
+     * c'est par lui qu'on choisit le noeud qui l'alimente. Le port ne l'avait pas, donc son cadre
+     * « Current Node » ne menait nulle part.
+     *
+     * @return la position du bloc, ou {@code null} pour l'objet portable — qui n'en a pas
+     */
+    @Override
+    public BlockPos machinePos() {
+        return developer instanceof DeveloperBlockEntity be ? be.getBlockPos() : null;
     }
 }

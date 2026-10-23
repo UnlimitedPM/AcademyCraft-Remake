@@ -82,7 +82,9 @@ public class WirelessRequestPacket {
             // n'est pas. Une machine cherche un noeud, un noeud cherche un Matrix — c'est la seule
             // difference entre les deux moities de l'onglet.
             if (sender.containerMenu instanceof WirelessMachine machine) {
-                machineRequest(level, sender, machine.machinePos(), msg);
+                BlockPos pos = machine.machinePos();
+                // Un conteneur sans machine — le developpeur portable — n'a rien a demander.
+                if (pos != null) machineRequest(level, sender, pos, msg);
             } else if (sender.containerMenu instanceof WirelessNode node) {
                 nodeRequest(level, sender, node.nodePos(), msg);
             }

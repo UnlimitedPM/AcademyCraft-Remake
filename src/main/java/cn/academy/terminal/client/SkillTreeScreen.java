@@ -218,29 +218,31 @@ public class SkillTreeScreen extends Screen {
 
         CWidget logo = ability.child("logo_ability");
         if (logo != null) {
-            logo.transform.doesDraw = category != null;
+            // L'original ne cachait pas l'icone : sans aptitude il montrait `icon_nocategory`.
             if (logo.texture == null) logo.texture = new CWidget.DrawTexture();
-            logo.texture.texture = category == null ? null : categoryIcon(category);
+            logo.transform.doesDraw = true;
+            logo.texture.texture = category == null
+                    ? "academy:textures/guis/icons/icon_nocategory.png"
+                    : categoryIcon(category);
         }
 
         CWidget name = ability.child("text_abilityname");
         if (name != null && name.text != null) {
             name.text.content = category == null
-                    ? Component.translatable("academy.developer.no_ability").getString()
+                    ? "N/A"
                     : Component.translatable(category.getDisplayKey()).getString();
         }
 
         CWidget level = ability.child("text_level");
         if (level != null && level.text != null) {
-            level.text.content = category == null ? ""
-                    : Component.translatable("academy.developer.level",
-                            data.getCategoryLevel(category)).getString();
+            level.text.content = Component.translatable("academy.ability.level"
+                    + (category == null ? 0 : data.getCategoryLevel(category))).getString();
         }
 
         CWidget exp = ability.child("text_exp");
         if (exp != null && exp.text != null) {
-            exp.text.content = category == null ? ""
-                    : "EXP " + (int) (data.getLevelProgress(category) * 100) + "%";
+            exp.text.content = "EXP " + (category == null ? 100
+                    : (int) (data.getLevelProgress(category) * 100)) + "%";
         }
 
         CWidget progress = ability.child("logo_progress");

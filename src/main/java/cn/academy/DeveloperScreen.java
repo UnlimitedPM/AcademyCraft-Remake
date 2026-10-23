@@ -11,6 +11,7 @@ import cn.academy.ability.develop.LearningHelper;
 import cn.academy.ability.develop.condition.LearningCondition;
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiShaders;
+import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.client.gui.cgui.CWidget;
 import cn.academy.client.gui.cgui.DeveloperConsole;
 import cn.academy.client.gui.cgui.GuiPageHost;
@@ -259,6 +260,11 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         buildAbilityPanel(page);
         buildMachinePanel(page);
         buildAptitude(page);
+
+        // L'onglet sans fil de l'original, pose EN DERNIER : le moteur ouvre la premiere page posee,
+        // et cette machine doit s'ouvrir sur son arbre. C'est par cet onglet qu'on choisit le noeud
+        // qui l'alimente — l'original le donnait a toutes ses machines, celle-ci comprise.
+        if (!menu.isPortable()) new CGuiWireless(screen).install();
     }
 
     /** La bobine magnetique en main : c'est elle qui demande a changer d'aptitude. */
@@ -284,28 +290,30 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         CWidget logo = ability.child("logo_ability");
         if (logo != null) {
-            // Sans aptitude, il n'y a pas d'icone a montrer — et une texture absente se dessine en
-            // rectangle BLANC. Le joueur l'a vu et l'a dit : « l'image qui montre quel pouvoir on a
-            // est un carre blanc quand on n'a pas de pouvoir ».
-            logo.transform.doesDraw = category != null;
+            // L'original ne cachait pas l'icone : sans aptitude il montrait `icon_nocategory`, le
+            // point d'interrogation. Le port la cachait, et le joueur a reclame l'image du vrai mod.
             if (logo.texture == null) logo.texture = new CWidget.DrawTexture();
-            logo.texture.texture = category == null ? null : categoryIcon(category);
+            logo.transform.doesDraw = true;
+            logo.texture.texture = category == null
+                    ? "academy:textures/guis/icons/icon_nocategory.png"
+                    : categoryIcon(category);
         }
 
         CWidget name = ability.child("text_abilityname");
         if (name != null && name.text != null) {
-            // « N/A » ne disait rien a personne, et le joueur a reclame le bon texte : sans
-            // aptitude, on le dit, au lieu d'ecrire une abreviation d'anglais de bureau.
+            // « N/A » est le texte de l'original quand il n'y a pas d'aptitude — c'est ce que le
+            // joueur a montre sur sa capture du vrai mod.
             name.text.content = category == null
-                    ? Component.translatable("academy.developer.no_ability").getString()
+                    ? "N/A"
                     : Component.translatable(category.getDisplayKey()).getString();
         }
 
         CWidget level = ability.child("text_level");
         if (level != null && level.text != null) {
-            level.text.content = category == null ? ""
-                    : Component.translatable("academy.developer.level",
-                            data.getCategoryLevel(category)).getString();
+            // `AbilityLocalization.levelDesc` : la cle `ac.ability.level<n>`, donc « Level 0 » sans
+            // aptitude. Le port ecrivait une chaine vide, et le joueur voyait un panneau a moitie nu.
+            level.text.content = Component.translatable("academy.ability.level"
+                    + (category == null ? 0 : data.getCategoryLevel(category))).getString();
         }
 
         // Le pourcentage d'experience. Le document porte « EXP 30% » : un texte d'exemple, que l'ecran
@@ -314,8 +322,10 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // Le chiffre est celui de la barre juste au-dessus, donc de l'avancement du niveau en cours.
         CWidget exp = ability.child("text_exp");
         if (exp != null && exp.text != null) {
-            exp.text.content = category == null ? ""
-                    : "EXP " + (int) (data.getLevelProgress(category) * 100) + "%";
+            // Sans aptitude, l'original annonce 100 % : son palier vaut zero, et un palier nul est
+            // un palier franchi. C'est ce que montre sa capture — « EXP 100% » a cote de « Level 0 ».
+            exp.text.content = "EXP " + (category == null ? 100
+                    : (int) (data.getLevelProgress(category) * 100)) + "%";
         }
 
         CWidget progress = ability.child("logo_progress");
@@ -334,17 +344,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             // le bouton LEARN [...] et pour les niveaux inferieurs, je dois le voir uniquement quand je
             // suis a 100 % ». Le palier plein est demande a {@code AbilityData}, qui porte la meme regle
             // que celle que le serveur appliquera au clic.
-            // Sans aptitude, ce meme bouton est celui qui en donne une : c'est l'action de montee de
-            // niveau de l'original, qui choisissait la categorie quand il n'y en avait pas encore.
-            boolean first = category == null;
-            boolean open = first || (data.getCategoryLevel(category) < DevelopActionLevel.MAX_LEVEL
-                    && data.canLevelUp(category));
+            //
+            // SANS APTITUDE, IL NE SE MONTRE PAS : l'original exigeait `aData.hasCategory`, et c'est
+            // la console qui donne la premiere aptitude (sa commande `learn`). Le port le montrait,
+            // et le joueur a vu un bouton LEARN la ou le vrai mod n'en a pas.
+            boolean open = category != null
+                    && data.getCategoryLevel(category) < DevelopActionLevel.MAX_LEVEL
+                    && data.canLevelUp(category);
             upgrade.transform.doesDraw = open;
-            if (open) {
-                onClick(upgrade, first
-                        ? () -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON)
-                        : this::openLevel);
-            }
+            if (open) onClick(upgrade, this::openLevel);
         }
     }
 
@@ -365,16 +373,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (machine == null) return;
 
         // « Current Node: » : la ligne du noeud, celle que l'original dessinait sous la barre
-        // d'energie. Le port la cachait entierement, si bien que le joueur ne savait pas a quoi sa
-        // machine etait raccordee â€” il l'a reclamee deux fois. Le libelle est dans la page ; c'est
-        // le nom du noeud, connu du seul serveur, qui manquait.
+        // d'energie. Le libelle est dans la page ; c'est le nom du noeud, connu du seul serveur,
+        // qui manquait.
+        //
+        // Le texte est « N/A » quand il n'y a pas de noeud, comme chez l'original — et non
+        // « Not Connected », qui est le texte de l'onglet sans fil et non celui de cette ligne.
         CWidget wireless = machine.child("button_wireless");
         CWidget node = wireless == null ? null : wireless.child("text_nodename");
         if (node != null && node.text != null) {
             String name = menu.getNodeName();
-            node.text.content = name.isEmpty()
-                    ? Component.translatable("academy.developer.not_connected").getString()
-                    : name;
+            node.text.content = name.isEmpty() ? "N/A" : name;
         }
 
         if (menu.isPortable()) {
@@ -384,6 +392,15 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                 left.texture.texture = "academy:textures/guis/ui/ui_developerleft_skilltree.png";
             }
             return;
+        }
+
+        // Le cadre du noeud ouvre l'onglet sans fil : c'est ce que faisait l'original, dont le
+        // `LeftClickEvent` posait sa `WirelessPage` par-dessus l'ecran. Le port n'avait ni l'onglet
+        // sur cette machine ni le moyen de changer de page depuis le code, donc le cadre ne faisait
+        // rien du tout — le joueur : « si j'appuie sur le "Not Connected", ça ne me met pas la page
+        // de connexion ».
+        if (wireless != null) {
+            onClick(wireless, () -> showPage(CGuiWireless.PAGE));
         }
 
         CWidget power = machine.child("progress_power");
@@ -661,6 +678,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      */
     private void drawConsole(GuiGraphics graphics) {
         if (console == null || consoleBox == null) return;
+        // La console appartient a la page de l'arbre : sur l'onglet sans fil, elle n'a rien a dire.
+        if (!PAGE.equals(currentPageId())) return;
 
         console.tick(net.minecraft.Util.getMillis() / 1000.0);
 
@@ -991,6 +1010,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             veil.beginClose();
             return true;
         }
+        // L'onglet sans fil se referme au premier clic qui ne prend rien : c'est la `Cover` de
+        // l'original, qui posait sa page par-dessus l'ecran et la retirait au clic. Sans cela, le
+        // joueur n'aurait aucun moyen de revenir a son arbre — cette machine n'a pas d'onglets.
+        if (button == 0 && CGuiWireless.PAGE.equals(currentPageId())) {
+            showPage(PAGE);
+            return true;
+        }
         return false;
     }
 
@@ -1000,10 +1026,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * <p>C'est le {@code KeyEvent} de l'original : retour arriere efface une lettre, Entree valide
      * la ligne, et tout le reste s'ecrit. Le port n'avait rien de tout cela — sa console affichait
      * son texte et ne prenait aucune frappe.
+     *
+     * <p>Et la touche d'inventaire ne ferme PAS l'ecran tant que la console attend sa frappe :
+     * c'est la regle de l'original, dont le {@code CGuiScreenContainer} ne laissait passer que
+     * l'echappement quand un champ avait le clavier. Sans elle, taper un mot qui contient un « e »
+     * fermait la machine — le joueur : « appuyer sur la touche E me fait ressortir de la machine ».
      */
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (console != null) {
+        // La console n'a le clavier que sur SA page : sur l'onglet sans fil, ses champs a elle
+        // prennent la main, et la console ne doit rien avaler.
+        if (console != null && PAGE.equals(currentPageId())) {
             if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
                 console.backspace();
                 return true;
@@ -1013,6 +1046,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                 console.submit();
                 return true;
             }
+            // Tout le reste est avale : la console a le clavier, comme un champ de saisie. Sans
+            // cela, la touche d'inventaire (E par defaut) ferme l'ecran au premier caractere.
+            if (keyCode != org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
@@ -1020,7 +1056,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /** Une lettre tapee va dans la ligne de la console. */
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (console != null && net.minecraft.SharedConstants.isAllowedChatCharacter(codePoint)) {
+        if (console != null && PAGE.equals(currentPageId())
+                && net.minecraft.SharedConstants.isAllowedChatCharacter(codePoint)) {
             console.type(codePoint);
             return true;
         }

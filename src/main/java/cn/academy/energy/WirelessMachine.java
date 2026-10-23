@@ -13,6 +13,12 @@ import net.minecraft.core.BlockPos;
  */
 public interface WirelessMachine {
 
-    /** La position de la machine dont ce conteneur est l'ecran. */
+    /**
+     * La position de la machine dont ce conteneur est l'ecran.
+     *
+     * <p>{@code null} pour un conteneur qui n'a pas de machine — le developpeur portable, qui est un
+     * objet tenu. L'onglet sans fil n'a alors rien a demander, et le serveur ne repond rien.
+     */
+    @javax.annotation.Nullable
     BlockPos machinePos();
 }

@@ -285,6 +285,12 @@
   "academy.learn.developer": "Nécessite un %s",
   "academy.learn.dependency": "Nécessite d'abord %s",
   "academy.learn.dependency_exp": "Nécessite %s à %s%% d'expérience",
+  "academy.ability.level0": "Niveau 0",
+  "academy.ability.level1": "Niveau 1",
+  "academy.ability.level2": "Niveau 2",
+  "academy.ability.level3": "Niveau 3",
+  "academy.ability.level4": "Niveau 4",
+  "academy.ability.level5": "Niveau 5",
   "academy.ability.not_learned": "Vous n'avez pas appris %s",
   "academy.ability.cooldown": "En recharge pendant %ss",
 

@@ -623,6 +623,32 @@ public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         }
     }
 
+    /**
+     * Ouvre une page par son identifiant, comme le ferait un clic sur son onglet.
+     *
+     * <p>C'est ce qu'il faut pour qu'un element de la page courante puisse mener a une autre : le
+     * cadre « Current Node » du developpeur ouvre l'onglet sans fil, et l'original le faisait en
+     * posant sa page par-dessus la sienne. Le port n'avait aucun moyen de changer de page depuis le
+     * code, donc ce cadre ne faisait rien du tout.
+     *
+     * @return vrai quand la page existe et a ete montree
+     */
+    protected boolean showPage(String id) {
+        for (int i = 0; i < pages.size(); i++) {
+            if (pages.get(i).id().equals(id)) {
+                show(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** L'identifiant de la page montree, ou {@code null} s'il n'y en a aucune. */
+    protected String currentPageId() {
+        Page page = current();
+        return page == null ? null : page.id();
+    }
+
     @Override
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         if (view == null) return;

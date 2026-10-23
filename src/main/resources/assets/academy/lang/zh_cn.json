@@ -285,6 +285,12 @@
   "academy.learn.developer": "需要一个%s",
   "academy.learn.dependency": "需要先学会 %s",
   "academy.learn.dependency_exp": "需要 %s 达到 %s%% 经验",
+  "academy.ability.level0": "等级 0",
+  "academy.ability.level1": "等级 1",
+  "academy.ability.level2": "等级 2",
+  "academy.ability.level3": "等级 3",
+  "academy.ability.level4": "等级 4",
+  "academy.ability.level5": "等级 5",
   "academy.ability.not_learned": "你还没有学会 %s",
   "academy.ability.cooldown": "冷却中，剩余 %ss",
 
