@@ -38,6 +38,34 @@ class DeveloperScreenTest {
         assertEquals(SkillTreeView.LINK_UNLEARNED, SkillTreeView.linkDim(1.0, false), 1.0e-9);
     }
 
+    /**
+     * L'ordre du fondu et de la teinte, qui n'est pas interchangeable.
+     *
+     * <p>L'original ecrit {@code mAlpha * clampd(0, 1, dt * 10.0)} : le fondu monte jusqu'a un, puis
+     * la teinte du noeud le reduit — et une fois le fondu fini, il ne reste QUE la teinte. Le port
+     * multipliait d'abord et bornait ensuite, donc tout saturait a un des que le produit depassait
+     * ce chiffre : au bout de deux dixiemes de seconde, une competence lointaine (0,25) brillait
+     * autant qu'une competence apprise. Le joueur l'a vu deux fois — « toutes les competences sont
+     * reliees avec la ligne blanche » et les noeuds hors de portee « pas assez sombres ».
+     */
+    @Test
+    @DisplayName("le fondu d'un noeud finit sur sa teinte, jamais sur un")
+    void leFonduFinitSurLaTeinte() {
+        // Une image plus tard : la teinte pleine, rien de plus.
+        assertEquals(LEARNED, SkillTreeView.appearAlpha(LEARNED, 10.0), 1.0e-9);
+        assertEquals(IN_REACH, SkillTreeView.appearAlpha(IN_REACH, 10.0), 1.0e-9,
+                "une competence a portee reste a sept dixiemes, meme une fois son fondu fini");
+        assertEquals(OUT_OF_REACH, SkillTreeView.appearAlpha(OUT_OF_REACH, 10.0), 1.0e-9,
+                "et une competence hors de portee reste a un quart — c'est elle qu'on voit trop clair");
+
+        // Au debut : rien. Le fondu lui-meme est lineaire, a dix par seconde.
+        assertEquals(0.0, SkillTreeView.appearAlpha(LEARNED, 0.0), 1.0e-9);
+        assertEquals(0.5 * IN_REACH, SkillTreeView.appearAlpha(IN_REACH, 0.05), 1.0e-9,
+                "a mi-fondu, la moitie de la teinte");
+        assertEquals(0.0, SkillTreeView.appearAlpha(OUT_OF_REACH, -1.0), 1.0e-9,
+                "un temps negatif ne descend pas sous zero");
+    }
+
     @Test
     @DisplayName("la Developer ne fait pas respirer ses fonds de page")
     void laDeveloperNeRespirePas() {

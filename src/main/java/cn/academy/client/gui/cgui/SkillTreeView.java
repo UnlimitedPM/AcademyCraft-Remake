@@ -353,12 +353,27 @@ public final class SkillTreeView {
                 disc.drawFill = node.learned;
                 disc.fill = data.getSkillExp(node.skill);
                 disc.grey = !node.learned;
-                disc.backAlpha = alpha(node.dim * APPEAR_SPEED * dt);
-                disc.iconAlpha = alpha(node.dim * APPEAR_SPEED * (dt - APPEAR_STEP));
+                // LE FONDU SE CLAMPE AVANT LA MULTIPLICATION. L'original ecrit
+                // {@code mAlpha * clampd(0, 1, dt * 10.0)} : le fondu monte jusqu'a un, PUIS la
+                // teinte du noeud le reduit. Le port multipliait d'abord et clamait ensuite — et
+                // un produit qui depasse un une fois pour toutes ne redescend jamais : tout
+                // atteignait donc la pleine opacite en une fraction de seconde, quelle que soit la
+                // teinte du noeud. C'est ce que le joueur a vu d'un bout a l'autre de l'arbre :
+                // « toutes les competences sont reliees avec la ligne blanche », et les noeuds
+                // lointains « pas assez sombres ». Deux dixiemes de seconde suffisaient a effacer
+                // les trois teintes de l'original — 1, 0,7 et 0,25.
+                disc.backAlpha = alpha(appearAlpha(node.dim, dt));
+                disc.iconAlpha = alpha(appearAlpha(node.dim, dt - APPEAR_STEP));
             }
             if (node.widget.line != null) {
+                // Meme regle pour le trait, et c'est la ou elle se voyait le plus : son opacite
+                // finale est {@code mAlpha * (if (learned) 1.0 else 0.4)}, une CONSTANTE — le fondu
+                // ne dit que jusqu'ou le trait a pousse. Le port le melangeait a l'opacite, et le
+                // produit saturait : les traits d'une competence non apprise sortaient blancs, et
+                // c'est exactement le reproche du joueur — « la ligne est grise si on n'a pas
+                // appris l'autre competence, et la ce n'est pas le cas ».
                 node.widget.line.progress = clamp01(LINK_FADE * dt);
-                node.widget.line.alpha = alpha(LINK_FADE * dt * linkDim(node.dim, node.learned));
+                node.widget.line.alpha = alpha(linkDim(node.dim, node.learned));
             }
         }
     }
@@ -371,6 +386,24 @@ public final class SkillTreeView {
      */
     public static double linkDim(double dim, boolean learned) {
         return dim * (learned ? 1.0d : LINK_UNLEARNED);
+    }
+
+    /**
+     * L'opacite d'un noeud pendant son apparition : son fondu, puis sa teinte.
+     *
+     * <p>C'est l'ordre de l'original — {@code mAlpha * clampd(0, 1, dt * 10.0)}, le fondu d'abord,
+     * la teinte ensuite — et il n'est pas interchangeable. Le port faisait le produit puis bornait
+     * le resultat a un, ce qui revient a effacer la teinte des que le fondu depasse un : les trois
+     * valeurs de l'original, 1, 0,7 et 0,25, se retrouvaient toutes a 1 au bout de deux dixiemes de
+     * seconde. Le joueur : « toutes les competences sont reliees avec la ligne blanche », et les
+     * competences hors de portee « pas assez sombres ».
+     *
+     * @param dim     la teinte du noeud : voir {@link Node}
+     * @param elapsed le temps depuis le debut de son fondu, en secondes ; une valeur negative borne
+     *                le resultat a zero
+     */
+    public static double appearAlpha(double dim, double elapsed) {
+        return dim * clamp01(APPEAR_SPEED * elapsed);
     }
 
     /**
