@@ -881,6 +881,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             consoleLearning = false;
             CWidget page = pageWindow(PAGE);
             if (page != null) {
+                // Les DEUX panneaux de gauche se refont ici, et pas seulement la zone de droite :
+                // `refresh` ne les rebatira plus, puisque l'arbre vient de noter sa signature et
+                // qu'elle ne bougera plus. Le joueur voyait donc l'arbre de sa nouvelle aptitude
+                // avec, a cote, « N/A » et le point d'interrogation de la precedente — « il ne met
+                // pas a jour le nom de ma competence ni l'image du pouvoir ».
+                buildAbilityPanel(page);
+                buildMachinePanel(page);
                 buildAptitude(page);
                 reflow();
             }
