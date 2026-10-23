@@ -549,6 +549,27 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         console.enqueue(progressTask(consoleTexts().resetSucc(), consoleTexts().resetFail(), false));
     }
     /**
+     * Le temps laisse a la premiere aptitude avant que la console ne dise son verdict.
+     *
+     * <p>Elle se donne tout de suite, sans stimulation : sans ce delai la tache se terminerait a
+     * l'image suivante, et le joueur ne verrait ni la ligne de progression ni le verdict. Une
+     * seconde suffit a lire les deux lignes, et c'est le temps que l'original mettait a jouer sa
+     * sequence.
+     */
+    private static final double MIN_FIRST_CATEGORY = 1.0;
+
+    /**
+     * Le texte d'un pourcentage tel qu'il s'ecrit dans la console : le nombre et son signe.
+     *
+     * <p>Le signe vient de la phrase de la langue ({@code Progress: %s%%}), donc il n'est pas dans
+     * {@link DeveloperConsole#percent} — mais la tache doit savoir combien de caracteres elle a
+     * ecrits pour les effacer, et c'est ce texte-la qu'elle a ecrit.
+     */
+    private static String progressText(int value) {
+        return DeveloperConsole.percent(value) + "%";
+    }
+
+    /**
      * La tache qui suit un apprentissage : elle reecrit le pourcentage sur place, puis dit le
      * verdict et demande la reconstruction de l'ecran.
      *
@@ -570,14 +591,34 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private DeveloperConsole.Task progressTask(String success, String failure,
                                                boolean firstCategory) {
         return new DeveloperConsole.Task() {
-            /** Ce que la derniere image a ecrit, pour l'effacer exactement. */
-            private String written = "";
+            /**
+             * Ce que la ligne porte deja, pour l'effacer exactement.
+             *
+             * <p>Il vaut {@code 0%} et non vide : l'appelant vient d'ecrire la ligne de progression
+             * a zero, et une valeur vide faisait donc ecrire le premier pourcentage A LA SUITE du
+             * zero — le joueur a vu « Progress: 0%49% » sur sa capture. Le signe fait partie du
+             * texte efface, puisque la phrase de la langue le pose deja.
+             */
+            private String written = progressText(0);
+
+            /** L'instant ou la tache a commence : voir {@link #MIN_FIRST_CATEGORY}. */
+            private double born = -1;
+
+            @Override
+            public void begin(double now) {
+                born = now;
+            }
 
             @Override
             public boolean isFinished(double now) {
-                return menu.getState() == DevelopProgress.DevState.FAILED
-                        || menu.getState() == DevelopProgress.DevState.DONE
-                        || firstCategory && category() != null;
+                if (menu.getState() == DevelopProgress.DevState.FAILED
+                        || menu.getState() == DevelopProgress.DevState.DONE) return true;
+                // La premiere aptitude se donne TOUT DE SUITE, sans stimulation : sans un delai
+                // minimum, la tache se terminerait a l'image suivante et le joueur ne verrait ni
+                // la ligne de progression ni le verdict — « la machine se met a jour d'elle meme
+                // et skip l'animation ».
+                return firstCategory && category() != null
+                        && now - born >= MIN_FIRST_CATEGORY;
             }
 
             @Override
@@ -586,7 +627,14 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                 // On efface EXACTEMENT ce qu'on a ecrit, et pas un nombre fixe de caracteres :
                 // « 1% » fait deux caracteres, « 100% » en fait quatre, et un `\b\b\b` fixe
                 // mordait donc dans la phrase precedente des que le chiffre changeait de taille.
-                String next = DeveloperConsole.percent((int) (menu.getProgress() * 100));
+                //
+                // La PREMIERE aptitude se donne d'un coup, donc la machine n'a aucune progression
+                // a montrer : c'est le temps ecoule qui la fait monter, sinon la ligne resterait a
+                // zero pendant tout le delai et le joueur ne verrait rien s'animer.
+                int percent = firstCategory
+                        ? (int) Math.min(100, (now - born) / MIN_FIRST_CATEGORY * 100)
+                        : (int) (menu.getProgress() * 100);
+                String next = progressText(percent);
                 if (next.equals(written)) return;
                 console.output("\b".repeat(written.length()) + next);
                 written = next;

@@ -54,14 +54,14 @@ class DeveloperConsoleOrderTest {
 
     @Test
     void lePourcentageNAPasDeZeroInutile() {
-        // Le joueur : « normalement il n'y a pas de 0 affiche pour rien, juste 1% pas 001% ». La
-        // tache de progression n'efface donc plus un nombre FIXE de caracteres : elle retient la
-        // longueur de ce qu'elle a ecrit et l'efface, ce qui marche pour les trois tailles.
-        assertEquals("0%", DeveloperConsole.percent(0));
-        assertEquals("1%", DeveloperConsole.percent(1));
-        assertEquals("9%", DeveloperConsole.percent(9));
-        assertEquals("10%", DeveloperConsole.percent(10));
-        assertEquals("100%", DeveloperConsole.percent(100));
+        // Le joueur : « normalement il n'y a pas de 0 affiche pour rien, juste 1% pas 001% ». Le
+        // signe appartient a la phrase de la langue, pas a ce nombre : le mettre des deux cotes
+        // donnait « 0%%49% » sur sa capture.
+        assertEquals("0", DeveloperConsole.percent(0));
+        assertEquals("1", DeveloperConsole.percent(1));
+        assertEquals("9", DeveloperConsole.percent(9));
+        assertEquals("10", DeveloperConsole.percent(10));
+        assertEquals("100", DeveloperConsole.percent(100));
     }
 
     @Test

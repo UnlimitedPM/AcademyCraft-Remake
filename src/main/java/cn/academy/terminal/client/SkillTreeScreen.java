@@ -288,6 +288,14 @@ public class SkillTreeScreen extends Screen {
             return;
         }
 
+        // L'aptitude est arrivee, mais la console joue encore : elle garde la place jusqu'a la fin
+        // de son animation, comme sur la machine.
+        if (console != null && !console.startupFinished()) {
+            buildConsole(area);
+            tree.note(null, data);
+            return;
+        }
+
         console = null;
         consoleBox = null;
         tree.build(category, data, this::openSkill);
@@ -383,7 +391,13 @@ public class SkillTreeScreen extends Screen {
     private void frame(GuiGraphics graphics, double mouseX, double mouseY) {
         Category category = category();
         AbilityData data = ClientAbilityData.get();
-        if (!tree.unchanged(category, data)) {
+
+        // La console garde la place tant que son demarrage n'est pas fini : sans cela, l'aptitude
+        // qui arrive du serveur la remplaçait au milieu de sa banniere, et le joueur ne voyait
+        // rien — « je vois les messages commencer a s'afficher sauf que la machine se met a jour
+        // d'elle meme et skip l'animation ».
+        boolean playing = console != null && !console.startupFinished();
+        if (!playing && !tree.unchanged(category, data)) {
             build();
             place();
         }

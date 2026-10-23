@@ -15,12 +15,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
 
 /**
- * Les commandes d'aptitude : celle du joueur, et celles du debogage.
+ * Les commandes d'aptitude : celles du debogage.
  *
- * <p>{@code /learn} est la porte d'entree : elle donne sa premiere aptitude a un joueur qui n'en a
- * aucune, en lisant son inventaire comme le fait le developpeur — un facteur d'induction designe sa
- * categorie, sinon le sort en donne une. {@code /academy learn <categorie>} reste pour les essais :
- * elle force une categorie, sans rien demander au joueur.
+ * <p>{@code /academy learn <categorie>} reste pour les essais : elle force une categorie, sans rien
+ * demander au joueur. La porte d'entree du mod, elle, est la console du developpeur — le joueur a
+ * fait retirer {@code /learn} du chat, qui n'avait pas lieu d'exister.
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public class AbilityCommands {
@@ -50,21 +49,9 @@ public class AbilityCommands {
                                     return 1;
                                 }))));
 
-        // La commande du JOUEUR, celle qui ouvre le mod : sans aptitude, elle en donne une. Elle lit
-        // l'inventaire comme le developpeur — un facteur designe sa categorie et disparait, sinon le
-        // sort en donne une — et elle previent le client, sans quoi l'affichage du joueur resterait
-        // vide jusqu'a la prochaine reconnexion. Elle passe par le meme chemin que les deux boutons
-        // LEARN de l'ecran, pour qu'il n'y ait qu'une facon de donner cette premiere aptitude.
-        dispatcher.register(Commands.literal("learn").executes(ctx -> {
-            ServerPlayer player = ctx.getSource().getPlayerOrException();
-            Category learned = cn.academy.ability.develop.DevelopActionFirstCategory.grantAndSync(player);
-            if (learned == null) {
-                ctx.getSource().sendFailure(Component.translatable("academy.developer.already_has"));
-                return 0;
-            }
-            ctx.getSource().sendSuccess(() -> Component.translatable("academy.developer.learned",
-                    Component.translatable(learned.getDisplayKey())), false);
-            return 1;
-        }));
+        // La commande du JOUEUR a ete RETIREE : le joueur l'a demandee explicitement — « la
+        // commande /learn dans le chat ne sert a rien, supprime la elle n'a jamais eu besoin
+        // d'exister ». La premiere aptitude se donne par la console du developpeur, et par elle
+        // seule : c'est la mecanique de l'original, et c'est ce que le joueur veut.
     }
 }

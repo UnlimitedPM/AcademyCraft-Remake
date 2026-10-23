@@ -318,15 +318,18 @@ public final class DeveloperConsole {
     }
 
     /**
-     * Un pourcentage, sans zero inutile : {@code 1%}, {@code 10%}, {@code 100%}.
+     * Un pourcentage, sans zero inutile et SANS le signe : {@code 1}, {@code 10}, {@code 100}.
      *
-     * <p>L'original ecrivait {@code 01%} — son {@code fmt} ajoutait un zero sous dix — mais le
-     * joueur ne veut pas de ce zero : « normalement il n'y a pas de 0 affiche pour rien, juste 1%
-     * pas 001% ». La tache de progression n'efface donc plus un nombre FIXE de caracteres : elle
-     * retient la longueur de ce qu'elle a ecrit et l'efface, ce qui marche pour les trois cas.
+     * <p>Le signe appartient a la phrase de la langue ({@code Progress: %s%}), et non a ce nombre :
+     * le mettre des deux cotes donnait {@code 0%%49%} — le joueur l'a vu sur sa capture. Et
+     * l'original ecrivait {@code 01%} (son {@code fmt} ajoutait un zero sous dix), ce que le joueur
+     * ne veut pas : « normalement il n'y a pas de 0 affiche pour rien, juste 1% pas 001% ».
+     *
+     * <p>La tache de progression n'efface donc plus un nombre FIXE de caracteres : elle retient la
+     * longueur de ce qu'elle a ecrit et l'efface, ce qui marche pour les trois tailles.
      */
     public static String percent(int value) {
-        return value + "%";
+        return String.valueOf(value);
     }
 
     // ------------------------------------------------------------------
