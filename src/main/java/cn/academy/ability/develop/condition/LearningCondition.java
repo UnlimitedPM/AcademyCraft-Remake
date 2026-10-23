@@ -31,6 +31,19 @@ public interface LearningCondition {
      */
     boolean accepts(AbilityData data, Skill skill, DeveloperType developer);
 
+    /**
+     * Vrai quand la reponse depend de la machine utilisee.
+     *
+     * <p>Une seule condition est dans ce cas : celle qui demande une qualite de developpeur. Les
+     * autres ne parlent que du joueur — son niveau, ses dependances — et se repondent donc partout,
+     * meme la ou il n'y a aucune machine. C'est ce que l'ecran du terminal a besoin de savoir :
+     * l'application du skill tree n'a pas de developpeur, et lui en passer un faux ferait afficher
+     * une exigence qui n'a pas ete evaluee.
+     */
+    default boolean needsDeveloper() {
+        return false;
+    }
+
     /** Pourquoi la condition n'est pas remplie, dans la langue du joueur. */
     Component describe(Skill skill);
 }

@@ -252,4 +252,41 @@ class LearningHelperTest {
         assertTrue(LearningHelper.canBePotentiallyLearned(fixture.data, child),
                 "une competence apprise ne disparait pas de l'ecran");
     }
+
+    /**
+     * Sans machine, la condition de qualite ne repond pas — et ne tue pas le jeu.
+     *
+     * <p>L'application du skill tree n'a pas de developpeur : elle demandait pourtant a chaque
+     * condition si elle etait remplie, en passant {@code null}. La condition de qualite lisait
+     * alors {@code developer.ordinal()} sur rien, et le joueur a plante en cliquant sur une
+     * competence — « quand je clique sur une competence dans l'app du skill tree, mon jeu plante ».
+     *
+     * <p>Deux garde-fous, et ce test les tient tous les deux : la condition se declare comme
+     * dependant d'une machine ({@link LearningCondition#needsDeveloper()}), ce qui permet a l'ecran
+     * de l'ecarter, et elle refuse proprement quand on la lui pose quand meme.
+     */
+    @Test
+    void sansMachineLaConditionDeQualiteRefuseAuLieuDePlanter() {
+        DummySkill haute = new DummySkill("haute", 4);
+        Fixture fixture = new Fixture(haute);
+        fixture.data.setCategoryLevel(fixture.category, 4);
+
+        ConditionDeveloperType condition = null;
+        for (var candidate : haute.getConditions()) {
+            if (candidate instanceof ConditionDeveloperType typed) condition = typed;
+        }
+        assertNotNull(condition, "une competence de niveau 4 exige une machine avancee");
+        assertTrue(condition.needsDeveloper(), "elle seule depend de la machine");
+
+        assertFalse(condition.accepts(fixture.data, haute, null),
+                "sans machine, elle n'est pas remplie — et surtout elle ne plante pas");
+        assertTrue(condition.accepts(fixture.data, haute, DeveloperType.ADVANCED));
+    }
+
+    /** Les autres conditions ne dependent pas de la machine : l'application peut les poser. */
+    @Test
+    void lesConditionsDuJoueurNeDemandentPasDeMachine() {
+        assertFalse(ConditionLevel.INSTANCE.needsDeveloper());
+        assertFalse(new ConditionDependency(new DummySkill("parent", 1), 0f).needsDeveloper());
+    }
 }

@@ -33,7 +33,17 @@ public final class ConditionDeveloperType implements LearningCondition {
 
     @Override
     public boolean accepts(AbilityData data, Skill skill, DeveloperType developer) {
+        // Sans machine, la question n'a pas de reponse : l'application du skill tree n'en a pas, et
+        // elle ecarte donc cette condition avant de la poser (voir {@link #needsDeveloper()}). Ce
+        // garde est la pour que l'oubli ne tue plus le jeu — le joueur a plante en cliquant sur une
+        // competence du terminal, sur un `developer.ordinal()` appele sur rien.
+        if (developer == null) return false;
         return developer.ordinal() >= required.ordinal();
+    }
+
+    @Override
+    public boolean needsDeveloper() {
+        return true;
     }
 
     @Override

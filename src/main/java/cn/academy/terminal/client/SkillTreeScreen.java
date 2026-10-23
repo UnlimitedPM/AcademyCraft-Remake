@@ -433,8 +433,15 @@ public class SkillTreeScreen extends Screen {
         if (!learned) {
             // Ce qui manque pour l'apprendre, dit par la condition elle-meme : c'est ce qui envoie
             // le joueur vers la machine avec une raison plutot qu'avec une envie.
+            //
+            // SAUF CE QUI PARLE DE LA MACHINE. L'application n'a pas de developpeur, donc la
+            // condition de qualite n'a pas de reponse ici : la poser quand meme faisait planter le
+            // jeu — « quand je clique sur une competence dans l'app du skill tree, mon jeu plante ».
+            // L'original ne montrait d'ailleurs aucune condition dans son application : elles
+            // n'existaient que sur la machine, qui seule sait ce qu'elle peut enseigner.
             y += 6;
             for (LearningCondition condition : skill.getConditions()) {
+                if (condition.needsDeveloper()) continue;
                 if (condition.accepts(data, skill, null)) continue;
                 content.add(text(condition.describe(skill).getString(), y, 255, 88, 88, DESC_FONT));
                 y += 11;
