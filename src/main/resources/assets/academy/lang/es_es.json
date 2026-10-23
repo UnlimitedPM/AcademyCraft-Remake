@@ -400,6 +400,7 @@
   "academy.developer.skill_progress": "Progreso: %s%%",
   "academy.developer.skill_successful": "Desarrollo exitoso.",
   "academy.developer.skill_failed": "Desarrollo fallido.",
+  "academy.developer.skill_no_energy": "Energía insuficiente: el desarrollador se ha detenido.",
 
   "ac.command.invalid": "§cEntrada no válida, inténtalo de nuevo.",
   "ac.command.successful": "§2Comando ejecutado correctamente.",

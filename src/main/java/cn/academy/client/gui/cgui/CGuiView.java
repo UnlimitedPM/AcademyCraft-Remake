@@ -704,12 +704,17 @@ public final class CGuiView {
         if (texture == null) return;
 
         // Une image grisee passe par le programme mono de l'original : c'est ce qui distingue une
-        // condition remplie d'une condition qui manque, dans la rangee sous « Req. ». Le dessin est
-        // le meme quad, seul le programme change — et s'il n'est pas la, on retombe sur l'image en
-        // couleur, ce qui vaut mieux qu'une icone qui disparait.
-        if (window.grey && CGuiShaders.greyQuad(graphics, texture, widget.absW, widget.absH,
-                (colour >>> 24) & 0xFF)) {
-            return;
+        // condition remplie d'une condition manquante, dans la rangee sous « Req. ». Le quad est
+        // pose a la place EXACTE du widget — sans quoi il se dessinait au coin haut-gauche de
+        // l'ecran, et le joueur voyait les conditions non remplies disparaitre : « les icones de ce
+        // qu'on a besoin sont cachees alors que normalement elles ne sont pas cachees ».
+        if (window.grey) {
+            graphics.pose().pushPose();
+            graphics.pose().translate((float) x, (float) y, 0f);
+            boolean drawn = CGuiShaders.greyQuad(graphics, texture, widget.absW, widget.absH,
+                    (colour >>> 24) & 0xFF);
+            graphics.pose().popPose();
+            if (drawn) return;
         }
 
         // Les images du developpeur sont dessinees PLUS GRANDES que leur fichier — le disque d'une

@@ -400,6 +400,7 @@
   "academy.developer.skill_progress": "进度：%s%%",
   "academy.developer.skill_successful": "开发成功。",
   "academy.developer.skill_failed": "开发失败。",
+  "academy.developer.skill_no_energy": "能量不足：开发机已停止。",
 
   "ac.command.invalid": "§c输入无效，请重试。",
   "ac.command.successful": "§2命令执行成功。",

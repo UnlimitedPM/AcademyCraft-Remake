@@ -400,6 +400,7 @@
   "academy.developer.skill_progress": "Fortschritt: %s%%",
   "academy.developer.skill_successful": "Entwicklung erfolgreich.",
   "academy.developer.skill_failed": "Entwicklung fehlgeschlagen.",
+  "academy.developer.skill_no_energy": "Nicht genug Energie: der Entwickler hat angehalten.",
 
   "ac.command.invalid": "§cUngültige Eingabe, bitte erneut versuchen.",
   "ac.command.successful": "§2Befehl erfolgreich ausgeführt.",

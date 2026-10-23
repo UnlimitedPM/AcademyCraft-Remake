@@ -399,6 +399,7 @@
   "academy.developer.skill_progress": "Progress: %s%%",
   "academy.developer.skill_successful": "Development Successful.",
   "academy.developer.skill_failed": "Development Failed.",
+  "academy.developer.skill_no_energy": "Not enough energy: the developer stopped.",
 
   "ac.command.invalid": "§cInvalid input, please try again.",
   "ac.command.successful": "§2Command successfully performed.",

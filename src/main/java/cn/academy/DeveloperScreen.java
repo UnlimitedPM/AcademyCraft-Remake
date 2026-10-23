@@ -79,7 +79,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double BUTTON_WIDTH = 64.0;
     private static final double BUTTON_HEIGHT = 32.0;
     private static final double BUTTON_SCALE = 0.5;
-    private static final double BUTTON_Y = 30.0;
+
+    /**
+     * La place du bouton : quatre-vingts unites sous le centre de la fiche.
+     *
+     * <p>C'est la {@code pos(0, 55)} de l'original — son bloc de texte commencait a vingt-cinq, donc
+     * le bouton tombait a quatre-vingts. Le port le posait a trente, c'est-a-dire au milieu du
+     * disque de la competence, et le joueur l'a vu : « le bouton pour apprendre est au mauvais
+     * endroit ».
+     */
+    private static final double BUTTON_Y = 80.0;
 
     /** La largeur dans laquelle la description d'une competence se coupe : celle de l'original. */
     private static final int DESCRIPTION_WIDTH = 200;
@@ -116,25 +125,36 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * les posait AU-DESSUS de l'icone, a moins quarante-six : le joueur voyait le nom et la
      * description au-dessus du dessin, alors que l'original les met dessous.
      */
-    private static final double TITLE_Y = 29.0;
-    private static final double SUBTITLE_Y = 39.0;
+    private static final double TITLE_Y = 28.0;
+    private static final double SUBTITLE_Y = 40.0;
+
+    /**
+     * La description d'une competence apprise, et ce qui suit.
+     *
+     * <p>L'original ne la montrait <b>que</b> pour une competence apprise : pour une autre, sa fiche
+     * disait « Skill not learned », posait ses conditions, puis sa question. Le port l'ecrivait dans
+     * les deux cas, et c'est ce que le joueur vient de refuser : « pour apprendre une competence il
+     * affiche la description alors qu'il ne devrait pas ».
+     */
     private static final double DESCRIPTION_Y = 49.0;
 
     /**
      * La rangee des conditions, celle de l'original.
      *
      * <p>Ses nombres sont dans {@code skillViewArea} : des icones de quatorze unites, ecartees de
-     * seize, posees sous le bloc de texte. Le port les ecrivait en phrases rouges ; le joueur a
-     * reclame « l'affichage des pouvoirs debloquables » du vrai mod.
+     * seize, posees a cinquante unites du centre — et non sous une description qui n'existe pas
+     * dans ce cas. Le port les ecrivait en phrases rouges ; le joueur a reclame l'affichage du vrai
+     * mod, puis a vu que la rangee etait poussee hors de la fiche.
      */
     private static final double CONDITION_ICON_SIZE = 14.0;
     private static final double CONDITION_STEP = 16.0;
+    private static final double CONDITION_Y = 50.0;
 
-    /** L'ecart entre la description et le mot « Req. ». */
-    private static final double CONDITION_Y_GAP = 6.0;
+    /** Le « Req. » de l'original : deux unites avant le bord gauche de la rangee, et trois sous elle. */
+    private static final double CONDITION_LABEL_GAP = 2.0;
 
-    /** Et l'ecart entre ce mot et sa rangee d'icones. */
-    private static final double CONDITION_ICON_GAP = 10.0;
+    /** La question du cout, a soixante-cinq unites — c'est la {@code pos(0, 40)} du bloc de texte. */
+    private static final double QUESTION_Y = 65.0;
 
     /** Combien de temps le verdict d'un apprentissage reste affiche avant que la fiche se ferme. */
     private static final double VERDICT_HOLD = 1.5;
@@ -143,9 +163,11 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * Le temps laisse au serveur pour repondre avant de conclure qu'il a refuse.
      *
      * <p>Un clic de bouton fait un aller-retour : la machine ne passe pas a DEVELOPING dans la meme
-     * image. Sans ce delai, la fiche conclurait au refus avant meme que la demande soit arrivee.
+     * image. Et un coup de lag peut depasser une demi-seconde — la fiche rendait alors sa question
+     * alors que l'apprentissage venait de partir, et le joueur voyait l'animation s'arreter sur un
+     * chiffre. Deux secondes laissent de la marge sans jamais faire attendre un vrai refus.
      */
-    private static final double LEARN_START_GRACE = 0.5;
+    private static final double LEARN_START_GRACE = 2.0;
 
     /**
      * La console : ses lignes se posent a cinq unites du coin, tous les dix, a la taille huit.
@@ -888,10 +910,21 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         }
 
         // L'anneau de la fiche est relu ici, comme la barre d'energie : il se remplit a chaque
-        // image pendant un apprentissage, et la fiche n'est pas rebatie pour autant.
+        // image pendant un apprentissage, et la fiche n'est pas rebatie pour autant. Il montre le
+        // meme chiffre que la question, donc le meme avancement monotone.
         if (surfaceRing != null) {
-            surfaceRing.progress = learning == null ? 0.0 : menu.getProgress();
-            surfaceRing.lit = learning != null && menu.getState() == DevelopProgress.DevState.DONE;
+            surfaceRing.progress = learning == null ? 0.0 : learning.shown();
+            surfaceRing.lit = learning != null && learning.isDone();
+        }
+
+        // L'echec rend la question et son bouton : c'est ce qui permet de reessayer sans rouvrir la
+        // fiche. Le texte du verdict a eu son instant, la question reprend sa place — et l'anneau
+        // repart de zero, puisque plus rien ne se developpe.
+        if (learning != null && learning.isDone() && closeAfter == 0
+                && learning.sinceVerdict() >= VERDICT_HOLD) {
+            learning.restore();
+            learning = null;
+            if (surfaceRing != null) surfaceRing.progress = 0;
         }
 
         refreshHint(mouseX, mouseY);
@@ -1109,40 +1142,38 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         content.add(surfaceIcon(skill));
 
         content.add(text(skillName(skill), TITLE_Y, 255, 255, 255, TITLE_FONT));
-        double y;
         if (learned) {
             content.add(text(Component.translatable("academy.developer.skill_exp",
                     (int) (data.getSkillExp(skill) * 100)).getString(), SUBTITLE_Y, 161, 225, 255,
                     EXP_FONT));
-        } else {
-            content.add(text(Component.translatable("academy.developer.not_learned").getString(),
-                    SUBTITLE_Y + 1, 255, 85, 85, TEXT_FONT));
-        }
-        y = DESCRIPTION_Y;
-
-        // LA DESCRIPTION, DANS LES DEUX CAS. L'original ne la montrait qu'une fois la competence
-        // apprise : pour une competence qu'on ne connait pas encore, il n'affichait que ce qui manque.
-        // Le joueur a demande l'inverse — « quand on click sur une competence on est cense voir une
-        // petite description qui apparait pour avoir une idee de ce que fait le pouvoir » — et c'est
-        // plus utile avant qu'apres : c'est au moment de la choisir qu'on veut savoir ce qu'elle fait.
-        for (String line : wrap(skill.getDescription().getString(), DESCRIPTION_WIDTH)) {
-            content.add(text(line, y, 255, 255, 255, DESC_FONT));
-            y += 10;
-        }
-
-        if (!learned) {
-            y += CONDITION_Y_GAP;
-            y = conditions(content, skill, data, y);
-            y += 4;
-
-            // La phrase du cout, celle de l'original : « Learn? (Estm. Consumption: 3500 IF) ».
-            // C'est elle qui laisse place au verdict pendant l'apprentissage, au meme endroit.
-            CWidget question = text(learnQuestion(skill), y, 170, 170, 203);
-            content.add(question);
-
-            if (canLearn(skill)) {
-                content.add(button(() -> startLearning(skill, question), BUTTON_Y, false));
+            // LA DESCRIPTION N'EST LA QUE POUR UNE COMPETENCE APPRISE. C'est l'ordre de
+            // l'original : « Skill not learned » pour une autre, puis ses conditions, puis sa
+            // question. Le port la montrait dans les deux cas, et le joueur a tranche : « pour
+            // apprendre une competence il affiche la description alors qu'il ne devrait pas ».
+            double y = DESCRIPTION_Y;
+            for (String line : wrap(skill.getDescription().getString(), DESCRIPTION_WIDTH)) {
+                content.add(text(line, y, 255, 255, 255, DESC_FONT));
+                y += 10;
             }
+            open(content);
+            return;
+        }
+
+        content.add(text(Component.translatable("academy.developer.not_learned").getString(),
+                SUBTITLE_Y, 255, 85, 85, TEXT_FONT));
+
+        // La rangee des conditions, puis la question du cout : les deux a leur place de l'original,
+        // et non poussees sous une description qui n'existe pas dans ce cas.
+        conditions(content, skill, data, CONDITION_Y);
+
+        // « Learn? (Estm. Consumption: 3500 IF) », en BLANC a deux tiers d'opacite : c'est
+        // {@code foSkillUnreadned2}, 0xAAFFFFFF, la couleur de l'original pour cette phrase. Le port
+        // l'ecrivait en gris-bleu (170, 170, 203), et le joueur a vu la difference.
+        CWidget question = textAlpha(learnQuestion(skill), QUESTION_Y, 255, 255, 255, 170);
+        content.add(question);
+
+        if (canLearn(skill)) {
+            content.add(button(() -> startLearning(skill, question), BUTTON_Y, false));
         }
         open(content);
     }
@@ -1165,13 +1196,20 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         }
         if (shown.isEmpty()) return y;
 
-        // Les nombres sont ceux de l'original : la rangee fait {@code seize fois son nombre}
-        // d'unites de large, centree, et « Req. » finit deux unites avant son bord gauche. Le
-        // libelle est donc aligne a DROITE, et non centre : il grandit vers la gauche quand une
-        // condition de plus s'ajoute, au lieu de pousser sur les icones.
+        // « Req. » : deux unites avant le bord gauche de la rangee, et a DROITE de sa boite — c'est
+        // l'alignement de l'original, qui grandit vers la gauche au lieu de pousser sur les icones.
+        //
+        // Le decalage se lit en TENANT COMPTE de la largeur de la boite : elle est posee au CENTRE de
+        // la fiche, donc son bord droit tombe a {@code TEXT_WIDTH / 2} du centre. Le port l'ecrivait
+        // a {@code -length / 2 - 2 + TEXT_WIDTH / 2}, ce qui deplacait la boite elle-meme au lieu de
+        // son bord : le mot finissait hors de la page, a droite, et le joueur ne le voyait plus —
+        // « le Req. a cote des icones n'est pas present ».
         double length = CONDITION_STEP * shown.size();
-        content.add(textRight(Component.translatable("academy.developer.req").getString(),
-                -length / 2 - 2, y, 170, 170, 170, DESC_FONT));
+        CWidget label = text(Component.translatable("academy.developer.req").getString(), y,
+                170, 170, 170, DESC_FONT);
+        label.text.align = "RIGHT";
+        label.transform.x = -length / 2 - CONDITION_LABEL_GAP - TEXT_WIDTH / 2;
+        content.add(label);
 
         conditionIcons.clear();
         double x = -length / 2;
@@ -1264,7 +1302,21 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         private final CWidget question;
         private final double born = net.minecraft.Util.getMillis() / 1000.0;
         private String written;
+
+        /**
+         * Le dernier avancement VU, de zero a un.
+         *
+         * <p>Il ne redescend jamais : la machine remet son compteur a zero quand elle a fini — ou
+         * quand elle echoue — donc lire son avancement brut ferait sauter la jauge de quarante pour
+         * cent a rien, et le joueur verrait l'animation « s'arreter ». La jauge garde donc son
+         * dernier point, et c'est le verdict qui la remplace.
+         */
+        private double shown;
+
         private boolean done;
+
+        /** L'instant du verdict d'echec, ou zero : c'est lui qui rend la question a sa place. */
+        private double failedAt;
 
         Learning(Skill skill, CWidget question) {
             this.skill = skill;
@@ -1276,41 +1328,89 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         void animate() {
             if (done || question == null || question.text == null) return;
 
-            DevelopProgress.DevState state = menu.getState();
-            if (state == DevelopProgress.DevState.FAILED) {
-                finish(Component.translatable("academy.developer.skill_failed").getString());
-                return;
-            }
-            if (state == DevelopProgress.DevState.DONE) {
-                finish(Component.translatable("academy.developer.skill_successful").getString());
-                return;
-            }
-            if (!menu.isDeveloping()) {
-                // Le serveur a refuse la demande : la machine reste au repos. Sans ce retour en
-                // arriere, la fiche garderait « Progress: 0% » pour toujours, sans bouton pour
-                // recommencer — et le joueur ne saurait pas ce qui s'est passe.
-                if (net.minecraft.Util.getMillis() / 1000.0 - born > LEARN_START_GRACE) {
-                    learning = null;
-                    question.text.content = learnQuestion(skill);
+            // L'avancement se lit AVANT l'etat : la machine remet son compteur a zero en passant a
+            // DONE, donc le lire apres rendrait zero sur la derniere image.
+            if (menu.isDeveloping()) {
+                shown = Math.max(shown, menu.getProgress());
+                String next = Component.translatable("academy.developer.skill_progress",
+                        (int) (shown * 100)).getString();
+                if (!next.equals(written)) {
+                    question.text.content = next;
+                    written = next;
                 }
                 return;
             }
 
-            String next = Component.translatable("academy.developer.skill_progress",
-                    (int) (menu.getProgress() * 100)).getString();
-            if (!next.equals(written)) {
-                question.text.content = next;
-                written = next;
+            DevelopProgress.DevState state = menu.getState();
+            if (state == DevelopProgress.DevState.DONE) {
+                finish(true, Component.translatable("academy.developer.skill_successful")
+                        .getString());
+                return;
+            }
+            if (state == DevelopProgress.DevState.FAILED) {
+                // La machine dit POURQUOI elle a echoue, et le cas courant est l'energie : son
+                // tampon n'a pas suivi la stimulation, et elle s'arrete la ou elle en etait. C'est
+                // exactement ce que le joueur a vu — « l'animation ne dure pas pendant tout le
+                // temps, elle s'arrete environ vers 40% » : la jauge montait puis se figeait, sans
+                // un mot. L'original avait deux phrases pour cela, et les voici.
+                String reason = menu.getEnergyStored() <= 0
+                        ? Component.translatable("academy.developer.skill_no_energy").getString()
+                        : Component.translatable("academy.developer.skill_failed").getString();
+                finish(false, reason);
+                return;
+            }
+            // Rien n'a demarre — le serveur a refuse, ou la machine s'est arretee sans verdict.
+            //
+            // On rend la fiche a son etat d'avant au lieu de la refermer : la question du cout
+            // revient, et le bouton est toujours la pour reessayer. Sans cela le joueur restait
+            // devant « Progress: 0% » sans rien pour repartir.
+            if (net.minecraft.Util.getMillis() / 1000.0 - born > LEARN_START_GRACE) {
+                learning = null;
+                shown = 0;
+                question.text.content = learnQuestion(skill);
             }
         }
 
-        private void finish(String verdict) {
+        /**
+         * Le verdict.
+         *
+         * <p>Un SUCCES referme la fiche, une fois le texte lu. Un ECHEC ne la referme pas : il rend
+         * la question et son bouton, parce qu'un echec se rejoue — la machine n'a pas eu assez
+         * d'energie, ou la condition a change en route. L'original laissait le joueur cliquer pour
+         * fermer ; le port refermait tout seul, sur un refus que le joueur n'avait pas eu le temps
+         * de lire.
+         */
+        private void finish(boolean success, String verdict) {
             done = true;
             if (question.text != null) question.text.content = verdict;
-            // La fiche se referme d'elle-meme, une fois le verdict lu. L'original laissait le joueur
-            // cliquer pour la fermer ; ici elle se ferme toute seule au bout du meme delai que la
-            // console, pour que les deux animations se terminent ensemble.
-            closeAfter = net.minecraft.Util.getMillis() / 1000.0 + VERDICT_HOLD;
+            if (success) {
+                closeAfter = net.minecraft.Util.getMillis() / 1000.0 + VERDICT_HOLD;
+            } else {
+                // Un echec se rejoue : la fiche reste ouverte, et la question reprend sa place une
+                // fois le verdict lu. Le bouton n'a jamais quitte l'ecran, donc il n'y a rien a
+                // refaire pour reessayer.
+                failedAt = net.minecraft.Util.getMillis() / 1000.0;
+            }
+        }
+
+        private double sinceVerdict() {
+            return net.minecraft.Util.getMillis() / 1000.0 - failedAt;
+        }
+
+        /** Remet la question du cout a sa place, apres un verdict d'echec. */
+        void restore() {
+            if (question != null && question.text != null) {
+                question.text.content = learnQuestion(skill);
+            }
+        }
+
+        /** L'avancement montre, de zero a un : il ne redescend jamais. */
+        double shown() {
+            return shown;
+        }
+
+        boolean isDone() {
+            return done;
         }
     }
 
@@ -1510,6 +1610,19 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         widget.transform.alignWidth = "CENTER";
         widget.transform.alignHeight = "CENTER";
         return widget;
+    }
+
+    /**
+     * Le meme, avec une opacite.
+     *
+     * <p>C'est la {@code foSkillUnlearned2} de l'original : un blanc a {@code 0xAA}, et non une
+     * teinte grise. La boite porte ses quatre canaux, opacite comprise.
+     */
+    private static CWidget textAlpha(String content, double y, int red, int green, int blue,
+                                     int alpha) {
+        CWidget box = text(content, y, red, green, blue, DESC_FONT);
+        box.text.alpha(alpha);
+        return box;
     }
 
     /**
