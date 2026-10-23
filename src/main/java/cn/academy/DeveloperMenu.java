@@ -199,16 +199,22 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
         }
 
         if (buttonId == FIRST_CATEGORY_BUTTON) {
-            // La premiere aptitude se decide avec l'inventaire : un facteur d'induction designe sa
-            // categorie, sinon le sort en donne une. Elle se donne TOUT DE SUITE, et sans energie.
+            // La premiere aptitude passe par la MACHINE, comme dans l'original : cinq stimulations,
+            // donc de l'energie et une animation qui dure. Le port la donnait d'un coup, et le
+            // joueur l'a vu : « l'animation est bien trop rapide par rapport au vrai mod » et « la
+            // machine n'utilise pas d'electricite quand j'apprend un pouvoir ».
             //
-            // C'est le seul endroit du mod qui n'attende rien de la machine, et c'est voulu : le
-            // joueur a vu « LEARN » ne rien faire, et la raison etait la — sa machine avait
-            // 0 sur 50000 unites, donc le premier tick de l'apprentissage echouait et tout etait
-            // perdu. Faire dependre l'entree dans le mod d'un reseau d'energie qu'un joueur neuf
-            // n'a pas encore construit, c'est fermer la porte a cle. C'est aussi ce que fait
-            // /learn, et les deux chemins doivent donner exactement la meme chose.
-            return cn.academy.ability.develop.DevelopActionFirstCategory.grantAndSync(serverPlayer) != null;
+            // Le don immediat reste pour le seul cas ou la machine ne peut rien payer du tout —
+            // c'est le joueur neuf, dont le developpeur est a zero et qui n'a pas encore de reseau.
+            // Sans cette porte, l'entree dans le mod serait fermee a cle.
+            if (developer.getEnergyStored() <= 0) {
+                return cn.academy.ability.develop.DevelopActionFirstCategory
+                        .grantAndSync(serverPlayer) != null;
+            }
+
+            cn.academy.ability.develop.DevelopActionFirstCategory first =
+                    cn.academy.ability.develop.DevelopActionFirstCategory.of(serverPlayer);
+            return first != null && developer.startDeveloping(serverPlayer, first);
         }
 
         if (buttonId < SKILL_BUTTON_BASE) {

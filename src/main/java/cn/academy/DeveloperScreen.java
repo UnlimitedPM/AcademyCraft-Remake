@@ -613,10 +613,11 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             public boolean isFinished(double now) {
                 if (menu.getState() == DevelopProgress.DevState.FAILED
                         || menu.getState() == DevelopProgress.DevState.DONE) return true;
-                // La premiere aptitude se donne TOUT DE SUITE, sans stimulation : sans un delai
-                // minimum, la tache se terminerait a l'image suivante et le joueur ne verrait ni
-                // la ligne de progression ni le verdict — « la machine se met a jour d'elle meme
-                // et skip l'animation ».
+                // La machine mene l'apprentissage : c'est elle qui decide de la fin, et son etat
+                // passe a DONE ou FAILED. Le delai minimum ne sert qu'au don immediat, celui d'une
+                // machine sans energie — sans lui, la tache se terminerait a l'image suivante et
+                // le joueur ne verrait ni la ligne de progression ni le verdict.
+                if (menu.isDeveloping()) return false;
                 return firstCategory && category() != null
                         && now - born >= MIN_FIRST_CATEGORY;
             }
@@ -628,12 +629,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                 // « 1% » fait deux caracteres, « 100% » en fait quatre, et un `\b\b\b` fixe
                 // mordait donc dans la phrase precedente des que le chiffre changeait de taille.
                 //
-                // La PREMIERE aptitude se donne d'un coup, donc la machine n'a aucune progression
-                // a montrer : c'est le temps ecoule qui la fait monter, sinon la ligne resterait a
-                // zero pendant tout le delai et le joueur ne verrait rien s'animer.
-                int percent = firstCategory
-                        ? (int) Math.min(100, (now - born) / MIN_FIRST_CATEGORY * 100)
-                        : (int) (menu.getProgress() * 100);
+                // Le chiffre est celui de la MACHINE quand elle travaille : c'est elle qui paie
+                // l'energie et compte les stimulations, donc c'est elle qui sait ou en est
+                // l'apprentissage. Le temps ecoule ne sert qu'au don immediat, ou il n'y a aucune
+                // progression a montrer.
+                int percent = menu.isDeveloping()
+                        ? (int) (menu.getProgress() * 100)
+                        : (int) Math.min(100, (now - born) / MIN_FIRST_CATEGORY * 100);
                 String next = progressText(percent);
                 if (next.equals(written)) return;
                 console.output("\b".repeat(written.length()) + next);
@@ -789,13 +791,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // jusqu'a ce qu'autre chose force une reconstruction — « le nom du current node se met a
         // jour tres lentement ».
         refreshNodeName();
+        refreshEnergy();
         veil.animate();
         tree.frame(ClientAbilityData.get(), mouseX, mouseY, width, height, veil.opened());
     }
 
     /** Le nom du noeud lie, relu sur le menu a chaque image. */
-    private void refreshNodeName() {
-        CWidget page = pageWindow(PAGE);
+    private void refreshNodeName() {        CWidget page = pageWindow(PAGE);
         CWidget panel = page == null ? null : page.child("parent_left");
         CWidget machine = panel == null ? null : panel.child("panel_machine");
         CWidget wireless = machine == null ? null : machine.child("button_wireless");
@@ -805,6 +807,25 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         String name = menu.getNodeName();
         String content = name.isEmpty() ? "N/A" : name;
         if (!content.equals(node.text.content)) node.text.content = content;
+    }
+
+    /**
+     * La barre d'energie, relue a chaque image.
+     *
+     * <p>Elle n'etait remplie qu'a la reconstruction de la page, donc elle ne bougeait pas pendant
+     * un apprentissage : le joueur en a conclu que « la machine n'utilise tout simplement pas
+     * d'electricite quand j'apprend un pouvoir ». Elle en depense pourtant a chaque tick — c'est
+     * juste que rien ne le montrait.
+     */
+    private void refreshEnergy() {
+        CWidget page = pageWindow(PAGE);
+        CWidget panel = page == null ? null : page.child("parent_left");
+        CWidget machine = panel == null ? null : panel.child("panel_machine");
+        CWidget power = machine == null ? null : machine.child("progress_power");
+        if (power == null || power.bar == null) return;
+
+        int max = Math.max(1, menu.getMaxEnergyStored());
+        power.bar.progress = Math.max(0.0, Math.min(1.0, (double) menu.getEnergyStored() / max));
     }
 
     /**

@@ -70,10 +70,23 @@ public class DevelopActionFirstCategory implements DevelopAction {
     }
 
     /**
+     * L'action pour une categorie DEJA designee.
+     *
+     * <p>C'est ce qu'une machine rechargee refabrique : elle ne peut plus lire l'inventaire du
+     * joueur, donc elle reprend la categorie qu'elle avait notee. L'original faisait de meme — son
+     * action de niveau choisissait la categorie au moment de l'apprentissage, et la machine la
+     * retrouvait par son identifiant.
+     */
+    public static DevelopActionFirstCategory forCategory(Category chosen) {
+        return new DevelopActionFirstCategory(chosen);
+    }
+
+    /**
      * Donne la premiere aptitude tout de suite, sans machine et sans attente, et rend celle qui a
      * ete donnee.
      *
-     * <p>C'est ce que fait la commande {@code /learn}.
+     * <p>C'est le chemin d'une machine qui n'a aucune energie : sans lui, un joueur neuf n'aurait
+     * aucun moyen d'entrer dans le mod.
      *
      * @return la categorie apprise, ou {@code null} si le joueur en avait deja une
      */

@@ -324,6 +324,12 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
         // joueur a en main, et une machine rechargee n'a pas de joueur sous la main. Elle
         // marquera donc l'apprentissage en echec, ce que le chargement detecte juste apres.
         if (targetSkillId == cn.academy.ability.develop.DevelopActionReset.SKILL_ID) return null;
+        // La PREMIERE aptitude non plus : elle se decide avec l'inventaire du joueur. Une machine
+        // rechargee la refabrique donc sans facteur, et le sort en donne une — c'est ce que faisait
+        // l'original, dont le choix etait refait a chaque chargement.
+        if (targetSkillId == cn.academy.ability.develop.DevelopActionFirstCategory.SKILL_ID) {
+            return cn.academy.ability.develop.DevelopActionFirstCategory.forCategory(category);
+        }
         if (targetSkillId < 0) return new DevelopActionLevel(category);
         Skill skill = category.getSkill(targetSkillId);
         return skill == null ? null : new DevelopActionSkill(skill);
