@@ -318,16 +318,15 @@ public final class DeveloperConsole {
     }
 
     /**
-     * Un pourcentage sur deux chiffres, comme le {@code fmt} de l'original.
+     * Un pourcentage, sans zero inutile : {@code 1%}, {@code 10%}, {@code 100%}.
      *
-     * <p>Ce n'est pas un ornement : la tache de progression efface TROIS caracteres
-     * ({@code \b\b\b}) avant d'ecrire le nouveau chiffre. Avec un pourcentage a un chiffre, elle
-     * mordait donc dans la phrase precedente — le joueur : « il supprime la phrase d'en dessous
-     * qu'on voit apparaitre tres brievement ». L'original ecrivait {@code 00%}, {@code 05%},
-     * {@code 10%} : toujours trois caracteres, donc l'effacement tombait juste.
+     * <p>L'original ecrivait {@code 01%} — son {@code fmt} ajoutait un zero sous dix — mais le
+     * joueur ne veut pas de ce zero : « normalement il n'y a pas de 0 affiche pour rien, juste 1%
+     * pas 001% ». La tache de progression n'efface donc plus un nombre FIXE de caracteres : elle
+     * retient la longueur de ce qu'elle a ecrit et l'efface, ce qui marche pour les trois cas.
      */
     public static String percent(int value) {
-        return (value < 10 ? "0" + value : String.valueOf(value)) + "%";
+        return value + "%";
     }
 
     // ------------------------------------------------------------------

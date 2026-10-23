@@ -197,6 +197,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      */
     private boolean consoleLearning;
 
+    /**
+     * Vrai quand un changement de categorie vient d'aboutir.
+     *
+     * <p>Le joueur garde sa bobine en main apres un reset — elle ne disparait qu'a l'unite — donc
+     * l'ecran se rebatissait en mode {@code reset} et la console repartait de sa banniere : « a la
+     * fin du reset, ca reouvre la machine, mais du coup, vu que j'ai encore des coil en main il la
+     * reouvre en mode reset ». Ce drapeau la fait taire jusqu'a ce que la bobine soit rangee.
+     */
+    private boolean resetDone;
+
     public DeveloperScreen(DeveloperMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         // La page de l'original n'est pas un cadre de machine : elle fait quatre cents unites de large,
@@ -501,6 +511,22 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         click(DeveloperMenu.FIRST_CATEGORY_BUTTON);
         console.enqueue(progressTask(consoleTexts().devSucc(), consoleTexts().devFail(), true));
     }
+    /**
+     * La sequence d'un apprentissage, jouee par la console.
+     *
+     * <p>Elle est la meme que celle de la commande {@code learn} : le texte de debut, la ligne de
+     * progression, puis le verdict. C'est ce qui permet a un {@code /learn} tape dans le chat de
+     * montrer la meme animation qu'un {@code learn} tape dans la console.
+     */
+    private void playLearnSequence() {
+        DeveloperConsole console = this.console;
+        if (console == null) return;
+
+        console.enqueue(console.print(consoleTexts().devBegin()));
+        console.enqueue(console.print(consoleTexts().progress().apply(0)));
+        consoleLearning = true;
+        console.enqueue(progressTask(consoleTexts().devSucc(), consoleTexts().devFail(), true));
+    }
 
     /** La commande {@code reset} : le changement de categorie, avec ses trois refus. */
     private void consoleReset() {
@@ -522,7 +548,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         click(DeveloperMenu.RESET_BUTTON);
         console.enqueue(progressTask(consoleTexts().resetSucc(), consoleTexts().resetFail(), false));
     }
-
     /**
      * La tache qui suit un apprentissage : elle reecrit le pourcentage sur place, puis dit le
      * verdict et demande la reconstruction de l'ecran.
@@ -545,6 +570,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private DeveloperConsole.Task progressTask(String success, String failure,
                                                boolean firstCategory) {
         return new DeveloperConsole.Task() {
+            /** Ce que la derniere image a ecrit, pour l'effacer exactement. */
+            private String written = "";
+
             @Override
             public boolean isFinished(double now) {
                 return menu.getState() == DevelopProgress.DevState.FAILED
@@ -555,8 +583,13 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             @Override
             public void update(double now) {
                 if (console == null) return;
-                // Trois caracteres, toujours : c'est ce que les trois retours arriere effacent.
-                console.output("\b\b\b" + DeveloperConsole.percent((int) (menu.getProgress() * 100)));
+                // On efface EXACTEMENT ce qu'on a ecrit, et pas un nombre fixe de caracteres :
+                // « 1% » fait deux caracteres, « 100% » en fait quatre, et un `\b\b\b` fixe
+                // mordait donc dans la phrase precedente des que le chiffre changeait de taille.
+                String next = DeveloperConsole.percent((int) (menu.getProgress() * 100));
+                if (next.equals(written)) return;
+                console.output("\b".repeat(written.length()) + next);
+                written = next;
             }
 
             @Override
@@ -566,6 +599,10 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                         || firstCategory && category() != null;
                 console.outputln();
                 console.output(done ? success : failure);
+                // Un changement de categorie abouti ne rouvre pas la console du reset : le joueur
+                // garde sa bobine en main, et la machine repartait donc en mode reset a chaque
+                // reconstruction.
+                if (done && !firstCategory) resetDone = true;
                 console.pause(0.5);
                 console.enqueueRebuild();
             }
@@ -624,8 +661,20 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             tree.note(null, data);
             return;
         }
-        if (holdsCoil()) {
+        if (holdsCoil() && !resetDone) {
             buildConsole(area, "reset");
+            tree.note(null, data);
+            return;
+        }
+
+        // L'aptitude vient d'arriver alors que la console etait encore la — c'est le cas d'un
+        // `/learn` tape dans le CHAT, qui ne passe pas par la console. Elle joue alors sa propre
+        // sequence, comme si on avait tape `learn` dedans : sans cela, l'arbre remplacait la
+        // console a l'instant du paquet et le joueur ne voyait rien — « l'animation a l'air d'etre
+        // presente, mais je ne peux pas la voir parce que la machine se reouvre directement ».
+        if (console != null && "learn".equals(consoleMode) && !consoleLearning) {
+            playLearnSequence();
+            buildConsole(area, "learn");
             tree.note(null, data);
             return;
         }
@@ -777,9 +826,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         Category category = category();
         AbilityData data = ClientAbilityData.get();
 
+        // La bobine rangee : le changement de categorie est termine, et la console du reset peut
+        // reparler si le joueur la reprend. C'est ici, et non dans `buildAptitude`, parce que
+        // celui-ci n'est appele que sur une reconstruction — ranger la bobine n'en declenche pas.
+        if (!holdsCoil()) resetDone = false;
+
         // La console a son propre etat : elle change de mode quand le joueur prend ou range la
         // bobine, et l'arbre ne voit rien de tout cela — sa signature ne parle que de l'aptitude.
-        String mode = category == null ? "learn" : holdsCoil() ? "reset" : null;
+        //
+        // Un reset abouti eteint la console du reset meme si la bobine est encore en main : c'est
+        // ce qui evite qu'elle se rouvre en boucle apres le changement de categorie.
+        String mode = category == null ? "learn" : holdsCoil() && !resetDone ? "reset" : null;
 
         // Tant qu'une console est a l'ecran, c'est ELLE qui decide : la signature de l'arbre ne
         // bouge pas (elle vaut « pas d'arbre »), donc la consulter rebatirait la page a chaque
@@ -788,10 +845,18 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (mode != null) {
             rebuild = !mode.equals(consoleMode);
         } else if (console != null) {
-            // L'aptitude est la et la bobine est rangee : la console cede la place quand elle a
-            // TOUT joue — son demarrage, et le verdict de l'apprentissage qu'elle a lance. C'est ce
-            // qui laisse voir son animation apres un `/learn`.
-            rebuild = consoleLearning ? console.rebuildRequested() : console.startupFinished();
+            if (consoleLearning) {
+                // Un apprentissage est en cours : la console reste jusqu'a son verdict.
+                rebuild = console.rebuildRequested();
+            } else if ("learn".equals(consoleMode)) {
+                // L'aptitude vient d'arriver alors que la console etait encore la : c'est un
+                // `/learn` tape dans le CHAT. On lui fait jouer la sequence, comme si la commande
+                // avait ete tapee dedans — sinon l'arbre la remplace a l'instant du paquet.
+                rebuild = true;
+            } else {
+                // La console cede la place quand elle a fini de jouer son demarrage.
+                rebuild = console.startupFinished();
+            }
         } else {
             rebuild = !tree.unchanged(category, data);
         }

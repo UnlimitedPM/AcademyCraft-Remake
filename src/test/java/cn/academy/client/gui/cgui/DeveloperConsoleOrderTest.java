@@ -53,13 +53,13 @@ class DeveloperConsoleOrderTest {
     }
 
     @Test
-    void lePourcentageFaitToujoursTroisCaracteres() {
-        // La tache de progression efface TROIS caracteres avant d'ecrire le nouveau chiffre. Un
-        // pourcentage a un chiffre mordait donc dans la phrase precedente — « il supprime la phrase
-        // d'en dessous qu'on voit apparaitre tres brievement ».
-        assertEquals("00%", DeveloperConsole.percent(0));
-        assertEquals("05%", DeveloperConsole.percent(5));
-        assertEquals("09%", DeveloperConsole.percent(9));
+    void lePourcentageNAPasDeZeroInutile() {
+        // Le joueur : « normalement il n'y a pas de 0 affiche pour rien, juste 1% pas 001% ». La
+        // tache de progression n'efface donc plus un nombre FIXE de caracteres : elle retient la
+        // longueur de ce qu'elle a ecrit et l'efface, ce qui marche pour les trois tailles.
+        assertEquals("0%", DeveloperConsole.percent(0));
+        assertEquals("1%", DeveloperConsole.percent(1));
+        assertEquals("9%", DeveloperConsole.percent(9));
         assertEquals("10%", DeveloperConsole.percent(10));
         assertEquals("100%", DeveloperConsole.percent(100));
     }
