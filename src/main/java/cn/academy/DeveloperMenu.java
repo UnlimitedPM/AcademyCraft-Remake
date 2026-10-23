@@ -341,12 +341,47 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
     /**
      * Vrai si le joueur peut changer de categorie maintenant.
      *
-     * <p>C'est la meme fonction que le serveur appellera au clic : l'ecran ne rejoue pas
-     * les regles, il demande.
+     * <p>Les regles sont celles de {@link DevelopActionReset#find}, mais relues sur ce que le
+     * <b>client</b> possede vraiment : les niveaux viennent des emplacements synchronises, et
+     * l'inventaire est le sien. La capability du joueur, elle, n'est pas synchronisee — elle est
+     * vide chez le client — donc la demander la rendait toujours fausse, et la console repondait
+     * « impossible de reinitialiser » a un joueur qui avait pourtant tout ce qu'il fallait.
+     *
+     * <p>Le serveur revalide de toute facon au clic, avec la vraie donnee : ceci ne decide de rien,
+     * il evite seulement de refuser une action qui serait acceptee.
      */
     public boolean canReset() {
         if (isDeveloping()) return false;
-        return DevelopActionReset.find(player, getDeveloperType()) != null;
+        if (getDeveloperType() != DeveloperType.ADVANCED) return false;
+
+        Category abandoned = abandonedCategory();
+        if (abandoned == null) return false;
+        if (!player.getMainHandItem().is(ModItems.MAGNETIC_COIL.get())) return false;
+        return FactorItem.otherCategoryIn(player, abandoned) != null;
+    }
+
+    /**
+     * La categorie que le joueur sacrifierait, lue sur les niveaux synchronises.
+     *
+     * <p>C'est la meme regle que {@link DevelopActionReset#abandonedCategory} — la plus haute, les
+     * ex aequo tranches par le nom — mais elle ne peut pas passer par la capability du joueur, qui
+     * est vide chez le client.
+     */
+    @Nullable
+    private Category abandonedCategory() {
+        Category best = null;
+        int bestLevel = 0;
+        for (int i = 0; i < categoryLevels.length; i++) {
+            int level = categoryLevels[i].value();
+            Category category = getCategory(i);
+            if (category == null || level <= 0) continue;
+            if (level > bestLevel || (level == bestLevel && best != null
+                    && category.getName().compareTo(best.getName()) < 0)) {
+                best = category;
+                bestLevel = level;
+            }
+        }
+        return bestLevel >= DevelopActionReset.MIN_LEVEL ? best : null;
     }
 
     /** Le prix annonce du changement de categorie, en stimulations. */

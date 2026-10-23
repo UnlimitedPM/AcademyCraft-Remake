@@ -62,8 +62,15 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     /** L'avancement de l'apprentissage, partage avec le developeur portable. */
     private final DevelopProgress progress = new DevelopProgress();
 
-    /** Cadence de recherche d'un noeud, en ticks. */
-    private static final int NODE_SEARCH_INTERVAL = 100;
+    /**
+     * Cadence de recherche d'un noeud, en ticks.
+     *
+     * <p>Cent ticks (cinq secondes) faisaient arriver le nom du noeud avec un retard visible : le
+     * joueur branchait sa machine, et « Current Node » restait sur « N/A » le temps de compter
+     * jusqu'a cent. Vingt ticks suffisent — c'est la cadence de synchronisation de la machine, donc
+     * le nom ne peut pas arriver plus vite que l'ecran ne le relit de toute facon.
+     */
+    private static final int NODE_SEARCH_INTERVAL = 20;
 
     /** Cadence de synchronisation vers le client, en ticks. */
     private static final int SYNC_INTERVAL = 10;

@@ -488,7 +488,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         console.enqueue(console.print(consoleTexts().devBegin()));
         console.enqueue(console.print(consoleTexts().progress().apply(0)));
         click(DeveloperMenu.FIRST_CATEGORY_BUTTON);
-        console.enqueue(progressTask(consoleTexts().devSucc(), consoleTexts().devFail()));
+        console.enqueue(progressTask(consoleTexts().devSucc(), consoleTexts().devFail(), true));
     }
 
     /** La commande {@code reset} : le changement de categorie, avec ses trois refus. */
@@ -508,7 +508,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         console.enqueue(console.print(consoleTexts().resetBegin()));
         console.enqueue(console.print(consoleTexts().progress().apply(0)));
         click(DeveloperMenu.RESET_BUTTON);
-        console.enqueue(progressTask(consoleTexts().resetSucc(), consoleTexts().resetFail()));
+        console.enqueue(progressTask(consoleTexts().resetSucc(), consoleTexts().resetFail(), false));
     }
 
     /**
@@ -523,14 +523,21 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * machine a fini : la premiere aptitude du port se donne tout de suite, sans stimulation
      * ({@code FIRST_CATEGORY_BUTTON}), donc l'etat de la machine ne bouge jamais et la tache
      * attendrait un verdict qui ne vient pas.
+     *
+     * <p>Ce raccourci ne vaut QUE pour la premiere aptitude : un changement de categorie laisse une
+     * categorie en place du debut a la fin, donc s'y fier ferait dire « reussi » a l'instant meme
+     * ou la commande part.
+     *
+     * @param firstCategory vrai pour {@code learn}, faux pour {@code reset}
      */
-    private DeveloperConsole.Task progressTask(String success, String failure) {
+    private DeveloperConsole.Task progressTask(String success, String failure,
+                                               boolean firstCategory) {
         return new DeveloperConsole.Task() {
             @Override
             public boolean isFinished(double now) {
                 return menu.getState() == DevelopProgress.DevState.FAILED
                         || menu.getState() == DevelopProgress.DevState.DONE
-                        || category() != null;
+                        || firstCategory && category() != null;
             }
 
             @Override
@@ -543,7 +550,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             public void finish() {
                 if (console == null) return;
                 boolean done = menu.getState() == DevelopProgress.DevState.DONE
-                        || category() != null;
+                        || firstCategory && category() != null;
                 console.outputln();
                 console.output(done ? success : failure);
                 console.pause(0.5);
@@ -610,6 +617,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             return;
         }
 
+        // L'aptitude est arrivee, mais la console joue encore : elle garde la place jusqu'a la fin
+        // de son animation. Sans cela, taper `/learn` dans le chat faisait disparaitre la banniere
+        // au premier paquet de synchronisation — le joueur : « quand je tape /learn, j'apprends
+        // bien un pouvoir mais je ne vois pas l'animation du terminal qui est cense etre la ».
+        if (console != null && !console.idle()) {
+            buildConsole(area, consoleMode == null ? "learn" : consoleMode);
+            tree.note(null, data);
+            return;
+        }
+
         // L'aptitude est arrivee, ou la bobine est rangee : la console a fini son office, et son
         // texte ne doit pas rester derriere l'arbre.
         console = null;
@@ -650,8 +667,28 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     @Override
     protected void frame(GuiGraphics graphics, double mouseX, double mouseY) {
         refresh();
+        // Le nom du noeud se relit a CHAQUE image : il vient du serveur par la balise du bloc, qui
+        // arrive quand elle arrive, et le panneau n'est rebati que lorsque l'arbre change. Sans
+        // cette relecture, le joueur branchait sa machine et « Current Node » restait sur « N/A »
+        // jusqu'a ce qu'autre chose force une reconstruction — « le nom du current node se met a
+        // jour tres lentement ».
+        refreshNodeName();
         veil.animate();
         tree.frame(ClientAbilityData.get(), mouseX, mouseY, width, height, veil.opened());
+    }
+
+    /** Le nom du noeud lie, relu sur le menu a chaque image. */
+    private void refreshNodeName() {
+        CWidget page = pageWindow(PAGE);
+        CWidget panel = page == null ? null : page.child("parent_left");
+        CWidget machine = panel == null ? null : panel.child("panel_machine");
+        CWidget wireless = machine == null ? null : machine.child("button_wireless");
+        CWidget node = wireless == null ? null : wireless.child("text_nodename");
+        if (node == null || node.text == null) return;
+
+        String name = menu.getNodeName();
+        String content = name.isEmpty() ? "N/A" : name;
+        if (!content.equals(node.text.content)) node.text.content = content;
     }
 
     /**
@@ -726,10 +763,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         // Tant qu'une console est a l'ecran, c'est ELLE qui decide : la signature de l'arbre ne
         // bouge pas (elle vaut « pas d'arbre »), donc la consulter rebatirait la page a chaque
-        // image. Seul un changement de mode — ou l'arrivee de l'aptitude — demande un repose.
-        boolean rebuild = mode == null
-                ? !tree.unchanged(category, data)
-                : !mode.equals(consoleMode);
+        // image. Seul un changement de mode — ou la fin de son animation — demande un repose.
+        boolean rebuild;
+        if (mode != null) {
+            rebuild = !mode.equals(consoleMode);
+        } else if (console != null) {
+            // L'aptitude est la et la bobine est rangee : la console cede la place des qu'elle a
+            // fini de jouer. C'est ce qui laisse voir son animation apres un `/learn`.
+            rebuild = console.idle();
+        } else {
+            rebuild = !tree.unchanged(category, data);
+        }
 
         if (!rebuild) return;
 

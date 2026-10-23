@@ -293,6 +293,17 @@ public final class DeveloperConsole {
         return rebuild;
     }
 
+    /**
+     * Vrai quand la console attend la frappe, sans rien avoir en cours.
+     *
+     * <p>C'est ce qui dit a l'ecran qu'elle peut etre remplacee par l'arbre : tant qu'une tache
+     * court — la banniere, la sequence, la progression d'un apprentissage — la console doit rester,
+     * sinon son animation disparait avant d'avoir ete vue.
+     */
+    public boolean idle() {
+        return current == inputTask && queue.isEmpty();
+    }
+
     // ------------------------------------------------------------------
     // Les lignes
     // ------------------------------------------------------------------
