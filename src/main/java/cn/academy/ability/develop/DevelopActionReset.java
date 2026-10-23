@@ -110,8 +110,13 @@ public class DevelopActionReset implements DevelopAction {
         // les effacait sur le meme evenement.
         cn.academy.ability.preset.PresetTracker.clearOnCategoryChange(player);
 
-        // La bobine et le facteur y passent, comme dans l'original.
-        player.getInventory().setItem(player.getInventory().selected, ItemStack.EMPTY);
+        // La bobine et le facteur y passent, comme dans l'original — mais UNE bobine, pas la pile.
+        //
+        // L'original vidait la main (`setHeldItem(MAIN_HAND, EMPTY)`), ce qui ne se voyait pas :
+        // sa bobine ne s'empilait pas. Le port la laisse s'empiler, donc vider la case en
+        // consommait 64 d'un coup — le joueur : « si j'ai 1 stack de coil en main, il consomme
+        // quand meme les 64 au lieu d'en consommer qu'un seul ».
+        player.getMainHandItem().shrink(1);
         FactorItem.consume(player);
 
         if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {

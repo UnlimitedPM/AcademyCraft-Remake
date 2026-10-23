@@ -88,6 +88,7 @@ public final class DeveloperConsole {
     private String input = "";
     private double now;
     private boolean rebuild;
+    private boolean startupDone;
 
     /** La tache qui attend la frappe : elle ne finit jamais, et c'est elle qui porte le curseur. */
     private final Task inputTask = new Task() {
@@ -304,6 +305,31 @@ public final class DeveloperConsole {
         return current == inputTask && queue.isEmpty();
     }
 
+    /**
+     * Vrai quand la sequence de demarrage a fini de se jouer, une fois pour toutes.
+     *
+     * <p>L'ecran s'en sert pour ne pas remplacer la console au milieu de sa banniere : une aptitude
+     * qui arrive pendant l'animation la laisse finir, et c'est seulement apres qu'elle cede la
+     * place. Le drapeau reste vrai — la console ne rejoue pas son demarrage.
+     */
+    public boolean startupFinished() {
+        if (idle()) startupDone = true;
+        return startupDone;
+    }
+
+    /**
+     * Un pourcentage sur deux chiffres, comme le {@code fmt} de l'original.
+     *
+     * <p>Ce n'est pas un ornement : la tache de progression efface TROIS caracteres
+     * ({@code \b\b\b}) avant d'ecrire le nouveau chiffre. Avec un pourcentage a un chiffre, elle
+     * mordait donc dans la phrase precedente — le joueur : « il supprime la phrase d'en dessous
+     * qu'on voit apparaitre tres brievement ». L'original ecrivait {@code 00%}, {@code 05%},
+     * {@code 10%} : toujours trois caracteres, donc l'effacement tombait juste.
+     */
+    public static String percent(int value) {
+        return (value < 10 ? "0" + value : String.valueOf(value)) + "%";
+    }
+
     // ------------------------------------------------------------------
     // Les lignes
     // ------------------------------------------------------------------
@@ -381,15 +407,23 @@ public final class DeveloperConsole {
         if (!input.isEmpty()) input = input.substring(0, input.length() - 1);
     }
 
-    /** Valide la ligne : la commande part, ou la console dit qu'elle n'existe pas. */
+    /**
+     * Valide la ligne : la commande part, ou la console dit qu'elle n'existe pas.
+     *
+     * <p>La ligne se vide APRES l'execution, et non avant : c'est ce qui la laisse s'ecrire dans la
+     * console. L'original faisait exactement cela — {@code parseCommand(input)} puis
+     * {@code input = ""} — et l'ordre inverse effacait le mot qu'on venait de taper, parce que
+     * {@link #enqueue} recopie la ligne courante avant de passer a la suite.
+     */
     public void submit() {
         String name = input;
-        input = "";
         Runnable action = commands.get(name);
         if (action == null) {
+            input = "";
             enqueue(print(texts.invalidCommand()));
         } else {
             action.run();
+            input = "";
         }
     }
 

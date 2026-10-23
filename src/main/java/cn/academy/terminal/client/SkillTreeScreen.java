@@ -333,8 +333,8 @@ public class SkillTreeScreen extends Screen {
                 key("academy.skill_tree.console.learn_hint"),
                 key("academy.skill_tree.console.override"),
                 key("academy.skill_tree.console.invalid_command"),
-                percent -> Component.translatable("academy.skill_tree.console.progress", percent)
-                        .getString(),
+                percent -> Component.translatable("academy.skill_tree.console.progress",
+                        DeveloperConsole.percent(percent)).getString(),
                 key("academy.skill_tree.console.dev_begin"),
                 key("academy.skill_tree.console.dev_succ"),
                 key("academy.skill_tree.console.dev_fail"),

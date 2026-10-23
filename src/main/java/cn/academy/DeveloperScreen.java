@@ -187,6 +187,16 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     @Nullable
     private String consoleMode;
 
+    /**
+     * Vrai quand la console a lance un apprentissage et n'a pas encore dit son verdict.
+     *
+     * <p>Sans ce drapeau, la console etait remplacee des que l'aptitude arrivait : elle etait deja
+     * « au repos » avant le `/learn`, donc la condition « elle a fini son demarrage » etait vraie
+     * tout de suite, et le joueur ne voyait ni « Start stimulation » ni le verdict — « avec le
+     * learn, on a toujours pas l'animation, elle dure a peine 1 seconde ».
+     */
+    private boolean consoleLearning;
+
     public DeveloperScreen(DeveloperMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         // La page de l'original n'est pas un cadre de machine : elle fait quatre cents unites de large,
@@ -487,6 +497,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         console.enqueue(console.print(consoleTexts().devBegin()));
         console.enqueue(console.print(consoleTexts().progress().apply(0)));
+        consoleLearning = true;
         click(DeveloperMenu.FIRST_CATEGORY_BUTTON);
         console.enqueue(progressTask(consoleTexts().devSucc(), consoleTexts().devFail(), true));
     }
@@ -507,6 +518,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         console.enqueue(console.print(consoleTexts().resetBegin()));
         console.enqueue(console.print(consoleTexts().progress().apply(0)));
+        consoleLearning = true;
         click(DeveloperMenu.RESET_BUTTON);
         console.enqueue(progressTask(consoleTexts().resetSucc(), consoleTexts().resetFail(), false));
     }
@@ -543,7 +555,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             @Override
             public void update(double now) {
                 if (console == null) return;
-                console.output("\b\b\b" + (int) (menu.getProgress() * 100) + "%");
+                // Trois caracteres, toujours : c'est ce que les trois retours arriere effacent.
+                console.output("\b\b\b" + DeveloperConsole.percent((int) (menu.getProgress() * 100)));
             }
 
             @Override
@@ -572,8 +585,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
                 key("academy.skill_tree.console.learn_hint"),
                 key("academy.skill_tree.console.override"),
                 key("academy.skill_tree.console.invalid_command"),
-                percent -> Component.translatable("academy.skill_tree.console.progress", percent)
-                        .getString(),
+                percent -> Component.translatable("academy.skill_tree.console.progress",
+                        DeveloperConsole.percent(percent)).getString(),
                 key("academy.skill_tree.console.dev_begin"),
                 key("academy.skill_tree.console.dev_succ"),
                 key("academy.skill_tree.console.dev_fail"),
@@ -621,7 +634,12 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // de son animation. Sans cela, taper `/learn` dans le chat faisait disparaitre la banniere
         // au premier paquet de synchronisation — le joueur : « quand je tape /learn, j'apprends
         // bien un pouvoir mais je ne vois pas l'animation du terminal qui est cense etre la ».
-        if (console != null && !console.idle()) {
+        //
+        // La condition est la FIN DU DEMARRAGE, et non « la file est vide » : la banniere et la
+        // sequence de nombres sont deux taches, et entre les deux la file est vide une image — la
+        // console cedait donc la place au milieu de son animation, ce que le joueur voyait comme
+        // « elle dure a peine 1 seconde ».
+        if (console != null && (consoleLearning || !console.startupFinished())) {
             buildConsole(area, consoleMode == null ? "learn" : consoleMode);
             tree.note(null, data);
             return;
@@ -632,6 +650,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         console = null;
         consoleBox = null;
         consoleMode = null;
+        consoleLearning = false;
         tree.build(category, data, this::openSkill);
     }
 
@@ -741,6 +760,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             console = null;
             consoleBox = null;
             consoleMode = null;
+            consoleLearning = false;
             CWidget page = pageWindow(PAGE);
             if (page != null) {
                 buildAptitude(page);
@@ -768,9 +788,10 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (mode != null) {
             rebuild = !mode.equals(consoleMode);
         } else if (console != null) {
-            // L'aptitude est la et la bobine est rangee : la console cede la place des qu'elle a
-            // fini de jouer. C'est ce qui laisse voir son animation apres un `/learn`.
-            rebuild = console.idle();
+            // L'aptitude est la et la bobine est rangee : la console cede la place quand elle a
+            // TOUT joue — son demarrage, et le verdict de l'apprentissage qu'elle a lance. C'est ce
+            // qui laisse voir son animation apres un `/learn`.
+            rebuild = consoleLearning ? console.rebuildRequested() : console.startupFinished();
         } else {
             rebuild = !tree.unchanged(category, data);
         }
