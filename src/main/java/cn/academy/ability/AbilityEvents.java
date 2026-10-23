@@ -145,6 +145,39 @@ public class AbilityEvents {
     }
 
     /**
+     * Dormir dans un lit rend la reserve et le surcout.
+     *
+     * <p>Portage de {@code CPData.Events.playerWakeup} : l'original rendait tout au reveil, et
+     * c'est la seule chose qui reste de son {@code recoverAll} — le port ne le fait plus a la
+     * mort, ou le joueur veut garder ses points entames.
+     *
+     * <p>La condition est celle de l'original, traduite : il exigeait
+     * {@code !wakeImmediately() && !updateWorld() && shouldSetSpawn()}, c'est-a-dire un reveil
+     * <b>naturel</b> (la nuit passee), et non un joueur qui sort du lit a la main. En 1.20.1
+     * {@code shouldSetSpawn} n'existe plus, mais les deux drapeaux restants suffisent :
+     * {@code ServerLevel.wakeUpAllPlayers} appelle {@code stopSleepInBed(false, false)} au
+     * matin, alors que sortir du lit envoie {@code stopSleepInBed(false, true)} et qu'une
+     * deconnexion ou une teleportation passent {@code true} en premier. Le couple
+     * {@code (false, false)} est donc exactement le reveil du matin.
+     *
+     * <p>L'original avait d'ailleurs corrige ce point dans sa 1.0pr2 : « Fixed can recover CP
+     * by lying on the bed and leave bed » — se coucher puis se relever ne rendait rien.
+     */
+    @SubscribeEvent
+    public static void onWakeUp(net.minecraftforge.event.entity.player.PlayerWakeUpEvent event) {
+        if (event.wakeImmediately() || event.updateLevel()) return;
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            data.recoverAll();
+            // Le reveil est un evenement rare : on pousse l'etat tout de suite plutot que
+            // d'attendre la cadence de synchronisation, sinon la barre du client resterait
+            // vide quelques ticks apres que le joueur a ouvert les yeux.
+            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+                    new SyncAbilityDataPacket(data));
+        });
+    }
+
+    /**
      * Termine tous les maintiens en cours, chacun par la fin ordinaire.
      *
      * <p>Trois chemins y menent, et c'est le meme geste : la mort, le surcout au maximum, et un

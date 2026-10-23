@@ -138,6 +138,40 @@ class AbilityOverloadTest {
     }
 
     @Test
+    void dormirRendLaReserveEtLeSurcout() {
+        // Portage de CPData.recoverAll, que l'original appelait au reveil dans un lit. Le port
+        // ne le fait plus a la mort (le joueur veut garder ses points entames), donc le lit est
+        // la seule facon de repartir a neuf.
+        AbilityData data = atLevel(1);
+        data.perform(500f, 500f);
+        assertTrue(data.getControlPoint() < data.getMaxControlPoint(), "la reserve est entamee");
+        assertTrue(data.isOverloadRecovering(), "et le surcout a ferme le verrou");
+
+        data.recoverAll();
+
+        assertEquals(data.getMaxControlPoint(), data.getControlPoint(), 0.0001f,
+                "la reserve revient pleine");
+        assertEquals(0f, data.getOverload(), 0.0001f, "le surcout est efface");
+        assertFalse(data.isOverloadRecovering(), "et le verrou s'ouvre");
+        assertFalse(data.isOverloaded(), "le temoin s'eteint");
+        assertEquals(0, data.getUntilOverloadRecover(), "sans delai qui traine");
+    }
+
+    @Test
+    void dormirNeRendPasLePlafondAcquis() {
+        // L'original ne touchait pas a addMaxCP : dormir rend la reserve, pas la progression.
+        AbilityData data = atLevel(1);
+        data.perform(400f, 0f);
+        float grown = data.getAddMaxControlPoint();
+        assertTrue(grown > 0f, "l'usage a agrandi la reserve");
+
+        data.recoverAll();
+
+        assertEquals(grown, data.getAddMaxControlPoint(), 0.0001f,
+                "le plafond acquis reste acquis");
+    }
+
+    @Test
     void uneReservePleineMetEnSurcharge() {
         AbilityData data = atLevel(1);
 

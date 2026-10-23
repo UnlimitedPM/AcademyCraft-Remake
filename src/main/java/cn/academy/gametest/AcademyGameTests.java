@@ -5634,6 +5634,48 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Dormir dans un lit rend la reserve et le surcout — mais seulement au reveil du matin.
+     *
+     * <p>Portage de {@code CPData.Events.playerWakeup}. Le port ne rend plus rien a la mort (le
+     * joueur veut garder ses points entames), donc le lit est la seule facon de repartir a neuf.
+     * L'original exigeait un reveil <b>naturel</b> : sortir du lit a la main ne rendait rien, et
+     * c'est ce que sa 1.0pr2 avait corrige (« Fixed can recover CP by lying on the bed and leave
+     * bed »). En 1.20.1 les deux drapeaux de l'evenement suffisent a distinguer les deux cas :
+     * {@code ServerLevel.wakeUpAllPlayers} passe {@code (false, false)}, sortir du lit passe
+     * {@code (false, true)}.
+     */
+    @GameTest(template = "empty")
+    public static void dormirRendLaReserveEtLeSurcout(GameTestHelper helper) {
+        var player = ownPlayer(helper, "slept-well");
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(cn.academy.ability.electromaster.ElectromasterCategory.INSTANCE, 2);
+
+        // Un joueur entame : de la reserve depensee et un surcout qui a ferme le verrou.
+        data.perform(500f, 500f);
+        assertTrue(helper, data.getControlPoint() < data.getMaxControlPoint(),
+                "la reserve est entamee");
+        assertTrue(helper, data.isOverloadRecovering(), "et le surcout a ferme le verrou");
+
+        // Sortir du lit a la main : rien n'est rendu.
+        cn.academy.ability.AbilityEvents.onWakeUp(
+                new net.minecraftforge.event.entity.player.PlayerWakeUpEvent(player, false, true));
+        assertTrue(helper, data.getControlPoint() < data.getMaxControlPoint(),
+                "se relever ne rend rien");
+
+        // Le reveil du matin, tel que le niveau le poste.
+        cn.academy.ability.AbilityEvents.onWakeUp(
+                new net.minecraftforge.event.entity.player.PlayerWakeUpEvent(player, false, false));
+
+        assertClose(helper, data.getMaxControlPoint(), data.getControlPoint(),
+                "la reserve revient pleine");
+        assertClose(helper, 0f, data.getOverload(), "le surcout est efface");
+        assertFalse(helper, data.isOverloadRecovering(), "et le verrou s'ouvre");
+
+        helper.succeed();
+    }
+
+    /**
      * La mort termine les maintiens — et le dit au client.
      *
      * <p>Le joueur : « si on meurt avec le deviation activer, quand on reapparait on a encore

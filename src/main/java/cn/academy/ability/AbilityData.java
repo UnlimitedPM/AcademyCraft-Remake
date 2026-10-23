@@ -629,6 +629,25 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
+     * Rend tout : la reserve pleine et le surcout efface, verrou compris.
+     *
+     * <p>Portage de {@code CPData.recoverAll}, que l'original appelait a la mort ET au reveil
+     * dans un lit. Le port ne le fait plus a la mort — le joueur veut garder ses points entames
+     * quand il meurt — mais le lit, lui, les rend : c'est la seule facon de repartir a neuf
+     * sans passer par une commande.
+     *
+     * <p>L'original posait {@code overloadFine = false} en vidant son surcout, et sa
+     * recuperation le rouvrait au tick suivant. Ici le verrou s'ouvre tout de suite
+     * ({@link #clearOverload}) : le joueur se reveille disponible, pas bloque une image de plus.
+     */
+    public void recoverAll() {
+        controlPoint = getMaxControlPoint();
+        // Le delai de reprise part avec : la reserve est deja pleine, il n'a plus rien a retenir.
+        untilRecover = 0;
+        clearOverload();
+    }
+
+    /**
      * Quelque chose a change : le client doit le savoir au plus vite.
      *
      * <p>Portage de {@code CPData.markDirty} : c'est ce drapeau qui resserre la cadence de
