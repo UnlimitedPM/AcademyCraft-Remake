@@ -5,11 +5,14 @@ import cn.academy.ability.Category;
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.ability.develop.DevelopActionLevel;
+import cn.academy.ability.develop.DevelopProgress;
+import cn.academy.ability.develop.DeveloperType;
 import cn.academy.ability.develop.LearningHelper;
 import cn.academy.ability.develop.condition.LearningCondition;
 import cn.academy.client.gui.cgui.CGuiContainerScreen;
 import cn.academy.client.gui.cgui.CGuiShaders;
 import cn.academy.client.gui.cgui.CWidget;
+import cn.academy.client.gui.cgui.DeveloperConsole;
 import cn.academy.client.gui.cgui.GuiPageHost;
 import cn.academy.client.gui.cgui.GuiSurface;
 import cn.academy.client.gui.cgui.SkillTreeView;
@@ -114,10 +117,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double SUBTITLE_Y = 39.0;
     private static final double DESCRIPTION_Y = 49.0;
 
-    /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
-    private static final double CONSOLE_WIDTH = 240.0;
+    /**
+     * La console : ses lignes se posent a cinq unites du coin, tous les dix, a la taille huit.
+     *
+     * <p>Ce sont les nombres de l'original ({@code Console} : {@code x = 5}, {@code y = 5},
+     * {@code y += 10}, {@code FontOption(8)}), et non un centrage : sa console s'ecrit comme un
+     * terminal, en haut a gauche de la zone.
+     */
+    private static final double CONSOLE_X = 5.0;
+    private static final double CONSOLE_Y = 5.0;
     private static final double CONSOLE_LINE = 10.0;
-    private static final double CONSOLE_DY = -22.0;
+    private static final double CONSOLE_FONT = 8.0;
 
     /** L'icone d'une surface : le meme disque, mais plus grand. */
     private static final String SURFACE_BACK = "academy:textures/guis/developer/skill_back.png";
@@ -152,6 +162,30 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private final SkillTreeView tree = new SkillTreeView(host);
     private final GuiSurface veil = new GuiSurface(host, PAGE_WIDTH, PAGE_HEIGHT);
 
+    /**
+     * La console du joueur sans aptitude, et la boite qui la porte.
+     *
+     * <p>Elle survit aux reconstructions de la page : c'est elle qui tient le texte deja ecrit, la
+     * tache en cours et la saisie. La recreer a chaque {@code build} ferait repartir l'animation de
+     * demarrage a chaque image, et le joueur ne verrait jamais la fin de la banniere.
+     */
+    @Nullable
+    private DeveloperConsole console;
+
+    @Nullable
+    private CWidget consoleBox;
+
+    /**
+     * Ce que la console montre : {@code null} quand il n'y en a pas.
+     *
+     * <p>L'original avait deux consoles — celle du joueur sans aptitude, qui propose {@code learn},
+     * et celle de la bobine magnetique, qui propose {@code reset}. Le port les distingue par ce
+     * drapeau, et recree la console quand il change : passer de l'une a l'autre doit repartir d'une
+     * banniere neuve, comme a l'ouverture.
+     */
+    @Nullable
+    private String consoleMode;
+
     public DeveloperScreen(DeveloperMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
         // La page de l'original n'est pas un cadre de machine : elle fait quatre cents unites de large,
@@ -162,8 +196,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
     /** La page occupe toute la place : elle ne se pose pas au milieu d'un cadre de machine. */
     @Override
-    protected void layoutRoot(CWidget root) {
-        root.transform.width = PAGE_WIDTH;
+    protected void layoutRoot(CWidget root) {        root.transform.width = PAGE_WIDTH;
         root.transform.height = PAGE_HEIGHT;
         root.transform.x = 0;
         root.transform.y = 0;
@@ -226,10 +259,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         buildAbilityPanel(page);
         buildMachinePanel(page);
         buildAptitude(page);
-        // La bobine magnetique change l'ecran : l'original ne montrait plus l'arbre du tout et laissait
-        // la place a la console du changement d'aptitude. Le port pose la meme question, sous forme de
-        // surface, et c'est ce que le joueur tient en main qui decide — comme chez l'original.
-        if (holdsCoil()) openReset();
     }
 
     /** La bobine magnetique en main : c'est elle qui demande a changer d'aptitude. */
@@ -374,68 +403,161 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      *
      * <p>L'original ne montrait pas un arbre vide a ce moment-la : il posait une petite console a la
      * place de l'arbre — « Welcome to Academy OS », l'echec du demarrage, le verdict, et la commande
-     * a taper. Le port garde son texte mot pour mot et remplace la frappe par un bouton, parce qu'un
-     * bouton se clique — et la commande existe aussi pour de vrai, c'est {@code /learn}.
+     * a taper. Le port affichait ce texte d'un coup et remplacait la frappe par un bouton ; le
+     * joueur a reclame la mecanique : « il n'y a pas l'animation du texte ni meme la mecanique de
+     * devoir taper /learn pour apprendre le pouvoir ».
+     *
+     * <p>La console vit dans {@link DeveloperConsole} — sans Minecraft, donc relisible en JUnit — et
+     * cet ecran ne fait que la dessiner et lui passer le clavier.
      */
-    private void buildConsole(CWidget area) {
+    private void buildConsole(CWidget area, String mode) {
         area.children().clear();
 
-        List<String> lines = consoleText();
-        double top = CONSOLE_DY - (lines.size() - 1) * CONSOLE_LINE / 2.0;
-        for (int i = 0; i < lines.size(); i++) {
-            area.add(consoleLine(lines.get(i), top + i * CONSOLE_LINE));
+        // Une console neuve quand le MODE change : celle du joueur sans aptitude propose `learn`,
+        // celle de la bobine propose `reset`, et l'original en ouvrait une autre dans chaque cas.
+        if (console == null || !mode.equals(consoleMode)) {
+            console = newConsole(mode);
+            consoleMode = mode;
         }
 
-        double below = top + lines.size() * CONSOLE_LINE + 6;
-        if (menu.isDeveloping()) {
-            area.add(text(Component.translatable("academy.developer.state.developing").getString(),
-                    below, 255, 216, 0));
-            return;
-        }
-        area.add(consoleButton(() -> click(DeveloperMenu.FIRST_CATEGORY_BUTTON), below));
+        // La console se dessine elle-meme : ses lignes changent a chaque image, et un widget par
+        // ligne obligerait a rebatir l'arbre soixante fois par seconde.
+        CWidget box = new CWidget("console");
+        box.transform.width = area.transform.width;
+        box.transform.height = area.transform.height;
+        box.transform.x = 0;
+        box.transform.y = 0;
+        box.transform.alignWidth = "LEFT";
+        box.transform.alignHeight = "TOP";
+        area.add(box);
+        consoleBox = box;
     }
 
-    /**
-     * Le texte de la console, concatene comme l'original le concatene.
-     *
-     * <p>Quatre cles, celles de l'original, et dans son ordre : le demarrage, l'echec qui se colle a
-     * la fin de la meme ligne, le verdict, et la commande a taper. L'invite {@code OS >} ferme la
-     * console — c'est la que l'original attendait sa frappe.
-     */
-    private List<String> consoleText() {
+    /** La console du joueur, avec ses textes et sa commande. */
+    private DeveloperConsole newConsole(String mode) {
+        DeveloperConsole.Texts texts = newConsoleTexts();
+
         String name = minecraft == null || minecraft.player == null
                 ? "" : minecraft.player.getGameProfile().getName();
-        String all = Component.translatable("academy.skill_tree.console.init", name).getString()
-                + Component.translatable("academy.skill_tree.console.boot_failed").getString()
-                + Component.translatable("academy.skill_tree.console.invalid_cat").getString()
-                + Component.translatable("academy.skill_tree.console.learn_hint").getString()
-                + "OS > ";
-        return List.of(all.split("\n", -1));
+        boolean reset = "reset".equals(mode);
+        DeveloperConsole console = new DeveloperConsole(texts, name, reset, true,
+                new java.util.Random());
+
+        // Les deux commandes de l'original. `learn` n'existe que sur une machine — c'est elle qui
+        // donne l'aptitude — et `reset` que si le joueur tient la bobine.
+        if (reset) {
+            console.command("reset", this::consoleReset);
+        } else {
+            console.command("learn", this::consoleLearn);
+        }
+        return console;
     }
 
-    /** Une ligne de la console, posee a gauche dans sa boite. */
-    private static CWidget consoleLine(String content, double y) {
-        CWidget line = new CWidget("console_line");
-        line.transform.width = CONSOLE_WIDTH;
-        line.transform.height = CONSOLE_LINE;
-        line.transform.y = y;
-        line.transform.alignWidth = "CENTER";
-        line.transform.alignHeight = "CENTER";
-        line.text = new CWidget.TextBox();
-        line.text.content = content;
-        line.text.align = "LEFT";
-        line.text.heightAlign = "CENTER";
-        return line;
+    private static String key(String translationKey) {
+        return Component.translatable(translationKey).getString();
     }
 
     /**
-     * Le bouton de la console : la meme image que celui des surfaces, son etiquette, et rien a
-     * fermer — il n'y a aucune surface ouverte sous lui.
+     * La commande {@code learn} : la stimulation, puis son verdict.
+     *
+     * <p>C'est le {@code Command("learn", ...)} de l'original, dans son ordre : le texte de debut,
+     * la ligne de progression a zero, l'envoi au serveur, puis une tache qui attend la fin de
+     * l'apprentissage et reecrit le pourcentage sur place.
      */
-    private CWidget consoleButton(Runnable action, double y) {
-        CWidget widget = button(action, y, false);
-        widget.add(text("LEARN", 0, 255, 255, 255));
-        return widget;
+    private void consoleLearn() {
+        DeveloperConsole console = this.console;
+        if (console == null) return;
+
+        console.enqueue(console.print(consoleTexts().devBegin()));
+        console.enqueue(console.print(consoleTexts().progress().apply(0)));
+        click(DeveloperMenu.FIRST_CATEGORY_BUTTON);
+        console.enqueue(progressTask(consoleTexts().devSucc(), consoleTexts().devFail()));
+    }
+
+    /** La commande {@code reset} : le changement de categorie, avec ses trois refus. */
+    private void consoleReset() {
+        DeveloperConsole console = this.console;
+        if (console == null) return;
+
+        if (!menu.canReset()) {
+            // L'original distingue les deux raisons : la machine n'est pas la bonne, ou le joueur
+            // n'a pas ce qu'il faut. Le port les separe de la meme facon.
+            console.enqueue(console.print(menu.getDeveloperType() != DeveloperType.ADVANCED
+                    ? consoleTexts().resetFailDev()
+                    : consoleTexts().resetFailOther()));
+            return;
+        }
+
+        console.enqueue(console.print(consoleTexts().resetBegin()));
+        console.enqueue(console.print(consoleTexts().progress().apply(0)));
+        click(DeveloperMenu.RESET_BUTTON);
+        console.enqueue(progressTask(consoleTexts().resetSucc(), consoleTexts().resetFail()));
+    }
+
+    /**
+     * La tache qui suit un apprentissage : elle reecrit le pourcentage sur place, puis dit le
+     * verdict et demande la reconstruction de l'ecran.
+     *
+     * <p>C'est la tache anonyme de l'original, avec son {@code \b\b\b} : trois retours arriere
+     * effacent le pourcentage precedent, et le nouveau s'ecrit dessus. Sans eux, la console
+     * empilerait une ligne par pourcentage.
+     *
+     * <p>Elle se termine aussi quand l'aptitude est <b>arrivee</b>, et pas seulement quand la
+     * machine a fini : la premiere aptitude du port se donne tout de suite, sans stimulation
+     * ({@code FIRST_CATEGORY_BUTTON}), donc l'etat de la machine ne bouge jamais et la tache
+     * attendrait un verdict qui ne vient pas.
+     */
+    private DeveloperConsole.Task progressTask(String success, String failure) {
+        return new DeveloperConsole.Task() {
+            @Override
+            public boolean isFinished(double now) {
+                return menu.getState() == DevelopProgress.DevState.FAILED
+                        || menu.getState() == DevelopProgress.DevState.DONE
+                        || category() != null;
+            }
+
+            @Override
+            public void update(double now) {
+                if (console == null) return;
+                console.output("\b\b\b" + (int) (menu.getProgress() * 100) + "%");
+            }
+
+            @Override
+            public void finish() {
+                if (console == null) return;
+                boolean done = menu.getState() == DevelopProgress.DevState.DONE
+                        || category() != null;
+                console.outputln();
+                console.output(done ? success : failure);
+                console.pause(0.5);
+                console.enqueueRebuild();
+            }
+        };
+    }
+
+    /** Les textes de la console, pour les commandes qui les ecrivent hors de sa construction. */
+    private DeveloperConsole.Texts consoleTexts() {
+        return console == null ? newConsoleTexts() : console.texts();
+    }
+
+    private DeveloperConsole.Texts newConsoleTexts() {
+        return new DeveloperConsole.Texts(
+                key("academy.skill_tree.console.init"),
+                key("academy.skill_tree.console.boot_failed"),
+                key("academy.skill_tree.console.invalid_cat"),
+                key("academy.skill_tree.console.learn_hint"),
+                key("academy.skill_tree.console.override"),
+                key("academy.skill_tree.console.invalid_command"),
+                percent -> Component.translatable("academy.skill_tree.console.progress", percent)
+                        .getString(),
+                key("academy.skill_tree.console.dev_begin"),
+                key("academy.skill_tree.console.dev_succ"),
+                key("academy.skill_tree.console.dev_fail"),
+                key("academy.skill_tree.console.reset_begin"),
+                key("academy.skill_tree.console.reset_succ"),
+                key("academy.skill_tree.console.reset_fail"),
+                key("academy.skill_tree.console.reset_fail_dev"),
+                key("academy.skill_tree.console.reset_fail_other"));
     }
 
     /**
@@ -457,12 +579,25 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         Category category = category();
         AbilityData data = ClientAbilityData.get();
+
+        // Les trois cas de l'original, dans son ordre : pas d'aptitude -> la console qui propose
+        // `learn` ; la bobine magnetique en main -> la console qui propose `reset` ; sinon l'arbre.
         if (category == null) {
-            buildConsole(area);
+            buildConsole(area, "learn");
+            tree.note(null, data);
+            return;
+        }
+        if (holdsCoil()) {
+            buildConsole(area, "reset");
             tree.note(null, data);
             return;
         }
 
+        // L'aptitude est arrivee, ou la bobine est rangee : la console a fini son office, et son
+        // texte ne doit pas rester derriere l'arbre.
+        console = null;
+        consoleBox = null;
+        consoleMode = null;
         tree.build(category, data, this::openSkill);
     }
 
@@ -502,6 +637,62 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         tree.frame(ClientAbilityData.get(), mouseX, mouseY, width, height, veil.opened());
     }
 
+    /**
+     * Le dessin de l'ecran, et la console par-dessus.
+     *
+     * <p>La console se dessine <b>apres</b> la page : {@code frame} passe avant le document, donc
+     * tout ce qu'on y ecrit est recouvert par le fond de la page — c'est la regle du moteur, et
+     * c'est ce qui a deja fait disparaitre un texte par le passe. Elle se dessine donc ici, une
+     * fois tout le reste pose.
+     */
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        drawConsole(graphics);
+    }
+
+    /**
+     * Dessine la console, ligne par ligne, a la place de la zone de l'arbre.
+     *
+     * <p>Elle se dessine ici et non par des widgets : ses lignes changent a chaque image — le texte
+     * s'ecrit lettre par lettre, le pourcentage se reecrit sur place — et un widget par ligne
+     * obligerait a rebatir l'arbre soixante fois par seconde. C'est aussi ce que faisait l'original,
+     * dont la console dessinait son texte dans son propre {@code FrameEvent}.
+     */
+    private void drawConsole(GuiGraphics graphics) {
+        if (console == null || consoleBox == null) return;
+
+        console.tick(net.minecraft.Util.getMillis() / 1000.0);
+
+        List<String> lines = console.lines();
+        int x = (int) Math.round(consoleBox.absX + CONSOLE_X * consoleBox.absScale);
+        int y = (int) Math.round(consoleBox.absY + CONSOLE_Y * consoleBox.absScale);
+        int cell = cn.academy.client.gui.AcademyFonts.cell(CONSOLE_FONT * consoleBox.absScale);
+        int step = (int) Math.round(CONSOLE_LINE * consoleBox.absScale);
+
+        for (int i = 0; i < lines.size(); i++) {
+            cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, lines.get(i),
+                    x, y + i * step, 0xFFFFFFFF, cell);
+        }
+
+        // La console a fini son travail : l'arbre prend sa place. C'est l'evenement de
+        // reconstruction de l'original, et sans lui le joueur ne verrait jamais le verdict.
+        //
+        // La reconstruction est FORCEE : `refresh` compare la signature de l'arbre, et celle-ci ne
+        // bouge pas quand l'aptitude n'est pas encore arrivee du serveur — la zone resterait alors
+        // vide, sans console et sans arbre.
+        if (console.rebuildRequested()) {
+            console = null;
+            consoleBox = null;
+            consoleMode = null;
+            CWidget page = pageWindow(PAGE);
+            if (page != null) {
+                buildAptitude(page);
+                reflow();
+            }
+        }
+    }
+
     /** Rebatit l'arbre et les panneaux si ce qu'ils montrent a change. */
     private void refresh() {
         CWidget page = pageWindow(PAGE);
@@ -509,7 +700,19 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         Category category = category();
         AbilityData data = ClientAbilityData.get();
-        if (tree.unchanged(category, data)) return;
+
+        // La console a son propre etat : elle change de mode quand le joueur prend ou range la
+        // bobine, et l'arbre ne voit rien de tout cela — sa signature ne parle que de l'aptitude.
+        String mode = category == null ? "learn" : holdsCoil() ? "reset" : null;
+
+        // Tant qu'une console est a l'ecran, c'est ELLE qui decide : la signature de l'arbre ne
+        // bouge pas (elle vaut « pas d'arbre »), donc la consulter rebatirait la page a chaque
+        // image. Seul un changement de mode — ou l'arrivee de l'aptitude — demande un repose.
+        boolean rebuild = mode == null
+                ? !tree.unchanged(category, data)
+                : !mode.equals(consoleMode);
+
+        if (!rebuild) return;
 
         // Les deux panneaux de gauche portent l'aptitude du joueur : ils changent avec elle, et
         // sans ce repose le panneau continuerait d'annoncer « No ability » apres la premiere
@@ -643,28 +846,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     }
 
     /**
-     * La surface du changement d'aptitude : la seule qui se demande en tenant la bobine magnetique.
-     *
-     * <p>L'original ne montrait pas l'arbre du tout dans ce cas, il montrait une console a commandes.
-     * Le port pose la question, ce qui revient au meme pour le joueur — la console viendra si elle
-     * manque.
-     */
-    private void openReset() {
-        CWidget content = new CWidget("reset");
-        content.add(surfaceIcon(null));
-
-        double y = -42;
-        content.add(text(Component.translatable("academy.developer.reset").getString(), y,
-                255, 255, 255));
-        y += 14;
-        content.add(text(Component.translatable("academy.developer.reset.tooltip").getString(),
-                y, 200, 200, 200));
-        y += 18;
-        content.add(button(() -> click(DeveloperMenu.RESET_BUTTON), BUTTON_Y));
-        open(content);
-    }
-
-    /**
      * Pourquoi le bouton ne se montre pas.
      *
      * <p>Le serveur revalide de toute facon : ce qui se verifie ici ne decide de rien, il evite
@@ -701,14 +882,6 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * cet ordre, pour que l'action parte sur un ecran encore en place.
      */
     private CWidget button(Runnable action, double y) {
-        return button(action, y, true);
-    }
-
-    /**
-     * @param close vrai si ce bouton ferme une surface ouverte, comme celui de l'original ; faux
-     *              pour celui de la console, qui ne ferme rien du tout
-     */
-    private CWidget button(Runnable action, double y, boolean close) {
         CWidget widget = new CWidget("button");
         widget.transform.width = BUTTON_WIDTH;
         widget.transform.height = BUTTON_HEIGHT;
@@ -727,7 +900,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         onClick(widget, () -> {
             action.run();
-            if (close) beginClose();
+            beginClose();
         });
         return widget;
     }
@@ -819,6 +992,39 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Le clavier va a la console quand elle est la.
+     *
+     * <p>C'est le {@code KeyEvent} de l'original : retour arriere efface une lettre, Entree valide
+     * la ligne, et tout le reste s'ecrit. Le port n'avait rien de tout cela — sa console affichait
+     * son texte et ne prenait aucune frappe.
+     */
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (console != null) {
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_BACKSPACE) {
+                console.backspace();
+                return true;
+            }
+            if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER
+                    || keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_KP_ENTER) {
+                console.submit();
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    /** Une lettre tapee va dans la ligne de la console. */
+    @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        if (console != null && net.minecraft.SharedConstants.isAllowedChatCharacter(codePoint)) {
+            console.type(codePoint);
+            return true;
+        }
+        return super.charTyped(codePoint, modifiers);
     }
 
     /** Referme la fiche, en la faisant d'abord s'effacer. */

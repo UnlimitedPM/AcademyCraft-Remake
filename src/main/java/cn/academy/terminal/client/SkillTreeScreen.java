@@ -10,6 +10,7 @@ import cn.academy.client.gui.cgui.CGuiDocument;
 import cn.academy.client.gui.cgui.CGuiShaders;
 import cn.academy.client.gui.cgui.CGuiView;
 import cn.academy.client.gui.cgui.CWidget;
+import cn.academy.client.gui.cgui.DeveloperConsole;
 import cn.academy.client.gui.cgui.GuiPageHost;
 import cn.academy.client.gui.cgui.GuiSurface;
 import cn.academy.client.gui.cgui.SkillTreeView;
@@ -82,9 +83,17 @@ public class SkillTreeScreen extends Screen {
     private static final int DESCRIPTION_WIDTH = 200;
 
     /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
-    private static final double CONSOLE_WIDTH = 240.0;
+    private static final double CONSOLE_X = 5.0;
+    private static final double CONSOLE_Y = 5.0;
     private static final double CONSOLE_LINE = 10.0;
-    private static final double CONSOLE_DY = -22.0;
+    private static final double CONSOLE_FONT = 8.0;
+
+    /** La console du joueur sans aptitude, et la boite qui la porte. */
+    @Nullable
+    private DeveloperConsole console;
+
+    @Nullable
+    private CWidget consoleBox;
 
     /**
      * La page, sa racine, et le moteur qui la dessine.
@@ -176,6 +185,7 @@ public class SkillTreeScreen extends Screen {
         place();
         frame(graphics, mouseX, mouseY);
         if (view != null) view.draw(graphics, mouseX, mouseY);
+        drawConsole(graphics);
     }
 
     /**
@@ -276,46 +286,88 @@ public class SkillTreeScreen extends Screen {
             return;
         }
 
+        console = null;
+        consoleBox = null;
         tree.build(category, data, this::openSkill);
     }
 
     /**
      * La console : ce que voit un joueur qui n'a encore aucune aptitude.
      *
-     * <p>Le meme texte que sur la machine, mot pour mot, et sans bouton : c'est la machine qui
+     * <p>Le meme texte que sur la machine, mot pour mot, et sans commande : c'est la machine qui
      * donne l'aptitude, pas l'application. La derniere ligne dit la commande, et elle marche ici
-     * aussi.
+     * aussi — mais c'est {@code /learn} dans le chat, pas une frappe dans la console.
+     *
+     * <p>L'animation, elle, est la meme : c'est la console de l'original, qui ne savait pas sur quel
+     * ecran elle se trouvait.
      */
     private void buildConsole(CWidget area) {
         area.children().clear();
 
-        List<String> lines = consoleText();
-        double top = CONSOLE_DY - (lines.size() - 1) * CONSOLE_LINE / 2.0;
-        for (int i = 0; i < lines.size(); i++) {
-            CWidget line = new CWidget("console_line");
-            line.transform.width = CONSOLE_WIDTH;
-            line.transform.height = CONSOLE_LINE;
-            line.transform.y = top + i * CONSOLE_LINE;
-            line.transform.alignWidth = "CENTER";
-            line.transform.alignHeight = "CENTER";
-            line.text = new CWidget.TextBox();
-            line.text.content = lines.get(i);
-            line.text.align = "LEFT";
-            line.text.heightAlign = "CENTER";
-            area.add(line);
+        if (console == null) {
+            String name = minecraft == null || minecraft.player == null
+                    ? "" : minecraft.player.getGameProfile().getName();
+            console = new DeveloperConsole(consoleTexts(), name, false, false,
+                    new java.util.Random());
         }
+
+        CWidget box = new CWidget("console");
+        box.transform.width = area.transform.width;
+        box.transform.height = area.transform.height;
+        box.transform.x = 0;
+        box.transform.y = 0;
+        box.transform.alignWidth = "LEFT";
+        box.transform.alignHeight = "TOP";
+        area.add(box);
+        consoleBox = box;
     }
 
-    /** Le texte de la console, concatene comme l'original le concatene. */
-    private List<String> consoleText() {
-        var mc = net.minecraft.client.Minecraft.getInstance();
-        String name = mc.player == null ? "" : mc.player.getGameProfile().getName();
-        String all = Component.translatable("academy.skill_tree.console.init", name).getString()
-                + Component.translatable("academy.skill_tree.console.boot_failed").getString()
-                + Component.translatable("academy.skill_tree.console.invalid_cat").getString()
-                + Component.translatable("academy.skill_tree.console.learn_hint").getString()
-                + "OS > ";
-        return List.of(all.split("\n", -1));
+    /** Les textes de la console, ceux de la machine. */
+    private static DeveloperConsole.Texts consoleTexts() {
+        return new DeveloperConsole.Texts(
+                key("academy.skill_tree.console.init"),
+                key("academy.skill_tree.console.boot_failed"),
+                key("academy.skill_tree.console.invalid_cat"),
+                key("academy.skill_tree.console.learn_hint"),
+                key("academy.skill_tree.console.override"),
+                key("academy.skill_tree.console.invalid_command"),
+                percent -> Component.translatable("academy.skill_tree.console.progress", percent)
+                        .getString(),
+                key("academy.skill_tree.console.dev_begin"),
+                key("academy.skill_tree.console.dev_succ"),
+                key("academy.skill_tree.console.dev_fail"),
+                key("academy.skill_tree.console.reset_begin"),
+                key("academy.skill_tree.console.reset_succ"),
+                key("academy.skill_tree.console.reset_fail"),
+                key("academy.skill_tree.console.reset_fail_dev"),
+                key("academy.skill_tree.console.reset_fail_other"));
+    }
+
+    private static String key(String translationKey) {
+        return Component.translatable(translationKey).getString();
+    }
+
+    /**
+     * Dessine la console, ligne par ligne, a la place de la zone de l'arbre.
+     *
+     * <p>Apres la page, comme sur la machine : {@code frame} passe avant le document, donc un texte
+     * ecrit la serait recouvert par le fond.
+     */
+    private void drawConsole(GuiGraphics graphics) {
+        if (console == null || consoleBox == null) return;
+
+        console.tick(net.minecraft.Util.getMillis() / 1000.0);
+
+        List<String> lines = console.lines();
+        int x = (int) Math.round(consoleBox.absX + CONSOLE_X * consoleBox.absScale);
+        int y = (int) Math.round(consoleBox.absY + CONSOLE_Y * consoleBox.absScale);
+        int cell = cn.academy.client.gui.AcademyFonts.cell(CONSOLE_FONT * consoleBox.absScale);
+        int step = (int) Math.round(CONSOLE_LINE * consoleBox.absScale);
+
+        for (int i = 0; i < lines.size(); i++) {
+            cn.academy.client.gui.AcademyFonts.drawTop(graphics, font, lines.get(i),
+                    x, y + i * step, 0xFFFFFFFF, cell);
+        }
     }
 
     // ------------------------------------------------------------------
