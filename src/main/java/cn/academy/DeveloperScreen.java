@@ -153,8 +153,27 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /** Le « Req. » de l'original : deux unites avant le bord gauche de la rangee, et trois sous elle. */
     private static final double CONDITION_LABEL_GAP = 2.0;
 
-    /** La question du cout, a soixante-cinq unites — c'est la {@code pos(0, 40)} du bloc de texte. */
-    private static final double QUESTION_Y = 65.0;
+    /**
+     * De combien la boite de « Req. » descend sous le haut des icones.
+     *
+     * <p>L'original ecrit ce mot a {@code y = 28} et pose ses icones a {@code y = 25} : trois
+     * unites, donc. Notre boite centre son glyphe dans douze unites, ce qui le remonte de quatre et
+     * demie par rapport a l'ordonnee qu'on lui donne — d'ou ces trois plus quatre et demie, qui
+     * remettent le mot a sa vraie place, trois unites sous le haut des icones. Le joueur, captures
+     * cote a cote, l'a vu : « le Req. est un peu trop haut quand on compare ».
+     */
+    private static final double REQ_DESCENT = 7.5;
+
+    /**
+     * La question du cout, a soixante-cinq unites — c'est la {@code pos(0, 40)} du bloc de texte,
+     * qui commence a vingt-cinq.
+     *
+     * <p>La boite se compte en plus : elle fait douze unites et centre son glyphe, donc son texte
+     * tombe cinq unites plus haut que l'ordonnee qu'on lui donne. Ces cinq-la sont ajoutes pour que
+     * le glyphe atterrisse bien a soixante-cinq, juste sous la rangee d'icones qui finit a
+     * soixante-quatre.
+     */
+    private static final double QUESTION_Y = 70.0;
 
     /** Combien de temps le verdict d'un apprentissage reste affiche avant que la fiche se ferme. */
     private static final double VERDICT_HOLD = 1.5;
@@ -1166,10 +1185,12 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // et non poussees sous une description qui n'existe pas dans ce cas.
         conditions(content, skill, data, CONDITION_Y);
 
-        // « Learn? (Estm. Consumption: 3500 IF) », en BLANC a deux tiers d'opacite : c'est
-        // {@code foSkillUnreadned2}, 0xAAFFFFFF, la couleur de l'original pour cette phrase. Le port
-        // l'ecrivait en gris-bleu (170, 170, 203), et le joueur a vu la difference.
+        // « Learn? (Estm. Consumption: 3500 IF) », en BLANC a deux tiers d'opacite et en CORPS DIX :
+        // c'est {@code foSkillUnlearned2}, {@code FontOption(10, CENTER, 0xaaffffff)}. Le port
+        // l'ecrivait en corps neuf et en gris-bleu, et le joueur a vu les deux : « la couleur du
+        // texte avec Learn? n'est pas de la bonne couleur », puis « pas assez grand ».
         CWidget question = textAlpha(learnQuestion(skill), QUESTION_Y, 255, 255, 255, 170);
+        question.text.fontSize = TEXT_FONT;
         content.add(question);
 
         if (canLearn(skill)) {
@@ -1199,14 +1220,19 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // « Req. » : deux unites avant le bord gauche de la rangee, et a DROITE de sa boite — c'est
         // l'alignement de l'original, qui grandit vers la gauche au lieu de pousser sur les icones.
         //
-        // Le decalage se lit en TENANT COMPTE de la largeur de la boite : elle est posee au CENTRE de
-        // la fiche, donc son bord droit tombe a {@code TEXT_WIDTH / 2} du centre. Le port l'ecrivait
-        // a {@code -length / 2 - 2 + TEXT_WIDTH / 2}, ce qui deplacait la boite elle-meme au lieu de
-        // son bord : le mot finissait hors de la page, a droite, et le joueur ne le voyait plus —
-        // « le Req. a cote des icones n'est pas present ».
+        // Le decalage se calcule sur le BORD de la boite, et non sur son centre : elle fait
+        // {@code TEXT_WIDTH} et le moteur la pose centree, donc son bord droit tombe a
+        // {@code TEXT_WIDTH / 2} du centre. Le port l'ajoutait au lieu de le retirer, et le mot
+        // partait hors de la page.
+        //
+        // SA HAUTEUR, ENFIN. L'original dessine ce mot a {@code y = 28} de son bloc de texte, et ses
+        // icones a {@code y = 25} : le mot tombe donc trois unites SOUS le haut des icones, c'est a
+        // dire a leur milieu. Notre boite centre son glyphe dans douze unites, donc elle se pose un
+        // et demi plus haut que son texte : {@code + 1,5} la remet a sa place.
         double length = CONDITION_STEP * shown.size();
-        CWidget label = text(Component.translatable("academy.developer.req").getString(), y,
-                170, 170, 170, DESC_FONT);
+        CWidget label = textAlpha(Component.translatable("academy.developer.req").getString(),
+                y + REQ_DESCENT, 255, 255, 255, 170);
+        label.text.fontSize = DESC_FONT;
         label.text.align = "RIGHT";
         label.transform.x = -length / 2 - CONDITION_LABEL_GAP - TEXT_WIDTH / 2;
         content.add(label);
@@ -1216,8 +1242,12 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         for (LearningCondition condition : shown) {
             boolean met = developerSatisfies(condition, data, skill);
             CWidget icon = conditionIcon(condition, !met);
-            icon.transform.x = x;
-            icon.transform.y = y;
+            // LE COIN HAUT-GAUCHE, et non le centre. L'original pose ses icones par {@code pos()},
+            // qui est un coin ; {@code centred} les pose autour de leur milieu. Une demi-taille plus
+            // loin, leur bord gauche mordait donc sur « Req. » — le joueur a vu « les icones
+            // deborde dessus ».
+            icon.transform.x = x + CONDITION_ICON_SIZE / 2;
+            icon.transform.y = y + CONDITION_ICON_SIZE / 2;
             content.add(icon);
             // Le survol d'une icone ecrit son texte a cote de la rangee : c'est le {@code
             // getHintText} de l'original, et le seul endroit ou la condition se dit en toutes
@@ -1226,7 +1256,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             x += CONDITION_STEP;
         }
 
-        hintText = text("", y, 238, 255, 255, DESC_FONT);
+        hintText = text("", y + REQ_DESCENT, 238, 255, 255, DESC_FONT);
         hintText.text.align = "LEFT";
         hintText.transform.x = length / 2 + 3 + TEXT_WIDTH / 2;
         content.add(hintText);

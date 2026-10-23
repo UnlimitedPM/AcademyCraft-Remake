@@ -86,6 +86,15 @@ public class SkillTreeScreen extends Screen {
     private static final double CONDITION_ICON_SIZE = 14.0;
     private static final double CONDITION_STEP = 16.0;
 
+    /**
+     * De combien la boite de « Req. » descend sous le haut des icones.
+     *
+     * <p>L'original ecrit ce mot trois unites sous le haut des icones, et notre boite centre son
+     * glyphe dans douze unites : elle le remonte donc de quatre et demie. Ces sept unites et demie
+     * remettent le mot a sa place.
+     */
+    private static final double REQ_DESCENT = 7.5;
+
     /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
     private static final double CONSOLE_X = 5.0;
     private static final double CONSOLE_Y = 5.0;
@@ -468,10 +477,15 @@ public class SkillTreeScreen extends Screen {
         if (shown.isEmpty()) return;
 
         double length = CONDITION_STEP * shown.size();
-        CWidget label = text(Component.translatable("academy.developer.req").getString(), y,
-                170, 170, 170, DESC_FONT);
+        // « Req. » : son bord droit deux unites avant la rangee. La boite fait TEXT_WIDTH et se pose
+        // centree, donc c'est sa demi-largeur qu'il faut retirer — l'ajouter la poussait hors de la
+        // page. Et elle descend de sept unites et demie : elle centre son glyphe dans douze unites,
+        // alors que l'original ecrit ce mot trois unites sous le haut des icones.
+        CWidget label = text(Component.translatable("academy.developer.req").getString(),
+                y + REQ_DESCENT, 255, 255, 255, DESC_FONT);
+        label.text.alpha(170);
         label.text.align = "RIGHT";
-        label.transform.x = -length / 2 - 2 + TEXT_WIDTH / 2;
+        label.transform.x = -length / 2 - 2 - TEXT_WIDTH / 2;
         content.add(label);
 
         double x = -length / 2;
@@ -480,8 +494,10 @@ public class SkillTreeScreen extends Screen {
             icon.texture = new CWidget.DrawTexture();
             icon.texture.texture = condition.getIcon().toString();
             icon.texture.grey = !condition.accepts(data, skill, null);
-            icon.transform.x = x;
-            icon.transform.y = y;
+            // Le coin haut-gauche, comme le {@code pos()} de l'original : {@code centred} pose le
+            // widget autour de son milieu, et une demi-taille plus loin son bord mord sur « Req. ».
+            icon.transform.x = x + CONDITION_ICON_SIZE / 2;
+            icon.transform.y = y + CONDITION_ICON_SIZE / 2;
             CGuiShaders.linear(condition.getIcon());
             content.add(icon);
             x += CONDITION_STEP;
