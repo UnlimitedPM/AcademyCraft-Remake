@@ -4,6 +4,9 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
 
 /**
  * Le joueur doit avoir appris <b>au moins une</b> competence d'un niveau donne.
@@ -37,6 +40,27 @@ public final class ConditionAnySkillOfLevel implements LearningCondition {
     @Override
     public Component describe(Skill skill) {
         return Component.translatable("academy.learn.any_skill_of_level", level);
+    }
+
+    /**
+     * L'icone du niveau demande.
+     *
+     * <p>Le {@code getIcon} de {@code DevConditionAnySkillOfLevel}, qui chargeait
+     * {@code abilities/condition/any<level>} : le meme disque chiffre que la montee de niveau
+     * affiche au milieu de sa fiche, et les cinq images sont livrees avec le mod.
+     */
+    @Nullable
+    @Override
+    public ResourceLocation getIcon() {
+        return ResourceLocation.fromNamespaceAndPath(cn.academy.AcademyCraft.MOD_ID,
+                "textures/abilities/condition/any" + level + ".png");
+    }
+
+    /** Le survol de cette icone : « Any skill learned for level %d ». */
+    @Nullable
+    @Override
+    public Component getHint() {
+        return Component.translatable("academy.learn.any_skill_hint", level);
     }
 
     /** Le niveau demande, pour les tests et l'ecran. */

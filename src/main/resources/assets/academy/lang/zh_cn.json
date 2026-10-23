@@ -393,6 +393,13 @@
   "ac.ability.vecmanip.plasma_cannon.desc": "以极高的精度操控大范围气流，形成等离子体。将其投出，造成灾难性的爆炸。",
 
   "academy.learn.any_skill_of_level": "任何 %s 级技能",
+  "academy.learn.dependency_hint": "需要 %s 达到 %s%% 经验",
+  "academy.learn.any_skill_hint": "已学会任意 %s 级技能",
+  "academy.developer.req": "需求",
+  "academy.developer.learn_question": "学习？(预计消耗：%s IF)",
+  "academy.developer.skill_progress": "进度：%s%%",
+  "academy.developer.skill_successful": "开发成功。",
+  "academy.developer.skill_failed": "开发失败。",
 
   "ac.command.invalid": "§c输入无效，请重试。",
   "ac.command.successful": "§2命令执行成功。",

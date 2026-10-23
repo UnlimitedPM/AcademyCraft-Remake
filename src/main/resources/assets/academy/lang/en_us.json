@@ -392,6 +392,13 @@
   "ac.ability.vecmanip.plasma_cannon.desc": "Manipulate a large area of air flow with extreme precision to form a plasma body. Throw it out to cause a disastrous explosion.",
 
   "academy.learn.any_skill_of_level": "Any skill of level %s",
+  "academy.learn.dependency_hint": "Requires %s at %s%% experience",
+  "academy.learn.any_skill_hint": "Any skill learned for level %s",
+  "academy.developer.req": "Req.",
+  "academy.developer.learn_question": "Learn? (Estm. Consumption: %s IF)",
+  "academy.developer.skill_progress": "Progress: %s%%",
+  "academy.developer.skill_successful": "Development Successful.",
+  "academy.developer.skill_failed": "Development Failed.",
 
   "ac.command.invalid": "§cInvalid input, please try again.",
   "ac.command.successful": "§2Command successfully performed.",

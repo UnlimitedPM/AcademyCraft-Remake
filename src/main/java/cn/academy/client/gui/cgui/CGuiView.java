@@ -369,9 +369,35 @@ public final class CGuiView {
             drawDisc(graphics, widget, widget.absX, widget.absY, w, h);
         }
 
+        if (widget.ring != null) {
+            drawRing(graphics, widget, w, h);
+        }
+
         for (CWidget child : widget.children()) {
             drawWidget(graphics, child, mouseX, mouseY);
         }
+    }
+
+    /**
+     * L'anneau de progression d'une fiche : le programme de l'original, centre sur le widget.
+     *
+     * <p>Il se dessine <b>apres</b> le disque et l'icone, et c'est tout son interet : c'est un
+     * secteur qui se pose par-dessus le dessin de la competence, et qui dit ou en est
+     * l'apprentissage. L'original le faisait briller a progression pleine — deux images pour un
+     * meme anneau — et c'est ce que fait {@code lit}.
+     */
+    private static void drawRing(GuiGraphics graphics, CWidget widget, int w, int h) {
+        CWidget.Ring ring = widget.ring;
+        double scale = widget.absScale;
+
+        graphics.pose().pushPose();
+        graphics.pose().translate(widget.absX + w / 2.0, widget.absY + h / 2.0, 0);
+        graphics.pose().scale((float) scale, (float) scale, 1f);
+
+        CGuiShaders.ring(graphics, ring.lit ? ring.glow : ring.texture, ring.mask, ring.size,
+                ring.progress, ring.alpha);
+
+        graphics.pose().popPose();
     }
 
     /**
@@ -676,6 +702,15 @@ public final class CGuiView {
                                     CWidget.DrawTexture window, double x, double y, int colour) {
         ResourceLocation texture = ResourceLocation.tryParse(window.texture);
         if (texture == null) return;
+
+        // Une image grisee passe par le programme mono de l'original : c'est ce qui distingue une
+        // condition remplie d'une condition qui manque, dans la rangee sous « Req. ». Le dessin est
+        // le meme quad, seul le programme change — et s'il n'est pas la, on retombe sur l'image en
+        // couleur, ce qui vaut mieux qu'une icone qui disparait.
+        if (window.grey && CGuiShaders.greyQuad(graphics, texture, widget.absW, widget.absH,
+                (colour >>> 24) & 0xFF)) {
+            return;
+        }
 
         // Les images du developpeur sont dessinees PLUS GRANDES que leur fichier — le disque d'une
         // fiche fait cinquante unites pour une image de cent vingt-huit pixels, qu'on voit donc a

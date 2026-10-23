@@ -1,11 +1,22 @@
 package cn.academy;
 
+import cn.academy.ability.Category;
+import cn.academy.ability.Skill;
+import cn.academy.ability.develop.DeveloperType;
+import cn.academy.ability.develop.condition.ConditionAnySkillOfLevel;
+import cn.academy.ability.develop.condition.ConditionDependency;
+import cn.academy.ability.develop.condition.ConditionDeveloperType;
+import cn.academy.ability.develop.condition.ConditionLevel;
 import cn.academy.client.gui.cgui.SkillTreeView;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * L'opacite d'un trait de l'arbre des competences, relue sans Minecraft.
@@ -64,6 +75,44 @@ class DeveloperScreenTest {
                 "a mi-fondu, la moitie de la teinte");
         assertEquals(0.0, SkillTreeView.appearAlpha(OUT_OF_REACH, -1.0), 1.0e-9,
                 "un temps negatif ne descend pas sous zero");
+    }
+
+    /**
+     * Les conditions de la fiche : les icones, et celles qui ne se montrent pas.
+     *
+     * <p>C'est le contrat du {@code IDevCondition} de l'original, qu'un ecran lit pour dessiner sa
+     * rangee : une icone, un texte de survol, et un drapeau « afficher ». Le port n'avait que la
+     * phrase — le joueur a vu des lignes rouges la ou le vrai mod pose des icones grisees.
+     */
+    @Test
+    @DisplayName("chaque condition a l'icone de l'original, et le niveau ne se montre pas")
+    void lesConditionsOntLeurIcone() {
+        assertFalse(ConditionLevel.INSTANCE.shouldDisplay(),
+                "le niveau du joueur se lit deja sur le panneau de gauche");
+        assertNull(ConditionLevel.INSTANCE.getIcon());
+
+        DeveloperType advanced = DeveloperType.ADVANCED;
+        ConditionDeveloperType machine = new ConditionDeveloperType(advanced);
+        assertNotNull(machine.getIcon(), "la machine exigee a l'image de la machine");
+        // Hors jeu, une cle de langue n'est pas resolue : c'est elle qu'on lit ici, et c'est ce
+        // qui garantit que le survol dit bien le nom de la MACHINE EXIGEE et pas une phrase fixe.
+        assertTrue(machine.getHint().getString().contains(advanced.nameKey()),
+                "le survol nomme la machine exigee");
+        assertTrue(machine.needsDeveloper(), "elle seule depend de la machine");
+
+        // La dependance : l'icone de la competence parente, et son seuil dans le survol.
+        Skill parent = new Skill("parent", 1) {};
+        Category category = new Category("test");
+        category.addSkill(parent);
+        ConditionDependency dependency = new ConditionDependency(parent, 0.3f);
+        assertEquals(parent.getHintIcon(), dependency.getIcon());
+        assertNotNull(dependency.getHint(), "le survol dit la dependance et son seuil");
+        assertFalse(dependency.needsDeveloper(), "l'application peut la poser");
+
+        // Le cursus : le disque chiffre du niveau demande.
+        ConditionAnySkillOfLevel any = new ConditionAnySkillOfLevel(3);
+        assertEquals("academy:textures/abilities/condition/any3.png", any.getIcon().toString());
+        assertNotNull(any.getHint());
     }
 
     @Test

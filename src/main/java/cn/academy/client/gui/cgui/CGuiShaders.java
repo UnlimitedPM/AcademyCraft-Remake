@@ -328,6 +328,36 @@ public final class CGuiShaders {
     }
 
     /**
+     * Une image grisee, posee dans le repere courant a sa taille exacte.
+     *
+     * <p>C'est le meme programme que {@link #greyIcon}, mais pour un widget du document : la
+     * rangee de conditions de la fiche d'une competence pose ses icones comme n'importe quelle
+     * image, et seule la couleur doit changer. Le quad est donc pose a la taille du widget, et non
+     * autour de l'origine comme le fait {@code quad}.
+     *
+     * @return faux quand le programme n'est pas la : l'appelant dessine alors l'image en couleur
+     */
+    public static boolean greyQuad(GuiGraphics graphics, ResourceLocation texture, double width,
+                                   double height, int alpha) {
+        if (mono == null || texture == null || width <= 0 || height <= 0) return false;
+
+        RenderType type = MONO_TYPES.computeIfAbsent(texture, key -> type("academy_skill_mono",
+                () -> mono, key));
+
+        Matrix4f pose = graphics.pose().last().pose();
+        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
+
+        buffer.vertex(pose, 0f, 0f, 0f).color(255, 255, 255, alpha).uv(0f, 0f).endVertex();
+        buffer.vertex(pose, 0f, (float) height, 0f).color(255, 255, 255, alpha).uv(0f, 1f).endVertex();
+        buffer.vertex(pose, (float) width, (float) height, 0f).color(255, 255, 255, alpha)
+                .uv(1f, 1f).endVertex();
+        buffer.vertex(pose, (float) width, 0f, 0f).color(255, 255, 255, alpha).uv(1f, 0f).endVertex();
+
+        graphics.flush();
+        return true;
+    }
+
+    /**
      * Un type de rendu qui LISSE la texture : mipmaps et filtrage lineaire.
      *
      * <p>Le programme est celui de vanilla â€” seule la maniere de lire la texture change. L'original

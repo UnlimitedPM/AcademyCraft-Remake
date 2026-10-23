@@ -23,7 +23,9 @@ import net.minecraft.world.entity.player.Inventory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * L'ecran du developpeur d'aptitudes : l'arbre des competences de l'original.
@@ -119,6 +121,33 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private static final double DESCRIPTION_Y = 49.0;
 
     /**
+     * La rangee des conditions, celle de l'original.
+     *
+     * <p>Ses nombres sont dans {@code skillViewArea} : des icones de quatorze unites, ecartees de
+     * seize, posees sous le bloc de texte. Le port les ecrivait en phrases rouges ; le joueur a
+     * reclame « l'affichage des pouvoirs debloquables » du vrai mod.
+     */
+    private static final double CONDITION_ICON_SIZE = 14.0;
+    private static final double CONDITION_STEP = 16.0;
+
+    /** L'ecart entre la description et le mot « Req. ». */
+    private static final double CONDITION_Y_GAP = 6.0;
+
+    /** Et l'ecart entre ce mot et sa rangee d'icones. */
+    private static final double CONDITION_ICON_GAP = 10.0;
+
+    /** Combien de temps le verdict d'un apprentissage reste affiche avant que la fiche se ferme. */
+    private static final double VERDICT_HOLD = 1.5;
+
+    /**
+     * Le temps laisse au serveur pour repondre avant de conclure qu'il a refuse.
+     *
+     * <p>Un clic de bouton fait un aller-retour : la machine ne passe pas a DEVELOPING dans la meme
+     * image. Sans ce delai, la fiche conclurait au refus avant meme que la demande soit arrivee.
+     */
+    private static final double LEARN_START_GRACE = 0.5;
+
+    /**
      * La console : ses lignes se posent a cinq unites du coin, tous les dix, a la taille huit.
      *
      * <p>Ce sont les nombres de l'original ({@code Console} : {@code x = 5}, {@code y = 5},
@@ -206,6 +235,36 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * reouvre en mode reset ». Ce drapeau la fait taire jusqu'a ce que la bobine soit rangee.
      */
     private boolean resetDone;
+
+    /**
+     * L'apprentissage en cours, tel que la fiche l'anime — ou {@code null}.
+     *
+     * <p>Il porte sa propre duree : c'est la machine qui dit ou en est la stimulation, et la fiche
+     * la relit a chaque image comme la console relit la sienne.
+     */
+    @Nullable
+    private Learning learning;
+
+    /** L'instant ou la fiche d'un apprentissage se refermera d'elle-meme, ou zero. */
+    private double closeAfter;
+
+    /** L'anneau de la fiche ouverte, relu a chaque image : c'est la jauge de l'apprentissage. */
+    @Nullable
+    private CWidget.Ring surfaceRing;
+
+    /**
+     * Les icones de condition de la fiche ouverte, et le texte de leur survol.
+     *
+     * <p>L'original n'ecrivait le texte d'une condition qu'au survol de son icone — c'est le
+     * {@code getHoveringWidget} de son {@code FrameEvent}. Le port ecrivait une phrase rouge par
+     * condition manquante, ce qui n'etait pas le vrai mod ; ici la rangee est muette, et seule
+     * l'icone survolee parle.
+     */
+    private final Map<CWidget, Component> conditionIcons = new HashMap<>();
+
+    /** La ligne du survol, vide tant qu'aucune icone ne l'est. */
+    @Nullable
+    private CWidget hintText;
 
     public DeveloperScreen(DeveloperMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -792,8 +851,69 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         // jour tres lentement ».
         refreshNodeName();
         refreshEnergy();
+        animateLearning(mouseX, mouseY);
         veil.animate();
         tree.frame(ClientAbilityData.get(), mouseX, mouseY, width, height, veil.opened());
+    }
+
+    /**
+     * L'animation de la fiche d'une competence : sa jauge, puis sa fermeture.
+     *
+     * <p>Deux choses s'y font, et c'est tout ce que la fiche demande a chaque image : la question
+     * du cout devient la progression de la machine ({@link Learning#animate}), puis, le verdict
+     * passe, la fiche se referme d'elle-meme.
+     */
+    private void animateLearning(double mouseX, double mouseY) {
+        // La fiche s'est refermee : elle n'a plus rien a animer, et son anneau ne doit pas rester
+        // accroche au prochain apprentissage.
+        if (!veil.opened()) {
+            learning = null;
+            closeAfter = 0;
+            surfaceRing = null;
+            conditionIcons.clear();
+            hintText = null;
+            return;
+        }
+
+        if (learning != null) {
+            learning.animate();
+            // La fiche se referme au verdict, pas avant : l'original laissait le joueur cliquer,
+            // mais la console, elle, enchainait toute seule, et deux animations qui ne finissent
+            // pas ensemble laissent le joueur devant un ecran fige.
+            if (closeAfter > 0 && net.minecraft.Util.getMillis() / 1000.0 >= closeAfter) {
+                closeAfter = 0;
+                learning = null;
+                veil.beginClose();
+            }
+        }
+
+        // L'anneau de la fiche est relu ici, comme la barre d'energie : il se remplit a chaque
+        // image pendant un apprentissage, et la fiche n'est pas rebatie pour autant.
+        if (surfaceRing != null) {
+            surfaceRing.progress = learning == null ? 0.0 : menu.getProgress();
+            surfaceRing.lit = learning != null && menu.getState() == DevelopProgress.DevState.DONE;
+        }
+
+        refreshHint(mouseX, mouseY);
+    }
+
+    /**
+     * Le texte du survol d'une icone de condition.
+     *
+     * <p>Il se relit a chaque image, comme tout le reste de la fiche : la souris bouge, et le
+     * moteur ne previent pas quand elle passe d'un widget a l'autre. Vide, la ligne ne dessine
+     * rien — c'est ce qui la rend invisible au repos.
+     */
+    private void refreshHint(double mouseX, double mouseY) {
+        if (hintText == null || hintText.text == null) return;
+
+        String content = "";
+        for (Map.Entry<CWidget, Component> entry : conditionIcons.entrySet()) {
+            if (!entry.getKey().isPointWithin(mouseX, mouseY)) continue;
+            content = entry.getValue() == null ? "" : entry.getValue().getString();
+            break;
+        }
+        if (!content.equals(hintText.text.content)) hintText.text.content = content;
     }
 
     /** Le nom du noeud lie, relu sur le menu a chaque image. */
@@ -962,14 +1082,24 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /**
      * La surface d'une competence : son icone, son nom, et de quoi l'apprendre.
      *
-     * <p>C'est le {@code skillViewArea} de l'original : un voile noir sur tout l'ecran, l'icone au
-     * milieu, et dessous ce qu'il faut savoir. Une competence deja apprise y montre son experience ;
-     * une autre montre ce qui manque — les conditions non remplies, dites par elles-memes — et le
-     * bouton qui l'apprend.
+     * <p>C'est le {@code skillViewArea} de l'original, dans son ordre : le disque et son icone au
+     * milieu, le nom en gras dessous, puis « Skill not learned », puis la rangee de conditions sous
+     * le mot « Req. », puis la question du cout, puis le bouton.
      *
-     * <p>Le bouton ne se montre que si l'apprentissage est <b>possible</b>. L'original, lui, le montrait
-     * toujours et repondait par une phrase quand il refusait ; ici les raisons sont deja ecrites au-dessus
-     * de lui, donc un bouton qui refuse n'apprendrait rien au joueur, et ne rien montrer est plus clair.
+     * <h2>Les conditions sont des ICONES</h2>
+     *
+     * <p>Le port ecrivait une phrase rouge par condition manquante. L'original n'en ecrivait
+     * aucune : il posait une rangee de petites icones de quatorze unites, chacune <b>grisee</b> tant
+     * que sa condition n'etait pas remplie, et son texte n'apparaissait qu'au survol. Le joueur a
+     * reclame les deux a la fois : « l'affichage des pouvoirs debloquables n'est pas du tout pareil
+     * que dans le vrai mod ».
+     *
+     * <h2>La fiche reste ouverte pendant l'apprentissage</h2>
+     *
+     * <p>Elle ne se referme plus au clic sur le bouton : elle devient une <b>jauge</b>. L'anneau de
+     * l'icone se remplit de la progression que la machine annonce, au meme rythme qu'elle, et la
+     * fiche se referme toute seule au verdict. Sans cela le joueur voyait l'animation de la console
+     * et jamais celle de la competence — « on n'a pas l'animation lorsqu'on apprend la competence ».
      */
     private void openSkill(Skill skill) {
         AbilityData data = ClientAbilityData.get();
@@ -1001,19 +1131,187 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         }
 
         if (!learned) {
-            y += 6;
-            for (LearningCondition condition : skill.getConditions()) {
-                if (condition.accepts(data, skill, menu.getDeveloperType())) continue;
-                content.add(text(condition.describe(skill).getString(), y, 255, 88, 88, DESC_FONT));
-                y += 11;
-            }
+            y += CONDITION_Y_GAP;
+            y = conditions(content, skill, data, y);
             y += 4;
-            content.add(text(cost(skill), y, 170, 170, 170));
+
+            // La phrase du cout, celle de l'original : « Learn? (Estm. Consumption: 3500 IF) ».
+            // C'est elle qui laisse place au verdict pendant l'apprentissage, au meme endroit.
+            CWidget question = text(learnQuestion(skill), y, 170, 170, 203);
+            content.add(question);
+
             if (canLearn(skill)) {
-                content.add(button(() -> click(DeveloperMenu.skillButton(skill)), BUTTON_Y));
+                content.add(button(() -> startLearning(skill, question), BUTTON_Y, false));
             }
         }
         open(content);
+    }
+
+    /**
+     * La rangee des conditions, telle que l'original la dessinait.
+     *
+     * <p>Le mot « Req. » a gauche, puis une icone par condition a afficher, ecartees de seize
+     * unites — celles qui ne se montrent pas (le niveau du joueur) sont sautees. Chacune est grisee
+     * tant qu'elle n'est pas remplie, et son infobulle ne s'ecrit qu'au survol.
+     *
+     * @return l'ordonnee ou poser la ligne suivante
+     */
+    private double conditions(CWidget content, Skill skill, AbilityData data, double y) {
+        List<LearningCondition> shown = new ArrayList<>();
+        for (LearningCondition condition : skill.getConditions()) {
+            if (!condition.shouldDisplay()) continue;
+            if (condition.getIcon() == null) continue;
+            shown.add(condition);
+        }
+        if (shown.isEmpty()) return y;
+
+        // Les nombres sont ceux de l'original : la rangee fait {@code seize fois son nombre}
+        // d'unites de large, centree, et « Req. » finit deux unites avant son bord gauche. Le
+        // libelle est donc aligne a DROITE, et non centre : il grandit vers la gauche quand une
+        // condition de plus s'ajoute, au lieu de pousser sur les icones.
+        double length = CONDITION_STEP * shown.size();
+        content.add(textRight(Component.translatable("academy.developer.req").getString(),
+                -length / 2 - 2, y, 170, 170, 170, DESC_FONT));
+
+        conditionIcons.clear();
+        double x = -length / 2;
+        for (LearningCondition condition : shown) {
+            boolean met = developerSatisfies(condition, data, skill);
+            CWidget icon = conditionIcon(condition, !met);
+            icon.transform.x = x;
+            icon.transform.y = y;
+            content.add(icon);
+            // Le survol d'une icone ecrit son texte a cote de la rangee : c'est le {@code
+            // getHintText} de l'original, et le seul endroit ou la condition se dit en toutes
+            // lettres. Ce texte est pose une fois, vide, et rempli a chaque image.
+            conditionIcons.put(icon, condition.getHint());
+            x += CONDITION_STEP;
+        }
+
+        hintText = text("", y, 238, 255, 255, DESC_FONT);
+        hintText.text.align = "LEFT";
+        hintText.transform.x = length / 2 + 3 + TEXT_WIDTH / 2;
+        content.add(hintText);
+
+        return y + CONDITION_ICON_SIZE;
+    }
+
+    /** La condition est-elle remplie ? La machine du joueur repond a celle qui la concerne. */
+    private boolean developerSatisfies(LearningCondition condition, AbilityData data, Skill skill) {
+        // Une condition qui parle de la machine se repond avec la machine, les autres sans elle :
+        // c'est la regle de `needsDeveloper`, posee pour que l'application du terminal ne plante
+        // plus (voir {@code SkillTreeScreen}).
+        return condition.accepts(data, skill,
+                condition.needsDeveloper() ? menu.getDeveloperType() : null);
+    }
+
+    /** L'icone d'une condition a sa place, grisee quand elle n'est pas remplie. */
+    private static CWidget conditionIcon(LearningCondition condition, boolean grey) {
+        CWidget icon = centred("condition", CONDITION_ICON_SIZE, CONDITION_ICON_SIZE);
+        icon.texture = new CWidget.DrawTexture();
+        icon.texture.texture = condition.getIcon().toString();
+        icon.texture.grey = grey;
+        // Ces images font trente-deux pixels pour un dessin de quatorze : lues au plus proche
+        // voisin, elles sortent en gros pixels.
+        CGuiShaders.linear(condition.getIcon());
+        return icon;
+    }
+
+    /**
+     * « Learn? (Estm. Consumption: 3500 IF) » — le texte de la fiche avant de lancer l'apprentissage.
+     *
+     * <p>C'est le {@code learn_question} de l'original, avec sa consommation estimee : les
+     * stimulations que la competence demande, fois le prix d'une stimulation de cette machine.
+     */
+    private String learnQuestion(Skill skill) {
+        return Component.translatable("academy.developer.learn_question",
+                (int) Math.round(skillCost(skill))).getString();
+    }
+
+    /**
+     * Ce que coute l'apprentissage d'une competence, en Imag.
+     *
+     * <p>C'est le {@code getEstimatedConsumption} de l'original : les stimulations que la
+     * <b>competence</b> demande — et non celles d'une montee de niveau — fois le prix d'une
+     * stimulation de cette machine. Le port lisait le cout de la categorie, ce qui annoncait le
+     * prix d'un palier pour une competence.
+     */
+    private double skillCost(Skill skill) {
+        return menu.getDeveloperType().getTotalCost(skill.getLearningStims());
+    }
+
+    /**
+     * Lance l'apprentissage et anime la fiche jusqu'au verdict.
+     *
+     * <p>C'est le clic de l'original : la fiche cesse de se fermer, la machine recoit la demande,
+     * et la question du cout est reecrite sur place — « Progress: 43% » pendant, puis le verdict.
+     * L'anneau de l'icone suit la meme progression, et la fiche se referme d'elle-meme a la fin.
+     */
+    private void startLearning(Skill skill, CWidget question) {
+        click(DeveloperMenu.skillButton(skill));
+        learning = new Learning(skill, question);
+    }
+
+    /**
+     * La fiche d'un apprentissage en cours : sa question reecrite, son anneau, et son verdict.
+     *
+     * <p>C'est le bloc {@code DevState} de l'original, relu a chaque image. Le port lancait
+     * l'apprentissage et refermait la fiche dans le meme clic : le joueur ne voyait ni la
+     * progression ni le succes — « on n'a pas l'animation lorsqu'on apprend la competence ».
+     */
+    private final class Learning {
+        private final Skill skill;
+        private final CWidget question;
+        private final double born = net.minecraft.Util.getMillis() / 1000.0;
+        private String written;
+        private boolean done;
+
+        Learning(Skill skill, CWidget question) {
+            this.skill = skill;
+            this.question = question;
+            this.written = question.text == null ? "" : question.text.content;
+        }
+
+        /** Ce qui change a chaque image : le chiffre, puis le verdict. */
+        void animate() {
+            if (done || question == null || question.text == null) return;
+
+            DevelopProgress.DevState state = menu.getState();
+            if (state == DevelopProgress.DevState.FAILED) {
+                finish(Component.translatable("academy.developer.skill_failed").getString());
+                return;
+            }
+            if (state == DevelopProgress.DevState.DONE) {
+                finish(Component.translatable("academy.developer.skill_successful").getString());
+                return;
+            }
+            if (!menu.isDeveloping()) {
+                // Le serveur a refuse la demande : la machine reste au repos. Sans ce retour en
+                // arriere, la fiche garderait « Progress: 0% » pour toujours, sans bouton pour
+                // recommencer — et le joueur ne saurait pas ce qui s'est passe.
+                if (net.minecraft.Util.getMillis() / 1000.0 - born > LEARN_START_GRACE) {
+                    learning = null;
+                    question.text.content = learnQuestion(skill);
+                }
+                return;
+            }
+
+            String next = Component.translatable("academy.developer.skill_progress",
+                    (int) (menu.getProgress() * 100)).getString();
+            if (!next.equals(written)) {
+                question.text.content = next;
+                written = next;
+            }
+        }
+
+        private void finish(String verdict) {
+            done = true;
+            if (question.text != null) question.text.content = verdict;
+            // La fiche se referme d'elle-meme, une fois le verdict lu. L'original laissait le joueur
+            // cliquer pour la fermer ; ici elle se ferme toute seule au bout du meme delai que la
+            // console, pour que les deux animations se terminent ensemble.
+            closeAfter = net.minecraft.Util.getMillis() / 1000.0 + VERDICT_HOLD;
+        }
     }
 
     /**
@@ -1079,13 +1377,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      */
     private boolean canLearn(Skill skill) {
         AbilityData data = ClientAbilityData.get();
-        if (menu.getEnergyStored() < menu.getCostFor(skill.getCategory().getCategoryId())) return false;
+        if (menu.getEnergyStored() < skillCost(skill)) return false;
         if (skill.getLevel() > data.getCategoryLevel(skill.getCategory())) return false;
         return LearningHelper.canLearn(data, skill, menu.getDeveloperType());
-    }
-
-    private String cost(Skill skill) {
-        return costText(skill.getCategory().getCategoryId());
     }
 
     private String costText(int index) {
@@ -1107,6 +1401,17 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
      * cet ordre, pour que l'action parte sur un ecran encore en place.
      */
     private CWidget button(Runnable action, double y) {
+        return button(action, y, true);
+    }
+
+    /**
+     * Le meme, qui peut laisser la fiche ouverte.
+     *
+     * <p>C'est ce que demande l'apprentissage d'une competence : la fiche ne se referme pas au clic,
+     * elle devient la jauge de l'operation — c'est le {@code canClose = false} de l'original, et
+     * sans lui le joueur ne voyait jamais la progression ni le verdict.
+     */
+    private CWidget button(Runnable action, double y, boolean close) {
         CWidget widget = new CWidget("button");
         widget.transform.width = BUTTON_WIDTH;
         widget.transform.height = BUTTON_HEIGHT;
@@ -1125,16 +1430,32 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
         onClick(widget, () -> {
             action.run();
-            beginClose();
+            if (close) beginClose();
         });
         return widget;
     }
 
-    /** Le disque d'une surface : le fond, et l'icone par-dessus quand il y en a une. */
-    private static CWidget surfaceIcon(@Nullable Skill skill) {
+    /**
+     * Le disque d'une surface : le fond, l'icone par-dessus, et l'anneau qui les enferme.
+     *
+     * <p>C'est le {@code drawActionIcon} de l'original — cinquante unites de fond, vingt-sept
+     * d'icone — avec son anneau de progression. Une competence non apprise y porte l'anneau au
+     * repos ; son apprentissage le remplit. L'anneau est toujours pose, meme a progression nulle :
+     * c'est lui qui donne au disque son cerne, et l'original le dessinait dans tous les cas.
+     */
+    private CWidget surfaceIcon(@Nullable Skill skill) {
         CWidget icon = centred("icon", SURFACE_BACK_SIZE, SURFACE_BACK_SIZE);
         icon.texture = new CWidget.DrawTexture();
         icon.texture.texture = SURFACE_BACK;
+
+        CWidget.Ring ring = new CWidget.Ring();
+        // L'anneau du disque d'une fiche fait la taille du disque, et non trente et un comme celui
+        // d'un noeud de l'arbre : cinquante unites, la taille de son fond.
+        ring.size = SURFACE_BACK_SIZE;
+        ring.progress = 0;
+        surfaceRing = ring;
+        icon.ring = ring;
+
         if (skill == null) return icon;
 
         CWidget glyph = centred("glyph", SURFACE_ICON_SIZE, SURFACE_ICON_SIZE);
@@ -1189,6 +1510,21 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         widget.transform.alignWidth = "CENTER";
         widget.transform.alignHeight = "CENTER";
         return widget;
+    }
+
+    /**
+     * Un bout de texte aligne a droite de son point d'ancrage.
+     *
+     * <p>C'est ce qu'il faut pour « Req. » : l'original le posait a {@code -len/2 - 2} avec un
+     * alignement a droite, donc son dernier caractere finit deux unites avant la rangee d'icones.
+     * Centre, il aurait chevauche la premiere icone des qu'une condition de plus apparaissait.
+     */
+    private static CWidget textRight(String content, double x, double y, int red, int green,
+                                     int blue, double size) {
+        CWidget box = text(content, y, red, green, blue, size);
+        box.text.align = "RIGHT";
+        box.transform.x = x + TEXT_WIDTH / 2;
+        return box;
     }
 
     /**

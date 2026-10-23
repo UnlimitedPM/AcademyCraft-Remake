@@ -1,5 +1,8 @@
 package cn.academy.ability.develop;
 
+import cn.academy.AcademyCraft;
+import net.minecraft.resources.ResourceLocation;
+
 /**
  * Les deux qualites de developeur d'aptitudes.
  *
@@ -101,6 +104,29 @@ public enum DeveloperType {
             case PORTABLE -> "academy.developer.type.portable";
             case NORMAL -> "academy.developer.type.normal";
             case ADVANCED -> "academy.developer.type.advanced";
+        };
+    }
+
+    /**
+     * L'image de cette machine, telle que la fiche d'une competence la montre.
+     *
+     * <p>C'est le {@code texture} de l'enumeration de l'original, ou chaque qualite portait la
+     * sienne : {@code items/developer_portable_empty}, {@code blocks/dev_normal},
+     * {@code blocks/dev_advanced}. Le port n'en avait pas besoin tant qu'il ecrivait une phrase au
+     * lieu d'une icone ; la fiche de l'original, elle, pose l'image de la machine exigee sous le mot
+     * « Req. », et c'est ce que le joueur a reclame.
+     *
+     * <p>Les trois images sont livrees, aux chemins de la 1.20.1 — {@code textures/item} et
+     * {@code textures/block}, au singulier.
+     */
+    public ResourceLocation getIcon() {
+        return switch (this) {
+            case PORTABLE -> ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+                    "textures/item/developer_portable_empty.png");
+            case NORMAL -> ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+                    "textures/block/dev_normal.png");
+            case ADVANCED -> ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+                    "textures/block/dev_advanced.png");
         };
     }
 

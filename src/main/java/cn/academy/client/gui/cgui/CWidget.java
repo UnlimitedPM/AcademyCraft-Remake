@@ -67,6 +67,16 @@ public class CWidget {
         public double v0;
         public double u1 = 1;
         public double v1 = 1;
+
+        /**
+         * Vrai pour dessiner l'image en gris, comme le programme mono de l'original.
+         *
+         * <p>L'original posait {@code setShaderId(shaderMono)} sur l'icone d'une condition non
+         * remplie : la rangee sous « Req. » disait donc d'un coup d'oeil ce qui manquait encore, en
+         * gris, et ce qui etait deja acquis, en couleur. Le port n'avait pas ce drapeau, et toutes
+         * les icones sortaient pareilles.
+         */
+        public boolean grey;
     }
 
     /**
@@ -260,6 +270,37 @@ public class CWidget {
     }
 
     /**
+     * Un anneau de progression, dessine par le programme de l'original.
+     *
+     * <p>C'est le {@code drawActionIcon} de la fiche d'une competence : le disque, l'icone, et
+     * par-dessus un anneau qui se remplit d'un secteur — l'avancement d'un apprentissage, ou
+     * l'experience d'une competence apprise. Le programme lit un masque qui porte l'<b>angle</b>,
+     * donc aucun decoupage rectangulaire ne peut le remplacer : voir {@code CGuiShaders.ring}.
+     *
+     * <p>Il se dessine au-dessus de l'icone, et c'est tout : le disque et l'icone restent des
+     * textures ordinaires du widget qui le porte.
+     */
+    public static final class Ring {
+        /** L'anneau au repos, et celui qui brille quand la progression est pleine. */
+        public String texture = "academy:textures/guis/developer/skill_view_outline.png";
+        public String glow = "academy:textures/guis/developer/skill_view_outline_glow.png";
+
+        /** Le masque qui porte l'angle : sa composante rouge monte sur un tour complet. */
+        public String mask = "academy:textures/guis/developer/skill_radial_mask.png";
+
+        /** Le remplissage, de zero a un. */
+        public double progress;
+
+        /** Vrai quand l'anneau doit briller : l'original le faisait a progression pleine. */
+        public boolean lit;
+
+        /** La taille dessinee, en unites du widget. */
+        public double size = 50.0;
+
+        public int alpha = 255;
+    }
+
+    /**
      * Un trait texture entre deux points : le lien d'un noeud vers celui dont il depend.
      *
      * <p>C'est le seul morceau du moteur qui se dessine <b>de travers</b>. Le trait du fichier
@@ -383,6 +424,7 @@ public class CWidget {
     public Frame frame;
     public Line line;
     public Disc disc;
+    public Ring ring;
     public DragBar dragBar;
 
     // --- Ou le widget tombe sur l'ecran, en pixels : pose par CGuiLayout, lu par le rendu. ---
@@ -460,6 +502,7 @@ public class CWidget {
         out.list = copy(list);
         out.line = copy(line);
         out.disc = copy(disc);
+        out.ring = copy(ring);
         out.dragBar = copy(dragBar);
         for (CWidget child : children) {
             out.add(child.copy());
@@ -508,6 +551,19 @@ public class CWidget {
         out.drawScale = source.drawScale;
         out.backAlpha = source.backAlpha;
         out.iconAlpha = source.iconAlpha;
+        return out;
+    }
+
+    private static Ring copy(Ring source) {
+        if (source == null) return null;
+        Ring out = new Ring();
+        out.texture = source.texture;
+        out.glow = source.glow;
+        out.mask = source.mask;
+        out.progress = source.progress;
+        out.lit = source.lit;
+        out.size = source.size;
+        out.alpha = source.alpha;
         return out;
     }
 
@@ -563,6 +619,7 @@ public class CWidget {
         out.v0 = source.v0;
         out.u1 = source.u1;
         out.v1 = source.v1;
+        out.grey = source.grey;
         return out;
     }
 

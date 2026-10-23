@@ -82,6 +82,10 @@ public class SkillTreeScreen extends Screen {
     private static final double DESCRIPTION_Y = 49.0;
     private static final int DESCRIPTION_WIDTH = 200;
 
+    /** La rangee des conditions, aux nombres de l'original : quatorze unites, ecartees de seize. */
+    private static final double CONDITION_ICON_SIZE = 14.0;
+    private static final double CONDITION_STEP = 16.0;
+
     /** La console : la largeur de ses lignes, leur hauteur, et ou la pile se pose. */
     private static final double CONSOLE_X = 5.0;
     private static final double CONSOLE_Y = 5.0;
@@ -431,24 +435,57 @@ public class SkillTreeScreen extends Screen {
         }
 
         if (!learned) {
-            // Ce qui manque pour l'apprendre, dit par la condition elle-meme : c'est ce qui envoie
-            // le joueur vers la machine avec une raison plutot qu'avec une envie.
+            // Ce qui manque pour l'apprendre, sous la meme forme que sur la machine : le mot
+            // « Req. » et une rangee d'icones, grisees tant que leur condition n'est pas remplie.
+            // C'est ce qui envoie le joueur vers la machine avec une raison plutot qu'avec une
+            // envie — et c'est la figure de l'original, que le joueur a reclamee.
             //
             // SAUF CE QUI PARLE DE LA MACHINE. L'application n'a pas de developpeur, donc la
             // condition de qualite n'a pas de reponse ici : la poser quand meme faisait planter le
             // jeu — « quand je clique sur une competence dans l'app du skill tree, mon jeu plante ».
-            // L'original ne montrait d'ailleurs aucune condition dans son application : elles
-            // n'existaient que sur la machine, qui seule sait ce qu'elle peut enseigner.
             y += 6;
-            for (LearningCondition condition : skill.getConditions()) {
-                if (condition.needsDeveloper()) continue;
-                if (condition.accepts(data, skill, null)) continue;
-                content.add(text(condition.describe(skill).getString(), y, 255, 88, 88, DESC_FONT));
-                y += 11;
-            }
+            conditions(content, skill, data, y);
         }
 
         veil.open(content);
+    }
+
+    /**
+     * La rangee des conditions, telle que la machine la dessine.
+     *
+     * <p>Les nombres sont ceux de l'original : des icones de quatorze unites, ecartees de seize,
+     * centrees, et « Req. » qui finit deux unites avant leur bord gauche. Une condition qui parle
+     * de la machine est sautee — l'application n'en a pas.
+     */
+    private void conditions(CWidget content, Skill skill, AbilityData data, double y) {
+        List<LearningCondition> shown = new ArrayList<>();
+        for (LearningCondition condition : skill.getConditions()) {
+            if (condition.needsDeveloper()) continue;
+            if (!condition.shouldDisplay()) continue;
+            if (condition.getIcon() == null) continue;
+            shown.add(condition);
+        }
+        if (shown.isEmpty()) return;
+
+        double length = CONDITION_STEP * shown.size();
+        CWidget label = text(Component.translatable("academy.developer.req").getString(), y,
+                170, 170, 170, DESC_FONT);
+        label.text.align = "RIGHT";
+        label.transform.x = -length / 2 - 2 + TEXT_WIDTH / 2;
+        content.add(label);
+
+        double x = -length / 2;
+        for (LearningCondition condition : shown) {
+            CWidget icon = centred("condition", CONDITION_ICON_SIZE, CONDITION_ICON_SIZE);
+            icon.texture = new CWidget.DrawTexture();
+            icon.texture.texture = condition.getIcon().toString();
+            icon.texture.grey = !condition.accepts(data, skill, null);
+            icon.transform.x = x;
+            icon.transform.y = y;
+            CGuiShaders.linear(condition.getIcon());
+            content.add(icon);
+            x += CONDITION_STEP;
+        }
     }
 
     /**

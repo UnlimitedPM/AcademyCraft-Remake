@@ -393,6 +393,13 @@
   "ac.ability.vecmanip.plasma_cannon.desc": "Manipuliert einen großen Luftströmungsbereich mit äußerster Präzision zu einem Plasmakörper. Wirf ihn, um eine verheerende Explosion auszulösen.",
 
   "academy.learn.any_skill_of_level": "Jede Fertigkeit der Stufe %s",
+  "academy.learn.dependency_hint": "Benötigt %s mit %s%% Erfahrung",
+  "academy.learn.any_skill_hint": "Beliebige Fertigkeit der Stufe %s erlernt",
+  "academy.developer.req": "Bed.",
+  "academy.developer.learn_question": "Lernen? (Gesch. Verbrauch: %s IF)",
+  "academy.developer.skill_progress": "Fortschritt: %s%%",
+  "academy.developer.skill_successful": "Entwicklung erfolgreich.",
+  "academy.developer.skill_failed": "Entwicklung fehlgeschlagen.",
 
   "ac.command.invalid": "§cUngültige Eingabe, bitte erneut versuchen.",
   "ac.command.successful": "§2Befehl erfolgreich ausgeführt.",

@@ -4,6 +4,9 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+
+import javax.annotation.Nullable;
 
 /**
  * Le joueur doit avoir atteint le niveau de la competence dans sa categorie.
@@ -32,5 +35,29 @@ public final class ConditionLevel implements LearningCondition {
     @Override
     public Component describe(Skill skill) {
         return Component.translatable("academy.learn.level", skill.getLevel());
+    }
+
+    /**
+     * La condition se cache : c'est le {@code shouldDisplay = false} de {@code DevConditionLevel}.
+     *
+     * <p>Le niveau du joueur se lit deja sur le panneau de gauche de la machine, et l'original
+     * n'encombrait donc pas sa fiche d'une icone de plus pour le redire. La phrase, elle, reste :
+     * c'est elle qu'un ecran ecrit quand il veut expliquer pourquoi la competence est fermee.
+     */
+    @Override
+    public boolean shouldDisplay() {
+        return false;
+    }
+
+    @Nullable
+    @Override
+    public ResourceLocation getIcon() {
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public Component getHint() {
+        return null;
     }
 }
