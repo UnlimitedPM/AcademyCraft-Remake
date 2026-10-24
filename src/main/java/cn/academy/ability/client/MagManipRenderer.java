@@ -71,7 +71,12 @@ public final class MagManipRenderer {
             // donne a `doRender` depuis toujours, et l'original s'en servait. Lire `getX()` nu
             // fait avancer le bloc par bonds de tick — deux blocs d'un coup quand il vole —, ce
             // que le joueur appelait des « ralentissements ».
-            Vec3 at = block.getPosition(partialTick);
+            // Le porteur local tourne son regard a chaque image, pas seulement au tick.
+            // Conserver le rapprochement du bloc, mais l'ancrer sur CE regard sans relire
+            // les anciennes positions que les paquets reseau peuvent reecrire.
+            Vec3 renderTarget = MagManipVisuals.carryTarget(
+                    client.player.getEyePosition(partialTick), client.player.getViewVector(partialTick));
+            Vec3 at = block.displayPosition(partialTick, renderTarget);
             pose.pushPose();
             pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
             // L'age du RENDU, lui aussi interpole : l'original dessinait son lacet entre son

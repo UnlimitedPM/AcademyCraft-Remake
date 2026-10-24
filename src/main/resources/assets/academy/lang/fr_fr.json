@@ -462,6 +462,8 @@
   "academy.phase_generator.state.on": "En marche",
   "academy.phase_generator.state.off": "Au repos",
 
+  "academy.interferer.label.switch": "État :",
+  "academy.interferer.label.range": "Rayon :",
   "academy.interferer.state.on": "Brouillage",
   "academy.interferer.state.off": "Au repos",
   "academy.interferer.action.toggle": "Marche / Arrêt",

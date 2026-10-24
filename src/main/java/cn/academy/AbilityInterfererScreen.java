@@ -155,6 +155,11 @@ public class AbilityInterfererScreen extends CGuiContainerScreen<AbilityInterfer
         config.list.spacing = 0;
         for (CWidget row : config.children()) row.transform.alignHeight = "TOP";
 
+        config.child("element_switch").child("element_name").text.content =
+            Component.translatable("academy.interferer.label.switch").getString();
+        config.child("element_range").child("element_name").text.content =
+            Component.translatable("academy.interferer.label.range").getString();
+
         onClick(config.child("element_switch").child("element_btn_switch"),
                 () -> press(AbilityInterfererMenu.BUTTON_TOGGLE));
         // Et toute la ligne allume aussi : le bouton fait seize unites de cote, et le libelle qui le

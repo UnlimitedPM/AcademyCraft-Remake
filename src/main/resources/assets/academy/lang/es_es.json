@@ -462,6 +462,8 @@
   "academy.phase_generator.state.on": "En marcha",
   "academy.phase_generator.state.off": "En reposo",
 
+  "academy.interferer.label.switch": "Estado:",
+  "academy.interferer.label.range": "Radio:",
   "academy.interferer.state.on": "Interfiriendo",
   "academy.interferer.state.off": "En reposo",
   "academy.interferer.action.toggle": "Encendido / Apagado",

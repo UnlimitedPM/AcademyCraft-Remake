@@ -462,6 +462,8 @@
   "academy.phase_generator.state.on": "Läuft",
   "academy.phase_generator.state.off": "Leerlauf",
 
+  "academy.interferer.label.switch": "Schalter:",
+  "academy.interferer.label.range": "Radius:",
   "academy.interferer.state.on": "Stört",
   "academy.interferer.state.off": "Leerlauf",
   "academy.interferer.action.toggle": "Ein / Aus",

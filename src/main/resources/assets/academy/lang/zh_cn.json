@@ -462,6 +462,8 @@
   "academy.phase_generator.state.on": "运行中",
   "academy.phase_generator.state.off": "待机",
 
+  "academy.interferer.label.switch": "开关：",
+  "academy.interferer.label.range": "半径：",
   "academy.interferer.state.on": "干扰中",
   "academy.interferer.state.off": "待机",
   "academy.interferer.action.toggle": "开 / 关",

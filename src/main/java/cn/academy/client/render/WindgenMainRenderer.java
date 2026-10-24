@@ -2,9 +2,9 @@ package cn.academy.client.render;
 
 import cn.academy.WindgenMainBlock;
 import cn.academy.WindgenMainBlockEntity;
+import cn.academy.ability.client.EffectClock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.Util;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
@@ -68,8 +68,9 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
             // et qu'une interpolation d'image est censee lisser. Le defaut est ailleurs — ce
             // couple n'est pas garanti pour le rendu d'un block entity, et la moindre irregularite
             // de l'interpolation se voyait comme un tremblement des pales des qu'on bougeait.
-            // L'original, lui, lisait `GameTimer.getTime()`, une horloge a lui : on fait pareil.
-            double seconds = Util.getMillis() / 1000.0d;
+            // L'original lisait GameTimer.getTime(), qui retranchait aussi les pauses.
+            // Garder l'horloge lisse, mais sans avancer ni rattraper le temps passe au menu.
+            double seconds = EffectClock.now() / 1000.0d;
             float spin = rotor.advanceFan(seconds);
 
             pose.pushPose();

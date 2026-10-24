@@ -21,10 +21,10 @@ import java.util.List;
  * <b>233333</b> ticks, suivait le bloc a chaque tick en recopiant sa position, et mourait avec
  * lui : {@code if (isDead) getTarget().setDead()}. Autour d'un cube de 1,3 bloc — la taille du
  * bloc, 1, multipliee par le {@code sizeMultiplyer} de 1,3 — {@code ArcType.THIN} tenait quatre
- * arcs vivants a la fois.
+ * arcs vivants a la fois. Le port resserre ce cube a un bloc pour rapprocher les eclairs.
  *
  * <p>Le port n'a pas d'entite d'arcs d'entourage : ce crochet-ci re-seme quelques arcs a chaque
- * tick autour de chaque bloc tenu, dans le meme cube et avec le meme gabarit. Un arc ne vit que
+ * tick autour de chaque bloc tenu, dans ce cube resserre et avec le meme gabarit. Un arc ne vit que
  * trois ticks — {@code SurroundArcs.LIFE_TICKS} — donc l'essaim suit le bloc avec un tick de
  * retard, et le nombre d'arcs semes par tick est calcule pour en garder quatre vivants : voir
  * {@link MagManipVisuals#arcsToSow}.
@@ -49,12 +49,12 @@ public final class MagManipEffect {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) return;
 
-        // Le portage du tick precedent ne vaut plus rien : les blocs qu'il ne reprendra pas
-        // reprennent leur vol tout seuls. Et ceux du joueur local sont a lui, donc c'est ce
-        // client-ci qui les fait vivre. Voir EntityMagManipBlock.markCarried.
+        // Renouveler le maintien, mais garder les poses locales entre deux ticks consecutifs :
+        // les effacer ici faisait repartir le suivi d'une correction reseau a chaque tick.
+        // Les blocs non repris retrouvent leur vol. Voir EntityMagManipBlock.beginCarryTick.
         for (Entity entity : client.level.entitiesForRendering()) {
             if (!(entity instanceof EntityMagManipBlock block)) continue;
-            block.unmarkCarried();
+            block.beginCarryTick();
             if (block.getOwner() == client.player) block.markOwnedByLocalPlayer();
         }
 
@@ -126,13 +126,14 @@ public final class MagManipEffect {
             lastBlockId = block.getId();
             lastTarget = null;
         }
-        Vec3 step = MagManipVisuals.carryStep(from, target, lastTarget != null ? lastTarget : target);
+        Vec3 previous = lastTarget != null ? lastTarget : target;
+        Vec3 step = MagManipVisuals.carryStep(from, target, previous);
         lastTarget = target;
         block.markCarried();
         block.setDeltaMovement(step);
         // La pose du tick, posee des maintenant : c'est elle que le rendu interpole (l'ancienne
         // etant celle d'ou l'on vient), et c'est elle aussi que suit l'essaim seme juste apres.
-        block.poseCarried(from.add(step), from);
+        block.poseCarried(from.add(step), from, target, previous);
         // L'essaim se seme MAINTENANT, sur la pose du tick : seme avec le reste des blocs, il
         // partirait d'un tick en arriere et trainerait derriere le bloc des que le joueur tourne
         // la tete ou se deplace vite.

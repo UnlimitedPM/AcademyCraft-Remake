@@ -62,6 +62,29 @@ class MagManipTest {
         assertEquals(0.0, stopped.distanceTo(block), 1.0e-6, "le bloc est sur son point");
     }
 
+        @Test
+        void leRenduSuitLeRegardEntreDeuxTicks() {
+        Vec3 previousTarget = new Vec3(0, 64, 2);
+        Vec3 target = new Vec3(2, 64, 0);
+        Vec3 renderTarget = new Vec3(Math.sqrt(2), 64, Math.sqrt(2));
+        Vec3 rendered = MagManipVisuals.carryRenderPosition(previousTarget, target,
+            previousTarget, target, renderTarget, 0.5f);
+        assertEquals(0.0, rendered.distanceTo(renderTarget), EPS,
+            "la rotation suit l'arc du regard, pas la corde entre deux ticks");
+        }
+
+        @Test
+        void leRenduConserveLeRapprochementPendantLeDeplacement() {
+        Vec3 previousTarget = new Vec3(0, 64, 2);
+        Vec3 target = previousTarget.add(3.6, 0, 0);
+        Vec3 renderTarget = previousTarget.lerp(target, 0.5);
+        Vec3 rendered = MagManipVisuals.carryRenderPosition(
+            previousTarget.add(-2, 0, 0), target.add(-0.4, 0, 0),
+            previousTarget, target, renderTarget, 0.5f);
+        assertEquals(0.0, rendered.distanceTo(renderTarget.add(-1.2, 0, 0)), EPS,
+            "le bloc rejoint progressivement sa cible sans perdre le mouvement du porteur");
+        }
+
     @Test
     void unEcartQuiVientDeNaitreSeRefermeEnVolant() {
         // Le joueur vient de se teleporter : son point est a vingt blocs du bloc.
@@ -154,7 +177,7 @@ class MagManipTest {
 
     @Test
     void leCubeDuGresillementEstCeluiDuBloc() {
-        // Un bloc, fois le sizeMultiplyer de 1,3 de l'original.
-        assertEquals(1.3, MagManipVisuals.SURROUND_CUBE, EPS);
+        // Centres resserres sur le bloc : les branches depassent deja autour de ce cube.
+        assertEquals(1.0, MagManipVisuals.SURROUND_CUBE, EPS);
     }
 }

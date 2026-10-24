@@ -100,11 +100,11 @@ public final class MagManipVisuals {
     /**
      * Le cote du cube ou gresille l'electricite, autour du bloc tenu.
      *
-     * <p>Un bloc, fois le {@code sizeMultiplyer} de 1,3 de l'original : sa boite a points etait
-     * faite des dimensions de ce qu'elle entourait, multipliees par ce facteur. Et centree sur le
-     * bloc, donc etendue de plus ou moins 0,65 dans les trois directions.
+    * <p>L'original multipliait les dimensions du bloc par 1,3. Ici les arcs ont aussi leur
+    * propre longueur et leurs branches : resserrer leurs centres sur le cube du bloc,
+    * soit plus ou moins 0,5, pour eviter un gresillement trop eparpille autour de lui.
      */
-    public static final double SURROUND_CUBE = 1.3;
+    public static final double SURROUND_CUBE = 1.0;
 
     /** La vie d'un arc d'entourage, en ticks — celle de {@code SurroundArcs}. */
     public static final int ARC_LIFE = 3;
@@ -120,6 +120,18 @@ public final class MagManipVisuals {
     public static final int ARCS_ALIVE = 2;
 
     private MagManipVisuals() {}
+
+    /**
+     * Garde le rapprochement du bloc interpole, mais suit le regard de l'image courante.
+     * Interpoler deux cibles de tick trace une corde pendant que la camera tourne sur un arc :
+     * le bloc semblait osciller et retardait sur le curseur. Les poses du reseau ne servent pas ici.
+     */
+    public static Vec3 carryRenderPosition(Vec3 before, Vec3 at, Vec3 previousTarget,
+                                          Vec3 target, Vec3 renderTarget, float partialTick) {
+        Vec3 previousOffset = before.subtract(previousTarget);
+        Vec3 offset = at.subtract(target);
+        return renderTarget.add(previousOffset.lerp(offset, partialTick));
+    }
 
     /**
      * Combien d'arcs semer ce tick pour en garder {@link #ARCS_ALIVE} vivants.

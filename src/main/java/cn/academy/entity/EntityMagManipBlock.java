@@ -157,6 +157,8 @@ public class EntityMagManipBlock extends Projectile {
      */
     private Vec3 carriedAt;
     private Vec3 carriedBefore;
+    private Vec3 carriedTarget;
+    private Vec3 carriedTargetBefore;
 
     public EntityMagManipBlock(EntityType<? extends EntityMagManipBlock> type, Level level) {
         super(type, level);
@@ -275,11 +277,19 @@ public class EntityMagManipBlock extends Projectile {
         this.clientCarried = true;
     }
 
-    /** Le portage client ne veut plus de ce bloc : il vole de ses propres ailes. */
-    public void unmarkCarried() {
+    /**
+     * Ouvre le tick de portage sans perdre la pose du tick precedent.
+     * Le maintien doit renouveler le drapeau ; les poses ne sont effacees qu'apres
+     * un tick entier sans maintien. Sinon chaque tick repartait de la position reseau.
+     */
+    public void beginCarryTick() {
+        if (!this.clientCarried) {
+            this.carriedAt = null;
+            this.carriedBefore = null;
+            this.carriedTarget = null;
+            this.carriedTargetBefore = null;
+        }
         this.clientCarried = false;
-        this.carriedAt = null;
-        this.carriedBefore = null;
     }
 
     /**
@@ -290,9 +300,11 @@ public class EntityMagManipBlock extends Projectile {
      * les notres — un paquet recu juste avant l'image partirait donc d'un point ou le bloc n'a
      * jamais ete, et ferait un bond au lieu de glisser.
      */
-    public void poseCarried(Vec3 at, Vec3 before) {
+    public void poseCarried(Vec3 at, Vec3 before, Vec3 target, Vec3 previousTarget) {
         this.carriedAt = at;
         this.carriedBefore = before;
+        this.carriedTarget = target;
+        this.carriedTargetBefore = previousTarget;
         this.xo = before.x;
         this.yo = before.y;
         this.zo = before.z;
@@ -307,6 +319,13 @@ public class EntityMagManipBlock extends Projectile {
      */
     public Vec3 displayPosition() {
         return carriedAt != null ? carriedAt : position();
+    }
+
+    /** Interpole uniquement la pose locale, puis suit le regard de cette image. */
+    public Vec3 displayPosition(float partialTick, Vec3 renderTarget) {
+        if (carriedAt == null || !clientCarried) return getPosition(partialTick);
+        return MagManipVisuals.carryRenderPosition(carriedBefore, carriedAt,
+                carriedTargetBefore, carriedTarget, renderTarget, partialTick);
     }
 
     @Override
