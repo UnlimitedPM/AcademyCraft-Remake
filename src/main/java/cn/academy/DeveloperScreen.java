@@ -1156,20 +1156,24 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     private void openSkill(Skill skill) {
         AbilityData data = ClientAbilityData.get();
         boolean learned = data.isSkillLearned(skill);
+        double textOffsetY = -5.0;
 
         CWidget content = new CWidget("skill");
         content.add(surfaceIcon(skill));
 
-        content.add(text(skillName(skill), TITLE_Y, 255, 255, 255, TITLE_FONT));
+        content.add(text(skillName(skill),
+            TITLE_Y + TITLE_FONT / 2 + textOffsetY,
+            255, 255, 255, TITLE_FONT));
         if (learned) {
             content.add(text(Component.translatable("academy.developer.skill_exp",
-                    (int) (data.getSkillExp(skill) * 100)).getString(), SUBTITLE_Y, 161, 225, 255,
+                    (int) (data.getSkillExp(skill) * 100)).getString(),
+                    SUBTITLE_Y + EXP_FONT / 2 + textOffsetY, 161, 225, 255,
                     EXP_FONT));
             // LA DESCRIPTION N'EST LA QUE POUR UNE COMPETENCE APPRISE. C'est l'ordre de
             // l'original : « Skill not learned » pour une autre, puis ses conditions, puis sa
             // question. Le port la montrait dans les deux cas, et le joueur a tranche : « pour
             // apprendre une competence il affiche la description alors qu'il ne devrait pas ».
-            double y = DESCRIPTION_Y;
+            double y = DESCRIPTION_Y + DESC_FONT / 2 + textOffsetY;
             for (String line : wrap(skill.getDescription().getString(), DESCRIPTION_WIDTH)) {
                 content.add(text(line, y, 255, 255, 255, DESC_FONT));
                 y += 10;
@@ -1179,17 +1183,18 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         }
 
         content.add(text(Component.translatable("academy.developer.not_learned").getString(),
-                SUBTITLE_Y, 255, 85, 85, TEXT_FONT));
+            SUBTITLE_Y + TEXT_FONT / 2 + textOffsetY, 255, 85, 85, TEXT_FONT));
 
         // La rangee des conditions, puis la question du cout : les deux a leur place de l'original,
         // et non poussees sous une description qui n'existe pas dans ce cas.
-        conditions(content, skill, data, CONDITION_Y);
+        conditions(content, skill, data, CONDITION_Y + textOffsetY);
 
         // « Learn? (Estm. Consumption: 3500 IF) », en BLANC a deux tiers d'opacite et en CORPS DIX :
         // c'est {@code foSkillUnlearned2}, {@code FontOption(10, CENTER, 0xaaffffff)}. Le port
         // l'ecrivait en corps neuf et en gris-bleu, et le joueur a vu les deux : « la couleur du
         // texte avec Learn? n'est pas de la bonne couleur », puis « pas assez grand ».
-        CWidget question = textAlpha(learnQuestion(skill), QUESTION_Y, 255, 255, 255, 170);
+        CWidget question = textAlpha(learnQuestion(skill), QUESTION_Y + textOffsetY,
+            255, 255, 255, 170);
         question.text.fontSize = TEXT_FONT;
         content.add(question);
 
@@ -1343,6 +1348,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
          */
         private double shown;
 
+        private boolean started;
         private boolean done;
 
         /** L'instant du verdict d'echec, ou zero : c'est lui qui rend la question a sa place. */
@@ -1361,6 +1367,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             // L'avancement se lit AVANT l'etat : la machine remet son compteur a zero en passant a
             // DONE, donc le lire apres rendrait zero sur la derniere image.
             if (menu.isDeveloping()) {
+                started = true;
                 shown = Math.max(shown, menu.getProgress());
                 String next = Component.translatable("academy.developer.skill_progress",
                         (int) (shown * 100)).getString();
@@ -1372,12 +1379,12 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
             }
 
             DevelopProgress.DevState state = menu.getState();
-            if (state == DevelopProgress.DevState.DONE) {
+            if (state == DevelopProgress.DevState.DONE && started) {
                 finish(true, Component.translatable("academy.developer.skill_successful")
                         .getString());
                 return;
             }
-            if (state == DevelopProgress.DevState.FAILED) {
+            if (state == DevelopProgress.DevState.FAILED && started) {
                 // La machine dit POURQUOI elle a echoue, et le cas courant est l'energie : son
                 // tampon n'a pas suivi la stimulation, et elle s'arrete la ou elle en etait. C'est
                 // exactement ce que le joueur a vu — « l'animation ne dure pas pendant tout le
