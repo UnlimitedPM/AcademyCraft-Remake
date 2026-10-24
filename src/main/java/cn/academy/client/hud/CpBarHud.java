@@ -6,23 +6,15 @@ import cn.academy.ability.CategoryManager;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.ability.preset.client.ClientPresetData;
 import cn.academy.command.AimCommandSpec;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL14;
 
 /**
  * Dessine le temoin de points de controle : la barre de CP, a sa place configuree.
@@ -42,9 +34,10 @@ import org.lwjgl.opengl.GL14;
  * <p>Quand la surcharge est pleine, l'original ne montre plus le remplissage du tout : le fond
  * rougit, un bandeau strie se pose dessus et l'etiquette « OVERLOADED » clignote.
  *
- * <p>ECART ASSUME : l'original decoupait l'icone de la categorie <b>dans</b> le remplissage a
- * l'aide d'un shader (l'alpha de l'icone perçait la barre, d'ou l'eclair au bout). Ici la barre
- * est dessinee sans shader, donc sans ce trou : c'est la seule chose qui manque au rendu.
+ * <p>L'embleme du pouvoir se lit <b>en creux</b> dans le remplissage : c'est le
+ * {@code cpbar_cp.frag} de l'original, porte par le programme {@code academy:cpbar_emblem}, qui
+ * retire de l'opacite de la barre celle de l'icone de la categorie. Le fond de la barre — et le
+ * monde derriere — se voient donc a travers la silhouette.
  */
 @OnlyIn(Dist.CLIENT)
 public final class CpBarHud {
@@ -126,7 +119,6 @@ public final class CpBarHud {
                     0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, BACK_ALPHA);
             drawOverloadBand(graphics, bufferedOverload);
             drawFill(graphics, bufferedCp);
-            drawPowerEmblem(graphics, bufferedCp);
         }
 
         // Le rappel des prereglages se pose apres le reste, dans les deux etats : chez l'original
@@ -169,20 +161,57 @@ public final class CpBarHud {
         int rgb = CpBarVisuals.fillColor(progress);
         int right = CpBarVisuals.FILL_X + CpBarVisuals.FILL_W;
         int bodyLeft = (int) Math.ceil(CpBarVisuals.fillLeftAt(progress, CpBarVisuals.FILL_H - 1));
+        ResourceLocation icon = emblemIcon();
+
+        // La bande de surcharge vient de poser SA couleur sur le shader, et le programme de
+        // l'embleme multiplie par `ColorModulator` : sans ce blanc, le remplissage sortirait
+        // teinte de la couleur de la surcharge.
+        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
 
         if (bodyLeft < right) {
-            blit(graphics, CP, bodyLeft, CpBarVisuals.FILL_Y, right - bodyLeft,
-                    CpBarVisuals.FILL_H,
-                    bodyLeft, CpBarVisuals.FILL_Y, right - bodyLeft, CpBarVisuals.FILL_H,
-                    rgb, 1.0f);
+            fillQuad(graphics, icon, bodyLeft, CpBarVisuals.FILL_Y, right - bodyLeft,
+                    CpBarVisuals.FILL_H, rgb);
         }
 
         for (int row = 0; row < CpBarVisuals.FILL_H; row++) {
             int rowLeft = (int) Math.ceil(CpBarVisuals.fillLeftAt(progress, row));
             if (rowLeft >= bodyLeft) break;
-            blit(graphics, CP, rowLeft, CpBarVisuals.FILL_Y + row, right - rowLeft, 1,
-                    rowLeft, CpBarVisuals.FILL_Y + row, right - rowLeft, 1, rgb, 1.0f);
+            fillQuad(graphics, icon, rowLeft, CpBarVisuals.FILL_Y + row, right - rowLeft, 1, rgb);
         }
+    }
+
+    /**
+     * Un morceau du remplissage, percé de l'emblème du pouvoir.
+     *
+     * <p>C'est le {@code cpbar_cp.frag} de l'original : la silhouette de la categorie est retirée
+     * de l'opacité de la barre, et non peinte par-dessus. Le creux laisse donc voir le fond de la
+     * barre — et le monde derrière, comme chez lui.
+     */
+    private static void fillQuad(GuiGraphics graphics, ResourceLocation icon, int x, int y,
+                                 int width, int height, int rgb) {
+        if (width <= 0 || height <= 0) return;
+
+        if (icon != null && cn.academy.client.gui.cgui.CGuiShaders.emblem(graphics, CP, icon,
+                x, y, width, height,
+                x / (float) CpBarVisuals.TEX_W, y / (float) CpBarVisuals.TEX_H,
+                (x + width) / (float) CpBarVisuals.TEX_W,
+                (y + height) / (float) CpBarVisuals.TEX_H,
+                (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, 255)) {
+            return;
+        }
+
+        blit(graphics, CP, x, y, width, height, x, y, width, height, rgb, 1.0f);
+    }
+
+    /** L'icone de l'emblème du pouvoir en service, ou {@code null} s'il n'y en a pas. */
+    private static ResourceLocation emblemIcon() {
+        Category power = AimCommandSpec.activePower(ClientAbilityData.get(),
+                CategoryManager.INSTANCE.getCategories());
+        if (power == null) return null;
+
+        ResourceLocation icon = power.getOverlayIcon();
+        cn.academy.client.gui.GuiTextures.nearest(icon);
+        return icon;
     }
 
     /** La bande de surcharge, posee vers le haut de l'image et colorée par son propre niveau. */
@@ -209,73 +238,6 @@ public final class CpBarHud {
         float pulse = 0.3f + 0.35f * (float) (Math.sin(Util.getMillis() / 200.0) + 1.0);
         blit(graphics, HIGHLIGHT, 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H,
                 0, 0, CpBarVisuals.TEX_W, CpBarVisuals.TEX_H, WHITE, Math.min(pulse, 1.0f));
-    }
-
-    /**
-     * L'embleme du pouvoir, decoupe DANS le remplissage.
-     *
-     * <p>L'original n'ajoutait pas une image par-dessus sa barre : son {@code cpbar_cp.frag}
-     * multipliait l'opacite du remplissage par {@code 1 - icone.a}, si bien que la silhouette du
-     * pouvoir apparaissait <b>en creux</b>, avec le fond de la barre — donc le monde — a travers.
-     * Le portage s'en tenait a « l'ecart assume » de ne pas l'avoir ; le joueur l'a demande :
-     * « on est cense avoir une petite icone en plus pour nous indiquer quel pouvoir on possede ».
-     *
-     * <p>Le trou se fait ici sans shader, et c'est le FOND qu'on peint dans la forme de l'icone :
-     * chez l'original, ce qu'on voit dans le creux n'est pas le monde seul mais le monde AVEC la
-     * plaque de la barre par-dessus. Le melange {@code CONSTANT_COLOR / ONE_MINUS_SRC_ALPHA} ecrit
-     * cette couleur-la dans la forme de l'icone — la teinte de l'icone ne compte pas, seule son
-     * opacite, comme dans son fragment shader. Un effacement pur ({@code ZERO /
-     * ONE_MINUS_SRC_ALPHA}) donnerait du NOIR : le fond du jeu a deja ete compose, et le multiplier
-     * par zero ne le rend pas.
-     *
-     * <p>Et la plaque n'est ecrite qu'a SON opacite (128 sur 255) : le remplissage de la barre se
-     * lit donc encore dessous, ce qui est exactement ce que faisait l'original — son creux laissait
-     * voir le monde a travers la plaque. Pleine, la forme faisait une tache noire.
-     *
-     * <p>Il faut ecrire la geometrie nous-memes : le type de rendu d'un {@code blit} de GUI
-     * repose son propre melange a chaque envoi, et effacerait le notre. D'ou le {@code flush()}
-     * avant — tout ce qui a ete empile doit deja etre a l'ecran.
-     */
-    private static void drawPowerEmblem(GuiGraphics graphics, float progress) {
-        Category power = AimCommandSpec.activePower(ClientAbilityData.get(),
-                CategoryManager.INSTANCE.getCategories());
-        if (power == null) return;
-
-        ResourceLocation icon = power.getOverlayIcon();
-        cn.academy.client.gui.GuiTextures.nearest(icon);
-        graphics.flush();
-
-        int x0 = (int) Math.ceil(CpBarVisuals.emblemLeft(progress));
-        int y0 = CpBarVisuals.ICON_Y;
-        int x1 = CpBarVisuals.ICON_X + CpBarVisuals.ICON_SIZE;
-        int y1 = y0 + CpBarVisuals.ICON_SIZE;
-        float u0 = (x0 - CpBarVisuals.ICON_X) / (float) CpBarVisuals.ICON_SIZE;
-
-        Matrix4f matrix = graphics.pose().last().pose();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFunc(GlStateManager.SourceFactor.CONSTANT_COLOR,
-                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-        GL14.glBlendColor(CpBarVisuals.PLATE_RED, CpBarVisuals.PLATE_GREEN,
-                CpBarVisuals.PLATE_BLUE, 1.0f);
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        // L'icone doit etre BLANCHE : seule son opacite compte, comme dans le fragment shader de
-        // l'original. Or ses pixels sont bleus (196, 225, 255), et le melange {@code CONSTANT_COLOR}
-        // multiplie la couleur de la source avant de l'ecrire. On pousse donc les trois canaux
-        // au-dela de un pour les saturer : le blanc ecrit alors exactement la couleur du fond. Et
-        // l'opacite est celle de la plaque, pour que la barre se lise encore dans la forme.
-        RenderSystem.setShaderColor(2.0f, 1.5f, 1.2f, CpBarVisuals.EMBLEM_COVERAGE);
-        RenderSystem.setShaderTexture(0, icon);
-
-        BufferBuilder buffer = Tesselator.getInstance().getBuilder();
-        buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        buffer.vertex(matrix, x0, y0, 0.0f).uv(u0, 0.0f).endVertex();
-        buffer.vertex(matrix, x0, y1, 0.0f).uv(u0, 1.0f).endVertex();
-        buffer.vertex(matrix, x1, y1, 0.0f).uv(1.0f, 1.0f).endVertex();
-        buffer.vertex(matrix, x1, y0, 0.0f).uv(1.0f, 0.0f).endVertex();
-        Tesselator.getInstance().end();
-
-        RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
-        RenderSystem.defaultBlendFunc();
     }
 
     /**

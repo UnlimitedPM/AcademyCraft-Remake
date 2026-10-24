@@ -129,10 +129,10 @@ public final class KeyHintVisuals {
     /**
      * L'epaisseur du halo autour de l'icone, en unites (le {@code size} de l'original).
      *
-     * <p>L'original posait la huit images de degrade ({@code glow_left|right|up|down|ru|rd|lu|ld}),
-     * quatre cotes et quatre coins. A cette epaisseur elles ne font qu'un pixel : le port dessine
-     * donc un filet UNI de la couleur de l'etat, qui est ce qu'on y voit — le joueur a demande une
-     * « petite ligne » et non un halo flou.
+     * <p>L'original posait ses huit images de degrade ({@code glow_left|right|up|down|ru|rd|lu|ld}),
+     * quatre cotes et quatre coins, lues au plus proche voisin : la ou le port avait un temps
+     * dessine un filet uni, c'est bien le degrade de l'original qui se pose depuis
+     * {@code GlowSprites}.
      */
     public static final int GLOW_SIZE = 5;
 

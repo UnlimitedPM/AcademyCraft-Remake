@@ -58,31 +58,6 @@ public final class CpBarVisuals {
     public static final int ICON_SIZE = 65;
 
     /**
-     * La couleur du FOND de la barre, celle qui se voit dans le creux de l'embleme.
-     *
-     * <p>Mesuree sur {@code back_normal.png} : un gris 52, a 128 d'opacite partout ou la plaque
-     * est posee. C'est ce que l'original laissait voir dans la decoupe de son icone — le monde,
-     * avec la plaque par-dessus —, et c'est donc cette couleur-la qu'on ecrit dans la forme.
-     */
-    public static final float PLATE_RED = 52f / 255f;
-    public static final float PLATE_GREEN = 52f / 255f;
-    public static final float PLATE_BLUE = 52f / 255f;
-
-    /**
-     * La part de la plaque dans l'embleme, quand elle ne recouvre pas le monde mais le REMPLISSAGE.
-     *
-     * <p>Chez l'original, le creux laissait voir le monde a travers la plaque — donc quelque chose
-     * de sombre, et l'embleme se lisait comme un gris tres peu transparent. Ici il n'y a pas de
-     * monde sous le remplissage : la forme se pose sur la barre, qui est claire.
-     *
-     * <p>REMIS A 1 SUR DEMANDE DU JOUEUR (21/10) : « pour l'instant remet le a 1, on verra plus
-     * tard ». Les deux autres essais sont gardes en memoire — 0,50 donnait une silhouette delavee
-     * (« trop transparent ») et 0,8 un entre-deux qu'il n'a pas retenu. C'est le seul chiffre a
-     * tourner si l'envie revient.
-     */
-    public static final float EMBLEM_COVERAGE = 1.0f;
-
-    /**
      * Le rappel des prereglages, sous la barre : quatre carres numerotes.
      *
      * <p>C'est le {@code drawPresetHint} de l'original — {@code x0 = 580}, {@code y0 = 136},

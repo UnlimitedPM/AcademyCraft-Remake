@@ -27,8 +27,8 @@ import net.minecraft.resources.ResourceLocation;
  * l'original, qui enregistrait quatre touches de plus dans un groupe a part. Voir
  * {@link #drawDirectionColumn}.
  *
- * <p>Une chose de l'original manque encore : le fondu de 0,3 s a l'apparition du rappel (il ne
- * s'affiche qu'avec l'aptitude allumee, donc le fondu se voit a chaque allumage).
+ * <p>Le rappel apparait avec un fondu de 0,3 s, comme chez l'original : il ne se dessine qu'avec
+ * l'aptitude allumee, donc le fondu se voit a chaque allumage.
  */
 public final class KeyHintHud {
 
@@ -238,7 +238,7 @@ public final class KeyHintHud {
     private static void drawRow(GuiGraphics graphics, KeyMapping key, ResourceLocation icon,
                                 KeyHintVisuals.State state, float remaining, int y,
                                 boolean usable, float wave, float fade) {
-        blit(graphics, PLATE, 0, y, KeyHintVisuals.PLATE_W, KeyHintVisuals.PLATE_H,
+        blit(graphics, nearest(PLATE), 0, y, KeyHintVisuals.PLATE_W, KeyHintVisuals.PLATE_H,
                 0, 0, PLATE_TEX_W, PLATE_TEX_H, PLATE_TEX_W, PLATE_TEX_H, 0xFFFFFF, fade);
 
         boolean mouse = key.getKey().getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE;
@@ -261,7 +261,13 @@ public final class KeyHintHud {
         }
 
         // Le cadre de l'icone, puis l'icone de la competence rangee sur cette touche.
-        blit(graphics, FRAME,
+        //
+        // LE CADRE SE LIT AU PLUS PROCHE VOISIN, comme les capuchons et le halo : lu en lisse, son
+        // liseré de cinq unites s'etalait sur deux ou trois pixels d'un degrade pale, la ou
+        // l'original en pose UN seul, net — le joueur l'a vu tout de suite (« la partie haute et a
+        // droite sont plus epaisses que les autres cotes »). Le filtre est repose a chaque image,
+        // parce que d'autres ecrans passent les memes textures en lisse.
+        blit(graphics, nearest(FRAME),
                 KeyHintVisuals.FRAME_X, y + KeyHintVisuals.FRAME_Y,
                 KeyHintVisuals.FRAME_SIZE, KeyHintVisuals.FRAME_SIZE,
                 0, 0, KeyHintVisuals.FRAME_SIZE, KeyHintVisuals.FRAME_SIZE,

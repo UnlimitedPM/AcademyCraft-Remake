@@ -3,10 +3,12 @@ package cn.academy.terminal.client;
 import cn.academy.AcademyCraft;
 import cn.academy.ability.client.AbilityKeyBindings;
 import cn.academy.client.gui.AcademyFonts;
+import cn.academy.client.gui.GuiTextures;
 import cn.academy.client.gui.cgui.CGuiScreen;
 import cn.academy.client.gui.cgui.CWidget;
 import cn.academy.terminal.tutorial.TutorialLibrary;
 import cn.academy.terminal.tutorial.TutorialMarkdown;
+import cn.academy.terminal.tutorial.TutorialOpening;
 import cn.academy.terminal.tutorial.TutorialText;
 import cn.academy.terminal.tutorial.client.ClientTutorialData;
 import net.minecraft.client.KeyMapping;
@@ -127,12 +129,19 @@ public class TutorialScreen extends CGuiScreen {
     /** Vrai pendant qu'on glisse le curseur de la barre de defilement. */
     private boolean draggingScroll;
 
+    private double openingStarted = -1;
+    private double logosClosingAt = -1;
+    private boolean firstOpen;
+    private final int[] logoAlphas = new int[4];
+    private int panelAlpha = 255;
+
     public TutorialScreen() {
         super(Component.translatable("ac.app.tutorial.name"), "tutorial");
     }
 
     @Override
     protected void layout() {
+        animateOpening();
         CWidget frame = find("frame");
         if (frame != null) frame.transform.scale = width / REF_WIDTH;
         super.layout();
@@ -160,10 +169,6 @@ public class TutorialScreen extends CGuiScreen {
         for (int i = 0; i < texts.size(); i++) if (opened.get(i)) order.add(i);
         for (int i = 0; i < texts.size(); i++) if (!opened.get(i)) order.add(i);
 
-        // L'introduction en logo de l'original (logo0..3) : ce sont les images blanches floues
-        // qui entourent la liste, et c'est leur degrade que le joueur voyait dans le vrai mod.
-        // Elles restent affichees tant qu'aucun tutoriel n'est choisi, puis s'effacent — c'est
-        // exactement ce que faisait l'original au premier clic. L'apercu 3D, lui, reste ferme.
         hide("showWindow");
 
         // Le cote droit attend un clic : c'est l'etat de repos de l'original.
@@ -172,6 +177,20 @@ public class TutorialScreen extends CGuiScreen {
 
         buildList();
         orderScrollBars();
+
+        if (openingStarted < 0) {
+            var player = Minecraft.getInstance().player;
+            firstOpen = player == null || !player.getPersistentData().getBoolean("AC_Tutorial_Open");
+            if (player != null) player.getPersistentData().putBoolean("AC_Tutorial_Open", true);
+            openingStarted = net.minecraft.Util.getMillis() / 1000.0;
+            for (int index = 0; index < logoAlphas.length; index++) {
+                CWidget logo = find("logo" + index);
+                logoAlphas[index] = logo == null || logo.texture == null ? 255 : logo.texture.alpha;
+            }
+            CWidget panel = find("leftPart");
+            if (panel != null && panel.texture != null) panelAlpha = panel.texture.alpha;
+        }
+        animateOpening();
 
         CWidget left = find("showWindow");
         if (left != null) {
@@ -289,12 +308,9 @@ public class TutorialScreen extends CGuiScreen {
     }
 
     private void select(int index) {
-        // Premier choix : les logos s'effacent, comme chez l'original.
+        if (firstOpen && !TutorialOpening.listVisible(openingAge())) return;
         if (selected < 0) {
-            hide("logo0");
-            hide("logo1");
-            hide("logo2");
-            hide("logo3");
+            logosClosingAt = net.minecraft.Util.getMillis() / 1000.0;
         }
 
         selected = index;
@@ -644,19 +660,54 @@ public class TutorialScreen extends CGuiScreen {
         double scale = logo1.absScale;
         double cx = logo1.absX + logo1.absW / 2;
         double cy = logo1.absY + logo1.absH / 2 + 15 * scale;
-        double ln = 500 * scale;
-        double ln2 = 300 * scale;
+        double age = firstOpen ? openingAge() : 3;
+        double outer = TutorialOpening.lineEnd(age) * scale;
+        double inner = TutorialOpening.lineStart(age) * scale;
         double ht = Math.max(1.0, 5 * scale);
 
-        lineGlow(graphics, cx + (ln - ln2), cx + ln, cy, ht);
-        lineGlow(graphics, cx - ln, cx - (ln - ln2), cy, ht);
+        if (outer > inner) {
+            lineGlow(graphics, cx + inner, cx + outer, cy, ht, logosAlpha());
+            lineGlow(graphics, cx - outer, cx - inner, cy, ht, logosAlpha());
+        }
+    }
 
-        moveScrollThumb();
+    private double openingAge() {
+        return Math.max(0, net.minecraft.Util.getMillis() / 1000.0 - openingStarted);
+    }
+
+    private double logosAlpha() {
+        return logosClosingAt < 0 ? 1 : TutorialOpening.closingAlpha(
+                net.minecraft.Util.getMillis() / 1000.0 - logosClosingAt);
+    }
+
+    private void animateOpening() {
+        if (openingStarted < 0) return;
+        double age = openingAge();
+        double closing = logosAlpha();
+        for (int index = 0; index < logoAlphas.length; index++) {
+            CWidget logo = find("logo" + index);
+            if (logo == null) continue;
+            logo.transform.doesDraw = closing > 0;
+            if (logo.texture != null) {
+                ResourceLocation texture = ResourceLocation.tryParse(logo.texture.texture);
+                if (texture != null) GuiTextures.smoothMipmapped(texture);
+                double alpha = firstOpen ? TutorialOpening.logoAlpha(index, age) : 1;
+                logo.texture.alpha = (int) Math.round(logoAlphas[index] * alpha * closing);
+            }
+            if (index == 3 && firstOpen) logo.transform.y = TutorialOpening.logoY(age);
+        }
+        CWidget panel = find("leftPart");
+        if (panel != null && panel.texture != null) {
+            panel.texture.alpha = (int) Math.round(panelAlpha
+                    * (firstOpen ? TutorialOpening.panelAlpha(age) : 1));
+        }
+        CWidget list = find("list");
+        if (list != null) list.transform.doesDraw = !firstOpen || TutorialOpening.listVisible(age);
     }
 
     /** Un trait blanc avec son halo : le {@code lineglow} de l'original. */
     private static void lineGlow(GuiGraphics graphics, double x0, double x1, double y,
-                                 double height) {
+                                 double height, double alpha) {
         ResourceLocation glow = ResourceLocation.tryParse(
                 "academy:textures/effects/glow_line.png");
         int left = (int) Math.round(Math.min(x0, x1));
@@ -664,11 +715,13 @@ public class TutorialScreen extends CGuiScreen {
 
         if (glow != null && right > left) {
             blend();
+            graphics.setColor(1f, 1f, 1f, (float) alpha);
             graphics.blit(glow, left, (int) Math.round(y - height * 2), right - left,
                     Math.max(1, (int) Math.round(height * 5)), 0f, 0f, 32, 32, 32, 32);
         }
+        graphics.setColor(1f, 1f, 1f, 1f);
         graphics.fill(left, (int) Math.round(y), right,
-                (int) Math.round(y + height), 0xFFFFFFFF);
+            (int) Math.round(y + height), ((int) Math.round(255 * alpha) << 24) | 0xFFFFFF);
     }
 
     /**

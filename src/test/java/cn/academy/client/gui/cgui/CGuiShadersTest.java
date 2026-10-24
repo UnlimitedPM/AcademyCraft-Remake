@@ -167,9 +167,35 @@ class CGuiShadersTest {
     }
 
     @Test
+    @DisplayName("le programme de l'embleme du temoin de CP : ce qu'il lit est ce qui est declare")
+    void emblemProgramAgreesWithItsManifest() {
+        JsonObject json = manifest(CGuiShaders.EMBLEM_PROGRAM);
+        String vertex = read(CGuiShaders.EMBLEM_PROGRAM + ".vsh");
+        String fragment = read(CGuiShaders.EMBLEM_PROGRAM + ".fsh");
+
+        assertEquals("academy:" + CGuiShaders.EMBLEM_PROGRAM, json.get("vertex").getAsString());
+        assertEquals("academy:" + CGuiShaders.EMBLEM_PROGRAM, json.get("fragment").getAsString());
+
+        commonGround(json, vertex, fragment);
+
+        Set<String> attributes = strings(json.getAsJsonArray("attributes"));
+        assertEquals(Set.of("Position", "Color", "UV0"), attributes);
+        assertEquals(attributes, inputs(vertex), "le sommet doit lire les attributs declares");
+
+        // Deux textures : la barre et l'icone. C'est l'opacite de la seconde qui perce la premiere,
+        // comme le cpbar_cp.frag de l'original — une seule texture ne saurait pas le faire.
+        Set<String> used = samplers(fragment);
+        assertEquals(Set.of("Sampler0", "Sampler1"), used,
+                "la barre se lit dans un sampler et l'icone dans l'autre");
+        assertEquals(used, names(json.getAsJsonArray("samplers"), "name"),
+                "tout sampler lu doit etre declare");
+    }
+
+    @Test
     @DisplayName("les uniformes d'un manifeste ont la bonne forme")
     void uniformsHaveTheRightShape() {
-        for (String program : List.of(CGuiShaders.RING_PROGRAM, CGuiShaders.MONO_PROGRAM)) {
+        for (String program : List.of(CGuiShaders.RING_PROGRAM, CGuiShaders.MONO_PROGRAM,
+                CGuiShaders.EMBLEM_PROGRAM)) {
             for (var element : manifest(program).getAsJsonArray("uniforms")) {
                 JsonObject uniform = element.getAsJsonObject();
                 int count = uniform.get("count").getAsInt();
@@ -194,7 +220,8 @@ class CGuiShadersTest {
     void programsBlendLikeTheGame() {
         // Un programme qui ne declare pas son melange est dessine sans transparence : l'anneau
         // apparaitrait sur un carre noir, et l'icone grisee cacherait son disque.
-        for (String program : List.of(CGuiShaders.RING_PROGRAM, CGuiShaders.MONO_PROGRAM)) {
+        for (String program : List.of(CGuiShaders.RING_PROGRAM, CGuiShaders.MONO_PROGRAM,
+                CGuiShaders.EMBLEM_PROGRAM)) {
             JsonObject blend = manifest(program).getAsJsonObject("blend");
             assertNotNull(blend, program + " doit declarer son melange");
             assertEquals("srcalpha", blend.get("srcrgb").getAsString());
@@ -205,7 +232,8 @@ class CGuiShadersTest {
     @Test
     @DisplayName("les deux programmes se chargent depuis des fichiers nommes comme eux")
     void filesAreNamedAfterThePrograms() {
-        List<String> programs = List.of(CGuiShaders.RING_PROGRAM, CGuiShaders.MONO_PROGRAM);
+        List<String> programs = List.of(CGuiShaders.RING_PROGRAM, CGuiShaders.MONO_PROGRAM,
+                CGuiShaders.EMBLEM_PROGRAM);
         for (String program : programs) {
             // read() echoue si le fichier n'est pas la : c'est le seul moyen de verifier qu'un renommage
             // du programme dans le code ne laisse pas ses fichiers derriere lui.

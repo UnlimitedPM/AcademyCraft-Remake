@@ -65,6 +65,7 @@ public final class CGuiShaders {
     public static final String RING_PROGRAM = "skill_ring";
     public static final String MONO_PROGRAM = "skill_mono";
     public static final String CLIP_PROGRAM = "skill_clip";
+    public static final String EMBLEM_PROGRAM = "cpbar_emblem";
 
     /** L'uniforme que le programme de l'anneau lit : le remplissage, de zero a un. */
     public static final String RING_PROGRESS_UNIFORM = "SkillProgress";
@@ -77,12 +78,14 @@ public final class CGuiShaders {
     @Nullable private static ShaderInstance ring;
     @Nullable private static ShaderInstance mono;
     @Nullable private static ShaderInstance clip;
+    @Nullable private static ShaderInstance emblem;
 
     /** Un type par texture : le construire a chaque image allouerait pour rien. */
     private static final Map<ResourceLocation, RenderType> RING_TYPES = new HashMap<>();
     private static final Map<ResourceLocation, RenderType> MONO_TYPES = new HashMap<>();
     private static final Map<String, RenderType> CLIP_TYPES = new HashMap<>();
     private static final Map<ResourceLocation, RenderType> LINE_TYPES = new HashMap<>();
+    private static final Map<String, RenderType> EMBLEM_TYPES = new HashMap<>();
 
     /**
      * La longueur du fondu de chaque bout d'un trait, en unites du document.
@@ -212,10 +215,12 @@ public final class CGuiShaders {
         ring = null;
         mono = null;
         clip = null;
+        emblem = null;
         RING_TYPES.clear();
         MONO_TYPES.clear();
         CLIP_TYPES.clear();
         LINE_TYPES.clear();
+        EMBLEM_TYPES.clear();
 
         try {
             ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
@@ -245,6 +250,16 @@ public final class CGuiShaders {
         } catch (Exception e) {
             LOGGER.warn("Le programme {} n'a pas pu etre compile : les icones deborderont du disque",
                     CLIP_PROGRAM, e);
+        }
+
+        try {
+            ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
+                    program(EMBLEM_PROGRAM), DefaultVertexFormat.POSITION_COLOR_TEX);
+            emblem = shader;
+            event.registerShader(shader, loaded -> emblem = loaded);
+        } catch (Exception e) {
+            LOGGER.warn("Le programme {} n'a pas pu etre compile : l'embleme du pouvoir "
+                    + "s'ecrira en gris au lieu de percer la barre", EMBLEM_PROGRAM, e);
         }
     }
 
@@ -352,6 +367,49 @@ public final class CGuiShaders {
         buffer.vertex(pose, (float) width, (float) height, 0f).color(255, 255, 255, alpha)
                 .uv(1f, 1f).endVertex();
         buffer.vertex(pose, (float) width, 0f, 0f).color(255, 255, 255, alpha).uv(1f, 0f).endVertex();
+
+        graphics.flush();
+        return true;
+    }
+
+    /**
+     * Un morceau du REMPLISSAGE du temoin de CP, perce de l'embleme du pouvoir.
+     *
+     * <p>Le programme fait ce que faisait le {@code cpbar_cp.frag} de l'original : il retire de
+     * l'opacite du remplissage celle de l'icone, dans la boite de 65 unites posee a (857, 43) de
+     * l'image de la barre. Le creux laisse donc voir le fond de la barre et le monde derriere, au
+     * lieu d'une silhouette grise posee par-dessus.
+     *
+     * <p>Les coordonnees de texture sont celles de l'IMAGE et non du quad : c'est ce qui permet de
+     * dessiner le remplissage par bandes, comme le demande sa coupe en biais, sans deplacer le
+     * creux.
+     *
+     * @return faux quand le programme n'est pas la : l'appelant dessine alors le remplissage plein
+     */
+    public static boolean emblem(GuiGraphics graphics, ResourceLocation bar, ResourceLocation icon,
+                                 double x, double y, double width, double height,
+                                 float u0, float v0, float u1, float v1,
+                                 int red, int green, int blue, int alpha) {
+        if (emblem == null || bar == null || icon == null || width <= 0 || height <= 0) {
+            return false;
+        }
+
+        RenderType type = EMBLEM_TYPES.computeIfAbsent(bar + "|" + icon,
+                key -> type("academy_cpbar_emblem", () -> emblem, bar));
+
+        RenderSystem.setShaderTexture(1, icon);
+
+        Matrix4f pose = graphics.pose().last().pose();
+        VertexConsumer buffer = graphics.bufferSource().getBuffer(type);
+
+        buffer.vertex(pose, (float) x, (float) y, 0f).color(red, green, blue, alpha)
+                .uv(u0, v0).endVertex();
+        buffer.vertex(pose, (float) x, (float) (y + height), 0f).color(red, green, blue, alpha)
+                .uv(u0, v1).endVertex();
+        buffer.vertex(pose, (float) (x + width), (float) (y + height), 0f)
+                .color(red, green, blue, alpha).uv(u1, v1).endVertex();
+        buffer.vertex(pose, (float) (x + width), (float) y, 0f).color(red, green, blue, alpha)
+                .uv(u1, v0).endVertex();
 
         graphics.flush();
         return true;
