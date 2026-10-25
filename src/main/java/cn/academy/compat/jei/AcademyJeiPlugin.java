@@ -80,6 +80,20 @@ public class AcademyJeiPlugin implements IModPlugin {
     public void onRuntimeAvailable(IJeiRuntime jeiRuntime) {
         runtime = jeiRuntime;
         hideTagPages(jeiRuntime);
+        hideTechnicalItems(jeiRuntime);
+    }
+
+    /**
+     * Retire de la liste de JEI les objets qui ne sont pas du contenu : le logo (icone de l'onglet,
+     * rien a en faire) et le bloc-objet du liquide de phase, qui doublait l'unite de matiere pleine
+     * ("Imag Phase Liquid" apparaissait deux fois).
+     */
+    private static void hideTechnicalItems(IJeiRuntime jeiRuntime) {
+        var hidden = java.util.List.of(
+                new ItemStack(cn.academy.ModItems.LOGO.get()),
+                new ItemStack(cn.academy.ModItems.IMAG_PHASE.get()));
+        jeiRuntime.getIngredientManager().removeIngredientsAtRuntime(
+                mezz.jei.api.constants.VanillaTypes.ITEM_STACK, hidden);
     }
 
     /**
