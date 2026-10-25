@@ -79,6 +79,7 @@ public class ModCreativeTabs {
                         // Unités et DIVERS[cite: 1]
                         output.accept(ModItems.MATTER_UNIT.get());
                         output.accept(ModItems.MATTER_UNIT_PHASE.get());
+                        output.accept(ModItems.IMAG_PHASE.get());
                         output.accept(ModItems.ENERGY_UNIT.get());
                         // L'original donnait DEUX piles dans l'onglet : une vide et une pleine.
                         net.minecraft.world.item.ItemStack fullUnit =

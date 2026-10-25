@@ -84,16 +84,19 @@ public class AcademyJeiPlugin implements IModPlugin {
     }
 
     /**
-     * Retire de la liste de JEI les objets qui ne sont pas du contenu : le logo (icone de l'onglet,
-     * rien a en faire) et le bloc-objet du liquide de phase, qui doublait l'unite de matiere pleine
-     * ("Imag Phase Liquid" apparaissait deux fois).
+     * Retire de la liste de JEI ce qui n'est pas du contenu : le logo (icone de l'onglet, rien a
+     * en faire) et le FLUIDE {@code phase_liquid}, qui doublait l'objet {@code imag_phase}
+     * ("Imag Phase Liquid" apparaissait deux fois). L'objet reste, c'est lui qu'on tient en main.
      */
     private static void hideTechnicalItems(IJeiRuntime jeiRuntime) {
-        var hidden = java.util.List.of(
-                new ItemStack(cn.academy.ModItems.LOGO.get()),
-                new ItemStack(cn.academy.ModItems.IMAG_PHASE.get()));
         jeiRuntime.getIngredientManager().removeIngredientsAtRuntime(
-                mezz.jei.api.constants.VanillaTypes.ITEM_STACK, hidden);
+                mezz.jei.api.constants.VanillaTypes.ITEM_STACK,
+                java.util.List.of(new ItemStack(cn.academy.ModItems.LOGO.get())));
+        jeiRuntime.getIngredientManager().removeIngredientsAtRuntime(
+                mezz.jei.api.forge.ForgeTypes.FLUID_STACK,
+                java.util.List.of(
+                        new net.minecraftforge.fluids.FluidStack(cn.academy.ModFluids.SOURCE_PHASE_LIQUID.get(), 1000),
+                        new net.minecraftforge.fluids.FluidStack(cn.academy.ModFluids.FLOWING_PHASE_LIQUID.get(), 1000)));
     }
 
     /**
