@@ -456,6 +456,17 @@ public final class AimCommands {
                 for (String name : chosen) {
                     cn.academy.advancements.AcademyAdvancements.grant(player, name);
                 }
+                if ("all".equals(token)) {
+                    // Les tutoriels s'ouvrent normalement en possedant un objet : `all` les ouvre
+                    // tous d'un coup, pour tester sans rien fabriquer.
+                    player.getCapability(cn.academy.terminal.tutorial.TutorialCapability.TUTORIAL_DATA)
+                            .ifPresent(tutorials -> {
+                                for (var entry : cn.academy.terminal.tutorial.TutorialLibrary.entries()) {
+                                    tutorials.unlock(entry.id());
+                                }
+                                cn.academy.terminal.tutorial.TutorialTracker.sync(player);
+                            });
+                }
                 send(source, "ac.command.successful");
             }
 
