@@ -31,6 +31,8 @@ public class TerminalInit {
             // Le lecteur media, a la fin lui aussi : l'original en faisait une application
             // ordinaire, ouverte depuis le terminal.
             AppRegistry.INSTANCE.register(AppMediaPlayer.INSTANCE);
+            // Et l'Emetteur de frequence en dernier, pour la meme raison.
+            AppRegistry.INSTANCE.register(cn.academy.terminal.app.AppFreqTransmitter.INSTANCE);
             AppRegistry.INSTANCE.bake();
         });
     }

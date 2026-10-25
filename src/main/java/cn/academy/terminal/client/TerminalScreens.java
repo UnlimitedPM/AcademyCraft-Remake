@@ -27,6 +27,9 @@ public final class TerminalScreens {
         // touches, et l'ecran qui les regle est le meme que celui de la touche dediee.
         AppScreens.register(AppSettings.INSTANCE, cn.academy.client.gui.SettingsScreen::new);
         AppScreens.register(cn.academy.terminal.app.AppMediaPlayer.INSTANCE, MediaPlayerScreen::new);
+        // L'Emetteur de frequence n'a pas de page : il rend le jeu et arme son mode.
+        AppScreens.registerAction(cn.academy.terminal.app.AppFreqTransmitter.INSTANCE,
+                FreqTransmitterClient::start);
 
         // Le seul chemin neutre vers un ecran, pour ce qui n'est pas le terminal :
         // l'objet MisakaCloud ouvre le tutoriel sans passer par la grille.

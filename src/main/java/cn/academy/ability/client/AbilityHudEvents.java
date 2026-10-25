@@ -20,6 +20,10 @@ public class AbilityHudEvents {
 
         event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "academy_cp", new AbilityHudOverlay());
 
+        // Le cadre de l'Emetteur de frequence, tant que son mode est arme.
+        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "academy_freq_transmitter",
+                new cn.academy.terminal.client.FreqTransmitterClient.Overlay());
+
         // Et les ondulations du champ de vecmanip, posees au-dessus du reticule : l'original les
         // dessinait a cette etape-la. Voir WaveRipples et RippleOverlay.
         event.registerAbove(VanillaGuiOverlay.CROSSHAIR.id(), "academy_vm_ripples",

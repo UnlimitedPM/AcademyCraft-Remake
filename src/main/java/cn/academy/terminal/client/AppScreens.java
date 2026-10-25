@@ -31,8 +31,17 @@ public final class AppScreens {
         FACTORIES.put(app.getAppId(), factory);
     }
 
+    /**
+     * Une application sans page : elle rend le jeu et arme un mode (l'Emetteur de frequence).
+     */
+    private static final Map<Integer, Runnable> ACTIONS = new HashMap<>();
+
+    public static void registerAction(App app, Runnable action) {
+        ACTIONS.put(app.getAppId(), action);
+    }
+
     public static boolean isAvailable(App app) {
-        return FACTORIES.containsKey(app.getAppId());
+        return FACTORIES.containsKey(app.getAppId()) || ACTIONS.containsKey(app.getAppId());
     }
 
     /** L'ecran de l'application, ou null si elle n'en a pas. */
@@ -49,6 +58,13 @@ public final class AppScreens {
      * {@code App.requestOpen}, dont cette methode est l'aboutissement cote client.
      */
     public static void open(App app) {
+        Runnable action = ACTIONS.get(app.getAppId());
+        if (action != null) {
+            origin = null;
+            net.minecraft.client.Minecraft.getInstance().setScreen(null);
+            action.run();
+            return;
+        }
         Screen page = create(app);
         if (page != null) {
             net.minecraft.client.Minecraft.getInstance().setScreen(page);

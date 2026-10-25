@@ -150,10 +150,8 @@ public class ModItems {
             () -> new AppInstallerItem("skill_tree"));
     public static final RegistryObject<Item> APP_MEDIA_PLAYER = ITEMS.register("app_media_player",
             () -> new AppInstallerItem("media_player"));
-    // L'Emetteur de frequence n'a toujours pas d'objet utilisable : la 1.20.1 ne connait
-    // plus les blocs sans fil de l'original, et le raccordement s'y fait tout seul.
     public static final RegistryObject<Item> APP_FREQ_TRANSMITTER = ITEMS.register("app_freq_transmitter",
-            () -> new TooltipItem("ac.app.freq_transmitter.name"));
+            () -> new AppInstallerItem("freq_transmitter"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings",
             () -> new AppInstallerItem("settings"));
 

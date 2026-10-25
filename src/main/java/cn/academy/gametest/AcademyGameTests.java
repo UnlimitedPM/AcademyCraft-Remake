@@ -7642,7 +7642,7 @@ public final class AcademyGameTests {
 
         // L'ordre du registre donne les identifiants : il suit les priorites de
         // l'original, « A propos » en premier, et une application s'ajoute a la fin.
-        assertValue(helper, 5, registry.size(), "cinq applications sont portees");
+        assertValue(helper, 6, registry.size(), "six applications sont portees");
         assertValue(helper, "about", registry.get(0).getName(), "la premiere application");
         assertValue(helper, "skill_tree", registry.get(1).getName(), "la deuxieme application");
         assertValue(helper, "tutorial", registry.get(2).getName(), "la troisieme application");
@@ -7685,8 +7685,9 @@ public final class AcademyGameTests {
         // une icone qui n'ouvre rien serait pire qu'une icone absente. L'Emetteur de
         // frequence n'a plus d'objet utilisable depuis la 1.20.1, le raccordement s'y
         // faisant tout seul.
-        assertTrue(helper, registry.getByName("freq_transmitter") == null,
-                "les applications non portees ne doivent pas etre enregistrees");
+        assertTrue(helper, registry.getByName("freq_transmitter")
+                        == cn.academy.terminal.app.AppFreqTransmitter.INSTANCE,
+                "l'Emetteur de frequence est enregistre en dernier");
         helper.succeed();
     }
 

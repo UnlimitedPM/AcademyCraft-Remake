@@ -180,5 +180,15 @@ public class AbilityNetwork {
                 cn.academy.energy.network.WirelessNodesPacket::encode,
                 cn.academy.energy.network.WirelessNodesPacket::decode,
                 cn.academy.energy.network.WirelessNodesPacket::handle);
+        // L'Emetteur de frequence : ses demandes montent, ses reponses redescendent. Ajoutes a la
+        // fin, parce que l'identifiant d'un paquet est sa place.
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.FreqTransmitterRequestPacket.class,
+                cn.academy.energy.network.FreqTransmitterRequestPacket::encode,
+                cn.academy.energy.network.FreqTransmitterRequestPacket::decode,
+                cn.academy.energy.network.FreqTransmitterRequestPacket::handle);
+        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.FreqTransmitterReplyPacket.class,
+                cn.academy.energy.network.FreqTransmitterReplyPacket::encode,
+                cn.academy.energy.network.FreqTransmitterReplyPacket::decode,
+                cn.academy.energy.network.FreqTransmitterReplyPacket::handle);
     }
 }
