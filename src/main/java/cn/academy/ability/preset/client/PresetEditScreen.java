@@ -133,7 +133,7 @@ public class PresetEditScreen extends Screen {
     private double pickY;
 
     public PresetEditScreen() {
-        super(Component.translatable("academy.preset.title"));
+        super(Component.translatable("ac.gui.preset_edit.name"));
     }
 
     private static ResourceLocation presetTexture(String name) {
