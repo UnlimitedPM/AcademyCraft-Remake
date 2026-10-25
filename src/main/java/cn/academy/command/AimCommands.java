@@ -128,6 +128,11 @@ public final class AimCommands {
         subs.add(Commands.literal("cd_clear").executes(ctx -> exec(ctx, target, gate, "cd_clear", null, null)));
         subs.add(Commands.literal("maxout").executes(ctx -> exec(ctx, target, gate, "maxout", null, null)));
 
+        subs.add(Commands.literal("advancement").then(Commands.argument("name", StringArgumentType.word())
+                .suggests(ADVANCEMENTS)
+                .executes(ctx -> exec(ctx, target, gate, "advancement",
+                        StringArgumentType.getString(ctx, "name"), null))));
+
         subs.add(Commands.literal("level")
                 .executes(ctx -> exec(ctx, target, gate, "level", null, null))
                 .then(Commands.argument("level", StringArgumentType.word())
@@ -217,6 +222,9 @@ public final class AimCommands {
     private static int help(CommandSourceStack source, String root) {
         send(source, "ac.command." + root + ".usage");
         for (String name : AimCommandSpec.COMMANDS) {
+            send(source, "ac.command." + root + "." + name);
+        }
+        for (String name : AimCommandSpec.EXTRA_COMMANDS) {
             send(source, "ac.command." + root + "." + name);
         }
         if (root.equals("aim")) {
@@ -433,6 +441,24 @@ public final class AimCommands {
                 send(source, "ac.command.successful");
             }
 
+            case "advancement" -> {
+                // Pas de pouvoir requis : on peut vouloir debloquer les succes avant tout.
+                List<String> grantable = cn.academy.advancements.AcademyAdvancements.grantable();
+                List<String> chosen;
+                if ("all".equals(token)) {
+                    chosen = grantable;
+                } else if (token != null && grantable.contains(token)) {
+                    chosen = List.of(token);
+                } else {
+                    send(source, "ac.command.aim.noadv");
+                    return 1;
+                }
+                for (String name : chosen) {
+                    cn.academy.advancements.AcademyAdvancements.grant(player, name);
+                }
+                send(source, "ac.command.successful");
+            }
+
             default -> send(source, "ac.command.aim.nocomm");
         }
         return 1;
@@ -521,6 +547,12 @@ public final class AimCommands {
             SharedSuggestionProvider.suggest(
                     CategoryManager.INSTANCE.getCategories().stream().map(Category::getName).toList(),
                     builder);
+
+    private static final SuggestionProvider<CommandSourceStack> ADVANCEMENTS = (ctx, builder) -> {
+        List<String> names = new ArrayList<>(cn.academy.advancements.AcademyAdvancements.grantable());
+        names.add("all");
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
 
     private static final SuggestionProvider<CommandSourceStack> LEVELS = (ctx, builder) ->
             SharedSuggestionProvider.suggest(List.of("1", "2", "3", "4", "5"), builder);

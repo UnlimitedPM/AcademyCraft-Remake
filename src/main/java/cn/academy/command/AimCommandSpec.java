@@ -32,6 +32,9 @@ public final class AimCommandSpec {
             "help", "cat", "catlist", "learn", "learn_all", "reset", "learned", "skills",
             "fullcp", "level", "exp", "cd_clear", "maxout");
 
+    /** Les ajouts du port, absents de l'original : listes apres le catalogue dans {@code help}. */
+    public static final List<String> EXTRA_COMMANDS = List.of("advancement");
+
     /** Bornes de {@code /aim level}, celles de l'original : 1 a 5. */
     public static final int LEVEL_MIN = 1;
     public static final int LEVEL_MAX = 5;

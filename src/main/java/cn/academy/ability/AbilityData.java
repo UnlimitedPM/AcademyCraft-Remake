@@ -355,6 +355,13 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         if (previous != level) {
             onLevelChanged();
         }
+        // Les succes de palier suivent le NIVEAU, pas le chemin qui y mene : le developpeur, une
+        // commande ou un deplacement de donnees arrivent au meme endroit. Chaque palier franchi
+        // est accorde, donc `level 5` donne aussi ceux des niveaux 1 et 3 qu'il enjambe.
+        // `owner` est nul cote client et en test : `award` ne fait alors rien.
+        for (int reached = previous + 1; reached <= level; reached++) {
+            cn.academy.advancements.AcademyAdvancements.onCategoryLevel(owner, reached);
+        }
     }
 
     public boolean hasLearned(Category category) {
@@ -1170,8 +1177,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     public void setSkillExp(Skill skill, float exp) {
         if (skill == null || skill.getCategory() == null) return;
-        skillExps.put(skillKey(skill), Math.max(0f, Math.min(1f, exp)));
+        String key = skillKey(skill);
+        float previous = skillExps.getOrDefault(key, 0f);
+        float reached = Math.max(0f, Math.min(1f, exp));
+        skillExps.put(key, reached);
         markDirty();
+        // Meme succes que `addSkillExp` : une competence qui atteint 100 %, quel que soit le chemin
+        // (la commande de debogage passe ici).
+        if (previous < 1f && reached >= 1f) {
+            cn.academy.advancements.AcademyAdvancements.award(owner,
+                    cn.academy.advancements.AcademyAdvancements.AC_EXP_FULL);
+        }
     }
 
     /** Verse de l'avancement dans le niveau en cours d'une categorie. */

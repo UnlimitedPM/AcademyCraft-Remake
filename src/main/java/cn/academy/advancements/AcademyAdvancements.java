@@ -98,6 +98,34 @@ public final class AcademyAdvancements {
         if (trigger != null) trigger.trigger(player);
     }
 
+    /**
+     * Les noms qu'une commande de debogage peut donner : la racine de l'onglet, puis les quinze
+     * succes du mod.
+     */
+    public static java.util.List<String> grantable() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        out.add("root");
+        out.addAll(java.util.List.of(NAMES));
+        return out;
+    }
+
+    /**
+     * Accorde un succes d'un coup, en validant tous ses criteres, sans passer par son declencheur.
+     *
+     * <p>Sert a la commande de debogage : la racine ({@code minecraft:impossible}) ne se declenche
+     * jamais autrement. Retourne vrai si quelque chose a change.
+     */
+    public static boolean grant(@Nullable ServerPlayer player, String name) {
+        if (player == null) return false;
+        var advancement = player.server.getAdvancements().getAdvancement(id(name));
+        if (advancement == null) return false;
+        boolean changed = false;
+        for (String criterion : advancement.getCriteria().keySet()) {
+            changed |= player.getAdvancements().award(advancement, criterion);
+        }
+        return changed;
+    }
+
     /** Le niveau d'une categorie vient de changer : les succes de palier s'en occupent. */
     public static void onCategoryLevel(@Nullable ServerPlayer player, int level) {
         for (String name : levelNames(level)) {

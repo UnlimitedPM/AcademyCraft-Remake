@@ -78,13 +78,8 @@ public class DevelopActionLevel implements DevelopAction {
         AbilityData data = dataOf(player);
         if (data == null) return;
         int level = levelOf(player) + 1;
+        // Les succes de palier sont accordes par `setCategoryLevel` lui-meme.
         data.setCategoryLevel(category, level);
-        // Les succes de palier se declenchent ICI, au moment ou le niveau change, et non
-        // dans le paquet qui porte le resultat : c'est le serveur qui decide, et lui seul
-        // sait quel joueur vient de monter.
-        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-            cn.academy.advancements.AcademyAdvancements.onCategoryLevel(serverPlayer, level);
-        }
     }
 
     /** Niveau actuel de cette categorie pour ce joueur, 0 s'il ne l'a pas apprise. */
