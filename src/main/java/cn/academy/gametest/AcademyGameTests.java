@@ -3740,6 +3740,40 @@ public final class AcademyGameTests {
         assertTrue(helper, cow.getHealth() < before,
                 "et le tir a porte : la vache perd des points");
 
+        // 3. LE BLOC : meme tir, mais un faisceau trente pour cent plus grand (demande du 26/10).
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK, 2));
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.BLOCK,
+                cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
+                "un bloc de fer est une munition a part : celle qui agrandit le faisceau");
+        assertTrue(helper,
+                cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE > 1.25
+                        && cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE < 1.35,
+                "et c'est bien trente pour cent : "
+                        + cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE);
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, 1, player.getMainHandItem().getCount(), "le bloc, lui aussi, est consomme");
+
+        // 4. LE BLOC ARRACHE PAR MAG_MANIP : il n'est pas dans la main, et il tire quand meme — et
+        // c'est LUI qui paie. C'est la demande du joueur : « il devrais aussi fonctionner si j'arrache
+        // le bloc du sol directement », et « ça ne supprime pas le bloc que j'ai utilisé ».
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        var carried = new cn.academy.entity.EntityMagManipBlock(level, player,
+                net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState(),
+                player.position().add(0, 1, 0));
+        level.addFreshEntity(carried);
+        data.setHoldTarget(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP,
+                carried.getId());
+
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED,
+                cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
+                "le bloc tenu par l'aimantation est une munition");
+        assertTrue(helper, railgun.canStart(player, data),
+                "et le tir part avec lui, sans rien avoir dans la main");
+        railgun.onActivateCharged(player, data, 0);
+        assertTrue(helper, carried.isRemoved(),
+                "le tir consomme le bloc arrache : il ne retombe pas");
+
         // 2 bis. LE CUIVRE, depuis que le joueur l'a demande : « il faut aussi rajouter le cuivre
         // pour le railgun ». Le lingot, le bloc, et les variantes travaillees avec eux ; le cuivre
         // brut et le minerai, non — ce n'est pas du metal travaille, comme pour l'aimantation.

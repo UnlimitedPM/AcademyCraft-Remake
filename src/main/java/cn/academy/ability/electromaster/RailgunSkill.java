@@ -41,6 +41,16 @@ public class RailgunSkill extends Skill {
     public static final double COMBO_RADIUS = 3.0;
     public static final int COMBO_BEAM_ARCS = 24;
 
+    /**
+     * Ce qu'un BLOC ajoute au faisceau : trente pour cent de plus, en longueur, en largeur et en
+     * arcs.
+     *
+     * <p>Demande du joueur le 26/10 : « augmente la taille du laser de 30 % quand je l'utilise
+     * avec un bloc ». C'est le fer en bloc de l'original, et le bloc arrache par mag_manip : la
+     * meme matiere, mais neuf fois plus — le faisceau se lit donc a l'echelle de ce qu'on y met.
+     */
+    public static final double BLOCK_BEAM_SCALE = 1.3;
+
     /** Les trois barres de degats, par munition puis par le tir combine. */
     public static final float COIN_DAMAGE_MIN = 75f, COIN_DAMAGE_MAX = 125f;
     public static final float IRON_DAMAGE_MIN = 40f, IRON_DAMAGE_MAX = 80f;
@@ -106,9 +116,9 @@ public class RailgunSkill extends Skill {
      *
      * <p>Le cout en CP suit l'original : 200 a 450, et il monte avec l'experience.
      */
-    public float damage(AbilityData data, boolean fromCoin) {
+    public float damage(AbilityData data, Ammo ammo) {
         float exp = data.getSkillExp(this);
-        return fromCoin ? lerp(COIN_DAMAGE_MIN, COIN_DAMAGE_MAX, exp)
+        return ammo == Ammo.COIN ? lerp(COIN_DAMAGE_MIN, COIN_DAMAGE_MAX, exp)
                 : lerp(IRON_DAMAGE_MIN, IRON_DAMAGE_MAX, exp);
     }
 
@@ -212,13 +222,73 @@ public class RailgunSkill extends Skill {
      */
     @Override
     public boolean canStart(Player player, AbilityData data) {
-        return hasAmmo(player);
+        return ammo(player, data) != Ammo.NONE;
+    }
+
+    /**
+     * Ce qui part quand on tire, et c'est ce qui decide de la taille du faisceau et du prix.
+     *
+     * <p>L'original n'avait que deux cas — la piece et le fer —, et le port en avait ajoute un
+     * troisieme avec le cuivre. Le quatrieme est celui du joueur du 26/10 : le bloc qu'on tient
+     * par <b>mag_manip</b>, sans l'avoir dans la main (« il devrais aussi fonctionner si j'arrache
+     * le bloc du sol directement »).
+     */
+    public enum Ammo {
+        /** Une piece lancee et retombee : le tir du rituel. */
+        COIN,
+        /** Un lingot de la main : le tir de base. */
+        INGOT,
+        /** Un BLOC de la main : le meme tir, d'un faisceau trente pour cent plus grand. */
+        BLOCK,
+        /** Le bloc arrache par mag_manip : le tir combine, et le bloc y passe. */
+        CARRIED,
+        /** Rien a tirer : le coup ne part pas, et rien n'est facture. */
+        NONE;
+
+        /** Un bloc donne-t-il un faisceau plus grand ? C'est la demande du joueur. */
+        public boolean isBlock() {
+            return this == BLOCK || this == CARRIED;
+        }
     }
 
     /** Une piece assez retombee, ou du fer en main. */
     public static boolean hasAmmo(Player player) {
         return cn.academy.entity.EntityCoinThrowing.ready(player) != null
                 || isAccepted(player.getMainHandItem());
+    }
+
+    /**
+     * La munition du tir, dans l'ordre de l'original : la piece d'abord, la main ensuite, et le
+     * bloc de mag_manip en dernier recours.
+     *
+     * <p>La main passe AVANT le bloc arrache : ce qu'on tient est un choix plus explicite que ce
+     * qu'on porte a distance, et c'est aussi l'ordre qui consomme le moins de surprises — c'est
+     * la poche qui paie avant le decor.
+     */
+    public static Ammo ammo(Player player, AbilityData data) {
+        if (cn.academy.entity.EntityCoinThrowing.ready(player) != null) return Ammo.COIN;
+
+        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+        if (isAccepted(held)) {
+            return held.getItem() instanceof net.minecraft.world.item.BlockItem
+                    ? Ammo.BLOCK : Ammo.INGOT;
+        }
+        return carriedBlock(player, data) != null ? Ammo.CARRIED : Ammo.NONE;
+    }
+
+    /**
+     * Le bloc que le joueur tient par mag_manip, s'il y en a un.
+     *
+     * <p>Le maintien de l'aimantation le designe par son identifiant (voir
+     * {@code AbilityData.getHoldTargetId}), qui est deja la facon dont elle le suit d'un tick a
+     * l'autre : le railgun n'a donc rien de plus a tenir de son cote.
+     */
+    public static cn.academy.entity.EntityMagManipBlock carriedBlock(Player player, AbilityData data) {
+        if (player == null || data == null) return null;
+        net.minecraft.world.entity.Entity entity = player.level().getEntity(
+                data.getHoldTargetId(ElectromasterCategory.MAG_MANIP));
+        return entity instanceof cn.academy.entity.EntityMagManipBlock block && block.isAlive()
+                ? block : null;
     }
 
     /**
@@ -297,29 +367,42 @@ public class RailgunSkill extends Skill {
      * et son {@code MSG_ITEM_PERFORM} pour le fer, qui retirait un exemplaire sauf en creatif. Rien
      * n'est rendu : c'est le prix du tir, en plus de ses CP et de son surcout.
      */
-    private static void consumeAmmo(Player player) {
-        cn.academy.entity.EntityCoinThrowing coin = cn.academy.entity.EntityCoinThrowing.ready(player);
-        if (coin != null) {
-            coin.consume();
-            return;
-        }
-        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
-        if (isAccepted(held) && !player.getAbilities().instabuild) {
-            held.shrink(1);
+    private static void consumeAmmo(Player player, AbilityData data, Ammo ammo) {
+        switch (ammo) {
+            case COIN -> {
+                cn.academy.entity.EntityCoinThrowing coin =
+                        cn.academy.entity.EntityCoinThrowing.ready(player);
+                if (coin != null) coin.consume();
+            }
+            case INGOT, BLOCK -> {
+                net.minecraft.world.item.ItemStack held = player.getMainHandItem();
+                if (isAccepted(held) && !player.getAbilities().instabuild) held.shrink(1);
+            }
+            case CARRIED -> {
+                // Le bloc arrache y PASSE : il ne retombe pas, il ne se repose pas, il est
+                // consomme par le tir — c'est ce que le joueur attendait et qui manquait.
+                cn.academy.entity.EntityMagManipBlock block = carriedBlock(player, data);
+                if (block != null) block.discard();
+            }
+            case NONE -> { }
         }
     }
 
     @Override
     public void onActivate(Player player, AbilityData data) {
         // La munition d'abord : le tir part de la piece, et l'original la tuait AVANT de tirer.
-        boolean fromCoin = cn.academy.entity.EntityCoinThrowing.ready(player) != null;
-        consumeAmmo(player);
+        Ammo ammo = ammo(player, data);
+        boolean fromCoin = ammo == Ammo.COIN;
+        consumeAmmo(player, data, ammo);
 
         // Le tir COMBINE, s'il tient mag_manip : un rail plus long, un cylindre plus large, et
         // ses propres degats. Voir {@link #isCombo}.
         boolean combo = isCombo(data);
-        double length = combo ? COMBO_BEAM_LENGTH : RailgunHit.LENGTH;
-        double radius = combo ? COMBO_RADIUS : RailgunHit.RADIUS;
+        // Et un BLOC agrandit ce faisceau de trente pour cent, quel qu'il soit : la munition se
+        // lit dans la taille du tir — voir {@link #BLOCK_BEAM_SCALE}.
+        double scale = ammo.isBlock() ? BLOCK_BEAM_SCALE : 1.0;
+        double length = (combo ? COMBO_BEAM_LENGTH : RailgunHit.LENGTH) * scale;
+        double radius = (combo ? COMBO_RADIUS : RailgunHit.RADIUS) * scale;
 
         // LA RAFALE D'ARCS, et c'est ici pour le fer seulement : sur une piece, le lancer s'en est
         // deja charge (voir ModItems.CoinItem.use), alors que la voie du fer ne se decide que la,
@@ -334,8 +417,8 @@ public class RailgunSkill extends Skill {
         cn.academy.sound.AcademySounds.playAt(player.level(), player.position(),
                 cn.academy.ModSounds.EM_RAILGUN, 0.5f, 1.0f);
 
-        shootBeam(player, combo ? COMBO_BEAM_LENGTH : BEAM_LENGTH,
-                combo ? COMBO_BEAM_ARCS : BEAM_ARCS);
+        shootBeam(player, length,
+                (int) Math.round((combo ? COMBO_BEAM_ARCS : BEAM_ARCS) * scale));
 
         // LES DEGATS : TOUT UN CYLINDRE, et non une cible unique. C'est le RangedRayDamage de
         // l'original — rayon 2, longueur 50, voir RailgunHit — et le port, lui, ne prenait qu'une
@@ -344,7 +427,7 @@ public class RailgunSkill extends Skill {
         // touchees, de la plus proche a la plus lointaine, chacune avec l'attenuation de sa distance.
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f).normalize();
-        float base = scaled(combo ? comboDamage(data) : damage(data, fromCoin));
+        float base = scaled(combo ? comboDamage(data) : damage(data, ammo));
 
         for (Entity target : entitiesInBeam(player, eye, look, length, radius)) {
             if (!(target instanceof LivingEntity living)) continue;
