@@ -51,9 +51,9 @@ public final class MineDetectOverlay {
      * balayage est demande tout de suite, sans attendre la periode : un eclat dont les
      * premiers minerais n'apparaitraient que cinq ticks plus tard aurait l'air en retard.
      */
-    public static void begin(float range, boolean advanced) {
+    public static void begin(float range, boolean advanced, int ticks) {
         LocalPlayer player = Minecraft.getInstance().player;
-        endTick = (player == null ? 0 : player.tickCount) + MineDetectSkill.TIME;
+        endTick = (player == null ? 0 : player.tickCount) + ticks;
         MineDetectOverlay.range = MineDetectVisuals.capRange(range);
         MineDetectOverlay.advanced = advanced;
         scanCooldown = 0;

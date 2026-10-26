@@ -23,23 +23,34 @@ public class MineDetectPacket {
     private final float range;
     private final boolean advanced;
 
-    public MineDetectPacket(float range, boolean advanced) {
+    /**
+     * La duree de l'eclat, en ticks, et elle vient du SERVEUR.
+     *
+     * <p>Le client la lisait autrefois dans {@code MineDetectSkill.TIME}, une constante : un
+     * eclat qui tient par la reserve (voir {@code MineDetectSkill.extraTicks}) dure pourtant
+     * aussi longtemps que le serveur l'a paye, et c'est donc a lui de le dire.
+     */
+    private final int ticks;
+
+    public MineDetectPacket(float range, boolean advanced, int ticks) {
         this.range = range;
         this.advanced = advanced;
+        this.ticks = ticks;
     }
 
     public static void encode(MineDetectPacket msg, FriendlyByteBuf buf) {
         buf.writeFloat(msg.range);
         buf.writeBoolean(msg.advanced);
+        buf.writeVarInt(msg.ticks);
     }
 
     public static MineDetectPacket decode(FriendlyByteBuf buf) {
-        return new MineDetectPacket(buf.readFloat(), buf.readBoolean());
+        return new MineDetectPacket(buf.readFloat(), buf.readBoolean(), buf.readVarInt());
     }
 
     public static void handle(MineDetectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> MineDetectOverlay.begin(msg.range, msg.advanced));
+        ctx.enqueueWork(() -> MineDetectOverlay.begin(msg.range, msg.advanced, msg.ticks));
         ctx.setPacketHandled(true);
     }
 }
