@@ -51,6 +51,16 @@ public class RailgunSkill extends Skill {
      */
     public static final double BLOCK_BEAM_SCALE = 1.3;
 
+    /**
+     * La recharge posee sur l'aimantation quand le tir lui prend son bloc : quarante ticks.
+     *
+     * <p>Sa veille n'en declare aucune (voir {@code MagManipSkill.getCooldownTicks}) : endHeld
+     * n'y posait donc rien, et le joueur pouvait la rallumer dans la foulee et arracher un autre
+     * bloc — c'est exactement ce qu'il a signale le 26/10 : « il faut que le mag manip soit en
+     * cooldown juste apres, la ce n'est pas le cas, donc ça lance un bloc juste apres ».
+     */
+    public static final int MAGNET_COOLDOWN_TICKS = 40;
+
     /** Les trois barres de degats, par munition puis par le tir combine. */
     public static final float COIN_DAMAGE_MIN = 75f, COIN_DAMAGE_MAX = 125f;
     public static final float IRON_DAMAGE_MIN = 40f, IRON_DAMAGE_MAX = 80f;
@@ -254,6 +264,17 @@ public class RailgunSkill extends Skill {
     }
 
     /**
+     * Une piece est-elle encore en l'air pour ce joueur ?
+     *
+     * <p>Lu par le rappel des touches, qui allume alors le railgun en orange : c'est la fenetre du
+     * QTE, et le joueur doit la voir. La piece se cherche dans le monde, donc cela marche des deux
+     * cotes (voir {@code EntityCoinThrowing.of}).
+     */
+    public static boolean coinInFlight(Player player) {
+        return player != null && cn.academy.entity.EntityCoinThrowing.of(player) != null;
+    }
+
+    /**
      * La munition du tir, dans l'ordre de l'original : la piece d'abord, la main ensuite, et le
      * bloc de mag_manip en dernier recours.
      *
@@ -400,6 +421,9 @@ public class RailgunSkill extends Skill {
                 if (player instanceof net.minecraft.server.level.ServerPlayer server) {
                     cn.academy.ability.AbilityEvents.endHeld(server, data,
                             ElectromasterCategory.MAG_MANIP);
+                    // Et une recharge, puisqu'elle n'en declare pas : sans elle, elle se rallume
+                    // au tick suivant et arrache un autre bloc (voir MAGNET_COOLDOWN_TICKS).
+                    data.setCooldown(ElectromasterCategory.MAG_MANIP, MAGNET_COOLDOWN_TICKS);
                 }
             }
             case NONE -> { }

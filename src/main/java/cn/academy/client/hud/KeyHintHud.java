@@ -227,10 +227,17 @@ public final class KeyHintHud {
             remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill), total);
         }
 
+        // L'ARMEMENT, ou la PIECE EN L'AIR : les deux fenetres du railgun, et l'original les
+        // montrait de la meme couleur — l'orange de la preparation. Le joueur du 26/10 : « si je
+        // lance une piece en l'air, la competence du railgun brille en orange ».
+        boolean armed = cn.academy.ability.client.AbilityClientEvents.armingTicks(slot) > 0
+                || (skill == cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN
+                        && cn.academy.ability.electromaster.RailgunSkill.coinInFlight(
+                                net.minecraft.client.Minecraft.getInstance().player));
+
         drawRow(graphics, AbilityKeyBindings.abilityKey(slot),
                 skill == null ? null : skill.getHintIcon(),
-                KeyHintVisuals.stateOf(skill, data,
-                        cn.academy.ability.client.AbilityClientEvents.armingTicks(slot) > 0),
+                KeyHintVisuals.stateOf(skill, data, armed),
                 remaining, y, usable, wave, fade);
     }
 

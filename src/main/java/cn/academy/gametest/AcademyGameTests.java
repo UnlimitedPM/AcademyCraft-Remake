@@ -3806,9 +3806,17 @@ public final class AcademyGameTests {
         assertFalse(helper,
                 data.isCharging(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP),
                 "le tir ferme l'aimantation");
-        assertTrue(helper, cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP
-                        .getCooldownTicks(data) == 0,
-                "et elle n'a rien a recharger : sa veille n'a jamais eu de recharge");
+        // Et elle part en RECHARGE : sa veille n'en declare aucune, donc sans cette pose elle se
+        // rallumait au tick suivant et arrachait un autre bloc — « il faut que le mag manip soit en
+        // cooldown juste apres, la ce n'est pas le cas, donc ça lance un bloc juste apres ».
+        assertTrue(helper,
+                data.isOnCooldown(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP),
+                "et le tir lui pose une recharge : " + data.getCooldown(
+                        cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP));
+        assertValue(helper,
+                cn.academy.ability.electromaster.RailgunSkill.MAGNET_COOLDOWN_TICKS,
+                data.getCooldown(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP),
+                "quarante ticks, le chiffre du port");
         assertValue(helper, 3, player.getMainHandItem().getCount(),
                 "les blocs de rechange restent en poche : rien n'est arrache");
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
