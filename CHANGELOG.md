@@ -1,5 +1,84 @@
 # Changelog
 
+## 1.0.0-beta - le railgun qui creuse, l'eclat qui tient / the railgun digs, the flare holds
+
+### English
+
+First **1.0.0** milestone, published as a **beta**: everything of 0.2.1, plus fifty commits of
+gameplay, interface and cleanup. Keep a backup of your world.
+
+- **The railgun digs.** Its shot opens a tunnel whose **depth follows the ammunition**: the coin
+  pierces the whole beam, the ingot two thirds of it, a block the whole beam again — thirty percent
+  wider and longer, so about ninety blocks in the combined shot.
+- **The material of a block decides the power.** A **full iron or copper block** keeps the full
+  combined damage (150-200); any other block falls to **70-120**, less than a coin at the same
+  experience, with the **same radius** but **a third of the range**. A block is only fired through
+  magnetism now (50 % railgun and 80 % magnet manipulation), never from a pocket, and the magnetism
+  goes on cooldown with the shot.
+- **The coin is worth more than the ingot** (75-125 against 40-80), and it turns from orange to light
+  blue when the shot is ready. The iron path arms for twenty ticks.
+- **Mine detection became a toggle**: one press opens it, a second closes it, the whole flare is paid
+  **tick by tick**, the overload stays pinned, and the cooldown only lands when it closes. The
+  **blindness now lasts the whole flare** (the fog follows the effect's remaining time, so a very
+  short refresh used to fade out after five seconds), and its **sound follows the player and repeats**
+  for as long as the flare holds. A filter screen lets one ore type stand out in green over the blue.
+- **Mine detection got three times cheaper**: the scan stops where the drawing stops (91 965 block
+  reads per scan become 24 405), allocates nothing per block, and resolves the chosen ore once. An
+  opt-in log (`AC_MD_STATS=1`) reports scans, block reads, ores and quads every five seconds.
+- **Teleport crits** got their own damage type, with its death message in all five languages; vector
+  reflection and deviation let teleport damage through instead of absorbing it.
+- **Frequency transmitter rebuilt** as a real terminal app with its overlay; the **media player** has
+  its covers and its progress bar.
+- **Developer, skill card, tree and terminal**: card icons and requirement lines, console fixes, tree
+  fade, pixel-perfect Customize UI, the CP emblem drawn by shader, and the tutorial intro.
+- **Cleanup**: the thirty-three dead per-skill key bindings are gone (with their language keys), the
+  unused railgun beam rendering is gone (some three hundred lines), and the five sound events that
+  neither the port nor the original ever played are documented as such instead of looking missing.
+- **Translations**: four hardcoded strings now go through the language files; the tutorial scan went
+  from three ticks to ten per player on the server.
+- **Tests**: 960 unit tests, 176 in-game tests and an offline asset audit, all green.
+
+### Francais
+
+Premier jalon **1.0.0**, publie en **beta** : tout le 0.2.1, plus cinquante commits de jeu,
+d'interface et de menage. Gardez une sauvegarde de votre monde.
+
+- **Le railgun creuse.** Son tir ouvre un tunnel dont la **profondeur suit la munition** : la piece
+  perce le trait entier, le lingot les deux tiers, le bloc a nouveau le trait entier — trente pour
+  cent plus large et plus long, soit une petite centaine de blocs en tir combine.
+- **La matiere du bloc decide de la puissance.** Un **bloc de fer ou de cuivre complet** garde les
+  degats du tir combine (150 a 200) ; tout autre bloc tombe a **70 a 120**, donc moins qu'une piece a
+  experience egale, avec le **meme rayon** mais **le tiers de la portee**. Un bloc ne part plus que
+  par l'aimantation (50 % de railgun et 80 % de mag manip), jamais d'une poche, et l'aimantation part
+  en recharge avec le tir.
+- **La piece vaut plus que le lingot** (75 a 125 contre 40 a 80), et elle passe de l'orange au bleu
+  clair quand le tir est pret. La voie du fer s'arme en vingt ticks.
+- **La detection de minerais est devenue une bascule** : un appui l'allume, un second l'eteint, tout
+  l'eclat se paie **tick par tick**, le surcoût reste epingle, et la recharge ne tombe qu'a la
+  fermeture. **L'aveuglement tient maintenant tout l'eclat** (le brouillard suit ce qui reste de
+  l'effet, donc un rafraichissement tres court s'effacait au bout de cinq secondes), et **son son suit
+  le joueur et se relance** tant que l'eclat dure. Un ecran de filtre fait ressortir un minerai en
+  vert sur le bleu.
+- **La detection coute trois fois moins** : le balayage s'arrete la ou le dessin s'arrete (91 965
+  blocs lus par balayage deviennent 24 405), n'alloue plus rien par bloc, et resout le minerai choisi
+  une seule fois. Un journal optionnel (`AC_MD_STATS=1`) donne, toutes les cinq secondes, les
+  balayages, les blocs lus, les minerais et les quads.
+- **Les critiques de teleportation** ont leur propre type de degats, avec son message de mort dans
+  les cinq langues ; la reflexion et la deviation vectorielles laissent passer ces degats au lieu de
+  les absorber.
+- **L'emetteur de frequence refait** en vraie application du terminal, avec son overlay ; le
+  **lecteur media** a ses pochettes et sa barre de progression.
+- **Developpeur, fiche, arbre et terminal** : icones et lignes de condition sur la fiche, console
+  corrigee, fondu de l'arbre, Customize UI au pixel pres, embleme de CP par shader, et l'introduction
+  du tutoriel.
+- **Menage** : les trente-trois touches mortes par competence sont parties (avec leurs cles de
+  langue), le rendu inutilise du faisceau du railgun aussi (environ trois cents lignes), et les cinq
+  evenements de son que ni le port ni l'original ne jouaient sont maintenant ecrits comme tels au lieu
+  de passer pour un oubli.
+- **Traductions** : quatre textes en dur passent par la langue ; le balayage du tutoriel passe de
+  trois ticks a dix par joueur, cote serveur.
+- **Tests** : 960 tests unitaires, 176 tests en jeu et un audit d'assets hors ligne, tous verts.
+
 ## 0.2.1 - le teleporteur au complet, l'eolienne juste / the teleporter complete, the wind generator right
 
 ### English

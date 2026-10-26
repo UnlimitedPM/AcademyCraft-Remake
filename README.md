@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Minecraft 1.20.1 &nbsp;Â·&nbsp; Forge 47.4.20+ &nbsp;Â·&nbsp; Java 17 &nbsp;Â·&nbsp; GPLv3 &nbsp;Â·&nbsp; <b>0.2.0 (test build)</b>
+  Minecraft 1.20.1 &nbsp;Â·&nbsp; Forge 47.4.20+ &nbsp;Â·&nbsp; Java 17 &nbsp;Â·&nbsp; GPLv3 &nbsp;Â·&nbsp; <b>1.0.0-beta</b>
 </p>
 
 ---
@@ -24,10 +24,10 @@ The original drew its interfaces with LambdaLib2's own GUI engine, and the port 
 ### Download and install
 
 1. Install **Forge 47.4.20 or later** for Minecraft 1.20.1.
-2. Download **`academy-0.2.0.jar`** from the [Releases](../../releases) page.
+2. Download **`academy-1.0.0-beta.jar`** from the [Releases](../../releases) page.
 3. Drop it into your `mods` folder and start the game.
 
-Nothing else to install. The port works on a server too, but it is a **test build**: keep a backup of your world.
+Nothing else to install. The port works on a server too, but it is a **beta build**: keep a backup of your world.
 
 ### How to play
 
@@ -37,7 +37,7 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 4. **Use them.** The four slots are **left click**, **right click**, **R** and **F** by default. Some are used in one press, others work while held, and a few grow if you hold them longer (the railgun charges, the thunder clap gathers, the meltdowner builds up).
 5. **Everything else.** **C** cycles presets, **N** opens the preset editor, **V** turns your ability on and off, **F4** opens the debug console (skills, cooldowns, control points), and **Left Alt** opens the terminal. All of them can be changed in Minecraft's controls screen, under "AcademyCraft".
 6. **Power a machine.** Place a **wireless node** and a **matrix**, open a machine (solar, wind or phase generator, imag fusor, metal former, ability interferer) and use its **wireless tab**: the list shows the nodes in range, nearest first. Click a node's connect icon, type its password if it has one, and the icon in the "Connected" frame disconnects you. A machine you disconnect stays disconnected — it will not link itself back on the next tick. The **node** works the same way, the other way round: its own wireless tab is where it picks the matrix it joins.
-### What is in this first version
+### What is in this version
 
 | | |
 |---|---|
@@ -54,10 +54,9 @@ Nothing else to install. The port works on a server too, but it is a **test buil
 
 Honest list, so you know what you are testing:
 
-- **Frequency transmitter** — the item is decorative: linking a machine to its node, and a node to its network, is done from their own wireless tabs.
 - **Languages** — the mod speaks English, French, German, Spanish and Chinese. The original also had Japanese, Korean, Russian and Traditional Chinese.
-- **Media player** — it plays its three built-in tracks, but without covers and without a progress bar.
 - **Per-skill cost multipliers** — the 1.12.2 kept one file per skill (`cp_consume_speed`, `overload_consume_speed`, `exp_incr_speed`). Here the cost, cooldown and experience multipliers are global, and a skill is switched on or off from `ability.disabledSkills`. Damage and range stay in the code, where the original kept them too.
+- **Taunts** — the original's in-game taunt lines are not ported yet.
 - **EU (IC2) / RF conversion** blocks.
 
 ### Building from source
@@ -92,10 +91,10 @@ L'original dessinait ses interfaces avec le moteur d'interface de LambdaLib2 ; l
 ### Télécharger et installer
 
 1. Installez **Forge 47.4.20 ou plus** pour Minecraft 1.20.1.
-2. Téléchargez **`academy-0.2.0.jar`** depuis la page [Releases](../../releases).
+2. Téléchargez **`academy-1.0.0-beta.jar`** depuis la page [Releases](../../releases).
 3. Posez-le dans votre dossier `mods` et lancez le jeu.
 
-Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est une **version de test** : gardez une sauvegarde de votre monde.
+Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est une **version bêta** : gardez une sauvegarde de votre monde.
 
 ### Comment jouer
 
@@ -105,16 +104,15 @@ Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est u
 4. **Les utiliser.** Les quatre emplacements sont le **clic gauche**, le **clic droit**, **R** et **F** par défaut. Certaines partent en une pression, d'autres agissent tant qu'on maintient, et quelques-unes montent si on maintient plus longtemps (le railgun se charge, le thunder clap s'accumule, le meltdowner monte en puissance).
 5. **Le reste.** **C** fait défiler les presets, **N** ouvre l'éditeur de presets, **V** allume et éteint l'aptitude, **F4** ouvre la console de débogage (compétences, recharges, points de contrôle), et **Alt gauche** ouvre le terminal. Toutes se changent dans les commandes de Minecraft, catégorie « AcademyCraft ».
 6. **Alimenter une machine.** Posez un **nœud sans fil** et une **matrice**, ouvrez une machine (générateur solaire, éolien ou de phase, fusor d'imag, formeur de métal, brouilleur d'aptitude) et passez par son **onglet sans fil** : la liste montre les nœuds à portée, du plus proche au plus loin. Cliquez l'icône de connexion d'un nœud, tapez son mot de passe s'il en a un, et l'icône du cadre « Connected » vous en déconnecte. Une machine que vous déconnectez reste déconnectée : elle ne se raccroche pas toute seule au tick suivant. Le **nœud** fait la même chose dans l'autre sens : c'est son propre onglet sans fil qui choisit la matrice qu'il rejoint.
-### Ce que contient cette première version
+### Ce que contient cette version
 
 Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; l'onglet sans fil de chaque machine, où l'on choisit le nœud qui l'alimente, et celui de chaque nœud, où l'on choisit le réseau qu'il rejoint ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès ; les deux intégrations facultatives, **JEI** (les recettes du formeur de métal et du fusor d'imag dans leurs propres catégories, raffinage générique des minerais compris) et **CraftTweaker** (`mods.academy.MetalFormer` et `mods.academy.ImagFusor` pour ajouter ou retirer des recettes depuis un script) ; et la **configuration** (`config/academy-common.toml`) : les quatre tables de points de contrôle par niveau (`initCp`, `addCp`, `initOverload`, `addOverload`, les `init_cp` de l'original), un multiplicateur sur chaque coût, chaque recharge et chaque gain d'expérience, la liste des compétences désactivées, la génération du monde, l'échelle des dégâts, le cassage de blocs et le PvP — chaque réglage commenté en français puis en anglais, et chaque nombre borné.
 
 ### Ce qu'il manque encore
 
-- **L'émetteur de fréquence** : l'objet est décoratif ; c'est l'onglet sans fil de la machine et celui du nœud qui font les raccordements.
 - **Les langues** : le mod parle anglais, français, allemand, espagnol et chinois. L'original en avait aussi quatre autres (japonais, coréen, russe, chinois traditionnel).
-- **Le lecteur média** : il joue ses trois morceaux, mais sans pochettes ni barre de progression.
 - **Les multiplicateurs par compétence** : la 1.12.2 tenait un fichier par compétence (`cp_consume_speed`, `overload_consume_speed`, `exp_incr_speed`). Ici les multiplicateurs de coût, de recharge et d'expérience sont globaux, et une compétence s'allume ou s'éteint dans `ability.disabledSkills`. Les dégâts et les portées restent dans le code, comme dans l'original.
+- **Les taunts** : les répliques de l'original ne sont pas encore portées.
 - **Les blocs de conversion EU (IC2) / RF**.
 
 ### Compiler depuis les sources
