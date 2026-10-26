@@ -74,9 +74,12 @@ public final class MineDetectOverlay {
         scanCooldown = 0;
         ores = List.of();
 
-        // Le son de l'eclat, chez le seul joueur concerne : l'original le jouait dans le
-        // meme gestionnaire client, sur le meme message.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_MINEDETECT, 0.5f);
+        // Le son de l'eclat, chez le seul joueur concerne : l'original le jouait dans le meme
+        // gestionnaire client, sur le meme message. Et il le SUIT : c'est un grondement de plusieurs
+        // secondes, et pose a une position il restait derriere le joueur qui avançait — « le bruit ne
+        // nous suit pas » (26/10). Voir FollowSound.
+        cn.academy.sound.client.FollowSound.play(player, cn.academy.ModSounds.EM_MINEDETECT.get(),
+                net.minecraft.sounds.SoundSource.AMBIENT, 0.5f, 1.0f);
     }
 
     /**

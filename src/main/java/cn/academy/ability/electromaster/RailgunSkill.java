@@ -82,12 +82,17 @@ public class RailgunSkill extends Skill {
      * munition decide donc de la LONGUEUR du trou, et la durete ne fait plus que l'arreter sur un
      * bloc dur. Corrige le 26/10 — « ce n'est pas le dig_width que je voulais, je parle de la
      * profondeur du tunnel, pas de son rayon » : la piece perce le trait entier, le lingot les deux
-     * tiers, et le bloc une fois et demie le trait — il a la matiere, et c'est ce que le joueur
-     * voit — « met le a 150 % en comparaison ».
+     * tiers, et le bloc la meme part que la piece.
+     *
+     * <p>Tous trois a la meme part depuis le 26/10 au soir : « la maintenant il mine environ 130
+     * bloc de longueur, fait en sorte que ce soit plutot 90 blocs ». Le bloc percait une fois et
+     * demie le trait, soit 137 blocs en tir combine — trop. Il perce donc la meme part que la piece,
+     * et reste PLUS LONG qu'elle par son faisceau, qui est deja trente pour cent plus grand (voir
+     * {@link #BLOCK_BEAM_SCALE}) : 91 blocs en tir combine, 65 seul.
      */
     public static final double COIN_DIG_LENGTH = 1.0;
     public static final double INGOT_DIG_LENGTH = 0.65;
-    public static final double BLOCK_DIG_LENGTH = 1.5;
+    public static final double BLOCK_DIG_LENGTH = 1.0;
 
     /** Le pas du disque de creusement : le {@code STEP} de l'original, 0,9 bloc. */
     private static final double DIG_STEP = 0.9;
@@ -546,6 +551,19 @@ public class RailgunSkill extends Skill {
             case CARRIED -> BLOCK_DIG_LENGTH;
             case NONE -> 0.0;
         };
+    }
+
+    /**
+     * La profondeur REELLE, faisceau compris : la part du trait multipliee par l'elargissement de
+     * la munition.
+     *
+     * <p>C'est elle qui se compare d'une munition a l'autre, et c'est la seule mesure honnete : le
+     * bloc perce la meme PART que la piece, mais son faisceau est trente pour cent plus long, donc
+     * son trou l'est aussi. Trente-deux blocs pour le lingot, cinquante pour la piece, soixante-cinq
+     * pour le bloc — et quatre-vingt-onze en tir combine.
+     */
+    public static double digReach(Ammo ammo) {
+        return digLength(ammo) * (ammo.isBlock() ? BLOCK_BEAM_SCALE : 1.0);
     }
 
     /**

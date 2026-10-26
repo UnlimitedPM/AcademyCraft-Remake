@@ -3758,19 +3758,25 @@ public final class AcademyGameTests {
 
         // Et la PROFONDEUR du tunnel suit la munition — c'est elle le levier, pas la largeur :
         // « nan, ce n'est pas le dig_width que je voulais, je parle de la profondeur du tunnel, pas
-        // de son rayon ». La piece perce le trait entier, le lingot les deux tiers, et le bloc une
-        // fois et demie le trait — « il y a plus de matiere, c'est logique que le trou soit plus
-        // grand et plus long ».
-        final double coinDig = cn.academy.ability.electromaster.RailgunSkill.digLength(
+        // de son rayon ». Le lingot perce les deux tiers du trait, la piece le trait entier, et le
+        // bloc la meme part que la piece — mais son faisceau est plus long, donc son trou aussi.
+        final double coinReach = cn.academy.ability.electromaster.RailgunSkill.digReach(
                 cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN);
-        final double ingotDig = cn.academy.ability.electromaster.RailgunSkill.digLength(
+        final double ingotReach = cn.academy.ability.electromaster.RailgunSkill.digReach(
                 cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT);
-        final double blockDig = cn.academy.ability.electromaster.RailgunSkill.digLength(
+        final double blockReach = cn.academy.ability.electromaster.RailgunSkill.digReach(
                 cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED);
-        assertTrue(helper, coinDig > ingotDig,
-                "le lingot perce moins loin que la piece : " + ingotDig + " contre " + coinDig);
-        assertTrue(helper, blockDig > coinDig * 1.4,
-                "le bloc perce une fois et demie la piece : " + blockDig);
+        assertTrue(helper, coinReach > ingotReach,
+                "le lingot perce moins loin que la piece : " + ingotReach + " contre " + coinReach);
+        // Le bloc reste le plus long, mais de peu : le joueur a trouve le trou trop profond a
+        // « environ 130 bloc » et veut « plutot 90 » — le faisceau du bloc le fait de lui-meme.
+        assertTrue(helper, blockReach > coinReach * 1.2,
+                "le bloc perce plus loin que la piece, faisceau compris : " + blockReach);
+        // Et la profondeur du bloc en tir combine tombe bien sur la quatre-vingtaine de blocs
+        // demandee, a dix pres.
+        double blockCombo = cn.academy.ability.electromaster.RailgunSkill.COMBO_BEAM_LENGTH * blockReach;
+        assertTrue(helper, blockCombo > 80 && blockCombo < 100,
+                "le bloc perce une petite centaine de blocs en tir combine : " + blockCombo);
         // Et le budget d'une colonne se lit sur cette profondeur, pas sur une somme partagee : la
         // roche ordinaire (1,5) comme le deepslate (3) ne coupent donc plus le tunnel — sinon, le
         // bloc s'arretait a vingt-cinq blocs dans la pierre au lieu de ses quatre-vingt-huit.
