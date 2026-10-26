@@ -212,7 +212,11 @@ public class ShiftTeleportSkill extends Skill {
         if (!planted) drop(player, stack, target);
 
         for (LivingEntity living : hit) {
-            TeleportCrits.strike(player, data, living, damage(data));
+            // `scaled` : le multiplicateur global de degats de la config passe par la, comme
+            // pour toutes les competences actives. Les deux autres coups de la categorie
+            // l'appliquaient deja ; celui-ci l'oubliait, donc `general.damageScale` ne mordait
+            // pas sur le geste d'epee.
+            TeleportCrits.strike(player, data, living, scaled(damage(data)));
         }
 
         // La trainee du geste, du corps du lanceur jusqu'a la case visee : c'est la seule chose
