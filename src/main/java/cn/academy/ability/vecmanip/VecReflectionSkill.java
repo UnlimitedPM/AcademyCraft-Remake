@@ -366,7 +366,7 @@ public class VecReflectionSkill extends Skill {
 
         // Une teleportation n'a pas de vecteur : le coup du teleporteur n'est ni absorbe ni
         // renvoye. Voir {@code TeleportCrits.source(Player)}.
-        if (event.getSource().is(TeleportCrits.TYPE)) return amount;
+        if (event.getSource().is(TeleportCrits.type())) return amount;
 
         // Meme regle que sur `onAttacked`, en second filet : tant que la veille est tenue, rien ne
         // passe. Le renvoi d'un renvoi ne se paie pas et ne se renvoie pas — c'est le garde-fou de
@@ -402,7 +402,7 @@ public class VecReflectionSkill extends Skill {
         // Meme regle ici, et c'est le crochet qui compte : c'est lui qui annule le coup AVANT
         // qu'il ne soit porte. Une teleportation n'a pas de vecteur a manipuler, elle passe donc
         // la veille sans etre renvoyee. Voir {@code TeleportCrits.source(Player)}.
-        if (event.getSource().is(TeleportCrits.TYPE)) return false;
+        if (event.getSource().is(TeleportCrits.type())) return false;
 
         // Le renvoi d'un renvoi ne se renvoie pas, mais il ne passe pas non plus : c'est le
         // garde-fou de l'original, celui qui evite la boucle entre deux reflets ou avec les epines

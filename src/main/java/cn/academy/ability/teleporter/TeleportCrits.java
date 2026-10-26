@@ -45,9 +45,23 @@ public final class TeleportCrits {
     /**
      * Le type de degats des coups de teleporteur : voir
      * {@code data/academy/damage_type/teleport.json}, qui porte aussi le message de mort.
+     *
+     * <p>Il n'est PAS un champ statique tout fait, et c'est pour les tests : {@code ResourceKey.create}
+     * sur {@code Registries.DAMAGE_TYPE} demande un registre <b>amorce</b>, donc un champ statique
+     * faisait echouer la classe des sa premiere lecture — {@code Not bootstrapped} — alors que
+     * {@link #chance}, {@link #tier} et {@link #damage} n'ont aucun besoin du registre. Le nom se
+     * construit donc au premier appel, c'est-a-dire en jeu.
      */
-    public static final ResourceKey<DamageType> TYPE = ResourceKey.create(Registries.DAMAGE_TYPE,
-            ResourceLocation.fromNamespaceAndPath("academy", "teleport"));
+    private static ResourceKey<DamageType> type;
+
+    /** Le type de degats des coups de teleporteur, construit au premier appel. */
+    public static ResourceKey<DamageType> type() {
+        if (type == null) {
+            type = ResourceKey.create(Registries.DAMAGE_TYPE,
+                    ResourceLocation.fromNamespaceAndPath("academy", "teleport"));
+        }
+        return type;
+    }
 
     /**
      * La source d'un coup de teleporteur.
@@ -69,9 +83,9 @@ public final class TeleportCrits {
      * l'{@code attackIgnoreArmor} de l'original.
      */
     public static DamageSource source(Player player) {
-        Holder<DamageType> type = player.level().registryAccess()
-                .registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(TYPE);
-        return new DamageSource(type, player, player);
+        Holder<DamageType> holder = player.level().registryAccess()
+                .registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(type());
+        return new DamageSource(holder, player, player);
     }
 
     private TeleportCrits() {}

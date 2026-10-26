@@ -340,7 +340,7 @@ public class AbilityEvents {
         // propre aux teleportations — ne pour son message de mort et pour que les veilles de
         // vecmanip le reconnaissent. Voir {@code TeleportCrits.source}.
         if (!source.is(net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC)
-                && !source.is(cn.academy.ability.teleporter.TeleportCrits.TYPE)) return;
+                && !source.is(cn.academy.ability.teleporter.TeleportCrits.type())) return;
 
         event.setCanceled(true);
     }

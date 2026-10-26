@@ -323,7 +323,7 @@ public class VecDeviationSkill extends Skill {
         // Une teleportation n'a pas de vecteur a devier : le coup du teleporteur passe entier.
         // C'est la meme regle que la reflexion, et la meme source : voir
         // {@code TeleportCrits.source(Player)}.
-        if (event.getSource().is(cn.academy.ability.teleporter.TeleportCrits.TYPE)) return amount;
+        if (event.getSource().is(cn.academy.ability.teleporter.TeleportCrits.type())) return amount;
 
         // Le claquement de la veille, AUSSI sur un coup encaisse (22/10) : le joueur ne
         // l'entendait que sur les entites que la veille arretait, jamais quand un zombie le
