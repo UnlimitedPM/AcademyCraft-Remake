@@ -99,6 +99,20 @@ public class RailgunSkill extends Skill {
     /** Le pas du disque de creusement : le {@code STEP} de l'original, 0,9 bloc. */
     private static final double DIG_STEP = 0.9;
 
+    /**
+     * La LARGEUR du tunnel, en multiple du rayon du tir.
+     *
+     * <p>Retour du joueur du 26/10 : « il ne casse pas assez de blocs a chaque passage ». Le disque
+     * de l'original avait le rayon du trait — une douzaine de colonnes —, et cela faisait un tunnel
+     * etroit pour un geste de cette taille. Le rayon du CREUSEMENT est donc une fois et demie celui
+     * des degats : environ deux fois plus de blocs par tranche.
+     *
+     * <p>Et le budget d'energie suit la SURFACE ({@code DIG_WIDTH_SCALE} au carre) : sans cela, la
+     * meme somme partagee entre deux fois plus de colonnes creuserait deux fois moins loin, et le
+     * joueur troquerait de la largeur contre de la portee. Ici il gagne les deux.
+     */
+    private static final double DIG_WIDTH_SCALE = 1.5;
+
     /** Les trois barres de degats, par munition puis par le tir combine. */
     public static final float COIN_DAMAGE_MIN = 75f, COIN_DAMAGE_MAX = 125f;
     public static final float IRON_DAMAGE_MIN = 40f, IRON_DAMAGE_MAX = 80f;
@@ -540,7 +554,9 @@ public class RailgunSkill extends Skill {
         // Et il CREUSE. Le port ne cassait rien du tout : le joueur du 26/10 — « par contre le
         // railgun ne casse pas les blocs la ». C'est la seconde moitie de {@code RangedRayDamage},
         // celle qui suit les memes colonnes que les degats.
-        digBeam(player, eye, look, length * digLength(ammo), radius, wallEnergy(data, ammo));
+        digBeam(player, eye, look, length * digLength(ammo),
+                radius * DIG_WIDTH_SCALE,
+                wallEnergy(data, ammo) * (float) (DIG_WIDTH_SCALE * DIG_WIDTH_SCALE));
     }
 
     /** Jusqu'ou cette munition creuse : la part du trait qui perce vraiment. */
