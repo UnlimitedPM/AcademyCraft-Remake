@@ -38,6 +38,10 @@ public class AbilityNetwork {
         // chose au client : c'est lui qui balaie le monde et l'allume.
         CHANNEL.registerMessage(nextId++, MineDetectPacket.class,
                 MineDetectPacket::encode, MineDetectPacket::decode, MineDetectPacket::handle);
+        CHANNEL.registerMessage(nextId++, cn.academy.ability.network.MineDetectStopPacket.class,
+                cn.academy.ability.network.MineDetectStopPacket::encode,
+                cn.academy.ability.network.MineDetectStopPacket::decode,
+                cn.academy.ability.network.MineDetectStopPacket::handle);
         // Les eclairs des competences : le serveur sait ou ils sont partis et jusqu'ou, et
         // il le dit a ceux qui voient le tireur. Sans ce paquet, un arc ne se dessinerait
         // que chez celui qui appuie sur la touche.

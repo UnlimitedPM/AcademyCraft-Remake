@@ -40,13 +40,16 @@ public final class MineDetectVisuals {
      * La cinquieme n'etait jamais atteinte chez l'original, dont le palier plafonne a trois —
      * le port garde la table telle quelle, parce que c'est la sienne.
      */
-    private static final int[][] COLORS = {
-            { 115, 200, 227 },
-            { 161, 181, 188 },
-            { 87, 231, 248 },
-            { 97, 204, 94 },
-            { 235, 109, 84 },
-    };
+    /**
+     * Le BLEU de l'eclat, et c'est la seule couleur qu'il donne.
+     *
+     * <p>L'original avait cinq teintes, une par palier de pioche, et son eclat complet (demi-
+     * experience et categorie de niveau 4) les allumait toutes : le vert et l'orange arrivaient
+     * donc sans que le joueur ait rien demande — « certains minerais apparaissent en vert et je
+     * ne sais pas pourquoi [...] je ne vois pas l'utilite ». Demande du 26/10 : tout redevient
+     * blue, et seul le minerai choisi dans l'ecran de filtre passe au vert (voir {@link #SELECTED}).
+     */
+    public static final int[] ORE = { 115, 200, 227 };
 
     /**
      * Le VERT du minerai choisi dans l'ecran de filtre.
@@ -94,13 +97,12 @@ public final class MineDetectVisuals {
      * pierre prend la deuxieme, un minerai de diamant la quatrieme.
      */
     public static int tierOf(boolean advanced, int harvestTier) {
-        return advanced ? Math.min(COLORS.length - 2, harvestTier + 1) : 0;
+        return advanced ? Math.min(3, harvestTier + 1) : 0;
     }
 
-    /** La couleur d'un palier, en trois canaux de 0 a 255. */
+    /** La couleur d'un minerai ordinaire : le bleu de l'eclat, quel que soit son palier. */
     public static int[] colorFor(int tier) {
-        int index = Math.max(0, Math.min(COLORS.length - 1, tier));
-        return COLORS[index];
+        return ORE;
     }
 
     /**

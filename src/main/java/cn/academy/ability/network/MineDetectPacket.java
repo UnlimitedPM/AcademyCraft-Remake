@@ -32,25 +32,37 @@ public class MineDetectPacket {
      */
     private final int ticks;
 
-    public MineDetectPacket(float range, boolean advanced, int ticks) {
+    /**
+     * L'eclat peut-il tenir au-dela de {@code ticks} ? Oui quand la competence a de l'entretien
+     * a donner : le client garde alors l'eclat allume jusqu'au paquet d'arret.
+     *
+     * <p>A 0 % d'experience il vaut faux, et le client se contente des {@code ticks} du paquet —
+     * l'eclat de l'original, au tick pres.
+     */
+    private final boolean hold;
+
+    public MineDetectPacket(float range, boolean advanced, int ticks, boolean hold) {
         this.range = range;
         this.advanced = advanced;
         this.ticks = ticks;
+        this.hold = hold;
     }
 
     public static void encode(MineDetectPacket msg, FriendlyByteBuf buf) {
         buf.writeFloat(msg.range);
         buf.writeBoolean(msg.advanced);
         buf.writeVarInt(msg.ticks);
+        buf.writeBoolean(msg.hold);
     }
 
     public static MineDetectPacket decode(FriendlyByteBuf buf) {
-        return new MineDetectPacket(buf.readFloat(), buf.readBoolean(), buf.readVarInt());
+        return new MineDetectPacket(buf.readFloat(), buf.readBoolean(), buf.readVarInt(),
+                buf.readBoolean());
     }
 
     public static void handle(MineDetectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> MineDetectOverlay.begin(msg.range, msg.advanced, msg.ticks));
+        ctx.enqueueWork(() -> MineDetectOverlay.begin(msg.range, msg.advanced, msg.ticks, msg.hold));
         ctx.setPacketHandled(true);
     }
 }

@@ -63,19 +63,10 @@ public class MineDetectSkill extends Skill {
      *
      * <p>Demande du joueur le 26/10 : l'eclat ne doit plus etre seulement chronometre, il doit
      * pouvoir tenir tant que la reserve suit. Huit CP par tick font vingt secondes pour 160 :
-     * c'est le prix d'un balayage qui continue, et il se paie d'avance — voir {@link #extraTicks}.
+     * c'est le prix d'un balayage qui continue. Il se paie <b>tick par tick</b>, dans
+     * {@link #tick}, et non d'avance : le joueur doit pouvoir s'arreter au milieu.
      */
     public static final float HOLD_CP_PER_TICK = 8f;
-
-    /**
-     * L'allongement maximal, en ticks : RIEN a 0 % d'experience, soixante secondes a 100 %.
-     *
-     * <p>C'est la demande, au chiffre pres : a 0 % l'eclat est exactement celui d'avant, et
-     * l'allongement grandit avec la competence. A 100 % le plafond disparait : c'est alors la
-     * reserve seule qui decide, et l'eclat dure tant qu'il y a de quoi le payer.
-     */
-    public static final int HOLD_TICKS_MIN_EXP = 0;
-    public static final int HOLD_TICKS_MAX_EXP = 1200;
 
     /** La portee : 15 blocs au depart, 30 au maximum d'experience. */
     public static final float RANGE_MIN_EXP = 15f;
@@ -176,20 +167,30 @@ public class MineDetectSkill extends Skill {
     }
 
     /**
-     * Les ticks d'eclat que la reserve peut encore payer, bornes par la competence.
+     * Les joueurs dont l'eclat tient encore, et depuis combien de ticks.
      *
-     * <p>Fonction PURE : elle prend la reserve restante, donc elle se relit hors du jeu. A 0 %
-     * d'experience elle rend toujours zero — l'eclat reste celui d'avant, cent ticks —, et a
-     * 100 % elle rend tout ce que la reserve peut payer : la competence ne plafonne plus rien.
-     *
-     * @param remainingCp ce qui reste dans la reserve <b>apres</b> le paiement de l'eclat
+     * <p>C'est l'etat de l'entretien, et il vit chez le <b>serveur</b> seul : c'est lui qui paie,
+     * qui decide de la fin et qui l'annonce. Le client ne fait que dessiner ce qu'on lui dit —
+     * voir {@code MineDetectPacket} et {@code MineDetectStopPacket}.
      */
-    public int extraTicks(AbilityData data, float remainingCp) {
+    private static final java.util.Map<java.util.UUID, Integer> HOLDING =
+            new java.util.HashMap<>();
+
+    /**
+     * La duree maximale de l'ENTRETIEN, en ticks : rien a 0 % d'experience, soixante secondes a
+     * 100 %, ou le plafond disparait et la reserve decide seule.
+     *
+     * <p>Demande du joueur : l'eclat doit s'allonger avec la competence, mais rester identique a
+     * l'original tant qu'on ne l'a pas montee.
+     */
+    public static final int HOLD_TICKS_MIN_EXP = 0;
+    public static final int HOLD_TICKS_MAX_EXP = 1200;
+
+    /** Les ticks d'entretien que la competence autorise. Zero a 0 %, infini a 100 %. */
+    public int extensionTicks(AbilityData data) {
         float exp = data.getSkillExp(this);
-        int cap = exp >= 1f ? Integer.MAX_VALUE
-                : Math.round(lerp(HOLD_TICKS_MIN_EXP, HOLD_TICKS_MAX_EXP, exp));
-        int affordable = (int) Math.floor(remainingCp / HOLD_CP_PER_TICK);
-        return Math.max(0, Math.min(cap, affordable));
+        if (exp >= 1f) return Integer.MAX_VALUE;
+        return Math.round(lerp(HOLD_TICKS_MIN_EXP, HOLD_TICKS_MAX_EXP, exp));
     }
 
     /**
@@ -202,26 +203,83 @@ public class MineDetectSkill extends Skill {
      */
     @Override
     public void onActivate(Player player, AbilityData data) {
-        if (!data.perform(consumption(data), overload(data))) return;
+        // Un SECOND appui ETEINT l'eclat. Il tient par la reserve, donc il faut pouvoir l'arreter :
+        // le joueur ne pouvait plus, une fois tout paye d'un coup (« si je veux le desactiver
+        // pendant que je l'utilise, je peux juste pas »).
+        if (HOLDING.containsKey(player.getUUID())) {
+            stop(player);
+            return;
+        }
 
-        // L'ENTRETIEN, paye d'avance : les ticks que la reserve peut encore offrir, bornes par
-        // la competence (voir extraTicks). A 0 % il en reste zero, et l'eclat est celui d'avant.
-        int extra = extraTicks(data, (float) data.getControlPoint());
-        if (extra > 0) data.performForced(extra * HOLD_CP_PER_TICK, 0f);
-        int ticks = TIME + extra;
+        if (!data.perform(consumption(data), overload(data))) return;
 
         // L'aveuglement, sans ses particules : l'original laissait celles de la cecite, et le
         // joueur les a refusees — elles tourbillonnent autour de lui et se lisent par-dessus la
         // pierre qu'il est justement en train de regarder. Le temoin du HUD, lui, reste : c'est
-        // la seule chose qui dit que l'effet est encore la.
-        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, ticks, 0, false, false, true));
+        // la seule chose qui dit que l'effet est encore la. Pendant l'entretien, il est rafraichi
+        // par {@link #tick} — c'est la duree de l'eclat qui commande, pas un minuteur.
+        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, TIME, 0, false, false, true));
         data.addSkillExp(this, EXP_PER_CAST);
         data.setCooldown(this, cooldown(data));
+        HOLDING.put(player.getUUID(), 0);
 
         if (player instanceof ServerPlayer server) {
+            // `hold` : l'eclat peut durer au-dela des cent ticks, contre la reserve. A 0 %
+            // d'experience l'entretien vaut zero, et le client se contente donc des cent ticks —
+            // c'est l'eclat de l'original, au tick pres.
             AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
                     new MineDetectPacket(range(data),
-                            advanced(data, data.getCategoryLevel(getCategory())), ticks));
+                            advanced(data, data.getCategoryLevel(getCategory())), TIME,
+                            extensionTicks(data) > 0));
+        }
+    }
+
+    /**
+     * L'entretien, un tick a la fois : c'est ici que l'eclat paie sa duree.
+     *
+     * <p>Les cent premiers ticks sont deja payes par l'activation. Au-dela, chaque tick coute
+     * {@link #HOLD_CP_PER_TICK}, et l'eclat s'arrete des qu'il ne peut plus payer, qu'il atteint
+     * le plafond de la competence, que le porteur meurt, ou qu'un brouillage le coupe.
+     *
+     * <p>Appele par {@code AbilityEvents.onPlayerTick}. La carte vide fait sortir tout de suite :
+     * le cout d'un joueur qui n'a pas d'eclat en cours est une lecture de dictionnaire.
+     */
+    public void tick(ServerPlayer player, AbilityData data) {
+        if (HOLDING.isEmpty()) return;
+        Integer held = HOLDING.get(player.getUUID());
+        if (held == null) return;
+
+        if (!player.isAlive() || data.isInterfered()) {
+            stop(player);
+            return;
+        }
+
+        int next = held + 1;
+        if (next > TIME) {
+            boolean affordable = data.getControlPoint() >= HOLD_CP_PER_TICK;
+            if (next - TIME > extensionTicks(data) || !affordable) {
+                stop(player);
+                return;
+            }
+            data.performForced(HOLD_CP_PER_TICK, 0f);
+            // L'aveuglement suit l'eclat : rafraichi tant qu'il dure, il tombe avec lui.
+            player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 8, 0, false, false, true));
+        }
+        HOLDING.put(player.getUUID(), next);
+    }
+
+    /**
+     * Eteint l'eclat : l'entretien s'arrete, et le client le sait tout de suite.
+     *
+     * <p>La cecite est retiree ici : elle appartenait a l'eclat, et la laisser courir apres lui
+     * ferait payer au joueur une seconde de plus qu'il n'a demande.
+     */
+    public void stop(Player player) {
+        if (HOLDING.remove(player.getUUID()) == null) return;
+        player.removeEffect(MobEffects.BLINDNESS);
+        if (player instanceof ServerPlayer server) {
+            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+                    new cn.academy.ability.network.MineDetectStopPacket());
         }
     }
 }

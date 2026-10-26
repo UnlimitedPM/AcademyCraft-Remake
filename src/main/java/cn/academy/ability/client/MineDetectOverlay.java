@@ -40,6 +40,18 @@ public final class MineDetectOverlay {
     private static boolean advanced;
     private static int scanCooldown;
 
+    /** L'eclat tient-il par la reserve ? Alors c'est le paquet d'arret qui l'eteint. */
+    private static boolean holding;
+
+    /**
+     * Et au plus tard, celui-la : trois minutes.
+     *
+     * <p>Un paquet d'arret perdu (deconnexion, changement de dimension) laisserait sinon des
+     * minerais allumes pour toujours. Le serveur, lui, s'arrete bien avant : c'est une borne de
+     * securite, pas une duree.
+     */
+    private static int holdEnd = -1;
+
     private static List<Ore> ores = List.of();
 
     private MineDetectOverlay() {}
@@ -51,9 +63,12 @@ public final class MineDetectOverlay {
      * balayage est demande tout de suite, sans attendre la periode : un eclat dont les
      * premiers minerais n'apparaitraient que cinq ticks plus tard aurait l'air en retard.
      */
-    public static void begin(float range, boolean advanced, int ticks) {
+    public static void begin(float range, boolean advanced, int ticks, boolean hold) {
         LocalPlayer player = Minecraft.getInstance().player;
-        endTick = (player == null ? 0 : player.tickCount) + ticks;
+        int now = player == null ? 0 : player.tickCount;
+        endTick = now + ticks;
+        holding = hold;
+        holdEnd = now + 3 * 60 * 20;
         MineDetectOverlay.range = MineDetectVisuals.capRange(range);
         MineDetectOverlay.advanced = advanced;
         scanCooldown = 0;
@@ -66,7 +81,22 @@ public final class MineDetectOverlay {
 
     /** Vrai tant que l'eclat dure. */
     public static boolean active(LocalPlayer player) {
-        return player != null && player.tickCount < endTick;
+        if (player == null) return false;
+        if (player.tickCount < endTick) return true;
+        return holding && player.tickCount < holdEnd;
+    }
+
+    /**
+     * L'eclat s'arrete : le serveur ne le paie plus.
+     *
+     * <p>Appele par {@code MineDetectStopPacket}, et c'est la seule facon de l'eteindre — le
+     * client ne decide pas, puisqu'il ne sait pas ce qui reste dans la reserve.
+     */
+    public static void stop() {
+        holding = false;
+        endTick = -1;
+        holdEnd = -1;
+        ores = List.of();
     }
 
     public static double range() {

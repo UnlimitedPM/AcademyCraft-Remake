@@ -51,6 +51,20 @@ public class AbilityEvents {
         }
     }
 
+    /**
+     * L'eclat de la detection s'oublie a la deconnexion.
+     *
+     * <p>L'entretien vit dans une table a part, cote serveur (voir {@code MineDetectSkill.tick}) :
+     * sans cette ligne, un joueur qui se deconnecte au milieu d'un eclat le retrouverait en
+     * revenant, et la reserve se remettrait a payer toute seule.
+     */
+    @SubscribeEvent
+    public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            cn.academy.ability.electromaster.ElectromasterCategory.MINE_DETECT.stop(player);
+        }
+    }
+
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -98,6 +112,11 @@ public class AbilityEvents {
             // Le controle est fait APRES le tick des maintiens, donc le franchissement de CE tick
             // les emporte dans la foulee, sans attendre une image de plus.
             tickSustained(player, data);
+
+            // La detection de minerais tient par la reserve : c'est ici qu'elle paie son
+            // entretien, un tick a la fois, et qu'elle s'eteint quand elle ne peut plus. Voir
+            // MineDetectSkill.tick, qui sort tout de suite pour qui n'a pas d'eclat en cours.
+            cn.academy.ability.electromaster.ElectromasterCategory.MINE_DETECT.tick(player, data);
             if (data.isOverloadRecovering()) {
                 endAllHolds(player, data);
             }
