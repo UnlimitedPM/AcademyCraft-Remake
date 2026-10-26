@@ -38,6 +38,15 @@ public final class ModSounds {
      */
     private static final List<RegistryObject<SoundEvent>> ALL = new ArrayList<>();
 
+    /**
+     * Les evenements que l'original annoncait sans jamais les jouer.
+     *
+     * <p>Son {@code sounds.json} les declare, son code ne les appelle nulle part — et son
+     * appel de {@code terminal.confirm} est meme commente sur place. Le port les garde pour
+     * que la bibliotheque reste celle de l'original, et deux tests la figent :
+     * {@code SoundAssetsTest} cote fichiers, et le GameTest des sons cote registre. Si un jour
+     * on veut les entendre, c'est ici qu'il faudra decider OU — un ecart assume.
+     */
     public static final RegistryObject<SoundEvent> ABILITY_DENY = event("ability.deny");
     public static final RegistryObject<SoundEvent> EM_ARC_WEAK = event("em.arc_weak");
     public static final RegistryObject<SoundEvent> EM_ARC_STRONG = event("em.arc_strong");
