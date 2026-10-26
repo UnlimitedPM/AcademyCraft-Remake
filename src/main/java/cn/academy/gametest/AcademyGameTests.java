@@ -5558,6 +5558,34 @@ public final class AcademyGameTests {
         assertTrue(helper, Math.abs(beforeLava - data.getControlPoint()) < 0.001d,
                 "et elle ne coute rien du tout : " + data.getControlPoint());
 
+        // Le coup du TELEPORTEUR, lui, PASSE : une teleportation n'a pas de vecteur a manipuler,
+        // il n'y a donc rien a renvoyer. L'original le retournait comme un coup de poing ; le
+        // joueur a demande le contraire le 26/10. Voir TeleportCrits.isStriking.
+        //
+        // Le faux joueur ne peut pas perdre de vie (FakePlayer.isInvulnerableTo repond toujours
+        // vrai, donc aucun `hurt` n'arrive jusqu'aux crochets) : les deux evenements du jeu sont
+        // donc fabriques a la main, dans le corps qui pose la marque — c'est exactement ce que
+        // fait TeleportCrits.strike autour de son `hurt`.
+        double beforeStrike = data.getControlPoint();
+        cn.academy.ability.teleporter.TeleportCrits.asTeleportStrike(() -> {
+            var strike = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                    player.damageSources().indirectMagic(player, player), 6f);
+            cn.academy.ability.AbilityEvents.onLivingAttack(strike);
+            assertFalse(helper, strike.isCanceled(),
+                    "une teleportation n'a pas de vecteur : la veille la laisse passer");
+
+            var strikeHurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                    player.damageSources().indirectMagic(player, player), 6f);
+            cn.academy.ability.AbilityEvents.onLivingHurt(strikeHurt);
+            assertFalse(helper, strikeHurt.isCanceled(), "et ses degats ne sont pas annules");
+            assertClose(helper, 6.0d, strikeHurt.getAmount(),
+                    "la veille n'en absorbe rien, et n'en renvoie rien");
+        });
+        assertFalse(helper, cn.academy.ability.teleporter.TeleportCrits.isStriking(),
+                "la marque du coup est retiree en sortant");
+        assertTrue(helper, Math.abs(beforeStrike - data.getControlPoint()) < 0.001d,
+                "et elle ne coute rien a la reserve : " + data.getControlPoint());
+
         // Hors du maintien, plus rien : les degats passent entiers, et rien n'est annule.
         data.cancelCharge(reflection);
         var after = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,

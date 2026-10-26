@@ -3,6 +3,7 @@ package cn.academy.ability.vecmanip;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
+import cn.academy.ability.teleporter.TeleportCrits;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -363,6 +364,10 @@ public class VecReflectionSkill extends Skill {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return amount;
 
+        // Une teleportation n'a pas de vecteur : le coup du teleporteur n'est ni absorbe ni
+        // renvoye. Voir {@code TeleportCrits.isStriking()}.
+        if (TeleportCrits.isStriking()) return amount;
+
         // Meme regle que sur `onAttacked`, en second filet : tant que la veille est tenue, rien ne
         // passe. Le renvoi d'un renvoi ne se paie pas et ne se renvoie pas — c'est le garde-fou de
         // l'original, celui qui evite la boucle entre deux reflets ou avec les epines d'un
@@ -393,6 +398,11 @@ public class VecReflectionSkill extends Skill {
     public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
         float amount = event.getAmount();
         if (amount > BIG_HIT) return false;
+
+        // Meme regle ici, et c'est le crochet qui compte : c'est lui qui annule le coup AVANT
+        // qu'il ne soit porte. Une teleportation n'a pas de vecteur a manipuler, elle passe donc
+        // la veille sans etre renvoyee. Voir {@code TeleportCrits.isStriking()}.
+        if (TeleportCrits.isStriking()) return false;
 
         // Le renvoi d'un renvoi ne se renvoie pas, mais il ne passe pas non plus : c'est le
         // garde-fou de l'original, celui qui evite la boucle entre deux reflets ou avec les epines

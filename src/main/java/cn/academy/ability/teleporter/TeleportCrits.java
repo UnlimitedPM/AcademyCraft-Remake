@@ -36,6 +36,42 @@ public final class TeleportCrits {
      */
     public static final float[] RATES = {1.3f, 1.6f, 2.6f};
 
+    /**
+     * Vrai pendant le {@code hurt} d'un coup de teleporteur, et seulement pendant lui.
+     *
+     * <p>Une teleportation n'a <b>pas de vecteur</b> a manipuler : elle ne peut donc ni etre
+     * deviee ni renvoyee. La <b>reflexion de vecteur</b> absorbe tout le reste, et c'est elle
+     * qu'on doit laisser passer ici — voir {@code VecReflectionSkill.onAttacked} et
+     * {@code onDamaged}, qui lisent cette marque a l'interieur du meme {@code hurt}, donc dans
+     * le meme fil que ce {@code strike}. L'original, lui, la renvoyait comme un coup de poing :
+     * le joueur a demande le contraire, et sa raison tient debout.
+     *
+     * <p>Un drapeau suffit, et c'est voulu : la frappe est <b>serveur</b>, elle ne se fait que
+     * dans {@code strike}, et le {@code finally} la retire meme si le coup leve.
+     */
+    private static boolean striking;
+
+    /** Le coup de teleporteur en cours : voir {@link #striking}. */
+    public static boolean isStriking() {
+        return striking;
+    }
+
+    /**
+     * Execute un corps comme un coup de <b>teleporteur</b>, la marque posee.
+     *
+     * <p>C'est le seul endroit qui pose {@link #striking}, et c'est aussi ce qui rend la regle
+     * verifiable : un test fabrique les evenements du jeu (le faux joueur du framework ne peut
+     * pas perdre de vie, donc aucun {@code hurt} n'y passe) et les fait tourner dans ce corps.
+     */
+    public static void asTeleportStrike(Runnable body) {
+        striking = true;
+        try {
+            body.run();
+        } finally {
+            striking = false;
+        }
+    }
+
     private TeleportCrits() {}
 
     /**
@@ -117,7 +153,9 @@ public final class TeleportCrits {
             cn.academy.ability.network.TeleportCritPacket.send(target);
         }
 
-        target.hurt(Skill.skillDamage(player), damage(base, tier));
+        // La marque du coup de teleporteur : la reflexion de vecteur la lit pour laisser passer
+        // ce coup-la (voir {@link #striking}).
+        asTeleportStrike(() -> target.hurt(Skill.skillDamage(player), damage(base, tier)));
     }
 
     /** L'experience d'une competence, ou -1 pour « pas apprise » : la convention de l'original. */
