@@ -36,8 +36,15 @@ import net.minecraftforge.network.PacketDistributor;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID)
 public class TutorialTracker {
 
-    /** La periode du balayage. L'original en avait choisi trois ticks. */
-    private static final int SCAN_PERIOD = 3;
+    /**
+     * La periode du balayage, en ticks. L'original en avait choisi trois.
+     *
+     * <p>Dix depuis le 26/10, et c'est une economie pure : le balayage relit l'inventaire du
+     * joueur et ses criteres, sans rien qui presse — un tutoriel qui s'ouvre un demi-tick plus
+     * tard ne se voit pas. A trois ticks, c'etait vingt inspections par seconde et par joueur ;
+     * a dix, six.
+     */
+    private static final int SCAN_PERIOD = 10;
 
     @SubscribeEvent
     public static void onRegisterCapabilities(RegisterCapabilitiesEvent event) {
