@@ -5393,6 +5393,14 @@ public final class AcademyGameTests {
         assertTrue(helper, Math.abs(5.965f - hurt.getAmount()) < 0.01f,
                 "10 points doivent tomber a 5,965 : la deviation epargne 40 %");
 
+        // Une teleportation n'a pas de vecteur a devier : le coup du teleporteur passe entier.
+        // C'est la meme source que la reflexion, voir TeleportCrits.source.
+        var teleportHurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                cn.academy.ability.teleporter.TeleportCrits.source(player), 6f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(teleportHurt);
+        assertClose(helper, 6.0d, teleportHurt.getAmount(),
+                "la deviation n'amortit rien d'une teleportation");
+
         // Et hors du maintien, elle ne fait plus rien du tout.
         data.cancelCharge(deviation);
         var after = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
@@ -5560,29 +5568,25 @@ public final class AcademyGameTests {
 
         // Le coup du TELEPORTEUR, lui, PASSE : une teleportation n'a pas de vecteur a manipuler,
         // il n'y a donc rien a renvoyer. L'original le retournait comme un coup de poing ; le
-        // joueur a demande le contraire le 26/10. Voir TeleportCrits.isStriking.
+        // joueur a demande le contraire le 26/10. Voir TeleportCrits.source.
         //
         // Le faux joueur ne peut pas perdre de vie (FakePlayer.isInvulnerableTo repond toujours
         // vrai, donc aucun `hurt` n'arrive jusqu'aux crochets) : les deux evenements du jeu sont
-        // donc fabriques a la main, dans le corps qui pose la marque — c'est exactement ce que
-        // fait TeleportCrits.strike autour de son `hurt`.
+        // donc fabriques a la main, avec exactement la source qu'emploie `strike`.
+        var teleport = cn.academy.ability.teleporter.TeleportCrits.source(player);
         double beforeStrike = data.getControlPoint();
-        cn.academy.ability.teleporter.TeleportCrits.asTeleportStrike(() -> {
-            var strike = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
-                    player.damageSources().indirectMagic(player, player), 6f);
-            cn.academy.ability.AbilityEvents.onLivingAttack(strike);
-            assertFalse(helper, strike.isCanceled(),
-                    "une teleportation n'a pas de vecteur : la veille la laisse passer");
+        var strike = new net.minecraftforge.event.entity.living.LivingAttackEvent(player,
+                teleport, 6f);
+        cn.academy.ability.AbilityEvents.onLivingAttack(strike);
+        assertFalse(helper, strike.isCanceled(),
+                "une teleportation n'a pas de vecteur : la veille la laisse passer");
 
-            var strikeHurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
-                    player.damageSources().indirectMagic(player, player), 6f);
-            cn.academy.ability.AbilityEvents.onLivingHurt(strikeHurt);
-            assertFalse(helper, strikeHurt.isCanceled(), "et ses degats ne sont pas annules");
-            assertClose(helper, 6.0d, strikeHurt.getAmount(),
-                    "la veille n'en absorbe rien, et n'en renvoie rien");
-        });
-        assertFalse(helper, cn.academy.ability.teleporter.TeleportCrits.isStriking(),
-                "la marque du coup est retiree en sortant");
+        var strikeHurt = new net.minecraftforge.event.entity.living.LivingHurtEvent(player,
+                teleport, 6f);
+        cn.academy.ability.AbilityEvents.onLivingHurt(strikeHurt);
+        assertFalse(helper, strikeHurt.isCanceled(), "et ses degats ne sont pas annules");
+        assertClose(helper, 6.0d, strikeHurt.getAmount(),
+                "la veille n'en absorbe rien, et n'en renvoie rien");
         assertTrue(helper, Math.abs(beforeStrike - data.getControlPoint()) < 0.001d,
                 "et elle ne coute rien a la reserve : " + data.getControlPoint());
 

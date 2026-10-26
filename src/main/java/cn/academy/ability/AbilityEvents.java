@@ -324,9 +324,10 @@ public class AbilityEvents {
      *
      * <p>C'est le {@code canAttackPlayer} de l'original, et il se lit au meme endroit que chez
      * lui — au PREMIER crochet de {@code LivingEntity.hurt} — donc un coup refuse ne laisse ni
-     * degats, ni recul, ni rouge. Le port n'a qu'un type de source pour ses competences
-     * ({@link Skill#skillDamage}, de l'{@code indirect_magic} avec le joueur pour auteur), c'est
-     * donc elle qui les reconnait : le corps a corps du jeu, lui, reste intact.
+     * degats, ni recul, ni rouge. Le port a deux types de source pour ses competences
+     * ({@link Skill#skillDamage}, de l'{@code indirect_magic} avec le joueur pour auteur, et le
+     * type propre aux teleportations de {@code TeleportCrits#source}), c'est donc eux qui les
+     * reconnaissent : le corps a corps du jeu, lui, reste intact.
      */
     @SubscribeEvent
     public static void onSkillHitsPlayer(LivingAttackEvent event) {
@@ -335,7 +336,11 @@ public class AbilityEvents {
 
         var source = event.getSource();
         if (!(source.getEntity() instanceof Player)) return;
-        if (!source.is(net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC)) return;
+        // Le port a deux sources de competence : l'{@code indirect_magic} ordinaire, et le type
+        // propre aux teleportations — ne pour son message de mort et pour que les veilles de
+        // vecmanip le reconnaissent. Voir {@code TeleportCrits.source}.
+        if (!source.is(net.minecraft.world.damagesource.DamageTypes.INDIRECT_MAGIC)
+                && !source.is(cn.academy.ability.teleporter.TeleportCrits.TYPE)) return;
 
         event.setCanceled(true);
     }

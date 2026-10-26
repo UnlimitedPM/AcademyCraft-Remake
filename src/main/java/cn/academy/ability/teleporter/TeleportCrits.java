@@ -2,7 +2,13 @@ package cn.academy.ability.teleporter;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
@@ -37,39 +43,35 @@ public final class TeleportCrits {
     public static final float[] RATES = {1.3f, 1.6f, 2.6f};
 
     /**
-     * Vrai pendant le {@code hurt} d'un coup de teleporteur, et seulement pendant lui.
-     *
-     * <p>Une teleportation n'a <b>pas de vecteur</b> a manipuler : elle ne peut donc ni etre
-     * deviee ni renvoyee. La <b>reflexion de vecteur</b> absorbe tout le reste, et c'est elle
-     * qu'on doit laisser passer ici — voir {@code VecReflectionSkill.onAttacked} et
-     * {@code onDamaged}, qui lisent cette marque a l'interieur du meme {@code hurt}, donc dans
-     * le meme fil que ce {@code strike}. L'original, lui, la renvoyait comme un coup de poing :
-     * le joueur a demande le contraire, et sa raison tient debout.
-     *
-     * <p>Un drapeau suffit, et c'est voulu : la frappe est <b>serveur</b>, elle ne se fait que
-     * dans {@code strike}, et le {@code finally} la retire meme si le coup leve.
+     * Le type de degats des coups de teleporteur : voir
+     * {@code data/academy/damage_type/teleport.json}, qui porte aussi le message de mort.
      */
-    private static boolean striking;
-
-    /** Le coup de teleporteur en cours : voir {@link #striking}. */
-    public static boolean isStriking() {
-        return striking;
-    }
+    public static final ResourceKey<DamageType> TYPE = ResourceKey.create(Registries.DAMAGE_TYPE,
+            ResourceLocation.fromNamespaceAndPath("academy", "teleport"));
 
     /**
-     * Execute un corps comme un coup de <b>teleporteur</b>, la marque posee.
+     * La source d'un coup de teleporteur.
      *
-     * <p>C'est le seul endroit qui pose {@link #striking}, et c'est aussi ce qui rend la regle
-     * verifiable : un test fabrique les evenements du jeu (le faux joueur du framework ne peut
-     * pas perdre de vie, donc aucun {@code hurt} n'y passe) et les fait tourner dans ce corps.
+     * <p>Le joueur deux fois — auteur et cause directe — comme {@link Skill#skillDamage} : le jeu
+     * n'accorde butin, experience et niveau de Butin qu'a une bete tuee par un joueur, et cela se
+     * lit sur {@code source.getEntity()}. Ce qui change, c'est le <b>type</b>.
+     *
+     * <p>Il en fallait un a la teleportation, pour deux raisons. Le <b>message de mort</b>,
+     * d'abord : « X a ete frappe par la teleportation de Y » se lit mieux que le « au moyen de
+     * magie » de {@code indirectMagic}. La <b>reconnaissance</b> ensuite : une teleportation n'a
+     * pas de vecteur a manipuler, et il faut donc pouvoir la distinguer d'un coup de poing pour
+     * que la reflexion et la deviation de vecteur la laissent passer — voir
+     * {@code VecReflectionSkill} et {@code VecDeviationSkill}.
+     *
+     * <p>Il porte la meme propriete que {@code indirectMagic} : l'armure ne l'arrete pas (la
+     * balise {@code minecraft:bypasses_armor}, posee dans
+     * {@code data/minecraft/tags/damage_type/bypasses_armor.json}). C'est
+     * l'{@code attackIgnoreArmor} de l'original.
      */
-    public static void asTeleportStrike(Runnable body) {
-        striking = true;
-        try {
-            body.run();
-        } finally {
-            striking = false;
-        }
+    public static DamageSource source(Player player) {
+        Holder<DamageType> type = player.level().registryAccess()
+                .registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(TYPE);
+        return new DamageSource(type, player, player);
     }
 
     private TeleportCrits() {}
@@ -129,8 +131,10 @@ public final class TeleportCrits {
     /**
      * Frappe une cible avec les critiques des teleportations (portage de
      * {@code TPSkillHelper.attack} et {@code attackIgnoreArmor}, qui ne differaient que par le
-     * type de degats — {@code indirectMagic}, celui qui traverse l'armure, ici comme dans le
-     * reste du port).
+     * type de degats).
+     *
+     * <p>Le coup part avec {@link #source} : un type propre a la teleportation, qui traverse
+     * l'armure et que les deux veilles de vecmanip laissent passer.
      */
     public static void strike(Player player, AbilityData data, LivingEntity target, float base) {
         float dimFolding = expOf(data, TeleporterCategory.DIM_FOLDING_THEOREM);
@@ -153,9 +157,9 @@ public final class TeleportCrits {
             cn.academy.ability.network.TeleportCritPacket.send(target);
         }
 
-        // La marque du coup de teleporteur : la reflexion de vecteur la lit pour laisser passer
-        // ce coup-la (voir {@link #striking}).
-        asTeleportStrike(() -> target.hurt(Skill.skillDamage(player), damage(base, tier)));
+        // La source du coup : le type de la teleportation, que la reflexion et la deviation de
+        // vecteur reconnaissent pour laisser passer (voir {@link #source}).
+        target.hurt(source(player), damage(base, tier));
     }
 
     /** L'experience d'une competence, ou -1 pour « pas apprise » : la convention de l'original. */
