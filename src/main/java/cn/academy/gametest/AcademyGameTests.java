@@ -3740,33 +3740,40 @@ public final class AcademyGameTests {
         assertTrue(helper, cow.getHealth() < before,
                 "et le tir a porte : la vache perd des points");
 
-        // 3. LE BLOC : meme tir, mais un faisceau trente pour cent plus grand (demande du 26/10).
+        // 3. LE BLOC EN MAIN NE TIRE PLUS : demande du joueur du 26/10 — « avec un bloc en main on
+        // peut lancer le railgun, sauf que je ne veux plus que ce soit le cas. Je veux pouvoir lancer
+        // un bloc uniquement via l'utilisation du mag manip. » Il ne part donc d'aucune poche, ni
+        // principale ni secondaire.
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK, 2));
-        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.BLOCK,
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.NONE,
                 cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
-                "un bloc de fer est une munition a part : celle qui agrandit le faisceau");
-        assertTrue(helper,
-                cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE > 1.25
-                        && cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE < 1.35,
-                "et c'est bien trente pour cent : "
-                        + cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE);
-        railgun.onActivateCharged(player, data, 0);
-        assertValue(helper, 1, player.getMainHandItem().getCount(), "le bloc, lui aussi, est consomme");
+                "un bloc de fer en main n'est plus une munition");
+        assertFalse(helper, railgun.canStart(player, data),
+                "et la competence refuse de partir : rien ne sera facture");
+        assertValue(helper, 2, player.getMainHandItem().getCount(),
+                "le bloc reste donc dans la main");
 
-        // 3 bis. LE BLOC EN MAIN SECONDAIRE : c'est une munition comme une autre, et c'est la main
-        // qui l'a porte qui paie. Le joueur l'a signale le 26/10 : son bloc « sortait de
-        // l'inventaire » et n'etait ni consomme ni annonce — il n'etait simplement jamais lu.
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,
                 new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK, 2));
-        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.BLOCK,
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.NONE,
                 cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
-                "un bloc en main secondaire est une munition");
-        assertTrue(helper, railgun.canStart(player, data), "et le tir part avec lui");
+                "ni en main secondaire");
+        assertValue(helper, 2, player.getOffhandItem().getCount(),
+                "qui n'en perd pas un exemplaire pour autant");
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, ItemStack.EMPTY);
+
+        // Et le LINGOT, lui, se tire toujours — d'une main ou de l'autre.
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,
+                new ItemStack(net.minecraft.world.item.Items.COPPER_INGOT, 2));
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT,
+                cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
+                "un lingot de cuivre en main secondaire reste une munition");
         railgun.onActivateCharged(player, data, 0);
         assertValue(helper, 1, player.getOffhandItem().getCount(),
-                "c'est la main secondaire qui paie : " + player.getOffhandItem().getCount());
+                "et c'est la main qui l'a porte qui paie : "
+                        + player.getOffhandItem().getCount());
         player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, ItemStack.EMPTY);
 
         // 4. LE BLOC ARRACHE PAR MAG_MANIP : il n'est pas dans la main, et il tire quand meme — et
@@ -3790,20 +3797,21 @@ public final class AcademyGameTests {
                 "le tir consomme le bloc arrache : il ne retombe pas");
 
         // 2 bis. LE CUIVRE, depuis que le joueur l'a demande : « il faut aussi rajouter le cuivre
-        // pour le railgun ». Le lingot, le bloc, et les variantes travaillees avec eux ; le cuivre
-        // brut et le minerai, non — ce n'est pas du metal travaille, comme pour l'aimantation.
+        // pour le railgun ». Son LINGOT seulement : les blocs de cuivre, tailles compris, sont
+        // sortis de la liste le 26/10 avec tous les autres blocs — un bloc ne se tire plus que
+        // par l'aimantation. Le cuivre brut et le minerai restent ecartes, comme avant.
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(net.minecraft.world.item.Items.COPPER_INGOT));
         assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
                 "le lingot de cuivre est une munition admise");
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(net.minecraft.world.item.Items.COPPER_BLOCK));
-        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
-                "le bloc de cuivre aussi");
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "le bloc de cuivre, non : un bloc de poche ne tire plus");
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(net.minecraft.world.item.Items.CUT_COPPER_STAIRS));
-        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
-                "et une variante taillee avec lui : c'est la regle de nom de l'aimantation");
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),
+                "ni une variante taillee : ce sont des blocs eux aussi");
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(net.minecraft.world.item.Items.RAW_COPPER));
         assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.hasAmmo(player),

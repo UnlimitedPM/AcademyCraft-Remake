@@ -185,29 +185,21 @@ public class RailgunSkill extends Skill {
     }
 
     /**
-     * Ce que le tir admet comme munition dans la main : du fer, et — depuis que le joueur l'a
-     * demande — du cuivre.
+     * Ce que le tir admet comme munition dans la main : le LINGOT de fer, et celui de cuivre.
      *
-     * <p>{@code acceptedItems} de l'original valait le lingot et le bloc de fer, et rien d'autre :
-     * pas de fer en poudre, pas de minerai. C'est le « ferraillage » de la competence, ce qu'on a
-     * sous la main quand on n'a pas de piece. Le joueur : « il faut aussi rajouter le cuivre pour le
-     * railgun » — le cuivre est un metal de la meme famille, et il se tire comme le fer : le lingot,
-     * et tous les blocs de cuivre <b>travaille</b>, variantes comprises (taille, escalier, dalle,
-     * oxyde, cire).
+     * <p>L'original acceptait aussi le <b>bloc</b> de fer. Le joueur l'a retire le 26/10 : « de
+     * base, avec un bloc en main on peut lancer le railgun, sauf que je ne veux plus que ce soit le
+     * cas. Je veux pouvoir lancer un bloc uniquement via l'utilisation du mag manip. » Un bloc ne
+     * se tire donc plus depuis une poche — sa place est dans l'aimantation, qui l'arrache du monde
+     * et le paie (voir {@code Ammo.CARRIED}). Les blocs de cuivre travaille tombent avec lui, pour
+     * la meme raison : ce sont des blocs.
      *
-     * <p>Le cuivre <b>non travaille</b> est ecarte, exactement comme pour l'aimantation : ni le
-     * minerai, ni le cuivre brut. Et la reconnaissance du cuivre travaille est celle de
-     * {@code MetalTargets}, partagee avec l'aimantation — les deux competences ne peuvent donc pas
-     * diverger sur ce qu'est « du cuivre ».
+     * <p>Le cuivre reste admis en lingot, a la demande du joueur : il est de la meme famille que le
+     * fer, et se tire pareil. Le cuivre <b>brut</b> et le minerai restent ecartes, comme avant.
      */
     public static boolean isAccepted(net.minecraft.world.item.ItemStack stack) {
-        if (stack.is(net.minecraft.world.item.Items.IRON_INGOT)
-                || stack.is(net.minecraft.world.item.Items.IRON_BLOCK)
-                || stack.is(net.minecraft.world.item.Items.COPPER_INGOT)) {
-            return true;
-        }
-        return stack.getItem() instanceof net.minecraft.world.item.BlockItem item
-                && MetalTargets.isWorkedCopper(item.getBlock());
+        return stack.is(net.minecraft.world.item.Items.IRON_INGOT)
+                || stack.is(net.minecraft.world.item.Items.COPPER_INGOT);
     }
 
     /**
@@ -236,18 +228,21 @@ public class RailgunSkill extends Skill {
     public enum Ammo {
         /** Une piece lancee et retombee : le tir du rituel. */
         COIN,
-        /** Un lingot de la main : le tir de base. */
+        /** Un LINGOT de la main : le tir de base. */
         INGOT,
-        /** Un BLOC de la main : le meme tir, d'un faisceau trente pour cent plus grand. */
-        BLOCK,
-        /** Le bloc arrache par mag_manip : le tir combine, et le bloc y passe. */
+        /**
+         * Le bloc arrache par mag_manip : le tir combine, et le bloc y passe.
+         *
+         * <p>C'est la SEULE facon de tirer un bloc — un bloc dans une main n'est plus une munition
+         * (voir {@link #isAccepted}), et c'est le joueur qui l'a demande.
+         */
         CARRIED,
         /** Rien a tirer : le coup ne part pas, et rien n'est facture. */
         NONE;
 
         /** Un bloc donne-t-il un faisceau plus grand ? C'est la demande du joueur. */
         public boolean isBlock() {
-            return this == BLOCK || this == CARRIED;
+            return this == CARRIED;
         }
     }
 
@@ -269,17 +264,11 @@ public class RailgunSkill extends Skill {
     public static Ammo ammo(Player player, AbilityData data) {
         if (cn.academy.entity.EntityCoinThrowing.ready(player) != null) return Ammo.COIN;
 
-        // Les DEUX mains : un bloc dans la main secondaire est une munition comme une autre, et
-        // c'est meme la place naturelle quand la main principale tient autre chose. Le joueur l'a
-        // signale le 26/10 : son bloc « sortait de l'inventaire » mais n'etait ni consomme ni
-        // annonce — il n'etait simplement pas lu.
-        net.minecraft.world.item.ItemStack main = player.getMainHandItem();
-        if (isAccepted(main)) return main.getItem() instanceof net.minecraft.world.item.BlockItem
-                ? Ammo.BLOCK : Ammo.INGOT;
-
-        net.minecraft.world.item.ItemStack off = player.getOffhandItem();
-        if (isAccepted(off)) return off.getItem() instanceof net.minecraft.world.item.BlockItem
-                ? Ammo.BLOCK : Ammo.INGOT;
+        // Les deux mains, et rien d'autre qu'un LINGOT : un bloc n'est plus une munition de poche
+        // (voir {@link #isAccepted}), il ne s'en tire que par l'aimantation.
+        if (isAccepted(player.getMainHandItem()) || isAccepted(player.getOffhandItem())) {
+            return Ammo.INGOT;
+        }
 
         return carriedBlock(player, data) != null ? Ammo.CARRIED : Ammo.NONE;
     }
@@ -384,32 +373,23 @@ public class RailgunSkill extends Skill {
      * n'est rendu : c'est le prix du tir, en plus de ses CP et de son surcout.
      */
     private static void consumeAmmo(Player player, AbilityData data, Ammo ammo) {
-        // LE CREATIF NE PAIE RIEN, et c'est la regle de l'original pour la main. Le bloc arrache
-        // la suit desormais aussi — avant, il disparaissait meme en creatif, et le joueur pouvait
-        // croire que la main, elle, ne payait pas : c'est l'incoherence qu'il a signalee.
-        boolean free = player.getAbilities().instabuild;
-
         switch (ammo) {
             case COIN -> {
                 cn.academy.entity.EntityCoinThrowing coin =
                         cn.academy.entity.EntityCoinThrowing.ready(player);
                 if (coin != null) coin.consume();
             }
-            case INGOT, BLOCK -> {
+            case INGOT -> {
+                // Le creatif ne paie rien : c'est la regle de l'original pour la main.
                 net.minecraft.world.item.ItemStack paying = payingStack(player);
-                if (!free && isAccepted(paying)) paying.shrink(1);
+                if (!player.getAbilities().instabuild && isAccepted(paying)) paying.shrink(1);
             }
             case CARRIED -> {
-                // Le bloc arrache y PASSE, en survie : il ne retombe pas, il ne se repose pas, il
-                // est consomme par le tir. En creatif il est simplement lache, pour ne rien voler
-                // a un joueur qui construit.
+                // Le bloc arrache y PASSE, TOUJOURS : il est le prix du tir, et le joueur l'a
+                // redemande le 26/10 — « ça ne supprime pas le bloc qu'on tient ». Le creatif ne
+                // le sauve donc plus : ce bloc-la ne vient pas d'une poche, il vient du monde.
                 cn.academy.entity.EntityMagManipBlock block = carriedBlock(player, data);
-                if (block == null) return;
-                if (free) {
-                    block.release();
-                } else {
-                    block.discard();
-                }
+                if (block != null) block.discard();
             }
             case NONE -> { }
         }
