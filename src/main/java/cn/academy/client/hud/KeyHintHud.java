@@ -227,17 +227,21 @@ public final class KeyHintHud {
             remaining = KeyHintVisuals.cooldownFraction(data.getCooldown(skill), total);
         }
 
-        // L'ARMEMENT, ou la PIECE EN L'AIR : les deux fenetres du railgun, et l'original les
-        // montrait de la meme couleur — l'orange de la preparation. Le joueur du 26/10 : « si je
-        // lance une piece en l'air, la competence du railgun brille en orange ».
+        // L'ARMEMENT, la PIECE EN L'AIR, et la FENETRE : les trois temps du railgun, et l'original
+        // les montrait de deux couleurs — l'orange de la preparation, puis le bleu clair de
+        // l'execution. Le joueur du 26/10 : « si je lance une piece en l'air, la competence du
+        // railgun brille en orange », et « vers la fin de l'animation [...] la couleur orange passe
+        // au bleu clair pour indiquer que c'est le bon moment pour taper la piece ».
+        net.minecraft.client.player.LocalPlayer me =
+                net.minecraft.client.Minecraft.getInstance().player;
+        boolean railgun = skill == cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN;
         boolean armed = cn.academy.ability.client.AbilityClientEvents.armingTicks(slot) > 0
-                || (skill == cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN
-                        && cn.academy.ability.electromaster.RailgunSkill.coinInFlight(
-                                net.minecraft.client.Minecraft.getInstance().player));
+                || (railgun && cn.academy.ability.electromaster.RailgunSkill.coinInFlight(me));
+        boolean ready = railgun && cn.academy.ability.electromaster.RailgunSkill.coinReady(me);
 
         drawRow(graphics, AbilityKeyBindings.abilityKey(slot),
                 skill == null ? null : skill.getHintIcon(),
-                KeyHintVisuals.stateOf(skill, data, armed),
+                KeyHintVisuals.stateOf(skill, data, armed, ready),
                 remaining, y, usable, wave, fade);
     }
 

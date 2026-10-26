@@ -246,7 +246,21 @@ public final class KeyHintVisuals {
      * l'original colorait ainsi sans ouvrir de contexte).
      */
     public static State stateOf(Skill skill, AbilityData data, boolean armed) {
+        return stateOf(skill, data, armed, false);
+    }
+
+    /**
+     * La meme chose, avec la <b>fenetre ouverte</b> en plus : la piece du railgun est retombee.
+     *
+     * <p>L'orange dit « prepare-toi », le bleu clair dit « maintenant » — et c'est le joueur qui l'a
+     * demande le 26/10 : « vers la fin de l'animation de la piece la couleur orange passe au bleu
+     * clair pour indiquer que c'est le bon moment pour taper la piece ». Le bleu est celui de
+     * l'execution ({@link State#ACTIVE}), donc le rappel n'a rien de nouveau a apprendre : c'est le
+     * meme halo, au meme endroit, qui change de couleur quand la fenetre s'ouvre.
+     */
+    public static State stateOf(Skill skill, AbilityData data, boolean armed, boolean ready) {
         if (skill == null) return State.IDLE;
+        if (ready) return State.ACTIVE;
         if (!cn.academy.ability.client.ClientCharge.isOpen(skill.getName())) {
             return armed ? State.CHARGE : State.IDLE;
         }

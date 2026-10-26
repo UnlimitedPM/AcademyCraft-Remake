@@ -61,6 +61,19 @@ public class RailgunSkill extends Skill {
      */
     public static final int MAGNET_COOLDOWN_TICKS = 40;
 
+    /**
+     * L'energie de creusement du tir : celle de l'original, {@code lerpf(900, 2000, exp)}.
+     *
+     * <p>Chaque colonne en recoit sa part, et chaque bloc traverse lui en prend sa <b>durete</b> :
+     * la terre file loin, la pierre beaucoup moins, l'obsidienne arrete la colonne. C'est le
+     * {@code totalEnergy} de {@code RangedRayDamage}, qui decrementait de {@code getBlockHardness}.
+     */
+    public static final float WALL_ENERGY_MIN = 900f;
+    public static final float WALL_ENERGY_MAX = 2000f;
+
+    /** Le pas du disque de creusement : le {@code STEP} de l'original, 0,9 bloc. */
+    private static final double DIG_STEP = 0.9;
+
     /** Les trois barres de degats, par munition puis par le tir combine. */
     public static final float COIN_DAMAGE_MIN = 75f, COIN_DAMAGE_MAX = 125f;
     public static final float IRON_DAMAGE_MIN = 40f, IRON_DAMAGE_MAX = 80f;
@@ -275,6 +288,19 @@ public class RailgunSkill extends Skill {
     }
 
     /**
+     * La piece est-elle assez retombee pour que le tir passe a travers ?
+     *
+     * <p>C'est le moment ou le rappel des touches passe de l'orange au <b>bleu clair</b> : le
+     * joueur du 26/10 — « vers la fin de l'animation de la piece la couleur orange passe au bleu
+     * clair pour indiquer que c'est le bon moment pour taper la piece ». Meme regle que le tir
+     * lui-meme ({@code EntityCoinThrowing.ready}), donc les deux ne peuvent pas diverger : ce qui
+     * brille est exactement ce qui part.
+     */
+    public static boolean coinReady(Player player) {
+        return player != null && cn.academy.entity.EntityCoinThrowing.ready(player) != null;
+    }
+
+    /**
      * La munition du tir, dans l'ordre de l'original : la piece d'abord, la main ensuite, et le
      * bloc de mag_manip en dernier recours.
      *
@@ -484,6 +510,94 @@ public class RailgunSkill extends Skill {
             Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
             living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
             living.hurtMarked = true;
+        }
+
+        // Et il CREUSE. Le port ne cassait rien du tout : le joueur du 26/10 — « par contre le
+        // railgun ne casse pas les blocs la ». C'est la seconde moitie de {@code RangedRayDamage},
+        // celle qui suit les memes colonnes que les degats.
+        digBeam(player, eye, look, length, radius, wallEnergy(data));
+    }
+
+    /** L'energie de creusement du tir, comme l'original : 900 au depart, 2000 a fond. */
+    public float wallEnergy(AbilityData data) {
+        return lerp(WALL_ENERGY_MIN, WALL_ENERGY_MAX, data.getSkillExp(this));
+    }
+
+    /**
+     * Le tunnel : chaque colonne du disque creuse tant que son energie tient.
+     *
+     * <p>C'est l'original au plus pres — {@code STEP} de 0,9, rayon tire a 0,9-1,1 par colonne (le
+     * bord du tunnel est donc irregulier), energie partagee entre les colonnes et reduite de la
+     * <b>durete</b> de chaque bloc traverse. Un bloc indestructible (durete negative, la bedrock)
+     * arrete sa colonne au lieu d'etre ignore : sans cela le faisceau creuserait derriere lui.
+     *
+     * <p>Deux ecarts, dits : rien n'est lache au sol (comme les quatre autres competences du port
+     * qui creusent), et le tir ne s'arrete pas a la premiere creature touchee — le port n'a pas
+     * cette notion de cible qui bloque le rayon.
+     *
+     * <p>Le tout est gate par {@code general.destroyBlocks}, et chaque bloc passe par
+     * {@code BlockEvent.BreakEvent} : ce qu'une protection de serveur refuse ne part pas.
+     */
+    private static void digBeam(Player player, Vec3 eye, Vec3 look, double length, double radius,
+                                float energy) {
+        if (!cn.academy.Config.destroyBlocks) return;
+        if (player.level().isClientSide) return;
+
+        // Les deux axes du disque : la largeur du regard, puis sa hauteur. Un tir vertical n'a pas
+        // de largeur — il n'y a alors rien a creuser, et on le dit plutot que de diviser par zero.
+        Vec3 right = look.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1.0E-6) return;
+        right = right.normalize();
+        Vec3 up = right.cross(look).normalize();
+
+        net.minecraft.util.RandomSource random = player.getRandom();
+
+        // Les COLONNES : un point de depart par case du disque, sans doublon — deux points dans la
+        // meme case creuseraient le meme tunnel deux fois, et l'energie s'y perdrait.
+        java.util.Set<net.minecraft.core.BlockPos> columns = new java.util.LinkedHashSet<>();
+        for (double s = -radius; s <= radius; s += DIG_STEP) {
+            for (double t = -radius; t <= radius; t += DIG_STEP) {
+                double edge = radius * (0.9 + random.nextDouble() * 0.2);
+                if (s * s + t * t > edge * edge) continue;
+                Vec3 seed = eye.add(right.scale(s)).add(up.scale(t));
+                columns.add(net.minecraft.core.BlockPos.containing(seed));
+            }
+        }
+        if (columns.isEmpty()) return;
+
+        float each = energy / columns.size();
+        for (net.minecraft.core.BlockPos seed : columns) {
+            // L'original tirait la part de chaque colonne a plus ou moins cinq pour cent : deux
+            // tirs dans le meme mur ne font donc pas exactement le meme trou.
+            float budget = each * (0.95f + random.nextFloat() * 0.1f);
+            digColumn(player, seed, look, length, budget);
+        }
+    }
+
+    /** Une colonne : le tunnel d'un point du disque, tant que son energie tient. */
+    private static void digColumn(Player player, net.minecraft.core.BlockPos seed, Vec3 look,
+                                  double length, float energy) {
+        cn.academy.util.Plotter plotter = new cn.academy.util.Plotter(
+                seed.getX(), seed.getY(), seed.getZ(), look.x, look.y, look.z);
+        float left = energy;
+
+        for (int step = 0; step <= (int) Math.ceil(length) && left > 0f; ++step) {
+            net.minecraft.core.BlockPos pos = plotter.next();
+            net.minecraft.world.level.block.state.BlockState state =
+                    player.level().getBlockState(pos);
+            if (state.isAir()) continue;
+
+            float hardness = state.getDestroySpeed(player.level(), pos);
+            if (hardness < 0f) return;                        // indestructible : la colonne s'arrete
+            if (hardness > left) return;                     // plus assez d'energie pour ce bloc
+
+            if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                    new net.minecraftforge.event.level.BlockEvent.BreakEvent(
+                            player.level(), pos, state, player))) {
+                continue;
+            }
+            left -= hardness;
+            player.level().removeBlock(pos, false);
         }
     }
 

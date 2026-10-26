@@ -3740,6 +3740,22 @@ public final class AcademyGameTests {
         assertTrue(helper, cow.getHealth() < before,
                 "et le tir a porte : la vache perd des points");
 
+        // 2 ter. ET IL CREUSE. Le joueur du 26/10 : « par contre le railgun ne casse pas les blocs
+        // la ». C'est la seconde moitie de RangedRayDamage, qui suit les memes colonnes que les
+        // degats : un mur de pierre a six blocs, et le tir l'ouvre.
+        //
+        // La case est donnee en coordonnees de STRUCTURE — helper.setBlock les attend ainsi — et
+        // c'est absolutePos qui la traduit pour viser : (3, 262, 9) est le abs.offset(0, 1, 6) de
+        // ce test, a ses 260 blocs d'altitude pres.
+        assertTrue(helper, cn.academy.Config.destroyBlocks,
+                "le creusement est ouvert par defaut : voir general.destroyBlocks");
+        BlockPos wall = new BlockPos(3, 262, 9);
+        helper.setBlock(wall, net.minecraft.world.level.block.Blocks.STONE);
+        lookAt(player, helper.absolutePos(wall));
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, net.minecraft.world.level.block.Blocks.AIR,
+                helper.getBlockState(wall).getBlock(), "le tir creuse le mur de pierre");
+
         // 3. LE BLOC EN MAIN NE TIRE PLUS : demande du joueur du 26/10 — « avec un bloc en main on
         // peut lancer le railgun, sauf que je ne veux plus que ce soit le cas. Je veux pouvoir lancer
         // un bloc uniquement via l'utilisation du mag manip. » Il ne part donc d'aucune poche, ni
