@@ -125,6 +125,60 @@ public class CustomizeUiScreen extends Screen {
         RenderSystem.defaultBlendFunc();
     }
 
+    /**
+     * Un aplat, le melange rallume juste avant.
+     *
+     * <p>Tous les aplats de ce fichier passent par ici : la teinte d'une ligne, le fond de la
+     * caisse, la barre du lecteur. {@code graphics.fill} a son propre type de rendu, mais il part
+     * de l'etat laisse par le dessin precedent — et ce qui precede un aplat translucide n'est pas
+     * toujours un aplat. Une seule fois sans melange, et les pixels qui devaient laisser voir le
+     * monde sortent en plein.
+     */
+    private static void fill(GuiGraphics graphics, int x1, int y1, int x2, int y2, int colour) {
+        blend();
+        graphics.fill(x1, y1, x2, y2, colour);
+    }
+
+    /**
+     * Un carre creux dont le trait se compte en pixels <b>d'ecran</b>, comme l'original.
+     *
+     * <p>Son {@code Outline} dessine un {@code GL_LINE_LOOP} de {@code lineWidth} 2, et cette
+     * largeur-la est en pixels de la FENETRE : un cheveu, quel que soit l'agrandissement de
+     * l'interface. Notre ecran se compte en pixels GUI, qui en valent deux ou trois — un
+     * {@code renderOutline} d'un pixel GUI, et pire deux cernes colles comme ce fichier les
+     * dessinait, faisaient donc un cadre jusqu'a trois fois trop epais.
+     *
+     * <p>La pose est ramenee au pixel d'ecran le temps du trait : le carre garde l'epaisseur de
+     * l'original a toutes les echelles d'interface, et rien ne depend plus de celle du joueur.
+     */
+    private void frame(GuiGraphics graphics, int x, int y, int w, int h, int colour) {
+        int scale = Math.max(1, (int) minecraft.getWindow().getGuiScale());
+
+        // Le MELANGE, toujours : la teinte d'une ligne, le fond de la caisse et la barre du
+        // lecteur portent un alpha, et un aplat parti sans melange sort en plein.
+        blend();
+
+        PoseStack pose = graphics.pose();
+        pose.pushPose();
+        pose.scale(1.0f / scale, 1.0f / scale, 1.0f);
+
+        int left = x * scale;
+        int top = y * scale;
+        int right = (x + w) * scale;
+        int bottom = (y + h) * scale;
+        int line = LINE;
+
+        graphics.fill(left, top, right, top + line, colour);
+        graphics.fill(left, bottom - line, right, bottom, colour);
+        graphics.fill(left, top + line, left + line, bottom - line, colour);
+        graphics.fill(right - line, top + line, right, bottom - line, colour);
+
+        pose.popPose();
+    }
+
+    /** L'epaisseur du trait des deux carres : les deux pixels d'ecran de l'original. */
+    private static final int LINE = 2;
+
     /** Le haut d'un texte dont on connait le bas : l'original cale ses boites par le bas. */
     private int textTopForBottom(float bottom) {
         return Math.round(bottom - font.lineHeight);
@@ -146,7 +200,7 @@ public class CustomizeUiScreen extends Screen {
                 CustomizeUiLayout.PANEL_W, CustomizeUiLayout.PANEL_H);
 
         for (int i = 0; i < elements.size(); ++i) {
-            graphics.fill(CustomizeUiLayout.BODY_X,
+            fill(graphics, CustomizeUiLayout.BODY_X,
                     CustomizeUiLayout.BODY_Y + i * CustomizeUiLayout.ROW_H,
                     CustomizeUiLayout.BODY_X + CustomizeUiLayout.ROW_W,
                     CustomizeUiLayout.BODY_Y + (i + 1) * CustomizeUiLayout.ROW_H,
@@ -186,12 +240,16 @@ public class CustomizeUiScreen extends Screen {
         pose.translate(x, y, 0);
 
         switch (element) {
-            case CP_BAR -> graphics.blit(CPBAR_TEXTURE, 0, 0, w, h, 0.0f, 0.0f,
-                    CPBAR_W, CPBAR_H, CPBAR_W, CPBAR_H);
+            case CP_BAR -> {
+                blend();
+                graphics.blit(CPBAR_TEXTURE, 0, 0, w, h, 0.0f, 0.0f,
+                        CPBAR_W, CPBAR_H, CPBAR_W, CPBAR_H);
+            }
             case KEY_HINT -> {
                 // Son image, a l'echelle ou l'original la montre dans cet ecran.
                 pose.pushPose();
                 pose.scale(KEY_HINT_SCALE, KEY_HINT_SCALE, 1.0f);
+                blend();
                 graphics.blit(KEY_HINT_TEXTURE, 0, 0,
                         KEY_HINT_IMAGE_W, KEY_HINT_IMAGE_H,
                         0.0f, 0.0f,
@@ -205,8 +263,12 @@ public class CustomizeUiScreen extends Screen {
 
         pose.popPose();
 
+        // Le temoin de l'element choisi : un carre creux autour de son apercu, comme le `Outline`
+        // que l'original posait sur le widget d'apercu. Il suit la BOITE de l'apercu, pas son
+        // image (chez lui le widget fait 140x210 pour une image de 128x193), et son trait garde
+        // l'epaisseur de l'original : voir {@link #frame}.
         if (element == selected) {
-            graphics.renderOutline(x - 1, y - 1, w + 2, h + 2, OUTLINE);
+            frame(graphics, x - 1, y - 1, w + 2, h + 2, OUTLINE);
         }
     }
 
@@ -221,6 +283,10 @@ public class CustomizeUiScreen extends Screen {
         graphics.blit(NOTIFY_BACK_TEXTURE, 0, 0, CustomizeUiLayout.NOTIFY_W,
                 CustomizeUiLayout.NOTIFY_H, 0.0f, 0.0f, CustomizeUiLayout.NOTIFY_W,
                 CustomizeUiLayout.NOTIFY_H, CustomizeUiLayout.NOTIFY_W, CustomizeUiLayout.NOTIFY_H);
+        // Le MELANGE avant CHAQUE image, jamais une fois pour deux : une icone tient tout entiere
+        // dans son alpha, et sans lui elle ne laisse qu'un carre blanc. C'est le meme piege que
+        // sous les apercus du tutoriel : voir {@code CGuiScreen.drawTexture}.
+        blend();
         graphics.blit(NOTIFY_LOGO_TEXTURE, CustomizeUiLayout.NOTIFY_ICON_X, CustomizeUiLayout.NOTIFY_ICON_Y,
                 CustomizeUiLayout.NOTIFY_ICON, CustomizeUiLayout.NOTIFY_ICON, 0.0f, 0.0f,
                 NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO);
@@ -256,10 +322,10 @@ public class CustomizeUiScreen extends Screen {
         int white = CustomizeUiLayout.MEDIA_BAR_WHITE_TENTHS;
         int inset = (white - grey) / 2;
 
-        graphics.fill(barX, barY - inset,
+        fill(graphics, barX, barY - inset,
                 barX + Math.round(barW * CustomizeUiLayout.MEDIA_BAR_PROGRESS), barY - inset + white,
                 CustomizeUiLayout.MEDIA_BAR_FILL);
-        graphics.fill(barX, barY, barX + barW, barY + grey, CustomizeUiLayout.MEDIA_BAR_BACK);
+        fill(graphics, barX, barY, barX + barW, barY + grey, CustomizeUiLayout.MEDIA_BAR_BACK);
         pose.popPose();
 
         // Le titre se cale par le bas de sa boite (juste au-dessus de la barre), et la duree
@@ -285,13 +351,11 @@ public class CustomizeUiScreen extends Screen {
         int x = CustomizeUiLayout.editLeft();
         int y = CustomizeUiLayout.editTop(index);
 
-        graphics.fill(x, y, x + CustomizeUiLayout.EDIT_W, y + CustomizeUiLayout.EDIT_H,
+        fill(graphics, x, y, x + CustomizeUiLayout.EDIT_W, y + CustomizeUiLayout.EDIT_H,
                 CustomizeUiLayout.EDIT_BACK);
-        // L'original donne a ce cadre un contour de deux pixels.
-        graphics.renderOutline(x, y, CustomizeUiLayout.EDIT_W, CustomizeUiLayout.EDIT_H,
+        // Son contour : le trait de deux pixels d'ecran de son `Outline`, pas deux cernes colles.
+        frame(graphics, x, y, CustomizeUiLayout.EDIT_W, CustomizeUiLayout.EDIT_H,
                 CustomizeUiLayout.EDIT_EDGE);
-        graphics.renderOutline(x + 1, y + 1, CustomizeUiLayout.EDIT_W - 2,
-                CustomizeUiLayout.EDIT_H - 2, CustomizeUiLayout.EDIT_EDGE);
 
         int top = CustomizeUiLayout.fieldTop(index);
         drawText(graphics, Component.literal("X"), x + CustomizeUiLayout.LABEL_X, top,
@@ -311,7 +375,7 @@ public class CustomizeUiScreen extends Screen {
         int top = CustomizeUiLayout.fieldTop(index);
         boolean focused = editing && x == editingX;
 
-        graphics.fill(left, top, left + CustomizeUiLayout.FIELD_W,
+        fill(graphics, left, top, left + CustomizeUiLayout.FIELD_W,
                 top + CustomizeUiLayout.FIELD_H,
                 focused && bufferBad ? CustomizeUiLayout.FIELD_BAD : CustomizeUiLayout.FIELD_BACK);
 
