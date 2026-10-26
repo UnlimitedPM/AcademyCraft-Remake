@@ -36,6 +36,16 @@ import java.util.List;
  */
 public class RailgunSkill extends Skill {
 
+    /** Le grand tir : un rail plus LONG que les quarante-cinq blocs du normal, et plus large. */
+    public static final double COMBO_BEAM_LENGTH = 70.0;
+    public static final double COMBO_RADIUS = 3.0;
+    public static final int COMBO_BEAM_ARCS = 24;
+
+    /** Les trois barres de degats, par munition puis par le tir combine. */
+    public static final float COIN_DAMAGE_MIN = 75f, COIN_DAMAGE_MAX = 125f;
+    public static final float IRON_DAMAGE_MIN = 40f, IRON_DAMAGE_MAX = 80f;
+    public static final float COMBO_DAMAGE_MIN = 150f, COMBO_DAMAGE_MAX = 200f;
+
     private static final float CP_COST_MIN_EXP = 200f;
     private static final float CP_COST_MAX_EXP = 450f;
     private static final double KNOCKBACK = 2.5;
@@ -86,18 +96,43 @@ public class RailgunSkill extends Skill {
     }
 
     /**
-     * Degats : de 110 a 160 selon l'experience.
+     * Degats d'un tir, selon la MUNITION : de 75 a 125 pour une piece, de 40 a 80 pour du fer.
      *
-     * <p>ECART DEMANDE PAR LE JOUEUR : l'original fait 60 a 110, et c'est ce que le port portait.
-     * Le railgun est une competence de niveau 4 a cible unique, et il doublait presque le claquement
-     * d'orage devenu plus fort (voir {@code ThunderClapSkill.damage}) : la borne basse passe donc
-     * au-dessus de la sienne, l'ecart entre les deux se lisant sur la portee (vingt-cinq contre
-     * trente blocs) et sur la zone (une cible contre tout le rayon). Le reglage
-     * {@code general.damageScale} adoucit toujours l'ensemble sans rien recompiler.
-     * Le cout en CP suit l'original : 200 a 450, et il monte avec l'experience.
+     * <p>ECART DEMANDE PAR LE JOUEUR le 26/10 : la piece se lance, se rattrape en vol et se
+     * consomme, le lingot ne demande qu'une main — elle doit donc valoir plus que le double de
+     * lui. L'egalite d'avant (110 a 160 pour les deux) ne donnait aucune raison de lancer une
+     * piece. Le reglage {@code general.damageScale} adoucit toujours l'ensemble sans rien
+     * recompiler.
+     *
+     * <p>Le cout en CP suit l'original : 200 a 450, et il monte avec l'experience.
      */
-    public float damage(AbilityData data) {
-        return lerp(110f, 160f, data.getSkillExp(this));
+    public float damage(AbilityData data, boolean fromCoin) {
+        float exp = data.getSkillExp(this);
+        return fromCoin ? lerp(COIN_DAMAGE_MIN, COIN_DAMAGE_MAX, exp)
+                : lerp(IRON_DAMAGE_MIN, IRON_DAMAGE_MAX, exp);
+    }
+
+    /**
+     * Le tir COMBINE, sous mag_manip : de 150 a 200, et un rail plus long que le normal.
+     *
+     * <p>Demande du joueur le 26/10 : tenir la manipulation magnetique et appuyer sur la touche du
+     * railgun engage les deux gestes, donc cela doit payer. Ses degats suivent l'experience du
+     * railgun, comme ceux des autres tirs, et la munition se consomme pareil.
+     */
+    public float comboDamage(AbilityData data) {
+        return lerp(COMBO_DAMAGE_MIN, COMBO_DAMAGE_MAX, data.getSkillExp(this));
+    }
+
+    /**
+     * Le tir est-il le COMBINE ? Il l'est quand mag_manip est tenu au moment de l'appui.
+     *
+     * <p>C'est la seule condition : c'est le geste en cours qui compte, pas un prereglage. La
+     * manipulation magnetique est une veille — {@code data.isCharging} dit donc exactement ce
+     * qu'on veut savoir, comme pour les crochets de la reflexion de vecteur. Tenir une veille
+     * suppose la competence apprise : il n'y a pas d'autre verrou a poser.
+     */
+    public static boolean isCombo(AbilityData data) {
+        return data.isCharging(ElectromasterCategory.MAG_MANIP);
     }
 
     /** Recharge reprise de l'original : de 300 a 160 ticks, soit 15 a 8 secondes. */
@@ -280,6 +315,12 @@ public class RailgunSkill extends Skill {
         boolean fromCoin = cn.academy.entity.EntityCoinThrowing.ready(player) != null;
         consumeAmmo(player);
 
+        // Le tir COMBINE, s'il tient mag_manip : un rail plus long, un cylindre plus large, et
+        // ses propres degats. Voir {@link #isCombo}.
+        boolean combo = isCombo(data);
+        double length = combo ? COMBO_BEAM_LENGTH : RailgunHit.LENGTH;
+        double radius = combo ? COMBO_RADIUS : RailgunHit.RADIUS;
+
         // LA RAFALE D'ARCS, et c'est ici pour le fer seulement : sur une piece, le lancer s'en est
         // deja charge (voir ModItems.CoinItem.use), alors que la voie du fer ne se decide que la,
         // au moment ou le tir part. C'est ce que faisait l'original, dont le Delegate.onKeyDown
@@ -293,7 +334,8 @@ public class RailgunSkill extends Skill {
         cn.academy.sound.AcademySounds.playAt(player.level(), player.position(),
                 cn.academy.ModSounds.EM_RAILGUN, 0.5f, 1.0f);
 
-        shootBeam(player);
+        shootBeam(player, combo ? COMBO_BEAM_LENGTH : BEAM_LENGTH,
+                combo ? COMBO_BEAM_ARCS : BEAM_ARCS);
 
         // LES DEGATS : TOUT UN CYLINDRE, et non une cible unique. C'est le RangedRayDamage de
         // l'original — rayon 2, longueur 50, voir RailgunHit — et le port, lui, ne prenait qu'une
@@ -302,16 +344,17 @@ public class RailgunSkill extends Skill {
         // touchees, de la plus proche a la plus lointaine, chacune avec l'attenuation de sa distance.
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f).normalize();
-        float base = scaled(damage(data));
+        float base = scaled(combo ? comboDamage(data) : damage(data, fromCoin));
 
-        for (Entity target : entitiesInBeam(player, eye, look)) {
+        for (Entity target : entitiesInBeam(player, eye, look, length, radius)) {
             if (!(target instanceof LivingEntity living)) continue;
             Vec3 to = target.position().subtract(eye);
-            double distance = RailgunHit.hitDistance(to.x, to.y, to.z, look.x, look.y, look.z);
+            double distance = RailgunHit.hitDistance(to.x, to.y, to.z, look.x, look.y, look.z,
+                    radius, length);
             if (distance < 0.0) continue;
 
             living.hurt(skillDamage(player),
-                    (float) (base * RailgunHit.damageFactor(distance)));
+                    (float) (base * RailgunHit.damageFactor(distance, length)));
             Vec3 push = living.position().subtract(player.position()).normalize().scale(KNOCKBACK);
             living.setDeltaMovement(living.getDeltaMovement().add(push.x, 0.2, push.z));
             living.hurtMarked = true;
@@ -326,10 +369,11 @@ public class RailgunSkill extends Skill {
      * candidate. C'est l'ordre de l'original, qui triait ses cibles par distance avant de les
      * frapper une a une.
      */
-    private static List<Entity> entitiesInBeam(Player player, Vec3 eye, Vec3 look) {
-        Vec3 end = eye.add(look.scale(RailgunHit.LENGTH));
+    private static List<Entity> entitiesInBeam(Player player, Vec3 eye, Vec3 look,
+                                              double length, double radius) {
+        Vec3 end = eye.add(look.scale(length));
         net.minecraft.world.phys.AABB box = new net.minecraft.world.phys.AABB(eye, end)
-                .inflate(RailgunHit.RADIUS * RailgunHit.WIDEN + 1.0);
+                .inflate(radius * RailgunHit.WIDEN + 1.0);
 
         List<Entity> targets = player.level().getEntities(player, box);
         targets.sort(java.util.Comparator.comparingDouble(
@@ -346,7 +390,7 @@ public class RailgunSkill extends Skill {
      * qu'il n'a pas — mais les arcs, eux, se font avec le moteur d'eclairs qu'il a deja, et
      * c'est eux qui donnent au tir son cote electrique.
      */
-    private static void shootBeam(Player player) {
+    private static void shootBeam(Player player, double length, int arcs) {
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
         net.minecraft.util.RandomSource random = player.getRandom();
@@ -354,15 +398,16 @@ public class RailgunSkill extends Skill {
         // Le faisceau d'abord : le trait lumineux que tout le reste entoure. C'est un CYLINDRE,
         // pas un ruban — voir ArcRenderer, ou les siens sont dessines.
         //
-        // Il part des YEUX, comme dans l'original, et va jusqu'au bout de la portee du tir.
-        sendBeam(player, eye, eye.add(look.scale(BEAM_LENGTH)), BEAM_ARC_TICKS);
+        // Il part des YEUX, comme dans l'original, et va jusqu'au bout de la portee du tir —
+        // celle du tir COMBINE quand il est tenu, et c'est le paquet qui la porte.
+        sendBeam(player, eye, eye.add(look.scale(length)), BEAM_ARC_TICKS);
 
-        for (int i = 0; i < BEAM_ARCS; i++) {
-            double start = 1.0 + i * (BEAM_LENGTH - 1.0) / BEAM_ARCS;
+        for (int i = 0; i < arcs; i++) {
+            double start = 1.0 + i * (length - 1.0) / arcs;
             // Leur LONGUEUR, et elle a ete raccourcie : le joueur les trouvait « trop grands ». Ce
             // n'est pas la place qu'ils prennent dans l'original — qui les seme un tous les un a deux
             // blocs — mais la longueur de chacun, et une par seconde et demie de tir.
-            double end = Math.min(BEAM_LENGTH, start + 0.8 + random.nextDouble() * 0.8);
+            double end = Math.min(length, start + 0.8 + random.nextDouble() * 0.8);
             // Les arcs ne sont pas SUR l'axe : ils gresillent autour, comme les siens. Un rail
             // parfaitement droit ne ressemblerait a rien.
             //
