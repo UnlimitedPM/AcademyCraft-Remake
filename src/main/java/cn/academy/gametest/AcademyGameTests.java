@@ -3763,20 +3763,22 @@ public final class AcademyGameTests {
         float blockWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED);
         assertTrue(helper, coinWall > ingotWall,
                 "le lingot perce moins loin que la piece : " + ingotWall + " contre " + coinWall);
-        assertTrue(helper, ingotWall > blockWall * 2f,
-                "et le bloc beaucoup moins encore : " + blockWall);
-        // Et la LONGUEUR de creusement suit le meme ordre : sans elle, dans la terre, les trois
-        // munitions perceraient le trait entier et la difference ne se verrait pas.
+        // Et le BLOC perce PLUS que la piece — demande du 26/10 : « il y a plus de matiere, c'est
+        // logique que le trou soit plus grand et plus long ».
+        assertTrue(helper, blockWall > coinWall * 1.4f,
+                "le bloc en garde une fois et demie la piece : " + blockWall);
+        // Et la LONGUEUR de creusement suit le meme ordre : sans elle, dans la terre, les munitions
+        // perceraient le trait entier et la difference ne se verrait pas.
         assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.digLength(
                                 cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN)
                         > cn.academy.ability.electromaster.RailgunSkill.digLength(
                                 cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT),
                 "la piece perce plus long que le lingot");
         assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.digLength(
-                                cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT)
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED)
                         > cn.academy.ability.electromaster.RailgunSkill.digLength(
-                                cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED) * 2.0,
-                "et le bloc perce bien plus court");
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN),
+                "et le bloc perce plus long que la piece");
 
         // 3. LE BLOC EN MAIN NE TIRE PLUS : demande du joueur du 26/10 — « avec un bloc en main on
         // peut lancer le railgun, sauf que je ne veux plus que ce soit le cas. Je veux pouvoir lancer

@@ -72,28 +72,29 @@ public class RailgunSkill extends Skill {
     public static final float WALL_ENERGY_MAX = 2000f;
 
     /**
-     * Et ce que chaque munition en garde : la piece loin, le lingot moins, le bloc beaucoup moins.
+     * Et ce que chaque munition en garde : la piece cent pour cent, le lingot moins, le bloc PLUS.
      *
-     * <p>Demande du joueur le 26/10 : « celui avec le lingot va trop loin (identique a la piece mais
-     * je veux que ce soit moins), et celui avec le bloc fait un trou plus large mais beaucoup moins
-     * loin ». Le bloc est deja PLUS LARGE par son rayon (+30 %, voir {@link #BLOCK_BEAM_SCALE}), donc
-     * son energie se partage entre plus de colonnes : le raccourcir encore par ce facteur donne le
-     * trou court et large du geste lourd.
+     * <p>Demande du joueur le 26/10, en deux temps. D'abord « celui avec le lingot va trop loin » :
+     * le lingot descend donc a 55 %. Puis, devant un bloc qui ne perçait que quatre blocs : « met le
+     * a 150 % en comparaison, puisqu'il y a plus de matiere c'est logique que le trou soit plus
+     * grand et plus long ». Le bloc passe donc AU-DESSUS de la piece — et son rayon deja plus large
+     * (+30 %, voir {@link #BLOCK_BEAM_SCALE}) partage cette energie entre plus de colonnes, ce qui
+     * lui donne le trou epais du geste lourd.
      */
     public static final float INGOT_WALL_FACTOR = 0.55f;
-    public static final float BLOCK_WALL_FACTOR = 0.2f;
+    public static final float BLOCK_WALL_FACTOR = 1.5f;
 
     /**
      * Et jusqu'ou chacune creuse, en part de la longueur du trait.
      *
-     * <p>Le budget d'energie seul ne suffisait pas : dans la terre (durete 0,5), les trois
-     * munitions atteignaient toutes le bout du trait, et le joueur ne voyait aucune difference.
-     * La LONGUEUR du creusement est donc bornee aussi — la piece le trait entier, le lingot un peu
-     * plus des deux tiers, le bloc le quart (et large, par son rayon).
+     * <p>Le budget d'energie seul ne suffisait pas : dans la terre (durete 0,5), les munitions
+     * atteignaient toutes le bout du trait, et le joueur ne voyait aucune difference. La LONGUEUR du
+     * creusement est donc bornee aussi — la piece le trait entier, le lingot les deux tiers, et le
+     * bloc une fois et demie le trait (il a la matiere, et cela se voit).
      */
     public static final double COIN_DIG_LENGTH = 1.0;
     public static final double INGOT_DIG_LENGTH = 0.65;
-    public static final double BLOCK_DIG_LENGTH = 0.25;
+    public static final double BLOCK_DIG_LENGTH = 1.5;
 
     /** Le pas du disque de creusement : le {@code STEP} de l'original, 0,9 bloc. */
     private static final double DIG_STEP = 0.9;
