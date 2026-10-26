@@ -254,8 +254,9 @@ public class SkillTreeScreen extends Screen {
 
         CWidget exp = ability.child("text_exp");
         if (exp != null && exp.text != null) {
-            exp.text.content = "EXP " + (category == null ? 100
-                    : (int) (data.getLevelProgress(category) * 100)) + "%";
+            exp.text.content = Component.translatable("academy.ability.exp",
+                    category == null ? 100 : (int) (data.getLevelProgress(category) * 100))
+                    .getString();
         }
 
         CWidget progress = ability.child("logo_progress");

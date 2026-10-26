@@ -335,8 +335,9 @@ public final class FreqTransmitterClient {
         @Override
         public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
             renderBackground(graphics);
-            graphics.drawString(font, (kind == 1 ? "SSID: " : "NODE: ") + name, width / 2 - 70,
-                    height / 2 - 24, 0xFFBFBFBF);
+            graphics.drawString(font,
+                    Component.translatable(LANG + (kind == 1 ? "ssid" : "node"), name),
+                    width / 2 - 70, height / 2 - 24, 0xFFBFBFBF);
             graphics.drawString(font, Component.translatable(LANG + "s1_0"), width / 2 - 70,
                     height / 2 + 16, 0xFF30FFFF);
             super.render(graphics, mouseX, mouseY, partialTick);

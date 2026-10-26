@@ -55,15 +55,14 @@ public class CustomizeUiScreen extends Screen {
     private static final int KEY_HINT_IMAGE_H = 193;
 
     /**
-     * Ses deux lignes d'exemple, mot pour mot comme avant.
+     * Ce que l'apercu montre : les deux lignes d'exemple de l'original.
      *
      * <p>Le reste de ses mesures vit dans {@link CustomizeUiLayout}, avec le HUD : l'apercu et le
-     * HUD ne peuvent donc pas diverger.
+     * HUD ne peuvent donc pas diverger. Les deux TITRES, eux, viennent de la langue —
+     * {@code ac.gui.uiedit.demo.notification} et {@code ac.media.only_my_railgun.name} —, parce
+     * qu'un apercu doit se lire dans la langue du joueur, comme le HUD qu'il imite.
      */
-    private static final String NOTIFY_DEMO_TITLE = "Some Notification";
     private static final String NOTIFY_DEMO_TEXT = "blablabla";
-    /** Ses textes d'exemple, tels que son xml les porte. */
-    private static final String MEDIA_DEMO_TITLE = "Only My Railgun";
     private static final String MEDIA_DEMO_TIME = "04:30";
 
     /** L'ecran precedent, pour y revenir sur Echap. */
@@ -292,7 +291,8 @@ public class CustomizeUiScreen extends Screen {
                 NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO, NOTIFY_LOGO);
 
         blend();
-        drawText(graphics, Component.literal(NOTIFY_DEMO_TITLE), CustomizeUiLayout.NOTIFY_TITLE_X,
+        drawText(graphics, Component.translatable("ac.gui.uiedit.demo.notification"),
+                CustomizeUiLayout.NOTIFY_TITLE_X,
                 CustomizeUiLayout.NOTIFY_TITLE_Y,
                 CustomizeUiLayout.plainFontScale(CustomizeUiLayout.NOTIFY_TITLE_FONT),
                 CustomizeUiLayout.NOTIFY_SCALE, CustomizeUiLayout.NOTIFY_TEXT_COLOR);
@@ -335,7 +335,8 @@ public class CustomizeUiScreen extends Screen {
         float titleScale = CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TITLE_FONT);
         float timeScale = CustomizeUiLayout.plainFontScale(CustomizeUiLayout.MEDIA_TIME_FONT);
         blend();
-        drawText(graphics, Component.literal(MEDIA_DEMO_TITLE), CustomizeUiLayout.MEDIA_TITLE_X,
+        drawText(graphics, Component.translatable("ac.media.only_my_railgun.name"),
+                CustomizeUiLayout.MEDIA_TITLE_X,
                 textTopForBottom(CustomizeUiLayout.MEDIA_TITLE_BOTTOM),
                 titleScale, 1.0f, CustomizeUiLayout.NOTIFY_TEXT_COLOR);
         blend();

@@ -444,8 +444,9 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
         if (exp != null && exp.text != null) {
             // Sans aptitude, l'original annonce 100 % : son palier vaut zero, et un palier nul est
             // un palier franchi. C'est ce que montre sa capture — « EXP 100% » a cote de « Level 0 ».
-            exp.text.content = "EXP " + (category == null ? 100
-                    : (int) (data.getLevelProgress(category) * 100)) + "%";
+            exp.text.content = Component.translatable("academy.ability.exp",
+                    category == null ? 100 : (int) (data.getLevelProgress(category) * 100))
+                    .getString();
         }
 
         CWidget progress = ability.child("logo_progress");
