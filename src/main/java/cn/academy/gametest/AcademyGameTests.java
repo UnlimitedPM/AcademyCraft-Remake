@@ -3756,6 +3756,28 @@ public final class AcademyGameTests {
         assertValue(helper, net.minecraft.world.level.block.Blocks.AIR,
                 helper.getBlockState(wall).getBlock(), "le tir creuse le mur de pierre");
 
+        // Et la PORTEE du creusement suit la munition : la piece loin, le lingot moins, le bloc
+        // beaucoup moins (il creuse deja plus large par son rayon). C'est la demande du 26/10.
+        float coinWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN);
+        float ingotWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT);
+        float blockWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED);
+        assertTrue(helper, coinWall > ingotWall,
+                "le lingot perce moins loin que la piece : " + ingotWall + " contre " + coinWall);
+        assertTrue(helper, ingotWall > blockWall * 2f,
+                "et le bloc beaucoup moins encore : " + blockWall);
+        // Et la LONGUEUR de creusement suit le meme ordre : sans elle, dans la terre, les trois
+        // munitions perceraient le trait entier et la difference ne se verrait pas.
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.digLength(
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN)
+                        > cn.academy.ability.electromaster.RailgunSkill.digLength(
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT),
+                "la piece perce plus long que le lingot");
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.digLength(
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT)
+                        > cn.academy.ability.electromaster.RailgunSkill.digLength(
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED) * 2.0,
+                "et le bloc perce bien plus court");
+
         // 3. LE BLOC EN MAIN NE TIRE PLUS : demande du joueur du 26/10 — « avec un bloc en main on
         // peut lancer le railgun, sauf que je ne veux plus que ce soit le cas. Je veux pouvoir lancer
         // un bloc uniquement via l'utilisation du mag manip. » Il ne part donc d'aucune poche, ni

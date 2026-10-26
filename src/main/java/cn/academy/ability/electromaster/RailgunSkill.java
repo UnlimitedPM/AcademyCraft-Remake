@@ -71,6 +71,30 @@ public class RailgunSkill extends Skill {
     public static final float WALL_ENERGY_MIN = 900f;
     public static final float WALL_ENERGY_MAX = 2000f;
 
+    /**
+     * Et ce que chaque munition en garde : la piece loin, le lingot moins, le bloc beaucoup moins.
+     *
+     * <p>Demande du joueur le 26/10 : « celui avec le lingot va trop loin (identique a la piece mais
+     * je veux que ce soit moins), et celui avec le bloc fait un trou plus large mais beaucoup moins
+     * loin ». Le bloc est deja PLUS LARGE par son rayon (+30 %, voir {@link #BLOCK_BEAM_SCALE}), donc
+     * son energie se partage entre plus de colonnes : le raccourcir encore par ce facteur donne le
+     * trou court et large du geste lourd.
+     */
+    public static final float INGOT_WALL_FACTOR = 0.55f;
+    public static final float BLOCK_WALL_FACTOR = 0.2f;
+
+    /**
+     * Et jusqu'ou chacune creuse, en part de la longueur du trait.
+     *
+     * <p>Le budget d'energie seul ne suffisait pas : dans la terre (durete 0,5), les trois
+     * munitions atteignaient toutes le bout du trait, et le joueur ne voyait aucune difference.
+     * La LONGUEUR du creusement est donc bornee aussi — la piece le trait entier, le lingot un peu
+     * plus des deux tiers, le bloc le quart (et large, par son rayon).
+     */
+    public static final double COIN_DIG_LENGTH = 1.0;
+    public static final double INGOT_DIG_LENGTH = 0.65;
+    public static final double BLOCK_DIG_LENGTH = 0.25;
+
     /** Le pas du disque de creusement : le {@code STEP} de l'original, 0,9 bloc. */
     private static final double DIG_STEP = 0.9;
 
@@ -515,12 +539,28 @@ public class RailgunSkill extends Skill {
         // Et il CREUSE. Le port ne cassait rien du tout : le joueur du 26/10 — « par contre le
         // railgun ne casse pas les blocs la ». C'est la seconde moitie de {@code RangedRayDamage},
         // celle qui suit les memes colonnes que les degats.
-        digBeam(player, eye, look, length, radius, wallEnergy(data));
+        digBeam(player, eye, look, length * digLength(ammo), radius, wallEnergy(data, ammo));
     }
 
-    /** L'energie de creusement du tir, comme l'original : 900 au depart, 2000 a fond. */
-    public float wallEnergy(AbilityData data) {
-        return lerp(WALL_ENERGY_MIN, WALL_ENERGY_MAX, data.getSkillExp(this));
+    /** Jusqu'ou cette munition creuse : la part du trait qui perce vraiment. */
+    public static double digLength(Ammo ammo) {
+        return switch (ammo) {
+            case COIN -> COIN_DIG_LENGTH;
+            case INGOT -> INGOT_DIG_LENGTH;
+            case CARRIED -> BLOCK_DIG_LENGTH;
+            case NONE -> 0.0;
+        };
+    }
+
+    /** L'energie de creusement du tir : le budget de l'original, borne par la munition. */
+    public float wallEnergy(AbilityData data, Ammo ammo) {
+        float base = lerp(WALL_ENERGY_MIN, WALL_ENERGY_MAX, data.getSkillExp(this));
+        return switch (ammo) {
+            case COIN -> base;
+            case INGOT -> base * INGOT_WALL_FACTOR;
+            case CARRIED -> base * BLOCK_WALL_FACTOR;
+            case NONE -> 0f;
+        };
     }
 
     /**
