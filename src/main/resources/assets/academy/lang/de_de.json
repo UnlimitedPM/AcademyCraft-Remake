@@ -356,6 +356,8 @@
 
   "ac.ability.teleporter.space_fluct.name": "Raumschwankung",
   "ac.ability.teleporter.crithit": "%sx kritischer Treffer!",
+  "death.attack.academy.teleport": "%1$s wurde von einer Teleportation getroffen",
+  "death.attack.academy.teleport.player": "%1$s wurde von der Teleportation von %2$s getroffen",
   "ac.ability.meltdowner.rad_intensify.name": "β-Strahlungsverstärkung",
   "ac.ability.meltdowner.electron_missile.name": "Elektronenrakete",
 

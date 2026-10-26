@@ -356,6 +356,8 @@
 
   "ac.ability.teleporter.space_fluct.name": "空间波动",
   "ac.ability.teleporter.crithit": "%sx 暴击！",
+  "death.attack.academy.teleport": "%1$s 被一道传送击中",
+  "death.attack.academy.teleport.player": "%1$s 被 %2$s 的传送击中",
   "ac.ability.meltdowner.rad_intensify.name": "β射线强化",
   "ac.ability.meltdowner.electron_missile.name": "电子导弹",
 
