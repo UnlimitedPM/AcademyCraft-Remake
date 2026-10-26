@@ -113,6 +113,25 @@ public class RailgunSkill extends Skill {
     public static final float IRON_DAMAGE_MIN = 40f, IRON_DAMAGE_MAX = 80f;
     public static final float COMBO_DAMAGE_MIN = 150f, COMBO_DAMAGE_MAX = 200f;
 
+    /**
+     * Les degats d'un bloc ORDINAIRE : 70 a 120, donc moins qu'une piece (75 a 125).
+     *
+     * <p>Demande du joueur le 26/10 : « le railgun avec les blocs ne fonctionne a pleine puissance
+     * qu'avec un bloc de fer ou un bloc de cuivre complet, et pour tous les autres blocs ca fait
+     * moins de degats que d'utiliser la piece ». Le bloc arrache reste donc un tir lourd, mais
+     * seulement quand la matiere conduit — voir {@link #conducts}.
+     */
+    public static final float BLOCK_DAMAGE_MIN = 70f, BLOCK_DAMAGE_MAX = 120f;
+
+    /**
+     * La portee d'un bloc ordinaire : le <b>tiers</b> de celle d'un bloc de fer ou de cuivre.
+     *
+     * <p>« Cette forme-la garde le meme rayon que les blocs de fer et de cuivre, mais que la portee
+     * soit diminuee par 3 » : le rayon du faisceau et du tunnel ne bouge pas, seule sa longueur
+     * tombe — et avec elle la profondeur creusee, qui se lit sur cette longueur.
+     */
+    public static final double PLAIN_BLOCK_RANGE_DIVISOR = 3.0;
+
     private static final float CP_COST_MIN_EXP = 200f;
     private static final float CP_COST_MAX_EXP = 450f;
     private static final double KNOCKBACK = 2.5;
@@ -188,6 +207,51 @@ public class RailgunSkill extends Skill {
      */
     public float comboDamage(AbilityData data) {
         return lerp(COMBO_DAMAGE_MIN, COMBO_DAMAGE_MAX, data.getSkillExp(this));
+    }
+
+    /**
+     * Les degats d'un bloc ordinaire, de 70 a 120 : moins qu'une piece, a toute experience.
+     *
+     * <p>Seuls le fer et le cuivre <b>complets</b> echappent a cette barre — voir {@link #conducts}.
+     */
+    public float blockDamage(AbilityData data) {
+        return lerp(BLOCK_DAMAGE_MIN, BLOCK_DAMAGE_MAX, data.getSkillExp(this));
+    }
+
+    /**
+     * Ce bloc conduit-il ? Le fer et le cuivre <b>complets</b>, et eux seuls.
+     *
+     * <p>Ce sont les deux matieres qui tirent a pleine puissance. Le cuivre se reconnait a son nom
+     * termine par {@code copper_block}, ce qui couvre ses huit blocs pleins (les quatre etats
+     * d'oxydation et leurs versions cirees) sans liste a maintenir — la meme regle de nom que
+     * {@code MetalTargets.isWorkedCopper}. Le cuivre <b>brut</b>, lui, n'est pas du metal travaille
+     * et reste un bloc ordinaire.
+     */
+    public static boolean conducts(net.minecraft.world.level.block.state.BlockState state) {
+        if (state == null) return false;
+        net.minecraft.world.level.block.Block block = state.getBlock();
+        if (block == net.minecraft.world.level.block.Blocks.IRON_BLOCK) return true;
+        net.minecraft.resources.ResourceLocation id =
+                net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
+        if (id == null) return false;
+        String path = id.getPath();
+        return path.endsWith("copper_block") && !path.contains("raw");
+    }
+
+    /** Le bloc arrache par l'aimantation conduit-il ? Lu AVANT que le tir ne le consomme. */
+    public static boolean carriedConducts(Player player, AbilityData data) {
+        cn.academy.entity.EntityMagManipBlock block = carriedBlock(player, data);
+        return block != null && conducts(block.getBlockState());
+    }
+
+    /**
+     * La longueur du faisceau d'un bloc ordinaire : le tiers de celle d'un bloc de fer.
+     *
+     * <p>Une fonction pure, et c'est ce qui la rend verifiable sans monde : le rayon, lui, ne
+     * change pas — c'est la demande.
+     */
+    public static double plainBlockLength(double full) {
+        return full / PLAIN_BLOCK_RANGE_DIVISOR;
     }
 
     /**
@@ -521,7 +585,12 @@ public class RailgunSkill extends Skill {
         // Et un BLOC agrandit ce faisceau de trente pour cent, quel qu'il soit : la munition se
         // lit dans la taille du tir — voir {@link #BLOCK_BEAM_SCALE}.
         double scale = ammo.isBlock() ? BLOCK_BEAM_SCALE : 1.0;
+        // LA MATIERE DU BLOC, lue AVANT que le tir ne le consomme : le fer et le cuivre complets
+        // tirent a pleine puissance ; tout le reste frappe moins qu'une piece et porte le tiers du
+        // faisceau. Le RAYON, lui, ne bouge pas — c'est la demande du joueur.
+        boolean plainBlock = ammo.isBlock() && !carriedConducts(player, data);
         double length = (combo ? COMBO_BEAM_LENGTH : RailgunHit.LENGTH) * scale;
+        if (plainBlock) length = plainBlockLength(length);
         double radius = (combo ? COMBO_RADIUS : RailgunHit.RADIUS) * scale;
         int arcs = (int) Math.round((combo ? COMBO_BEAM_ARCS : BEAM_ARCS) * scale);
 
@@ -550,7 +619,9 @@ public class RailgunSkill extends Skill {
         // touchees, de la plus proche a la plus lointaine, chacune avec l'attenuation de sa distance.
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f).normalize();
-        float base = scaled(combo ? comboDamage(data) : damage(data, ammo));
+        float base = scaled(ammo.isBlock()
+                ? (plainBlock ? blockDamage(data) : comboDamage(data))
+                : combo ? comboDamage(data) : damage(data, ammo));
 
         for (Entity target : entitiesInBeam(player, eye, look, length, radius)) {
             if (!(target instanceof LivingEntity living)) continue;

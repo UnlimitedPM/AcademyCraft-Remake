@@ -84,6 +84,21 @@ class SkillCurvesTest {
                 railgun);
         assertBounds("degats du tir combine", 150f, 200f, railgun::comboDamage, railgun);
 
+        // Le bloc arrache : 70 a 120, donc moins qu'une piece (75 a 125) — c'est la demande du
+        // 26/10. Le fer et le cuivre complets gardent, eux, la pleine puissance du tir combine.
+        assertBounds("degats d'un bloc ordinaire", 70f, 120f, railgun::blockDamage, railgun);
+        assertTrue(railgun.blockDamage(atExperience(railgun, 1f))
+                        < railgun.damage(atExperience(railgun, 1f),
+                                cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN),
+                "et a experience egale, il frappe moins qu'une piece");
+
+        // Sa PORTEE, elle, est le tiers de celle d'un bloc de fer, rayon inchange.
+        double fullBlock = cn.academy.ability.electromaster.RailgunSkill.COMBO_BEAM_LENGTH
+                * cn.academy.ability.electromaster.RailgunSkill.BLOCK_BEAM_SCALE;
+        assertEquals(fullBlock / 3.0,
+                cn.academy.ability.electromaster.RailgunSkill.plainBlockLength(fullBlock), 1.0e-9,
+                "un bloc ordinaire porte le tiers du faisceau d'un bloc de fer");
+
         // Le thunder bolt fait deux degats : la cible touchee, et ce qui l'entoure.
         var thunderBolt = cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_BOLT;
         assertBounds("degats de thunder_bolt", 10f, 25f, thunderBolt::damage, thunderBolt);

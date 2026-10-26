@@ -3861,6 +3861,27 @@ public final class AcademyGameTests {
                 "le bloc tenu par l'aimantation est une munition");
         assertTrue(helper, railgun.canStart(player, data),
                 "et le tir part avec lui, sans rien avoir dans la main");
+
+        // Et la MATIERE du bloc compte : seuls le fer et le cuivre <b>complets</b> tirent a
+        // pleine puissance. Tout le reste frappe moins qu'une piece (70 a 120) et porte le tiers
+        // du faisceau, rayon inchange — demande du joueur du 26/10. Voir conducts et blockDamage.
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.conducts(
+                        net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState()),
+                "le bloc de fer conduit");
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.conducts(
+                        net.minecraft.world.level.block.Blocks.COPPER_BLOCK.defaultBlockState()),
+                "le bloc de cuivre aussi");
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.conducts(
+                        net.minecraft.world.level.block.Blocks.WAXED_COPPER_BLOCK.defaultBlockState()),
+                "et sa version ciree, comme les trois autres etats d'oxydation");
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.conducts(
+                        net.minecraft.world.level.block.Blocks.IRON_BARS.defaultBlockState()),
+                "les barres de fer, non : il faut un bloc complet");
+        assertFalse(helper, cn.academy.ability.electromaster.RailgunSkill.conducts(
+                        net.minecraft.world.level.block.Blocks.RAW_COPPER_BLOCK.defaultBlockState()),
+                "le cuivre brut non plus : ce n'est pas du metal travaille");
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.carriedConducts(player, data),
+                "et le bloc que le joueur tient ici est bien du fer");
         railgun.onActivateCharged(player, data, 0);
         assertTrue(helper, carried.isRemoved(),
                 "le tir consomme le bloc arrache : il ne retombe pas");
