@@ -73,8 +73,16 @@ class SkillCurvesTest {
         assertBounds("degats de arc_gen", 5f, 9f, arcGen::damage, arcGen);
 
         var railgun = cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN;
-        // Releve a la demande du joueur : l'original fait 60 a 110.
-        assertBounds("degats de railgun", 110f, 160f, railgun::damage, railgun);
+        // La munition decide de la courbe : la piece frappe le plus, le lingot le moins, et le
+        // tir combine — la piece ET le lingot — passe par sa propre courbe. C'est l'ancien
+        // 110 a 160 d'une seule courbe, eclate en trois quand le railgun a appris ses munitions.
+        assertBounds("degats de railgun (piece)", 75f, 125f,
+                data -> railgun.damage(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN),
+                railgun);
+        assertBounds("degats de railgun (lingot)", 40f, 80f,
+                data -> railgun.damage(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT),
+                railgun);
+        assertBounds("degats du tir combine", 150f, 200f, railgun::comboDamage, railgun);
 
         // Le thunder bolt fait deux degats : la cible touchee, et ce qui l'entoure.
         var thunderBolt = cn.academy.ability.electromaster.ElectromasterCategory.THUNDER_BOLT;
@@ -1250,14 +1258,16 @@ class SkillCurvesTest {
     void laDetectionDeMineraisPaieSonRegard() {
         var detect = cn.academy.ability.electromaster.ElectromasterCategory.MINE_DETECT;
 
-        // Rien n'est declare au paquet : l'eclat decide, paie, et pose sa recharge — sinon
-        // un appui sans reserve couterait une attente pour un regard qui n'a pas eu lieu.
-        assertTrue(detect.paysOnEffect(), "c'est l'effet qui paie");
-        assertTrue(detect.earnsExpOnEffect(), "et qui verse l'experience");
-        assertEquals(0f, detect.getExpGain(atExperience(detect, 0f)), 0.000001f);
+        // Le paquet ne prend RIEN en reserve : tout l'eclat se paie tick par tick, dans
+        // onHoldTick (voir tickCost). Il verse l'experience lui-meme, et la recharge n'est pas
+        // posee a l'ouverture mais a la fermeture, par endHeld — d'ou un getCooldownTicks qui
+        // la declare sans que le paquet la pose.
+        assertFalse(detect.paysOnEffect(), "le paquet ne paie pas : l'entretien s'en charge");
+        assertEquals(0f, detect.getExpGain(atExperience(detect, 0f)), 0.000001f,
+                "l'experience se verse dans l'effet");
         assertEquals(0f, detect.getCpCost(), 0.000001f, "aucun cout en reserve a l'appui");
-        assertEquals(0, detect.getCooldownTicks(atExperience(detect, 0f)),
-                "et aucune recharge posee par le paquet");
+        assertTrue(detect.isHeld(), "l'eclat se tient");
+        assertTrue(detect.isToggle(), "et se bascule : un appui l'allume, un second l'eteint");
 
         // Ce qu'il paie : 1500 a 1000 CP divises par 28, et 200 a 180 de surcout. Le prix
         // baisse quand la portee grandit, ce qui est l'envers des habitudes.

@@ -64,6 +64,28 @@ public class MineDetectSkill extends Skill {
     public static final int TIME = 100;
 
     /**
+     * Le rafraichissement de l'aveuglement pendant le maintien, en ticks.
+     *
+     * <p>Quarante, et pas huit : la cecite de la 1.20.1 n'est qu'un brouillard, et
+     * {@code FogRenderer} le resserre avec ce qui reste de l'effet —
+     * {@code min(1, duree / 20)} vaut un des vingt ticks restants, zero au terme. Un effet de
+     * <b>huit</b> ticks rafraichi a chaque tick reste donc a 0,4 : le brouillard est presque
+     * celui du jeu, et le joueur voit sa cecite s'arreter au bout des cent ticks de l'original
+     * alors que l'eclat, lui, continue — « l'effet de blindness ne reste pas pendant tout le
+     * pouvoir ». A quarante, la fraction reste a un des le premier tick et le brouillard est
+     * plein jusqu'a la fin.
+     */
+    public static final int BLIND_REFRESH_TICKS = 40;
+
+    /**
+     * Les vingt derniers ticks de l'effet, ou {@code FogRenderer} efface le brouillard.
+     *
+     * <p>C'est la borne du rafraichissement : on repose l'aveuglement des qu'il y entre, donc
+     * celui-ci ne descend jamais sous le seuil ou la cecite commence a s'eclaircir.
+     */
+    public static final int BLIND_FADE_TICKS = 20;
+
+    /**
      * L'entretien : ce que coute chaque tick d'eclat <b>au-dela</b> des cent premiers.
      *
      * <p>Demande du joueur le 26/10 : l'eclat ne doit plus etre seulement chronometre, il doit
@@ -313,10 +335,23 @@ public class MineDetectSkill extends Skill {
         if (!data.consumeControlPoint(tickCost(data, heldTicks))) return false;
 
         // L'aveuglement suit l'eclat : rafraichi tant qu'il tient, il tombe avec lui.
-        if (heldTicks > TIME) {
-            player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 8, 0, false, false, true));
-        }
+        keepBlind(player);
         return true;
+    }
+
+    /**
+     * Repose l'aveuglement quand il entre dans ses vingt derniers ticks.
+     *
+     * <p>Le premier eclat en pose cent ({@link #TIME}), largement de quoi tenir les cinq
+     * secondes de l'original : ce n'est qu'ensuite que le maintien doit le rallumer. La duree
+     * reposee ({@link #BLIND_REFRESH_TICKS}) est celle qui garde le brouillard <b>plein</b>, et
+     * non le minimum qui maintiendrait l'effet — voir la constante.
+     */
+    private static void keepBlind(Player player) {
+        MobEffectInstance blind = player.getEffect(MobEffects.BLINDNESS);
+        if (blind != null && blind.getDuration() > BLIND_FADE_TICKS) return;
+        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, BLIND_REFRESH_TICKS, 0,
+                false, false, true));
     }
 
     /**

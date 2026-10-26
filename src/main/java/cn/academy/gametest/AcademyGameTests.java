@@ -6336,6 +6336,23 @@ public final class AcademyGameTests {
         assertTrue(helper, Math.abs((beforeUpkeep - upkeep) - data.getControlPoint()) < 0.01,
                 "un tick d'entretien se preleve pareil : " + data.getControlPoint());
 
+        // L'aveuglement ne doit pas seulement EXISTER pendant le maintien : il doit garder le
+        // brouillard PLEIN. `FogRenderer` efface la cecite sur les vingt derniers ticks de
+        // l'effet (`min(1, duree / 20)`), donc un rafraichissement a huit ticks ne peignait
+        // presque rien et le joueur voyait sa cecite s'arreter au bout des cinq secondes de
+        // l'original pendant que l'eclat continuait. Voir BLIND_REFRESH_TICKS.
+        player.removeEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
+        player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.BLINDNESS, 10));
+        assertTrue(helper, detect.onHoldTick(player, data, 121), "l'entretien rallume la cecite");
+        var renewed = player.getEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
+        assertTrue(helper,
+                renewed != null
+                        && renewed.getDuration()
+                                >= cn.academy.ability.electromaster.MineDetectSkill.BLIND_FADE_TICKS,
+                "une duree qui garde le brouillard plein : "
+                        + (renewed == null ? "aucun effet" : renewed.getDuration()));
+
         // La fermeture — ici la fin ordinaire, comme un second appui — pose la recharge.
         cn.academy.ability.AbilityEvents.endHeld(player, data, detect);
         assertTrue(helper, data.isOnCooldown(detect), "la recharge tombe a la fermeture");

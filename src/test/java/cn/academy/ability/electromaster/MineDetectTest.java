@@ -59,16 +59,27 @@ class MineDetectTest {
         assertEquals(3, MineDetectVisuals.tierOf(true, 3),
                 "au diamant — et la cinquieme couleur de l'original n'etait jamais atteinte");
 
-        // Les cinq couleurs de l'original, dans l'ordre.
+        // Tout est BLEU, quel que soit le palier : les cinq teintes de l'original sont parties
+        // le 26/10 — « certains minerais apparaissent en vert et je ne sais pas pourquoi » —, et
+        // seul le minerai choisi dans l'ecran de filtre passe au vert (voir MineDetectFilter).
         assertColor(115, 200, 227, 0);
-        assertColor(161, 181, 188, 1);
-        assertColor(87, 231, 248, 2);
-        assertColor(97, 204, 94, 3);
-        assertColor(235, 109, 84, 4);
+        assertColor(115, 200, 227, 1);
+        assertColor(115, 200, 227, 2);
+        assertColor(115, 200, 227, 3);
+        assertColor(115, 200, 227, 4);
 
-        // Et un palier hors bornes est ramene dans la table plutot que de la depasser.
+        // Et un palier hors bornes rend la meme chose plutot que de sortir de la table.
         assertColor(115, 200, 227, -1);
-        assertColor(235, 109, 84, 99);
+        assertColor(115, 200, 227, 99);
+
+        // Le choix du joueur, lui, passe AVANT le palier : c'est une couleur de choix, pas une
+        // couleur de pioche.
+        int[] chosen = MineDetectVisuals.colorFor(3, true);
+        assertEquals(90, chosen[0], "rouge du minerai choisi");
+        assertEquals(230, chosen[1], "vert du minerai choisi");
+        assertEquals(120, chosen[2], "bleu du minerai choisi");
+        int[] plain = MineDetectVisuals.colorFor(3, false);
+        assertEquals(115, plain[0], "et le minerai non choisi reste bleu");
     }
 
     private static void assertColor(int r, int g, int b, int tier) {

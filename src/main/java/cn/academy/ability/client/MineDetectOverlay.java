@@ -6,9 +6,12 @@ import java.util.List;
 import cn.academy.AcademyCraft;
 import cn.academy.ability.electromaster.MetalTargets;
 import cn.academy.ability.electromaster.MineDetectSkill;
+import cn.academy.sound.client.FollowSound;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
@@ -54,6 +57,20 @@ public final class MineDetectOverlay {
 
     private static List<Ore> ores = List.of();
 
+    /**
+     * Le grondement de l'eclat, et ce qu'il lui reste a jouer, en ticks.
+     *
+     * <p>L'ogg dure 6,8 secondes — cent trente-sept ticks —, et l'eclat peut tenir bien plus
+     * longtemps que lui : a l'origine le pouvoir durait cinq secondes, donc un seul envoi
+     * suffisait. Depuis qu'il vit tant que la reserve paie, le son se <b>relance</b> a chaque
+     * fin du fichier, et c'est {@link #stop()} qui le fait taire — le joueur, 26/10 : « le son
+     * du pouvoir [ne reste pas] pendant tout le pouvoir ».
+     */
+    private static final int SOUND_TICKS = 137;
+
+    private static SoundInstance sound;
+    private static int soundTicks;
+
     private MineDetectOverlay() {}
 
     /**
@@ -78,8 +95,28 @@ public final class MineDetectOverlay {
         // gestionnaire client, sur le meme message. Et il le SUIT : c'est un grondement de plusieurs
         // secondes, et pose a une position il restait derriere le joueur qui avançait — « le bruit ne
         // nous suit pas » (26/10). Voir FollowSound.
-        cn.academy.sound.client.FollowSound.play(player, cn.academy.ModSounds.EM_MINEDETECT.get(),
-                net.minecraft.sounds.SoundSource.AMBIENT, 0.5f, 1.0f);
+        playSound(player);
+    }
+
+    /**
+     * Joue le grondement de l'eclat, et retient de quoi l'eteindre et le relancer.
+     *
+     * <p>Appele a l'ouverture, puis par {@link #onClientTick} quand le fichier est arrive a son
+     * terme : c'est le meme son qui repart, sur le joueur, sans coupure notable.
+     */
+    private static void playSound(LocalPlayer player) {
+        // Un eclat precedent peut gronder encore : un seul grondement a la fois.
+        stopSound();
+        sound = FollowSound.play(player, cn.academy.ModSounds.EM_MINEDETECT.get(),
+                SoundSource.AMBIENT, 0.5f, 1.0f);
+        soundTicks = SOUND_TICKS;
+    }
+
+    /** Eteint le grondement, a l'arret de l'eclat. */
+    private static void stopSound() {
+        FollowSound.stop(sound);
+        sound = null;
+        soundTicks = 0;
     }
 
     /**
@@ -110,6 +147,7 @@ public final class MineDetectOverlay {
         endTick = -1;
         holdEnd = -1;
         ores = List.of();
+        stopSound();
     }
 
     public static double range() {
@@ -130,8 +168,11 @@ public final class MineDetectOverlay {
         LocalPlayer player = Minecraft.getInstance().player;
         if (!active(player)) {
             ores = List.of();
+            if (sound != null) stopSound();
             return;
         }
+        // Le son tient l'eclat : l'ogg dure 6,8 secondes, l'eclat peut en durer trente.
+        if (sound != null && --soundTicks <= 0) playSound(player);
         // En pause, la sphere n'a pas change : on ne la balaie pas pour rien. Voir ClientPause.
         if (ClientPause.frozen()) return;
         if (scanCooldown-- > 0) return;
