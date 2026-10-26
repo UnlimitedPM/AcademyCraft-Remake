@@ -229,7 +229,14 @@ public final class RailgunHandEffect {
      */
     public static void onIronAimed(Skill skill, Player player) {
         if (player == null || skill != ElectromasterCategory.RAILGUN) return;
-        if (!RailgunSkill.isAccepted(player.getMainHandItem())) return;
+        // Les deux mains, et le bloc tenu par mag_manip : la rafale partait deja sur le fer en
+        // main, et le joueur a vu qu'elle MANQUAIT dans les deux autres cas — « il n'y a que
+        // celui qui sort de mon inventaire directement qui fait l'animation au depart ».
+        if (!RailgunSkill.isAccepted(player.getMainHandItem())
+                && !RailgunSkill.isAccepted(player.getOffhandItem())
+                && MagManipEffect.carried(player) == null) {
+            return;
+        }
         if (!ClientAbilityData.get().isActivated()) return;
         PLAYING.put(player.getId(), 0);
     }

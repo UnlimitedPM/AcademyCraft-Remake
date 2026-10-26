@@ -251,10 +251,11 @@ public class RailgunSkill extends Skill {
         }
     }
 
-    /** Une piece assez retombee, ou du fer en main. */
+    /** Une piece assez retombee, ou du fer dans l'une des deux mains. */
     public static boolean hasAmmo(Player player) {
         return cn.academy.entity.EntityCoinThrowing.ready(player) != null
-                || isAccepted(player.getMainHandItem());
+                || isAccepted(player.getMainHandItem())
+                || isAccepted(player.getOffhandItem());
     }
 
     /**
@@ -268,12 +269,25 @@ public class RailgunSkill extends Skill {
     public static Ammo ammo(Player player, AbilityData data) {
         if (cn.academy.entity.EntityCoinThrowing.ready(player) != null) return Ammo.COIN;
 
-        net.minecraft.world.item.ItemStack held = player.getMainHandItem();
-        if (isAccepted(held)) {
-            return held.getItem() instanceof net.minecraft.world.item.BlockItem
-                    ? Ammo.BLOCK : Ammo.INGOT;
-        }
+        // Les DEUX mains : un bloc dans la main secondaire est une munition comme une autre, et
+        // c'est meme la place naturelle quand la main principale tient autre chose. Le joueur l'a
+        // signale le 26/10 : son bloc « sortait de l'inventaire » mais n'etait ni consomme ni
+        // annonce — il n'etait simplement pas lu.
+        net.minecraft.world.item.ItemStack main = player.getMainHandItem();
+        if (isAccepted(main)) return main.getItem() instanceof net.minecraft.world.item.BlockItem
+                ? Ammo.BLOCK : Ammo.INGOT;
+
+        net.minecraft.world.item.ItemStack off = player.getOffhandItem();
+        if (isAccepted(off)) return off.getItem() instanceof net.minecraft.world.item.BlockItem
+                ? Ammo.BLOCK : Ammo.INGOT;
+
         return carriedBlock(player, data) != null ? Ammo.CARRIED : Ammo.NONE;
+    }
+
+    /** La main qui porte la munition : la principale d'abord, comme {@link #ammo}. */
+    private static net.minecraft.world.item.ItemStack payingStack(Player player) {
+        net.minecraft.world.item.ItemStack main = player.getMainHandItem();
+        return isAccepted(main) ? main : player.getOffhandItem();
     }
 
     /**
@@ -309,7 +323,9 @@ public class RailgunSkill extends Skill {
     @Override
     public int getArmingTicks(Player player, AbilityData data) {
         if (cn.academy.entity.EntityCoinThrowing.of(player) != null) return 0;
-        return isAccepted(player.getMainHandItem()) ? IRON_ARMING_TICKS : 0;
+        // Les deux mains, comme la munition elle-meme : un bloc en main secondaire s'arme pareil.
+        return isAccepted(player.getMainHandItem()) || isAccepted(player.getOffhandItem())
+                ? IRON_ARMING_TICKS : 0;
     }
 
     /**
@@ -368,6 +384,11 @@ public class RailgunSkill extends Skill {
      * n'est rendu : c'est le prix du tir, en plus de ses CP et de son surcout.
      */
     private static void consumeAmmo(Player player, AbilityData data, Ammo ammo) {
+        // LE CREATIF NE PAIE RIEN, et c'est la regle de l'original pour la main. Le bloc arrache
+        // la suit desormais aussi — avant, il disparaissait meme en creatif, et le joueur pouvait
+        // croire que la main, elle, ne payait pas : c'est l'incoherence qu'il a signalee.
+        boolean free = player.getAbilities().instabuild;
+
         switch (ammo) {
             case COIN -> {
                 cn.academy.entity.EntityCoinThrowing coin =
@@ -375,14 +396,20 @@ public class RailgunSkill extends Skill {
                 if (coin != null) coin.consume();
             }
             case INGOT, BLOCK -> {
-                net.minecraft.world.item.ItemStack held = player.getMainHandItem();
-                if (isAccepted(held) && !player.getAbilities().instabuild) held.shrink(1);
+                net.minecraft.world.item.ItemStack paying = payingStack(player);
+                if (!free && isAccepted(paying)) paying.shrink(1);
             }
             case CARRIED -> {
-                // Le bloc arrache y PASSE : il ne retombe pas, il ne se repose pas, il est
-                // consomme par le tir — c'est ce que le joueur attendait et qui manquait.
+                // Le bloc arrache y PASSE, en survie : il ne retombe pas, il ne se repose pas, il
+                // est consomme par le tir. En creatif il est simplement lache, pour ne rien voler
+                // a un joueur qui construit.
                 cn.academy.entity.EntityMagManipBlock block = carriedBlock(player, data);
-                if (block != null) block.discard();
+                if (block == null) return;
+                if (free) {
+                    block.release();
+                } else {
+                    block.discard();
+                }
             }
             case NONE -> { }
         }

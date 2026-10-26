@@ -3754,6 +3754,21 @@ public final class AcademyGameTests {
         railgun.onActivateCharged(player, data, 0);
         assertValue(helper, 1, player.getMainHandItem().getCount(), "le bloc, lui aussi, est consomme");
 
+        // 3 bis. LE BLOC EN MAIN SECONDAIRE : c'est une munition comme une autre, et c'est la main
+        // qui l'a porte qui paie. Le joueur l'a signale le 26/10 : son bloc « sortait de
+        // l'inventaire » et n'etait ni consomme ni annonce — il n'etait simplement jamais lu.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND,
+                new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK, 2));
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.BLOCK,
+                cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
+                "un bloc en main secondaire est une munition");
+        assertTrue(helper, railgun.canStart(player, data), "et le tir part avec lui");
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, 1, player.getOffhandItem().getCount(),
+                "c'est la main secondaire qui paie : " + player.getOffhandItem().getCount());
+        player.setItemInHand(net.minecraft.world.InteractionHand.OFF_HAND, ItemStack.EMPTY);
+
         // 4. LE BLOC ARRACHE PAR MAG_MANIP : il n'est pas dans la main, et il tire quand meme — et
         // c'est LUI qui paie. C'est la demande du joueur : « il devrais aussi fonctionner si j'arrache
         // le bloc du sol directement », et « ça ne supprime pas le bloc que j'ai utilisé ».

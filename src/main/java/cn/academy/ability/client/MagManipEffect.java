@@ -141,7 +141,7 @@ public final class MagManipEffect {
     }
 
     /** Le bloc que le joueur porte : le sien, et le plus proche de ses yeux. */
-    private static EntityMagManipBlock carried(net.minecraft.world.entity.player.Player player) {
+    public static EntityMagManipBlock carried(net.minecraft.world.entity.player.Player player) {
         if (Minecraft.getInstance().level == null) return null;
 
         EntityMagManipBlock best = null;
