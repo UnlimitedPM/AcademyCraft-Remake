@@ -62,6 +62,17 @@ public class RailgunSkill extends Skill {
     public static final int MAGNET_COOLDOWN_TICKS = 40;
 
     /**
+     * Les deux seuils du lancer de bloc : le railgun a la moitie, et mag_manip aux quatre
+     * cinquiemes.
+     *
+     * <p>Demande du joueur du 26/10 : « il faudrait pouvoir lancer les blocs de fer uniquement a
+     * partir du moment que le railgun est debloque a 50 % et que le mag manip soit debloque a
+     * 80 % ». Voir {@link #canThrowBlock}.
+     */
+    public static final float BLOCK_RAILGUN_EXP = 0.5f;
+    public static final float BLOCK_MAG_MANIP_EXP = 0.8f;
+
+    /**
      * L'energie qu'un bloc de roche ordinaire coute a une colonne.
      *
      * <p>Le budget d'une colonne ne vient plus d'un chiffre fixe mais de sa <b>profondeur</b> :
@@ -280,7 +291,8 @@ public class RailgunSkill extends Skill {
          * Le bloc arrache par mag_manip : le tir combine, et le bloc y passe.
          *
          * <p>C'est la SEULE facon de tirer un bloc — un bloc dans une main n'est plus une munition
-         * (voir {@link #isAccepted}), et c'est le joueur qui l'a demande.
+         * (voir {@link #isAccepted}), et c'est le joueur qui l'a demande. Et il ne s'ouvre qu'aux
+         * deux seuils de {@link #canThrowBlock}.
          */
         CARRIED,
         /** Rien a tirer : le coup ne part pas, et rien n'est facture. */
@@ -340,7 +352,26 @@ public class RailgunSkill extends Skill {
             return Ammo.INGOT;
         }
 
+        // Et le bloc n'ouvre qu'a ses deux seuils — voir {@link #canThrowBlock}.
+        if (!canThrowBlock(data)) return Ammo.NONE;
         return carriedBlock(player, data) != null ? Ammo.CARRIED : Ammo.NONE;
+    }
+
+    /**
+     * Le lancer de bloc est-il ouvert a ce joueur ? Deux seuils, et il faut les deux.
+     *
+     * <p>Demande du joueur du 26/10 : « il faudrait pouvoir lancer les blocs de fer uniquement a
+     * partir du moment que le railgun est debloque a 50 % et que le mag manip soit debloque a
+     * 80 % ». Le bloc n'est donc pas la munition des debuts : c'est le geste qui demande les deux
+     * competences ensemble, celle qui l'arrache et celle qui le propulse.
+     *
+     * <p>Le refus tombe sur la munition elle-meme, pas sur la porte : {@link #ammo} ne voit plus de
+     * bloc, le tir repond donc {@code NONE} et rien n'est facture — ni le bloc, ni les points.
+     */
+    public static boolean canThrowBlock(AbilityData data) {
+        if (data == null) return false;
+        return data.getSkillExp(ElectromasterCategory.RAILGUN) >= BLOCK_RAILGUN_EXP
+                && data.getSkillExp(ElectromasterCategory.MAG_MANIP) >= BLOCK_MAG_MANIP_EXP;
     }
 
     /** La main qui porte la munition : la principale d'abord, comme {@link #ammo}. */

@@ -3824,6 +3824,13 @@ public final class AcademyGameTests {
         // 4. LE BLOC ARRACHE PAR MAG_MANIP : il n'est pas dans la main, et il tire quand meme — et
         // c'est LUI qui paie. C'est la demande du joueur : « il devrais aussi fonctionner si j'arrache
         // le bloc du sol directement », et « ça ne supprime pas le bloc que j'ai utilisé ».
+        //
+        // Mais il a DEUX verrous, demandes le 26/10 : « il faudrait pouvoir lancer les blocs de fer
+        // uniquement a partir du moment que le railgun est debloque a 50 % et que le mag manip soit
+        // debloque a 80 % ». Le railgun est a 50 % ici ; l'aimantation, elle, sort d'apprendre et
+        // n'a pas un point d'experience.
+        var magManip = cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP;
+        data.learnSkill(magManip);
         player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
                 new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK, 3));
         var carried = new cn.academy.entity.EntityMagManipBlock(level, player,
@@ -3834,6 +3841,20 @@ public final class AcademyGameTests {
         data.beginCharge(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP);
         data.setHoldTarget(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP,
                 carried.getId());
+
+        assertFalse(helper,
+                cn.academy.ability.electromaster.RailgunSkill.canThrowBlock(data),
+                "a 0 % de mag_manip le lancer de bloc est ferme : " + data.getSkillExp(magManip));
+        assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.NONE,
+                cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
+                "le bloc tenu ne compte donc pas comme munition, et rien n'est facture");
+        assertFalse(helper, railgun.canStart(player, data),
+                "la competence refuse de partir sur ce bloc");
+
+        // A 80 % pile, il s'ouvre — les deux seuils sont ceux-la, et ils sont INCLUSIFS.
+        data.setSkillExp(magManip, cn.academy.ability.electromaster.RailgunSkill.BLOCK_MAG_MANIP_EXP);
+        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.canThrowBlock(data),
+                "aux quatre cinquiemes de mag_manip le bloc passe");
 
         assertValue(helper, cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED,
                 cn.academy.ability.electromaster.RailgunSkill.ammo(player, data),
