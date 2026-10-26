@@ -3756,29 +3756,28 @@ public final class AcademyGameTests {
         assertValue(helper, net.minecraft.world.level.block.Blocks.AIR,
                 helper.getBlockState(wall).getBlock(), "le tir creuse le mur de pierre");
 
-        // Et la PORTEE du creusement suit la munition : la piece loin, le lingot moins, le bloc
-        // beaucoup moins (il creuse deja plus large par son rayon). C'est la demande du 26/10.
-        float coinWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN);
-        float ingotWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT);
-        float blockWall = railgun.wallEnergy(data, cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED);
-        assertTrue(helper, coinWall > ingotWall,
-                "le lingot perce moins loin que la piece : " + ingotWall + " contre " + coinWall);
-        // Et le BLOC perce PLUS que la piece — demande du 26/10 : « il y a plus de matiere, c'est
-        // logique que le trou soit plus grand et plus long ».
-        assertTrue(helper, blockWall > coinWall * 1.4f,
-                "le bloc en garde une fois et demie la piece : " + blockWall);
-        // Et la LONGUEUR de creusement suit le meme ordre : sans elle, dans la terre, les munitions
-        // perceraient le trait entier et la difference ne se verrait pas.
-        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.digLength(
-                                cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN)
-                        > cn.academy.ability.electromaster.RailgunSkill.digLength(
-                                cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT),
-                "la piece perce plus long que le lingot");
-        assertTrue(helper, cn.academy.ability.electromaster.RailgunSkill.digLength(
-                                cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED)
-                        > cn.academy.ability.electromaster.RailgunSkill.digLength(
-                                cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN),
-                "et le bloc perce plus long que la piece");
+        // Et la PROFONDEUR du tunnel suit la munition — c'est elle le levier, pas la largeur :
+        // « nan, ce n'est pas le dig_width que je voulais, je parle de la profondeur du tunnel, pas
+        // de son rayon ». La piece perce le trait entier, le lingot les deux tiers, et le bloc une
+        // fois et demie le trait — « il y a plus de matiere, c'est logique que le trou soit plus
+        // grand et plus long ».
+        final double coinDig = cn.academy.ability.electromaster.RailgunSkill.digLength(
+                cn.academy.ability.electromaster.RailgunSkill.Ammo.COIN);
+        final double ingotDig = cn.academy.ability.electromaster.RailgunSkill.digLength(
+                cn.academy.ability.electromaster.RailgunSkill.Ammo.INGOT);
+        final double blockDig = cn.academy.ability.electromaster.RailgunSkill.digLength(
+                cn.academy.ability.electromaster.RailgunSkill.Ammo.CARRIED);
+        assertTrue(helper, coinDig > ingotDig,
+                "le lingot perce moins loin que la piece : " + ingotDig + " contre " + coinDig);
+        assertTrue(helper, blockDig > coinDig * 1.4,
+                "le bloc perce une fois et demie la piece : " + blockDig);
+        // Et le budget d'une colonne se lit sur cette profondeur, pas sur une somme partagee : la
+        // roche ordinaire (1,5) comme le deepslate (3) ne coupent donc plus le tunnel — sinon, le
+        // bloc s'arretait a vingt-cinq blocs dans la pierre au lieu de ses quatre-vingt-huit.
+        assertTrue(helper,
+                cn.academy.ability.electromaster.RailgunSkill.DIG_ENERGY_PER_BLOCK
+                        > net.minecraft.world.level.block.Blocks.DEEPSLATE.defaultDestroyTime(),
+                "chaque bloc de roche passe, seule la durete dure arrete une colonne");
 
         // 3. LE BLOC EN MAIN NE TIRE PLUS : demande du joueur du 26/10 — « avec un bloc en main on
         // peut lancer le railgun, sauf que je ne veux plus que ce soit le cas. Je veux pouvoir lancer

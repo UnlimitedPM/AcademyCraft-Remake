@@ -62,35 +62,28 @@ public class RailgunSkill extends Skill {
     public static final int MAGNET_COOLDOWN_TICKS = 40;
 
     /**
-     * L'energie de creusement du tir : celle de l'original, {@code lerpf(900, 2000, exp)}.
+     * L'energie qu'un bloc de roche ordinaire coute a une colonne.
      *
-     * <p>Chaque colonne en recoit sa part, et chaque bloc traverse lui en prend sa <b>durete</b> :
-     * la terre file loin, la pierre beaucoup moins, l'obsidienne arrete la colonne. C'est le
-     * {@code totalEnergy} de {@code RangedRayDamage}, qui decrementait de {@code getBlockHardness}.
+     * <p>Le budget d'une colonne ne vient plus d'un chiffre fixe mais de sa <b>profondeur</b> :
+     * c'est elle que la munition decide (voir {@link #digLength}). La durete ne sert donc plus qu'a
+     * ARRETER les blocs durs — l'obsidienne, la bedrock —, et le tunnel va au bout du trait dans
+     * la roche comme dans la terre. Avant, le budget de l'original suffisait a la piece mais coupait
+     * le bloc a mi-chemin : « il ne casse pas assez de blocs a chaque passage ».
+     *
+     * <p>Trois virgule deux : la pierre vaut 1,5, le deepslate 3 — les deux passent, l'obsidienne
+     * (50) arrete sa colonne.
      */
-    public static final float WALL_ENERGY_MIN = 900f;
-    public static final float WALL_ENERGY_MAX = 2000f;
+    public static final float DIG_ENERGY_PER_BLOCK = 3.2f;
 
     /**
-     * Et ce que chaque munition en garde : la piece cent pour cent, le lingot moins, le bloc PLUS.
+     * Jusqu'ou chacune creuse, en multiple de la longueur du trait : c'est LA profondeur du tunnel.
      *
-     * <p>Demande du joueur le 26/10, en deux temps. D'abord « celui avec le lingot va trop loin » :
-     * le lingot descend donc a 55 %. Puis, devant un bloc qui ne perçait que quatre blocs : « met le
-     * a 150 % en comparaison, puisqu'il y a plus de matiere c'est logique que le trou soit plus
-     * grand et plus long ». Le bloc passe donc AU-DESSUS de la piece — et son rayon deja plus large
-     * (+30 %, voir {@link #BLOCK_BEAM_SCALE}) partage cette energie entre plus de colonnes, ce qui
-     * lui donne le trou epais du geste lourd.
-     */
-    public static final float INGOT_WALL_FACTOR = 0.55f;
-    public static final float BLOCK_WALL_FACTOR = 1.5f;
-
-    /**
-     * Et jusqu'ou chacune creuse, en part de la longueur du trait.
-     *
-     * <p>Le budget d'energie seul ne suffisait pas : dans la terre (durete 0,5), les munitions
-     * atteignaient toutes le bout du trait, et le joueur ne voyait aucune difference. La LONGUEUR du
-     * creusement est donc bornee aussi — la piece le trait entier, le lingot les deux tiers, et le
-     * bloc une fois et demie le trait (il a la matiere, et cela se voit).
+     * <p>Le budget d'une colonne en decoule ({@code profondeur x DIG_ENERGY_PER_BLOCK}) : la
+     * munition decide donc de la LONGUEUR du trou, et la durete ne fait plus que l'arreter sur un
+     * bloc dur. Corrige le 26/10 — « ce n'est pas le dig_width que je voulais, je parle de la
+     * profondeur du tunnel, pas de son rayon » : la piece perce le trait entier, le lingot les deux
+     * tiers, et le bloc une fois et demie le trait — il a la matiere, et c'est ce que le joueur
+     * voit — « met le a 150 % en comparaison ».
      */
     public static final double COIN_DIG_LENGTH = 1.0;
     public static final double INGOT_DIG_LENGTH = 0.65;
@@ -98,20 +91,6 @@ public class RailgunSkill extends Skill {
 
     /** Le pas du disque de creusement : le {@code STEP} de l'original, 0,9 bloc. */
     private static final double DIG_STEP = 0.9;
-
-    /**
-     * La LARGEUR du tunnel, en multiple du rayon du tir.
-     *
-     * <p>Retour du joueur du 26/10 : « il ne casse pas assez de blocs a chaque passage ». Le disque
-     * de l'original avait le rayon du trait — une douzaine de colonnes —, et cela faisait un tunnel
-     * etroit pour un geste de cette taille. Le rayon du CREUSEMENT est donc une fois et demie celui
-     * des degats : environ deux fois plus de blocs par tranche.
-     *
-     * <p>Et le budget d'energie suit la SURFACE ({@code DIG_WIDTH_SCALE} au carre) : sans cela, la
-     * meme somme partagee entre deux fois plus de colonnes creuserait deux fois moins loin, et le
-     * joueur troquerait de la largeur contre de la portee. Ici il gagne les deux.
-     */
-    private static final double DIG_WIDTH_SCALE = 1.5;
 
     /** Les trois barres de degats, par munition puis par le tir combine. */
     public static final float COIN_DAMAGE_MIN = 75f, COIN_DAMAGE_MAX = 125f;
@@ -554,9 +533,9 @@ public class RailgunSkill extends Skill {
         // Et il CREUSE. Le port ne cassait rien du tout : le joueur du 26/10 — « par contre le
         // railgun ne casse pas les blocs la ». C'est la seconde moitie de {@code RangedRayDamage},
         // celle qui suit les memes colonnes que les degats.
-        digBeam(player, eye, look, length * digLength(ammo),
-                radius * DIG_WIDTH_SCALE,
-                wallEnergy(data, ammo) * (float) (DIG_WIDTH_SCALE * DIG_WIDTH_SCALE));
+        // La PROFONDEUR que cette munition perce, et le budget de chaque colonne qui va avec.
+        double digBlocks = length * digLength(ammo);
+        digBeam(player, eye, look, digBlocks, radius, (float) (digBlocks * DIG_ENERGY_PER_BLOCK));
     }
 
     /** Jusqu'ou cette munition creuse : la part du trait qui perce vraiment. */
@@ -569,24 +548,18 @@ public class RailgunSkill extends Skill {
         };
     }
 
-    /** L'energie de creusement du tir : le budget de l'original, borne par la munition. */
-    public float wallEnergy(AbilityData data, Ammo ammo) {
-        float base = lerp(WALL_ENERGY_MIN, WALL_ENERGY_MAX, data.getSkillExp(this));
-        return switch (ammo) {
-            case COIN -> base;
-            case INGOT -> base * INGOT_WALL_FACTOR;
-            case CARRIED -> base * BLOCK_WALL_FACTOR;
-            case NONE -> 0f;
-        };
-    }
-
     /**
      * Le tunnel : chaque colonne du disque creuse tant que son energie tient.
      *
      * <p>C'est l'original au plus pres — {@code STEP} de 0,9, rayon tire a 0,9-1,1 par colonne (le
-     * bord du tunnel est donc irregulier), energie partagee entre les colonnes et reduite de la
-     * <b>durete</b> de chaque bloc traverse. Un bloc indestructible (durete negative, la bedrock)
-     * arrete sa colonne au lieu d'etre ignore : sans cela le faisceau creuserait derriere lui.
+     * bord du tunnel est donc irregulier) —, mais le budget d'une colonne se lit sur sa
+     * <b>profondeur</b> et non sur une somme partagee : chaque colonne va au bout de sa portee dans
+     * la roche, et seule la durete d'un bloc dur l'arrete. C'etait la correction du joueur du 26/10 :
+     * « ce n'est pas le dig_width que je voulais, je parle de la profondeur du tunnel, pas de son
+     * rayon ».
+     *
+     * <p>Un bloc indestructible (durete negative, la bedrock) arrete sa colonne au lieu d'etre
+     * ignore : sans cela le faisceau creuserait derriere lui.
      *
      * <p>Deux ecarts, dits : rien n'est lache au sol (comme les quatre autres competences du port
      * qui creusent), et le tir ne s'arrete pas a la premiere creature touchee — le port n'a pas
@@ -596,7 +569,7 @@ public class RailgunSkill extends Skill {
      * {@code BlockEvent.BreakEvent} : ce qu'une protection de serveur refuse ne part pas.
      */
     private static void digBeam(Player player, Vec3 eye, Vec3 look, double length, double radius,
-                                float energy) {
+                                float perColumn) {
         if (!cn.academy.Config.destroyBlocks) return;
         if (player.level().isClientSide) return;
 
@@ -622,11 +595,10 @@ public class RailgunSkill extends Skill {
         }
         if (columns.isEmpty()) return;
 
-        float each = energy / columns.size();
         for (net.minecraft.core.BlockPos seed : columns) {
             // L'original tirait la part de chaque colonne a plus ou moins cinq pour cent : deux
             // tirs dans le meme mur ne font donc pas exactement le meme trou.
-            float budget = each * (0.95f + random.nextFloat() * 0.1f);
+            float budget = perColumn * (0.95f + random.nextFloat() * 0.1f);
             digColumn(player, seed, look, length, budget);
         }
     }
