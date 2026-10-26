@@ -3779,11 +3779,14 @@ public final class AcademyGameTests {
         // 4. LE BLOC ARRACHE PAR MAG_MANIP : il n'est pas dans la main, et il tire quand meme — et
         // c'est LUI qui paie. C'est la demande du joueur : « il devrais aussi fonctionner si j'arrache
         // le bloc du sol directement », et « ça ne supprime pas le bloc que j'ai utilisé ».
-        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.IRON_BLOCK, 3));
         var carried = new cn.academy.entity.EntityMagManipBlock(level, player,
                 net.minecraft.world.level.block.Blocks.IRON_BLOCK.defaultBlockState(),
                 player.position().add(0, 1, 0));
         level.addFreshEntity(carried);
+        // La veille OUVERTE, comme quand le joueur tient la touche de l'aimantation.
+        data.beginCharge(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP);
         data.setHoldTarget(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP,
                 carried.getId());
 
@@ -3795,6 +3798,20 @@ public final class AcademyGameTests {
         railgun.onActivateCharged(player, data, 0);
         assertTrue(helper, carried.isRemoved(),
                 "le tir consomme le bloc arrache : il ne retombe pas");
+
+        // 4 bis. ET L'AIMANTATION S'ARRETE AVEC LE TIR : « je voudrais que apres un railgun ça
+        // comptabilise comme si la competence avait ete utilisee et donc qu'elle s'arrete par
+        // defaut ». Sans cela, son tick suivant retrouvait une main pleine de blocs, et le bloc
+        // detruit semblait remplace sur-le-champ par un neuf.
+        assertFalse(helper,
+                data.isCharging(cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP),
+                "le tir ferme l'aimantation");
+        assertTrue(helper, cn.academy.ability.electromaster.ElectromasterCategory.MAG_MANIP
+                        .getCooldownTicks(data) == 0,
+                "et elle n'a rien a recharger : sa veille n'a jamais eu de recharge");
+        assertValue(helper, 3, player.getMainHandItem().getCount(),
+                "les blocs de rechange restent en poche : rien n'est arrache");
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
 
         // 2 bis. LE CUIVRE, depuis que le joueur l'a demande : « il faut aussi rajouter le cuivre
         // pour le railgun ». Son LINGOT seulement : les blocs de cuivre, tailles compris, sont

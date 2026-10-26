@@ -390,6 +390,17 @@ public class RailgunSkill extends Skill {
                 // le sauve donc plus : ce bloc-la ne vient pas d'une poche, il vient du monde.
                 cn.academy.entity.EntityMagManipBlock block = carriedBlock(player, data);
                 if (block != null) block.discard();
+
+                // ET L'AIMANTATION S'ARRETE LA, comme si elle avait servi. Sans cela elle restait
+                // ouverte, et son tick suivant retrouvait une main pleine de blocs : le tir en
+                // arrachait un autre, et le bloc detruit semblait remplace sur-le-champ. « Je
+                // voudrais que apres un railgun ça comptabilise comme si la competence avait ete
+                // utilisee et donc qu'elle s'arrete par defaut. » C'est endHeld qui le fait, avec
+                // sa recharge — le meme chemin qu'un second appui.
+                if (player instanceof net.minecraft.server.level.ServerPlayer server) {
+                    cn.academy.ability.AbilityEvents.endHeld(server, data,
+                            ElectromasterCategory.MAG_MANIP);
+                }
             }
             case NONE -> { }
         }
@@ -397,19 +408,21 @@ public class RailgunSkill extends Skill {
 
     @Override
     public void onActivate(Player player, AbilityData data) {
-        // La munition d'abord : le tir part de la piece, et l'original la tuait AVANT de tirer.
+        // La munition et la FORME du tir d'abord, et la consommation ensuite : consommer le bloc
+        // arrache ferme l'aimantation, et le tir ne doit pas y perdre son cote combine pour
+        // autant — la forme se lit sur l'etat de l'appui, pas sur celui d'apres.
         Ammo ammo = ammo(player, data);
         boolean fromCoin = ammo == Ammo.COIN;
-        consumeAmmo(player, data, ammo);
-
-        // Le tir COMBINE, s'il tient mag_manip : un rail plus long, un cylindre plus large, et
-        // ses propres degats. Voir {@link #isCombo}.
         boolean combo = isCombo(data);
         // Et un BLOC agrandit ce faisceau de trente pour cent, quel qu'il soit : la munition se
         // lit dans la taille du tir — voir {@link #BLOCK_BEAM_SCALE}.
         double scale = ammo.isBlock() ? BLOCK_BEAM_SCALE : 1.0;
         double length = (combo ? COMBO_BEAM_LENGTH : RailgunHit.LENGTH) * scale;
         double radius = (combo ? COMBO_RADIUS : RailgunHit.RADIUS) * scale;
+        int arcs = (int) Math.round((combo ? COMBO_BEAM_ARCS : BEAM_ARCS) * scale);
+
+        // La munition part maintenant : la piece meurt avant que le tir parte, chez l'original.
+        consumeAmmo(player, data, ammo);
 
         // LA RAFALE D'ARCS, et c'est ici pour le fer seulement : sur une piece, le lancer s'en est
         // deja charge (voir ModItems.CoinItem.use), alors que la voie du fer ne se decide que la,
@@ -424,8 +437,7 @@ public class RailgunSkill extends Skill {
         cn.academy.sound.AcademySounds.playAt(player.level(), player.position(),
                 cn.academy.ModSounds.EM_RAILGUN, 0.5f, 1.0f);
 
-        shootBeam(player, length,
-                (int) Math.round((combo ? COMBO_BEAM_ARCS : BEAM_ARCS) * scale));
+        shootBeam(player, length, arcs);
 
         // LES DEGATS : TOUT UN CYLINDRE, et non une cible unique. C'est le RangedRayDamage de
         // l'original — rayon 2, longueur 50, voir RailgunHit — et le port, lui, ne prenait qu'une
