@@ -142,20 +142,50 @@ public class MineDetectSkill extends Skill {
         return 0f;
     }
 
-    /** Le prix d'ouverture : ce que l'eclat coute a la reserve, paye a l'ouverture. */
+    /**
+     * Rien n'est paye A L'OUVERTURE : tout l'eclat se paie tick par tick.
+     *
+     * <p>Demande du joueur du 26/10 : le prix des cinq premieres secondes etait preleve d'un
+     * coup, et pendant ce temps la reserve se regenerait — « le temps que les 5 secondes passent,
+     * j'ai le temps de regenerer des CP ». Reparti sur la duree, l'eclat ne rend plus rien : la
+     * reserve baisse a chaque tick, du premier au dernier. Voir {@link #tickCost}.
+     */
     @Override
     public float getCpCost() {
-        return CP_MIN_EXP;
+        return 0f;
     }
 
     @Override
     public float getCpCost(AbilityData data) {
-        return consumption(data);
+        return 0f;
     }
 
     @Override
     public float getOverloadCost(AbilityData data) {
         return overload(data);
+    }
+
+    /**
+     * Ce qu'un tick d'eclat coute : les cinq premieres secondes reparties, puis l'entretien.
+     *
+     * <p>Le prix de l'original (1500 a 1000 CP pour cinq secondes) ne change pas d'un CP : il est
+     * seulement preleve au rythme du regard — quinze par tick au depart, dix quand on sait faire.
+     * Au-dela des cent ticks, c'est l'entretien ({@link #HOLD_CP_PER_TICK}), et c'est lui qui
+     * donne a l'eclat toute la duree que la reserve peut payer.
+     */
+    public float tickCost(AbilityData data, int heldTicks) {
+        return heldTicks <= TIME ? consumption(data) / TIME : HOLD_CP_PER_TICK;
+    }
+
+    /**
+     * L'eclat ne s'ouvre pas sur une reserve qui ne paierait pas son premier tick.
+     *
+     * <p>Sans ce verrou, une ouverture gratuite laisserait payer le surcout pour un eclat qui
+     * s'eteindrait dans le tick suivant. C'est le meme refus, muet, que les autres competences.
+     */
+    @Override
+    public boolean canStart(Player player, AbilityData data) {
+        return data.getControlPoint() >= tickCost(data, 1);
     }
 
     /**
@@ -238,7 +268,13 @@ public class MineDetectSkill extends Skill {
     }
 
     /**
-     * L'ouverture : l'aveuglement, l'experience, et le paquet qui allume le client.
+     * L'ouverture : le surcout epingle, l'aveuglement, l'experience, et le paquet qui allume le
+     * client.
+     *
+     * <p>Le surcout est <b>epingle</b> par {@code setHeldOverload}, comme le font toutes les
+     * veilles du port : sans cela il redescendrait pendant les cinq secondes, et maintenir
+     * l'eclat finirait par ne plus rien couter — « mon overload se vide petit a petit, ca ne
+     * devrait pas etre le cas puisque en theorie j'utilise encore mon pouvoir ».
      *
      * <p>Appele par {@code beginHeld} APRES paiement : une ouverture refusee n'allume donc rien
      * et ne verse rien, exactement comme l'eclat de l'original, dont tout le corps vivait dans
@@ -246,6 +282,7 @@ public class MineDetectSkill extends Skill {
      */
     @Override
     public void onStart(Player player, AbilityData data) {
+        data.setHeldOverload(this, data.getOverload());
         // L'aveuglement, sans ses particules : l'original laissait celles de la cecite, et le
         // joueur les a refusees — elles tourbillonnent autour de lui et se lisent par-dessus la
         // pierre qu'il est justement en train de regarder. Pendant l'entretien, il est rafraichi
@@ -265,20 +302,20 @@ public class MineDetectSkill extends Skill {
     }
 
     /**
-     * L'entretien, un tick a la fois : c'est ici que l'eclat paie sa duree.
+     * L'entretien, un tick a la fois : c'est ici que l'eclat paie TOUTE sa duree.
      *
-     * <p>Les cent premiers ticks sont deja payes par l'ouverture. Au-dela, chaque tick coute
-     * {@link #HOLD_CP_PER_TICK}, et rendre faux quand la reserve ne suit plus fait fermer
-     * l'eclat par le moteur — donc poser la recharge, comme un second appui.
+     * <p>Chaque tick preleve {@link #tickCost} — le prix de l'original reparti sur ses cinq
+     * premieres secondes, puis l'entretien —, et rendre faux quand la reserve ne suit plus fait
+     * fermer l'eclat par le moteur, donc poser la recharge, comme un second appui.
      */
     @Override
     public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
-        if (heldTicks <= TIME) return true;
+        if (!data.consumeControlPoint(tickCost(data, heldTicks))) return false;
 
-        if (data.getControlPoint() < HOLD_CP_PER_TICK) return false;
-        data.performForced(HOLD_CP_PER_TICK, 0f);
-        // L'aveuglement suit l'eclat : rafraichi tant qu'il dure, il tombe avec lui.
-        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 8, 0, false, false, true));
+        // L'aveuglement suit l'eclat : rafraichi tant qu'il tient, il tombe avec lui.
+        if (heldTicks > TIME) {
+            player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 8, 0, false, false, true));
+        }
         return true;
     }
 
@@ -290,6 +327,8 @@ public class MineDetectSkill extends Skill {
      */
     @Override
     public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
+        // Le surcout redevient libre : la veille est finie, il peut redescendre.
+        data.setHeldOverload(this, 0f);
         player.removeEffect(MobEffects.BLINDNESS);
         if (player instanceof ServerPlayer server) {
             AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),

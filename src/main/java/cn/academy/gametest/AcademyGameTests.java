@@ -6142,12 +6142,14 @@ public final class AcademyGameTests {
         double reserveBefore = data.getControlPoint();
         float overloadBefore = data.getOverload();
 
-        // L'eclat est une BASCULE TENUE : le prix d'ouverture est paye comme le fait beginHeld,
-        // puis chaque tick d'entretien se paie dans onHoldTick, et la recharge ne tombe qu'a la
-        // fermeture (endHeld) — c'est la demande du joueur : « le cooldown ne soit qu'apres avoir
-        // desactive la competence ».
+        // L'eclat est une BASCULE TENUE, et TOUT se paie tick par tick : l'ouverture ne prend que
+        // le surcout, la reserve est prelevee au rythme du regard, et la recharge ne tombe qu'a la
+        // fermeture (endHeld). C'est la demande du joueur : plus de grosse consommation d'un coup,
+        // donc plus de regeneration possible pendant les cinq premieres secondes.
+        assertTrue(helper, detect.getCpCost(data) == 0f,
+                "l'ouverture ne prend rien a la reserve : " + detect.getCpCost(data));
         assertTrue(helper, data.perform(detect.getCpCost(data), detect.getOverloadCost(data)),
-                "la reserve paie l'ouverture");
+                "l'ouverture paie son surcout");
         data.beginCharge(detect);
         detect.onStart(player, data);
 
@@ -6157,21 +6159,34 @@ public final class AcademyGameTests {
         assertClose(helper, 0.008d, data.getSkillExp(detect), "et verse 0,008 d'experience");
         assertFalse(helper, data.isOnCooldown(detect),
                 "aucune recharge tant que l'eclat est ouvert : un second appui peut l'eteindre");
-        assertTrue(helper, data.getControlPoint() < reserveBefore - 53f,
-                "1500 CP sur 2800 valent 53,57 : " + data.getControlPoint());
+        assertClose(helper, reserveBefore, data.getControlPoint(),
+                "et la reserve n'a pas bouge d'un CP a l'ouverture : " + data.getControlPoint());
         assertTrue(helper, data.getOverload() > overloadBefore + 199f,
-                "et 200 de surcout, verbatim : " + data.getOverload());
+                "200 de surcout, verbatim : " + data.getOverload());
+        // Et il est EPINGLE : sans cela il redescendrait pendant que l'eclat dure, et le maintenir
+        // finirait par ne plus rien couter.
+        assertTrue(helper, data.isHoldingOverload(), "le surcout est epingle par le maintien");
 
-        // Les cent premiers ticks sont deja payes : l'entretien ne commence qu'apres.
+        // Chaque tick se paie, des le premier : le prix de l'original reparti sur ses cent ticks,
+        // puis l'entretien. C'est ce qui empeche la reserve de remonter pendant que l'eclat dure.
         double afterOpen = data.getControlPoint();
-        assertTrue(helper, detect.onHoldTick(player, data, 60), "le maintien tient");
-        assertClose(helper, afterOpen, data.getControlPoint(),
-                "les cent premiers ticks ne coutent rien de plus");
+        float firstTick = detect.tickCost(data, 1);
+        // Le TOTAL ne change pas d'un CP : c'est le prix de l'original, reparti sur la duree.
+        assertTrue(helper,
+                Math.abs(detect.consumption(data)
+                        - firstTick * cn.academy.ability.electromaster.MineDetectSkill.TIME) < 0.01,
+                "cent ticks valent exactement le prix de l'original : " + firstTick);
+        assertTrue(helper, detect.onHoldTick(player, data, 1), "le premier tick tient");
+        assertTrue(helper, Math.abs((afterOpen - firstTick) - data.getControlPoint()) < 0.01,
+                "un tick des cinq premieres secondes coute sa part : " + data.getControlPoint());
 
-        // Au-dela, chaque tick se paie : huit CP, preleves un a un.
-        assertTrue(helper, detect.onHoldTick(player, data, 120), "et il continue de tenir");
-        assertClose(helper, afterOpen - 8d, data.getControlPoint(),
-                "un tick d'entretien coute huit CP : " + data.getControlPoint());
+        double beforeUpkeep = data.getControlPoint();
+        float upkeep = detect.tickCost(data, 120);
+        assertTrue(helper, upkeep == cn.academy.ability.electromaster.MineDetectSkill.HOLD_CP_PER_TICK,
+                "au-dela, un tick coute l'entretien : " + upkeep);
+        assertTrue(helper, detect.onHoldTick(player, data, 120), "et l'entretien tient");
+        assertTrue(helper, Math.abs((beforeUpkeep - upkeep) - data.getControlPoint()) < 0.01,
+                "un tick d'entretien se preleve pareil : " + data.getControlPoint());
 
         // La fermeture — ici la fin ordinaire, comme un second appui — pose la recharge.
         cn.academy.ability.AbilityEvents.endHeld(player, data, detect);
@@ -6183,6 +6198,7 @@ public final class AcademyGameTests {
                 "quarante-cinq secondes au depart : " + data.getCooldown(detect));
         assertFalse(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
                 "et l'aveuglement tombe avec l'eclat");
+        assertFalse(helper, data.isHoldingOverload(), "et le surcout redevient libre");
 
         // Sans reserve : rien ne s'ouvre, rien n'est verse, et aucune recharge ne tombe. C'est le
         // paiement d'ouverture de beginHeld, et c'est la moitie du test.
@@ -6197,9 +6213,8 @@ public final class AcademyGameTests {
                     "vider la reserve doit marcher");
         }
 
-        assertFalse(helper,
-                poorData.perform(detect.getCpCost(poorData), detect.getOverloadCost(poorData)),
-                "sans reserve, le regard n'a pas lieu");
+        assertFalse(helper, detect.canStart(poor, poorData),
+                "sans reserve, le regard ne s'ouvre pas");
         assertFalse(helper, poor.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
                 "et rien ne s'allume");
         assertClose(helper, 0.0d, poorData.getSkillExp(detect), "et rien n'est verse");
