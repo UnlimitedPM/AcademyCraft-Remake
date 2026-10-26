@@ -22,11 +22,16 @@ import net.minecraftforge.network.PacketDistributor;
  *
  * <h2>Ce que le regard coute</h2>
  *
- * Le paiement n'est pas celui des autres competences : l'original ne consommait la reserve
- * <b>qu'une fois son effet decide</b>, et rien du tout si elle manquait — pas de facture, pas
- * d'aveuglement, pas de recharge. Le port le dit avec {@link #paysOnEffect()} : le paquet
- * d'activation ne paie rien, et c'est l'effet qui decide. C'est la meme mecanique que l'onde
- * de choc au sol, qui ne coute rien quand le joueur a les pieds en l'air.
+ * Le paiement est celui de toutes les competences TENUES : l'ouverture paie les deux
+ * ressources d'un coup ({@link #getCpCost}, {@link #getOverloadCost}), et rien du tout si la
+ * reserve manque — pas de facture, pas d'aveuglement, pas de recharge. L'entretien, lui, se
+ * paie tick par tick dans {@link #onHoldTick}, et la recharge ne tombe qu'a la fermeture :
+ * second appui, reserve epuisee, ou plafond de la competence.
+ *
+ * <p>C'est la meme mecanique que les ailes d'orage, qui tiennent tant que la reserve suit :
+ * la competence est une <b>bascule</b> ({@link #isToggle}), et le moteur ferme sur un second
+ * appui avant tout refus — on ne peut donc jamais rester coince dans un eclat qu'on ne peut
+ * plus eteindre.
  *
  * <p>Le prix suit l'experience a l'envers des habitudes : 1500 a 1000 CP et
  * 200 a 180 de surcout, donc moins cher quand on sait faire, et la portee grandit en meme
@@ -132,27 +137,20 @@ public class MineDetectSkill extends Skill {
     // L'eclat
     // ------------------------------------------------------------------
 
-    /** Le paquet d'activation ne paie rien : l'effet decide, et paie lui-meme. */
-    @Override
-    public boolean paysOnEffect() {
-        return true;
-    }
-
-    /** L'experience aussi est versee par l'effet, et seulement s'il a eu lieu. */
-    @Override
-    public boolean earnsExpOnEffect() {
-        return true;
-    }
-
     @Override
     public float getExpGain(AbilityData data) {
         return 0f;
     }
 
-    /** Aucun cout declare : c'est l'effet qui paie, et il paie les deux ressources. */
+    /** Le prix d'ouverture : ce que l'eclat coute a la reserve, paye a l'ouverture. */
     @Override
     public float getCpCost() {
-        return 0f;
+        return CP_MIN_EXP;
+    }
+
+    @Override
+    public float getCpCost(AbilityData data) {
+        return consumption(data);
     }
 
     @Override
@@ -160,24 +158,50 @@ public class MineDetectSkill extends Skill {
         return overload(data);
     }
 
-    /** Aucune recharge declaree : l'eclat la pose lui-meme, s'il a eu lieu. */
+    /**
+     * La recharge n'est plus posee a l'ouverture, mais a la FERMETURE.
+     *
+     * <p>C'est toute la demande du joueur du 26/10 : « fait en sorte que le cooldown ne soit
+     * qu'apres avoir desactive la competence ». C'est {@code AbilityEvents.endHeld} qui la pose,
+     * au meme moment pour un second appui et pour une fin par epuisement — les deux chemins
+     * passent par lui.
+     */
     @Override
     public int getCooldownTicks(AbilityData data) {
-        return 0;
+        return cooldown(data);
+    }
+
+    // ------------------------------------------------------------------
+    // Le maintien : une BASCULE, comme les ailes d'orage
+    // ------------------------------------------------------------------
+
+    /**
+     * L'eclat est une competence TENUE : il vit tant que la reserve suit, et pas sur un minuteur.
+     *
+     * <p>Le parcours est celui du moteur, et c'est ce qui donne au joueur ce qu'il demandait :
+     * un appui ouvre ({@code beginHeld}), le prix d'ouverture est paye une fois, chaque tick
+     * d'entretien est paye par {@link #onHoldTick}, et la recharge tombe a la fin — par
+     * {@code endHeld}, que la fin vienne d'un second appui ou de la reserve.
+     */
+    @Override
+    public boolean isHeld() {
+        return true;
     }
 
     /**
-     * Les joueurs dont l'eclat tient encore, et depuis combien de ticks.
+     * Et il se <b>bascule</b> : un appui l'allume, un second l'eteint.
      *
-     * <p>C'est l'etat de l'entretien, et il vit chez le <b>serveur</b> seul : c'est lui qui paie,
-     * qui decide de la fin et qui l'annonce. Le client ne fait que dessiner ce qu'on lui dit —
-     * voir {@code MineDetectPacket} et {@code MineDetectStopPacket}.
+     * <p>C'est la regle du moteur (voir {@code ActivateSkillPacket.handle}) : une bascule se
+     * ferme sur un second appui, et fermer ne se refuse jamais — ni surcharge, ni recharge, ni
+     * config ne s'y opposent. Le joueur n'avait donc plus a attendre pour l'eteindre.
      */
-    private static final java.util.Map<java.util.UUID, Integer> HOLDING =
-            new java.util.HashMap<>();
+    @Override
+    public boolean isToggle() {
+        return true;
+    }
 
     /**
-     * La duree maximale de l'ENTRETIEN, en ticks : rien a 0 % d'experience, soixante secondes a
+     * L'allongement maximal de l'eclat, en ticks : RIEN a 0 % d'experience, soixante secondes a
      * 100 %, ou le plafond disparait et la reserve decide seule.
      *
      * <p>Demande du joueur : l'eclat doit s'allonger avec la competence, mais rester identique a
@@ -186,7 +210,14 @@ public class MineDetectSkill extends Skill {
     public static final int HOLD_TICKS_MIN_EXP = 0;
     public static final int HOLD_TICKS_MAX_EXP = 1200;
 
-    /** Les ticks d'entretien que la competence autorise. Zero a 0 %, infini a 100 %. */
+    /**
+     * Les ticks d'entretien que la competence autorise. Zero a 0 %, sans fin a 100 %.
+     *
+     * <p>Zero est ce qui garde l'eclat de l'original : cent ticks, puis la recharge. A 100 %, le
+     * plafond disparait et c'est la reserve qui decide — ce que le joueur a demande aux deux
+     * etapes : « le temps s'allonge avec l'experience », puis « tant qu'il peut consommer des
+     * CP l'effet dure ».
+     */
     public int extensionTicks(AbilityData data) {
         float exp = data.getSkillExp(this);
         if (exp >= 1f) return Integer.MAX_VALUE;
@@ -194,34 +225,33 @@ public class MineDetectSkill extends Skill {
     }
 
     /**
-     * L'eclat, cote serveur.
+     * La duree maximale du maintien : les cent ticks de l'original, plus ce que la competence
+     * offre d'entretien.
      *
-     * <p>Rien n'est verse ni pose quand la reserve manque : l'original appelait
-     * {@code consume} d'abord, et tout le reste vivait dans le {@code if}. Le client, lui,
-     * n'apprend l'eclat que s'il a eu lieu — c'est ce qui l'empeche d'allumer des minerais
-     * pour une competence qui a ete refusee.
+     * <p>Zero veut dire « aucune duree » dans le moteur : a 100 % d'experience, c'est donc la
+     * reserve seule qui decide, et l'eclat tient tant qu'elle paie.
      */
     @Override
-    public void onActivate(Player player, AbilityData data) {
-        // Un SECOND appui ETEINT l'eclat. Il tient par la reserve, donc il faut pouvoir l'arreter :
-        // le joueur ne pouvait plus, une fois tout paye d'un coup (« si je veux le desactiver
-        // pendant que je l'utilise, je peux juste pas »).
-        if (HOLDING.containsKey(player.getUUID())) {
-            stop(player);
-            return;
-        }
+    public int getMaxHoldTicks(AbilityData data) {
+        int extension = extensionTicks(data);
+        return extension == Integer.MAX_VALUE ? 0 : TIME + extension;
+    }
 
-        if (!data.perform(consumption(data), overload(data))) return;
-
+    /**
+     * L'ouverture : l'aveuglement, l'experience, et le paquet qui allume le client.
+     *
+     * <p>Appele par {@code beginHeld} APRES paiement : une ouverture refusee n'allume donc rien
+     * et ne verse rien, exactement comme l'eclat de l'original, dont tout le corps vivait dans
+     * un {@code if} de paiement.
+     */
+    @Override
+    public void onStart(Player player, AbilityData data) {
         // L'aveuglement, sans ses particules : l'original laissait celles de la cecite, et le
         // joueur les a refusees — elles tourbillonnent autour de lui et se lisent par-dessus la
-        // pierre qu'il est justement en train de regarder. Le temoin du HUD, lui, reste : c'est
-        // la seule chose qui dit que l'effet est encore la. Pendant l'entretien, il est rafraichi
-        // par {@link #tick} — c'est la duree de l'eclat qui commande, pas un minuteur.
+        // pierre qu'il est justement en train de regarder. Pendant l'entretien, il est rafraichi
+        // par {@link #onHoldTick} : c'est la duree de l'eclat qui commande, pas un minuteur.
         player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, TIME, 0, false, false, true));
         data.addSkillExp(this, EXP_PER_CAST);
-        data.setCooldown(this, cooldown(data));
-        HOLDING.put(player.getUUID(), 0);
 
         if (player instanceof ServerPlayer server) {
             // `hold` : l'eclat peut durer au-dela des cent ticks, contre la reserve. A 0 %
@@ -237,45 +267,29 @@ public class MineDetectSkill extends Skill {
     /**
      * L'entretien, un tick a la fois : c'est ici que l'eclat paie sa duree.
      *
-     * <p>Les cent premiers ticks sont deja payes par l'activation. Au-dela, chaque tick coute
-     * {@link #HOLD_CP_PER_TICK}, et l'eclat s'arrete des qu'il ne peut plus payer, qu'il atteint
-     * le plafond de la competence, que le porteur meurt, ou qu'un brouillage le coupe.
-     *
-     * <p>Appele par {@code AbilityEvents.onPlayerTick}. La carte vide fait sortir tout de suite :
-     * le cout d'un joueur qui n'a pas d'eclat en cours est une lecture de dictionnaire.
+     * <p>Les cent premiers ticks sont deja payes par l'ouverture. Au-dela, chaque tick coute
+     * {@link #HOLD_CP_PER_TICK}, et rendre faux quand la reserve ne suit plus fait fermer
+     * l'eclat par le moteur — donc poser la recharge, comme un second appui.
      */
-    public void tick(ServerPlayer player, AbilityData data) {
-        if (HOLDING.isEmpty()) return;
-        Integer held = HOLDING.get(player.getUUID());
-        if (held == null) return;
+    @Override
+    public boolean onHoldTick(Player player, AbilityData data, int heldTicks) {
+        if (heldTicks <= TIME) return true;
 
-        if (!player.isAlive() || data.isInterfered()) {
-            stop(player);
-            return;
-        }
-
-        int next = held + 1;
-        if (next > TIME) {
-            boolean affordable = data.getControlPoint() >= HOLD_CP_PER_TICK;
-            if (next - TIME > extensionTicks(data) || !affordable) {
-                stop(player);
-                return;
-            }
-            data.performForced(HOLD_CP_PER_TICK, 0f);
-            // L'aveuglement suit l'eclat : rafraichi tant qu'il dure, il tombe avec lui.
-            player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 8, 0, false, false, true));
-        }
-        HOLDING.put(player.getUUID(), next);
+        if (data.getControlPoint() < HOLD_CP_PER_TICK) return false;
+        data.performForced(HOLD_CP_PER_TICK, 0f);
+        // L'aveuglement suit l'eclat : rafraichi tant qu'il dure, il tombe avec lui.
+        player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 8, 0, false, false, true));
+        return true;
     }
 
     /**
-     * Eteint l'eclat : l'entretien s'arrete, et le client le sait tout de suite.
+     * La fermeture : plus d'aveuglement, et le client eteint son eclat.
      *
-     * <p>La cecite est retiree ici : elle appartenait a l'eclat, et la laisser courir apres lui
-     * ferait payer au joueur une seconde de plus qu'il n'a demande.
+     * <p>La recharge, elle, n'est pas posee ici : c'est {@code endHeld} qui la pose juste apres,
+     * avec le chiffre de la competence (voir {@link #getCooldownTicks}).
      */
-    public void stop(Player player) {
-        if (HOLDING.remove(player.getUUID()) == null) return;
+    @Override
+    public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
         player.removeEffect(MobEffects.BLINDNESS);
         if (player instanceof ServerPlayer server) {
             AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),

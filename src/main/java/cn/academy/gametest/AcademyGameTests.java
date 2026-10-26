@@ -6141,25 +6141,51 @@ public final class AcademyGameTests {
 
         double reserveBefore = data.getControlPoint();
         float overloadBefore = data.getOverload();
-        detect.onActivate(player, data);
+
+        // L'eclat est une BASCULE TENUE : le prix d'ouverture est paye comme le fait beginHeld,
+        // puis chaque tick d'entretien se paie dans onHoldTick, et la recharge ne tombe qu'a la
+        // fermeture (endHeld) — c'est la demande du joueur : « le cooldown ne soit qu'apres avoir
+        // desactive la competence ».
+        assertTrue(helper, data.perform(detect.getCpCost(data), detect.getOverloadCost(data)),
+                "la reserve paie l'ouverture");
+        data.beginCharge(detect);
+        detect.onStart(player, data);
 
         var blindness = player.getEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
         assertTrue(helper, blindness != null, "l'eclat aveugle un instant");
         assertValue(helper, 100, blindness.getDuration(), "cent ticks, comme le regard");
         assertClose(helper, 0.008d, data.getSkillExp(detect), "et verse 0,008 d'experience");
-        assertTrue(helper, data.isOnCooldown(detect), "puis pose sa recharge");
-        // Quarante-cinq secondes au depart, moins l'experience que l'eclat vient de verser :
-        // la recharge est lue APRES le gain, comme dans l'original, ou elle vaut donc 896 et
-        // non 900 des le premier eclat.
-        assertTrue(helper, data.getCooldown(detect) >= 895 && data.getCooldown(detect) <= 900,
-                "quarante-cinq secondes au depart : " + data.getCooldown(detect));
+        assertFalse(helper, data.isOnCooldown(detect),
+                "aucune recharge tant que l'eclat est ouvert : un second appui peut l'eteindre");
         assertTrue(helper, data.getControlPoint() < reserveBefore - 53f,
                 "1500 CP sur 2800 valent 53,57 : " + data.getControlPoint());
         assertTrue(helper, data.getOverload() > overloadBefore + 199f,
                 "et 200 de surcout, verbatim : " + data.getOverload());
 
-        // Sans reserve : ni regard, ni experience, ni recharge. C'est tout l'interet du
-        // paiement dans l'effet, et c'est la moitie du test.
+        // Les cent premiers ticks sont deja payes : l'entretien ne commence qu'apres.
+        double afterOpen = data.getControlPoint();
+        assertTrue(helper, detect.onHoldTick(player, data, 60), "le maintien tient");
+        assertClose(helper, afterOpen, data.getControlPoint(),
+                "les cent premiers ticks ne coutent rien de plus");
+
+        // Au-dela, chaque tick se paie : huit CP, preleves un a un.
+        assertTrue(helper, detect.onHoldTick(player, data, 120), "et il continue de tenir");
+        assertClose(helper, afterOpen - 8d, data.getControlPoint(),
+                "un tick d'entretien coute huit CP : " + data.getControlPoint());
+
+        // La fermeture — ici la fin ordinaire, comme un second appui — pose la recharge.
+        cn.academy.ability.AbilityEvents.endHeld(player, data, detect);
+        assertTrue(helper, data.isOnCooldown(detect), "la recharge tombe a la fermeture");
+        // Quarante-cinq secondes au depart, moins l'experience que l'eclat vient de verser :
+        // la recharge est lue APRES le gain, comme dans l'original, ou elle vaut donc 896 et
+        // non 900 des le premier eclat.
+        assertTrue(helper, data.getCooldown(detect) >= 895 && data.getCooldown(detect) <= 900,
+                "quarante-cinq secondes au depart : " + data.getCooldown(detect));
+        assertFalse(helper, player.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                "et l'aveuglement tombe avec l'eclat");
+
+        // Sans reserve : rien ne s'ouvre, rien n'est verse, et aucune recharge ne tombe. C'est le
+        // paiement d'ouverture de beginHeld, et c'est la moitie du test.
         var poor = ownPlayer(helper, "ore-seer-poor");
         poor.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
         var poorData = poor.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
@@ -6171,9 +6197,11 @@ public final class AcademyGameTests {
                     "vider la reserve doit marcher");
         }
 
-        detect.onActivate(poor, poorData);
-        assertFalse(helper, poor.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+        assertFalse(helper,
+                poorData.perform(detect.getCpCost(poorData), detect.getOverloadCost(poorData)),
                 "sans reserve, le regard n'a pas lieu");
+        assertFalse(helper, poor.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                "et rien ne s'allume");
         assertClose(helper, 0.0d, poorData.getSkillExp(detect), "et rien n'est verse");
         assertFalse(helper, poorData.isOnCooldown(detect), "ni aucune recharge");
 

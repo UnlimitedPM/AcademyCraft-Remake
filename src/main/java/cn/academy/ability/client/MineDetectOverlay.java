@@ -83,7 +83,21 @@ public final class MineDetectOverlay {
     public static boolean active(LocalPlayer player) {
         if (player == null) return false;
         if (player.tickCount < endTick) return true;
-        return holding && player.tickCount < holdEnd;
+        return holding && player.tickCount < holdEnd && held(player);
+    }
+
+    /**
+     * Le maintien est-il toujours ouvert, du point de vue du client ?
+     *
+     * <p>Filet de securite : le paquet d'arret eteint l'eclat tout de suite, mais il peut se
+     * perdre (mort, changement de dimension). Le client tient deja le miroir des maintiens, donc
+     * une eclat qui n'est plus tenu cote serveur ne doit plus rien allumer ici.
+     */
+    private static boolean held(LocalPlayer player) {
+        return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .map(data -> data.isCharging(
+                        cn.academy.ability.electromaster.ElectromasterCategory.MINE_DETECT))
+                .orElse(false);
     }
 
     /**
