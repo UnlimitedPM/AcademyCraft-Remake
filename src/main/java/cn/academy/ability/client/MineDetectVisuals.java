@@ -68,6 +68,23 @@ public final class MineDetectVisuals {
     }
 
     /**
+     * La part de la portee ou un minerai a encore une opacite.
+     *
+     * <p>{@link #alpha} tombe a zero quand {@code 1 - d / range * FADE} atteint
+     * {@code -BASE_ALPHA / (1 - BASE_ALPHA)}, c'est-a-dire a
+     * {@code (1 + BASE_ALPHA / (1 - BASE_ALPHA)) / FADE} — 0,6494 avec les chiffres de
+     * l'original. Au-dela, le minerai n'est <b>jamais</b> dessine : le balayage n'a donc rien a
+     * lire la-bas, et c'est ce que {@link #visibleRange} dit a {@code MineDetectOverlay}.
+     */
+    public static final double VISIBLE_RANGE_FRACTION =
+            (1.0 + BASE_ALPHA / (1.0 - BASE_ALPHA)) / FADE;
+
+    /** La distance au-dela de laquelle un minerai ne se dessine plus, pour une portee donnee. */
+    public static double visibleRange(double range) {
+        return range * VISIBLE_RANGE_FRACTION;
+    }
+
+    /**
      * La transparence d'un minerai, selon sa distance.
      *
      * Portage de {@code calcAlpha} : la base est a 0,3, et le minerai gagne jusqu'a 1 en

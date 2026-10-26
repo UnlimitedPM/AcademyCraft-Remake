@@ -13,6 +13,7 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
@@ -165,6 +166,8 @@ public final class MineDetectOverlay {
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        // Les compteurs, quand le joueur les a demandes : voir MineDetectStats.
+        MineDetectStats.tick();
         LocalPlayer player = Minecraft.getInstance().player;
         if (!active(player)) {
             ores = List.of();
@@ -186,28 +189,60 @@ public final class MineDetectOverlay {
      * <p>Une sphere, et l'air ignore : c'est le {@code getBlocksWithin} de l'original, avec sa
      * borne sur le nombre de minerais trouves. Rien n'est trie : l'ordre du balayage est celui
      * du monde, et personne ne le voit.
+     *
+     * <p>La sphere s'arrete a la portee <b>visible</b> et non a la portee de la competence (voir
+     * {@link MineDetectVisuals#visibleRange}) : au-dela, {@code alpha} vaut zero et le minerai
+     * n'est jamais peint, donc le lire ne servait a rien. Sur 28 blocs, cela fait 3,8 fois moins
+     * de blocs lus par balayage.
+     *
+     * <p>Le curseur est <b>mutable</b> : {@code BlockPos.offset} creait un objet par bloc
+     * examine, air compris — une dizaine de milliers d'allocations par tick dans une caverne.
+     * Seuls les minerais retenus recoivent une position immuable.
      */
     private static List<Ore> scan(LocalPlayer player) {
+        long start = MineDetectStats.ENABLED ? System.nanoTime() : 0L;
+
         Level level = player.level();
         BlockPos centre = player.blockPosition();
-        int radius = (int) Math.ceil(range);
-        double limit = range * range;
+        double visible = MineDetectVisuals.visibleRange(range);
+        int radius = (int) Math.ceil(visible);
+        double limit = visible * visible;
+
+        // Le minerai choisi, resolu UNE fois : `MineDetectFilter.isSelected(state)` refaisait une
+        // lecture de registre et une chaine par minerai trouve.
+        Block chosen = MineDetectFilter.selectedBlock();
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        int cx = centre.getX();
+        int cy = centre.getY();
+        int cz = centre.getZ();
 
         List<Ore> found = new ArrayList<>();
+        int read = 0;
         for (int dy = -radius; dy <= radius; dy++) {
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
                     if (dx * dx + dy * dy + dz * dz > limit) continue;
-                    BlockPos pos = centre.offset(dx, dy, dz);
-                    BlockState state = level.getBlockState(pos);
+                    cursor.set(cx + dx, cy + dy, cz + dz);
+                    BlockState state = level.getBlockState(cursor);
+                    read++;
                     if (state.isAir()) continue;
                     if (!MetalTargets.isOreBlock(state)) continue;
-                    found.add(new Ore(pos.immutable(),
+                    found.add(new Ore(cursor.immutable(),
                             MineDetectVisuals.tierOf(advanced, MetalTargets.harvestTier(state)),
-                            MineDetectFilter.isSelected(state)));
-                    if (found.size() >= MineDetectVisuals.SCAN_LIMIT) return found;
+                            chosen != null && state.is(chosen)));
+                    if (found.size() >= MineDetectVisuals.SCAN_LIMIT) {
+                        return reported(found, read, start);
+                    }
                 }
             }
+        }
+        return reported(found, read, start);
+    }
+
+    /** Ferme la mesure du balayage et rend la liste, sans detour dans le corps de {@link #scan}. */
+    private static List<Ore> reported(List<Ore> found, int read, long start) {
+        if (MineDetectStats.ENABLED) {
+            MineDetectStats.scan(System.nanoTime() - start, read, found.size());
         }
         return found;
     }

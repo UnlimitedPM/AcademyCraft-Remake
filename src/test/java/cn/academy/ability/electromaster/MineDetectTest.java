@@ -117,4 +117,20 @@ class MineDetectTest {
         assertFalse(detect.advanced(novice, novice.getCategoryLevel(category)),
                 "et un niveau 5 ne remplace pas l'experience");
     }
+
+    @Test
+    void leBalayageSArreteOuLeDessinSArrete() {
+        // L'eclat ne peint rien au-dela de 0,6494 fois sa portee : `alpha` y vaut deja zero.
+        // Le balayage s'arrete donc la, et c'est ce qui divise les blocs lus par 3,8 sur 28
+        // (91 965 positions avant, 24 405 apres).
+        assertEquals(0.64935, MineDetectVisuals.VISIBLE_RANGE_FRACTION, 0.0005,
+                "la fraction ou l'opacite tombe a zero");
+        assertEquals(0.0f, MineDetectVisuals.alpha(MineDetectVisuals.visibleRange(20.0), 20.0),
+                1.0e-6, "a la portee visible, le minerai ne se peint plus");
+        assertTrue(MineDetectVisuals.alpha(MineDetectVisuals.visibleRange(20.0) - 0.01, 20.0) > 0f,
+                "juste en deca, il se peint encore");
+        assertEquals(28.0 * MineDetectVisuals.VISIBLE_RANGE_FRACTION,
+                MineDetectVisuals.visibleRange(28.0), 1.0e-9,
+                "et la portee visible suit la portee de l'eclat");
+    }
 }

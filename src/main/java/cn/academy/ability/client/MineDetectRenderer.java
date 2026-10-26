@@ -103,14 +103,29 @@ public final class MineDetectRenderer {
         BufferBuilder buffer = tesselator.getBuilder();
         buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR_TEX);
 
+        // Les distances se calculent en primitives : `Vec3.atCenterOf` puis `distanceTo`
+        // allouaient un Vec3 par minerai et par image — huit mille objets par frame dans une
+        // caverne dense, pour une racine carree et trois soustractions.
+        double px = from.x;
+        double py = from.y;
+        double pz = from.z;
+        long start = MineDetectStats.ENABLED ? System.nanoTime() : 0L;
+        int drawn = 0;
         for (MineDetectOverlay.Ore ore : MineDetectOverlay.ores()) {
-            Vec3 centre = Vec3.atCenterOf(ore.pos());
-            float alpha = MineDetectVisuals.alpha(from.distanceTo(centre), range);
+            BlockPos pos = ore.pos();
+            double dx = pos.getX() + 0.5 - px;
+            double dy = pos.getY() + 0.5 - py;
+            double dz = pos.getZ() + 0.5 - pz;
+            float alpha = MineDetectVisuals.alpha(Math.sqrt(dx * dx + dy * dy + dz * dz), range);
             if (alpha <= 0f) continue;
             cube(buffer, matrix, ore.pos(), camera, MineDetectVisuals.colorFor(ore.tier(), ore.selected()), alpha);
+            drawn++;
         }
 
         BufferUploader.drawWithShader(buffer.end());
+        if (MineDetectStats.ENABLED) {
+            MineDetectStats.draw(drawn, System.nanoTime() - start);
+        }
 
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();

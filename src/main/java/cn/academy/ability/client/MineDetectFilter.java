@@ -3,6 +3,7 @@ package cn.academy.ability.client;
 import cn.academy.client.hud.HudConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -46,5 +47,20 @@ public final class MineDetectFilter {
     public static boolean isSelected(BlockState state) {
         String id = selected();
         return !id.isEmpty() && id.equals(keyOf(state));
+    }
+
+    /**
+     * Le bloc choisi, resolu en objet, ou {@code null} si le joueur n'a rien choisi — ou si la
+     * cle ne correspond a aucun bloc (un mod retire, un pack de donnees change).
+     *
+     * <p>C'est la forme que le balayage emploie : {@link #isSelected} refaisait une lecture de
+     * registre ET une chaine par minerai trouve, la ou une comparaison de bloc ne coute rien.
+     * La resolution, elle, se fait une fois par balayage.
+     */
+    public static Block selectedBlock() {
+        String id = selected();
+        if (id.isEmpty()) return null;
+        ResourceLocation key = ResourceLocation.tryParse(id);
+        return key == null ? null : BuiltInRegistries.BLOCK.getOptional(key).orElse(null);
     }
 }
