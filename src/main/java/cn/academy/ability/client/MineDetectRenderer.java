@@ -107,7 +107,7 @@ public final class MineDetectRenderer {
             Vec3 centre = Vec3.atCenterOf(ore.pos());
             float alpha = MineDetectVisuals.alpha(from.distanceTo(centre), range);
             if (alpha <= 0f) continue;
-            cube(buffer, matrix, ore.pos(), camera, MineDetectVisuals.colorFor(ore.tier()), alpha);
+            cube(buffer, matrix, ore.pos(), camera, MineDetectVisuals.colorFor(ore.tier(), ore.selected()), alpha);
         }
 
         BufferUploader.drawWithShader(buffer.end());

@@ -357,6 +357,9 @@
   "ac.ability.teleporter.crithit": "%sx critical hit!",
   "death.attack.academy.teleport": "%1$s was struck by a teleportation",
   "death.attack.academy.teleport.player": "%1$s was struck by %2$s's teleportation",
+  "ac.settings.prop.filter_ores": "Filter ores",
+  "ac.gui.orefilter.title": "Detected ores",
+  "ac.gui.orefilter.none": "None",
   "ac.ability.meltdowner.rad_intensify.name": "β Radiation Intensify",
   "ac.ability.meltdowner.electron_missile.name": "Electron Missile",
 

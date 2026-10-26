@@ -358,6 +358,9 @@
   "ac.ability.teleporter.crithit": "%sx kritischer Treffer!",
   "death.attack.academy.teleport": "%1$s wurde von einer Teleportation getroffen",
   "death.attack.academy.teleport.player": "%1$s wurde von der Teleportation von %2$s getroffen",
+  "ac.settings.prop.filter_ores": "Erze filtern",
+  "ac.gui.orefilter.title": "Erkannte Erze",
+  "ac.gui.orefilter.none": "Keines",
   "ac.ability.meltdowner.rad_intensify.name": "β-Strahlungsverstärkung",
   "ac.ability.meltdowner.electron_missile.name": "Elektronenrakete",
 

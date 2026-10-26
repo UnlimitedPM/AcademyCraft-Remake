@@ -31,8 +31,8 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class MineDetectOverlay {
 
-    /** Un minerai allume : ou il est, et le palier de couleur qu'il a gagne. */
-    public record Ore(BlockPos pos, int tier) {}
+    /** Un minerai allume : ou il est, le palier de couleur qu'il a gagne, et s'il est le CHOIX. */
+    public record Ore(BlockPos pos, int tier, boolean selected) {}
 
     /** Fin de l'eclat, en ticks du client. */
     private static int endTick = -1;
@@ -119,7 +119,8 @@ public final class MineDetectOverlay {
                     if (state.isAir()) continue;
                     if (!MetalTargets.isOreBlock(state)) continue;
                     found.add(new Ore(pos.immutable(),
-                            MineDetectVisuals.tierOf(advanced, MetalTargets.harvestTier(state))));
+                            MineDetectVisuals.tierOf(advanced, MetalTargets.harvestTier(state)),
+                            MineDetectFilter.isSelected(state)));
                     if (found.size() >= MineDetectVisuals.SCAN_LIMIT) return found;
                 }
             }

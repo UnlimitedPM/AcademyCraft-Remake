@@ -37,6 +37,9 @@ public final class HudConfig {
     private static final Map<HudElement, ForgeConfigSpec.ConfigValue<List<? extends Double>>> VALUES =
             new EnumMap<>(HudElement.class);
 
+    /** Le minerai mis en evidence par la detection de minerais : voir {@link #mineDetectOre}. */
+    private static ForgeConfigSpec.ConfigValue<String> MINE_DETECT_ORE;
+
     /** La config chargee, pour pouvoir la reecrire. Posee par l'evenement de chargement. */
     private static ModConfig loaded;
 
@@ -70,6 +73,13 @@ public final class HudConfig {
                         "The media player's volume, from zero to one; kept from one session to the next.")
                 .push("media");
         MEDIA_VOLUME = builder.defineInRange("volume", 1.0d, 0.0d, 1.0d);
+        builder.pop();
+
+        builder.comment("Le minerai que la detection de minerais met en EVIDENCE : les autres",
+                        "restent bleus. Vide : aucun n'est mis en avant.",
+                        "The ore the mine detector highlights; the others stay blue.")
+                .push("mine_detect");
+        MINE_DETECT_ORE = builder.define("ore", "");
         builder.pop();
 
         SPEC = builder.build();
@@ -159,6 +169,27 @@ public final class HudConfig {
         // Arrondi au centieme : un flottant ecrit tel quel donne « 0.4000000059604645 » dans le
         // fichier, et personne n'a envie de lire ca pour regler son volume.
         MEDIA_VOLUME.set(Math.round(volume * 100.0f) / 100.0);
+        save();
+    }
+
+    /**
+     * Le minerai mis en evidence par la detection, ou une chaine vide.
+     *
+     * <p>Rend vide quand la config n'est pas encore lue : un eclat qui partirait avant le premier
+     * chargement ne met donc rien en avant, comme l'original.
+     */
+    public static String mineDetectOre() {
+        try {
+            String id = MINE_DETECT_ORE.get();
+            return id == null ? "" : id;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Ecrit le minerai mis en evidence et sauvegarde : c'est le clic de l'ecran de filtre. */
+    public static void writeMineDetectOre(String id) {
+        MINE_DETECT_ORE.set(id == null ? "" : id);
         save();
     }
 }

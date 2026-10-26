@@ -358,6 +358,9 @@
   "ac.ability.teleporter.crithit": "%sx 暴击！",
   "death.attack.academy.teleport": "%1$s 被一道传送击中",
   "death.attack.academy.teleport.player": "%1$s 被 %2$s 的传送击中",
+  "ac.settings.prop.filter_ores": "筛选矿石",
+  "ac.gui.orefilter.title": "探测到的矿石",
+  "ac.gui.orefilter.none": "无",
   "ac.ability.meltdowner.rad_intensify.name": "β射线强化",
   "ac.ability.meltdowner.electron_missile.name": "电子导弹",
 

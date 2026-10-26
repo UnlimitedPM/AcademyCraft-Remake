@@ -48,6 +48,15 @@ public final class MineDetectVisuals {
             { 235, 109, 84 },
     };
 
+    /**
+     * Le VERT du minerai choisi dans l'ecran de filtre.
+     *
+     * <p>Demande du joueur le 26/10 : les minerais non choisis restent bleus, celui qu'il a
+     * designe passe au vert. C'est une couleur de <b>choix</b>, et non de palier : elle passe
+     * donc avant la table, quel que soit l'eclat et quelle que soit la pioche.
+     */
+    public static final int[] SELECTED = { 90, 230, 120 };
+
     private MineDetectVisuals() {}
 
     /** La portee reellement balayee. */
@@ -92,5 +101,15 @@ public final class MineDetectVisuals {
     public static int[] colorFor(int tier) {
         int index = Math.max(0, Math.min(COLORS.length - 1, tier));
         return COLORS[index];
+    }
+
+    /**
+     * La couleur d'un minerai, le choix du joueur passant AVANT le palier.
+     *
+     * <p>Le minerai choisi dans l'ecran de filtre est vert ; tous les autres gardent la couleur de
+     * leur palier, donc le bleu de l'eclat. Voir {@link #SELECTED}.
+     */
+    public static int[] colorFor(int tier, boolean selected) {
+        return selected ? SELECTED : colorFor(tier);
     }
 }

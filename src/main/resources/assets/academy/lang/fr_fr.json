@@ -358,6 +358,9 @@
   "ac.ability.teleporter.crithit": "%sx coup critique !",
   "death.attack.academy.teleport": "%1$s a été frappé par une téléportation",
   "death.attack.academy.teleport.player": "%1$s a été frappé par la téléportation de %2$s",
+  "ac.settings.prop.filter_ores": "Filtrer les minerais",
+  "ac.gui.orefilter.title": "Minerais detectes",
+  "ac.gui.orefilter.none": "Aucun",
   "ac.ability.meltdowner.rad_intensify.name": "Intensification des radiations β",
   "ac.ability.meltdowner.electron_missile.name": "Missile d'électrons",
 

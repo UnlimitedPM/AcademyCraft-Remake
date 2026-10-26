@@ -197,6 +197,10 @@ public class SettingsScreen extends Screen {
         rows.add(Row.header("misc"));
         rows.add(Row.action("misc", "ac.settings.prop.edit_ui",
                 () -> minecraft.setScreen(new CustomizeUiScreen(this))));
+        // Le filtre de la detection de minerais : une piece du port, demandee le 26/10. Il vit
+        // dans Misc, a cote du reglage du HUD, parce que c'est un reglage de presentation.
+        rows.add(Row.action("misc", "ac.settings.prop.filter_ores",
+                () -> minecraft.setScreen(new OreFilterScreen(this))));
     }
 
     // ------------------------------------------------------------------
