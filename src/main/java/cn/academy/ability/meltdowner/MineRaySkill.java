@@ -244,6 +244,7 @@ public abstract class MineRaySkill extends Skill {
     /** Casse le bloc, avec les butins de ce rayon. */
     private void breakBlock(Player player, AbilityData data, BlockPos pos) {
         if (!(player.level() instanceof ServerLevel level)) return;
+        if (!cn.academy.ability.BlockBreaking.allowed(data, this)) return;
 
         BlockState state = level.getBlockState(pos);
         level.playSound(null, pos, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 0.5f, 1f);

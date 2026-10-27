@@ -32,6 +32,10 @@ public class AbilityNetwork {
                 LocationTeleportPacket::encode, LocationTeleportPacket::decode, LocationTeleportPacket::handle);
         CHANNEL.registerMessage(nextId++, ToggleAbilityPacket.class,
                 ToggleAbilityPacket::encode, ToggleAbilityPacket::decode, ToggleAbilityPacket::handle);
+        // Ce que le joueur accepte de casser : le serveur le tient, parce que c'est lui qui
+        // fait disparaitre les blocs. Voir BreakPrefsPacket.
+        CHANNEL.registerMessage(nextId++, BreakPrefsPacket.class,
+                BreakPrefsPacket::encode, BreakPrefsPacket::decode, BreakPrefsPacket::handle);
         CHANNEL.registerMessage(nextId++, SyncAbilityDataPacket.class,
                 SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode, SyncAbilityDataPacket::handle);
         // La detection de minerais est la seule competence qui ait besoin de dire quelque

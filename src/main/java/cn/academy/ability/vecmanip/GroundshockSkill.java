@@ -468,7 +468,7 @@ public class GroundshockSkill extends Skill {
          * fois par coup (voir l'entete de la classe).
          */
         private void breakAt(BlockPos pos, boolean drop) {
-            if (!cn.academy.Config.destroyBlocks) return;
+            if (!cn.academy.ability.BlockBreaking.allowed(data, skill)) return;
 
             BlockState state = level.getBlockState(pos);
             if (state.is(Blocks.FARMLAND) || !state.getFluidState().isEmpty()) return;

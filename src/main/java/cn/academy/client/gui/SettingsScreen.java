@@ -2,6 +2,7 @@ package cn.academy.client.gui;
 
 import cn.academy.AcademyCraft;
 import cn.academy.ability.client.AbilityKeyBindings;
+import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.terminal.client.TerminalKeyBindings;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.KeyMapping;
@@ -187,8 +188,19 @@ public class SettingsScreen extends Screen {
         rows.add(Row.header("generic"));
         rows.add(Row.toggle("generic", "ac.settings.prop.attackPlayer",
                 () -> cn.academy.Config.attackPlayer, () -> cn.academy.Config.toggleAttackPlayer()));
+        // La casse : ce n'est plus le reglage du serveur, c'est celui du JOUEUR. Le serveur garde
+        // son propre verrou ({@code general.destroyBlocks}) ; ici le joueur dit ce qu'il accepte,
+        // et son choix part au serveur, qui l'applique et le renvoie.
         rows.add(Row.toggle("generic", "ac.settings.prop.destroyBlocks",
-                () -> cn.academy.Config.destroyBlocks, () -> cn.academy.Config.toggleDestroyBlocks()));
+                SettingsScreen::playerBreaksBlocks, () -> sendBreakPrefs(null, !playerBreaksBlocks())));
+        // Puis une sous-ligne par competence qui creuse, pour celles qu'il connait : c'est ce qui
+        // permet de garder la mine ray et de refuser le meltdowner, par exemple.
+        for (cn.academy.ability.Skill skill : cn.academy.ability.BlockBreaking.prefSkills()) {
+            if (!ClientAbilityData.get().isSkillLearned(skill)) continue;
+            rows.add(Row.toggle("generic", skill.getDisplayKey(),
+                    () -> ClientAbilityData.get().breaksBlocks(skill),
+                    () -> sendBreakPrefs(skill, !ClientAbilityData.get().breaksBlocks(skill))));
+        }
         rows.add(Row.toggle("generic", "ac.settings.prop.headsOrTails",
                 () -> cn.academy.Config.headsOrTails, () -> cn.academy.Config.toggleHeadsOrTails()));
         rows.add(Row.toggle("generic", "ac.settings.prop.useMouseWheel",
@@ -201,6 +213,23 @@ public class SettingsScreen extends Screen {
         // dans Misc, a cote du reglage du HUD, parce que c'est un reglage de presentation.
         rows.add(Row.action("misc", "ac.settings.prop.filter_ores",
                 () -> minecraft.setScreen(new OreFilterScreen(this))));
+    }
+
+    /** Le drapeau du joueur, tel que le serveur vient de le synchroniser. */
+    private static boolean playerBreaksBlocks() {
+        return ClientAbilityData.get().playerBreaksBlocks();
+    }
+
+    /**
+     * Le choix part au serveur ; c'est lui qui l'ecrit et qui le renvoie.
+     *
+     * <p>{@code skill} nul vaut le drapeau general. Le client ne touche pas a son exemplaire :
+     * l'affichage suivra la synchronisation, comme pour l'allumage de l'aptitude.
+     */
+    private static void sendBreakPrefs(cn.academy.ability.Skill skill, boolean value) {
+        String key = skill == null ? "" : cn.academy.ability.BlockBreaking.key(skill);
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+                new cn.academy.ability.network.BreakPrefsPacket(key, value));
     }
 
     // ------------------------------------------------------------------

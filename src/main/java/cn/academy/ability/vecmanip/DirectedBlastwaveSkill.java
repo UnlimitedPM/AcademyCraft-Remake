@@ -383,7 +383,7 @@ public class DirectedBlastwaveSkill extends Skill {
     /** Un bloc du cube : la durete decide, le butin suit. */
     private void breakBlock(ServerLevel level, Player player, AbilityData data, BlockPos pos,
                             float hardnessLimit, boolean mastery) {
-        if (!cn.academy.Config.destroyBlocks) return;
+        if (!cn.academy.ability.BlockBreaking.allowed(data, this)) return;
 
         BlockState state = level.getBlockState(pos);
         float hardness = state.getDestroySpeed(level, pos);

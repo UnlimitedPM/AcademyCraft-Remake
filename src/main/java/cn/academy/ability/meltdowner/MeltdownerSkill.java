@@ -413,7 +413,7 @@ public class MeltdownerSkill extends Skill {
      * refuse ne part pas.
      */
     private void digBeam(Player player, AbilityData data) {
-        if (!cn.academy.Config.destroyBlocks) return;
+        if (!cn.academy.ability.BlockBreaking.allowed(data, this)) return;
         if (player.level().isClientSide) return;
 
         Vec3 from = player.getEyePosition(1f);

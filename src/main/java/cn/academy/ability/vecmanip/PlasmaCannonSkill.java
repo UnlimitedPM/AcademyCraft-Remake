@@ -459,7 +459,7 @@ public class PlasmaCannonSkill extends Skill {
             }
         }
 
-        boolean destroy = cn.academy.Config.destroyBlocks;
+        boolean destroy = cn.academy.ability.BlockBreaking.allowed(data, this);
         level.explode(player, center.x, center.y, center.z, power(data), false,
                 destroy ? Level.ExplosionInteraction.BLOCK : Level.ExplosionInteraction.NONE);
     }

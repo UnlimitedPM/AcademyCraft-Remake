@@ -446,7 +446,7 @@ public class StormWingSkill extends Skill {
         data.protectFromFall();
 
         if (clumsy(data) && player.level() instanceof ServerLevel level) {
-            breakAround(level, player);
+            breakAround(level, player, data);
         }
 
         // La charge ne coute rien : l'original ne facturait que les ailes ouvertes.
@@ -529,8 +529,8 @@ public class StormWingSkill extends Skill {
      * de l'herbe, de la neige, des feuilles. L'original jouait le son de casse de chaque bloc ;
      * le port n'a pas de son.
      */
-    private static void breakAround(ServerLevel level, Player player) {
-        if (!cn.academy.Config.destroyBlocks) return;
+    private static void breakAround(ServerLevel level, Player player, AbilityData data) {
+        if (!cn.academy.ability.BlockBreaking.allowed(data, VecmanipCategory.STORM_WING)) return;
         for (int attempt = 0; attempt < BREAK_ATTEMPTS; attempt++) {
             BlockPos pos = BlockPos.containing(
                     player.getX() + Mth.nextInt(level.getRandom(), -BREAK_RANGE, BREAK_RANGE),

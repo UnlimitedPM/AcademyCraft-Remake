@@ -63,6 +63,25 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     private final Set<String> learnedSkills = new HashSet<>();
 
     /**
+     * Le joueur veut-il que ses compétences cassent des blocs ?
+     *
+     * <p>C'est un réglage <b>de joueur</b>, et non du serveur : {@code general.destroyBlocks}
+     * dit ce que le serveur <i>autorise</i>, celui-ci dit ce que le joueur <b>accepte</b>. Sans
+     * lui, un serveur qui autorise la casse l'imposait à tout le monde — « les joueurs doivent
+     * quand même avoir la possibilité de faire en sorte que leur pouvoir ne casse pas les
+     * blocs ».
+     */
+    private boolean breaksBlocks = true;
+
+    /**
+     * Les compétences que le joueur a exclues de la casse, par clé — voir {@link #skillKey}.
+     *
+     * <p>On range les <b>refus</b>, et pas les accords : la table reste vide tant que le joueur
+     * ne touche à rien, et un refus survit à l'apprentissage d'autres compétences.
+     */
+    private final Set<String> noBreak = new HashSet<>();
+
+    /**
      * Experience de chaque competence, de 0 a 1.
      *
      * Meme cle que les competences apprises. L'original tenait un tableau indexe par
@@ -1075,6 +1094,46 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return learnedSkills.contains(skillKey(skill));
     }
 
+    // ------------------------------------------------------------------
+    // Ce que le joueur accepte de casser
+    // ------------------------------------------------------------------
+
+    /** Le joueur veut-il casser des blocs avec ses compétences ? */
+    public boolean playerBreaksBlocks() {
+        return breaksBlocks;
+    }
+
+    public void setPlayerBreaksBlocks(boolean value) {
+        breaksBlocks = value;
+    }
+
+    /**
+     * Cette compétence peut-elle casser, du point de vue du joueur ?
+     *
+     * <p>Deux questions en une : le drapeau général, puis le refus posé sur cette compétence.
+     * Le serveur, lui, garde son propre verrou par-dessus — voir
+     * {@code BlockBreaking.allowed}.
+     */
+    public boolean breaksBlocks(Skill skill) {
+        return breaksBlocks && (skill == null || !noBreak.contains(skillKey(skill)));
+    }
+
+    /** Accepte ou refuse la casse pour une compétence. */
+    public void setBreaksBlocks(Skill skill, boolean value) {
+        if (skill == null) return;
+        if (value) {
+            noBreak.remove(skillKey(skill));
+        } else {
+            noBreak.add(skillKey(skill));
+        }
+    }
+
+    /** Remet les deux réglages à leur état d'origine : tout casse. */
+    public void resetBreakPrefs() {
+        breaksBlocks = true;
+        noBreak.clear();
+    }
+
     /** Marque une competence comme apprise. Retourne vrai si cela a change quelque chose. */
     public boolean learnSkill(Skill skill) {
         if (skill == null || skill.getCategory() == null) return false;
@@ -1621,6 +1680,15 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // sources, elles, n'ont aucun sens hors du serveur.
         tag.putBoolean("interfered", interfered);
 
+        // Les deux réglages de casse voyagent avec le reste : l'écran de réglage du client les
+        // affiche, et le serveur les applique.
+        tag.putBoolean("breaksBlocks", breaksBlocks);
+        ListTag noBreakTags = new ListTag();
+        for (String key : noBreak) {
+            noBreakTags.add(StringTag.valueOf(key));
+        }
+        tag.put("noBreak", noBreakTags);
+
         // Les competences apprises voyagent aussi : l'ecran du developpeur et
         // l'arbre doivent savoir quoi griser, et le client ne peut pas le deviner.
         ListTag skills = new ListTag();
@@ -1680,6 +1748,14 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         untilRecover = tag.getInt("untilRecover");
         activated = tag.getBoolean("activated");
         interfered = tag.getBoolean("interfered");
+
+        // Une sauvegarde d'avant ces réglages n'a pas les clés : tout casse, comme avant.
+        breaksBlocks = !tag.contains("breaksBlocks") || tag.getBoolean("breaksBlocks");
+        noBreak.clear();
+        ListTag noBreakTags = tag.getList("noBreak", Tag.TAG_STRING);
+        for (int i = 0; i < noBreakTags.size(); i++) {
+            noBreak.add(noBreakTags.getString(i));
+        }
 
         learnedSkills.clear();
         ListTag skills = tag.getList(TAG_SKILLS, Tag.TAG_STRING);

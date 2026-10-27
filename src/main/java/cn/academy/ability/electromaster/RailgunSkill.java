@@ -642,7 +642,7 @@ public class RailgunSkill extends Skill {
         // celle qui suit les memes colonnes que les degats.
         // La PROFONDEUR que cette munition perce, et le budget de chaque colonne qui va avec.
         double digBlocks = length * digLength(ammo);
-        digBeam(player, eye, look, digBlocks, radius, (float) (digBlocks * DIG_ENERGY_PER_BLOCK));
+        digBeam(player, data, eye, look, digBlocks, radius, (float) (digBlocks * DIG_ENERGY_PER_BLOCK));
     }
 
     /** Jusqu'ou cette munition creuse : la part du trait qui perce vraiment. */
@@ -688,9 +688,9 @@ public class RailgunSkill extends Skill {
      * <p>Le tout est gate par {@code general.destroyBlocks}, et chaque bloc passe par
      * {@code BlockEvent.BreakEvent} : ce qu'une protection de serveur refuse ne part pas.
      */
-    private static void digBeam(Player player, Vec3 eye, Vec3 look, double length, double radius,
-                                float perColumn) {
-        if (!cn.academy.Config.destroyBlocks) return;
+    private static void digBeam(Player player, AbilityData data, Vec3 eye, Vec3 look, double length,
+                                double radius, float perColumn) {
+        if (!cn.academy.ability.BlockBreaking.allowed(data, ElectromasterCategory.RAILGUN)) return;
         if (player.level().isClientSide) return;
 
         // Les deux axes du disque : la largeur du regard, puis sa hauteur. Un tir vertical n'a pas
