@@ -77,9 +77,9 @@ public class SettingsScreen extends Screen {
      */
     private static final double INDENT = 26.0;
     /** La petite fleche des lignes depliables, dans la gouttiere a gauche des libelles. */
-    private static final double ARROW_X = 6.0;
-    private static final double ARROW_W = 20.0;
-    private static final double ARROW_H = 20.0;
+    private static final double ARROW_X = 4.0;
+    private static final double ARROW_W = 30.0;
+    private static final double ARROW_H = 30.0;
     /**
      * La largeur du libelle.
      *
@@ -402,6 +402,80 @@ public class SettingsScreen extends Screen {
         graphics.pose().popPose();
         graphics.flush();
         graphics.setColor(1f, 1f, 1f, 1f);
+
+        // La fleche est la SEULE chose dessinee hors de l'echelle de la page : a 0,2, ses bords
+        // tombaient sur des quarts de pixel et sortaient en escalier — « il faudrait lui rajouter
+        // de l'anti aliasing ». En pixels d'ecran, chaque pixel recoit l'alpha de sa couverture.
+        graphics.enableScissor(
+                (int) Math.floor(originX() + AREA_X * PAGE_SCALE),
+                (int) Math.floor(originY() + AREA_Y * PAGE_SCALE),
+                (int) Math.ceil(originX() + (AREA_X + AREA_W) * PAGE_SCALE),
+                (int) Math.ceil(originY() + (AREA_Y + AREA_H) * PAGE_SCALE));
+        drawArrows(graphics);
+        graphics.disableScissor();
+        graphics.flush();
+    }
+
+    /**
+     * La petite fleche des lignes depliables, en pixels d'ecran.
+     *
+     * <p>Vers le bas quand la liste est ouverte, vers la droite quand elle est fermee : c'est la
+     * convention des sites, et le document de l'original ne connaissait pas ces sous-options.
+     */
+    private void drawArrows(GuiGraphics graphics) {
+        double shift = shift();
+        for (int i = 0; i < rows.size(); i++) {
+            Row row = rows.get(i);
+            if (!row.disclosure()) continue;
+            double y = AREA_Y + i * ROW_H - shift;
+            if (y > AREA_Y + AREA_H || y + ROW_H < AREA_Y) continue;
+            triangle(graphics,
+                    originX() + (AREA_X + ARROW_X) * PAGE_SCALE,
+                    originY() + (y + (ROW_H - ARROW_H) / 2.0) * PAGE_SCALE,
+                    ARROW_W * PAGE_SCALE, ARROW_H * PAGE_SCALE, row.open());
+        }
+    }
+
+    /**
+     * Un triangle plein, lisse par sur-echantillonnage.
+     *
+     * <p>Chaque pixel d'ecran est echantillonne seize fois : le compte des points tombes dans le
+     * triangle donne son alpha. C'est un vrai anti-aliasing, pas un arrondi — quatre pixels de
+     * large ne suffisent pas a cacher un escalier autrement.
+     */
+    private static void triangle(GuiGraphics graphics, double x, double y, double w, double h,
+                                 boolean open) {
+        int samples = 4;
+        int px0 = (int) Math.floor(x);
+        int py0 = (int) Math.floor(y);
+        int px1 = (int) Math.ceil(x + w);
+        int py1 = (int) Math.ceil(y + h);
+        for (int py = py0; py < py1; py++) {
+            for (int px = px0; px < px1; px++) {
+                int inside = 0;
+                for (int sy = 0; sy < samples; sy++) {
+                    for (int sx = 0; sx < samples; sx++) {
+                        if (inTriangle(x, y, w, h, open,
+                                px + (sx + 0.5) / samples, py + (sy + 0.5) / samples)) {
+                            inside++;
+                        }
+                    }
+                }
+                if (inside == 0) continue;
+                int alpha = Math.round(255f * inside / (samples * samples));
+                fill(graphics, px, py, 1, 1, (alpha << 24) | 0xFFFFFF);
+            }
+        }
+    }
+
+    /** Le point est-il dans le triangle ? Base a gauche (ou en haut), pointe a l'oppose. */
+    private static boolean inTriangle(double x, double y, double w, double h, boolean open,
+                                      double px, double py) {
+        double u = (px - x) / w;
+        double v = (py - y) / h;
+        if (u < 0 || u > 1 || v < 0 || v > 1) return false;
+        if (open) return Math.abs(u - 0.5) * 2 <= 1 - v;
+        return Math.abs(v - 0.5) * 2 <= 1 - u;
     }
 
     private void drawRows(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -440,40 +514,12 @@ public class SettingsScreen extends Screen {
         if (over && capturing < 0) {
             fill(graphics, AREA_X, y, ROW_W, ROW_H, HOVER_VEIL);
         }
-        if (row.disclosure()) {
-            drawArrow(graphics, AREA_X + ARROW_X, y + (ROW_H - ARROW_H) / 2.0, row.open());
-        }
         boolean shifted = row.indent() || row.disclosure();
         double indent = shifted ? INDENT : 0;
         String label = fit(Component.translatable(row.labelKey()).getString(), LABEL_W - indent, CELL);
         AcademyFonts.drawTop(graphics, font, label,
                 (int) Math.round(AREA_X + LABEL_X + indent),
                 (int) Math.round(labelY), TEXT_COLOUR, CELL);
-    }
-
-    /**
-     * La petite fleche d'une ligne depliable.
-     *
-     * <p>Vers le bas quand la liste est ouverte, vers la droite quand elle est fermee : c'est la
-     * convention des sites, et le document de l'original ne connaissait pas ces sous-options.
-     * Elle est dessinee par bandes, faute de texture dans les assets du mod.
-     */
-    private static void drawArrow(GuiGraphics graphics, double x, double y, boolean open) {
-        int strips = 5;
-        double stripH = ARROW_H / strips;
-        double stripW = ARROW_W / strips;
-        for (int i = 0; i < strips; i++) {
-            if (open) {
-                // Triangle qui pointe vers le bas : la base en haut, la pointe en bas.
-                double half = (strips - i) * stripW / 2.0;
-                fill(graphics, x + ARROW_W / 2.0 - half, y + i * stripH, half * 2.0, stripH,
-                        TEXT_COLOUR);
-            } else {
-                // Triangle qui pointe vers la droite : la base a gauche, la pointe a droite.
-                double len = (strips - 2 * Math.abs(i - strips / 2)) * stripW;
-                fill(graphics, x, y + i * stripH, len, stripH, TEXT_COLOUR);
-            }
-        }
     }
 
     /**
