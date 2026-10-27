@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Minecraft 1.20.1 &nbsp;·&nbsp; Forge 47.4.20+ &nbsp;·&nbsp; Java 17 &nbsp;·&nbsp; GPLv3 &nbsp;·&nbsp; <b>1.0.1-beta</b>
+  Minecraft 1.20.1 &nbsp;·&nbsp; Forge 47.4.20+ &nbsp;·&nbsp; Java 17 &nbsp;·&nbsp; GPLv3 &nbsp;·&nbsp; <b>1.0.2-beta</b>
 </p>
 
 ---
@@ -24,7 +24,7 @@ The original drew its interfaces with LambdaLib2's own GUI engine, and the port 
 ### Download and install
 
 1. Install **Forge 47.4.20 or later** for Minecraft 1.20.1.
-2. Download **`academy-1.0.1-beta.jar`** from the [Releases](../../releases) page.
+2. Download **`academy-1.0.2-beta.jar`** from the [Releases](../../releases) page.
 3. Drop it into your `mods` folder and start the game.
 
 Nothing else to install. The port works on a server too, but it is a **beta build**: keep a backup of your world.
@@ -91,7 +91,7 @@ L'original dessinait ses interfaces avec le moteur d'interface de LambdaLib2 ; l
 ### Télécharger et installer
 
 1. Installez **Forge 47.4.20 ou plus** pour Minecraft 1.20.1.
-2. Téléchargez **`academy-1.0.1-beta.jar`** depuis la page [Releases](../../releases).
+2. Téléchargez **`academy-1.0.2-beta.jar`** depuis la page [Releases](../../releases).
 3. Posez-le dans votre dossier `mods` et lancez le jeu.
 
 Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est une **version bêta** : gardez une sauvegarde de votre monde.

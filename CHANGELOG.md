@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.0.2-beta - la case lit le joueur, le vide ne coute rien / the box reads the player, the void costs nothing
+
+### English
+
+Three bugs found in multiplayer right after 1.0.1-beta. Keep a backup of your world.
+
+- **The breaking box reads the player, not the machine.** It also read the server's lock
+  (`general.destroyBlocks`) — from the **client's own** configuration file, which the server never
+  sends to it (common configs are not synced). One player therefore had a box that could not be
+  ticked at all, another had a perfectly normal one, and a box could sit **unticked while the
+  server kept breaking blocks**. The box now shows the player's own choice, which the server
+  applies and sends back; the server's lock stays where it belongs, on the server. Single player
+  keeps the write-through: there the player *is* the server, and a ticked box must mean something.
+- **Flesh ripping into the void costs nothing.** The packet paid the cost *before* the effect ran,
+  and the effect gave up when the aim found no one — so spamming it in the air filled the overload
+  for free. The skill now refuses to start without a target (no control points, no overload, no
+  cooldown, no experience) and pays inside its own effect, when the hit lands — the original's
+  `MSG_ABORT` and `consumeWithForce`.
+- **Tests**: 970 unit tests and 179 in-game tests (including flesh ripping into the void), plus the
+  offline asset audit — all green.
+
+### Francais
+
+Trois bugs trouves en multi juste apres la 1.0.1-beta. Gardez une sauvegarde de votre monde.
+
+- **La case de la casse lit le joueur, pas la machine.** Elle lisait aussi le verrou du serveur
+  (`general.destroyBlocks`) — dans le fichier de configuration **du client**, que le serveur ne lui
+  envoie jamais (les configs communes ne sont pas synchronisees). Un joueur avait donc une case
+  impossible a cocher, un autre une case parfaitement normale, et une case pouvait rester
+  **decochee pendant que le serveur cassait des blocs**. La case ne montre plus que le choix du
+  joueur, que le serveur applique et renvoie ; le verrou du serveur reste cote serveur. En solo, la
+  case leve toujours le verrou avec elle : la, le joueur *est* le serveur, et une case cochee doit
+  vouloir dire quelque chose.
+- **Le flesh ripping dans le vide ne coute rien.** Le paquet payait le cout *avant* l'effet, et
+  l'effet sortait sans rien faire quand la visee ne trouvait personne : spammer dans l'air
+  remplissait donc l'overload pour rien. La competence refuse maintenant de partir sans cible (ni
+  points, ni surcout, ni recharge, ni experience) et paie dans son propre effet, quand le coup
+  tombe — le `MSG_ABORT` et le `consumeWithForce` de l'original.
+- **Tests** : 970 tests unitaires et 179 tests en jeu (dont le flesh ripping dans le vide), plus
+  l'audit d'assets hors ligne — tous verts.
+
 ## 1.0.1-beta - la casse au joueur, le liquide qui eteint / player-side block breaking, the liquid that douses
 
 ### English
