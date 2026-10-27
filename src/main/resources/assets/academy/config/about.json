@@ -12,7 +12,12 @@
     { "role": "QA", "names": ["xiao6", "BlueFeather"] },
     { "role": "Website", "names": ["LeLe", "NAT", "yinfb", "KSkun", "Cafe"] },
     { "role": "Localization", "names": ["mkpoli (Japanese)", "柳荫理乃 (Japanese)", "dtraitor (Russian)"] },
-    { "role": "GitHub Contributors", "names": ["3TUSK", "l89669", "MrBenjaminBowman", "berry64"] }
+    { "role": "GitHub Contributors", "names": [
+        "KSkun", "WeAthFoLD", "Paindar", "acaly", "EAirPeter", "NolifeM",
+        "zeldacl", "ShieLian", "voidcl", "mkpoli", "LeLeMoe", "gakongren",
+        "3TUSK", "Eing0", "xhj1102", "mindy15963", "LI-Build",
+        "MrBenjaminBowman", "magicnat", "CrowbarProjectq", "berry64", "l89669"
+    ] }
   ],
   "donators": [
     "anon katon",

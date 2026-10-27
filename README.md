@@ -76,6 +76,10 @@ On Windows, run `gradlew.bat`. If Java 17 is not your default, set `JAVA_HOME` f
 
 The original **AcademyCraft** was made by **WeAthFolD** and **Lambda Innovation**, with [LambdaLib2](https://github.com/LambdaInnovation/LambdaLib2). Its assets, its layout documents, its numbers and its behaviour are what this port is built from — thank you for a mod we are still playing.
 
+And everyone who took part in it — the [contributors](https://github.com/LambdaInnovation/AcademyCraft/graphs/contributors) of the original repository, most work first:
+
+KSkun · WeAthFoLD · Paindar · acaly · EAirPeter · NolifeM · zeldacl · ShieLian · voidcl · mkpoli · LeLeMoe · gakongren · 3TUSK · Eing0 · xhj1102 · mindy15963 · LI-Build · MrBenjaminBowman · magicnat · CrowbarProjectq · berry64 · l89669
+
 ### License
 
 **GPLv3**, like the original. See `LICENSE.txt`.
@@ -122,6 +126,10 @@ Il faut **JDK 17** (Gradle 8.1 et Forge 1.20.1 refusent les plus récents). Les 
 ### Crédits
 
 L'**AcademyCraft** d'origine a été fait par **WeAthFolD** et **Lambda Innovation**, avec [LambdaLib2](https://github.com/LambdaInnovation/LambdaLib2). Ses ressources, ses documents de mise en page, ses nombres et son comportement sont ce sur quoi ce portage est bâti — merci pour un mod auquel on joue encore.
+
+Et à tous ceux qui y ont participé — les [contributeurs](https://github.com/LambdaInnovation/AcademyCraft/graphs/contributors) du dépôt d'origine, du plus actif au moins actif :
+
+KSkun · WeAthFoLD · Paindar · acaly · EAirPeter · NolifeM · zeldacl · ShieLian · voidcl · mkpoli · LeLeMoe · gakongren · 3TUSK · Eing0 · xhj1102 · mindy15963 · LI-Build · MrBenjaminBowman · magicnat · CrowbarProjectq · berry64 · l89669
 
 ### Licence
 
