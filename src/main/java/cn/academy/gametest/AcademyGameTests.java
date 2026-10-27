@@ -10125,6 +10125,68 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Viser un bloc <b>a cote</b> d'une bete pose le bloc la, et pas derriere elle.
+     *
+     * <p>Le joueur : « si je vise le bloc qui est sous l'entite, visiblement le bloc ne veut pas se
+     * mettre a cet endroit maintenant ». Une bete se tient toujours a un demi-bloc de la face de
+     * cote du bloc qu'elle occupe : la tolerance autour d'elle avalait donc ce bloc-la aussi, et le
+     * geste partait derriere elle. Ici on vise la face de cote du bloc qui la porte, et la
+     * destination doit etre la case qui la suit.
+     */
+    @GameTest(template = "empty")
+    public static void leBlocViseACoteDUneBeteSePoseLa(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
+        BlockPos corner = aboveTestArea(helper, new BlockPos(1, 1, 1), 220);
+        for (var leftover : helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.Entity.class,
+                new net.minecraft.world.phys.AABB(corner.getX() - 2, corner.getY() - 1,
+                        corner.getZ() - 2, corner.getX() + 6, corner.getY() + 6,
+                        corner.getZ() + 10))) {
+            leftover.discard();
+        }
+        // Un sol sous la bete (z 1 et 2), un autre sous le joueur (z 5 et 6), et le vide entre les
+        // deux : c'est la face de cote du bloc de la bete qu'on veut pouvoir viser.
+        for (int x = 1; x <= 5; x++) {
+            for (int z = 1; z <= 6; z++) {
+                boolean sol = z <= 2 || z >= 5;
+                helper.setBlock(new BlockPos(x, 220, z),
+                        sol ? net.minecraft.world.level.block.Blocks.STONE
+                                : net.minecraft.world.level.block.Blocks.AIR);
+                for (int y = 221; y <= 224; y++) {
+                    helper.setBlock(new BlockPos(x, y, z),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var bete = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(3, 221, 2));
+        bete.setNoAi(true);
+        bete.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+
+        var player = ownPlayer(helper, "poseur");
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        player.moveTo(corner.getX() + 2.5, corner.getY(), corner.getZ() + 5.5, 0f, 0f);
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0.5f);
+        // Le regard tombe sur la FACE DE COTE du bloc qui porte la bete, pas sur la bete.
+        var support = helper.absolutePos(new BlockPos(3, 220, 2));
+        player.lookAt(net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
+                new net.minecraft.world.phys.Vec3(support.getX() + 0.5, support.getY() + 0.5,
+                        support.getZ() + 1.0));
+
+        var aimed = skill.target(player, data);
+        assertValue(helper, null, aimed.victim(),
+                "viser la face de cote, c'est viser un BLOC, pas la bete qui le touche");
+        var destination = skill.destination(player, data);
+        assertValue(helper, helper.absolutePos(new BlockPos(3, 220, 3)), destination.cell(),
+                "et le bloc se pose a l'endroit vise, juste a cote d'elle");
+        helper.succeed();
+    }
+
+    /**
      * Joue une touche de competence par le vrai paquet : appui ou relachement.
      *
      * <p>Le test doit passer par la, et non par {@code canStart} : c'est le paquet qui debitait la

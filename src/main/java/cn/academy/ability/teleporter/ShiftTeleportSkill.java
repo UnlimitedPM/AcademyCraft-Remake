@@ -403,8 +403,17 @@ public class ShiftTeleportSkill extends Skill {
         // geste plantait son bloc dans l'herbe au lieu de le transpercer — « la seule solution,
         // c'est de le viser un peu vers le ciel ». Le point touche, lui, est a ses pieds : la
         // creature qui l'occupe est la cible.
+        //
+        // MAIS SEULEMENT SUR LE DESSUS D'UN BLOC, et seulement sous la bete. Le joueur : « si je vise
+        // le bloc qui est sous l'entite, visiblement le bloc ne veut pas se mettre a cet endroit ».
+        // Une bete se tient TOUJOURS a un demi-bloc d'une face de cote — celle du bloc qu'elle
+        // occupe —, donc la moindre tolerance autour d'elle avalait aussi les blocs d'a cote, et le
+        // bloc partait derriere elle au lieu de se poser la ou l'on visait. Une face de cote, c'est
+        // un BLOC qu'on vise ; le dessus, sous elle, c'est ses pieds. Voir {@link #standingAt}.
         if (hit.getType() != HitResult.Type.MISS) {
-            LivingEntity standing = standingAt(player, hit.getLocation());
+            LivingEntity standing = hit.getDirection() == Direction.UP
+                    ? standingAt(player, hit.getLocation())
+                    : null;
             if (standing != null) {
                 return fromEntity(standing, hit.getLocation());
             }
@@ -414,32 +423,46 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     /**
-     * La creature dont la boite contient ce point, ou qui le touche de pres.
+     * La creature qui se tient <b>a plomb</b> au-dessus de ce point touche.
      *
      * <p>La tolerance valait trois dixiemes, au motif que le point touche est sur le sol, donc a la
-     * limite basse de la boite. C'etait compter sans les creatures qui ne se tiennent pas
-     * <b>pile</b> sur la case : une vache au bord d'une dalle, un monstre qui vient de sauter, et le
-     * point touche tombe a un demi-bloc de ses pieds — la visee ne trouvait plus personne. Elle vaut
-     * maintenant huit dixiemes, la largeur d'un corps pres. Le joueur : « parfois, si le monstre
-     * n'est pas parfaitement sur le bloc, il n'est tout simplement pas encadre en rouge ».
+     * limite basse de la boite. Le joueur : « parfois, si le monstre n'est pas parfaitement sur le
+     * bloc, il n'est tout simplement pas encadre en rouge ». Elle a ete poussee a huit dixiemes, et
+     * c'etait trop : une bete se tient toujours a un demi-bloc d'une face de cote — celle du bloc
+     * qu'elle occupe —, donc les blocs d'a cote tombaient aussi dans la tolerance, et visaient la
+     * bete au lieu du bloc. Le joueur : « si je vise le bloc qui est sous l'entite, visiblement le
+     * bloc ne veut pas se mettre a cet endroit ».
+     *
+     * <p>Trois bornes, donc, et chacune tient un role : la distance se mesure <b>a plomb</b>, dans
+     * le plan du sol, et vaut {@link #STANDING_GRACE} ; le point doit tomber a la hauteur des
+     * <b>pieds</b> ({@link #STANDING_BELOW} sous eux, {@link #STANDING_ABOVE} au-dessus) ; et
+     * l'appelant ne pose la question que sur un <b>dessus</b> de bloc — une face de cote, elle, est
+     * un bloc qu'on vise, et non une creature.
      */
     private static LivingEntity standingAt(Player player, Vec3 point) {
-        AABB box = new AABB(point, point).inflate(STANDING_GRACE);
+        AABB area = new AABB(point, point).inflate(Math.max(STANDING_GRACE, STANDING_BELOW));
         LivingEntity best = null;
         double closest = Double.MAX_VALUE;
-        for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class, box,
+        for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class, area,
                 e -> e != player && !e.isSpectator() && e.isAlive())) {
-            double distance = living.getBoundingBox().distanceToSqr(point);
-            if (distance < closest) {
-                closest = distance;
-                best = living;
-            }
+            AABB box = living.getBoundingBox();
+            if (point.y < box.minY - STANDING_BELOW || point.y > box.minY + STANDING_ABOVE) continue;
+            // A plomb : le point touche est sur le sol, donc a ses pieds, pas a vol d'oiseau.
+            double flat = Math.hypot(Math.max(0.0, Math.max(box.minX - point.x, point.x - box.maxX)),
+                    Math.max(0.0, Math.max(box.minZ - point.z, point.z - box.maxZ)));
+            if (flat > STANDING_GRACE || flat >= closest) continue;
+            closest = flat;
+            best = living;
         }
-        return closest <= STANDING_GRACE * STANDING_GRACE ? best : null;
+        return best;
     }
 
-    /** La tolerance du point touche a la boite de la creature qui l'occupe, en blocs. */
-    private static final double STANDING_GRACE = 0.8;
+    /** La tolerance a plomb sous les pieds d'une creature, en blocs. */
+    private static final double STANDING_GRACE = 0.3;
+
+    /** Et la hauteur ou le point touche compte encore : sous ses pieds, puis au-dessus d'eux. */
+    private static final double STANDING_BELOW = 1.0;
+    private static final double STANDING_ABOVE = 0.6;
 
     /**
      * La case visee quand le regard bute sur une <b>creature</b> : la sienne.
