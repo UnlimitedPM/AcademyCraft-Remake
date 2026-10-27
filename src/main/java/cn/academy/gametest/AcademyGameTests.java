@@ -10048,6 +10048,67 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le bloc se pose <b>derriere</b> la bete, dans la place qu'il reste.
+     *
+     * <p>Le joueur, cinq fois de suite : « le bloc s'arrete toujours sur l'entite au lieu d'aller
+     * derriere si il y a de la place ». Le scenario est celui d'une plaine : un sol de pierre, de
+     * l'air partout au-dessus, et une vache a six blocs qu'on vise au corps. La visee trouve la
+     * bete, et la <b>destination</b> — celle que la marque dessine et que le bloc rejoint — doit se
+     * trouver plusieurs blocs plus loin, la ou le regard rencontre le sol.
+     */
+    @GameTest(template = "empty")
+    public static void leBlocSePoseDerriereLaBete(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
+
+        // Un coin a nous, tres au-dessus de la zone commune, et nettoie : un voisin y pose parfois
+        // ses propres betes. Un sol de pierre, et rien au-dessus — c'est la « place » du joueur.
+        // L'altitude est libre : deux tests qui partagent la meme se marchent dessus.
+        BlockPos corner = aboveTestArea(helper, new BlockPos(1, 1, 1), 560);
+        for (var leftover : helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.Entity.class,
+                new net.minecraft.world.phys.AABB(corner.getX() - 2, corner.getY() - 1,
+                        corner.getZ() - 2, corner.getX() + 18, corner.getY() + 6,
+                        corner.getZ() + 6))) {
+            leftover.discard();
+        }
+        for (int x = 1; x <= 16; x++) {
+            for (int z = 1; z <= 4; z++) {
+                helper.setBlock(new BlockPos(x, 560, z),
+                        net.minecraft.world.level.block.Blocks.STONE);
+                for (int y = 561; y <= 564; y++) {
+                    helper.setBlock(new BlockPos(x, y, z),
+                            net.minecraft.world.level.block.Blocks.AIR);
+                }
+            }
+        }
+
+        var player = ownPlayer(helper, "poseur");
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        player.moveTo(corner.getX() + 0.5, corner.getY(), corner.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0.5f);
+
+        var bete = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(7, 561, 2));
+        bete.setNoAi(true);
+        bete.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        // Le regard bute sur son corps, pas sur le sol : c'est le cas qui echouait.
+        lookAt(player, helper.absolutePos(new BlockPos(7, 561, 2)));
+
+        var aimed = skill.target(player, data);
+        assertValue(helper, bete, aimed.victim(), "viser le corps designe la bete");
+
+        var destination = skill.destination(player, data);
+        assertTrue(helper, destination.cell().getX() >= bete.blockPosition().getX() + 2,
+                "le bloc se pose derriere la bete, pas sur elle : " + destination.cell()
+                        + " contre " + bete.blockPosition());
+        helper.succeed();
+    }
+
+    /**
      * Joue une touche de competence par le vrai paquet : appui ou relachement.
      *
      * <p>Le test doit passer par la, et non par {@code canStart} : c'est le paquet qui debitait la

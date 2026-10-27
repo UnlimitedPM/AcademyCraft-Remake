@@ -286,6 +286,26 @@ public class ShiftTeleportSkill extends Skill {
     private static final double EXIT_STEP = 0.05;
 
     /**
+     * La ou le bloc se posera <b>vraiment</b> : la visee, et sa continuation quand le geste touche
+     * quelqu'un.
+     *
+     * <p>C'est la seule chose que la marque doit montrer. Le joueur, apres quatre essais : « le bloc
+     * s'arrete toujours sur l'entite au lieu d'aller derriere si il y a de la place ». Les quatre
+     * essais avaient tous change l'endroit ou l'item <b>tombait</b>, et aucun l'endroit ou la
+     * <b>boite</b> se dessinait : elle restait sur la case de la bete tant que la touche se tenait,
+     * et c'est elle qu'on voit. La marque lit donc la destination, et rien d'autre — celle-la meme
+     * que la pose et la chute utilisent.
+     */
+    public Target destination(Player player, AbilityData data) {
+        Target aimed = target(player, data);
+        List<LivingEntity> crossed = line(player.level(), player, aimed);
+        if (aimed.victim() instanceof LivingEntity visee && !crossed.contains(visee)) {
+            crossed.add(visee);
+        }
+        return crossed.isEmpty() ? aimed : past(player, data, aimed, crossed);
+    }
+
+    /**
      * Ou le bloc atterrit quand le geste a touche quelqu'un : <b>plus loin</b>, dans l'axe du geste.
      *
      * <p>Le joueur, trois fois : « le bloc s'arrete sur l'entite, il ne passe pas derriere meme si il
@@ -352,8 +372,7 @@ public class ShiftTeleportSkill extends Skill {
         return leave >= enter ? leave : -1.0;
     }
 
-    public Target target(Player player, AbilityData data) {
-        Vec3 eye = player.getEyePosition(1f);
+    public Target target(Player player, AbilityData data) {        Vec3 eye = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);
         Vec3 end = eye.add(look.scale(maxRange(data)));
         BlockHitResult hit = player.level().clip(new ClipContext(eye, end,

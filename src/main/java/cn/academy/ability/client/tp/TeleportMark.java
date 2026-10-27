@@ -483,8 +483,12 @@ public final class TeleportMark {
         // qu'il refusait aux deux autres boites. La case visee se tient souvent derriere le bloc
         // qu'on regarde, et elle serait alors exactement la ou on ne la verrait pas.
         if (skill == TeleporterCategory.SHIFT_TELEPORT) {
-            ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT.target(player,
-                    ClientAbilityData.get());
+            // La DESTINATION, et non la case visee : quand le geste touche une creature, le bloc la
+            // depasse et se pose derriere elle — la marque doit donc se dessiner la-bas. Dessinee
+            // sur la case de la bete, elle disait l'inverse du geste, et le joueur y lisait que « le
+            // bloc s'arrete sur l'entite ». Voir ShiftTeleportSkill.destination.
+            ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT
+                    .destination(player, ClientAbilityData.get());
             return new Seat(new Vec3(target.cell().getX() + 0.5, target.cell().getY(),
                     target.cell().getZ() + 0.5), COLOR_SHIFT_BOX, Shape.box(SHIFT_BOX, SHIFT_BOX),
                     true);
