@@ -390,6 +390,19 @@ public final class Config {
         return destroyBlocks;
     }
 
+    /**
+     * Ecrit le verrou du serveur, et le sauve.
+     *
+     * <p>Sert a l'ecran de reglage en solo : le joueur y est le serveur, et une case cochee qui
+     * ne casse rien parce qu'un verrou est reste ferme ailleurs serait un mensonge.
+     */
+    public static boolean setDestroyBlocks(boolean value) {
+        destroyBlocks = value;
+        DESTROY_BLOCKS.set(value);
+        save();
+        return destroyBlocks;
+    }
+
     /** Bascule « Enable PvP » et l'ecrit dans le fichier. */
     public static boolean toggleAttackPlayer() {
         attackPlayer = !attackPlayer;

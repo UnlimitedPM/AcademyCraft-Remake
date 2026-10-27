@@ -70,6 +70,13 @@ public class SettingsScreen extends Screen {
     /** Le libelle, la case a cocher et le controle de droite. */
     private static final double LABEL_X = 15.0;
     /**
+     * Le retrait d'une sous-ligne.
+     *
+     * <p>Une sous-option se lit comme telle ou ne se lit pas : c'est le retrait qui dit qu'elle
+     * appartient a la ligne du dessus, et pas qu'elle est une competence de plus.
+     */
+    private static final double INDENT = 26.0;
+    /**
      * La largeur du libelle.
      *
      * <p>Le document dit 300, et le texte s'y coupe net (regle du {@code TextBox}). Mais sa police
@@ -114,24 +121,38 @@ public class SettingsScreen extends Screen {
     /** Ce qu'une ligne fait quand on clique sur sa partie droite. */
     private enum Kind { HEADER, KEY, TOGGLE, ACTION }
 
-    private record Row(String labelKey, Kind kind, String category,
-                       KeyMapping key, java.util.function.BooleanSupplier getter, Runnable action) {
+    private record Row(String labelKey, Kind kind, String category, KeyMapping key,
+                       java.util.function.BooleanSupplier getter, Runnable action,
+                       String hintKey, boolean indent) {
 
         static Row header(String category) {
-            return new Row("ac.settings.cat." + category, Kind.HEADER, category, null, null, null);
+            return new Row("ac.settings.cat." + category, Kind.HEADER, category, null, null, null,
+                    null, false);
         }
 
         static Row key(String category, String labelKey, KeyMapping mapping) {
-            return new Row(labelKey, Kind.KEY, category, mapping, null, null);
+            return new Row(labelKey, Kind.KEY, category, mapping, null, null, null, false);
         }
 
         static Row toggle(String category, String labelKey,
                           java.util.function.BooleanSupplier getter, Runnable action) {
-            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action);
+            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, null, false);
+        }
+
+        /**
+         * Une sous-ligne : decalee a droite, et suivie de ce que la case veut dire.
+         *
+         * <p>Une case a cocher posee a cote d'un nom de competence ne dit pas, a elle seule, si
+         * cocher l'autorise ou l'interdit — c'est exactement ce qui a fait lire l'ecran a
+         * l'envers. Le suffixe le dit, une fois pour toutes.
+         */
+        static Row subToggle(String category, String labelKey, String hintKey,
+                             java.util.function.BooleanSupplier getter, Runnable action) {
+            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, hintKey, true);
         }
 
         static Row action(String category, String labelKey, Runnable action) {
-            return new Row(labelKey, Kind.ACTION, category, null, null, action);
+            return new Row(labelKey, Kind.ACTION, category, null, null, action, null, false);
         }
     }
 
@@ -191,15 +212,21 @@ public class SettingsScreen extends Screen {
         // La casse : ce n'est plus le reglage du serveur, c'est celui du JOUEUR. Le serveur garde
         // son propre verrou ({@code general.destroyBlocks}) ; ici le joueur dit ce qu'il accepte,
         // et son choix part au serveur, qui l'applique et le renvoie.
+        //
+        // La case montre l'etat EFFECTIF (verrou du serveur ET choix du joueur) : une case cochee
+        // qui ne casse rien serait un mensonge. En solo le joueur est le serveur, donc la case
+        // leve aussi le verrou du serveur — c'est ce qu'il attend d'un reglage nomme « detruire
+        // les blocs ».
         rows.add(Row.toggle("generic", "ac.settings.prop.destroyBlocks",
-                SettingsScreen::playerBreaksBlocks, () -> sendBreakPrefs(null, !playerBreaksBlocks())));
+                SettingsScreen::breaksBlocksNow, SettingsScreen::toggleBreaksBlocks));
         // Puis une sous-ligne par competence qui creuse, pour celles qu'il connait : c'est ce qui
-        // permet de garder la mine ray et de refuser le meltdowner, par exemple.
+        // permet de garder la mine ray et de refuser le meltdowner, par exemple. Cochee = elle
+        // casse, et c'est l'etat par defaut puisqu'une case neuve l'est aussi.
         for (cn.academy.ability.Skill skill : cn.academy.ability.BlockBreaking.prefSkills()) {
             if (!ClientAbilityData.get().isSkillLearned(skill)) continue;
-            rows.add(Row.toggle("generic", skill.getDisplayKey(),
-                    () -> ClientAbilityData.get().breaksBlocks(skill),
-                    () -> sendBreakPrefs(skill, !ClientAbilityData.get().breaksBlocks(skill))));
+            rows.add(Row.subToggle("generic", skill.getDisplayKey(), "ac.settings.prop.breaks_blocks",
+                    () -> breaksBlocksNow() && ClientAbilityData.get().skillBreaksBlocks(skill),
+                    () -> toggleSkill(skill)));
         }
         rows.add(Row.toggle("generic", "ac.settings.prop.headsOrTails",
                 () -> cn.academy.Config.headsOrTails, () -> cn.academy.Config.toggleHeadsOrTails()));
@@ -218,6 +245,43 @@ public class SettingsScreen extends Screen {
     /** Le drapeau du joueur, tel que le serveur vient de le synchroniser. */
     private static boolean playerBreaksBlocks() {
         return ClientAbilityData.get().playerBreaksBlocks();
+    }
+
+    /** L'etat effectif : le verrou du serveur, puis le choix du joueur. */
+    private static boolean breaksBlocksNow() {
+        return cn.academy.Config.destroyBlocks && playerBreaksBlocks();
+    }
+
+    /**
+     * La case generale : le choix du joueur, et en solo le verrou du serveur avec lui.
+     *
+     * <p>En solo le joueur <b>est</b> le serveur : sans ce deuxieme geste, une case cochee
+     * laisserait {@code general.destroyBlocks} ferme et rien ne casserait — le joueur l'a
+     * signale.
+     */
+    private static void toggleBreaksBlocks() {
+        setBreaksBlocks(!breaksBlocksNow());
+    }
+
+    private static void setBreaksBlocks(boolean value) {
+        sendBreakPrefs(null, value);
+        if (net.minecraft.client.Minecraft.getInstance().hasSingleplayerServer()) {
+            cn.academy.Config.setDestroyBlocks(value);
+        }
+    }
+
+    /**
+     * Une sous-case : elle coche la competence, et ouvre le general si besoin.
+     *
+     * <p>Une case cochee derriere un general ferme ne casserait rien — l'ecran dirait le
+     * contraire de ce que le jeu fait. Le clic ouvre donc le general avec elle.
+     */
+    private static void toggleSkill(cn.academy.ability.Skill skill) {
+        boolean next = !ClientAbilityData.get().skillBreaksBlocks(skill);
+        if (next && !breaksBlocksNow()) {
+            setBreaksBlocks(true);
+        }
+        sendBreakPrefs(skill, next);
     }
 
     /**
@@ -342,9 +406,17 @@ public class SettingsScreen extends Screen {
         if (over && capturing < 0) {
             fill(graphics, AREA_X, y, ROW_W, ROW_H, HOVER_VEIL);
         }
-        String label = fit(Component.translatable(row.labelKey()).getString(), LABEL_W, CELL);
+        String label = fit(rowText(row), LABEL_W - (row.indent() ? INDENT : 0), CELL);
         AcademyFonts.drawTop(graphics, font, label,
-                (int) Math.round(AREA_X + LABEL_X), (int) Math.round(labelY), TEXT_COLOUR, CELL);
+                (int) Math.round(AREA_X + LABEL_X + (row.indent() ? INDENT : 0)),
+                (int) Math.round(labelY), TEXT_COLOUR, CELL);
+    }
+
+    /** Le texte d'une ligne : son libelle, et pour une sous-ligne ce que sa case veut dire. */
+    private static String rowText(Row row) {
+        String text = Component.translatable(row.labelKey()).getString();
+        if (row.hintKey() == null) return text;
+        return text + "  " + Component.translatable(row.hintKey()).getString();
     }
 
     /**

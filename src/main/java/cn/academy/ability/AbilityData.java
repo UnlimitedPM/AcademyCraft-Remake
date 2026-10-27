@@ -1115,7 +1115,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * {@code BlockBreaking.allowed}.
      */
     public boolean breaksBlocks(Skill skill) {
-        return breaksBlocks && (skill == null || !noBreak.contains(skillKey(skill)));
+        return breaksBlocks && skillBreaksBlocks(skill);
+    }
+
+    /**
+     * Cette competence casse-t-elle, en ignorant le drapeau general ?
+     *
+     * <p>C'est la sous-case de l'ecran de reglage, qui ne parle que d'elle-meme : le drapeau
+     * general est une autre ligne, et melanger les deux rendrait l'affichage muet — une
+     * sous-case grisee par le general ne dirait plus ce que la competence, elle, prefere.
+     */
+    public boolean skillBreaksBlocks(Skill skill) {
+        return skill == null || !noBreak.contains(skillKey(skill));
     }
 
     /** Accepte ou refuse la casse pour une compétence. */

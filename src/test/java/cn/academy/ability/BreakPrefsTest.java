@@ -58,6 +58,28 @@ class BreakPrefsTest {
         assertTrue(data.breaksBlocks(MeltdownerCategory.MELTDOWNER));
     }
 
+    /**
+     * La sous-case de l'ecran ne parle que d'elle-meme.
+     *
+     * <p>C'est ce qui permet de lire « Meltdowner : casse les blocs » sans que le drapeau general
+     * vienne griser la reponse : le general a sa propre ligne, et deux verrous valent mieux qu'un
+     * affichage muet.
+     */
+    @Test
+    @DisplayName("le bit par competence ignore le drapeau general")
+    void bitParCompetence() {
+        AbilityData data = new AbilityData();
+        assertTrue(data.skillBreaksBlocks(MeltdownerCategory.MELTDOWNER), "coche par defaut");
+
+        data.setPlayerBreaksBlocks(false);
+        assertTrue(data.skillBreaksBlocks(MeltdownerCategory.MELTDOWNER),
+                "le general ne change pas la sous-case");
+
+        data.setBreaksBlocks(MeltdownerCategory.MELTDOWNER, false);
+        assertFalse(data.skillBreaksBlocks(MeltdownerCategory.MELTDOWNER));
+        assertTrue(data.skillBreaksBlocks(MeltdownerCategory.MINE_RAY_BASIC));
+    }
+
     /** Un refus survit a la traversee du NBT : c'est lui qui part au serveur et qui revient. */
     @Test
     @DisplayName("les deux reglages voyagent dans le NBT")
