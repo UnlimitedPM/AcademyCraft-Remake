@@ -584,9 +584,23 @@ public final class TeleportMark {
         ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT.target(player,
                 ClientAbilityData.get());
         List<Satellite> boxes = new ArrayList<>();
-        for (LivingEntity living : ShiftTeleportSkill.line(player.level(), player, target.cell())) {
+        for (LivingEntity living : ShiftTeleportSkill.line(player.level(), player, target)) {
             boxes.add(new Satellite(living.getId(), living.position(), living.position(),
                     Shape.box(living.getBbWidth(), living.getBbHeight())));
+        }
+        // ET LA BETE VISEE, TOUJOURS. La ligne peut la rater d'un cheveu — la visee, elle, l'a
+        // trouvee, et c'est elle que le geste frappera. Sans cette ligne, la boite rouge manquait
+        // alors que le coup partait : le joueur lisait l'inverse, « il n'est pas encadre en rouge,
+        // et ne prend donc aucun degats ». La marque ne doit pas mentir, donc elle suit la visee.
+        if (target.victim() instanceof LivingEntity visee) {
+            boolean already = false;
+            for (Satellite satellite : boxes) {
+                if (satellite.id() == visee.getId()) already = true;
+            }
+            if (!already) {
+                boxes.add(new Satellite(visee.getId(), visee.position(), visee.position(),
+                        Shape.box(visee.getBbWidth(), visee.getBbHeight())));
+            }
         }
         return boxes;
     }

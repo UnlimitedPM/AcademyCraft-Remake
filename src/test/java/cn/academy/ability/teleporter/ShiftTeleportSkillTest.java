@@ -88,4 +88,29 @@ class ShiftTeleportSkillTest {
                         new Vec3(20, 64.5, 0)),
                 "une creature basse, sur une ligne qui monte a peine");
     }
+
+    @Test
+    @DisplayName("la continuation repart apres la boite de la bete, pas dedans")
+    void laContinuationSortDeLaBete() {
+        // Le joueur : « meme si il n'y a aucun mur derriere elle, le bloc s'arrete quand meme sur
+        // l'entite plutot que de continuer son chemin ». La continuation efface les boites
+        // traversees et suit le MEME regard : elle repart donc a la sortie de la bete, et non au
+        // point touche, qui est sur le sol colle a ses pieds.
+        Vec3 eye = new Vec3(0, 65.0, 0);
+        Vec3 look = new Vec3(1, 0, 0).normalize();
+        AABB bete = new AABB(9.7, 64, -0.3, 10.3, 65.4, 0.3);
+
+        double sortie = ShiftTeleportSkill.exitAlong(bete, eye, look);
+
+        assertEquals(10.3, sortie, 1.0e-6, "le regard sort de la boite par son dos");
+        assertTrue(sortie > 10.0, "et donc bien au-dela du point touche, qui est sur sa face");
+
+        // Un regard qui ne la croise pas n'a pas de sortie : c'est le -1 qui le dit, et la
+        // continuation part alors du tireur lui-meme.
+        assertEquals(-1.0, ShiftTeleportSkill.exitAlong(bete, eye.add(0, 0, 5), look), 1.0e-6,
+                "un regard a cote ne traverse rien");
+        // Et un regard qui part de DEDANS rend sa sortie : c'est la bete collee au tireur.
+        assertEquals(0.3, ShiftTeleportSkill.exitAlong(bete, new Vec3(10, 65, 0), look), 1.0e-6,
+                "un regard ne dans la boite en sort");
+    }
 }

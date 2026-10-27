@@ -215,9 +215,14 @@ public class ShiftTeleportSkill extends Skill {
         // Le geste qui touche quelqu'un ne se plante pas dans le sol : le bloc, lui, <b>continue sa
         // route</b> et tombe derriere la creature — c'est un coup d'epieu, pas un pieu. Seuls les
         // degats s'arretent sur elle.
-        boolean planted = hit.isEmpty() && place(player, item, stack, target);
+        //
+        // ET LA BETE VISEE COMPTE COMME TOUCHEE, meme quand la LIGNE la rate : c'est elle qui
+        // decidait de la pose, et c'est par la qu'un bloc se plantait sur elle — la ligne manquait
+        // la creature, la pose s'ouvrait, et la case visee etait la sienne. Voir #past.
+        boolean touches = !hit.isEmpty() || target.victim() != null;
+        boolean planted = !touches && place(player, item, stack, target);
         if (!planted) {
-            drop(player, stack, hit.isEmpty() ? target : beyond(player, data, target));
+            drop(player, stack, touches ? past(player, data, target, hit) : target);
         }
 
         for (LivingEntity living : hit) {
@@ -277,51 +282,74 @@ public class ShiftTeleportSkill extends Skill {
      * <p>Elle est toujours <b>libre</b> : le rayon s'arrete au premier bloc, donc la case qui suit
      * la face touchee est forcement vide — sinon le rayon l'aurait touchee avant lui.
      */
+    /** Le pas dont la continuation repart apres la derniere boite traversee, en blocs. */
+    private static final double EXIT_STEP = 0.05;
+
     /**
-     * Ou le bloc atterrirait si rien ne l'arretait : le <b>terrain</b> seul, creatures ignorees.
+     * Ou le bloc atterrit quand le geste a touche quelqu'un : <b>plus loin</b>, dans l'axe du geste.
      *
-     * <p>C'est la que part le bloc quand la pose echoue. Le joueur : « quand je vise la cible
-     * directement, le bloc a l'air de bloquer sur la cible plutot que de passer derriere elle ».
+     * <p>Le joueur, trois fois : « le bloc s'arrete sur l'entite, il ne passe pas derriere meme si il
+     * y a de la place », « meme si il n'y a aucun mur derriere elle, le bloc s'arrete quand meme sur
+     * l'entite plutot que de continuer son chemin ». Le port avait tente de repartir du <b>point
+     * touche</b> en sautant les blocs trop proches : en visant un corps, ce point est sur le sol
+     * colle aux pieds de la bete, et le saut suivant repartait <b>dans</b> ce sol — chaque essai
+     * retombait donc a un bloc ou deux d'elle, c'est-a-dire sur elle.
+     *
+     * <p>La continuation prend maintenant le regard <b>tel qu'il est</b> et repart la ou il SORT des
+     * boites traversees — la bete visee, et celles que la ligne croise. C'est la meme droite, une
+     * fois ces boites effacees : le bloc suit donc le chemin qu'il aurait pris sans personne, et
+     * c'est exactement ce que le joueur demande. Voir {@link #exitAlong}, fonction pure.
+     *
+     * <p>Quand il ne reste aucun terrain devant — le regard part vers le ciel —, la destination est
+     * le bout de la portee, dans l'air, et le bloc tombe la.
      */
-    public Target terrainTarget(Player player, AbilityData data) {
+    public Target past(Player player, AbilityData data, Target struck,
+                       List<LivingEntity> crossed) {
         Vec3 eye = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);
-        Vec3 end = eye.add(look.scale(maxRange(data)));
-        BlockHitResult hit = player.level().clip(new ClipContext(eye, end,
+        Vec3 end = eye.add(look.scale(maxRange(data) + 2.0));
+
+        double skip = 0.0;
+        if (struck.victim() instanceof LivingEntity victim) {
+            skip = Math.max(skip, exitAlong(victim.getBoundingBox(), eye, look));
+        }
+        for (LivingEntity living : crossed) {
+            skip = Math.max(skip, exitAlong(living.getBoundingBox(), eye, look));
+        }
+
+        Vec3 start = skip > 0.0 ? eye.add(look.scale(skip + EXIT_STEP)) : eye;
+        BlockHitResult hit = player.level().clip(new ClipContext(start, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
     }
 
     /**
-     * Ou le bloc atterrit quand le geste a touche quelqu'un : <b>plus loin</b>, dans l'axe du geste.
+     * A quelle distance le long du regard on <b>sort</b> de cette boite, ou {@code -1} si le regard
+     * ne la traverse pas.
      *
-     * <p>Le joueur, deux fois : « le bloc s'arrete sur l'entite, il ne passe pas derriere meme si il
-     * y a de la place », puis « meme si il n'y a aucun mur derriere elle, le bloc s'arrete quand
-     * meme sur l'entite plutot que de continuer son chemin ». En visant un corps, le regard pique
-     * vers le sol : le premier bloc qu'il trouve est a un bloc ou deux derriere la bete, et le bloc
-     * se posait la — donc « sur » elle.
-     *
-     * <p>La continuation part donc de la creature et <b>ignore les blocs qui la touchent</b> : tant
-     * que le point touche reste colle a elle, le bloc repart de la, decale d'un demi-bloc dans
-     * l'axe. Il finit par trouver le sol vraiment derriere, ou le bout de la portee.
+     * <p>Fonction pure, donc verifiable : c'est le decoupage d'un rayon par les six plans de la
+     * boite, sans monde ni entite. Un rayon qui part de l'interieur rend la sortie — c'est le cas de
+     * la creature collee au tireur —, et un rayon qui ne la croise pas rend moins un.
      */
-    public Target beyond(Player player, AbilityData data, Target struck) {
-        Vec3 center = Vec3.atCenterOf(struck.cell());
-        Vec3 dir = player.getViewVector(1f);
-        Vec3 end = center.add(dir.scale(maxRange(data) + 2.0));
-        BlockHitResult hit = player.level().clip(new ClipContext(center, end,
-                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        // 1,75 bloc : en deca, le point touche appartient encore a la creature.
-        double tooClose = 1.75 * 1.75;
-        int guard = 0;
-        while (hit.getType() != HitResult.Type.MISS
-                && hit.getLocation().distanceToSqr(center) < tooClose
-                && guard++ < 8) {
-            Vec3 next = hit.getLocation().add(dir.scale(0.75));
-            hit = player.level().clip(new ClipContext(next, end,
-                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+    public static double exitAlong(AABB box, Vec3 from, Vec3 dir) {
+        double enter = 0.0;
+        double leave = Double.MAX_VALUE;
+        double[] origin = {from.x, from.y, from.z};
+        double[] way = {dir.x, dir.y, dir.z};
+        double[] low = {box.minX, box.minY, box.minZ};
+        double[] high = {box.maxX, box.maxY, box.maxZ};
+        for (int axis = 0; axis < 3; axis++) {
+            if (Math.abs(way[axis]) < 1.0e-9) {
+                // Le rayon ne bouge pas sur cet axe : il est dedans ou il est a cote, pour toujours.
+                if (origin[axis] < low[axis] || origin[axis] > high[axis]) return -1.0;
+                continue;
+            }
+            double one = (low[axis] - origin[axis]) / way[axis];
+            double two = (high[axis] - origin[axis]) / way[axis];
+            enter = Math.max(enter, Math.min(one, two));
+            leave = Math.min(leave, Math.max(one, two));
         }
-        return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
+        return leave >= enter ? leave : -1.0;
     }
 
     public Target target(Player player, AbilityData data) {
@@ -358,9 +386,18 @@ public class ShiftTeleportSkill extends Skill {
         return fromMiss(end);
     }
 
-    /** La creature dont la boite contient ce point, ou qui le touche de pres. */
+    /**
+     * La creature dont la boite contient ce point, ou qui le touche de pres.
+     *
+     * <p>La tolerance valait trois dixiemes, au motif que le point touche est sur le sol, donc a la
+     * limite basse de la boite. C'etait compter sans les creatures qui ne se tiennent pas
+     * <b>pile</b> sur la case : une vache au bord d'une dalle, un monstre qui vient de sauter, et le
+     * point touche tombe a un demi-bloc de ses pieds — la visee ne trouvait plus personne. Elle vaut
+     * maintenant huit dixiemes, la largeur d'un corps pres. Le joueur : « parfois, si le monstre
+     * n'est pas parfaitement sur le bloc, il n'est tout simplement pas encadre en rouge ».
+     */
     private static LivingEntity standingAt(Player player, Vec3 point) {
-        AABB box = new AABB(point, point).inflate(0.75);
+        AABB box = new AABB(point, point).inflate(STANDING_GRACE);
         LivingEntity best = null;
         double closest = Double.MAX_VALUE;
         for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class, box,
@@ -371,9 +408,11 @@ public class ShiftTeleportSkill extends Skill {
                 best = living;
             }
         }
-        // 0,3 de tolerance : le point touche est sur le sol, donc a la limite basse de la boite.
-        return closest <= 0.3 * 0.3 ? best : null;
+        return closest <= STANDING_GRACE * STANDING_GRACE ? best : null;
     }
+
+    /** La tolerance du point touche a la boite de la creature qui l'occupe, en blocs. */
+    private static final double STANDING_GRACE = 0.8;
 
     /**
      * La case visee quand le regard bute sur une <b>creature</b> : la sienne.
@@ -415,27 +454,58 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     /**
+     * La marge autour d'une boite, en blocs : une creature qui <b>rase</b> la ligne est traversee.
+     *
+     * <p>Sans elle, il fallait tomber pile dessus. Le joueur : « parfois, si le monstre n'est pas
+     * parfaitement sur le bloc, il n'est tout simplement pas encadre en rouge, et ne prend donc
+     * aucun degats ». Un tiers de bloc, c'est l'ecart d'un corps qui se tient au bord de sa case.
+     */
+    public static final double LINE_GRACE = 0.35;
+
+    /**
      * Les creatures que le geste traverse : celles dont la boite croise le segment qui va des pieds
-     * du joueur au <b>centre</b> de la case visee.
+     * du joueur jusqu'au point vise.
      *
      * <p>C'est le {@code getTargetsInLine} de l'original : un volume pour demander au monde ses
-     * creatures — celui du segment, exactement —, puis un croisement de boite pour chacune, qui
-     * ecarte celles qui ne sont que <b>a cote</b> de la ligne. L'auteur du geste en est retire.
+     * creatures — celui du segment —, puis un croisement de boite pour chacune, qui ecarte celles
+     * qui ne sont que <b>a cote</b> de la ligne. L'auteur du geste en est retire.
      *
      * <p>Le segment part des pieds, comme chez l'original, et non des yeux : c'est le corps entier
-     * qui passe, et c'est lui qui frappe.
+     * qui passe, et c'est lui qui frappe. Il va au <b>centre de la case visee</b>.
      */
     public static List<LivingEntity> line(Level level, Player player, BlockPos cell) {
+        return line(level, player, Vec3.atCenterOf(cell));
+    }
+
+    /**
+     * La meme ligne, mais jusqu'au point que la visee a trouve.
+     *
+     * <p>Le centre de la case n'est pas toujours <b>dans</b> la creature : ses pieds peuvent tomber
+     * a un cheveu sous la limite de la case, et la case visee est alors celle du sol, donc son
+     * centre passe sous la bete — la ligne l'effleurait sans la toucher, et le geste la traversait
+     * sans la voir. Le centre de la boite, lui, est toujours dedans. Voir {@link #aimOf}.
+     */
+    public static List<LivingEntity> line(Level level, Player player, Target target) {
+        return line(level, player, aimOf(target));
+    }
+
+    /** Le point que la ligne du geste vise : le centre de la bete, ou celui de la case. */
+    public static Vec3 aimOf(Target target) {
+        return target.victim() != null ? target.victim().getBoundingBox().getCenter()
+                : Vec3.atCenterOf(target.cell());
+    }
+
+    private static List<LivingEntity> line(Level level, Player player, Vec3 to) {
         Vec3 from = player.position();
-        Vec3 to = Vec3.atCenterOf(cell);
         AABB area = new AABB(
                 Math.min(from.x, to.x), Math.min(from.y, to.y), Math.min(from.z, to.z),
-                Math.max(from.x, to.x), Math.max(from.y, to.y), Math.max(from.z, to.z));
+                Math.max(from.x, to.x), Math.max(from.y, to.y), Math.max(from.z, to.z))
+                .inflate(LINE_GRACE);
 
         List<LivingEntity> hit = new ArrayList<>();
         for (LivingEntity living : level.getEntitiesOfClass(LivingEntity.class, area,
                 e -> e != player && !e.isSpectator())) {
-            if (crosses(living.getBoundingBox(), from, to)) hit.add(living);
+            if (crosses(living.getBoundingBox().inflate(LINE_GRACE), from, to)) hit.add(living);
         }
         return hit;
     }

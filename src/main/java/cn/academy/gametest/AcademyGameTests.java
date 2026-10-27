@@ -10032,13 +10032,18 @@ public final class AcademyGameTests {
         // L'axe du geste continue au-dela de la creature, et le bloc atterrit la-bas. On interroge
         // la continuation elle-meme : chercher l'item au sol serait fragile, les tests d'un meme
         // lot tournent en parallele et lachent leurs objets dans le meme monde.
-        var continuation = skill.beyond(player, data, target);
+        var continuation = skill.past(player, data, target,
+                cn.academy.ability.teleporter.ShiftTeleportSkill.line(player.level(), player,
+                        target));
         var centre = net.minecraft.world.phys.Vec3.atCenterOf(bete.blockPosition());
         assertTrue(helper, continuation.point().distanceToSqr(centre) > 1.7 * 1.7,
                 "le bloc continue loin derriere la bete : " + continuation.point()
                         + " contre " + bete.position());
         assertValue(helper, bete, target.victim(),
                 "et la visee retient la creature des pieds : c'est elle qui s'arrete, pas le bloc");
+        assertTrue(helper, cn.academy.ability.teleporter.ShiftTeleportSkill.line(player.level(),
+                        player, target).contains(bete),
+                "et la LIGNE la traverse, sinon sa boite rouge ne s'allume pas");
         helper.succeed();
     }
 
