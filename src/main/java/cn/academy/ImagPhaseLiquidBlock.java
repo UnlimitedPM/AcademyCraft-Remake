@@ -104,8 +104,8 @@ public class ImagPhaseLiquidBlock extends LiquidBlock {
             return;
         }
         // Les autres l'entendent d'ici ; le joueur en feu en est exclu, il a deja le sien.
-        level.playSound(entity instanceof Player player ? player : null,
-                entity.getX(), entity.getY(), entity.getZ(),
+        if (entity instanceof Player) return;
+        level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
                 net.minecraft.sounds.SoundEvents.GENERIC_EXTINGUISH_FIRE,
                 net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, pitch);
     }

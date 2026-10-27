@@ -75,11 +75,11 @@ public class SettingsScreen extends Screen {
      * <p>Une sous-option se lit comme telle ou ne se lit pas : c'est le retrait qui dit qu'elle
      * appartient a la ligne du dessus, et pas qu'elle est une competence de plus.
      */
-    private static final double INDENT = 26.0;
+    private static final double INDENT = 50.0;
     /** La petite fleche des lignes depliables, dans la gouttiere a gauche des libelles. */
-    private static final double ARROW_X = 4.0;
-    private static final double ARROW_W = 30.0;
-    private static final double ARROW_H = 30.0;
+    private static final double ARROW_X = 6.0;
+    private static final double ARROW_W = 42.0;
+    private static final double ARROW_H = 42.0;
     /**
      * La largeur du libelle.
      *
@@ -445,7 +445,7 @@ public class SettingsScreen extends Screen {
      */
     private static void triangle(GuiGraphics graphics, double x, double y, double w, double h,
                                  boolean open) {
-        int samples = 4;
+        int samples = 6;
         int px0 = (int) Math.floor(x);
         int py0 = (int) Math.floor(y);
         int px1 = (int) Math.ceil(x + w);
