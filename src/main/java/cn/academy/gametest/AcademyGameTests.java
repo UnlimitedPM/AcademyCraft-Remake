@@ -9940,24 +9940,106 @@ public final class AcademyGameTests {
         data.setCategoryLevel(skill.getCategory(), 4);
         data.learnSkill(skill);
         data.setSkillExp(skill, 0.5f);
+        data.setActivated(true);
 
-        // 1. RIEN DEVANT : la competence refuse de partir, donc rien n'est facture.
+        // 1. RIEN DEVANT : la competence refuse de partir, donc rien n'est facture. On passe par le
+        // CHEMIN REEL du paquet — appui, charge, relachement — et pas seulement par canStart : c'est
+        // la ou le cout se prenait.
         lookAt(player, abs.offset(0, 1, 6));
-        assertFalse(helper, skill.canStart(player, data),
-                "dans le vide, le flesh ripping ne part pas : ni CP, ni surcout");
+        float cpBefore = data.getControlPoint();
+        float overloadBefore = data.getOverload();
+        useSkill(player, data, skill, cn.academy.ability.network.ActivateSkillPacket.Phase.PRESS);
+        for (int i = 0; i < 30; i++) {
+            data.tickCharges();
+        }
+        useSkill(player, data, skill, cn.academy.ability.network.ActivateSkillPacket.Phase.RELEASE);
 
-        // 2. UNE VACHE DEVANT : elle part, et c'est son effet qui paie. La bete se pose a la
-        // hauteur du test — les coordonnees de structure, comme le mur du test du railgun.
-        BlockPos bete = new BlockPos(3, 262, 9);
-        helper.spawn(net.minecraft.world.entity.EntityType.COW, bete);
-        lookAt(player, helper.absolutePos(bete));
+        assertClose(helper, cpBefore, data.getControlPoint(), "les CP du tir dans le vide");
+        assertClose(helper, overloadBefore, data.getOverload(), "le surcout du tir dans le vide");
+        assertTrue(helper, data.getCooldown(skill) == 0,
+                "et aucune recharge n'a ete posee par un tir dans le vide");
+
+        // 1 bis. LA MISE EN GARDE DU JOUEUR : « il utilise des CP et de l'overload meme quand il ne
+        // vise aucune entite ». La visee ignorait les blocs — un mur, le sol — et prenait donc une
+        // bete derriere. Un mur suffit a le prouver.
+        BlockPos mur = new BlockPos(3, 262, 6);
+        helper.setBlock(mur, net.minecraft.world.level.block.Blocks.STONE);
+        helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(3, 262, 9));
+        lookAt(player, helper.absolutePos(new BlockPos(3, 262, 9)));
+        assertFalse(helper, skill.canStart(player, data),
+                "un mur arrete la visee : la bete derriere n'est pas vue, et rien n'est facture");
+        helper.setBlock(mur, net.minecraft.world.level.block.Blocks.AIR);
+
+        // 2. UNE VACHE DEVANT, A DECOUVERT : elle part, et c'est son effet qui paie. La bete se
+        // pose a la hauteur du test — les coordonnees de structure, comme le mur du test du
+        // railgun.
+        lookAt(player, helper.absolutePos(new BlockPos(3, 262, 9)));
         assertTrue(helper, skill.canStart(player, data),
                 "avec une cible devant, la competence part");
         assertTrue(helper, skill.paysOnEffect(),
                 "le paiement appartient a l'effet, pas au relachement de la touche");
-        assertTrue(helper, data.getCooldown(skill) == 0,
-                "et aucune recharge n'a ete posee par les essais dans le vide");
         helper.succeed();
+    }
+
+    /**
+     * Le saut frappe la creature qu'on vise <b>aux pieds</b>.
+     *
+     * <p>Le joueur : « quand je vise un joueur avec un bloc, si je vise vers les pieds du joueur,
+     * le bloc choisit uniquement de se poser devant l'autre joueur plutot que de le transpercer et
+     * donc de faire des degats. La maintenant la seule solution, c'est de le viser un peu vers le
+     * ciel ».
+     *
+     * <p>En visant les pieds, le rayon bute sur le sol juste devant : il ne traverse donc jamais la
+     * boite de la creature, et le geste plantait son bloc dans l'herbe. Le point touche, lui, est a
+     * ses pieds — c'est la creature qui l'occupe qui est la cible.
+     */
+    @GameTest(template = "empty")
+    public static void leSautFrappeQuandOnViseLesPieds(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.SHIFT_TELEPORT;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 260);
+
+        var player = ownPlayer(helper, "sauteur");
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        clearCorridor(helper, abs, 12);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0.5f);
+
+        // Un sol, et la bete dessus : ses pieds sont donc exactement au point que le regard touche.
+        helper.setBlock(new BlockPos(3, 261, 9), net.minecraft.world.level.block.Blocks.STONE);
+        var bete = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(3, 262, 9));
+        lookAt(player, helper.absolutePos(new BlockPos(3, 262, 9)));
+
+        var target = skill.target(player, data);
+        assertValue(helper, bete.blockPosition(), target.cell(),
+                "viser les pieds designe la creature qui les a, pas l'herbe devant elle");
+        helper.succeed();
+    }
+
+    /**
+     * Joue une touche de competence par le vrai paquet : appui ou relachement.
+     *
+     * <p>Le test doit passer par la, et non par {@code canStart} : c'est le paquet qui debitait la
+     * reserve avant l'effet. {@code handle} est prive, donc la reflexion est le prix a payer pour
+     * tester le chemin reel sans exposer de porte de service dans le code de jeu.
+     */
+    private static void useSkill(net.minecraft.server.level.ServerPlayer player,
+                                 cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill,
+                                 cn.academy.ability.network.ActivateSkillPacket.Phase phase) {
+        try {
+            var method = cn.academy.ability.network.ActivateSkillPacket.class.getDeclaredMethod(
+                    "handle", net.minecraft.server.level.ServerPlayer.class,
+                    cn.academy.ability.AbilityData.class, cn.academy.ability.Skill.class,
+                    cn.academy.ability.network.ActivateSkillPacket.Phase.class);
+            method.setAccessible(true);
+            method.invoke(null, player, data, skill, phase);
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("le paquet ne se laisse pas appeler", failure);
+        }
     }
 
     /**

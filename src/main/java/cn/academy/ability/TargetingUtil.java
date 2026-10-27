@@ -16,13 +16,29 @@ public final class TargetingUtil {
 
     private TargetingUtil() {}
 
+    /**
+     * La creature que le regard touche, ou {@code null}.
+     *
+     * <p>Le rayon s'arrete au premier <b>bloc</b> : sans cela il traversait le sol et les murs, et
+     * le coup partait sur une vache sous la terre. Le joueur l'a vu autrement — « il utilise des CP
+     * et de l'overload meme quand il ne vise aucune entite » : il ne visait rien, mais la visee, si.
+     * C'est le {@code Raytrace.traceLiving} de l'original, qui tracait les deux d'un seul rayon.
+     */
     public static Entity findEntityInSight(Player player, double range) {
         Vec3 eye = player.getEyePosition(1.0f);
         Vec3 look = player.getViewVector(1.0f);
         Vec3 end = eye.add(look.scale(range));
+        BlockHitResult block = player.level().clip(new ClipContext(eye, end,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        // Un oeil DANS la matiere — coince dans un mur, ou dans une salle de test taillee dans la
+        // pierre — bute sur le bloc qui le contient, a distance nulle : la visee ne verrait alors
+        // plus rien du tout. Ce cas-la ne coupe rien.
+        boolean embedded = block.getType() != HitResult.Type.MISS
+                && block.getLocation().distanceToSqr(eye) < 0.01;
+        Vec3 stop = block.getType() == HitResult.Type.MISS || embedded ? end : block.getLocation();
         AABB box = player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0);
 
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(player, eye, end, box,
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(player, eye, stop, box,
                 e -> !e.isSpectator() && e.isPickable() && e != player, range * range);
         return hit != null ? hit.getEntity() : null;
     }

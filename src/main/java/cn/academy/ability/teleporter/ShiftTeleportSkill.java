@@ -287,7 +287,36 @@ public class ShiftTeleportSkill extends Skill {
                 || struck.getLocation().distanceToSqr(eye) < hit.getLocation().distanceToSqr(eye))) {
             return fromEntity(struck.getEntity(), struck.getLocation());
         }
-        return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
+        // ET LA CREATURE QUI SE TIENT AU POINT TOUCHE. Viser les PIEDS d'un joueur fait buter le
+        // rayon sur le sol juste devant lui : le regard ne traverse donc jamais sa boite, et le
+        // geste plantait son bloc dans l'herbe au lieu de le transpercer — « la seule solution,
+        // c'est de le viser un peu vers le ciel ». Le point touche, lui, est a ses pieds : la
+        // creature qui l'occupe est la cible.
+        if (hit.getType() != HitResult.Type.MISS) {
+            LivingEntity standing = standingAt(player, hit.getLocation());
+            if (standing != null) {
+                return fromEntity(standing, hit.getLocation());
+            }
+            return fromHit(hit);
+        }
+        return fromMiss(end);
+    }
+
+    /** La creature dont la boite contient ce point, ou qui le touche de pres. */
+    private static LivingEntity standingAt(Player player, Vec3 point) {
+        AABB box = new AABB(point, point).inflate(0.75);
+        LivingEntity best = null;
+        double closest = Double.MAX_VALUE;
+        for (LivingEntity living : player.level().getEntitiesOfClass(LivingEntity.class, box,
+                e -> e != player && !e.isSpectator() && e.isAlive())) {
+            double distance = living.getBoundingBox().distanceToSqr(point);
+            if (distance < closest) {
+                closest = distance;
+                best = living;
+            }
+        }
+        // 0,3 de tolerance : le point touche est sur le sol, donc a la limite basse de la boite.
+        return closest <= 0.3 * 0.3 ? best : null;
     }
 
     /**
