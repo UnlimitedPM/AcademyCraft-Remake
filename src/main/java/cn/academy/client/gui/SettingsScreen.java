@@ -76,6 +76,10 @@ public class SettingsScreen extends Screen {
      * appartient a la ligne du dessus, et pas qu'elle est une competence de plus.
      */
     private static final double INDENT = 26.0;
+    /** La petite fleche des lignes depliables, dans la gouttiere a gauche des libelles. */
+    private static final double ARROW_X = 6.0;
+    private static final double ARROW_W = 20.0;
+    private static final double ARROW_H = 20.0;
     /**
      * La largeur du libelle.
      *
@@ -123,41 +127,54 @@ public class SettingsScreen extends Screen {
 
     private record Row(String labelKey, Kind kind, String category, KeyMapping key,
                        java.util.function.BooleanSupplier getter, Runnable action,
-                       String hintKey, boolean indent) {
+                       boolean indent, boolean disclosure, boolean open) {
 
         static Row header(String category) {
             return new Row("ac.settings.cat." + category, Kind.HEADER, category, null, null, null,
-                    null, false);
+                    false, false, false);
         }
 
         static Row key(String category, String labelKey, KeyMapping mapping) {
-            return new Row(labelKey, Kind.KEY, category, mapping, null, null, null, false);
+            return new Row(labelKey, Kind.KEY, category, mapping, null, null, false, false, false);
         }
 
         static Row toggle(String category, String labelKey,
                           java.util.function.BooleanSupplier getter, Runnable action) {
-            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, null, false);
+            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, false, false, false);
         }
 
         /**
-         * Une sous-ligne : decalee a droite, et suivie de ce que la case veut dire.
+         * Une ligne depliable : sa petite fleche ouvre et ferme les lignes du dessous.
          *
-         * <p>Une case a cocher posee a cote d'un nom de competence ne dit pas, a elle seule, si
-         * cocher l'autorise ou l'interdit — c'est exactement ce qui a fait lire l'ecran a
-         * l'envers. Le suffixe le dit, une fois pour toutes.
+         * <p>{@code open} n'est lu que pour dessiner la fleche — la liste des lignes est
+         * refaite a chaque bascule, donc la valeur ne peut pas mentir.
          */
-        static Row subToggle(String category, String labelKey, String hintKey,
+        static Row disclose(String category, String labelKey,
+                            java.util.function.BooleanSupplier getter, Runnable action, boolean open) {
+            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, false, true, open);
+        }
+
+        /** Une sous-ligne : decalee sous la ligne qu'elle precise, sans rien y ajouter. */
+        static Row subToggle(String category, String labelKey,
                              java.util.function.BooleanSupplier getter, Runnable action) {
-            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, hintKey, true);
+            return new Row(labelKey, Kind.TOGGLE, category, null, getter, action, true, false, false);
         }
 
         static Row action(String category, String labelKey, Runnable action) {
-            return new Row(labelKey, Kind.ACTION, category, null, null, action, null, false);
+            return new Row(labelKey, Kind.ACTION, category, null, null, action, false, false, false);
         }
     }
 
     private final Screen parent;
     private final List<Row> rows = new ArrayList<>();
+
+    /**
+     * Les competences de la casse sont-elles depliees ? La fleche les ouvre et les ferme.
+     *
+     * <p>Ouvertes par defaut : les sous-options ne servent a rien si personne ne sait qu'elles
+     * existent. La fleche est la pour les ranger, pas pour les cacher.
+     */
+    private boolean breakOpen = true;
 
     /** Position de la glissiere, de 0 a 1. */
     private double progress;
@@ -217,16 +234,19 @@ public class SettingsScreen extends Screen {
         // qui ne casse rien serait un mensonge. En solo le joueur est le serveur, donc la case
         // leve aussi le verrou du serveur — c'est ce qu'il attend d'un reglage nomme « detruire
         // les blocs ».
-        rows.add(Row.toggle("generic", "ac.settings.prop.destroyBlocks",
-                SettingsScreen::breaksBlocksNow, SettingsScreen::toggleBreaksBlocks));
+        rows.add(Row.disclose("generic", "ac.settings.prop.destroyBlocks",
+                SettingsScreen::breaksBlocksNow, SettingsScreen::toggleBreaksBlocks, breakOpen));
         // Puis une sous-ligne par competence qui creuse, pour celles qu'il connait : c'est ce qui
         // permet de garder la mine ray et de refuser le meltdowner, par exemple. Cochee = elle
-        // casse, et c'est l'etat par defaut puisqu'une case neuve l'est aussi.
-        for (cn.academy.ability.Skill skill : cn.academy.ability.BlockBreaking.prefSkills()) {
-            if (!ClientAbilityData.get().isSkillLearned(skill)) continue;
-            rows.add(Row.subToggle("generic", skill.getDisplayKey(), "ac.settings.prop.breaks_blocks",
-                    () -> breaksBlocksNow() && ClientAbilityData.get().skillBreaksBlocks(skill),
-                    () -> toggleSkill(skill)));
+        // casse, et c'est l'etat par defaut puisqu'une case neuve l'est aussi. Derriere la fleche :
+        // sept competences sous chaque reglage feraient une liste interminable.
+        if (breakOpen) {
+            for (cn.academy.ability.Skill skill : cn.academy.ability.BlockBreaking.prefSkills()) {
+                if (!ClientAbilityData.get().isSkillLearned(skill)) continue;
+                rows.add(Row.subToggle("generic", skill.getDisplayKey(),
+                        () -> breaksBlocksNow() && ClientAbilityData.get().skillBreaksBlocks(skill),
+                        () -> toggleSkill(skill)));
+            }
         }
         rows.add(Row.toggle("generic", "ac.settings.prop.headsOrTails",
                 () -> cn.academy.Config.headsOrTails, () -> cn.academy.Config.toggleHeadsOrTails()));
@@ -240,6 +260,20 @@ public class SettingsScreen extends Screen {
         // dans Misc, a cote du reglage du HUD, parce que c'est un reglage de presentation.
         rows.add(Row.action("misc", "ac.settings.prop.filter_ores",
                 () -> minecraft.setScreen(new OreFilterScreen(this))));
+    }
+
+    /**
+     * Ouvre ou ferme la liste des competences de la casse.
+     *
+     * <p>La liste entiere est refaite, parce que les lignes sont une liste plate : c'est ce qui
+     * garde la geometrie, le clic et le defilement d'accord avec ce qui est dessine.
+     */
+    private void toggleBreakDisclosure() {
+        breakOpen = !breakOpen;
+        rows.clear();
+        buildRows();
+        capturing = -1;
+        progress = Math.max(0, Math.min(1, progress));
     }
 
     /** Le drapeau du joueur, tel que le serveur vient de le synchroniser. */
@@ -406,17 +440,40 @@ public class SettingsScreen extends Screen {
         if (over && capturing < 0) {
             fill(graphics, AREA_X, y, ROW_W, ROW_H, HOVER_VEIL);
         }
-        String label = fit(rowText(row), LABEL_W - (row.indent() ? INDENT : 0), CELL);
+        if (row.disclosure()) {
+            drawArrow(graphics, AREA_X + ARROW_X, y + (ROW_H - ARROW_H) / 2.0, row.open());
+        }
+        boolean shifted = row.indent() || row.disclosure();
+        double indent = shifted ? INDENT : 0;
+        String label = fit(Component.translatable(row.labelKey()).getString(), LABEL_W - indent, CELL);
         AcademyFonts.drawTop(graphics, font, label,
-                (int) Math.round(AREA_X + LABEL_X + (row.indent() ? INDENT : 0)),
+                (int) Math.round(AREA_X + LABEL_X + indent),
                 (int) Math.round(labelY), TEXT_COLOUR, CELL);
     }
 
-    /** Le texte d'une ligne : son libelle, et pour une sous-ligne ce que sa case veut dire. */
-    private static String rowText(Row row) {
-        String text = Component.translatable(row.labelKey()).getString();
-        if (row.hintKey() == null) return text;
-        return text + "  " + Component.translatable(row.hintKey()).getString();
+    /**
+     * La petite fleche d'une ligne depliable.
+     *
+     * <p>Vers le bas quand la liste est ouverte, vers la droite quand elle est fermee : c'est la
+     * convention des sites, et le document de l'original ne connaissait pas ces sous-options.
+     * Elle est dessinee par bandes, faute de texture dans les assets du mod.
+     */
+    private static void drawArrow(GuiGraphics graphics, double x, double y, boolean open) {
+        int strips = 5;
+        double stripH = ARROW_H / strips;
+        double stripW = ARROW_W / strips;
+        for (int i = 0; i < strips; i++) {
+            if (open) {
+                // Triangle qui pointe vers le bas : la base en haut, la pointe en bas.
+                double half = (strips - i) * stripW / 2.0;
+                fill(graphics, x + ARROW_W / 2.0 - half, y + i * stripH, half * 2.0, stripH,
+                        TEXT_COLOUR);
+            } else {
+                // Triangle qui pointe vers la droite : la base a gauche, la pointe a droite.
+                double len = (strips - 2 * Math.abs(i - strips / 2)) * stripW;
+                fill(graphics, x, y + i * stripH, len, stripH, TEXT_COLOUR);
+            }
+        }
     }
 
     /**
@@ -498,14 +555,21 @@ public class SettingsScreen extends Screen {
         }
 
         // Une ligne : seule sa partie droite repond, comme chez l'original, ou la case et la
-        // touche sont des widgets a part.
+        // touche sont des widgets a part. L'exception est la fleche d'une ligne depliable, qui a
+        // sa propre zone a gauche du libelle.
         double shift = shift();
         for (int i = 0; i < rows.size(); i++) {
             double y = AREA_Y + i * ROW_H - shift;
             if (pageY < y || pageY >= y + ROW_H) continue;
-            if (pageX < AREA_X + CTRL_X - 20 || pageX > AREA_X + ROW_W) continue;
 
             Row row = rows.get(i);
+            if (row.disclosure() && pageX >= AREA_X + ARROW_X - 6
+                    && pageX <= AREA_X + ARROW_X + ARROW_W + 6) {
+                toggleBreakDisclosure();
+                return true;
+            }
+            if (pageX < AREA_X + CTRL_X - 20 || pageX > AREA_X + ROW_W) continue;
+
             switch (row.kind()) {
                 case KEY -> capturing = i;
                 case TOGGLE -> {
