@@ -89,8 +89,14 @@ public class ImagPhaseLiquidBlock extends LiquidBlock {
     @Override
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
         super.entityInside(state, level, pos, entity);
-        if (entity.isOnFire() || entity.getRemainingFireTicks() > 0) {
-            entity.clearFire();
+        if (!entity.isOnFire() && entity.getRemainingFireTicks() <= 0) return;
+        entity.clearFire();
+        // Le bruit que le jeu fait quand on s'eteint — « il n'y a pas le bruit de minecraft qui
+        // dit qu'on n'est plus en feu ». C'est celui de {@code Entity#baseTick}, a la meme hauteur
+        // et a la meme hauteur de son : le joueur doit entendre la meme chose que dans l'eau.
+        if (!level.isClientSide) {
+            entity.playSound(net.minecraft.sounds.SoundEvents.GENERIC_EXTINGUISH_FIRE, 0.7f,
+                    1.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.4f);
         }
     }
 
