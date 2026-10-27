@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.0.1-beta - la casse au joueur, le liquide qui eteint / player-side block breaking, the liquid that douses
+
+### English
+
+Follow-up to 1.0.0-beta: two features the player asked for and the fixes they pulled in. Keep a
+backup of your world.
+
+- **Breaking blocks is now the player's choice.** The server keeps its own lock
+  (`general.destroyBlocks`): it alone says whether anything may break at all. On top of it, each
+  player decides **what they accept** — one master switch and **one sub-option per skill that
+  digs** (railgun, meltdowner, the three mine rays, directed blastwave, groundshock, plasma
+  cannon, storm wing), all ticked by default. A player can only ever *remove*: their choice never
+  opens what the server closed. In single player the master switch also lifts the server's
+  setting, so a ticked box always means what it says. The choice is sent to the server, which
+  applies it and sends it back — the screen never shows a state the game does not have.
+- **The mine ray finally obeys the rule.** It dug every single time, without even looking at the
+  server's setting; it now follows the same lock as the other six.
+- **The Imag phase liquid puts fire out.** The fire blocks it touches, a fire that is born against
+  it, and **the flames of a body that walks in** — with the game's own extinguish sound, played
+  once, for the player who is burning.
+- **The settings screen grows a fold.** The breaking line carries a small arrow that shows or
+  hides the per-skill lines: it points at the label when folded and down when unfolded, and it is
+  drawn by the interface font, so it is as smooth as the text next to it.
+- **Tests**: 970 unit tests and 178 in-game tests (including a player who refuses to dig and a
+  burning body in the liquid), plus the offline asset audit — all green.
+
+### Francais
+
+Suite du 1.0.0-beta : deux demandes du joueur, et les corrections qu'elles ont tirees. Gardez une
+sauvegarde de votre monde.
+
+- **La casse des blocs appartient au joueur.** Le serveur garde son verrou
+  (`general.destroyBlocks`) : lui seul dit si l'on peut casser, un point c'est tout. Par-dessus,
+  chaque joueur decide **ce qu'il accepte** — une case generale et **une sous-option par competence
+  qui creuse** (railgun, meltdowner, les trois mine rays, directed blastwave, groundshock, plasma
+  cannon, storm wing), toutes cochees par defaut. Le joueur ne peut que **retirer** : son choix
+  n'ouvre jamais ce que le serveur a ferme. En solo, la case generale leve aussi le reglage du
+  serveur, pour qu'une case cochee ne mente jamais. Le choix part au serveur, qui l'applique et le
+  renvoie — l'ecran n'affiche jamais un etat que le jeu n'a pas.
+- **La mine ray obeit enfin a la regle.** Elle creusait a chaque tir, sans meme regarder le reglage
+  du serveur ; elle suit maintenant le meme verrou que les six autres.
+- **L'imag phase liquide eteint le feu.** Les blocs de feu qu'il touche, un feu qui nait contre lui,
+  et **les flammes d'un corps qui le traverse** — avec le son d'extinction du jeu, joue une seule
+  fois, pour le joueur qui brule.
+- **L'ecran de reglage se plie.** La ligne de la casse porte une petite fleche qui montre ou cache
+  les lignes par competence : elle vise le libelle quand c'est plie, le bas quand c'est deplie, et
+  elle est dessinee par la police de l'interface — donc aussi lisse que le texte d'a cote.
+- **Tests** : 970 tests unitaires et 178 tests en jeu (dont un joueur qui refuse de creuser et un
+  corps en feu dans le liquide), plus l'audit d'assets hors ligne — tous verts.
+
 ## 1.0.0-beta - le railgun qui creuse, l'eclat qui tient / the railgun digs, the flare holds
 
 ### English

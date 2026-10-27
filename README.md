@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Minecraft 1.20.1 &nbsp;Â·&nbsp; Forge 47.4.20+ &nbsp;Â·&nbsp; Java 17 &nbsp;Â·&nbsp; GPLv3 &nbsp;Â·&nbsp; <b>1.0.0-beta</b>
+  Minecraft 1.20.1 &nbsp;·&nbsp; Forge 47.4.20+ &nbsp;·&nbsp; Java 17 &nbsp;·&nbsp; GPLv3 &nbsp;·&nbsp; <b>1.0.1-beta</b>
 </p>
 
 ---
@@ -24,7 +24,7 @@ The original drew its interfaces with LambdaLib2's own GUI engine, and the port 
 ### Download and install
 
 1. Install **Forge 47.4.20 or later** for Minecraft 1.20.1.
-2. Download **`academy-1.0.0-beta.jar`** from the [Releases](../../releases) page.
+2. Download **`academy-1.0.1-beta.jar`** from the [Releases](../../releases) page.
 3. Drop it into your `mods` folder and start the game.
 
 Nothing else to install. The port works on a server too, but it is a **beta build**: keep a backup of your world.
@@ -48,7 +48,7 @@ Nothing else to install. The port works on a server too, but it is a **beta buil
 | **Interface** | the ability HUD, key hints, notifications, presets, the F4 debug console, and the ten machine screens on the rebuilt engine |
 | **World** | the mod's ores, the Imag phase liquid, the advancements |
 | **Integrations** | **JEI** (two recipe categories: the metal former's four modes, the imag fusor's phases, plus the generic refining of every ore that smelts) and **CraftTweaker** (`mods.academy.MetalFormer` and `mods.academy.ImagFusor` add or remove recipes from a script). Both are **optional**: without them the mod behaves exactly the same |
-| **Configuration** | `config/academy-common.toml`: the four control point tables per level (`initCp`, `addCp`, `initOverload`, `addOverload`, the original's `init_cp` and friends), a multiplier on every cost, cooldown and experience gain, the list of disabled skills, world generation, the damage scale, block breaking and PvP. Every option carries a comment in French then in English, and every number a bound |
+| **Configuration** | `config/academy-common.toml`: the four control point tables per level (`initCp`, `addCp`, `initOverload`, `addOverload`, the original's `init_cp` and friends), a multiplier on every cost, cooldown and experience gain, the list of disabled skills, world generation, the damage scale, the server's lock on block breaking and PvP. On top of that lock, every player chooses in the settings screen **which of their own skills may break blocks** — the server decides what is allowed, the player decides what they accept. Every option carries a comment in French then in English, and every number a bound |
 
 ### What is still missing
 
@@ -91,7 +91,7 @@ L'original dessinait ses interfaces avec le moteur d'interface de LambdaLib2 ; l
 ### Télécharger et installer
 
 1. Installez **Forge 47.4.20 ou plus** pour Minecraft 1.20.1.
-2. Téléchargez **`academy-1.0.0-beta.jar`** depuis la page [Releases](../../releases).
+2. Téléchargez **`academy-1.0.1-beta.jar`** depuis la page [Releases](../../releases).
 3. Posez-le dans votre dossier `mods` et lancez le jeu.
 
 Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est une **version bêta** : gardez une sauvegarde de votre monde.
@@ -106,7 +106,7 @@ Rien d'autre à installer. Le port fonctionne aussi sur un serveur, mais c'est u
 6. **Alimenter une machine.** Posez un **nœud sans fil** et une **matrice**, ouvrez une machine (générateur solaire, éolien ou de phase, fusor d'imag, formeur de métal, brouilleur d'aptitude) et passez par son **onglet sans fil** : la liste montre les nœuds à portée, du plus proche au plus loin. Cliquez l'icône de connexion d'un nœud, tapez son mot de passe s'il en a un, et l'icône du cadre « Connected » vous en déconnecte. Une machine que vous déconnectez reste déconnectée : elle ne se raccroche pas toute seule au tick suivant. Le **nœud** fait la même chose dans l'autre sens : c'est son propre onglet sans fil qui choisit la matrice qu'il rejoint.
 ### Ce que contient cette version
 
-Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; l'onglet sans fil de chaque machine, où l'on choisit le nœud qui l'alimente, et celui de chaque nœud, où l'on choisit le réseau qu'il rejoint ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès ; les deux intégrations facultatives, **JEI** (les recettes du formeur de métal et du fusor d'imag dans leurs propres catégories, raffinage générique des minerais compris) et **CraftTweaker** (`mods.academy.MetalFormer` et `mods.academy.ImagFusor` pour ajouter ou retirer des recettes depuis un script) ; et la **configuration** (`config/academy-common.toml`) : les quatre tables de points de contrôle par niveau (`initCp`, `addCp`, `initOverload`, `addOverload`, les `init_cp` de l'original), un multiplicateur sur chaque coût, chaque recharge et chaque gain d'expérience, la liste des compétences désactivées, la génération du monde, l'échelle des dégâts, le cassage de blocs et le PvP — chaque réglage commenté en français puis en anglais, et chaque nombre borné.
+Les quatre catégories d'aptitudes et leurs 35 compétences (electromaster, meltdowner, teleporter, vecmanip) et les trois cursus génériques, avec points de contrôle, surcharge, expérience par compétence, charges et recharges ; l'arbre du développeur d'aptitude avec ses icônes, ses descriptions, ses niveaux et ses coûts ; le réseau d'énergie imag (générateurs solaire, éolien et de phase, nœuds et matrice sans fil, fusor d'imag, le formeur de métal avec ses quatre modes et les recettes de l'original, dont tout minerai qui fond) ; l'onglet sans fil de chaque machine, où l'on choisit le nœud qui l'alimente, et celui de chaque nœud, où l'on choisit le réseau qu'il rejoint ; le terminal de données et ses applications, plus le tutoriel ; l'affichage tête haute, les préset, la console F4, et les dix écrans de machine sur le moteur reconstruit ; les minerais du mod, le fluide de phase imag et les succès ; les deux intégrations facultatives, **JEI** (les recettes du formeur de métal et du fusor d'imag dans leurs propres catégories, raffinage générique des minerais compris) et **CraftTweaker** (`mods.academy.MetalFormer` et `mods.academy.ImagFusor` pour ajouter ou retirer des recettes depuis un script) ; et la **configuration** (`config/academy-common.toml`) : les quatre tables de points de contrôle par niveau (`initCp`, `addCp`, `initOverload`, `addOverload`, les `init_cp` de l'original), un multiplicateur sur chaque coût, chaque recharge et chaque gain d'expérience, la liste des compétences désactivées, la génération du monde, l'échelle des dégâts, le cassage de blocs et le PvP — chaque réglage commenté en français puis en anglais, et chaque nombre borné. Par-dessus ce verrou du serveur, chaque joueur choisit dans l'écran de réglage **lesquelles de ses propres compétences peuvent casser des blocs** : le serveur dit ce qui est permis, le joueur dit ce qu'il accepte.
 
 ### Ce qu'il manque encore
 
