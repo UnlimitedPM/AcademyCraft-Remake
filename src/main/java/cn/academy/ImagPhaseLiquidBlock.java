@@ -3,6 +3,7 @@ package cn.academy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
@@ -93,11 +94,20 @@ public class ImagPhaseLiquidBlock extends LiquidBlock {
         entity.clearFire();
         // Le bruit que le jeu fait quand on s'eteint — « il n'y a pas le bruit de minecraft qui
         // dit qu'on n'est plus en feu ». C'est celui de {@code Entity#baseTick}, a la meme hauteur
-        // et a la meme hauteur de son : le joueur doit entendre la meme chose que dans l'eau.
-        if (!level.isClientSide) {
-            entity.playSound(net.minecraft.sounds.SoundEvents.GENERIC_EXTINGUISH_FIRE, 0.7f,
-                    1.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.4f);
+        // de son, mais un peu plus fort : le joueur ne l'entendait pas.
+        float pitch = 1.6f + (level.random.nextFloat() - level.random.nextFloat()) * 0.4f;
+        if (level.isClientSide) {
+            // Celui qui brule a le sien ici, tout de suite : le paquet du serveur arrive apres le
+            // changement d'etat, et c'est justement ce qui le rendait inaudible. Voir ClientExtinguish.
+            net.minecraftforge.fml.DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT,
+                    () -> () -> cn.academy.client.ClientExtinguish.playFor(entity, pitch));
+            return;
         }
+        // Les autres l'entendent d'ici ; le joueur en feu en est exclu, il a deja le sien.
+        level.playSound(entity instanceof Player player ? player : null,
+                entity.getX(), entity.getY(), entity.getZ(),
+                net.minecraft.sounds.SoundEvents.GENERIC_EXTINGUISH_FIRE,
+                net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, pitch);
     }
 
     /**

@@ -9891,10 +9891,21 @@ public final class AcademyGameTests {
         BlockPos sol = new BlockPos(4, 0, 4);
         BlockPos corps = new BlockPos(4, 1, 4);
         helper.setBlock(sol, net.minecraft.world.level.block.Blocks.STONE);
+        // Et le bruit du jeu doit partir avec : « il n'y a pas le bruit de minecraft qui dit qu'on
+        // n'est plus en feu ». On l'ecoute par l'evenement que Forge leve sur chaque son du monde.
+        var bruits = new java.util.concurrent.atomic.AtomicInteger();
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.PlayLevelSoundEvent.AtPosition event) -> {
+                    if (event.getSound().value() == net.minecraft.sounds.SoundEvents.GENERIC_EXTINGUISH_FIRE) {
+                        bruits.incrementAndGet();
+                    }
+                });
         var zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, corps);
         zombie.setRemainingFireTicks(200);
         helper.setBlock(corps, cn.academy.ModBlocks.PHASE_LIQUID_BLOCK.get());
         helper.runAfterDelay(3, () -> {
+            assertTrue(helper, bruits.get() > 0,
+                    "l'extinction doit jouer Generic_Extinguish_Fire, celui du jeu");   
             // « Eteint » se lit a deux signes : plus de ticks de feu, et le drapeau visuel tombe.
             // Le compte exact n'est pas une promesse du jeu — `clearFire` laisse un negatif — donc
             // le test regarde l'etat, pas le chiffre.
