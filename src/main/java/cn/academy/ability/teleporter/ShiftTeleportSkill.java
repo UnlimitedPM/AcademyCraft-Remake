@@ -206,13 +206,18 @@ public class ShiftTeleportSkill extends Skill {
         // d'epieu qui part des pieds et va jusqu'a la case visee. La question se pose AVANT la pose,
         // parce que c'est elle qui la decide.
         List<LivingEntity> hit = line(player.level(), player, target.cell());
+        // La visee peut avoir trouve une bete que la LIGNE rate — viser les pieds, une bete collee
+        // au sol : le geste la frappe quand meme, et le bloc part derriere elle.
+        if (target.victim() instanceof LivingEntity visee && !hit.contains(visee)) {
+            hit.add(visee);
+        }
 
         // Le geste qui touche quelqu'un ne se plante pas dans le sol : le bloc, lui, <b>continue sa
         // route</b> et tombe derriere la creature — c'est un coup d'epieu, pas un pieu. Seuls les
         // degats s'arretent sur elle.
         boolean planted = hit.isEmpty() && place(player, item, stack, target);
         if (!planted) {
-            drop(player, stack, hit.isEmpty() ? target : terrainTarget(player, data));
+            drop(player, stack, hit.isEmpty() ? target : beyond(player, data, target));
         }
 
         for (LivingEntity living : hit) {
@@ -275,16 +280,37 @@ public class ShiftTeleportSkill extends Skill {
     /**
      * Ou le bloc atterrirait si rien ne l'arretait : le <b>terrain</b> seul, creatures ignorees.
      *
-     * <p>C'est la que part le bloc quand le geste touche quelqu'un. Le joueur : « quand je vise la
-     * cible directement, le bloc a l'air de bloquer sur la cible plutot que de passer derriere
-     * elle ». Un coup d'epieu qui touche continue sa route ; ce sont les degats qui s'arretent sur
-     * la creature, pas le bloc.
+     * <p>C'est la que part le bloc quand la pose echoue. Le joueur : « quand je vise la cible
+     * directement, le bloc a l'air de bloquer sur la cible plutot que de passer derriere elle ».
      */
     public Target terrainTarget(Player player, AbilityData data) {
         Vec3 eye = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);
         Vec3 end = eye.add(look.scale(maxRange(data)));
         BlockHitResult hit = player.level().clip(new ClipContext(eye, end,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
+    }
+
+    /**
+     * Ou le bloc atterrit quand le geste a touche quelqu'un : <b>derriere</b> lui, dans l'axe du
+     * geste.
+     *
+     * <p>Le rayon du REGARD ne suffit pas : en visant les pieds, il bute sur le sol juste devant la
+     * creature, et le bloc se posait donc a ses pieds — « il ne passe pas derriere meme si il y a de
+     * la place ». La continuation part donc de la creature et suit l'axe du geste, celui qui va des
+     * pieds du lanceur a la case visee : c'est la direction du coup, et le bloc la garde.
+     */
+    public Target beyond(Player player, AbilityData data, Target struck) {
+        Vec3 from = player.position();
+        Vec3 to = Vec3.atCenterOf(struck.cell());
+        Vec3 dir = to.subtract(from);
+        if (dir.lengthSqr() < 1.0E-4) {
+            dir = player.getViewVector(1f);
+        }
+        dir = dir.normalize();
+        Vec3 end = to.add(dir.scale(maxRange(data)));
+        BlockHitResult hit = player.level().clip(new ClipContext(to, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
         return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
     }
@@ -352,7 +378,7 @@ public class ShiftTeleportSkill extends Skill {
      */
     public static Target fromEntity(Entity entity, Vec3 struck) {
         BlockPos cell = BlockPos.containing(entity.getX(), entity.getY(), entity.getZ());
-        return new Target(cell, struck, Direction.DOWN, cell);
+        return new Target(cell, struck, Direction.DOWN, cell, entity);
     }
 
     /**
@@ -364,7 +390,7 @@ public class ShiftTeleportSkill extends Skill {
         Direction face = hit.getDirection();
         BlockPos block = hit.getBlockPos();
         Vec3 point = hit.getLocation().add(face.getStepX(), face.getStepY(), face.getStepZ());
-        return new Target(block.relative(face), point, face, block);
+        return new Target(block.relative(face), point, face, block, null);
     }
 
     /**
@@ -376,7 +402,7 @@ public class ShiftTeleportSkill extends Skill {
      */
     public static Target fromMiss(Vec3 end) {
         BlockPos cell = BlockPos.containing(end);
-        return new Target(cell, end, Direction.DOWN, cell);
+        return new Target(cell, end, Direction.DOWN, cell, null);
     }
 
     /**
@@ -426,6 +452,14 @@ public class ShiftTeleportSkill extends Skill {
      * <p>Les deux servent, et a des choses differentes : la case est ce que la marque dessine et ce
      * que la ligne vise, le point est la ou le bloc se pose — ou tombe.
      */
-    public record Target(BlockPos cell, Vec3 point, Direction face, BlockPos block) {
+    /**
+     * La case visee, son point, sa face — et la creature visee, s'il y en avait une.
+     *
+     * <p>{@code victim} est la pour une raison : la ligne du geste peut rater une bete que l'oeil a
+     * pourtant visee (viser les pieds, une bete collee au sol). Le geste la frappe quand meme, et
+     * le bloc, lui, part derriere — sans cette information, il se posait sur elle.
+     */
+    public record Target(BlockPos cell, Vec3 point, Direction face, BlockPos block,
+                         Entity victim) {
     }
 }

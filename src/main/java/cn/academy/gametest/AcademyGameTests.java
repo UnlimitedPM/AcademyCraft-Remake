@@ -10027,6 +10027,17 @@ public final class AcademyGameTests {
         var target = skill.target(player, data);
         assertValue(helper, bete.blockPosition(), target.cell(),
                 "viser les pieds designe la creature qui les a, pas l'herbe devant elle");
+
+        // ET LE BLOC PASSE DERRIERE : « il ne passe pas derriere meme si il y a de la place ».
+        // L'axe du geste continue au-dela de la creature, et le bloc atterrit la-bas. On interroge
+        // la continuation elle-meme : chercher l'item au sol serait fragile, les tests d'un meme
+        // lot tournent en parallele et lachent leurs objets dans le meme monde.
+        var continuation = skill.beyond(player, data, target);
+        assertTrue(helper, continuation.point().z > bete.getZ() + 1.0,
+                "le bloc continue derriere la bete : " + continuation.point()
+                        + " contre " + bete.position());
+        assertValue(helper, bete, target.victim(),
+                "et la visee retient la creature des pieds : c'est elle qui s'arrete, pas le bloc");
         helper.succeed();
     }
 
