@@ -9885,6 +9885,81 @@ public final class AcademyGameTests {
         assertFalse(helper, helper.getBlockState(feu2).is(net.minecraft.world.level.block.Blocks.FIRE),
                 "un feu qui nait contre le liquide doit mourir aussitot");
 
+        // Sens 3 : le corps en feu qui ENTRE dans le liquide. « quand je me mets en feu et que je
+        // rentre dans l'imag liquid, il ne me retire pas le feu ». C'est l'eau qui eteint les corps
+        // dans le jeu de base, et notre fluide n'en est pas — voir entityInside.
+        BlockPos sol = new BlockPos(4, 0, 4);
+        BlockPos corps = new BlockPos(4, 1, 4);
+        helper.setBlock(sol, net.minecraft.world.level.block.Blocks.STONE);
+        var zombie = helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, corps);
+        zombie.setRemainingFireTicks(200);
+        helper.setBlock(corps, cn.academy.ModBlocks.PHASE_LIQUID_BLOCK.get());
+        helper.runAfterDelay(3, () -> {
+            // « Eteint » se lit a deux signes : plus de ticks de feu, et le drapeau visuel tombe.
+            // Le compte exact n'est pas une promesse du jeu — `clearFire` laisse un negatif — donc
+            // le test regarde l'etat, pas le chiffre.
+            assertTrue(helper, zombie.getRemainingFireTicks() <= 0 && !zombie.isOnFire(),
+                    "le liquide eteint le corps qui le traverse : reste "
+                            + zombie.getRemainingFireTicks() + " ticks");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Un joueur qui refuse la casse ne creuse pas — meme quand le serveur l'autorise.
+     *
+     * <p>Demande du joueur : « si en tant que meltdowner je veux pouvoir creuser avec les mine ray,
+     * mais que je ne veux pas que mon meltdowner casse les blocs », et « les joueurs doivent quand
+     * meme avoir la possibilite de faire en sorte que leur pouvoir ne casse pas les blocs ».
+     *
+     * <p>Le railgun sert de temoin : c'est le meme rayon que celui du test de creusement, la meme
+     * munition et la meme cible. Seule la preference change, et c'est elle qui decide.
+     */
+    @GameTest(template = "empty")
+    public static void unJoueurQuiRefuseNeCreusePas(GameTestHelper helper) {
+        var railgun = cn.academy.ability.electromaster.ElectromasterCategory.RAILGUN;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 260);
+
+        var player = ownPlayer(helper, "refuseur");
+        player.getAbilities().instabuild = false;
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        clearCorridor(helper, abs, 12);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(railgun.getCategory(), 4);
+        data.learnSkill(railgun);
+        data.setSkillExp(railgun, 0.5f);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 3));
+
+        // Le serveur autorise : c'est le cas qui rendait le refus impossible avant ce reglage.
+        assertTrue(helper, cn.academy.Config.destroyBlocks,
+                "le creusement est ouvert par defaut : sinon le test ne prouverait rien");
+
+        BlockPos wall = new BlockPos(3, 262, 9);
+        helper.setBlock(wall, net.minecraft.world.level.block.Blocks.STONE);
+
+        // 1. IL REFUSE : le tir part, le mur reste.
+        data.setBreaksBlocks(railgun, false);
+        lookAt(player, helper.absolutePos(wall));
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, net.minecraft.world.level.block.Blocks.STONE,
+                helper.getBlockState(wall).getBlock(),
+                "un joueur qui a decoche la competence ne creuse pas");
+
+        // 2. IL ACCEPTE : le meme tir, la meme cible, et le mur s'ouvre. C'est ce qui prouve que
+        // c'est bien la preference qui a decide, et pas un tir qui n'aurait rien fait du tout.
+        data.setBreaksBlocks(railgun, true);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, 3));
+        lookAt(player, helper.absolutePos(wall));
+        railgun.onActivateCharged(player, data, 0);
+        assertValue(helper, net.minecraft.world.level.block.Blocks.AIR,
+                helper.getBlockState(wall).getBlock(),
+                "et il creuse des qu'il recoche la competence");
+
         helper.succeed();
     }
 }

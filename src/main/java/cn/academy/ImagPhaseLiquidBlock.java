@@ -2,6 +2,7 @@ package cn.academy;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.Block;
@@ -72,6 +73,25 @@ public class ImagPhaseLiquidBlock extends LiquidBlock {
         super.neighborChanged(state, level, pos, block, fromPos, movedByPiston);
         if (level.isClientSide) return;
         douse(level, fromPos);
+    }
+
+    /**
+     * Un corps dans le liquide : le feu s'eteint.
+     *
+     * <p>Signale par le joueur : « quand je me mets en feu et que je rentre dans l'imag liquid, il
+     * ne me retire pas le feu ». L'eau eteint les corps qui la traversent depuis toujours — c'est
+     * {@code Entity#baseTick} qui le fait, et il ne regarde que l'eau. Notre fluide n'en est pas,
+     * donc rien ne s'eteignait.
+     *
+     * <p>La methode est appelee a chaque tick pour chaque bloc que le corps touche : c'est le
+     * meme crochet que celui du feu, qui embrase, mais a l'envers.
+     */
+    @Override
+    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+        super.entityInside(state, level, pos, entity);
+        if (entity.isOnFire() || entity.getRemainingFireTicks() > 0) {
+            entity.clearFire();
+        }
     }
 
     /**
