@@ -435,24 +435,43 @@ public class SettingsScreen extends Screen {
         }
     }
 
+    /**
+     * La fleche d'une ligne depliable : la meme gravure que les libelles.
+     *
+     * <p>C'est ce qui la rend aussi lisse qu'eux — le texte est grave par AWT en haute resolution
+     * puis reduit, quand un triangle dessine au pixel reste en escalier quel que soit le nombre de
+     * points par pixel.
+     *
+     * <p>Ouverte, elle pointe vers le BAS ; fermee, vers la DROITE — donc vers le texte, comme sur
+     * un site. Le triangle qui pointe a droite n'existe pas dans la police de l'interface
+     * (U+25B6 et U+25B8 manquent a « Microsoft YaHei », verifie), donc on tourne celui du bas d'un
+     * quart de tour : meme glyphe, meme lissage, et la pointe vise bien le texte.
+     */
+    private void drawArrow(GuiGraphics graphics, boolean open, int x, int top) {
+        if (open) {
+            AcademyFonts.drawTop(graphics, font, "\u25BC", x, top, TEXT_COLOUR, ARROW_CELL);
+            return;
+        }
+        // Un quart de tour autour du centre de la cellule : vers le bas devient vers la droite.
+        double cx = x + ARROW_CELL * 0.5;
+        double cy = top + ARROW_CELL * 0.5;
+        graphics.pose().pushPose();
+        graphics.pose().translate(cx, cy, 0d);
+        graphics.pose().mulPose(com.mojang.math.Axis.ZP.rotationDegrees(-90f));
+        graphics.pose().translate(-cx, -cy, 0d);
+        AcademyFonts.drawTop(graphics, font, "\u25BC", x, top, TEXT_COLOUR, ARROW_CELL);
+        graphics.pose().popPose();
+    }
+
     private void drawLabel(GuiGraphics graphics, Row row, double y, boolean over) {
         double labelY = y + CTRL_Y;
         if (over && capturing < 0) {
             fill(graphics, AREA_X, y, ROW_W, ROW_H, HOVER_VEIL);
         }
         if (row.disclosure()) {
-            // LA MEME POLICE QUE LE TEXTE, et c'est tout le sujet : « il n'est pas assez smooth par
-            // rapport au texte ». Le texte est grave par AWT en haute resolution puis reduit, donc
-            // lisse ; un triangle dessine au pixel reste en escalier, quel que soit le nombre de
-            // points par pixel. Ici la fleche suit exactement le meme chemin que les libelles.
-            //
-            // Un triangle PLEIN, vers le bas ferme et vers le haut ouvert : la police de
-            // l'interface (« Microsoft YaHei ») ne sait pas dessiner les triangles qui pointent a
-            // droite (U+25B6 et U+25B8 manquent a son repertoire), et un caractere absent se
-            // dessinerait en carre vide. Haut et bas, elle les a tous les deux.
-            AcademyFonts.drawTop(graphics, font, row.open() ? "\u25B2" : "\u25BC",
+            drawArrow(graphics, row.open(),
                     (int) Math.round(AREA_X + ARROW_X),
-                    (int) Math.round(y + (ROW_H - ARROW_CELL) / 2.0), TEXT_COLOUR, ARROW_CELL);
+                    (int) Math.round(y + (ROW_H - ARROW_CELL) / 2.0));
         }
         boolean shifted = row.indent() || row.disclosure();
         double indent = shifted ? INDENT : 0;
