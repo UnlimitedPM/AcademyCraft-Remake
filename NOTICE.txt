@@ -1,0 +1,87 @@
+AcademyCraft Remake
+===================
+
+Copyright (C) 2026 UnlimitedPM
+
+This program is free software: you can redistribute it and/or modify it under the terms of
+the GNU General Public License as published by the Free Software Foundation, either version 3
+of the License, or (at your option) any later version. The full text is in LICENSE.txt.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+See the GNU General Public License for more details.
+
+Its complete corresponding source code is published at:
+    https://github.com/UnlimitedPM/AcademyCraft-Remake
+
+
+1. What this work is derived from
+---------------------------------
+
+AcademyCraft Remake is a DERIVATIVE WORK of:
+
+    AcademyCraft (for Minecraft 1.12.2)
+    Copyright (C) Lambda Innovation
+    https://github.com/LambdaInnovation/AcademyCraft
+    Released under the GNU General Public License, version 3.
+
+The upstream authors, as named in the original's own credits, are WeAthFolD and the project's
+team, plus everyone who committed to that repository:
+
+    KSkun, WeAthFoLD, Paindar, acaly, EAirPeter, NolifeM, zeldacl, ShieLian, voidcl, mkpoli,
+    LeLeMoe, gakongren, 3TUSK, Eing0, xhj1102, mindy15963, LI-Build, MrBenjaminBowman,
+    magicnat, CrowbarProjectq, berry64, l89669
+
+Their work is what this port is built from. Nothing here is a claim on it.
+
+The original's interfaces were drawn by LambdaLib2, an engine of the same authors. This port
+does NOT bundle LambdaLib2 and does NOT copy its code: it re-implements that engine inside the
+mod, in its own classes. LambdaLib2 is therefore referenced here as documentation, and its own
+licence governs it.
+
+
+2. Statement of changes (GNU GPLv3, section 5a)
+-----------------------------------------------
+
+The files of this repository were CHANGED. Dated 2026.
+
+    * The whole Java source was rewritten for Minecraft 1.20.1 and Forge 47: the original's
+      classes are re-implemented, not mechanically translated — Minecraft's own API changed
+      too much for that (materials, rendering, capabilities, data packs).
+    * The original's assets are REUSED: textures, models, sounds, language files, tutorials
+      and the interface layout documents. They are distributed here under the same GPLv3.
+    * The original's numbers (costs, cooldowns, ranges, experience, damage) and behaviour are
+      ported as they were, and are quoted in the comments of the classes they come from.
+    * Things the port adds are marked as such in the code and in CHANGELOG.md.
+
+Every file's history is public; `git log` is the record of what changed and when.
+
+
+3. What this project is not
+---------------------------
+
+Not affiliated with, endorsed by, or supported by Lambda Innovation, Mojang Studios or
+Microsoft. "AcademyCraft" names the original mod and is used only to say what this work is
+derived from. Minecraft is a trademark of Mojang Studios.
+
+The original mod also carries additional terms on top of the GPLv3 (see its own README): its
+authors ask that neither it nor its contents be sold in any form. This port does not sell the
+mod, and asks the same. That request is a courtesy of the original authors, not a condition
+added to the GPLv3 by this project.
+
+
+4. En francais
+--------------
+
+AcademyCraft Remake est une OEUVRE DERIVEE d'AcademyCraft (Minecraft 1.12.2), Copyright (C)
+Lambda Innovation, publie sous GNU GPL version 3, et ecrit par WeAthFolD, son equipe, et tous
+ceux qui ont committe sur ce depot-la (la liste est au point 1).
+
+Les sources Java ont ete REECRITES pour Minecraft 1.20.1 et Forge 47 ; les ressources de
+l'original (textures, modeles, sons, langues, tutoriels, documents de mise en page) sont
+REUTILISEES sous la meme GPLv3 ; ses nombres et son comportement sont reportes, et cites dans
+les commentaires des classes dont ils viennent. Les ajouts du portage sont signales comme tels
+dans le code et dans CHANGELOG.md.
+
+Le code source complet est publie a l'adresse ci-dessus. Aucune affiliation avec Lambda
+Innovation, Mojang Studios ou Microsoft. Minecraft est une marque de Mojang Studios.

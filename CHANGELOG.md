@@ -27,6 +27,10 @@ them found in play. Keep a backup of your world.
   barrage, flesh ripping, threatening teleport, directed shock, the plasma bomb) no longer see
   through blocks: a creature behind a wall is out of sight, and flesh ripping would rather refuse
   than spend control points on nothing.
+- **Licence and attribution travel with the jar.** `LICENSE.txt` (GPLv3) and a new `NOTICE.txt` are
+  now inside the jar: what this work is derived from, who wrote it, what was changed, and why
+  LambdaLib2 is only referenced and never copied. The credits shown in the mods list name the
+  original authors and point at the upstream repository.
 - **Tests**: 971 unit tests and 182 in-game tests (including the six above), plus the offline asset
   audit — all green.
 
@@ -55,6 +59,10 @@ blocs), toutes trouvees en jouant. Gardez une sauvegarde de votre monde.
   barrage de rayons, arrachage de chair, teleportation menacante, onde dirigee, bombe a plasma) ne
   voient plus au travers des blocs : une creature derriere un mur n'est plus en vue, et l'arrachage
   de chair prefere refuser plutot que depenser des points pour rien.
+- **La licence et l'attribution voyagent avec le jar.** `LICENSE.txt` (GPLv3) et un nouveau
+  `NOTICE.txt` sont maintenant dans le jar : de quoi cette oeuvre derive, qui l'a ecrite, ce qui a
+  ete change, et pourquoi LambdaLib2 n'est que cite et jamais copie. Les credits de la liste des
+  mods nomment les auteurs d'origine et renvoient au depot amont.
 - **Tests** : 971 tests unitaires et 182 tests en jeu (dont les six ci-dessus), plus l'audit
   d'assets hors ligne — tous verts.
 

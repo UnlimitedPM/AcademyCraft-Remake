@@ -236,6 +236,13 @@ tasks.named('jar', Jar).configure {
         ])
     }
 
+    // La LICENCE ET L'ATTRIBUTION VOYAGENT AVEC LE JAR. Un binaire distribue sous GPLv3 doit
+    // etre accompagne de sa licence ; et ce mod est une oeuvre derivee, donc le NOTICE qui dit
+    // de quoi, par qui, et ce qui a change, doit etre la aussi. Le joueur n'a pas a ouvrir le
+    // depot pour savoir ce qu'il a telecharge. Voir NOTICE.txt.
+    from('LICENSE.txt')
+    from('NOTICE.txt')
+
     // This is the preferred method to reobfuscate your jar file
     finalizedBy 'reobfJar'
 }

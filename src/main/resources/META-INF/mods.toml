@@ -33,7 +33,7 @@ displayName="AcademyCraft Remake" #mandatory
 #credits="" #optional
 # A text field displayed in the mod UI
 authors="UnlimitedPM" #optional
-credits="Original AcademyCraft by WeAthFolD and Lambda Innovation, with LambdaLib2. / AcademyCraft d'origine par WeAthFolD et Lambda Innovation, avec LambdaLib2." #optional
+credits="GPLv3. Original AcademyCraft by WeAthFolD and Lambda Innovation, with LambdaLib2. / AcademyCraft d'origine par WeAthFolD et Lambda Innovation, avec LambdaLib2. Contributors: https://github.com/LambdaInnovation/AcademyCraft" #optional
 displayURL="https://github.com/UnlimitedPM/AcademyCraft-Remake" #optional
 issueTrackerURL="https://github.com/UnlimitedPM/AcademyCraft-Remake/issues" #optional
 logoFile="academy_logo.png" #optional

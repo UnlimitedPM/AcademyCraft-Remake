@@ -80,9 +80,15 @@ And everyone who took part in it — the [contributors](https://github.com/Lambd
 
 KSkun · WeAthFoLD · Paindar · acaly · EAirPeter · NolifeM · zeldacl · ShieLian · voidcl · mkpoli · LeLeMoe · gakongren · 3TUSK · Eing0 · xhj1102 · mindy15963 · LI-Build · MrBenjaminBowman · magicnat · CrowbarProjectq · berry64 · l89669
 
-### License
+### License and attribution
 
 **GPLv3**, like the original. See `LICENSE.txt`.
+
+This project is a **derivative work** of [AcademyCraft](https://github.com/LambdaInnovation/AcademyCraft) for Minecraft 1.12.2, © Lambda Innovation, released under the GPLv3. Its Java source was rewritten for Minecraft 1.20.1 / Forge 47; its assets — textures, models, sounds, language files, tutorials and the interface layout documents — are reused under the same licence; its numbers and its behaviour are ported, and quoted in the comments of the classes they come from. `NOTICE.txt` records all of it, names the upstream authors, and ships inside the jar next to `LICENSE.txt`, so the attribution travels with the download.
+
+LambdaLib2, the original's interface engine, is **not** bundled and **not** copied: the engine is re-implemented inside the mod, in its own classes, and LambdaLib2 is only referenced as documentation.
+
+Not affiliated with, endorsed by or supported by Lambda Innovation, Mojang Studios or Microsoft. "AcademyCraft" names the original mod and says what this work is derived from; Minecraft is a trademark of Mojang Studios.
 
 ---
 
@@ -131,6 +137,12 @@ Et à tous ceux qui y ont participé — les [contributeurs](https://github.com/
 
 KSkun · WeAthFoLD · Paindar · acaly · EAirPeter · NolifeM · zeldacl · ShieLian · voidcl · mkpoli · LeLeMoe · gakongren · 3TUSK · Eing0 · xhj1102 · mindy15963 · LI-Build · MrBenjaminBowman · magicnat · CrowbarProjectq · berry64 · l89669
 
-### Licence
+### Licence et attribution
 
 **GPLv3**, comme l'original. Voir `LICENSE.txt`.
+
+Ce projet est une **œuvre dérivée** d'[AcademyCraft](https://github.com/LambdaInnovation/AcademyCraft) pour Minecraft 1.12.2, © Lambda Innovation, publié sous GPLv3. Ses sources Java ont été réécrites pour Minecraft 1.20.1 / Forge 47 ; ses ressources — textures, modèles, sons, fichiers de langue, tutoriels et documents de mise en page de l'interface — sont réutilisées sous la même licence ; ses nombres et son comportement sont reportés, et cités dans les commentaires des classes dont ils viennent. `NOTICE.txt` consigne tout cela, nomme les auteurs d'origine, et voyage dans le jar à côté de `LICENSE.txt` : l'attribution suit le téléchargement.
+
+LambdaLib2, le moteur d'interface de l'original, n'est **ni embarqué ni copié** : le moteur est réimplémenté dans le mod, dans ses propres classes, et LambdaLib2 n'y est cité que comme documentation.
+
+Aucune affiliation, approbation ni soutien de Lambda Innovation, Mojang Studios ou Microsoft. « AcademyCraft » nomme le mod d'origine et dit de quoi ce travail dérive ; Minecraft est une marque de Mojang Studios.
