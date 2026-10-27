@@ -202,10 +202,14 @@ public class ShiftTeleportSkill extends Skill {
         if (!data.perform(getCpCost(data), getOverloadCost(data))) return false;
 
         Target target = target(player, data);
-        // Les creatures que le geste croise, dans l'ordre ou elles se presentent : c'est un coup
-        // d'epieu qui part des pieds et va jusqu'a la case visee. La question se pose AVANT la pose,
-        // parce que c'est elle qui la decide.
-        List<LivingEntity> hit = line(player.level(), player, target.cell());
+        // La ou le bloc se posera : la visee, et sa continuation si le geste touche quelqu'un.
+        Target destination = destination(player, data, target);
+        // ET LES CREATURES SE COMPTENT JUSQU'LA, pas jusqu'a la case visee. La ligne s'arretait au
+        // centre de cette case — donc dans la premiere bete —, et celles qui se tenaient derriere
+        // elle, pourtant dans l'axe du geste, ne prenaient rien. Le joueur : « il ne tape qu'une
+        // seule entite sur la meme ligne ». Le bloc, lui, va jusqu'a la destination : le coup
+        // frappe donc tout ce que ce trajet croise, la bete visee comprise.
+        List<LivingEntity> hit = line(player.level(), player, destination);
         // La visee peut avoir trouve une bete que la LIGNE rate — viser les pieds, une bete collee
         // au sol : le geste la frappe quand meme, et le bloc part derriere elle.
         if (target.victim() instanceof LivingEntity visee && !hit.contains(visee)) {
@@ -219,10 +223,9 @@ public class ShiftTeleportSkill extends Skill {
         // ET LA BETE VISEE COMPTE COMME TOUCHEE, meme quand la LIGNE la rate : c'est elle qui
         // decidait de la pose, et c'est par la qu'un bloc se plantait sur elle — la ligne manquait
         // la creature, la pose s'ouvrait, et la case visee etait la sienne. Voir #past.
-        boolean touches = !hit.isEmpty() || target.victim() != null;
-        boolean planted = !touches && place(player, item, stack, target);
+        boolean planted = hit.isEmpty() && place(player, item, stack, destination);
         if (!planted) {
-            drop(player, stack, touches ? past(player, data, target, hit) : target);
+            drop(player, stack, destination);
         }
 
         for (LivingEntity living : hit) {
@@ -238,7 +241,7 @@ public class ShiftTeleportSkill extends Skill {
         // l'original l'envoyait avant de payer, donc un geste refuse par la reserve laissait
         // quand meme sa trace. Voir ShiftTeleportPacket et ShiftTrail.
         cn.academy.ability.network.ShiftTeleportPacket.send(player, player.position(),
-                target.cell());
+                destination.cell());
 
         // Le son part toujours, comme chez l'original : il annonce le geste, pas ses victimes.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
@@ -297,7 +300,11 @@ public class ShiftTeleportSkill extends Skill {
      * que la pose et la chute utilisent.
      */
     public Target destination(Player player, AbilityData data) {
-        Target aimed = target(player, data);
+        return destination(player, data, target(player, data));
+    }
+
+    /** La meme chose, avec la visee deja lue : la marque et le geste la partagent. */
+    public Target destination(Player player, AbilityData data, Target aimed) {
         List<LivingEntity> crossed = line(player.level(), player, aimed);
         if (aimed.victim() instanceof LivingEntity visee && !crossed.contains(visee)) {
             crossed.add(visee);
@@ -372,7 +379,8 @@ public class ShiftTeleportSkill extends Skill {
         return leave >= enter ? leave : -1.0;
     }
 
-    public Target target(Player player, AbilityData data) {        Vec3 eye = player.getEyePosition(1f);
+    public Target target(Player player, AbilityData data) {
+        Vec3 eye = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);
         Vec3 end = eye.add(look.scale(maxRange(data)));
         BlockHitResult hit = player.level().clip(new ClipContext(eye, end,

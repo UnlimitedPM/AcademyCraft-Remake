@@ -10062,8 +10062,9 @@ public final class AcademyGameTests {
 
         // Un coin a nous, tres au-dessus de la zone commune, et nettoie : un voisin y pose parfois
         // ses propres betes. Un sol de pierre, et rien au-dessus — c'est la « place » du joueur.
-        // L'altitude est libre : deux tests qui partagent la meme se marchent dessus.
-        BlockPos corner = aboveTestArea(helper, new BlockPos(1, 1, 1), 560);
+        // L'altitude est libre, et surtout DANS le monde : au-dela de 320, setBlock ne pose rien et
+        // le rayon ne trouve plus de sol du tout.
+        BlockPos corner = aboveTestArea(helper, new BlockPos(1, 1, 1), 180);
         for (var leftover : helper.getLevel().getEntitiesOfClass(
                 net.minecraft.world.entity.Entity.class,
                 new net.minecraft.world.phys.AABB(corner.getX() - 2, corner.getY() - 1,
@@ -10073,9 +10074,9 @@ public final class AcademyGameTests {
         }
         for (int x = 1; x <= 16; x++) {
             for (int z = 1; z <= 4; z++) {
-                helper.setBlock(new BlockPos(x, 560, z),
+                helper.setBlock(new BlockPos(x, 180, z),
                         net.minecraft.world.level.block.Blocks.STONE);
-                for (int y = 561; y <= 564; y++) {
+                for (int y = 181; y <= 184; y++) {
                     helper.setBlock(new BlockPos(x, y, z),
                             net.minecraft.world.level.block.Blocks.AIR);
                 }
@@ -10085,6 +10086,9 @@ public final class AcademyGameTests {
         var player = ownPlayer(helper, "poseur");
         player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         player.moveTo(corner.getX() + 0.5, corner.getY(), corner.getZ() + 0.5, 0f, 0f);
+        assertValue(helper, net.minecraft.world.level.block.Blocks.STONE,
+                helper.getBlockState(new BlockPos(10, 180, 2)).getBlock(),
+                "le sol du test est bien la ou le regard tombera");
 
         var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
                 .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
@@ -10092,11 +10096,16 @@ public final class AcademyGameTests {
         data.learnSkill(skill);
         data.setSkillExp(skill, 0.5f);
 
-        var bete = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(7, 561, 2));
+        var bete = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(7, 181, 2));
         bete.setNoAi(true);
         bete.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        // Et une SECONDE bete, plus loin dans le meme axe : le geste doit les prendre toutes les
+        // deux. Le joueur : « il ne tape qu'une seule entite sur la meme ligne ».
+        var seconde = helper.spawn(net.minecraft.world.entity.EntityType.COW, new BlockPos(9, 181, 2));
+        seconde.setNoAi(true);
+        seconde.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
         // Le regard bute sur son corps, pas sur le sol : c'est le cas qui echouait.
-        lookAt(player, helper.absolutePos(new BlockPos(7, 561, 2)));
+        lookAt(player, helper.absolutePos(new BlockPos(7, 181, 2)));
 
         var aimed = skill.target(player, data);
         assertValue(helper, bete, aimed.victim(), "viser le corps designe la bete");
@@ -10105,6 +10114,13 @@ public final class AcademyGameTests {
         assertTrue(helper, destination.cell().getX() >= bete.blockPosition().getX() + 2,
                 "le bloc se pose derriere la bete, pas sur elle : " + destination.cell()
                         + " contre " + bete.blockPosition());
+        var crossed = cn.academy.ability.teleporter.ShiftTeleportSkill.line(player.level(), player,
+                destination);
+        assertTrue(helper, crossed.contains(bete) && crossed.contains(seconde),
+                "le coup frappe toute la ligne, pas la seule bete visee : " + crossed.size()
+                        + " depuis " + player.position() + " jusqu'a " + destination.cell()
+                        + " (point " + destination.point() + ") / betes "
+                        + bete.blockPosition() + " et " + seconde.blockPosition());
         helper.succeed();
     }
 

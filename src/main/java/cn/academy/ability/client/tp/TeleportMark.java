@@ -585,10 +585,15 @@ public final class TeleportMark {
     private static List<Satellite> victims(Player player, Skill skill) {
         if (skill != TeleporterCategory.SHIFT_TELEPORT) return List.of();
 
-        ShiftTeleportSkill.Target target = TeleporterCategory.SHIFT_TELEPORT.target(player,
-                ClientAbilityData.get());
+        // JUSQU'A LA DESTINATION, et pas jusqu'a la case visee : le bloc va la-bas, donc le coup
+        // frappe tout ce que ce trajet croise — la bete visee, celles d'avant, et celles qui se
+        // tiennent derriere elle dans l'axe. Voir ShiftTeleportSkill.onRelease.
+        var data = ClientAbilityData.get();
+        ShiftTeleportSkill.Target aimed = TeleporterCategory.SHIFT_TELEPORT.target(player, data);
+        ShiftTeleportSkill.Target destination = TeleporterCategory.SHIFT_TELEPORT
+                .destination(player, data, aimed);
         List<Satellite> boxes = new ArrayList<>();
-        for (LivingEntity living : ShiftTeleportSkill.line(player.level(), player, target)) {
+        for (LivingEntity living : ShiftTeleportSkill.line(player.level(), player, destination)) {
             boxes.add(new Satellite(living.getId(), living.position(), living.position(),
                     Shape.box(living.getBbWidth(), living.getBbHeight())));
         }
@@ -596,7 +601,7 @@ public final class TeleportMark {
         // trouvee, et c'est elle que le geste frappera. Sans cette ligne, la boite rouge manquait
         // alors que le coup partait : le joueur lisait l'inverse, « il n'est pas encadre en rouge,
         // et ne prend donc aucun degats ». La marque ne doit pas mentir, donc elle suit la visee.
-        if (target.victim() instanceof LivingEntity visee) {
+        if (aimed.victim() instanceof LivingEntity visee) {
             boolean already = false;
             for (Satellite satellite : boxes) {
                 if (satellite.id() == visee.getId()) already = true;
