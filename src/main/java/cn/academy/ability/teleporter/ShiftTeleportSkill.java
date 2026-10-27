@@ -293,25 +293,34 @@ public class ShiftTeleportSkill extends Skill {
     }
 
     /**
-     * Ou le bloc atterrit quand le geste a touche quelqu'un : <b>derriere</b> lui, dans l'axe du
-     * geste.
+     * Ou le bloc atterrit quand le geste a touche quelqu'un : <b>plus loin</b>, dans l'axe du geste.
      *
-     * <p>Le rayon du REGARD ne suffit pas : en visant les pieds, il bute sur le sol juste devant la
-     * creature, et le bloc se posait donc a ses pieds — « il ne passe pas derriere meme si il y a de
-     * la place ». La continuation part donc de la creature et suit l'axe du geste, celui qui va des
-     * pieds du lanceur a la case visee : c'est la direction du coup, et le bloc la garde.
+     * <p>Le joueur, deux fois : « le bloc s'arrete sur l'entite, il ne passe pas derriere meme si il
+     * y a de la place », puis « meme si il n'y a aucun mur derriere elle, le bloc s'arrete quand
+     * meme sur l'entite plutot que de continuer son chemin ». En visant un corps, le regard pique
+     * vers le sol : le premier bloc qu'il trouve est a un bloc ou deux derriere la bete, et le bloc
+     * se posait la — donc « sur » elle.
+     *
+     * <p>La continuation part donc de la creature et <b>ignore les blocs qui la touchent</b> : tant
+     * que le point touche reste colle a elle, le bloc repart de la, decale d'un demi-bloc dans
+     * l'axe. Il finit par trouver le sol vraiment derriere, ou le bout de la portee.
      */
     public Target beyond(Player player, AbilityData data, Target struck) {
-        Vec3 from = player.position();
-        Vec3 to = Vec3.atCenterOf(struck.cell());
-        Vec3 dir = to.subtract(from);
-        if (dir.lengthSqr() < 1.0E-4) {
-            dir = player.getViewVector(1f);
-        }
-        dir = dir.normalize();
-        Vec3 end = to.add(dir.scale(maxRange(data)));
-        BlockHitResult hit = player.level().clip(new ClipContext(to, end,
+        Vec3 center = Vec3.atCenterOf(struck.cell());
+        Vec3 dir = player.getViewVector(1f);
+        Vec3 end = center.add(dir.scale(maxRange(data) + 2.0));
+        BlockHitResult hit = player.level().clip(new ClipContext(center, end,
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        // 1,75 bloc : en deca, le point touche appartient encore a la creature.
+        double tooClose = 1.75 * 1.75;
+        int guard = 0;
+        while (hit.getType() != HitResult.Type.MISS
+                && hit.getLocation().distanceToSqr(center) < tooClose
+                && guard++ < 8) {
+            Vec3 next = hit.getLocation().add(dir.scale(0.75));
+            hit = player.level().clip(new ClipContext(next, end,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        }
         return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
     }
 
