@@ -87,6 +87,30 @@ public class FleshRippingSkill extends Skill {
     }
 
     /**
+     * Le coup se paie dans son effet, pas au relachement de la touche.
+     *
+     * <p>Signale par le joueur : « si elle lance l'attaque dans le vide, et donc que rien ne se
+     * passe, il faudrait que ca n'utilise ni CP ni Overload, et pourtant, si on spam dans le vide
+     * on atteint l'overload ». Le paquet payait le cout avant l'effet ; l'effet, lui, sortait sans
+     * rien faire quand la visee ne trouvait personne. Le coup se paie donc ici, dans
+     * {@link #onActivateCharged}, et seulement quand il tombe sur quelqu'un — c'est le
+     * {@code consumeWithForce} de l'original.
+     */
+    @Override
+    public boolean paysOnEffect() {
+        return true;
+    }
+
+    /**
+     * Y a-t-il quelqu'un a dechirer ? Sinon rien ne part : ni les points, ni le surcout, ni la
+     * recharge, ni l'experience — le {@code MSG_ABORT} de l'original.
+     */
+    @Override
+    public boolean canStart(Player player, AbilityData data) {
+        return aimed(player, data) instanceof LivingEntity;
+    }
+
+    /**
      * Ce que la visee trouve devant elle, ou {@code null} s'il n'y a rien.
      *
      * <p>Publique parce que la marque du client en a besoin : l'original lisait sa cible depuis

@@ -9917,6 +9917,50 @@ public final class AcademyGameTests {
     }
 
     /**
+     * Le flesh ripping lance dans le vide ne coute rien.
+     *
+     * <p>Le joueur : « si elle lance l'attaque dans le vide, et donc que rien ne se passe, il
+     * faudrait que ca n'utilise ni CP ni Overload, et pourtant, si on spam dans le vide on atteint
+     * l'overload ». Le paquet payait le cout avant l'effet ; l'effet, lui, sortait sans rien faire
+     * quand la visee ne trouvait personne. La competence refuse donc maintenant de partir
+     * ({@code canStart}), et elle paie dans son propre effet ({@code paysOnEffect}).
+     */
+    @GameTest(template = "empty")
+    public static void leFleshRippingDansLeVideNeCouteRien(GameTestHelper helper) {
+        var skill = cn.academy.ability.teleporter.TeleporterCategory.FLESH_RIPPING;
+        BlockPos abs = aboveTestArea(helper, new BlockPos(3, 1, 3), 260);
+
+        var player = ownPlayer(helper, "dechireur");
+        player.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        clearCorridor(helper, abs, 12);
+        player.moveTo(abs.getX() + 0.5, abs.getY(), abs.getZ() + 0.5, 0f, 0f);
+
+        var data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                .orElseThrow(() -> new IllegalStateException("le faux joueur doit porter la donnee"));
+        data.setCategoryLevel(skill.getCategory(), 4);
+        data.learnSkill(skill);
+        data.setSkillExp(skill, 0.5f);
+
+        // 1. RIEN DEVANT : la competence refuse de partir, donc rien n'est facture.
+        lookAt(player, abs.offset(0, 1, 6));
+        assertFalse(helper, skill.canStart(player, data),
+                "dans le vide, le flesh ripping ne part pas : ni CP, ni surcout");
+
+        // 2. UNE VACHE DEVANT : elle part, et c'est son effet qui paie. La bete se pose a la
+        // hauteur du test — les coordonnees de structure, comme le mur du test du railgun.
+        BlockPos bete = new BlockPos(3, 262, 9);
+        helper.spawn(net.minecraft.world.entity.EntityType.COW, bete);
+        lookAt(player, helper.absolutePos(bete));
+        assertTrue(helper, skill.canStart(player, data),
+                "avec une cible devant, la competence part");
+        assertTrue(helper, skill.paysOnEffect(),
+                "le paiement appartient a l'effet, pas au relachement de la touche");
+        assertTrue(helper, data.getCooldown(skill) == 0,
+                "et aucune recharge n'a ete posee par les essais dans le vide");
+        helper.succeed();
+    }
+
+    /**
      * Un joueur qui refuse la casse ne creuse pas — meme quand le serveur l'autorise.
      *
      * <p>Demande du joueur : « si en tant que meltdowner je veux pouvoir creuser avec les mine ray,

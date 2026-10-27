@@ -235,7 +235,7 @@ public class SettingsScreen extends Screen {
         // leve aussi le verrou du serveur — c'est ce qu'il attend d'un reglage nomme « detruire
         // les blocs ».
         rows.add(Row.disclose("generic", "ac.settings.prop.destroyBlocks",
-                SettingsScreen::breaksBlocksNow, SettingsScreen::toggleBreaksBlocks, breakOpen));
+                SettingsScreen::playerWantsBreaking, SettingsScreen::toggleBreaksBlocks, breakOpen));
         // Puis une sous-ligne par competence qui creuse, pour celles qu'il connait : c'est ce qui
         // permet de garder la mine ray et de refuser le meltdowner, par exemple. Cochee = elle
         // casse, et c'est l'etat par defaut puisqu'une case neuve l'est aussi. Derriere la fleche :
@@ -244,7 +244,7 @@ public class SettingsScreen extends Screen {
             for (cn.academy.ability.Skill skill : cn.academy.ability.BlockBreaking.prefSkills()) {
                 if (!ClientAbilityData.get().isSkillLearned(skill)) continue;
                 rows.add(Row.subToggle("generic", skill.getDisplayKey(),
-                        () -> breaksBlocksNow() && ClientAbilityData.get().skillBreaksBlocks(skill),
+                        () -> playerWantsBreaking() && ClientAbilityData.get().skillBreaksBlocks(skill),
                         () -> toggleSkill(skill)));
             }
         }
@@ -281,9 +281,20 @@ public class SettingsScreen extends Screen {
         return ClientAbilityData.get().playerBreaksBlocks();
     }
 
-    /** L'etat effectif : le verrou du serveur, puis le choix du joueur. */
-    private static boolean breaksBlocksNow() {
-        return cn.academy.Config.destroyBlocks && playerBreaksBlocks();
+    /**
+     * Ce que la case generale montre : le choix du joueur, et rien d'autre.
+     *
+     * <p>Elle lisait aussi {@code general.destroyBlocks} — le verrou du SERVEUR. En solo les deux
+     * vivent dans le meme fichier et cela ne se voyait pas ; en multi, ce fichier est celui du
+     * client, que le serveur ne lui envoie pas. Un joueur dont le fichier local disait « non »
+     * voyait alors une case impossible a cocher (« un joueur avec l'electromaster ne peut pas »),
+     * et celui dont le fichier disait « oui » la voyait normale — deux joueurs, deux comportements.
+     *
+     * <p>Le verrou du serveur, lui, reste la ou il doit etre : dans {@code BlockBreaking.allowed},
+     * cote serveur. La case dit ce que le joueur accepte ; le serveur dit ce qui est permis.
+     */
+    private static boolean playerWantsBreaking() {
+        return playerBreaksBlocks();
     }
 
     /**
@@ -291,10 +302,10 @@ public class SettingsScreen extends Screen {
      *
      * <p>En solo le joueur <b>est</b> le serveur : sans ce deuxieme geste, une case cochee
      * laisserait {@code general.destroyBlocks} ferme et rien ne casserait — le joueur l'a
-     * signale.
+     * signale. En multi, ce fichier n'est pas celui du serveur : on n'y touche pas.
      */
     private static void toggleBreaksBlocks() {
-        setBreaksBlocks(!breaksBlocksNow());
+        setBreaksBlocks(!playerWantsBreaking());
     }
 
     private static void setBreaksBlocks(boolean value) {
@@ -312,7 +323,7 @@ public class SettingsScreen extends Screen {
      */
     private static void toggleSkill(cn.academy.ability.Skill skill) {
         boolean next = !ClientAbilityData.get().skillBreaksBlocks(skill);
-        if (next && !breaksBlocksNow()) {
+        if (next && !playerWantsBreaking()) {
             setBreaksBlocks(true);
         }
         sendBreakPrefs(skill, next);
