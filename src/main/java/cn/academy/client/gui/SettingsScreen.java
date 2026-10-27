@@ -78,8 +78,8 @@ public class SettingsScreen extends Screen {
     private static final double INDENT = 40.0;
     /** La petite fleche des lignes depliables, dans la gouttiere a gauche des libelles. */
     private static final double ARROW_X = 8.0;
-    private static final double ARROW_W = 32.0;
-    private static final double ARROW_H = 32.0;
+    /** Sa cellule, la meme que le texte : c'est ce qui la rend aussi lisse que lui. */
+    private static final int ARROW_CELL = 40;
     /**
      * La largeur du libelle.
      *
@@ -402,99 +402,6 @@ public class SettingsScreen extends Screen {
         graphics.pose().popPose();
         graphics.flush();
         graphics.setColor(1f, 1f, 1f, 1f);
-
-        // La fleche est la SEULE chose dessinee hors de l'echelle de la page : a 0,2, ses bords
-        // tombaient sur des quarts de pixel et sortaient en escalier — « il faudrait lui rajouter
-        // de l'anti aliasing ». En pixels d'ecran, chaque pixel recoit l'alpha de sa couverture.
-        graphics.enableScissor(
-                (int) Math.floor(originX() + AREA_X * PAGE_SCALE),
-                (int) Math.floor(originY() + AREA_Y * PAGE_SCALE),
-                (int) Math.ceil(originX() + (AREA_X + AREA_W) * PAGE_SCALE),
-                (int) Math.ceil(originY() + (AREA_Y + AREA_H) * PAGE_SCALE));
-        drawArrows(graphics);
-        graphics.disableScissor();
-        graphics.flush();
-    }
-
-    /**
-     * La petite fleche des lignes depliables, en pixels d'ecran.
-     *
-     * <p>Un <b>chevron</b> — deux traits diagonaux, comme sur un site — et non un triangle plein :
-     * « la fleche est trop grosse et pas assez smooth ». A six pixels, un triangle n'est qu'une
-     * tache a coins durs ; deux traits fins se lisent tout seuls et leur diagonale se lisse bien.
-     *
-     * <p>Vers le bas quand la liste est ouverte, vers la droite quand elle est fermee.
-     */
-    private void drawArrows(GuiGraphics graphics) {
-        double shift = shift();
-        for (int i = 0; i < rows.size(); i++) {
-            Row row = rows.get(i);
-            if (!row.disclosure()) continue;
-            double y = AREA_Y + i * ROW_H - shift;
-            if (y > AREA_Y + AREA_H || y + ROW_H < AREA_Y) continue;
-            chevron(graphics,
-                    originX() + (AREA_X + ARROW_X) * PAGE_SCALE,
-                    originY() + (y + (ROW_H - ARROW_H) / 2.0) * PAGE_SCALE,
-                    ARROW_W * PAGE_SCALE, ARROW_H * PAGE_SCALE, row.open());
-        }
-    }
-
-    /**
-     * Un chevron, lisse par sur-echantillonnage.
-     *
-     * <p>Chaque pixel d'ecran est echantillonne soixante-quatre fois : le compte des points tombes
-     * dans l'un des deux traits donne son alpha. C'est un vrai anti-aliasing, pas un arrondi.
-     */
-    private static void chevron(GuiGraphics graphics, double x, double y, double w, double h,
-                                boolean open) {
-        int samples = 8;
-        int px0 = (int) Math.floor(x);
-        int py0 = (int) Math.floor(y);
-        int px1 = (int) Math.ceil(x + w);
-        int py1 = (int) Math.ceil(y + h);
-        for (int py = py0; py < py1; py++) {
-            for (int px = px0; px < px1; px++) {
-                int inside = 0;
-                for (int sy = 0; sy < samples; sy++) {
-                    for (int sx = 0; sx < samples; sx++) {
-                        if (inChevron(x, y, w, h, open,
-                                px + (sx + 0.5) / samples, py + (sy + 0.5) / samples)) {
-                            inside++;
-                        }
-                    }
-                }
-                if (inside == 0) continue;
-                int alpha = Math.round(255f * inside / (samples * samples));
-                fill(graphics, px, py, 1, 1, (alpha << 24) | 0xFFFFFF);
-            }
-        }
-    }
-
-    /** Le point est-il sur l'un des deux traits du chevron ? */
-    private static boolean inChevron(double x, double y, double w, double h, boolean open,
-                                     double px, double py) {
-        // Un trait FIN : a cette taille, un trait epais referme le V et n'en fait plus qu'une
-        // tache. 0,58 pixel de demi-epaisseur, c'est un trait d'un peu plus d'un pixel.
-        double half = Math.max(0.5, Math.min(w, h) * 0.09);
-        if (open) {
-            // Pointe en bas : deux traits qui descendent vers le milieu.
-            return distanceTo(x + 0.14 * w, y + 0.30 * h, x + 0.50 * w, y + 0.70 * h, px, py) <= half
-                    || distanceTo(x + 0.50 * w, y + 0.70 * h, x + 0.86 * w, y + 0.30 * h, px, py) <= half;
-        }
-        // Pointe a droite : deux traits qui se rejoignent au milieu du bord droit.
-        return distanceTo(x + 0.34 * w, y + 0.14 * h, x + 0.72 * w, y + 0.50 * h, px, py) <= half
-                || distanceTo(x + 0.72 * w, y + 0.50 * h, x + 0.34 * w, y + 0.86 * h, px, py) <= half;
-    }
-
-    /** Distance d'un point au segment, pour epaissir un trait. */
-    private static double distanceTo(double ax, double ay, double bx, double by,
-                                     double px, double py) {
-        double dx = bx - ax;
-        double dy = by - ay;
-        double lengthSqr = dx * dx + dy * dy;
-        double t = lengthSqr == 0d ? 0d
-                : Math.max(0d, Math.min(1d, ((px - ax) * dx + (py - ay) * dy) / lengthSqr));
-        return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
     }
 
     private void drawRows(GuiGraphics graphics, int mouseX, int mouseY) {
@@ -532,6 +439,20 @@ public class SettingsScreen extends Screen {
         double labelY = y + CTRL_Y;
         if (over && capturing < 0) {
             fill(graphics, AREA_X, y, ROW_W, ROW_H, HOVER_VEIL);
+        }
+        if (row.disclosure()) {
+            // LA MEME POLICE QUE LE TEXTE, et c'est tout le sujet : « il n'est pas assez smooth par
+            // rapport au texte ». Le texte est grave par AWT en haute resolution puis reduit, donc
+            // lisse ; un triangle dessine au pixel reste en escalier, quel que soit le nombre de
+            // points par pixel. Ici la fleche suit exactement le meme chemin que les libelles.
+            //
+            // Un triangle PLEIN, vers le bas ferme et vers le haut ouvert : la police de
+            // l'interface (« Microsoft YaHei ») ne sait pas dessiner les triangles qui pointent a
+            // droite (U+25B6 et U+25B8 manquent a son repertoire), et un caractere absent se
+            // dessinerait en carre vide. Haut et bas, elle les a tous les deux.
+            AcademyFonts.drawTop(graphics, font, row.open() ? "\u25B2" : "\u25BC",
+                    (int) Math.round(AREA_X + ARROW_X),
+                    (int) Math.round(y + (ROW_H - ARROW_CELL) / 2.0), TEXT_COLOUR, ARROW_CELL);
         }
         boolean shifted = row.indent() || row.disclosure();
         double indent = shifted ? INDENT : 0;
@@ -629,7 +550,7 @@ public class SettingsScreen extends Screen {
 
             Row row = rows.get(i);
             if (row.disclosure() && pageX >= AREA_X + ARROW_X - 6
-                    && pageX <= AREA_X + ARROW_X + ARROW_W + 6) {
+                    && pageX <= AREA_X + ARROW_X + ARROW_CELL) {
                 toggleBreakDisclosure();
                 return true;
             }
