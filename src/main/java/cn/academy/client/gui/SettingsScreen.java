@@ -75,11 +75,11 @@ public class SettingsScreen extends Screen {
      * <p>Une sous-option se lit comme telle ou ne se lit pas : c'est le retrait qui dit qu'elle
      * appartient a la ligne du dessus, et pas qu'elle est une competence de plus.
      */
-    private static final double INDENT = 50.0;
+    private static final double INDENT = 40.0;
     /** La petite fleche des lignes depliables, dans la gouttiere a gauche des libelles. */
-    private static final double ARROW_X = 6.0;
-    private static final double ARROW_W = 42.0;
-    private static final double ARROW_H = 42.0;
+    private static final double ARROW_X = 8.0;
+    private static final double ARROW_W = 32.0;
+    private static final double ARROW_H = 32.0;
     /**
      * La largeur du libelle.
      *
@@ -419,8 +419,11 @@ public class SettingsScreen extends Screen {
     /**
      * La petite fleche des lignes depliables, en pixels d'ecran.
      *
-     * <p>Vers le bas quand la liste est ouverte, vers la droite quand elle est fermee : c'est la
-     * convention des sites, et le document de l'original ne connaissait pas ces sous-options.
+     * <p>Un <b>chevron</b> — deux traits diagonaux, comme sur un site — et non un triangle plein :
+     * « la fleche est trop grosse et pas assez smooth ». A six pixels, un triangle n'est qu'une
+     * tache a coins durs ; deux traits fins se lisent tout seuls et leur diagonale se lisse bien.
+     *
+     * <p>Vers le bas quand la liste est ouverte, vers la droite quand elle est fermee.
      */
     private void drawArrows(GuiGraphics graphics) {
         double shift = shift();
@@ -429,7 +432,7 @@ public class SettingsScreen extends Screen {
             if (!row.disclosure()) continue;
             double y = AREA_Y + i * ROW_H - shift;
             if (y > AREA_Y + AREA_H || y + ROW_H < AREA_Y) continue;
-            triangle(graphics,
+            chevron(graphics,
                     originX() + (AREA_X + ARROW_X) * PAGE_SCALE,
                     originY() + (y + (ROW_H - ARROW_H) / 2.0) * PAGE_SCALE,
                     ARROW_W * PAGE_SCALE, ARROW_H * PAGE_SCALE, row.open());
@@ -437,15 +440,14 @@ public class SettingsScreen extends Screen {
     }
 
     /**
-     * Un triangle plein, lisse par sur-echantillonnage.
+     * Un chevron, lisse par sur-echantillonnage.
      *
-     * <p>Chaque pixel d'ecran est echantillonne seize fois : le compte des points tombes dans le
-     * triangle donne son alpha. C'est un vrai anti-aliasing, pas un arrondi — quatre pixels de
-     * large ne suffisent pas a cacher un escalier autrement.
+     * <p>Chaque pixel d'ecran est echantillonne soixante-quatre fois : le compte des points tombes
+     * dans l'un des deux traits donne son alpha. C'est un vrai anti-aliasing, pas un arrondi.
      */
-    private static void triangle(GuiGraphics graphics, double x, double y, double w, double h,
-                                 boolean open) {
-        int samples = 6;
+    private static void chevron(GuiGraphics graphics, double x, double y, double w, double h,
+                                boolean open) {
+        int samples = 8;
         int px0 = (int) Math.floor(x);
         int py0 = (int) Math.floor(y);
         int px1 = (int) Math.ceil(x + w);
@@ -455,7 +457,7 @@ public class SettingsScreen extends Screen {
                 int inside = 0;
                 for (int sy = 0; sy < samples; sy++) {
                     for (int sx = 0; sx < samples; sx++) {
-                        if (inTriangle(x, y, w, h, open,
+                        if (inChevron(x, y, w, h, open,
                                 px + (sx + 0.5) / samples, py + (sy + 0.5) / samples)) {
                             inside++;
                         }
@@ -468,14 +470,31 @@ public class SettingsScreen extends Screen {
         }
     }
 
-    /** Le point est-il dans le triangle ? Base a gauche (ou en haut), pointe a l'oppose. */
-    private static boolean inTriangle(double x, double y, double w, double h, boolean open,
-                                      double px, double py) {
-        double u = (px - x) / w;
-        double v = (py - y) / h;
-        if (u < 0 || u > 1 || v < 0 || v > 1) return false;
-        if (open) return Math.abs(u - 0.5) * 2 <= 1 - v;
-        return Math.abs(v - 0.5) * 2 <= 1 - u;
+    /** Le point est-il sur l'un des deux traits du chevron ? */
+    private static boolean inChevron(double x, double y, double w, double h, boolean open,
+                                     double px, double py) {
+        // Un trait FIN : a cette taille, un trait epais referme le V et n'en fait plus qu'une
+        // tache. 0,58 pixel de demi-epaisseur, c'est un trait d'un peu plus d'un pixel.
+        double half = Math.max(0.5, Math.min(w, h) * 0.09);
+        if (open) {
+            // Pointe en bas : deux traits qui descendent vers le milieu.
+            return distanceTo(x + 0.14 * w, y + 0.30 * h, x + 0.50 * w, y + 0.70 * h, px, py) <= half
+                    || distanceTo(x + 0.50 * w, y + 0.70 * h, x + 0.86 * w, y + 0.30 * h, px, py) <= half;
+        }
+        // Pointe a droite : deux traits qui se rejoignent au milieu du bord droit.
+        return distanceTo(x + 0.34 * w, y + 0.14 * h, x + 0.72 * w, y + 0.50 * h, px, py) <= half
+                || distanceTo(x + 0.72 * w, y + 0.50 * h, x + 0.34 * w, y + 0.86 * h, px, py) <= half;
+    }
+
+    /** Distance d'un point au segment, pour epaissir un trait. */
+    private static double distanceTo(double ax, double ay, double bx, double by,
+                                     double px, double py) {
+        double dx = bx - ax;
+        double dy = by - ay;
+        double lengthSqr = dx * dx + dy * dy;
+        double t = lengthSqr == 0d ? 0d
+                : Math.max(0d, Math.min(1d, ((px - ax) * dx + (py - ay) * dy) / lengthSqr));
+        return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
     }
 
     private void drawRows(GuiGraphics graphics, int mouseX, int mouseY) {
