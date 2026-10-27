@@ -9849,4 +9849,42 @@ public final class AcademyGameTests {
                 "la machine cassee doit rendre ses " + amount + " lingots, rendus = " + dropped);
         helper.succeed();
     }
+
+    /**
+     * L'imag phase liquide eteint le feu.
+     *
+     * <p>Bug signale par le joueur : « l'imag liquid ne nous permet pas de retirer le feu alors
+     * qu'il devrait pouvoir le faire ». L'original n'avait rien a ecrire pour cela : son
+     * {@code BlockImagPhase} etait construit sur {@code Material.WATER}, et le feu de 1.12.2
+     * mourait a cote de tout ce qui portait ce materiau. En 1.20.1 l'eau eteint par sa propre
+     * mecanique, et notre fluide n'est pas de l'eau — voir {@code ImagPhaseLiquidBlock#douse}.
+     *
+     * <p>Les deux sens sont testes, parce qu'ils passent par deux accroches differentes : le
+     * liquide qui arrive ({@code onPlace}) et le feu qui nait ({@code neighborChanged}).
+     */
+    @GameTest(template = "empty")
+    public static void lImagLiquideEteintLeFeu(GameTestHelper helper) {
+        // Sens 1 : le feu brule deja, le liquide arrive a cote.
+        BlockPos support = new BlockPos(2, 0, 2);
+        BlockPos feu = new BlockPos(2, 1, 2);
+        helper.setBlock(support, net.minecraft.world.level.block.Blocks.NETHERRACK);
+        helper.setBlock(feu, net.minecraft.world.level.block.Blocks.FIRE);
+        assertTrue(helper, helper.getBlockState(feu).is(net.minecraft.world.level.block.Blocks.FIRE),
+                "le feu temoin doit tenir avant l'arrivee du liquide");
+
+        helper.setBlock(new BlockPos(3, 1, 2), cn.academy.ModBlocks.PHASE_LIQUID_BLOCK.get());
+        assertFalse(helper, helper.getBlockState(feu).is(net.minecraft.world.level.block.Blocks.FIRE),
+                "le liquide pose a cote doit eteindre le feu");
+
+        // Sens 2 : la nappe est deja la, et c'est le feu qui nait contre elle.
+        BlockPos support2 = new BlockPos(2, 0, 6);
+        BlockPos feu2 = new BlockPos(2, 1, 6);
+        helper.setBlock(new BlockPos(3, 1, 6), cn.academy.ModBlocks.PHASE_LIQUID_BLOCK.get());
+        helper.setBlock(support2, net.minecraft.world.level.block.Blocks.NETHERRACK);
+        helper.setBlock(feu2, net.minecraft.world.level.block.Blocks.FIRE);
+        assertFalse(helper, helper.getBlockState(feu2).is(net.minecraft.world.level.block.Blocks.FIRE),
+                "un feu qui nait contre le liquide doit mourir aussitot");
+
+        helper.succeed();
+    }
 }
