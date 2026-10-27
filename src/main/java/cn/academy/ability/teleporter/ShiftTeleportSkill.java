@@ -184,11 +184,12 @@ public class ShiftTeleportSkill extends Skill {
      * de la face visee, le controle de place, le bruit du bloc, et le retrait de l'objet de la
      * pile — sauf en creatif. Quand l'endroit refuse, le meme objet tombe au point touche.
      *
-     * <p>Et quand le geste <b>touche quelqu'un</b>, le bloc ne se plante pas davantage : il tombe au
-     * point touche, la aussi. L'original, lui, le posait — sa verification ne regardait que le
-     * terrain, jamais les creatures, et il enfoncait donc son bloc dans celle qu'il venait de
-     * frapper. C'est un choix du port, demande par le joueur, et il va dans le sens du geste : un
-     * coup d'epieu qui touche n'est pas un pieu qu'on enfonce.
+     * <p>Et quand le geste <b>touche quelqu'un</b>, le bloc ne se plante pas davantage : il
+     * <b>continue sa route</b> et tombe derriere la creature. L'original, lui, le posait — sa
+     * verification ne regardait que le terrain, jamais les creatures, et il enfoncait donc son bloc
+     * dans celle qu'il venait de frapper. Le port, lui, ne l'y laisse plus s'arreter : c'est un coup
+     * d'epieu, pas un pieu — « quand je vise la cible directement, le bloc a l'air de bloquer sur la
+     * cible plutot que de passer derriere elle ».
      *
      * <p>Le controle de l'original qui verifiait qu'on avait le droit de <b>casser</b> le bloc vise
      * n'a pas d'equivalent dans le port : il n'y a pas de reglage de ce genre a lire.
@@ -206,10 +207,13 @@ public class ShiftTeleportSkill extends Skill {
         // parce que c'est elle qui la decide.
         List<LivingEntity> hit = line(player.level(), player, target.cell());
 
-        // Le geste qui touche quelqu'un ne se plante pas dans le sol : le bloc tombe au point
-        // touche, comme quand l'endroit le refuse.
+        // Le geste qui touche quelqu'un ne se plante pas dans le sol : le bloc, lui, <b>continue sa
+        // route</b> et tombe derriere la creature — c'est un coup d'epieu, pas un pieu. Seuls les
+        // degats s'arretent sur elle.
         boolean planted = hit.isEmpty() && place(player, item, stack, target);
-        if (!planted) drop(player, stack, target);
+        if (!planted) {
+            drop(player, stack, hit.isEmpty() ? target : terrainTarget(player, data));
+        }
 
         for (LivingEntity living : hit) {
             // `scaled` : le multiplicateur global de degats de la config passe par la, comme
@@ -268,6 +272,23 @@ public class ShiftTeleportSkill extends Skill {
      * <p>Elle est toujours <b>libre</b> : le rayon s'arrete au premier bloc, donc la case qui suit
      * la face touchee est forcement vide — sinon le rayon l'aurait touchee avant lui.
      */
+    /**
+     * Ou le bloc atterrirait si rien ne l'arretait : le <b>terrain</b> seul, creatures ignorees.
+     *
+     * <p>C'est la que part le bloc quand le geste touche quelqu'un. Le joueur : « quand je vise la
+     * cible directement, le bloc a l'air de bloquer sur la cible plutot que de passer derriere
+     * elle ». Un coup d'epieu qui touche continue sa route ; ce sont les degats qui s'arretent sur
+     * la creature, pas le bloc.
+     */
+    public Target terrainTarget(Player player, AbilityData data) {
+        Vec3 eye = player.getEyePosition(1f);
+        Vec3 look = player.getViewVector(1f);
+        Vec3 end = eye.add(look.scale(maxRange(data)));
+        BlockHitResult hit = player.level().clip(new ClipContext(eye, end,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return hit.getType() == HitResult.Type.MISS ? fromMiss(end) : fromHit(hit);
+    }
+
     public Target target(Player player, AbilityData data) {
         Vec3 eye = player.getEyePosition(1f);
         Vec3 look = player.getViewVector(1f);

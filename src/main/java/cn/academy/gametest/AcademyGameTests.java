@@ -4728,6 +4728,16 @@ public final class AcademyGameTests {
                         + " contre " + healthBefore);
         assertTrue(helper, player.getMainHandItem().isEmpty(), "et le bloc a quitte la main");
 
+        // ET LE BLOC PASSE DERRIERE. Le joueur : « quand je vise la cible directement, le bloc a
+        // l'air de bloquer sur la cible plutot que de passer derriere elle ». Un coup d'epieu qui
+        // touche continue sa route : ce sont les degats qui s'arretent, pas le bloc.
+        var poses = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                new net.minecraft.world.phys.AABB(abs).inflate(40.0));
+        assertTrue(helper, !poses.isEmpty(), "le bloc depose existe quelque part");
+        assertTrue(helper, poses.get(0).distanceToSqr(player) > shulker.distanceToSqr(player),
+                "et il est tombé derriere la bete, pas sur elle : " + poses.get(0).position()
+                        + " contre " + shulker.position());
+
         shulker.discard();
         helper.succeed();
     }
