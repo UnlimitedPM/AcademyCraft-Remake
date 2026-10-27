@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.0.3-beta - le bloc passe derriere la bete / the block goes past the creature
+
+### English
+
+Six fixes on the teleporter's **Shift Teleport** (throw a held block, up to 35 blocks away), all of
+them found in play. Keep a backup of your world.
+
+- **The thrown block goes past the creature.** Aiming at a creature threw the block *onto* it: it
+  landed on the ground the creature stood on, so the block seemed to stop on it — "the block stops
+  on the entity instead of going behind it even when there is room". It now carries on along the
+  gesture's axis, leaving the creature behind, and lands where that line meets the terrain — or at
+  the end of the range when it meets nothing.
+- **The destination box tells the truth.** The grey box drawn while the key is held sat on the
+  creature's own cell, so the gesture looked like it stopped there. It now shows the real
+  destination — the one the block will reach — while the red box on each crossed creature keeps
+  saying who takes the hit.
+- **The thrust hits everything on the line.** Damage stopped at the first creature, because the
+  line ended at the aimed cell. It now runs to the block's destination: every creature it crosses
+  takes the hit — the aimed one, those before it, and those behind it in the axis.
+- **Aiming at the feet hits, aiming at a block places.** A creature sitting right on the aimed point
+  is still the target, but only on the *top* face of a block and inside its own footprint. A side
+  face is a block you aim at, so the block is now placed there instead of being thrown behind the
+  creature.
+- **Aim stops at walls.** The skills that pick their target from the look (thunder clap, ray
+  barrage, flesh ripping, threatening teleport, directed shock, the plasma bomb) no longer see
+  through blocks: a creature behind a wall is out of sight, and flesh ripping would rather refuse
+  than spend control points on nothing.
+- **Tests**: 971 unit tests and 182 in-game tests (including the six above), plus the offline asset
+  audit — all green.
+
+### Francais
+
+Six corrections sur le **depose au loin** du teleporteur (lancer un bloc tenu, jusqu'a trente-cinq
+blocs), toutes trouvees en jouant. Gardez une sauvegarde de votre monde.
+
+- **Le bloc passe derriere la bete.** Viser une creature lancait le bloc *sur* elle : il se posait
+  sur le sol qu'elle occupait, donc le bloc avait l'air de s'arreter sur elle — « le bloc s'arrete
+  sur l'entite au lieu d'aller derriere si il y a de la place ». Il continue maintenant dans l'axe du
+  geste, laissant la creature derriere lui, et se pose la ou cette ligne rencontre le terrain — ou
+  au bout de la portee quand elle ne rencontre rien.
+- **La boite de destination dit la verite.** La boite grise dessinee pendant le maintien se tenait
+  sur la case de la creature, donc le geste avait l'air de s'y arreter. Elle montre maintenant la
+  vraie destination — celle que le bloc rejoindra — et la boite rouge de chaque creature traversee
+  continue de dire qui prend le coup.
+- **Le coup d'epieu frappe toute la ligne.** Les degats s'arretaient a la premiere creature, la ligne
+  finissant sur la case visee. Elle va maintenant jusqu'a la destination du bloc : tout ce qu'elle
+  croise prend le coup — la bete visee, celles d'avant, et celles qui se tiennent derriere elle dans
+  l'axe.
+- **Viser les pieds frappe, viser un bloc pose.** Une creature posee sur le point vise reste la
+  cible, mais seulement sur le *dessus* d'un bloc et dans sa propre empreinte. Une face de cote,
+  c'est un bloc qu'on vise : le bloc s'y pose maintenant, au lieu de partir derriere la creature.
+- **La visee bute sur les murs.** Les competences qui prennent leur cible dans le regard (orage,
+  barrage de rayons, arrachage de chair, teleportation menacante, onde dirigee, bombe a plasma) ne
+  voient plus au travers des blocs : une creature derriere un mur n'est plus en vue, et l'arrachage
+  de chair prefere refuser plutot que depenser des points pour rien.
+- **Tests** : 971 tests unitaires et 182 tests en jeu (dont les six ci-dessus), plus l'audit
+  d'assets hors ligne — tous verts.
+
 ## 1.0.2-beta - la case lit le joueur, le vide ne coute rien / the box reads the player, the void costs nothing
 
 ### English
