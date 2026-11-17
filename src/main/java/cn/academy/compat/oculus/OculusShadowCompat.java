@@ -290,6 +290,10 @@ public final class OculusShadowCompat {
         ClientLevel level = minecraft.level;
         if (level == null) return;
 
+        // Et la machine recoit son porteur d'ombre : c'est LUI qui projette l'ombre quand le pack
+        // de shaders refuse les block entities (voir ShadowCasters).
+        ShadowCasters.want(pos);
+
         if (level != trackedLevel) {
             TRACKED.clear();
             trackedLevel = level;

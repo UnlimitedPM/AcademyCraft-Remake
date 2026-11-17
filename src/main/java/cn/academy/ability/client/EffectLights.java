@@ -75,11 +75,11 @@ public final class EffectLights {
      */
     private static final int LEVEL = 9;
 
-    /** Un lampion tous les deux blocs : un chapelet serre se lit comme une ligne. */
-    private static final double STEP = 2.0d;
+    /** Un lampion tous les un bloc et demi : le chapelet reste CONTIGU d'un tick a l'autre. */
+    private static final double STEP = 1.5d;
 
     /** Le nombre maximal de lampions pour un seul effet. */
-    private static final int MAX_PER_EFFECT = 12;
+    private static final int MAX_PER_EFFECT = 16;
 
     /** Le nombre maximal de lampions toutes sources confondues. */
     private static final int MAX_TOTAL = 48;
@@ -87,12 +87,12 @@ public final class EffectLights {
     /**
      * Combien de ticks un lampion survit a sa derniere demande.
      *
-     * <p>Trois : juste de quoi couvrir le saut des arcs, qui changent de place toutes les trois
-     * ticks. Plus long, et les lampions d'un rayon qu'on vient de tourner restaient allumes
-     * derriere le joueur (le joueur, le 17/11 : « parfois il y a de la lumiere qui se genere
-     * derriere moi »).
+     * <p>Quatre : le chapelet est contigu, donc un lampion n'a qu'a couvrir les quelques ticks ou
+     * une case passe sous le seuil d'allumage. Trois laissait encore clignoter les cases du bout du
+     * rayon (le joueur, le 17/11 : « ca clignote encore un peu, ca fait mal aux yeux »), et huit
+     * laissaient les lampions d'un rayon qu'on venait de tourner allumes derriere soi.
      */
-    private static final int LINGER_TICKS = 3;
+    private static final int LINGER_TICKS = 4;
 
     /** La distance sous laquelle un arc fait partie de l'aura du joueur, et non d'un trajet. */
     private static final double AURA_RADIUS = 6.0d;
@@ -121,8 +121,10 @@ public final class EffectLights {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
 
-        // Branche l'integration d'ombre d'Oculus si elle est la (voir OculusShadowCompat).
+        // Branche l'integration d'ombre d'Oculus si elle est la (voir OculusShadowCompat), et
+        // tient a jour les porteurs d'ombre des machines (voir ShadowCasters).
         cn.academy.compat.oculus.OculusShadowCompat.ensureInstalled();
+        cn.academy.compat.oculus.ShadowCasters.tick();
 
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;

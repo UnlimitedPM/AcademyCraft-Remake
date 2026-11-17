@@ -127,6 +127,10 @@ public class AcademyCraft {
             // plante — voir MagHookRenderer.
             event.registerEntityRenderer(ModEntities.MAG_HOOK.get(),
                     cn.academy.client.MagHookRenderer::new);
+            // Le porteur d'ombre des machines : invisible a l'ecran, il ne dessine la machine que
+            // pendant la carte d'ombre d'un shader — voir ShadowCasterRenderer.
+            event.registerEntityRenderer(ModEntities.SHADOW_CASTER.get(),
+                    cn.academy.client.render.ShadowCasterRenderer::new);
         }
 
         @SubscribeEvent

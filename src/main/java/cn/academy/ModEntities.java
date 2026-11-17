@@ -120,6 +120,23 @@ public class ModEntities {
                     .updateInterval(1)
                     .build("mag_hook"));
 
+    /**
+     * Le porteur d'ombre d'une machine, pose par le client seulement.
+     *
+     * <p>Il ne dessine rien a l'ecran et ne collisionne pas : il n'existe que pour donner aux
+     * pales de l'eolienne et aux developpeurs le chemin d'ombre d'une ENTITE, le seul qu'un shader
+     * veuille bien ombrer quand son pack refuse les block entities — c'est le cas de
+     * Complementary, dans tous ses profils. Voir {@code ShadowCasters}.
+     */
+    public static final RegistryObject<EntityType<cn.academy.entity.EntityShadowCaster>> SHADOW_CASTER =
+            ENTITIES.register("shadow_caster", () -> EntityType.Builder
+                    .<cn.academy.entity.EntityShadowCaster>of(cn.academy.entity.EntityShadowCaster::new,
+                            MobCategory.MISC)
+                    .sized(2f, 3f)
+                    .clientTrackingRange(4)
+                    .updateInterval(20)
+                    .build("shadow_caster"));
+
     public static void register(net.minecraftforge.eventbus.api.IEventBus bus) {
         ENTITIES.register(bus);
     }
