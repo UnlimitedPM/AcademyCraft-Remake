@@ -67,6 +67,10 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
         if (!(state.getBlock() instanceof DeveloperBlock block)) return;
         if (state.getValue(DeveloperBlock.PART) != DeveloperBlock.DevPart.BASE) return;
 
+        // Les shaders ne voient pas les block entities d'eux-memes (voir OculusShadowCompat) :
+        // on signale celle-ci pour qu'elle projette son ombre.
+        cn.academy.compat.oculus.OculusShadowCompat.track(developer.getBlockPos());
+
         boolean advanced = block.getDeveloperType() == DeveloperType.ADVANCED;
         ResourceLocation model = advanced ? ADVANCED_MODEL : NORMAL_MODEL;
         ResourceLocation texture = advanced ? ADVANCED_TEXTURE : NORMAL_TEXTURE;
@@ -84,8 +88,12 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
         // recentre sur la brique. Rien en profondeur, la machine affleure le bord comme l'original.
         pose.translate(SHIFT_SIDE, 0.0d, 0.0d);
 
-        ObjModels.draw(ObjModels.get(model).all(), pose,
-                buffers.getBuffer(ObjModels.translucent(texture)), light, overlay);
+        // A l'ecran, la vitre se melange et la profondeur s'ecrit (translucent) ; dans la carte
+        // d'ombre, il faut une surface opaque, sinon la vitre ne projette aucune ombre.
+        net.minecraft.client.renderer.RenderType type = cn.academy.compat.oculus.OculusShadowCompat.inShadowPass()
+                ? net.minecraft.client.renderer.RenderType.entitySolid(texture)
+                : ObjModels.translucent(texture);
+        ObjModels.draw(ObjModels.get(model).all(), pose, buffers.getBuffer(type), light, overlay);
         pose.popPose();
     }
 
