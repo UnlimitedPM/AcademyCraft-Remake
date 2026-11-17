@@ -203,6 +203,66 @@ class ObjMeshTest {
         assertEquals(42, derriere("matrix"));
     }
 
+    @Test
+    @DisplayName("les normales se lissent d'une face a l'autre, sauf sur une arete vive")
+    void lesNormalesSeLissentEntreFaces() {
+        // Deux triangles qui partagent l'arete (0,0,0)-(1,0,0) : l'un couche, l'autre plie de
+        // 20 degres. Sous un shader, ce sont ces normales qui decident de la teinte de chaque
+        // triangle : plates, une pale se couvre de facettes (le joueur, le 17/11). Les deux
+        // coins de l'arete commune doivent donc porter la MEME normale, entre les deux faces.
+        ObjMesh doux = ObjMesh.parse("""
+                v 0 0 0
+                v 1 0 0
+                v 0 1 0
+                v 0 0.93969 -0.34202
+                f 1 2 3
+                f 1 2 4
+                """);
+
+        ObjMesh.Vertex plie = doux.group("").get(1).vertices().get(0);
+        ObjMesh.Vertex couche = doux.group("").get(0).vertices().get(0);
+        assertEquals(couche.ny(), plie.ny(), 1.0e-5f, "l'arete commune porte une seule normale");
+        assertEquals(0.174f, couche.ny(), 0.002f, "et cette normale est entre les deux faces");
+        assertEquals(0f, couche.nx(), 1.0e-5f, "toujours perpendiculaire a l'arete");
+
+        // Une arete vive de 80 degres, elle, reste vive : chaque face garde sa normale.
+        ObjMesh vif = ObjMesh.parse("""
+                v 0 0 0
+                v 1 0 0
+                v 0 1 0
+                v 0 0.17365 -0.98481
+                f 1 2 3
+                f 1 2 4
+                """);
+        assertEquals(0f, vif.group("").get(0).vertices().get(0).ny(), 1.0e-5f,
+                "la face couchee garde sa normale vers le haut");
+        assertEquals(1f, vif.group("").get(0).vertices().get(0).nz(), 1.0e-5f);
+        assertEquals(0.985f, vif.group("").get(1).vertices().get(0).ny(), 0.002f,
+                "et la face pliee garde la sienne");
+    }
+
+    @Test
+    @DisplayName("les modeles livres se lissent sans perdre leurs aretes vives")
+    void lesModelesLivresSeLissent() throws Exception {
+        // Une arete vive reste vive : sur les pales, le tranchant garde ses deux normales. Ce
+        // qui change est ailleurs — plus aucun triangle n'a de normale isolee au milieu d'une
+        // surface courbe. On le mesure la ou ca compte : les normales de deux coins du MEME
+        // triangle ne doivent plus se tourner le dos.
+        for (String nom : List.of("windgen_fan", "developer_normal", "developer_advanced")) {
+            ObjMesh mesh = lit(nom);
+            for (ObjMesh.Face face : mesh.all()) {
+                ObjMesh.Vertex a = face.vertices().get(0);
+                ObjMesh.Vertex b = face.vertices().get(1);
+                ObjMesh.Vertex c = face.vertices().get(2);
+                double ab = a.nx() * b.nx() + a.ny() * b.ny() + a.nz() * b.nz();
+                double bc = b.nx() * c.nx() + b.ny() * c.ny() + b.nz() * c.nz();
+                double ca = c.nx() * a.nx() + c.ny() * a.ny() + c.nz() * a.nz();
+                assertTrue(ab > 0.5 && bc > 0.5 && ca > 0.5,
+                        nom + " : les trois coins d'un triangle s'eclairent du meme cote");
+            }
+        }
+    }
+
     /** Le nombre de faces d'un modele livre qui passent derriere. */
     private static int derriere(String nom) throws Exception {
         return lit(nom).behind().size();

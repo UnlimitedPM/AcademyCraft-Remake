@@ -46,10 +46,20 @@ import java.util.Set;
  *   <li>un lampion <b>survit</b> quelques ticks apres avoir cesse d'etre demande
  *       ({@link #LINGER_TICKS}), ce qui lisse les deplacements d'un tick a l'autre ;</li>
  *   <li>les arcs proches du joueur (les essaims de la charge et du renfort) n'allument plus un
- *       lampion par arc et par position : ils allument une <b>aura stable</b> autour du joueur ;</li>
+ *       lampion par arc et par position : ils allument un <b>anneau</b> de lampions autour du
+ *       joueur ;</li>
  *   <li>chaque rayon projette aussi un lampion au sol, sous lui, pour que la lumiere se voie sur
  *       une surface, et pas seulement dans l'air.</li>
  * </ul>
+ *
+ * <h2>La lumiere n'ecrase pas le joueur</h2>
+ *
+ * <p>La lumiere d'un bloc eclaire TOUT ce qui l'entoure, le modele du joueur compris. La
+ * premiere version posait deux lampions a quinze dans le joueur, a hauteur de torse : sous un
+ * shader, son visage devenait une torche et le decor, lui, ne gagnait presque rien. Rien ne se
+ * pose donc a moins de {@link #MIN_CLEAR} blocs des yeux, et l'aura d'un essaim est un anneau a
+ * {@link #AURA_RING} blocs du joueur — la lumiere eclaire le decor, pas le personnage (le joueur,
+ * le 17/11).
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class EffectLights {
@@ -72,11 +82,23 @@ public final class EffectLights {
     /** La distance sous laquelle un arc fait partie de l'aura du joueur, et non d'un trajet. */
     private static final double AURA_RADIUS = 6.0d;
 
+    /** Le rayon de l'anneau qui eclaire autour du joueur quand un essaim l'entoure. */
+    private static final double AURA_RING = 3.5d;
+
+    /** Le nombre de lampions de cet anneau. */
+    private static final int RING_LAMPS = 6;
+
+    /** Rien ne se pose a moins de cette distance des yeux : c'est le visage du joueur. */
+    private static final double MIN_CLEAR = 2.5d;
+
     /** Le nombre de blocs verses sous un rayon quand il cherche le sol. */
     private static final int GROUND_SCAN = 24;
 
     /** Les lampions poses, et leur temps de vie restant en ticks. */
     private static final Map<BlockPos, Integer> POSED = new HashMap<>();
+
+    /** Les yeux du joueur pour le tick en cours : c'est la que la lumiere ne va pas. */
+    private static Vec3 EYES = Vec3.ZERO;
 
     private EffectLights() {}
 
@@ -99,11 +121,14 @@ public final class EffectLights {
 
         Set<BlockPos> wanted = new LinkedHashSet<>();
 
+        // Les yeux du joueur, avant tout : c'est autour d'eux qu'on ne pose rien.
+        Vec3 eyes = minecraft.player.getEyePosition();
+        EYES = eyes;
+
         for (MdRays.LiveRay ray : MdRays.live()) {
             sample(level, ray.from(), ray.to(), wanted);
         }
 
-        Vec3 eyes = minecraft.player.getEyePosition();
         boolean aura = false;
         for (ClientArcs.LiveArc arc : ClientArcs.live()) {
             double[] from = arc.from();
@@ -118,13 +143,29 @@ public final class EffectLights {
             }
         }
         if (aura) {
-            // L'essaim entoure le joueur : une aura fixe autour de lui, pas une lumiere par arc.
-            BlockPos feet = BlockPos.containing(eyes.x, eyes.y - 0.5d, eyes.z);
-            air(level, feet, wanted);
-            air(level, feet.above(), wanted);
+            // L'essaim entoure le joueur : un anneau autour de lui, et surtout pas un lampion
+            // sur lui — colles a ses yeux, ils faisaient de son visage une torche.
+            ring(level, eyes, wanted);
         }
 
         apply(level, wanted);
+    }
+
+    /**
+     * L'anneau qui sert d'aura a un essaim d'arcs.
+     *
+     * <p>Un lampion par arc ne tenait pas : les arcs se deplacent toutes les trois ticks et la
+     * lumiere clignotait. Un anneau fixe autour du joueur donne une lumiere stable, et a distance
+     * de lui — c'est le decor qu'on eclaire, pas son visage.
+     */
+    private static void ring(ClientLevel level, Vec3 eyes, Set<BlockPos> out) {
+        int y = (int) Math.floor(eyes.y - 1.2d);
+        for (int i = 0; i < RING_LAMPS; i++) {
+            double angle = i * (Math.PI * 2.0d / RING_LAMPS);
+            BlockPos pos = BlockPos.containing(eyes.x + Math.cos(angle) * AURA_RING,
+                    y, eyes.z + Math.sin(angle) * AURA_RING);
+            air(level, pos, out);
+        }
     }
 
     /** Pose des lampions le long d'un segment, dans l'air et sur le sol en dessous. */
@@ -171,6 +212,12 @@ public final class EffectLights {
     /** Ajoute ce bloc s'il est de l'air, et si le budget n'est pas epuise. */
     private static void air(ClientLevel level, BlockPos pos, Set<BlockPos> out) {
         if (out.size() >= MAX_TOTAL) return;
+        // Rien tout contre les yeux. La lumiere d'un bloc eclaire aussi le modele du joueur :
+        // deux lampions a quinze dans son torse faisaient de son visage une torche sous shader.
+        double dx = pos.getX() + 0.5d - EYES.x;
+        double dy = pos.getY() + 0.5d - EYES.y;
+        double dz = pos.getZ() + 0.5d - EYES.z;
+        if (dx * dx + dy * dy + dz * dz < MIN_CLEAR * MIN_CLEAR) return;
         if (level.getBlockState(pos).isAir()) out.add(pos.immutable());
     }
 

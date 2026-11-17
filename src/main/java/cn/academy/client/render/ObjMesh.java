@@ -2,6 +2,8 @@ package cn.academy.client.render;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,6 +23,9 @@ import java.util.Set;
  * les groupes ({@code g}), et les faces — triangles ou quads, indices positifs ou negatifs
  * comme le veut le format. Ce qu'il ignore : les materiaux et le lissage, qui ne servent
  * pas ici puisque chaque morceau n'a qu'une texture.
+ *
+ * <p>Sauf que le lissage des normales, lui, se voit sous un shader : les fichiers du mod
+ * donnent une normale par coin, et ces normales ne se suivent pas. Voir {@link #smooth()}.
  *
  * <p>Aucune classe de Minecraft : ce lecteur se relit en JUnit, ou l'on verifie qu'un quad
  * devient bien deux triangles et qu'une normale manquante se calcule.
@@ -78,6 +83,8 @@ public final class ObjMesh {
                 default -> { /* mtllib, usemtl, s : rien a faire */ }
             }
         }
+        // Les normales du fichier ne se suivent pas : elles sont refaites une fois pour toutes.
+        mesh.smooth();
         return mesh;
     }
 
@@ -179,6 +186,119 @@ public final class ObjMesh {
         return vertex.nx() == 0f && vertex.ny() == 0f && vertex.nz() == 0f
                 ? new Vertex(vertex.x(), vertex.y(), vertex.z(), vertex.u(), vertex.v(), nx, ny, nz)
                 : vertex;
+    }
+
+    /** Le meme sommet, avec la normale qu'on vient de calculer. */
+    private static Vertex withNormal(Vertex vertex, float[] normal) {
+        return new Vertex(vertex.x(), vertex.y(), vertex.z(), vertex.u(), vertex.v(),
+                normal[0], normal[1], normal[2]);
+    }
+
+    /**
+     * L'angle au dela duquel deux faces ne sont plus lissees ensemble.
+     *
+     * <p>Cinquante degres : le tranchant d'une pale et les aretes d'un caisson restent vifs, et
+     * tout ce qui se plie doucement devient lisse.
+     */
+    private static final double CREASE_DEGREES = 50.0d;
+
+    /** Le cosinus de cet angle : au dela, les deux normales s'averent. */
+    private static final double CREASE_COS = Math.cos(Math.toRadians(CREASE_DEGREES));
+
+    /** Le pas de la soudure des sommets, en milliemes de bloc : personne ne le voit. */
+    private static final double WELD = 1000.0d;
+
+    /**
+     * Refait les normales des sommets en lissant les faces qui se suivent.
+     *
+     * <p>Le fichier des pales sort d'un export qui donne une normale par coin, et ces normales ne
+     * se suivent pas : sur une meme position, deux coins peuvent porter des normales a angle
+     * droit. La lumiere de vanilla ne s'en apercevait pas — elle ne lit que la carte de lumiere —
+     * donc rien ne se voyait sans shader. Sous un shader, c'est la normale qui decide de la teinte
+     * de chaque triangle : les pales se sont couvertes de facettes plates et ont paru faites de
+     * panneaux rectangulaires, alors que le meme modele se lit comme une pale courbe sans shader
+     * (le joueur, le 17/11 : « on ne distingue pas vraiment les triangles »).
+     *
+     * <p>On soude donc les sommets par position, on moyenne les normales des faces qui s'y
+     * rencontrent — ponderees par leur aire, donc les grands panneaux pèsent plus que les petits
+     * details — et on s'arrete aux aretes vives : au dela de {@link #CREASE_DEGREES} de pli,
+     * chaque surface garde sa normale.
+     */
+    private void smooth() {
+        List<Face> all = all();
+        if (all.isEmpty()) return;
+
+        Map<Face, Integer> index = new IdentityHashMap<>();
+        double[][] normals = new double[all.size()][];
+        Map<String, List<Integer>> around = new HashMap<>();
+        for (int i = 0; i < all.size(); i++) {
+            Face face = all.get(i);
+            index.put(face, i);
+            normals[i] = weightedNormal(face.vertices());
+            Set<String> seen = new HashSet<>();
+            for (Vertex vertex : face.vertices()) {
+                String key = key(vertex);
+                if (seen.add(key)) around.computeIfAbsent(key, k -> new ArrayList<>()).add(i);
+            }
+        }
+
+        for (List<Face> faces : groups.values()) {
+            for (int f = 0; f < faces.size(); f++) {
+                Face face = faces.get(f);
+                double[] own = normals[index.get(face)];
+                List<Vertex> vertices = new ArrayList<>(face.vertices().size());
+                for (Vertex vertex : face.vertices()) {
+                    vertices.add(withNormal(vertex,
+                            smoothNormal(own, around.get(key(vertex)), normals)));
+                }
+                faces.set(f, new Face(List.copyOf(vertices)));
+            }
+        }
+    }
+
+    /** L'aire et l'orientation d'une face : le produit vectoriel de deux de ses cotes, non normalise. */
+    private static double[] weightedNormal(List<Vertex> vertices) {
+        Vertex a = vertices.get(0);
+        Vertex b = vertices.get(1);
+        Vertex c = vertices.get(2);
+        double ux = b.x() - a.x(), uy = b.y() - a.y(), uz = b.z() - a.z();
+        double vx = c.x() - a.x(), vy = c.y() - a.y(), vz = c.z() - a.z();
+        return new double[] { uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx };
+    }
+
+    /**
+     * La normale de ce coin : celle de sa face, plus celles des faces voisines qui la suivent.
+     *
+     * <p>Une voisine ne compte que si elle reste dans le pli tolere ; les autres appartiennent a
+     * une autre surface du modele, et c'est leur arete qui doit rester nette.
+     */
+    private static float[] smoothNormal(double[] own, List<Integer> neighbours, double[][] normals) {
+        double length = Math.sqrt(own[0] * own[0] + own[1] * own[1] + own[2] * own[2]);
+        if (length < 1.0e-12d) return new float[] { 0f, 1f, 0f };
+        double ox = own[0] / length, oy = own[1] / length, oz = own[2] / length;
+
+        double x = 0.0d, y = 0.0d, z = 0.0d;
+        for (int i = 0; i < neighbours.size(); i++) {
+            double[] other = normals[neighbours.get(i)];
+            double otherLength = Math.sqrt(other[0] * other[0] + other[1] * other[1]
+                    + other[2] * other[2]);
+            if (otherLength < 1.0e-12d) continue;
+            double cosine = (other[0] * ox + other[1] * oy + other[2] * oz) / otherLength;
+            if (cosine < CREASE_COS) continue;
+            x += other[0];
+            y += other[1];
+            z += other[2];
+        }
+
+        double total = Math.sqrt(x * x + y * y + z * z);
+        if (total < 1.0e-12d) return new float[] { (float) ox, (float) oy, (float) oz };
+        return new float[] { (float) (x / total), (float) (y / total), (float) (z / total) };
+    }
+
+    /** La clef d'un sommet : sa position, arrondie au millieme de bloc. */
+    private static String key(Vertex vertex) {
+        return Math.round(vertex.x() * WELD) + ":" + Math.round(vertex.y() * WELD)
+                + ":" + Math.round(vertex.z() * WELD);
     }
 
     /** Tolerance sur le plan commun, en blocs : 1e-5 sur un bloc, personne ne le voit. */
