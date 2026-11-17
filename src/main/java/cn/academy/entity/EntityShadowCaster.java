@@ -31,7 +31,6 @@ public class EntityShadowCaster extends Entity {
         super(type, level);
         this.noPhysics = true;
         setNoGravity(true);
-        setInvisible(true);
     }
 
     @Override

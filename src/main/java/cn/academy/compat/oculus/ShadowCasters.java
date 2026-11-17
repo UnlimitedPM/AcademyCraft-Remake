@@ -45,6 +45,14 @@ public final class ShadowCasters {
     /** Les identifiants des entites locales : negatifs, comme le veut un client. */
     private static int nextId = -1;
 
+    private static final org.slf4j.Logger LOGGER =
+            org.slf4j.LoggerFactory.getLogger("academy-oculus");
+
+    /** Ce que la derniere pose a donne, et l'heure du dernier rapport. */
+    private static String lastSpawn = "aucune tentative";
+    private static long lastReport;
+    private static boolean reported;
+
     private ShadowCasters() {}
 
     /** Une machine vient d'etre dessinee : il lui faut un porteur d'ombre. */
@@ -64,12 +72,21 @@ public final class ShadowCasters {
         if (current == null) return;
         if (LIVE.isEmpty() && WANTED.isEmpty()) return;
 
-        LIVE.entrySet().removeIf(entry -> entry.getValue().isRemoved());
+        int wanted = WANTED.size();
+        int[] removed = { 0 };
+        LIVE.entrySet().removeIf(entry -> {
+            boolean gone = entry.getValue().isRemoved();
+            if (gone) removed[0]++;
+            return gone;
+        });
 
         for (BlockPos pos : WANTED) {
             EntityShadowCaster known = LIVE.get(pos);
             if (known != null && !known.isRemoved()) continue;
-            if (!EntityShadowCaster.casts(current.getBlockEntity(pos))) continue;
+            if (!EntityShadowCaster.casts(current.getBlockEntity(pos))) {
+                lastSpawn = "pas de machine en " + pos;
+                continue;
+            }
 
             EntityShadowCaster caster = new EntityShadowCaster(ModEntities.SHADOW_CASTER.get(), current);
             // Pose sur le COIN du bloc : le rendu de block entity prend son origine la, et la pose
@@ -77,10 +94,25 @@ public final class ShadowCasters {
             caster.setPos(pos.getX(), pos.getY(), pos.getZ());
             caster.setOldPosAndRot();
             caster.setId(nextId--);
-            if (current.addFreshEntity(caster)) {
+            boolean added = current.addFreshEntity(caster);
+            lastSpawn = added ? "posee en " + pos : "refusee en " + pos;
+            if (added) {
                 LIVE.put(pos, caster);
             }
         }
         WANTED.clear();
+
+        report(wanted, removed[0]);
+    }
+
+    /** Un etat des lieux, deux fois par seconde au plus, tant qu'il y a quelque chose a dire. */
+    private static void report(int wanted, int removed) {
+        long now = System.currentTimeMillis();
+        if (reported && now - lastReport < 2000L) return;
+        if (wanted == 0 && LIVE.isEmpty()) return;
+        reported = true;
+        lastReport = now;
+        LOGGER.info("ombre : {} machine(s) vue(s), {} porteur(s) vivant(s), {} retire(s), {}",
+                wanted, LIVE.size(), removed, lastSpawn);
     }
 }

@@ -75,10 +75,7 @@ public final class EffectLights {
      */
     private static final int LEVEL = 9;
 
-    /** Un lampion tous les un bloc et demi : le chapelet reste CONTIGU d'un tick a l'autre. */
-    private static final double STEP = 1.5d;
-
-    /** Le nombre maximal de lampions pour un seul effet. */
+    /** Le nombre de cases allumees pour un seul effet, mesurees le long du rayon. */
     private static final int MAX_PER_EFFECT = 16;
 
     /** Le nombre maximal de lampions toutes sources confondues. */
@@ -188,10 +185,15 @@ public final class EffectLights {
     /**
      * Pose des lampions le long d'un segment, et une flaque la ou le rayon s'arrete.
      *
-     * <p>Le chapelet suit le rayon a la lettre : c'est lui qui fait la ligne. La flaque, elle,
-     * n'est posee qu'au bout du rayon — un rayon qui passe a dix blocs du sol n'eclaire presque
-     * rien, et c'est la ou il touche que la lumiere doit se voir. Une flaque sous CHAQUE lampion
-     * noyait le sol d'un halo large et brouillait la ligne.
+     * <p>On MARCHE LA GRILLE DU MONDE, deux points par bloc : une case allumee ne depend donc que
+     * du trajet du rayon, et pas du decoupage en echantillons. C'est ce qui regle le clignotement
+     * qui restait : avec des echantillons espaces, le moindre mouvement du rayon decalait TOUTES
+     * les positions d'un coup, donc une case s'eteignait et une autre s'allumait a chaque tick sur
+     * toute la longueur, et le moteur de lumiere refaisait la lumiere de la section a chaque fois.
+     * En marchant les cases, seules celles du bout du rayon changent.
+     *
+     * <p>La flaque, elle, n'est posee qu'au bout du rayon : un rayon qui passe a dix blocs du sol
+     * n'eclaire presque rien, et c'est la ou il touche que la lumiere doit se voir.
      */
     private static void sample(ClientLevel level, double[] from, double[] to, Set<BlockPos> out) {
         double dx = to[0] - from[0];
@@ -200,17 +202,20 @@ public final class EffectLights {
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (distance < 0.01d) return;
 
-        int steps = (int) Math.min(MAX_PER_EFFECT,
-                Math.max(1.0d, Math.ceil(distance / STEP)));
-        for (int i = 0; i <= steps; i++) {
+        int steps = (int) Math.ceil(distance * 2.0d);
+        BlockPos previous = null;
+        int lit = 0;
+        for (int i = 0; i <= steps && lit < MAX_PER_EFFECT; i++) {
             double t = (double) i / steps;
-            double x = from[0] + dx * t;
-            double y = from[1] + dy * t;
-            double z = from[2] + dz * t;
-            BlockPos pos = BlockPos.containing(x, y, z);
+            BlockPos pos = BlockPos.containing(from[0] + dx * t, from[1] + dy * t, from[2] + dz * t);
+            if (pos.equals(previous)) continue;
+            previous = pos;
+
             // On ne remplace JAMAIS un bloc : un rayon qui traverse une paroi ne doit pas
             // y creuser un trou. Seuls les blocs d'air recoivent un lampion.
+            int before = out.size();
             air(level, pos, out);
+            if (out.size() != before) lit++;
         }
         // Et la ou le rayon s'arrete : une lumiere sur une surface, pas seulement dans l'air.
         ground(level, BlockPos.containing(to[0], to[1], to[2]), out);
