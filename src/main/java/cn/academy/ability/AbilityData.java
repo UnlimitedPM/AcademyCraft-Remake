@@ -754,6 +754,10 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * quand meme du surcout derriere elle.
      */
     public boolean perform(float cp, float overloadCost) {
+        // En creatif, les deux ressources sont GRATUITES : le joueur veut pouvoir essayer ses
+        // pouvoirs sans jamais tomber a court de CP ni se retrouver en surcharge. La competence
+        // part donc, et rien n'est preleve — ni la reserve, ni le surcout, ni l'entrainement.
+        if (isCreativeMode()) return true;
         cp = scaled(cp, cn.academy.Config.cpCostScale);
         overloadCost = scaled(overloadCost, cn.academy.Config.overloadCostScale);
         if (controlPoint < cp) return false;
@@ -787,6 +791,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * qu'on a — donc il n'y a rien a refuser, seulement une reserve a vider.
      */
     public void performForced(float cp, float overloadCost) {
+        if (isCreativeMode()) return;
         cp = scaled(cp, cn.academy.Config.cpCostScale);
         overloadCost = scaled(overloadCost, cn.academy.Config.overloadCostScale);
         controlPoint = Math.max(0f, controlPoint - cp);
@@ -984,6 +989,17 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     public void setOwner(net.minecraft.world.entity.player.Player player) {
         owner = player instanceof net.minecraft.server.level.ServerPlayer serverPlayer ? serverPlayer : null;
+    }
+
+    /**
+     * Le proprietaire est-il en creatif ?
+     *
+     * <p>Vrai seulement cote serveur : l'exemplaire du client n'a pas de proprietaire, et c'est
+     * justement lui qui affiche la reserve — voir {@code ClientAbilityData}, qui lit le mode de
+     * son propre joueur pour ne pas rejouer une depense que le serveur ne fait plus.
+     */
+    public boolean isCreativeMode() {
+        return owner != null && owner.isCreative();
     }
 
     /**

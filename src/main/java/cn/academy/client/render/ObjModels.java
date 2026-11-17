@@ -33,13 +33,7 @@ public final class ObjModels {
     private static final Map<ResourceLocation, ObjMesh> CACHE = new HashMap<>();
 
     /** Un type de rendu par texture : le construire a chaque image allouerait pour rien. */
-    private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
-
-    /** Idem, pour les faces qui passent derriere (un recul de profondeur en plus). */
     private static final Map<ResourceLocation, RenderType> BEHIND = new HashMap<>();
-
-    /** Et les types translucides : melange, et la profondeur S'ECRIT. */
-    private static final Map<ResourceLocation, RenderType> TRANSLUCENT = new HashMap<>();
 
     private ObjModels() {}
 
@@ -66,23 +60,26 @@ public final class ObjModels {
     /**
      * Le type de rendu des modeles.
      *
-     * <p>Il est construit a la main pour une seule raison : les faces du lecteur OBJ sont
-     * des TRIANGLES, alors que tous les types d'entite de Minecraft declarent
-     * {@code VertexFormat.Mode.QUADS} — quatre sommets par face. Le lecteur en ecrit trois,
-     * donc la carte graphique recollait la fin d'un triangle avec le debut du suivant : des
-     * faces etirees entre deux morceaux du modele, qui semblent dessinees a l'envers, et
-     * d'autres qui disparaissent. Vecu sur les pales de l'eolienne.
+     * <p>C'est celui de <b>vanilla</b> ({@code entityCutoutNoCull}), et pas un type fabrique a la
+     * main : les shaders (Iris/Oculus) ne dessinent dans leur carte d'ombre que les types qu'ils
+     * connaissent, et un {@code RenderType} maison y est ignore — les pales de l'eolienne et les
+     * developpeurs n'avaient donc aucune ombre.
      *
-     * <p>Le reste reprend ce que fait {@code entityCutoutNoCull} : decoupe, SANS cull,
-     * lumiere du bloc et superposition. Le cull est justement laisse de cote : les modeles
-     * du mod sont doubles paroi par paroi, mais ils sont aussi ouverts par endroits (73
-     * aretes libres dans {@code matrix.obj}), donc cacher le cote qui regarde ailleurs y
-     * ferait des trous — on voyait l'herbe au travers de la base. Le scintillement, lui, se
-     * regle a la source : {@link ObjMesh#withoutCoveredFaces()} retire les faces
-     * recouvertes, et il n'y a plus deux surfaces pour se disputer la profondeur.
+     * <p>Le passage en QUADS est ce qui rend ce type possible : les faces du lecteur OBJ sont des
+     * TRIANGLES, et {@link #draw(List, PoseStack, VertexConsumer, int, int)} les ecrit en quads en
+     * repetant le dernier sommet. Sans cela, la carte graphique recollait la fin d'un triangle avec
+     * le debut du suivant — des faces etirees entre deux morceaux du modele, vecu sur les pales.
+     *
+     * <p>Le cull est laisse de cote : les modeles du mod sont doubles paroi par paroi, mais ils
+     * sont aussi ouverts par endroits (73 aretes libres dans {@code matrix.obj}), donc cacher le
+     * cote qui regarde ailleurs y ferait des trous — on voyait l'herbe au travers de la base. Le
+     * scintillement, lui, se regle a la source : {@link ObjMesh#withoutCoveredFaces()} retire les
+     * faces recouvertes, et il n'y a plus deux surfaces pour se disputer la profondeur.
      */
     public static RenderType type(ResourceLocation texture) {
-        return TYPES.computeIfAbsent(texture, tex -> createType(tex, false));
+        // Le type de VANILLA, et pas un type maison : voir le commentaire ci-dessus. Ce type est
+        // en QUADS, et draw(...) ecrit les triangles OBJ en quads.
+        return RenderType.entityCutoutNoCull(texture);
     }
 
     /**
@@ -94,9 +91,13 @@ public final class ObjModels {
      * et son infime imprecision change avec l'angle de la camera — c'est le scintillement du
      * matrix. Avec ce recul, la face qui recouvre l'emporte TOUJOURS, et la face recouverte
      * reste visible partout ou elle ne l'est pas.
+     *
+     * <p>Le type reste maison pour le recul de profondeur — les types de vanilla n'en ont pas —
+     * mais il est en QUADS, et les faces d'ombre viennent des faces avant, du type de vanilla
+     * ci-dessus : l'ombre ne depend donc pas de celui-ci.
      */
     public static RenderType behind(ResourceLocation texture) {
-        return BEHIND.computeIfAbsent(texture, tex -> createType(tex, true));
+        return BEHIND.computeIfAbsent(texture, ObjModels::createBehind);
     }
 
     /**
@@ -110,39 +111,15 @@ public final class ObjModels {
      * mod on voit un peu le monde exterieur [...] alors que la pour nous non ».
      *
      * <p>Sans cull, comme l'original : le modele est une coque ouverte par endroits, et cacher le
-     * cote qui regarde ailleurs y ferait des trous.
+     * cote qui regarde ailleurs y ferait des trous. {@code entityTranslucent} est exactement ce
+     * contrat, et c'est un type de vanilla — donc un type que les shaders savent ombrer.
      */
     public static RenderType translucent(ResourceLocation texture) {
-        return TRANSLUCENT.computeIfAbsent(texture, tex -> {
-            RenderType.CompositeState states = RenderType.CompositeState.builder()
-                    .setShaderState(new RenderStateShard.ShaderStateShard(
-                            GameRenderer::getRendertypeEntityTranslucentShader))
-                    .setTextureState(new RenderStateShard.TextureStateShard(tex, false, false))
-                    .setTransparencyState(new RenderStateShard.TransparencyStateShard(
-                            "academy_obj_translucent",
-                            () -> {
-                                RenderSystem.enableBlend();
-                                RenderSystem.blendFunc(
-                                        com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-                                        com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
-                            },
-                            () -> {
-                                RenderSystem.disableBlend();
-                                RenderSystem.defaultBlendFunc();
-                            }))
-                    .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, true))
-                    .setCullState(new RenderStateShard.CullStateShard(false))
-                    .setLightmapState(new RenderStateShard.LightmapStateShard(true))
-                    .setOverlayState(new RenderStateShard.OverlayStateShard(true))
-                    .createCompositeState(true);
-
-            return RenderType.create("academy_obj_translucent", DefaultVertexFormat.NEW_ENTITY,
-                    VertexFormat.Mode.TRIANGLES, 256, false, false, states);
-        });
+        return RenderType.entityTranslucent(texture);
     }
 
-    private static RenderType createType(ResourceLocation texture, boolean behind) {
-        RenderType.CompositeState.CompositeStateBuilder states = RenderType.CompositeState.builder()
+    private static RenderType createBehind(ResourceLocation texture) {
+        RenderType.CompositeState states = RenderType.CompositeState.builder()
                 .setShaderState(new RenderStateShard.ShaderStateShard(
                         GameRenderer::getRendertypeEntityCutoutNoCullShader))
                 .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
@@ -150,20 +127,19 @@ public final class ObjModels {
                         () -> RenderSystem.disableBlend(), () -> { }))
                 .setCullState(new RenderStateShard.CullStateShard(false))
                 .setLightmapState(new RenderStateShard.LightmapStateShard(true))
-                .setOverlayState(new RenderStateShard.OverlayStateShard(true));
-        if (behind) {
-            states = states.setLayeringState(new RenderStateShard.LayeringStateShard("academy_obj_behind",
-                    () -> { RenderSystem.polygonOffset(1.0f, 1.0f); RenderSystem.enablePolygonOffset(); },
-                    () -> { RenderSystem.polygonOffset(0.0f, 0.0f); RenderSystem.disablePolygonOffset(); }));
-        }
+                .setOverlayState(new RenderStateShard.OverlayStateShard(true))
+                .setLayeringState(new RenderStateShard.LayeringStateShard("academy_obj_behind",
+                        () -> { RenderSystem.polygonOffset(1.0f, 1.0f); RenderSystem.enablePolygonOffset(); },
+                        () -> { RenderSystem.polygonOffset(0.0f, 0.0f); RenderSystem.disablePolygonOffset(); }))
+                .createCompositeState(true);
 
-        return RenderType.create(behind ? "academy_obj_behind" : "academy_obj",
+        return RenderType.create("academy_obj_behind",
                 DefaultVertexFormat.NEW_ENTITY,
-                VertexFormat.Mode.TRIANGLES,
+                VertexFormat.Mode.QUADS,
                 256,
                 false,
                 true,
-                states.createCompositeState(true));
+                states);
     }
 
     /**
@@ -231,7 +207,12 @@ public final class ObjModels {
         Matrix4f matrix = pose.last().pose();
         PoseStack.Pose frame = pose.last();
         for (ObjMesh.Face face : faces) {
-            for (ObjMesh.Vertex vertex : face.vertices()) {
+            // QUATRE sommets par triangle, le dernier repete : les faces OBJ sont des triangles,
+            // et les types de rendu de vanilla sont en QUADS (c'est ce qui leur permet d'etre
+                // ombres par les shaders). Le quad degenere dessine exactement le meme triangle, et
+            // il n'y a plus de faces etirees entre deux morceaux du modele.
+            for (int i = 0; i < 4; i++) {
+                ObjMesh.Vertex vertex = face.vertices().get(Math.min(i, 2));
                 out.vertex(matrix, vertex.x(), vertex.y(), vertex.z())
                         .color(1f, 1f, 1f, 1f)
                         .uv(vertex.u(), 1f - vertex.v())

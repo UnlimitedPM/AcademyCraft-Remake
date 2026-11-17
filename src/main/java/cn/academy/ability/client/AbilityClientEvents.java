@@ -557,7 +557,8 @@ public class AbilityClientEvents {
             // lui-meme, et il ne peut pas s'y tromper — une main est une main. Sans lui, un appui
             // les mains vides ouvrait le maintien pour rien, et le joueur en voyait le debut
             // scintiller avant que le serveur ne le referme. Voir Skill#isHandValid.
-            if (HoldRefusal.refusesStart(skill, ClientAbilityData.get(), handOk(skill))) {
+            if (HoldRefusal.refusesStart(skill, ClientAbilityData.get(), handOk(skill),
+                    minecraftPlayer() != null && minecraftPlayer().isCreative())) {
                 send(category, skill, Phase.PRESS);
                 return;
             }

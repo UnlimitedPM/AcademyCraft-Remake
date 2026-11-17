@@ -52,7 +52,16 @@ public class ClientAbilityData {
         // Le surcout monte par le meme chemin, et pour la meme raison : les ailes de tempete en
         // ajoutent a chaque tick de vol, et le joueur voyait sa barre monter « d'un certain nombre
         // a chaque fois plutot que d'avoir un beau defilement comme pour les CP ».
-        if (holding && (upkeep > 0f || upkeepOverload > 0f)) {
+        // En creatif, le serveur ne debite plus rien : rejouer l'entretien ici ferait descendre la
+        // barre entre deux synchronisations, puis remonter d'un coup au paquet suivant. Le joueur
+        // veut justement voir sa reserve intacte tant qu'il est en creatif.
+        //
+        // La garde sur `Minecraft.getInstance()` n'est pas de la prudence gratuite : ces donnees
+        // se relisent aussi dans les tests unitaires, ou il n'y a aucun jeu en marche.
+        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
+        boolean creative = minecraft != null && minecraft.player != null
+                && minecraft.player.isCreative();
+        if (holding && !creative && (upkeep > 0f || upkeepOverload > 0f)) {
             DATA.replayUpkeep(upkeep, upkeepOverload);
         }
         if (DATA.getControlPoint() < DATA.getMaxControlPoint()) {

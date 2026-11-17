@@ -154,6 +154,10 @@ public final class EnergyItems {
      * c'est fait de sorte qu'on ne voie pas de barre de recharge ».
      */
     public static boolean hasBar(ItemStack stack) {
+        // Une pile de plusieurs unites (les recettes en donnent 2 ou 4) ne montre pas la barre :
+        // elle recouvrait le nombre de la pile dans JEI, qui se dessine au meme endroit. L'objet
+        // ne s'empile pas en jeu, donc c'est la seule situation ou cela arrive.
+        if (stack.getCount() > 1) return false;
         return supports(stack) && hasBar(getEnergy(stack), maxEnergy(stack));
     }
 

@@ -76,6 +76,11 @@ public class AbilityEvents {
             data.tickCharges();
             // Le surcout redescend apres son delai, comme dans CPData.tick.
             data.tickOverload();
+            // En creatif, le surcout n'est plus une ressource : on l'efface pour que le HUD ne
+            // reste pas bloque sur une barre rouge et que plus rien ne ferme les maintiens.
+            if (data.isCreativeMode() && (data.getOverload() > 0f || data.isOverloadRecovering())) {
+                data.clearOverload();
+            }
             // Un pouvoir protege de la chute jusqu'a ce que le joueur se soit pose — et non
             // jusqu'au premier bloc touche. Un atterrissage a cheval sur deux blocs, ou un
             // glissement de quelques ticks, se payait sinon : le joueur a vu « parfois je prends

@@ -211,6 +211,9 @@ public class ActivateSkillPacket {
         // mais je n'en ai plus besoin puisqu'on peut deja tout voir nativement avec le menu F4 ».
         if (!data.isActivated()) return false;
         if (data.isInterfered()) return false;
+        // En creatif, le surcout ne bloque plus rien : le joueur veut essayer ses pouvoirs sans
+        // jamais etre arrete par une barre qu'il ne remplit plus. Voir AbilityData.perform.
+        if (data.isCreativeMode()) return true;
         // Le verrou de l'original vaut pour toute la descente, et pas seulement pour le delai
         // pendant lequel le temoin affiche la surcharge : sinon le joueur relancerait une
         // competence au milieu de sa propre recuperation.

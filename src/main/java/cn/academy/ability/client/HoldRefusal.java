@@ -48,9 +48,22 @@ public final class HoldRefusal {
      *               quand elle ne demande rien.
      */
     public static boolean refusesStart(Skill skill, AbilityData data, boolean handOk) {
+        return refusesStart(skill, data, handOk, false);
+    }
+
+    /**
+     * La meme chose, avec le mode creatif.
+     *
+     * <p>En creatif, la surcharge et la reserve ne refusent plus rien : c'est exactement ce que
+     * {@code AbilityData.perform} ne facture plus. Les autres refus — aptitude eteinte,
+     * brouillage, recharge, main vide — restent, parce qu'ils ne parlent pas d'une ressource.
+     */
+    public static boolean refusesStart(Skill skill, AbilityData data, boolean handOk,
+                                       boolean creative) {
         if (!data.isActivated()) return true;
         if (data.isInterfered()) return true;
         if (data.getCooldown(skill) > 0) return true;
+        if (creative) return !handOk;
         if (data.isOverloadRecovering()) return true;
         if (data.getControlPoint() < skill.getCpCost(data)) return true;
         return !handOk;

@@ -10,8 +10,6 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 
 public class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlockEntity> {
     // CORRECTION : Chemin exact de ta texture
@@ -32,24 +30,36 @@ public class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlockEnti
         poseStack.mulPose(Axis.XP.rotationDegrees(entity.rotation));
 
         VertexConsumer vertexConsumer = buffer.getBuffer(RenderType.entityCutoutNoCull(CAT_TEXTURE));
-        Matrix4f matrix = poseStack.last().pose();
+        PoseStack.Pose frame = poseStack.last();
+
+        // La normale du chat reste VERTICALE dans le monde, quelle que soit la direction du
+        // regard et quel que soit l'angle du panneau. Le port la laissait en (0, 1, 0) dans le
+        // repere de la pose, et le shader la faisait tourner avec le lacet de la camera : le chat
+        // s'assombrissait donc rien qu'en regardant vers le sud ou l'est. Comme le panneau tourne
+        // de `entity.rotation` autour de X, on lui donne la normale qui, une fois cette rotation
+        // appliquee, redevient (0, 1, 0).
+        double radians = Math.toRadians(entity.rotation);
+        float nx = 0f;
+        float ny = (float) Math.cos(radians);
+        float nz = (float) -Math.sin(radians);
 
         float s = 0.4f;
-        drawVertex(vertexConsumer, matrix, -s, -s, 0, 0, 1, combinedLight);
-        drawVertex(vertexConsumer, matrix,  s, -s, 0, 1, 1, combinedLight);
-        drawVertex(vertexConsumer, matrix,  s,  s, 0, 1, 0, combinedLight);
-        drawVertex(vertexConsumer, matrix, -s,  s, 0, 0, 0, combinedLight);
+        drawVertex(vertexConsumer, frame, -s, -s, 0, 0, 1, combinedLight, nx, ny, nz);
+        drawVertex(vertexConsumer, frame,  s, -s, 0, 1, 1, combinedLight, nx, ny, nz);
+        drawVertex(vertexConsumer, frame,  s,  s, 0, 1, 0, combinedLight, nx, ny, nz);
+        drawVertex(vertexConsumer, frame, -s,  s, 0, 0, 0, combinedLight, nx, ny, nz);
 
         poseStack.popPose();
     }
 
-    private void drawVertex(VertexConsumer builder, Matrix4f matrix, float x, float y, float z, float u, float v, int light) {
-        builder.vertex(matrix, x, y, z)
+    private void drawVertex(VertexConsumer builder, PoseStack.Pose frame, float x, float y, float z,
+                            float u, float v, int light, float nx, float ny, float nz) {
+        builder.vertex(frame.pose(), x, y, z)
                 .color(255, 255, 255, 255)
                 .uv(u, v)
                 .overlayCoords(OverlayTexture.NO_OVERLAY)
                 .uv2(light)
-                .normal(0, 1, 0)
+                .normal(frame.normal(), nx, ny, nz)
                 .endVertex();
     }
 }

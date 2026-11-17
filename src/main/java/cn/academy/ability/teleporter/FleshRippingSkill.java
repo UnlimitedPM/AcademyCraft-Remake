@@ -141,7 +141,7 @@ public class FleshRippingSkill extends Skill {
      */
     @Override
     public boolean onChargeTick(Player player, AbilityData data, int chargeTicks) {
-        return data.getControlPoint() >= cpCost(data);
+        return data.isCreativeMode() || data.getControlPoint() >= cpCost(data);
     }
 
     @Override

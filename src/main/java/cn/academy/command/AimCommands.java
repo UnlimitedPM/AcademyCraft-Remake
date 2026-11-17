@@ -292,9 +292,6 @@ public final class AimCommands {
                 }
                 sync(player, data);
                 send(source, "ac.command.successful");
-                if (!dropped.isEmpty()) {
-                    send(source, "ac.command.aim.power_dropped", names(dropped));
-                }
             }
 
             case "learn" -> {
@@ -499,17 +496,6 @@ public final class AimCommands {
 
     private static void send(CommandSourceStack source, String key, Object... args) {
         source.sendSuccess(() -> Component.translatable(key, args), false);
-    }
-
-    private static String names(List<Category> categories) {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (Category category : categories) {
-            if (!first) sb.append(", ");
-            sb.append(category.getName());
-            first = false;
-        }
-        return sb.toString();
     }
 
     /** Le pourcentage de `/aim exp <competence>`, arrondi comme l'original (0 a 100). */
