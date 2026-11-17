@@ -48,8 +48,8 @@ import java.util.Set;
  *   <li>les arcs proches du joueur (les essaims de la charge et du renfort) n'allument plus un
  *       lampion par arc et par position : ils allument un <b>anneau</b> de lampions autour du
  *       joueur ;</li>
- *   <li>chaque rayon projette aussi un lampion au sol, sous lui, pour que la lumiere se voie sur
- *       une surface, et pas seulement dans l'air.</li>
+ *   <li>chaque rayon pose une flaque au sol <b>la ou il s'arrete</b>, pour que la lumiere se voie
+ *       sur une surface, et pas seulement dans l'air.</li>
  * </ul>
  *
  * <h2>La lumiere n'ecrase pas le joueur</h2>
@@ -64,20 +64,35 @@ import java.util.Set;
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class EffectLights {
 
-    /** Le niveau d'un lampion : le maximum, comme une torche de lumiere. */
-    private static final int LEVEL = 15;
+    /**
+     * Le niveau d'un lampion.
+     *
+     * <p>Neuf, et pas quinze. La lumiere d'un bloc s'eparpille sur autant de blocs que son
+     * niveau : a quinze, chaque lampion de rayon allumait une sphere de quinze blocs, les spheres
+     * se fondaient les unes dans les autres et le rayon devenait un halo diffus qui ne se lisait
+     * pas comme une ligne (le joueur, le 17/11 : « trop diffuse, elle ne fait pas une ligne
+     * droite »). A neuf, le long du rayon reste nettement plus clair que les cotes.
+     */
+    private static final int LEVEL = 9;
 
-    /** Un lampion tous les quatre blocs : assez pour que la lumiere se lise. */
-    private static final double STEP = 4.0d;
+    /** Un lampion tous les deux blocs : un chapelet serre se lit comme une ligne. */
+    private static final double STEP = 2.0d;
 
     /** Le nombre maximal de lampions pour un seul effet. */
-    private static final int MAX_PER_EFFECT = 8;
+    private static final int MAX_PER_EFFECT = 12;
 
     /** Le nombre maximal de lampions toutes sources confondues. */
     private static final int MAX_TOTAL = 48;
 
-    /** Combien de ticks un lampion survit a sa derniere demande. */
-    private static final int LINGER_TICKS = 8;
+    /**
+     * Combien de ticks un lampion survit a sa derniere demande.
+     *
+     * <p>Trois : juste de quoi couvrir le saut des arcs, qui changent de place toutes les trois
+     * ticks. Plus long, et les lampions d'un rayon qu'on vient de tourner restaient allumes
+     * derriere le joueur (le joueur, le 17/11 : « parfois il y a de la lumiere qui se genere
+     * derriere moi »).
+     */
+    private static final int LINGER_TICKS = 3;
 
     /** La distance sous laquelle un arc fait partie de l'aura du joueur, et non d'un trajet. */
     private static final double AURA_RADIUS = 6.0d;
@@ -168,7 +183,14 @@ public final class EffectLights {
         }
     }
 
-    /** Pose des lampions le long d'un segment, dans l'air et sur le sol en dessous. */
+    /**
+     * Pose des lampions le long d'un segment, et une flaque la ou le rayon s'arrete.
+     *
+     * <p>Le chapelet suit le rayon a la lettre : c'est lui qui fait la ligne. La flaque, elle,
+     * n'est posee qu'au bout du rayon — un rayon qui passe a dix blocs du sol n'eclaire presque
+     * rien, et c'est la ou il touche que la lumiere doit se voir. Une flaque sous CHAQUE lampion
+     * noyait le sol d'un halo large et brouillait la ligne.
+     */
     private static void sample(ClientLevel level, double[] from, double[] to, Set<BlockPos> out) {
         double dx = to[0] - from[0];
         double dy = to[1] - from[1];
@@ -187,9 +209,9 @@ public final class EffectLights {
             // On ne remplace JAMAIS un bloc : un rayon qui traverse une paroi ne doit pas
             // y creuser un trou. Seuls les blocs d'air recoivent un lampion.
             air(level, pos, out);
-            // Et le sol en dessous : la lumiere se voit sur une surface, pas au milieu du vide.
-            ground(level, pos, out);
         }
+        // Et la ou le rayon s'arrete : une lumiere sur une surface, pas seulement dans l'air.
+        ground(level, BlockPos.containing(to[0], to[1], to[2]), out);
     }
 
     /**

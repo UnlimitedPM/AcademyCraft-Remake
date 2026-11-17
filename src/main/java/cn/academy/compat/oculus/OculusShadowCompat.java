@@ -71,7 +71,6 @@ public final class OculusShadowCompat {
 
     /** Le drapeau ACTIVE d'Oculus : vrai pendant la construction de la carte d'ombre. */
     private static Field activeField;
-    private static boolean activeResolved;
 
     /** Le proxy installe a la place de la fonction d'Oculus. */
     private static Object proxy;
@@ -81,6 +80,12 @@ public final class OculusShadowCompat {
 
     /** Ce qui a deja ete dit au journal : on ne le repete pas a chaque seconde. */
     private static boolean reported;
+
+    /** Le passage d'ombre d'Oculus est-il deja passe par le crochet ? (dit une fois). */
+    private static boolean passReported;
+
+    /** Le dessin a-t-il deja echoue ? (dit une fois, avec la cause). */
+    private static boolean drawReported;
 
     private OculusShadowCompat() {}
 
@@ -136,7 +141,7 @@ public final class OculusShadowCompat {
                     ? type.getClassLoader() : OculusShadowCompat.class.getClassLoader();
             Object wrapped = Proxy.newProxyInstance(loader, new Class<?>[] { type },
                     new ShadowFunction(current));
-            function.set(null, wrapped);
+            write(state, function, wrapped);
             proxy = wrapped;
             if (!reported) {
                 reported = true;
@@ -157,15 +162,42 @@ public final class OculusShadowCompat {
         }
     }
 
+    /**
+     * Pose la fonction d'ombre, par la porte publique quand elle existe.
+     *
+     * <p>Oculus expose {@code setBlockEntityRenderFunction} : c'est ce qu'Embeddium appelle pour
+     * prendre la main, et c'est donc la voie prevue. Ecrire le champ prive marche aussi, mais
+     * echoue si la version d'Oculus le declare {@code final} — d'ou cet ordre.
+     */
+    private static void write(Class<?> state, Field function, Object value) throws Exception {
+        for (Method method : state.getMethods()) {
+            if (!method.getName().equals("setBlockEntityRenderFunction")) continue;
+            if (method.getParameterCount() != 1) continue;
+            if (!method.getParameterTypes()[0].isInstance(value)) continue;
+            method.setAccessible(true);
+            method.invoke(null, value);
+            return;
+        }
+        function.set(null, value);
+    }
+
     /** Ce qui a echoue, dit une seule fois : un journal par seconde ne sert a personne. */
     private static void report(Throwable error) {
         if (reported) return;
         reported = true;
         if (error == null) {
-            LOGGER.debug("Oculus absent (ou d'une forme inconnue) : pas de carte d'ombre a alimenter.");
+            LOGGER.info("Oculus absent, ou d'une forme inconnue : les machines ne passent pas par "
+                    + "une carte d'ombre (essaye : {}, {}).", STATE_NAMES[0], STATE_NAMES[1]);
         } else {
             LOGGER.warn("Oculus : le crochet de la carte d'ombre a echoue.", error);
         }
+    }
+
+    /** Le dessin dans la carte d'ombre a echoue : dit une fois, avec la cause. */
+    private static void reportDraw(Throwable error) {
+        if (drawReported) return;
+        drawReported = true;
+        LOGGER.warn("Oculus : le dessin des machines dans la carte d'ombre a echoue.", error);
     }
 
     /**
@@ -188,8 +220,8 @@ public final class OculusShadowCompat {
             if (method.getName().equals("renderBlockEntities")) {
                 try {
                     draw(args);
-                } catch (Throwable ignored) {
-                    // Ne jamais empecher Oculus de dessiner ses propres ombres.
+                } catch (Throwable error) {
+                    reportDraw(error);
                 }
                 return method.invoke(delegate, args);
             }
@@ -218,6 +250,12 @@ public final class OculusShadowCompat {
                 }
             }
             if (pose == null || buffers == null) return;
+
+            if (!passReported) {
+                passReported = true;
+                LOGGER.info("Oculus : le passage d'ombre appelle le crochet, {} machine(s) suivie(s).",
+                        TRACKED.size());
+            }
 
             Minecraft minecraft = Minecraft.getInstance();
             ClientLevel level = minecraft.level;
@@ -269,8 +307,9 @@ public final class OculusShadowCompat {
      * exemple, est translucide a l'ecran mais doit ecrire la profondeur dans la carte d'ombre.
      */
     public static boolean inShadowPass() {
-        if (!activeResolved) {
-            activeResolved = true;
+        if (activeField == null) {
+            // Tant que le champ n'est pas trouve, on reessaie : la premiere image peut passer
+            // avant qu'Oculus ne soit visible depuis ce mod.
             for (String name : SHADOW_RENDERERS) {
                 try {
                     Class<?> type = load(name);
