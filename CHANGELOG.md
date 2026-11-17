@@ -6,24 +6,24 @@
 
 The first build made with shaders on. Everything below was found in play with ComplementaryUnbound.
 
-- **Shadows under shaders.** The wind turbine blades and both ability developers cast shadows again. Their models now go through vanilla entity render types — cutout for the blades, translucent for the developers — whose OBJ triangles are written as quads. Iris/Oculus only draw known render types into the shadow map, and the hand-made type was silently skipped.
+- **Shadows under shaders.** The wind turbine blades and both ability developers cast shadows again. Oculus 1.20.1 never fills the block-entity list its shadow pass walks, and the Sodium path bypasses that list entirely: the mod now wraps Oculus's own shadow function and draws its machines into the shadow map on both paths. The developers are drawn solid only in that pass.
 - **The cat is lit the same way from every direction.** Toast and Cat's billboard normal is kept vertical in world space, so the shader no longer darkens it with the camera's yaw — it used to go dark when looking south or east.
 - **No yellow chat line when changing power.** The dropped-power notice is gone from the power switch.
 - **JEI shows the crafted amount.** The energy unit's battery bar is hidden on a multi-unit recipe output, so the `2` or `4` in the output slot is readable again.
 - **Creative is free.** Using a skill in creative spends no control points and adds no overload; a hold no longer ends when a bar would have emptied, and the client does not replay a cost the server no longer charges. Cooldowns still apply.
-- **Lasers and lightning light the world.** Invisible light blocks follow every live meltdowner ray, mining ray, railgun beam and electromaster arc, then vanish with the effect. The light is white; shaders see it like any block light.
+- **Lasers and lightning light the world, steadily.** Invisible light blocks follow every live meltdowner ray, mining ray, railgun beam and electromaster arc. Beams also light the ground below them, and a near swarm keeps a fixed aura around the player instead of one light per random arc; each light survives a few ticks after the effect moves, so nothing flickers. The light is white; shaders see it like any block light.
 - **Tests**: 971 unit tests and 182 in-game tests, plus the offline asset audit — all green.
 
 ### Français
 
 Première version faite avec des shaders. Tout ce qui suit a été trouvé en jouant avec ComplementaryUnbound.
 
-- **Des ombres sous shader.** Les pales de l'éolienne et les deux développeurs d'aptitude portent de nouveau une ombre. Leurs modèles passent maintenant par les types de rendu d'entité de vanilla — découpe pour les pales, translucide pour les développeurs — dont les triangles OBJ sont écrits en quads. Iris/Oculus ne dessinent dans la carte d'ombre que les types qu'ils connaissent, et le type maison était ignoré en silence.
+- **Des ombres sous shader.** Les pales de l'éolienne et les deux développeurs d'aptitude portent de nouveau une ombre. Oculus 1.20.1 ne remplit jamais la liste de block entities que son passage d'ombre parcourt, et le chemin Sodium contourne complètement cette liste : le mod enveloppe maintenant la fonction d'ombre d'Oculus et dessine ses machines dans la carte d'ombre sur les deux chemins. Les développeurs y sont dessinés en solide, uniquement pendant ce passage.
 - **Le chat est éclairé pareil dans toutes les directions.** La normale du panneau de Toast and Cat reste verticale dans le monde : le shader ne l'assombrit plus avec le lacet de la caméra — il devenait sombre en regardant vers le sud ou l'est.
 - **Plus de ligne jaune dans le chat au changement de pouvoir.** L'annonce du pouvoir abandonné a été retirée du changement de pouvoir.
 - **JEI montre la quantité fabriquée.** La barre de batterie de l'unité d'énergie disparaît sur une sortie de recette à plusieurs unités : le `2` ou le `4` de l'emplacement de sortie est de nouveau lisible.
 - **Le créatif est gratuit.** Utiliser une compétence en créatif ne coûte aucun point de contrôle et n'ajoute aucune surcharge ; un maintien ne s'arrête plus parce qu'une barre se serait vidée, et le client ne rejoue plus un coût que le serveur ne facture plus. Les recharges restent.
-- **Les lasers et les éclairs éclairent le monde.** Des blocs de lumière invisibles suivent chaque rayon du meltdowner, chaque rayon minier, le faisceau du railgun et chaque arc de l'electromaster, puis disparaissent avec l'effet. La lumière est blanche ; les shaders la voient comme n'importe quelle lumière de bloc.
+- **Les lasers et les éclairs éclairent le monde, sans clignoter.** Des blocs de lumière invisibles suivent chaque rayon du meltdowner, chaque rayon minier, le faisceau du railgun et chaque arc de l'electromaster. Les rayons éclairent aussi le sol sous eux, et un essaim proche garde une aura fixe autour du joueur au lieu d'un lampion par arc aléatoire ; chaque lampion survit quelques ticks après le déplacement de l'effet, donc plus de clignotement. La lumière est blanche ; les shaders la voient comme n'importe quelle lumière de bloc.
 - **Tests** : 971 tests unitaires et 182 tests en jeu, plus l'audit hors ligne des ressources — tout est vert.
 
 ## 1.0.3-beta - le bloc passe derriere la bete / the block goes past the creature
