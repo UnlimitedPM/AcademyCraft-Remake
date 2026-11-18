@@ -94,7 +94,14 @@ public final class ShadowCasters {
             caster.setPos(pos.getX(), pos.getY(), pos.getZ());
             caster.setOldPosAndRot();
             caster.setId(nextId--);
-            boolean added = current.addFreshEntity(caster);
+
+            // PAS addFreshEntity : chez le client, cette methode n'est que le defaut de
+            // LevelWriter, qui renvoie false sans rien ajouter (le joueur le lisait dans le
+            // journal : « refusee en ... », a chaque tick). La porte du client, c'est
+            // putNonPlayerEntity — celle que le jeu emprunte lui-meme quand il recoit une entite.
+            current.putNonPlayerEntity(caster.getId(), caster);
+
+            boolean added = !caster.isRemoved() && current.getEntity(caster.getId()) == caster;
             lastSpawn = added ? "posee en " + pos : "refusee en " + pos;
             if (added) {
                 LIVE.put(pos, caster);
