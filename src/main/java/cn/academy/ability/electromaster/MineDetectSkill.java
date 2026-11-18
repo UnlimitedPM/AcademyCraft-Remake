@@ -207,7 +207,7 @@ public class MineDetectSkill extends Skill {
      */
     @Override
     public boolean canStart(Player player, AbilityData data) {
-        return data.isCreativeMode() || data.getControlPoint() >= tickCost(data, 1);
+        return data.isFreeMode() || data.getControlPoint() >= tickCost(data, 1);
     }
 
     /**

@@ -78,7 +78,7 @@ public class AbilityEvents {
             data.tickOverload();
             // En creatif, le surcout n'est plus une ressource : on l'efface pour que le HUD ne
             // reste pas bloque sur une barre rouge et que plus rien ne ferme les maintiens.
-            if (data.isCreativeMode() && (data.getOverload() > 0f || data.isOverloadRecovering())) {
+            if (data.isFreeMode() && (data.getOverload() > 0f || data.isOverloadRecovering())) {
                 data.clearOverload();
             }
             // Un pouvoir protege de la chute jusqu'a ce que le joueur se soit pose — et non

@@ -558,7 +558,8 @@ public class AbilityClientEvents {
             // les mains vides ouvrait le maintien pour rien, et le joueur en voyait le debut
             // scintiller avant que le serveur ne le referme. Voir Skill#isHandValid.
             if (HoldRefusal.refusesStart(skill, ClientAbilityData.get(), handOk(skill),
-                    minecraftPlayer() != null && minecraftPlayer().isCreative())) {
+                    minecraftPlayer() != null
+                            && (minecraftPlayer().isCreative() || minecraftPlayer().isSpectator()))) {
                 send(category, skill, Phase.PRESS);
                 return;
             }

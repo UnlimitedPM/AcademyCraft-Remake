@@ -757,7 +757,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // En creatif, les deux ressources sont GRATUITES : le joueur veut pouvoir essayer ses
         // pouvoirs sans jamais tomber a court de CP ni se retrouver en surcharge. La competence
         // part donc, et rien n'est preleve — ni la reserve, ni le surcout, ni l'entrainement.
-        if (isCreativeMode()) return true;
+        if (isFreeMode()) return true;
         cp = scaled(cp, cn.academy.Config.cpCostScale);
         overloadCost = scaled(overloadCost, cn.academy.Config.overloadCostScale);
         if (controlPoint < cp) return false;
@@ -791,7 +791,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      * qu'on a — donc il n'y a rien a refuser, seulement une reserve a vider.
      */
     public void performForced(float cp, float overloadCost) {
-        if (isCreativeMode()) return;
+        if (isFreeMode()) return;
         cp = scaled(cp, cn.academy.Config.cpCostScale);
         overloadCost = scaled(overloadCost, cn.academy.Config.overloadCostScale);
         controlPoint = Math.max(0f, controlPoint - cp);
@@ -992,14 +992,18 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
     }
 
     /**
-     * Le proprietaire est-il en creatif ?
+     * Le proprietaire joue-t-il SANS payer : creatif ou spectateur ?
      *
      * <p>Vrai seulement cote serveur : l'exemplaire du client n'a pas de proprietaire, et c'est
      * justement lui qui affiche la reserve — voir {@code ClientAbilityData}, qui lit le mode de
      * son propre joueur pour ne pas rejouer une depense que le serveur ne fait plus.
+     *
+     * <p>Le spectateur compte comme le creatif : il ne peut rien casser ni rien poser, donc lui
+     * facturer une reserve qu'il ne peut pas reconstituer par le jeu n'aurait aucun sens — et le
+     * joueur s'en sert pour observer ses machines pendant les essais (demande du 18/11).
      */
-    public boolean isCreativeMode() {
-        return owner != null && owner.isCreative();
+    public boolean isFreeMode() {
+        return owner != null && (owner.isCreative() || owner.isSpectator());
     }
 
     /**

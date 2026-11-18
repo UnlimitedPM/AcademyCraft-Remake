@@ -59,9 +59,9 @@ public class ClientAbilityData {
         // La garde sur `Minecraft.getInstance()` n'est pas de la prudence gratuite : ces donnees
         // se relisent aussi dans les tests unitaires, ou il n'y a aucun jeu en marche.
         net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        boolean creative = minecraft != null && minecraft.player != null
-                && minecraft.player.isCreative();
-        if (holding && !creative && (upkeep > 0f || upkeepOverload > 0f)) {
+        boolean free = minecraft != null && minecraft.player != null
+                && (minecraft.player.isCreative() || minecraft.player.isSpectator());
+        if (holding && !free && (upkeep > 0f || upkeepOverload > 0f)) {
             DATA.replayUpkeep(upkeep, upkeepOverload);
         }
         if (DATA.getControlPoint() < DATA.getMaxControlPoint()) {

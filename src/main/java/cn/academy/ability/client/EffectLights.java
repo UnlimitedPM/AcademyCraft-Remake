@@ -73,7 +73,7 @@ public final class EffectLights {
      * pas comme une ligne (le joueur, le 17/11 : « trop diffuse, elle ne fait pas une ligne
      * droite »). A neuf, le long du rayon reste nettement plus clair que les cotes.
      */
-    private static final int LEVEL = 9;
+    private static final int LEVEL = 12;
 
     /** Le nombre de cases allumees pour un seul effet, mesurees le long du rayon. */
     private static final int MAX_PER_EFFECT = 16;
@@ -90,6 +90,18 @@ public final class EffectLights {
      * laissaient les lampions d'un rayon qu'on venait de tourner allumes derriere soi.
      */
     private static final int LINGER_TICKS = 4;
+
+    /**
+     * Le sursis de l'anneau d'aura, bien plus long.
+     *
+     * <p>C'est lui qui clignotait le plus : les six lampions de l'anneau s'allument et s'eteignent
+     * ENSEMBLE, des que le dernier arc sort du rayon d'aura — un clignotement large, tres visible.
+     * Un sursis de dix ticks couvre largement les va-et-vient d'un essaim.
+     */
+    private static final int AURA_LINGER_TICKS = 10;
+
+    /** Le nombre de blocs verses vers le haut pour trouver la surface d'une eau. */
+    private static final int SURFACE_SCAN = 40;
 
     /** La distance sous laquelle un arc fait partie de l'aura du joueur, et non d'un trajet. */
     private static final double AURA_RADIUS = 6.0d;
@@ -134,6 +146,7 @@ public final class EffectLights {
         if (minecraft.player == null || minecraft.isPaused()) return;
 
         Set<BlockPos> wanted = new LinkedHashSet<>();
+        Set<BlockPos> auraLamps = new LinkedHashSet<>();
 
         // Les yeux du joueur, avant tout : c'est autour d'eux qu'on ne pose rien.
         Vec3 eyes = minecraft.player.getEyePosition();
@@ -159,10 +172,10 @@ public final class EffectLights {
         if (aura) {
             // L'essaim entoure le joueur : un anneau autour de lui, et surtout pas un lampion
             // sur lui — colles a ses yeux, ils faisaient de son visage une torche.
-            ring(level, eyes, wanted);
+            ring(level, eyes, auraLamps);
         }
 
-        apply(level, wanted);
+        apply(level, wanted, auraLamps);
     }
 
     /**
@@ -238,37 +251,71 @@ public final class EffectLights {
         air(level, cursor.above(), out);
     }
 
-    /** Ajoute ce bloc s'il est de l'air, et si le budget n'est pas epuise. */
+    /**
+     * Ajoute ce bloc s'il est de l'air, et si le budget n'est pas epuise.
+     *
+     * <p>Sous l'eau, il n'y a pas d'air a allumer — et poser un bloc de lumiere a la place d'un
+     * bloc d'eau laisserait un TROU visible dans la mer. On eclaire donc la SURFACE au-dessus du
+     * rayon : la lumiere y entre et descend ensuite dans l'eau, qui l'affaiblit mais ne l'arrete
+     * pas. C'etait la demande du joueur, « sous l'eau ca ne fait juste aucune lumiere ».
+     */
     private static void air(ClientLevel level, BlockPos pos, Set<BlockPos> out) {
         if (out.size() >= MAX_TOTAL) return;
-        // Rien tout contre les yeux. La lumiere d'un bloc eclaire aussi le modele du joueur :
-        // deux lampions a quinze dans son torse faisaient de son visage une torche sous shader.
+        BlockState state = level.getBlockState(pos);
+        if (state.isAir()) {
+            if (!nearEyes(pos)) out.add(pos.immutable());
+            return;
+        }
+        if (state.getFluidState().isEmpty()) return;
+
+        BlockPos.MutableBlockPos cursor = pos.mutable();
+        for (int i = 0; i < SURFACE_SCAN && !level.getFluidState(cursor).isEmpty(); i++) {
+            cursor.move(0, 1, 0);
+        }
+        if (level.getBlockState(cursor).isAir() && !nearEyes(cursor)) {
+            out.add(cursor.immutable());
+        }
+    }
+
+    /** Vrai trop pres des yeux : la lumiere d'un bloc eclaire aussi le modele du joueur. */
+    private static boolean nearEyes(BlockPos pos) {
         double dx = pos.getX() + 0.5d - EYES.x;
         double dy = pos.getY() + 0.5d - EYES.y;
         double dz = pos.getZ() + 0.5d - EYES.z;
-        if (dx * dx + dy * dy + dz * dz < MIN_CLEAR * MIN_CLEAR) return;
-        if (level.getBlockState(pos).isAir()) out.add(pos.immutable());
+        return dx * dx + dy * dy + dz * dz < MIN_CLEAR * MIN_CLEAR;
     }
 
-    /** Pose ce qui manque, fait vieillir ce qui n'est plus demande. */
-    private static void apply(ClientLevel level, Set<BlockPos> wanted) {
+    /**
+     * Pose ce qui manque, fait vieillir ce qui n'est plus demande.
+     *
+     * <p>Deux sursis : celui des rayons, court, et celui de l'anneau d'aura, long — c'est lui qui
+     * evite le clignotement large des six lampions qui vont ensemble.
+     */
+    private static void apply(ClientLevel level, Set<BlockPos> wanted, Set<BlockPos> aura) {
         BlockState light = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, LEVEL);
 
-        for (BlockPos pos : wanted) {
+        // Une case demandee par les deux sources prend le plus long des deux sursis.
+        Map<BlockPos, Integer> holds = new HashMap<>();
+        for (BlockPos pos : wanted) holds.merge(pos, LINGER_TICKS, Math::max);
+        for (BlockPos pos : aura) holds.merge(pos, AURA_LINGER_TICKS, Math::max);
+
+        for (Map.Entry<BlockPos, Integer> entry : holds.entrySet()) {
+            BlockPos pos = entry.getKey();
             BlockState state = level.getBlockState(pos);
             if (isOurs(state)) {
-                POSED.put(pos, LINGER_TICKS);
+                // Deja allumee : le sursis se renouvelle, et jamais ne raccourcit.
+                POSED.merge(pos, entry.getValue(), Math::max);
                 continue;
             }
             // Le chunk a pu etre recharge entre-temps : on ne pose que sur de l'air.
             if (!state.isAir()) continue;
             level.setBlock(pos, light, Block.UPDATE_ALL);
-            POSED.put(pos, LINGER_TICKS);
+            POSED.put(pos, entry.getValue());
         }
 
         for (Iterator<Map.Entry<BlockPos, Integer>> it = POSED.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<BlockPos, Integer> entry = it.next();
-            if (wanted.contains(entry.getKey())) continue;
+            if (holds.containsKey(entry.getKey())) continue;
             int left = entry.getValue() - 1;
             if (left > 0) {
                 entry.setValue(left);
