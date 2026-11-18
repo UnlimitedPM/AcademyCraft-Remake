@@ -52,6 +52,12 @@ import java.util.Set;
  *       sur une surface, et pas seulement dans l'air.</li>
  * </ul>
  *
+ * <p>Et une quatrieme, qui etait la vraie cause du clignotement permanent : un lampion <b>compte
+ * comme une case libre</b>. Sans cela, la case qu'on venait d'allumer n'etait plus de l'air, donc
+ * n'etait plus demandee, donc s'eteignait au bout de son sursis, puis se rallumait aussitot — un
+ * cycle de sept ticks sans fin, partout ou le rayon touchait (le joueur, le 18/11 : « quand je
+ * vise le sol et n'importe ou, la lumiere des competences clignote »).
+ *
  * <h2>La lumiere n'ecrase pas le joueur</h2>
  *
  * <p>La lumiere d'un bloc eclaire TOUT ce qui l'entoure, le modele du joueur compris. La
@@ -257,10 +263,12 @@ public final class EffectLights {
     private static void ground(ClientLevel level, BlockPos from, Set<BlockPos> out) {
         int minY = Math.max(level.getMinBuildHeight(), from.getY() - GROUND_SCAN);
         BlockPos.MutableBlockPos cursor = from.mutable();
-        while (cursor.getY() > minY && level.getBlockState(cursor).isAir()) {
+        // Un lampion deja pose fait partie de la colonne : on descend au travers, sinon le
+        // prochain lampion se poserait un bloc plus haut a chaque tick (il grimpait).
+        while (cursor.getY() > minY && passable(level.getBlockState(cursor))) {
             cursor.move(0, -1, 0);
         }
-        if (level.getBlockState(cursor).isAir()) return;
+        if (passable(level.getBlockState(cursor))) return;
         air(level, cursor.above(), out);
     }
 
@@ -275,7 +283,11 @@ public final class EffectLights {
     private static void air(ClientLevel level, BlockPos pos, Set<BlockPos> out) {
         if (out.size() >= MAX_TOTAL) return;
         BlockState state = level.getBlockState(pos);
-        if (state.isAir()) {
+        // Un de NOS lampions compte comme une case libre : c'est ce qui rendait la lumiere
+        // clignotante. Elle y etait deja, donc la case n'etait plus de l'air, donc elle n'etait
+        // plus demandee, donc elle s'eteignait au bout du sursis — et se rallumait la seconde
+        // d'apres, indefiniment. Un lampion en place reste demande.
+        if (state.isAir() || isOurs(state)) {
             if (!nearEyes(pos)) out.add(pos.immutable());
             return;
         }
@@ -285,9 +297,14 @@ public final class EffectLights {
         for (int i = 0; i < SURFACE_SCAN && !level.getFluidState(cursor).isEmpty(); i++) {
             cursor.move(0, 1, 0);
         }
-        if (level.getBlockState(cursor).isAir() && !nearEyes(cursor)) {
+        if (passable(level.getBlockState(cursor)) && !nearEyes(cursor)) {
             out.add(cursor.immutable());
         }
+    }
+
+    /** Vrai pour une case ou un lampion peut se poser : de l'air, ou un des notres. */
+    private static boolean passable(BlockState state) {
+        return state.isAir() || isOurs(state);
     }
 
     /** Vrai trop pres des yeux : la lumiere d'un bloc eclaire aussi le modele du joueur. */
