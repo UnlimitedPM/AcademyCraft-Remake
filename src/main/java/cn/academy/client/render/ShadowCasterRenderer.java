@@ -35,10 +35,6 @@ public class ShadowCasterRenderer extends EntityRenderer<EntityShadowCaster> {
     private static boolean shadowReported;
     private static boolean screenReported;
 
-    /** Diagnostic de portee, provisoire : la distance du porteur le plus loin dessine. */
-    private static double farthest;
-    private static long lastDistanceReport;
-
     public ShadowCasterRenderer(EntityRendererProvider.Context context) {
         super(context);
     }
@@ -54,29 +50,10 @@ public class ShadowCasterRenderer extends EntityRenderer<EntityShadowCaster> {
         BlockEntity machine = caster.level().getBlockEntity(caster.blockPosition());
         if (!EntityShadowCaster.casts(machine)) return;
 
-        reportDistance(caster);
-
         // La pose est deja amenee sur le coin du bloc (l'entite y est posee) : c'est exactement
         // ce qu'attend le rendu de block entity.
         Minecraft.getInstance().getBlockEntityRenderDispatcher()
                 .render(machine, partialTick, pose, buffers);
-    }
-
-    /**
-     * Jusqu'ou la carte d'ombre veut bien de nous : une ligne toutes les quatre secondes.
-     *
-     * <p>Provisoire. Si cette ligne annonce une portee confortable alors que l'ombre ne se voit
-     * pas, le limiteur n'est plus le mod mais la carte d'ombre elle-meme (sa portee, reglee par le
-     * pack) ; si elle s'arrete a trente blocs, c'est encore notre porteur qui est ecarte.
-     */
-    private static void reportDistance(EntityShadowCaster caster) {
-        net.minecraft.client.player.LocalPlayer player = Minecraft.getInstance().player;
-        if (player != null) farthest = Math.max(farthest, Math.sqrt(caster.distanceToSqr(player)));
-        long now = System.currentTimeMillis();
-        if (now - lastDistanceReport < 4000L) return;
-        lastDistanceReport = now;
-        LOGGER.info("ombre : le porteur le plus loin dessine est a {} blocs.", Math.round(farthest));
-        farthest = 0.0d;
     }
 
     /** Ce que le porteur a reellement fait, dit une fois par cas — dans le journal du jeu. */
