@@ -45,6 +45,9 @@ public final class MdRenderType {
     /** Un type par image : le construire a chaque image allouerait pour rien. */
     private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
 
+    /** La meme chose, en version EMISSIVE : voir {@link #emissive}. */
+    private static final Map<ResourceLocation, RenderType> EMISSIVE = new HashMap<>();
+
     /** Et celui des tubes, construit a la premiere image : il n'y a rien a y mettre. */
     private static RenderType flat;
 
@@ -57,6 +60,40 @@ public final class MdRenderType {
     /** Le type qui dessine cette image. */
     public static RenderType of(ResourceLocation texture) {
         return TYPES.computeIfAbsent(texture, MdRenderType::create);
+    }
+
+    /**
+     * Le meme dessin, mais EMISSIF : le shader ne l'eclaire pas.
+     *
+     * <p>C'est pour les lueurs qui sont des CARRES textures — la bille du meltdowner et ses
+     * petites soeurs de la bombe a electrons. Le type ci-dessus passe par le programme du faisceau
+     * de phare, que les packs de shaders detournent : Complementary, par exemple, y force l'alpha
+     * des pixels presque transparents et y ajoute de la lueur, ce qui rend visible le CARRE de
+     * l'image au lieu de son seul rond lumineux (le joueur, le 18/11 : « les petites billes qui se
+     * forment ont leur bords carres visibles avec l'eclairage »).
+     *
+     * <p>Le programme emissif des entites, lui, se contente d'ecrire la couleur : aucun eclairage,
+     * aucune ombre, et l'alpha reste celui de l'image.
+     *
+     * <p>Le format de sommet est celui d'une entite ({@code NEW_ENTITY}), d'ou les coordonnees
+     * d'ecrasement et la normale que les appelants doivent ecrire — voir
+     * {@code MdBallRenderer.corner}.
+     */
+    public static RenderType emissive(ResourceLocation texture) {
+        return EMISSIVE.computeIfAbsent(texture, MdRenderType::createEmissive);
+    }
+
+    private static RenderType createEmissive(ResourceLocation texture) {
+        return RenderType.create("academy_md_emissive", DefaultVertexFormat.NEW_ENTITY,
+                VertexFormat.Mode.QUADS, 256, false, true,
+                RenderType.CompositeState.builder()
+                        .setShaderState(new RenderStateShard.ShaderStateShard(
+                                GameRenderer::getRendertypeEntityTranslucentEmissiveShader))
+                        .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                        .setTransparencyState(blending())
+                        .setWriteMaskState(noDepthWrite())
+                        .setCullState(new RenderStateShard.CullStateShard(false))
+                        .createCompositeState(false));
     }
 
     /**

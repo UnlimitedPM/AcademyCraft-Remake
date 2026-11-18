@@ -77,11 +77,15 @@ public class MdBallRenderer extends EntityRenderer<EntityMdBall> {
                 net.minecraft.client.Minecraft.getInstance().renderBuffers().bufferSource();
 
         // Le halo d'abord, le coeur par-dessus : c'est l'ordre de l'original.
-        VertexConsumer glow = batch.getBuffer(MdRenderType.of(GLOW));
+        //
+        // Et EMISSIF, pas le type habituel du plasma : sous un shader, le programme du faisceau
+        // de phare que prend ce dernier est detourne par le pack, qui force l'alpha des pixels
+        // presque transparents — le carre de l'image se voit alors au lieu de son rond lumineux.
+        VertexConsumer glow = batch.getBuffer(MdRenderType.emissive(GLOW));
         quad(glow, pose.last(), left, up, MdBallVisuals.GLOW_SIZE * size / 2,
                 alpha * (0.3f + 0.7f * wiggle));
 
-        VertexConsumer core = batch.getBuffer(MdRenderType.of(CORES[entity.texture()]));
+        VertexConsumer core = batch.getBuffer(MdRenderType.emissive(CORES[entity.texture()]));
         quad(core, pose.last(), left, up, MdBallVisuals.CORE_SIZE * size / 2,
                 alpha * (0.8f + 0.2f * wiggle));
 
@@ -124,6 +128,11 @@ public class MdBallRenderer extends EntityRenderer<EntityMdBall> {
                         (float) (left[2] * along + up[2] * high))
                 .color(1f, 1f, 1f, alpha)
                 .uv(u, v)
+                // Le type emissif est celui d'une ENTITE : il lui faut ces trois elements, meme
+                // si son programme les ignore. Sans eux, le tampon refuse le sommet.
+                .overlayCoords(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+                .uv2(net.minecraft.client.renderer.LightTexture.FULL_BRIGHT)
+                .normal(pose.normal(), 0f, 0f, 1f)
                 .endVertex();
     }
 

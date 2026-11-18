@@ -89,7 +89,7 @@ public final class EffectLights {
      * rayon (le joueur, le 17/11 : « ca clignote encore un peu, ca fait mal aux yeux »), et huit
      * laissaient les lampions d'un rayon qu'on venait de tourner allumes derriere soi.
      */
-    private static final int LINGER_TICKS = 4;
+    private static final int LINGER_TICKS = 6;
 
     /**
      * Le sursis de l'anneau d'aura, bien plus long.
@@ -195,23 +195,27 @@ public final class EffectLights {
         }
     }
 
+    /** Le pas de la grille sur laquelle on pose les extremites d'un rayon, en blocs. */
+    private static final double SNAP = 2.0d;
+
     /**
      * Pose des lampions le long d'un segment, et une flaque la ou le rayon s'arrete.
      *
      * <p>On MARCHE LA GRILLE DU MONDE, deux points par bloc : une case allumee ne depend donc que
-     * du trajet du rayon, et pas du decoupage en echantillons. C'est ce qui regle le clignotement
-     * qui restait : avec des echantillons espaces, le moindre mouvement du rayon decalait TOUTES
-     * les positions d'un coup, donc une case s'eteignait et une autre s'allumait a chaque tick sur
-     * toute la longueur, et le moteur de lumiere refaisait la lumiere de la section a chaque fois.
-     * En marchant les cases, seules celles du bout du rayon changent.
+     * du trajet du rayon, et pas du decoupage en echantillons.
      *
-     * <p>La flaque, elle, n'est posee qu'au bout du rayon : un rayon qui passe a dix blocs du sol
-     * n'eclaire presque rien, et c'est la ou il touche que la lumiere doit se voir.
+     * <p>Et les deux extremites sont <b>calees sur une grille de deux blocs</b>. Sans cela, le
+     * moindre tremblement du regard (ou le balancement d'un essaim d'arcs) deplacait la fin du
+     * rayon d'une fraction de bloc, donc une case du bout s'allumait et une autre s'eteignait a
+     * chaque tick : c'est le clignotement qui restait. Calees, les cases ne changent que quand le
+     * regard bouge vraiment — au pire une case tous les deux blocs de rotation.
      */
     private static void sample(ClientLevel level, double[] from, double[] to, Set<BlockPos> out) {
-        double dx = to[0] - from[0];
-        double dy = to[1] - from[1];
-        double dz = to[2] - from[2];
+        double[] start = snap(from);
+        double[] end = snap(to);
+        double dx = end[0] - start[0];
+        double dy = end[1] - start[1];
+        double dz = end[2] - start[2];
         double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (distance < 0.01d) return;
 
@@ -220,7 +224,8 @@ public final class EffectLights {
         int lit = 0;
         for (int i = 0; i <= steps && lit < MAX_PER_EFFECT; i++) {
             double t = (double) i / steps;
-            BlockPos pos = BlockPos.containing(from[0] + dx * t, from[1] + dy * t, from[2] + dz * t);
+            BlockPos pos = BlockPos.containing(start[0] + dx * t, start[1] + dy * t,
+                    start[2] + dz * t);
             if (pos.equals(previous)) continue;
             previous = pos;
 
@@ -231,7 +236,15 @@ public final class EffectLights {
             if (out.size() != before) lit++;
         }
         // Et la ou le rayon s'arrete : une lumiere sur une surface, pas seulement dans l'air.
-        ground(level, BlockPos.containing(to[0], to[1], to[2]), out);
+        ground(level, BlockPos.containing(end[0], end[1], end[2]), out);
+    }
+
+    /** Une extremite de rayon, ramenee sur la grille des lampions. */
+    private static double[] snap(double[] point) {
+        return new double[] {
+                Math.round(point[0] / SNAP) * SNAP,
+                Math.round(point[1] / SNAP) * SNAP,
+                Math.round(point[2] / SNAP) * SNAP };
     }
 
     /**
