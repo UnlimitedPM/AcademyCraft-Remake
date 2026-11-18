@@ -30,7 +30,24 @@ public class EntityShadowCaster extends Entity {
     public EntityShadowCaster(EntityType<?> type, Level level) {
         super(type, level);
         this.noPhysics = true;
+        // Aucun culling : ni le frustum, ni la portee de rendu des entites. Le porteur ne dessine
+        // rien a l'ecran, et pendant la carte d'ombre c'est la CARTE qui decide de ce qu'elle
+        // garde — pas la camera du joueur. Sans cela, une machine a quinze ou trente blocs sortait
+        // du frustum des entites et son ombre disparaissait alors que le soleil la projetait
+        // encore (le joueur, le 18/11).
+        this.noCulling = true;
         setNoGravity(true);
+    }
+
+    /**
+     * Toujours « assez proche » : la portee des entites ne doit pas decider des ombres.
+     *
+     * <p>Sans cette reponse, le jeu ecarte le porteur au-dela d'une portee calculee sur la taille
+     * de sa boite, et l'ombre s'arrete bien avant la portee de la carte d'ombre.
+     */
+    @Override
+    public boolean shouldRenderAtSqrDistance(double distance) {
+        return true;
     }
 
     @Override

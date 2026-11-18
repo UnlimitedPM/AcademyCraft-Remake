@@ -48,10 +48,9 @@ public final class ShadowCasters {
     private static final org.slf4j.Logger LOGGER =
             org.slf4j.LoggerFactory.getLogger("academy-oculus");
 
-    /** Ce que la derniere pose a donne, et l'heure du dernier rapport. */
+    /** Ce que la derniere pose a donne, et la valeur deja annoncee. */
     private static String lastSpawn = "aucune tentative";
-    private static long lastReport;
-    private static boolean reported;
+    private static String previousSpawn = "";
 
     private ShadowCasters() {}
 
@@ -109,17 +108,18 @@ public final class ShadowCasters {
         }
         WANTED.clear();
 
-        report(wanted, removed[0]);
+        if (wanted > 0 || removed[0] > 0) report(wanted, removed[0]);
     }
 
-    /** Un etat des lieux, deux fois par seconde au plus, tant qu'il y a quelque chose a dire. */
+    /** Une pose reussie, et les retraits : une ligne chacun, pas une par seconde. */
     private static void report(int wanted, int removed) {
-        long now = System.currentTimeMillis();
-        if (reported && now - lastReport < 2000L) return;
-        if (wanted == 0 && LIVE.isEmpty()) return;
-        reported = true;
-        lastReport = now;
-        LOGGER.info("ombre : {} machine(s) vue(s), {} porteur(s) vivant(s), {} retire(s), {}",
-                wanted, LIVE.size(), removed, lastSpawn);
+        if (removed > 0) {
+            LOGGER.debug("ombre : {} porteur(s) retire(s), {} vivant(s).", removed, LIVE.size());
+        }
+        if (!lastSpawn.equals(previousSpawn)) {
+            previousSpawn = lastSpawn;
+            LOGGER.info("ombre : {} machine(s) vue(s), {} porteur(s) vivant(s), {}",
+                    wanted, LIVE.size(), lastSpawn);
+        }
     }
 }
