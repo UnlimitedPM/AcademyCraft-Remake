@@ -325,14 +325,21 @@ public final class EffectLights {
         }
         FluidState fluid = state.getFluidState();
         if (fluid.isEmpty()) return;
-        // De l'eau : un lampion noye, sur place. L'eau ne coupe pas la lumiere d'un bloc, donc
-        // elle descend dans l'eau comme celle d'une torche tenue a la main, et le lampion lui-meme
-        // se montre comme de l'eau (waterlogged) : aucun trou dans la mer, et pas de surface a
+        // De l'eau libre : un lampion noye, sur place. L'eau ne coupe pas la lumiere d'un bloc,
+        // donc elle descend dans l'eau comme celle d'une torche tenue a la main, et le lampion
+        // lui-meme se montre comme de l'eau : aucun trou dans la mer, et pas de surface a
         // chercher. C'etait la demande du joueur, le 19/11.
-        if (fluid.is(FluidTags.WATER)) {
+        //
+        // Seulement dans de l'EAU, jamais dans une case qui contient une algue : une algue baigne
+        // dans l'eau elle aussi, et la remplacer la faisait disparaitre le temps du rayon (le
+        // joueur, le 19/11 : « si il y a des algues devant mon faisceau, visuellement les algues
+        // disparaissent »). Une algue garde donc sa case, et la lumiere passe a cote.
+        if (state.is(Blocks.WATER)) {
             place(level, pos, out);
             return;
         }
+        // Une plante aquatique ou un bloc deja noye : on n'y touche pas.
+        if (fluid.is(FluidTags.WATER)) return;
         // Reste la lave : elle n'accepte pas de lampion, on eclaire la surface au-dessus.
         BlockPos.MutableBlockPos cursor = pos.mutable();
         for (int i = 0; i < SURFACE_SCAN && !level.getFluidState(cursor).isEmpty(); i++) {
@@ -403,8 +410,9 @@ public final class EffectLights {
                 POSED.merge(pos, entry.getValue(), Math::max);
                 continue;
             }
-            // Le chunk a pu etre recharge entre-temps : on ne pose que sur de l'air ou de l'eau.
-            boolean water = state.getFluidState().is(FluidTags.WATER);
+            // Le chunk a pu etre recharge entre-temps : on ne pose que dans de l'air ou dans de
+            // l'eau libre — jamais dans une algue, elle disparaitrait (voir air()).
+            boolean water = state.is(Blocks.WATER);
             if (!state.isAir() && !water) continue;
             level.setBlock(pos, water ? wet : light, Block.UPDATE_ALL);
             POSED.put(pos, entry.getValue());
