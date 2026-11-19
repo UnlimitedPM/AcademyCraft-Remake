@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "academy",
+  "version": "${version}",
+  "name": "AcademyCraft Remake",
+  "description": "AcademyCraft for Minecraft 1.20.1: abilities, an Imag energy network, machines and a skill tree. / AcademyCraft pour Minecraft 1.20.1 : aptitudes, reseau d'energie imag, machines et arbre de competences.",
+  "authors": [
+    "UnlimitedPM"
+  ],
+  "contact": {
+    "homepage": "https://github.com/UnlimitedPM/AcademyCraft-Remake",
+    "issues": "https://github.com/UnlimitedPM/AcademyCraft-Remake/issues"
+  },
+  "license": "GPLv3",
+  "icon": "academy_logo.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "cn.academy.fabric.AcademyCraftFabric"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.20.1",
+    "java": ">=17"
+  }
+}

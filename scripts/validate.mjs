@@ -22,8 +22,10 @@ const ARGS = new Set(process.argv.slice(2));
 const STRICT = ARGS.has('--strict');
 const AS_JSON = ARGS.has('--json');
 
-const SRC = path.join(MOD_ROOT, 'src/main/java/cn/academy');
-const RES = path.join(MOD_ROOT, 'src/main/resources');
+// Depuis la restructuration multiloader, le code Forge et les ressources vivent dans forge/.
+// Les classes deplacees vers common/ seront ajoutees ici quand le portage commencera.
+const SRC = path.join(MOD_ROOT, 'forge/src/main/java/cn/academy');
+const RES = path.join(MOD_ROOT, 'forge/src/main/resources');
 const ASSETS = path.join(RES, 'assets/academy');
 const DATA = path.join(RES, 'data/academy');
 const MODID = 'academy';

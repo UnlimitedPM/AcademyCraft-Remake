@@ -1,0 +1,39 @@
+// Code et ressources partages par les trois chargeurs.
+//
+// Ce module compile contre Minecraft et les mappings officiels uniquement. Il ne depend d'aucune
+// API de chargeur : c'est la regle qui permet au meme bytecode de tourner sous Forge, NeoForge et
+// Fabric. Les services propres a un chargeur sont declares ici sous forme d'interfaces, et
+// implementes dans chaque module de plateforme.
+
+plugins {
+    id 'dev.architectury.loom'
+}
+
+apply from: rootProject.file('gradle/minecraft-module.gradle')
+
+base {
+    archivesName = "${rootProject.mod_id}-common"
+}
+
+// Ce module n'est jamais livre seul : son jar est fusionne dans chaque jar de chargeur par
+// Shadow. Desactiver le remap evite de produire un artefact intermediaire inutile.
+tasks.named('remapJar') {
+    enabled = false
+}
+
+// Loom range le jar de developpement dans build/devlibs avec le classifieur "dev", et son
+// composant Java pointe vers remapJar (desactive ici). Cette configuration expose explicitement
+// le jar a fusionner dans les modules de chargeur.
+configurations {
+    shared
+}
+
+artifacts {
+    shared(tasks.named('jar'))
+}
+
+dependencies {
+    // Uniquement pour les annotations @Environment si le code partage en a besoin un jour.
+    // Aucune classe du loader ne doit etre utilisee depuis ce module.
+    compileOnly "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+}

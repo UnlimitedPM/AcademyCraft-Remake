@@ -1,10 +1,22 @@
+// Projet multiloader AcademyCraft (Minecraft 1.20.1).
+//
+// Un sous-projet par chargeur :
+//   common/    code et ressources partages (vanilla + abstractions maison)
+//   forge/     implementation Forge (le code du portage 1.12.2 -> 1.20.1 y vit pour l'instant)
+//   neoforge/  implementation NeoForge 1.20.1 (meme famille d'API que Forge 47)
+//   fabric/    implementation Fabric ; ce jar sert aussi pour Quilt (Quilt charge fabric.mod.json)
+//
+// Architectury Loom fournit le meme cycle de build (mappings, remap, runClient) aux quatre
+// chargeurs. Stonecutter n'est pas utilise tant qu'une seule version de Minecraft est ciblee :
+// il deviendra utile le jour ou une version 1.21.x devra cohabiter avec 1.20.1.
+
 pluginManagement {
     repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        maven { name = 'Architectury'; url = 'https://maven.architectury.dev/' }
+        maven { name = 'MinecraftForge'; url = 'https://maven.minecraftforge.net/' }
+        maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases/' }
         gradlePluginPortal()
-        maven {
-            name = 'forge'
-            url = 'https://maven.minecraftforge.net/'
-        }
     }
 }
 
@@ -12,5 +24,18 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }
 
-// Le nom du projet vient APRES les plugins
+// Architectury Loom choisit sa plateforme via la propriete de projet "loom.platform".
+// Elle doit etre posee avant l'evaluation du build script du sous-projet.
+// Seul le module Fabric utilise Architectury Loom ; Forge et NeoForge utilisent ForgeGradle.
+gradle.beforeProject { project ->
+    if (project.path == ':fabric') {
+        project.ext['loom.platform'] = 'fabric'
+    }
+}
+
 rootProject.name = 'academy'
+
+include 'common'
+include 'forge'
+include 'neoforge'
+include 'fabric'

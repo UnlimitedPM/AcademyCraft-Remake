@@ -1,0 +1,76 @@
+// Implementation NeoForge 1.20.1 (47.x).
+//
+// NeoForge 1.20.1 est un fork de Forge 47. Architectury Loom 1.4 (le dernier compatible Gradle 8.3)
+// ne sait pas encore le configurer : sa plateforme neoForge echoue sur un SrgProvider absent.
+// Ce module utilise donc ForgeGradle, le meme outil que le projet Forge d'origine, avec l'artefact
+// userdev de NeoForge.
+//
+// Le code commun sera partage par sourceSet (common/src/main/java) tant que le portage n'a pas
+// separe proprement les classes neutres.
+
+plugins {
+    // Version epinglee : les plages de versions de ForgeGradle peuvent tirer une SNAPSHOT dont
+    // l'analyseur de version casse sur Gradle 8.3 ("1-snapshot-1").
+    id 'net.minecraftforge.gradle' version '6.0.24'
+    id 'com.github.johnrengelman.shadow'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+base {
+    archivesName = "${rootProject.mod_id}-neoforge"
+}
+
+minecraft {
+    mappings channel: 'official', version: rootProject.minecraft_version
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.enabledGameTestNamespaces', rootProject.mod_id
+            mods {
+                academy {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.enabledGameTestNamespaces', rootProject.mod_id
+            args '--nogui'
+            mods {
+                academy {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.java.srcDir rootProject.file('common/src/main/java')
+sourceSets.main.resources.srcDir rootProject.file('common/src/main/resources')
+
+dependencies {
+    minecraft "net.neoforged:forge:${rootProject.minecraft_version}-${rootProject.neoforge_version}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/mods.toml') {
+        expand(
+                mod_version: project.version,
+                loader_version_range: rootProject.neoforge_loader_version_range,
+                neoforge_version_range: rootProject.neoforge_version_range,
+                minecraft_version_range: rootProject.minecraft_version_range
+        )
+    }
+}
+
+jar {
+    archiveClassifier = 'dev'
+}
+
+shadowJar {
+    archiveClassifier = null
+    // Les sources communes sont compilees dans ce module : rien a fusionner pour l'instant.
+}

@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="GPLv3"
+
+[[mods]]
+modId="academy"
+version="${mod_version}"
+displayName="AcademyCraft Remake"
+authors="UnlimitedPM"
+credits="GPLv3. Original AcademyCraft by WeAthFolD and Lambda Innovation, with LambdaLib2. / AcademyCraft d'origine par WeAthFolD et Lambda Innovation, avec LambdaLib2. Contributors: https://github.com/LambdaInnovation/AcademyCraft"
+displayURL="https://github.com/UnlimitedPM/AcademyCraft-Remake"
+issueTrackerURL="https://github.com/UnlimitedPM/AcademyCraft-Remake/issues"
+logoFile="academy_logo.png"
+description='''AcademyCraft for Minecraft 1.20.1: abilities, an Imag energy network, machines and a skill tree. A port of the 1.12.2 classic. / AcademyCraft pour Minecraft 1.20.1 : aptitudes, reseau d'energie imag, machines et arbre de competences. Portage du classique 1.12.2.'''
+
+[[dependencies.academy]]
+modId="forge"
+mandatory=true
+versionRange="${neoforge_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.academy]]
+modId="minecraft"
+mandatory=true
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"

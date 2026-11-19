@@ -1,0 +1,13 @@
+// Reglages communs aux quatre projets Architectury Loom.
+// A appliquer APRES le bloc plugins de chaque module :
+//
+//     apply from: rootProject.file('gradle/minecraft-module.gradle')
+
+loom {
+    silentMojangMappingsLicense()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+    mappings loom.officialMojangMappings()
+}

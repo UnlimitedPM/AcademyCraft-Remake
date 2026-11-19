@@ -1,5 +1,29 @@
 # Changelog
 
+## Non publié - chantier multiloader / unreleased multiloader work
+
+### Français
+
+- Nouvelle branche `feat/multiloader` : le dépôt est découpé en modules `common`, `forge`,
+  `neoforge` et `fabric`, avec un build Gradle unique. Le jar Fabric sert aussi pour Quilt.
+- Le code du portage 1.12.2 → 1.20.1 est déplacé dans `forge/` sans changement de comportement.
+  Les tâches `run/` et `run-data/` restent à la racine, les mondes existants sont conservés.
+- Seul Forge contient le mod complet pour l'instant. NeoForge et Fabric ont un point d'entrée
+  minimal qui appelle `AcademyCraftCommon.init()` ; la feuille de route est dans `MULTILOADER.md`.
+- `gradlew build` construit les quatre modules ; les tests unitaires Forge passent et le client
+  Forge atteint l'écran titre.
+
+### English
+
+- New `feat/multiloader` branch: the repository is split into `common`, `forge`, `neoforge` and
+  `fabric` modules with a single Gradle build. The Fabric jar also serves Quilt.
+- The 1.12.2 → 1.20.1 port code moved into `forge/` with no behaviour change. `run/` and
+  `run-data/` stay at the project root, so existing worlds are preserved.
+- Only Forge contains the full mod for now. NeoForge and Fabric have a minimal entrypoint calling
+  `AcademyCraftCommon.init()`; the roadmap is in `MULTILOADER.md`.
+- `gradlew build` builds all four modules; Forge unit tests pass and the Forge client reaches the
+  title screen.
+
 ## 1.0.4 - la lumiere et les ombres / light and shadows
 
 ### English

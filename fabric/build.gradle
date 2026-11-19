@@ -1,0 +1,54 @@
+// Implementation Fabric. Ce jar sert aussi pour Quilt : Quilt Loader lit fabric.mod.json et charge
+// les mods Fabric sans adaptation.
+
+plugins {
+    id 'dev.architectury.loom'
+    id 'com.github.johnrengelman.shadow'
+}
+
+apply from: rootProject.file('gradle/minecraft-module.gradle')
+
+base {
+    archivesName = "${rootProject.mod_id}-fabric"
+}
+
+configurations {
+    // Classes communes visibles a la compilation et au runtime de developpement.
+    common
+    // Le meme jar commun, destine uniquement a etre fusionne dans le jar final.
+    shadowCommon
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+
+    common project(path: ':common', configuration: 'shared')
+    shadowCommon(project(path: ':common', configuration: 'shared')) {
+        transitive = false
+    }
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') {
+        expand version: project.version
+    }
+}
+
+shadowJar {
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = 'dev-shadow'
+}
+
+jar {
+    archiveClassifier = 'dev'
+}
+
+remapJar {
+    input.set shadowJar.archiveFile
+    dependsOn shadowJar
+    archiveClassifier = null
+}
