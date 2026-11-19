@@ -94,6 +94,11 @@ public class MdEffects {
             MineRayEffect.frame(minecraft.player, event.getPartialTick(), above,
                     minecraft.options.getCameraType().isFirstPerson());
         }
+        // Et celui des autres joueurs : ils ne l'envoient pas (il couterait vingt paquets par
+        // seconde), on le repose donc sur leur tete a partir de ce que le jeu synchronise deja.
+        if (minecraft.level != null) {
+            MineRaySight.frame(minecraft.level, event.getPartialTick(), above);
+        }
 
         // Le tremblement des lueurs se fait par IMAGE, comme dans l'original : il ne se lit
         // pas au tick.

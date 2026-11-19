@@ -2,8 +2,11 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
+import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.ability.network.MineRaySightPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
@@ -21,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -113,6 +117,34 @@ public abstract class MineRaySkill extends Skill {
         // Le rayon s'annonce : l'original le faisait au meme moment, quand son contexte
         // devenait vivant.
         cn.academy.sound.AcademySounds.playFor(player, startupSound(), 0.4f);
+        announce(player, true);
+    }
+
+    /**
+     * La fin du maintien : le rayon s'efface chez les autres joueurs aussi.
+     *
+     * <p>Elle passe par {@code endHeld}, donc elle couvre le relachement, la reserve videe, un
+     * changement de competence et la deconnexion : une seule porte a fermer.
+     */
+    @Override
+    public void onHoldEnd(Player player, AbilityData data, int heldTicks) {
+        announce(player, false);
+    }
+
+    /**
+     * Dit aux joueurs qui voient le mineur qu'un rayon minier s'ouvre ou se ferme chez lui.
+     *
+     * <p>Le rayon minier ne se voyait que chez son tireur : il est entierement calcule sur son
+     * client, et rien ne le publiait. Ceux qui l'entourent le voyaient donc frapper sans rien
+     * voir venir — et, la lumiere des competences ne se calculant que sur les rayons visibles, ils
+     * n'en recevaient pas l'eclairage non plus. Deux paquets par rayon suffisent : celui-ci dit
+     * qu'il existe, et chaque client le redessine sur la tete du mineur (voir {@code MineRaySight}).
+     */
+    private void announce(Player player, boolean open) {
+        if (!(player instanceof ServerPlayer server)) return;
+        AbilityNetwork.CHANNEL.send(
+                PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
+                new MineRaySightPacket(getName(), server.getId(), open));
     }
 
     /**

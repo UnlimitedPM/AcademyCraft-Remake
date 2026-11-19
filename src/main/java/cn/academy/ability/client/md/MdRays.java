@@ -306,6 +306,29 @@ public final class MdRays {
         return held == null ? null : held.kind();
     }
 
+    /**
+     * Ouvre un rayon qui n'appartient pas au joueur : celui d'un rayon minier voisin.
+     *
+     * <p>Il vit dans la meme liste que les autres, donc il se dessine et il eclaire tout seul ;
+     * c'est {@code MineRaySight} qui le deplace d'une image a l'autre, et qui le ferme.
+     */
+    static LiveRay open(MdRayKind kind, Vec3 from, Vec3 to) {
+        LiveRay ray = new LiveRay(kind, new double[] { from.x, from.y, from.z },
+                new double[] { to.x, to.y, to.z }, cn.academy.ability.client.EffectClock.now());
+        RAYS.add(ray);
+        return ray;
+    }
+
+    /** Deplace les deux bouts d'un rayon ouvert par {@link #open}. */
+    static void move(LiveRay ray, Vec3 from, Vec3 to) {
+        ray.moveTo(new double[] { from.x, from.y, from.z }, new double[] { to.x, to.y, to.z });
+    }
+
+    /** Ferme un rayon ouvert par {@link #open}. */
+    static void close(LiveRay ray) {
+        RAYS.remove(ray);
+    }
+
     /** Un tick du client : les etincelles des rayons, puis les rayons morts s'en vont. */
     public static void tick() {
         tick(cn.academy.ability.client.EffectClock.now());
@@ -351,6 +374,7 @@ public final class MdRays {
         RAYS.clear();
         held = null;
         lastFrameMs = 0;
+        MineRaySight.clear();
     }
 
     private static double distance(double[] from, double[] to) {

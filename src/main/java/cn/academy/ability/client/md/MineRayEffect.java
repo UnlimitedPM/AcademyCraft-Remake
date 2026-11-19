@@ -184,6 +184,21 @@ public final class MineRayEffect {
     }
 
     /**
+     * Le genre d'un rayon minier, lu sur le NOM de sa competence.
+     *
+     * <p>C'est la lecture inverse de {@link #skillOf}, et c'est le serveur qui en a besoin : il
+     * ne peut pas nommer un genre de rayon (ils vivent chez le client), mais il connait le nom de
+     * la competence qu'il vient d'ouvrir. Le client refait donc la correspondance ici.
+     */
+    @Nullable
+    public static MdRayKind kindOf(String skillName) {
+        if ("mine_ray_basic".equals(skillName)) return MdRayKind.MINE_BASIC;
+        if ("mine_ray_expert".equals(skillName)) return MdRayKind.MINE_EXPERT;
+        if ("mine_ray_luck".equals(skillName)) return MdRayKind.MINE_LUCK;
+        return null;
+    }
+
+    /**
      * La chance qu'a ce rayon de lacher une etincelle a ce tick.
      *
      * <p>Une sur deux pour celui de base, une sur trois pour les deux autres — c'est l'original,

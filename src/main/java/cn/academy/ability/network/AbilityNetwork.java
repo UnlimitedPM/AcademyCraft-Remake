@@ -198,5 +198,10 @@ public class AbilityNetwork {
                 cn.academy.energy.network.FreqTransmitterReplyPacket::encode,
                 cn.academy.energy.network.FreqTransmitterReplyPacket::decode,
                 cn.academy.energy.network.FreqTransmitterReplyPacket::handle);
+        // Ajoute a la FIN : les identifiants sont attribues dans l'ordre.
+        CHANNEL.registerMessage(nextId++, MineRaySightPacket.class,
+                MineRaySightPacket::encode,
+                MineRaySightPacket::decode,
+                MineRaySightPacket::handle);
     }
 }
