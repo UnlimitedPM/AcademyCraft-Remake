@@ -6,10 +6,12 @@ import cn.academy.ability.client.md.MdRays;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.TickEvent;
@@ -63,9 +65,20 @@ import java.util.Set;
  * <p>La lumiere d'un bloc eclaire TOUT ce qui l'entoure, le modele du joueur compris. La
  * premiere version posait deux lampions a quinze dans le joueur, a hauteur de torse : sous un
  * shader, son visage devenait une torche et le decor, lui, ne gagnait presque rien. Rien ne se
- * pose donc a moins de {@link #MIN_CLEAR} blocs des yeux, et l'aura d'un essaim est un anneau a
- * {@link #AURA_RING} blocs du joueur — la lumiere eclaire le decor, pas le personnage (le joueur,
- * le 17/11).
+ * pose donc dans le joueur ({@link #MIN_CLEAR}), ni a hauteur de son visage
+ * ({@link #FACE_BAND} / {@link #FACE_RADIUS}), et l'aura d'un essaim est un anneau a
+ * {@link #AURA_RING} blocs de lui — la lumiere eclaire le decor, pas le personnage (le joueur,
+ * le 17/11). Un lampion qui passe SOUS la ligne du regard, lui, ne prend que ses pieds : il peut
+ * donc venir tout pres, et la lumiere ne commence plus a deux blocs et demi devant lui (le
+ * joueur, le 19/11 : « ca se voit que la lumiere part un peu apres la competence »).
+ *
+ * <h2>La lumiere entre dans l'eau</h2>
+ *
+ * <p>Un lampion ne se pose que dans de l'air, sinon il laisse un trou dans la mer. Mais le bloc
+ * de lumiere est waterloggable : noye, il se montre comme de l'eau et eclaire quand meme, et
+ * l'eau, elle, ne coupe pas la lumiere d'un bloc. Chaque case d'eau touchee par un rayon recoit
+ * donc un lampion noye, et la lumiere descend dans l'eau comme celle d'une torche tenue a la
+ * main (le joueur, le 19/11).
  */
 @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class EffectLights {
@@ -106,7 +119,7 @@ public final class EffectLights {
      */
     private static final int AURA_LINGER_TICKS = 10;
 
-    /** Le nombre de blocs verses vers le haut pour trouver la surface d'une eau. */
+    /** Le nombre de blocs verses vers le haut pour trouver la surface d'un fluide sans lampion. */
     private static final int SURFACE_SCAN = 40;
 
     /** La distance sous laquelle un arc fait partie de l'aura du joueur, et non d'un trajet. */
@@ -118,14 +131,33 @@ public final class EffectLights {
     /** Le nombre de lampions de cet anneau. */
     private static final int RING_LAMPS = 6;
 
-    /** Rien ne se pose a moins de cette distance des yeux : c'est le visage du joueur. */
-    private static final double MIN_CLEAR = 2.5d;
+    /** Rien ne se pose a moins de cette distance des yeux : c'est le corps du joueur. */
+    private static final double MIN_CLEAR = 1.2d;
+
+    /**
+     * Et rien a hauteur du visage, plus loin que le corps.
+     *
+     * <p>Un lampion a hauteur des yeux fait du visage du joueur une torche ; un lampion plus bas
+     * n'eclaire que ses pieds. On garde donc une sphere courte autour du corps et une bande large
+     * a hauteur des yeux : la lumiere peut venir tout pres quand elle passe sous la ligne du
+     * regard, et le vide devant le joueur disparait (le joueur, le 19/11).
+     */
+    private static final double FACE_BAND = 1.0d;
+
+    /** La distance a laquelle rien ne se pose a hauteur des yeux. */
+    private static final double FACE_RADIUS = 2.5d;
+
+    /** De combien de blocs on descend un lampion trop pres du visage. */
+    private static final int DROP_BELOW = 2;
 
     /** Le nombre de blocs verses sous un rayon quand il cherche le sol. */
     private static final int GROUND_SCAN = 24;
 
     /** Les lampions poses, et leur temps de vie restant en ticks. */
     private static final Map<BlockPos, Integer> POSED = new HashMap<>();
+
+    /** Ce qu'il y avait dans une case d'eau avant son lampion noye : on le remet en partant. */
+    private static final Map<BlockPos, BlockState> FLUID = new HashMap<>();
 
     /** Les yeux du joueur pour le tick en cours : c'est la que la lumiere ne va pas. */
     private static Vec3 EYES = Vec3.ZERO;
@@ -146,6 +178,7 @@ public final class EffectLights {
         if (level == null) {
             // Quitter un monde emporte les lampions avec lui.
             POSED.clear();
+            FLUID.clear();
             return;
         }
         // En pause, les effets eux-memes sont figes : on laisse leur lumiere telle quelle.
@@ -235,8 +268,8 @@ public final class EffectLights {
             if (pos.equals(previous)) continue;
             previous = pos;
 
-            // On ne remplace JAMAIS un bloc : un rayon qui traverse une paroi ne doit pas
-            // y creuser un trou. Seuls les blocs d'air recoivent un lampion.
+            // On ne remplace JAMAIS un bloc plein : un rayon qui traverse une paroi ne doit pas
+            // y creuser un trou. Seuls l'air et l'eau recoivent un lampion.
             int before = out.size();
             air(level, pos, out);
             if (out.size() != before) lit++;
@@ -273,12 +306,11 @@ public final class EffectLights {
     }
 
     /**
-     * Ajoute ce bloc s'il est de l'air, et si le budget n'est pas epuise.
+     * Ajoute ce bloc s'il est de l'air, de l'eau, ou un de nos lampions, et si le budget le permet.
      *
-     * <p>Sous l'eau, il n'y a pas d'air a allumer — et poser un bloc de lumiere a la place d'un
-     * bloc d'eau laisserait un TROU visible dans la mer. On eclaire donc la SURFACE au-dessus du
-     * rayon : la lumiere y entre et descend ensuite dans l'eau, qui l'affaiblit mais ne l'arrete
-     * pas. C'etait la demande du joueur, « sous l'eau ca ne fait juste aucune lumiere ».
+     * <p>On ne remplace jamais un bloc plein, sinon le rayon creuserait un trou dans une paroi.
+     * L'eau est la seule exception : un lampion noye s'y met sans laisser de trou et sans couper
+     * la lumiere, donc le rayon eclaire DANS l'eau au lieu d'eclairer la surface au-dessus.
      */
     private static void air(ClientLevel level, BlockPos pos, Set<BlockPos> out) {
         if (out.size() >= MAX_TOTAL) return;
@@ -288,11 +320,20 @@ public final class EffectLights {
         // plus demandee, donc elle s'eteignait au bout du sursis — et se rallumait la seconde
         // d'apres, indefiniment. Un lampion en place reste demande.
         if (state.isAir() || isOurs(state)) {
-            if (!nearEyes(pos)) out.add(pos.immutable());
+            place(level, pos, out);
             return;
         }
-        if (state.getFluidState().isEmpty()) return;
-
+        FluidState fluid = state.getFluidState();
+        if (fluid.isEmpty()) return;
+        // De l'eau : un lampion noye, sur place. L'eau ne coupe pas la lumiere d'un bloc, donc
+        // elle descend dans l'eau comme celle d'une torche tenue a la main, et le lampion lui-meme
+        // se montre comme de l'eau (waterlogged) : aucun trou dans la mer, et pas de surface a
+        // chercher. C'etait la demande du joueur, le 19/11.
+        if (fluid.is(FluidTags.WATER)) {
+            place(level, pos, out);
+            return;
+        }
+        // Reste la lave : elle n'accepte pas de lampion, on eclaire la surface au-dessus.
         BlockPos.MutableBlockPos cursor = pos.mutable();
         for (int i = 0; i < SURFACE_SCAN && !level.getFluidState(cursor).isEmpty(); i++) {
             cursor.move(0, 1, 0);
@@ -307,12 +348,35 @@ public final class EffectLights {
         return state.isAir() || isOurs(state);
     }
 
+    /**
+     * Pose le lampion dans cette case — ou, si elle est trop pres du visage, juste sous la ligne
+     * du regard.
+     *
+     * <p>Sans cette descente, le rayon qui part des yeux laissait ses premiers blocs dans le noir
+     * (interdits a hauteur du visage) et la lumiere avait l'air de commencer apres la competence
+     * (le joueur, le 19/11). Un lampion deux blocs plus bas n'eclaire que les pieds, et la lumiere
+     * arrive donc des la main.
+     */
+    private static void place(ClientLevel level, BlockPos pos, Set<BlockPos> out) {
+        if (!nearEyes(pos)) {
+            out.add(pos.immutable());
+            return;
+        }
+        BlockPos low = pos.below(DROP_BELOW);
+        BlockState state = level.getBlockState(low);
+        if ((state.isAir() || isOurs(state)) && !nearEyes(low)) out.add(low.immutable());
+    }
+
     /** Vrai trop pres des yeux : la lumiere d'un bloc eclaire aussi le modele du joueur. */
     private static boolean nearEyes(BlockPos pos) {
         double dx = pos.getX() + 0.5d - EYES.x;
         double dy = pos.getY() + 0.5d - EYES.y;
         double dz = pos.getZ() + 0.5d - EYES.z;
-        return dx * dx + dy * dy + dz * dz < MIN_CLEAR * MIN_CLEAR;
+        double flat = dx * dx + dz * dz;
+        // Dans le corps : jamais.
+        if (dx * dx + dy * dy + flat < MIN_CLEAR * MIN_CLEAR) return true;
+        // Et a hauteur du visage : pas tout pres non plus, meme de biais.
+        return Math.abs(dy) < FACE_BAND && flat < FACE_RADIUS * FACE_RADIUS;
     }
 
     /**
@@ -323,6 +387,8 @@ public final class EffectLights {
      */
     private static void apply(ClientLevel level, Set<BlockPos> wanted, Set<BlockPos> aura) {
         BlockState light = Blocks.LIGHT.defaultBlockState().setValue(LightBlock.LEVEL, LEVEL);
+        // Le meme lampion, noye : il eclaire dans l'eau et se montre comme de l'eau.
+        BlockState wet = light.setValue(LightBlock.WATERLOGGED, true);
 
         // Une case demandee par les deux sources prend le plus long des deux sursis.
         Map<BlockPos, Integer> holds = new HashMap<>();
@@ -337,10 +403,12 @@ public final class EffectLights {
                 POSED.merge(pos, entry.getValue(), Math::max);
                 continue;
             }
-            // Le chunk a pu etre recharge entre-temps : on ne pose que sur de l'air.
-            if (!state.isAir()) continue;
-            level.setBlock(pos, light, Block.UPDATE_ALL);
+            // Le chunk a pu etre recharge entre-temps : on ne pose que sur de l'air ou de l'eau.
+            boolean water = state.getFluidState().is(FluidTags.WATER);
+            if (!state.isAir() && !water) continue;
+            level.setBlock(pos, water ? wet : light, Block.UPDATE_ALL);
             POSED.put(pos, entry.getValue());
+            if (water) FLUID.put(pos, state);
         }
 
         for (Iterator<Map.Entry<BlockPos, Integer>> it = POSED.entrySet().iterator(); it.hasNext(); ) {
@@ -353,7 +421,12 @@ public final class EffectLights {
             }
             BlockPos pos = entry.getKey();
             if (isOurs(level.getBlockState(pos))) {
-                level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
+                // Une case d'eau retrouve son eau : on ne laisse pas de trou dans la mer.
+                BlockState back = FLUID.remove(pos);
+                level.setBlock(pos, back != null ? back : Blocks.AIR.defaultBlockState(),
+                        Block.UPDATE_ALL);
+            } else {
+                FLUID.remove(pos);
             }
             it.remove();
         }
