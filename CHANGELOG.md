@@ -13,7 +13,10 @@
 - NeoForge 1.20.1 (47.1.106) est complet : le code Forge est compilé pour lui, avec deux
   adaptations d'API (`ResourceLocation`, constructeur du mod, `ModLoadingContext`). 182 GameTests
   et 975 tests unitaires verts ; client jusqu'à un monde. Fabric reste un squelette.
-- Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs et un onglet créatif sont
+- Taille des jars : 45 Mo ramenés à 27,4 Mo (Forge/NeoForge) et 25,9 Mo (Fabric). La police
+  `ac_gui.ttf` de 19,6 Mo, jamais référencée, avait été ajoutée par erreur au dépôt ; onze
+  textures de modèle dupliquées à l'identique dans `textures/models` ont aussi été retirées.
+- Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs, 47 sons et un onglet créatif sont
   enregistrés, le client Fabric démarre et charge un monde. Le plan du reste est dans
   `FABRIC_PORT.md`.
 
@@ -28,7 +31,10 @@
 - NeoForge 1.20.1 (47.1.106) is complete: the Forge code is compiled for it, with two API
   adaptations (`ResourceLocation`, mod constructor, `ModLoadingContext`). 182 GameTests and 975
   unit tests green; client reaches a world. Fabric remains a skeleton.
-- Fabric (and Quilt) got its first milestone: 20 items, 5 blocks and a creative tab are
+- Jar size: 45 MB down to 27.4 MB (Forge/NeoForge) and 25.9 MB (Fabric). The unused 19.6 MB
+  `ac_gui.ttf` font had been committed by mistake; eleven byte-identical model textures duplicated
+  in `textures/models` were removed too.
+- Fabric (and Quilt) got its first milestone: 20 items, 5 blocks, 47 sounds and a creative tab are
   registered; the Fabric client starts and loads a world. The rest of the plan is in
   `FABRIC_PORT.md`.
 

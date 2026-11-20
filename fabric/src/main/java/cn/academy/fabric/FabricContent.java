@@ -33,6 +33,8 @@ public final class FabricContent {
     }
 
     public static void register() {
+        FabricSounds.register();
+
         // --- Materiaux et composants (Item vanilla) ---
         plainItem("crystal_low");
         plainItem("crystal_normal");
