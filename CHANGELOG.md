@@ -10,6 +10,9 @@
   Les tâches `run/` et `run-data/` restent à la racine, les mondes existants sont conservés.
 - Seul Forge contient le mod complet pour l'instant. NeoForge et Fabric ont un point d'entrée
   minimal qui appelle `AcademyCraftCommon.init()` ; la feuille de route est dans `MULTILOADER.md`.
+- NeoForge 1.20.1 (47.1.106) est complet : le code Forge est compilé pour lui, avec deux
+  adaptations d'API (`ResourceLocation`, constructeur du mod, `ModLoadingContext`). 182 GameTests
+  et 975 tests unitaires verts ; client jusqu'à un monde. Fabric reste un squelette.
 - `gradlew build` construit les quatre modules ; les tests unitaires Forge passent et le client
   Forge atteint l'écran titre.
 
@@ -21,6 +24,9 @@
   `run-data/` stay at the project root, so existing worlds are preserved.
 - Only Forge contains the full mod for now. NeoForge and Fabric have a minimal entrypoint calling
   `AcademyCraftCommon.init()`; the roadmap is in `MULTILOADER.md`.
+- NeoForge 1.20.1 (47.1.106) is complete: the Forge code is compiled for it, with two API
+  adaptations (`ResourceLocation`, mod constructor, `ModLoadingContext`). 182 GameTests and 975
+  unit tests green; client reaches a world. Fabric remains a skeleton.
 - `gradlew build` builds all four modules; Forge unit tests pass and the Forge client reaches the
   title screen.
 

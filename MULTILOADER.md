@@ -10,7 +10,7 @@ Produire un jar pour chaque famille de chargeurs à partir d'un seul dépôt :
 | Module | Chargeur | Artefact | État |
 |---|---|---|---|
 | `forge/` | Forge 47.4.20 | `academy-forge-1.0.4.jar` | Complet : tout le portage 1.12.2 → 1.20.1 |
-| `neoforge/` | NeoForge 47.1.106 | `academy-neoforge-1.0.4.jar` | Échafaudage : point d'entrée seul |
+| `neoforge/` | NeoForge 47.1.106 | `academy-neoforge-1.0.4.jar` | Complet : même code, adapté aux APIs NeoForge 47.1 |
 | `fabric/` | Fabric Loader 0.16.14 + Fabric API 0.92.12 | `academy-fabric-1.0.4.jar` | Échafaudage : point d'entrée seul |
 | `common/` | — | aucun (sources partagées) | Une classe neutre, à remplir |
 
@@ -81,17 +81,24 @@ Les tâches VS Code (`MC: …`) pointent déjà sur les tâches `:forge:*`.
 
 ## Feuille de route du portage
 
-### 1. NeoForge (en premier)
+### 1. NeoForge — fait
 
 NeoForge 1.20.1 est un fork de Forge 47 : packages identiques, donc le code Forge compile presque
-tel quel. Étapes :
+tel quel. Ce qui a dû changer :
 
-1. Copier le code de `forge/src/main/java` dans `neoforge/src/main/java` (ou déplacer les classes
-   neutres vers `common/` et garder ici les classes Forge).
-2. Compiler, corriger les rares APIs qui diffèrent (réseau, capacités, config).
-3. Faire tourner `:neoforge:runClient` et les GameTests.
-4. Ne pas maintenir deux copies à la main : à terme, `common/` porte la logique et chaque module
-   ne garde que les points d'entrée et les implémentations de services.
+1. `ResourceLocation.fromNamespaceAndPath` et `withDefaultNamespace` n'existent pas dans NeoForge
+   47.1. Le module `neoforge` compile une copie filtrée de `forge/src/main/java`
+   (`prepareNeoForgeSources`) qui remplace ces fabriques par `new ResourceLocation(...)`.
+2. Le constructeur du mod est sans argument : Forge 47.4 n'accepte que `FMLJavaModLoadingContext`
+   ou zéro argument, NeoForge 47.1 n'accepte pas `FMLJavaModLoadingContext`. Le bus se récupère
+   par `FMLJavaModLoadingContext.get()`.
+3. `registerConfig` se fait par `ModLoadingContext.get()`, disponible chez les deux.
+4. JEI et CraftTweaker compilent via leurs artefacts Forge 1.20.1 (packages identiques).
+
+Le filtre de sources est une étape temporaire : quand les classes neutres passeront dans
+`common/`, il disparaîtra.
+
+Validé : 182 GameTests NeoForge verts, 975 tests unitaires verts, client NeoForge jusqu'au monde.
 
 ### 2. Fabric puis Quilt
 
@@ -115,8 +122,9 @@ compatibilité Fabric API avec Quilt Loader.
 
 ## Vérifications faites
 
-- `gradlew build` : `common`, `fabric`, `forge`, `neoforge` construisent ; les 973 tests unitaires
-  Forge passent.
-- `:forge:runClient` atteint l'écran titre avec le mod chargé, JEI et CraftTweaker présents.
+- `gradlew build` : `common`, `fabric`, `forge`, `neoforge` construisent.
+- Forge : 973 tests unitaires et 182 GameTests verts ; client jusqu'à l'écran titre puis monde.
+- NeoForge : 975 tests unitaires et 182 GameTests verts ; client jusqu'à un monde (`New World`).
 - Le jar Forge contient les ressources (45 Mo) et `cn/academy/AcademyCraftCommon.class`.
+- Le jar NeoForge contient les mêmes 960 fichiers d'assets et son `META-INF/mods.toml` NeoForge.
 - Le jar Fabric contient `fabric.mod.json` et `cn/academy/AcademyCraftCommon.class`.

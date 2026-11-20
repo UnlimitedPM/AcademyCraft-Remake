@@ -18,8 +18,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class OggDurationTest {
 
-    private static final File MEDIA_FOLDER =
-            new File("src/main/resources/assets/academy/sounds/media");
+    // Le test tourne dans le dossier du module (forge/ ou neoforge/). Sous NeoForge, les
+    // ressources du mod sont celles de forge/ : on accepte les deux emplacements.
+    private static final File MEDIA_FOLDER = mediaFolder();
+
+    private static File mediaFolder() {
+        File local = new File("src/main/resources/assets/academy/sounds/media");
+        return local.isDirectory()
+                ? local
+                : new File("../forge/src/main/resources/assets/academy/sounds/media");
+    }
 
     @Test
     void lesMorceauxLivresOntLeurDuree() throws Exception {

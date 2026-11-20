@@ -5,17 +5,22 @@
 // Ce module utilise donc ForgeGradle, le meme outil que le projet Forge d'origine, avec l'artefact
 // userdev de NeoForge.
 //
-// Le code commun sera partage par sourceSet (common/src/main/java) tant que le portage n'a pas
-// separe proprement les classes neutres.
+// Le code Forge est partage par transformation de source : voir prepareNeoForgeSources plus bas.
+// Les classes neutres seront extraites vers common/ quand le portage Fabric commencera.
 
 plugins {
     // Version epinglee : les plages de versions de ForgeGradle peuvent tirer une SNAPSHOT dont
     // l'analyseur de version casse sur Gradle 8.3 ("1-snapshot-1").
     id 'net.minecraftforge.gradle' version '6.0.24'
-    id 'com.github.johnrengelman.shadow'
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+tasks.withType(JavaCompile).configureEach {
+    // Le portage Forge utilise des APIs que NeoForge 47.1 n'a pas toutes : on veut la liste
+    // complete des erreurs en une passe pendant la migration.
+    options.compilerArgs += ['-Xmaxerrs', '2000']
+}
 
 base {
     archivesName = "${rootProject.mod_id}-neoforge"
@@ -44,17 +49,62 @@ minecraft {
                 }
             }
         }
+        gameTestServer {
+            workingDirectory project.file('run')
+            property 'forge.enabledGameTestNamespaces', rootProject.mod_id
+            mods {
+                academy {
+                    source sourceSets.main
+                }
+            }
+        }
     }
 }
 
-sourceSets.main.java.srcDir rootProject.file('common/src/main/java')
-sourceSets.main.resources.srcDir rootProject.file('common/src/main/resources')
+// NeoForge 47.1 ne contient pas deux fabriques ajoutees par Forge 47.4 a ResourceLocation.
+// Plutot que de modifier 95 appels dans le code Forge, on compile une copie preparee des sources
+// partagees. Le code source reste identique pour les deux chargeurs ; ce filtre disparaitra
+// quand les classes neutres seront extraites vers common/.
+def prepareNeoForgeSources = tasks.register('prepareNeoForgeSources', Sync) {
+    from(rootProject.file('forge/src/main/java'))
+    into(layout.buildDirectory.dir('generated/sources/sharedForge/java'))
+    filteringCharset = 'UTF-8'
+    inputs.property('resourceLocationShim', 2)
+    filter { String line ->
+        line.replace('net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(', 'new net.minecraft.resources.ResourceLocation(')
+                .replace('net.minecraft.resources.ResourceLocation.withDefaultNamespace(', 'new net.minecraft.resources.ResourceLocation("minecraft", ')
+                .replace('ResourceLocation.fromNamespaceAndPath(', 'new ResourceLocation(')
+                .replace('ResourceLocation.withDefaultNamespace(', 'new ResourceLocation("minecraft", ')
+    }
+}
+
+sourceSets.main.java.setSrcDirs([layout.buildDirectory.dir('generated/sources/sharedForge/java')])
+sourceSets.test.java.srcDir rootProject.file('forge/src/test/java')
+sourceSets.test.resources.srcDir rootProject.file('forge/src/test/resources')
+tasks.named('compileJava') {
+    dependsOn prepareNeoForgeSources
+}
 
 dependencies {
     minecraft "net.neoforged:forge:${rootProject.minecraft_version}-${rootProject.neoforge_version}"
+
+    // JEI et CraftTweaker 1.20.1 parlent encore les packages net.minecraftforge : leurs artefacts
+    // Forge compilent contre NeoForge 47. Restent facultatifs au runtime.
+    compileOnly fg.deobf("mezz.jei:jei-${rootProject.minecraft_version}-common-api:${rootProject.jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${rootProject.minecraft_version}-forge-api:${rootProject.jei_version}")
+    compileOnly fg.deobf("com.blamejared.crafttweaker:CraftTweaker-forge-${rootProject.minecraft_version}:${rootProject.crafttweaker_version}")
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 processResources {
+    // Toutes les ressources du mod sont partagees avec Forge, sauf les metadonnees de chargeur.
+    from(rootProject.file('forge/src/main/resources')) {
+        exclude 'META-INF/mods.toml'
+    }
+    from(rootProject.file('forge/src/generated/resources'))
+
     inputs.property 'version', project.version
     filesMatching('META-INF/mods.toml') {
         expand(
@@ -64,13 +114,4 @@ processResources {
                 minecraft_version_range: rootProject.minecraft_version_range
         )
     }
-}
-
-jar {
-    archiveClassifier = 'dev'
-}
-
-shadowJar {
-    archiveClassifier = null
-    // Les sources communes sont compilees dans ce module : rien a fusionner pour l'instant.
 }

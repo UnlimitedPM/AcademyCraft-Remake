@@ -14,14 +14,17 @@ import net.minecraftforge.event.entity.player.FillBucketEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 @Mod(AcademyCraft.MOD_ID)
 public class AcademyCraft {
     public static final String MOD_ID = "academy";
 
-    public AcademyCraft(FMLJavaModLoadingContext context) {
-        IEventBus modEventBus = context.getModEventBus();
+    /**
+     * Constructeur sans argument : c'est la seule forme acceptee a la fois par Forge 47.4 et
+     * NeoForge 47.1. Le bus se recupere ensuite par FMLJavaModLoadingContext.get().
+     */
+    public AcademyCraft() {
+        IEventBus modEventBus = net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus();
 
         ModFluids.register(modEventBus);
         ModBlocks.register(modEventBus);
@@ -41,12 +44,16 @@ public class AcademyCraft {
         modEventBus.addListener(cn.academy.terminal.TerminalInit::init);
 
         // Sans cette ligne, le fichier config/academy-common.toml n'est jamais cree.
-        context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
+        // ModLoadingContext.get() marche sur Forge 47 comme sur NeoForge 47 ; l'instance
+        // FMLJavaModLoadingContext expose registerConfig chez Forge mais pas chez NeoForge.
+        net.minecraftforge.fml.ModLoadingContext.get()
+                .registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
         // La place des elements du HUD est une affaire de client : elle vit donc dans une
         // config de type CLIENT, comme l'original la rangeait chez lui. Sur un serveur
         // dedie, Forge ignore simplement cette config.
-        context.registerConfig(net.minecraftforge.fml.config.ModConfig.Type.CLIENT,
-                cn.academy.client.hud.HudConfig.SPEC);
+        net.minecraftforge.fml.ModLoadingContext.get()
+                .registerConfig(net.minecraftforge.fml.config.ModConfig.Type.CLIENT,
+                        cn.academy.client.hud.HudConfig.SPEC);
 
         MinecraftForge.EVENT_BUS.register(this);
     }
