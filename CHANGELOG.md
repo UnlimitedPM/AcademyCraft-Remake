@@ -16,9 +16,9 @@
 - Taille des jars : 45 Mo ramenés à 27,4 Mo (Forge/NeoForge) et 25,9 Mo (Fabric). La police
   `ac_gui.ttf` de 19,6 Mo, jamais référencée, avait été ajoutée par erreur au dépôt ; onze
   textures de modèle dupliquées à l'identique dans `textures/models` ont aussi été retirées.
-- Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs, 47 sons, l'unité d'énergie et le
-  moteur à chat portés dans `common/`, plus un onglet créatif. Le client Fabric démarre et charge
-  un monde. Le plan du reste est dans `FABRIC_PORT.md`.
+- Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs, 47 sons, l'unité d'énergie, le
+  moteur à chat et onze classes du réseau d'énergie portés dans `common/`, plus un onglet créatif.
+  Le client Fabric démarre et charge un monde. Le plan du reste est dans `FABRIC_PORT.md`.
 
 ### English
 
@@ -34,9 +34,9 @@
 - Jar size: 45 MB down to 27.4 MB (Forge/NeoForge) and 25.9 MB (Fabric). The unused 19.6 MB
   `ac_gui.ttf` font had been committed by mistake; eleven byte-identical model textures duplicated
   in `textures/models` were removed too.
-- Fabric (and Quilt) got its first milestone: 20 items, 5 blocks, 47 sounds, the energy unit and
-  the cat engine moved to `common/`, plus a creative tab. The Fabric client starts and loads a
-  world. The rest of the plan is in `FABRIC_PORT.md`.
+- Fabric (and Quilt) got its first milestone: 20 items, 5 blocks, 47 sounds, the energy unit, the
+  cat engine and eleven energy-network classes moved to `common/`, plus a creative tab. The Fabric
+  client starts and loads a world. The rest of the plan is in `FABRIC_PORT.md`.
 
 ## 1.0.4 - la lumiere et les ombres / light and shadows
 

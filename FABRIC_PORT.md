@@ -43,6 +43,9 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 - le moteur à chat (`CatEngineBlock`, `CatEngineBlockEntity`, `CatEngineRenderer`) déplacé dans
   `common/` : premier bloc à block entity et premier rendu partagés. Le type de block entity est
   injecté par le chargeur, le rendu Fabric est enregistré par `AcademyCraftFabricClient` ;
+- onze classes du réseau d'énergie passées dans `common/` : `EnergyNode`, `EnergyGenerator`,
+  `EnergyReceiver`, `ImagNetworkData`, `NodeConnection`, `NodeType`, `WirelessBalancer`,
+  `WirelessMachine`, `WirelessNode`, `BlockEntityScan`, `ConfigText` ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;
