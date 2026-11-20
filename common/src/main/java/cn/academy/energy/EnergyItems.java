@@ -48,10 +48,7 @@ public final class EnergyItems {
      * etait exactement le defaut : le slot refusait l'unite et le portable.
      */
     public static boolean isEnergyItem(ItemStack stack) {
-        return supports(stack)
-                || (!stack.isEmpty()
-                && stack.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY)
-                        .isPresent());
+        return supports(stack) || cn.academy.platform.PlatformHooks.hasExternalEnergy(stack);
     }
 
     public static double maxEnergy(ItemStack stack) {

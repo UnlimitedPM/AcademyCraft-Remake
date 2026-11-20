@@ -1,6 +1,7 @@
 package cn.academy.fabric;
 
 import cn.academy.AcademyCraftCommon;
+import cn.academy.EnergyUnitItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -57,6 +58,9 @@ public final class FabricContent {
         plainItem("mat_core_2");
         plainItem("needle");
 
+        // --- Premier objet energetique porte depuis common/ ---
+        register("energy_unit", new EnergyUnitItem());
+
         // --- Blocs vanilla (minerais et cadre de machine) ---
         plainBlock("constraint_metal", BlockBehaviour.Properties.copy(Blocks.IRON_ORE).sound(SoundType.STONE));
         plainBlock("crystal_ore", BlockBehaviour.Properties.of()
@@ -75,7 +79,10 @@ public final class FabricContent {
     }
 
     private static void plainItem(String name) {
-        Item item = new Item(new Item.Properties());
+        register(name, new Item(new Item.Properties()));
+    }
+
+    private static void register(String name, Item item) {
         Registry.register(BuiltInRegistries.ITEM, id(name), item);
         TAB_ITEMS.add(item);
     }

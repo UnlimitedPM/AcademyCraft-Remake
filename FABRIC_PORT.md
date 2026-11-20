@@ -36,6 +36,9 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 `fabric/` charge le mod et enregistre une première tranche de contenu vanilla :
 
 - 20 objets matériaux/composants (`Item` simple) ;
+- l'unité d'énergie (`EnergyUnitItem`) déplacée dans `common/` avec `EnergyItems` et
+  `ImagEnergyItem` : premier vrai morceau partagé, avec `PlatformHooks` pour la capacité d'énergie
+  externe ;
 - 5 blocs vanilla (4 minerais + `machine_frame`) avec leurs block items ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;

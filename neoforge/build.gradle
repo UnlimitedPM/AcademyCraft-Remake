@@ -67,6 +67,7 @@ minecraft {
 // quand les classes neutres seront extraites vers common/.
 def prepareNeoForgeSources = tasks.register('prepareNeoForgeSources', Sync) {
     from(rootProject.file('forge/src/main/java'))
+    from(rootProject.file('common/src/main/java'))
     into(layout.buildDirectory.dir('generated/sources/sharedForge/java'))
     filteringCharset = 'UTF-8'
     inputs.property('resourceLocationShim', 2)

@@ -25,6 +25,7 @@ public class AcademyCraft {
      */
     public AcademyCraft() {
         IEventBus modEventBus = net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus();
+        ForgePlatformHooks.install();
 
         ModFluids.register(modEventBus);
         ModBlocks.register(modEventBus);
