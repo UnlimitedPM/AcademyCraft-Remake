@@ -17,6 +17,9 @@
   "entrypoints": {
     "main": [
       "cn.academy.fabric.AcademyCraftFabric"
+    ],
+    "client": [
+      "cn.academy.fabric.client.AcademyCraftFabricClient"
     ]
   },
   "depends": {

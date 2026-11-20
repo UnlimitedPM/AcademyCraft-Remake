@@ -14,7 +14,9 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<CatEngineBlockEntity>> CAT_ENGINE =
             BLOCK_ENTITIES.register("cat_engine", () ->
-                    BlockEntityType.Builder.of(CatEngineBlockEntity::new, ModBlocks.CAT_ENGINE.get()).build(null));
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new CatEngineBlockEntity(ModBlockEntities.CAT_ENGINE.get(), pos, state),
+                            ModBlocks.CAT_ENGINE.get()).build(null));
 
     // PAS de block entity pour le bloc de fluide : un par bloc de liquide ne portait rien du tout.
     // Le rendu des nappes retrouve les blocs par la palette du chunk.

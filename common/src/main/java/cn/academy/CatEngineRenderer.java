@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 
 public class CatEngineRenderer implements BlockEntityRenderer<CatEngineBlockEntity> {
     // CORRECTION : Chemin exact de ta texture
-    private static final ResourceLocation CAT_TEXTURE = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/block/cat_engine.png");
+    private static final ResourceLocation CAT_TEXTURE = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/block/cat_engine.png");
 
     public CatEngineRenderer(BlockEntityRendererProvider.Context context) {}
 

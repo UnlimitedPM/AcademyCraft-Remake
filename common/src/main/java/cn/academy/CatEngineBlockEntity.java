@@ -6,6 +6,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 import net.minecraft.world.level.Level;
@@ -14,8 +15,8 @@ public class CatEngineBlockEntity extends BlockEntity {
     private boolean isRotating = false;
     public float rotation = 0;
 
-    public CatEngineBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.CAT_ENGINE.get(), pos, state);
+    public CatEngineBlockEntity(BlockEntityType<CatEngineBlockEntity> type, BlockPos pos, BlockState state) {
+        super(type, pos, state);
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, CatEngineBlockEntity entity) {

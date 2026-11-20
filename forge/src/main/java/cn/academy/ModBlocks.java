@@ -74,7 +74,8 @@ public class ModBlocks {
             () -> new SolarGenBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL)));
 
     public static final RegistryObject<Block> CAT_ENGINE = BLOCKS.register("cat_engine",
-            () -> new CatEngineBlock(BlockBehaviour.Properties.of().noOcclusion()));
+            () -> new CatEngineBlock(BlockBehaviour.Properties.of().noOcclusion(),
+                    () -> ModBlockEntities.CAT_ENGINE.get()));
 
     // --- RÉSEAU SANS FIL ---
     public static final RegistryObject<Block> MATRIX = BLOCKS.register("matrix",

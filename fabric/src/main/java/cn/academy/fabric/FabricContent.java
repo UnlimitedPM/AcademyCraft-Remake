@@ -1,6 +1,8 @@
 package cn.academy.fabric;
 
 import cn.academy.AcademyCraftCommon;
+import cn.academy.CatEngineBlock;
+import cn.academy.CatEngineBlockEntity;
 import cn.academy.EnergyUnitItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.core.Registry;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
 import java.util.ArrayList;
@@ -32,6 +35,9 @@ public final class FabricContent {
 
     private FabricContent() {
     }
+
+    /** Type de block entity du moteur a chat ; expose pour le rendu client. */
+    public static BlockEntityType<CatEngineBlockEntity> CAT_ENGINE_TYPE;
 
     public static void register() {
         FabricSounds.register();
@@ -69,6 +75,16 @@ public final class FabricContent {
         plainBlock("reso_ore", BlockBehaviour.Properties.of()
                 .strength(3.0f).sound(SoundType.STONE).requiresCorrectToolForDrops());
         plainBlock("machine_frame", BlockBehaviour.Properties.of().strength(3.0f).sound(SoundType.METAL));
+
+        // --- Moteur a chat : premier bloc a block entity partage avec Forge/NeoForge ---
+        Block catEngine = new CatEngineBlock(BlockBehaviour.Properties.of().noOcclusion(),
+                () -> CAT_ENGINE_TYPE);
+        Registry.register(BuiltInRegistries.BLOCK, id("cat_engine"), catEngine);
+        CAT_ENGINE_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("cat_engine"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new CatEngineBlockEntity(CAT_ENGINE_TYPE, pos, state),
+                        catEngine).build(null));
+        register("cat_engine", new BlockItem(catEngine, new Item.Properties()));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()

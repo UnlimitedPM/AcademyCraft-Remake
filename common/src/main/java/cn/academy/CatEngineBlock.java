@@ -13,16 +13,15 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 
-// Importe aussi tes propres registres pour l'entité
-import cn.academy.CatEngineBlockEntity;
+import java.util.function.Supplier;
 
 public class CatEngineBlock extends BaseEntityBlock {
-    public CatEngineBlock(Properties props) {
+    private final Supplier<BlockEntityType<CatEngineBlockEntity>> type;
+
+    public CatEngineBlock(Properties props, Supplier<BlockEntityType<CatEngineBlockEntity>> type) {
         super(props.noOcclusion());
+        this.type = type;
     }
 
     @Override
@@ -42,13 +41,13 @@ public class CatEngineBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new CatEngineBlockEntity(pos, state);
+        return new CatEngineBlockEntity(type.get(), pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         // Ici, le 'Level' de Minecraft est passé au ticker helper
-        return createTickerHelper(type, ModBlockEntities.CAT_ENGINE.get(), CatEngineBlockEntity::tick);
+        return createTickerHelper(type, this.type.get(), CatEngineBlockEntity::tick);
     }
 }
