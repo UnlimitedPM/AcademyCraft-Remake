@@ -13,8 +13,9 @@
 - NeoForge 1.20.1 (47.1.106) est complet : le code Forge est compilé pour lui, avec deux
   adaptations d'API (`ResourceLocation`, constructeur du mod, `ModLoadingContext`). 182 GameTests
   et 975 tests unitaires verts ; client jusqu'à un monde. Fabric reste un squelette.
-- `gradlew build` construit les quatre modules ; les tests unitaires Forge passent et le client
-  Forge atteint l'écran titre.
+- Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs et un onglet créatif sont
+  enregistrés, le client Fabric démarre et charge un monde. Le plan du reste est dans
+  `FABRIC_PORT.md`.
 
 ### English
 
@@ -27,8 +28,9 @@
 - NeoForge 1.20.1 (47.1.106) is complete: the Forge code is compiled for it, with two API
   adaptations (`ResourceLocation`, mod constructor, `ModLoadingContext`). 182 GameTests and 975
   unit tests green; client reaches a world. Fabric remains a skeleton.
-- `gradlew build` builds all four modules; Forge unit tests pass and the Forge client reaches the
-  title screen.
+- Fabric (and Quilt) got its first milestone: 20 items, 5 blocks and a creative tab are
+  registered; the Fabric client starts and loads a world. The rest of the plan is in
+  `FABRIC_PORT.md`.
 
 ## 1.0.4 - la lumiere et les ombres / light and shadows
 

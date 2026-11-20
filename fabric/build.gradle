@@ -32,6 +32,18 @@ dependencies {
 }
 
 processResources {
+    // Les assets et data du mod sont communs aux chargeurs. Les metadonnees de chargeur, elles,
+    // restent propres au module (fabric.mod.json ici).
+    from(rootProject.file('forge/src/main/resources')) {
+        exclude 'META-INF/**'
+        // Le palier Fabric ne contient pas encore les machines, outils et item tags : leurs
+        // recettes/succes referenceraient des objets absents. On les ajoutera avec le contenu.
+        exclude 'data/**'
+    }
+    from(rootProject.file('forge/src/generated/resources')) {
+        exclude 'data/**'
+    }
+
     inputs.property 'version', project.version
     filesMatching('fabric.mod.json') {
         expand version: project.version

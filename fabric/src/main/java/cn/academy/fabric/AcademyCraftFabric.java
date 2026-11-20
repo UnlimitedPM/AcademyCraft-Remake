@@ -13,5 +13,6 @@ public final class AcademyCraftFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         AcademyCraftCommon.init();
+        FabricContent.register();
     }
 }

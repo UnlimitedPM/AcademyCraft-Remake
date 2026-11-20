@@ -11,7 +11,7 @@ Produire un jar pour chaque famille de chargeurs à partir d'un seul dépôt :
 |---|---|---|---|
 | `forge/` | Forge 47.4.20 | `academy-forge-1.0.4.jar` | Complet : tout le portage 1.12.2 → 1.20.1 |
 | `neoforge/` | NeoForge 47.1.106 | `academy-neoforge-1.0.4.jar` | Complet : même code, adapté aux APIs NeoForge 47.1 |
-| `fabric/` | Fabric Loader 0.16.14 + Fabric API 0.92.12 | `academy-fabric-1.0.4.jar` | Échafaudage : point d'entrée seul |
+| `fabric/` | Fabric Loader 0.16.14 + Fabric API 0.92.12 | `academy-fabric-1.0.4.jar` | Démarrage : 20 objets + 5 blocs + onglet créatif |
 | `common/` | — | aucun (sources partagées) | Une classe neutre, à remplir |
 
 Quilt n'a pas de module : Quilt Loader lit `fabric.mod.json` et charge les mods Fabric. Le jar
@@ -101,6 +101,11 @@ Le filtre de sources est une étape temporaire : quand les classes neutres passe
 Validé : 182 GameTests NeoForge verts, 975 tests unitaires verts, client NeoForge jusqu'au monde.
 
 ### 2. Fabric puis Quilt
+
+Le portage Fabric est en cours. Audit détaillé, ordre des domaines et règles : `FABRIC_PORT.md`.
+
+Le jar Fabric charge déjà le mod, enregistre les matériaux, les minerais et un onglet créatif.
+Le reste demande des abstractions de capacités, réseau, config, fluides, énergie et hooks client.
 
 Le chantier est plus profond ; les points suivants n'ont pas d'équivalent direct :
 
