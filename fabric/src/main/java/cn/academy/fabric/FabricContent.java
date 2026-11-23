@@ -6,6 +6,12 @@ import cn.academy.CatEngineBlockEntity;
 import cn.academy.EnergyUnitItem;
 import cn.academy.MatrixBlock;
 import cn.academy.MatrixMenu;
+import cn.academy.ImagFusorBlock;
+import cn.academy.ImagFusorBlockEntity;
+import cn.academy.ImagFusorMenu;
+import cn.academy.PhaseGeneratorBlock;
+import cn.academy.PhaseGeneratorBlockEntity;
+import cn.academy.PhaseGeneratorMenu;
 import cn.academy.MetalFormerBlock;
 import cn.academy.MetalFormerBlockEntity;
 import cn.academy.MetalFormerMenu;
@@ -84,6 +90,12 @@ public final class FabricContent {
     public static MenuType<MatrixMenu> MATRIX_MENU;
     public static BlockEntityType<NodeBlockEntity> NODE_TYPE;
     public static MenuType<NodeMenu> NODE_MENU;
+
+    /** Machines a fluide. */
+    public static BlockEntityType<ImagFusorBlockEntity> IMAG_FUSOR_TYPE;
+    public static MenuType<ImagFusorMenu> IMAG_FUSOR_MENU;
+    public static BlockEntityType<PhaseGeneratorBlockEntity> PHASE_GEN_TYPE;
+    public static MenuType<PhaseGeneratorMenu> PHASE_GEN_MENU;
 
     public static void register() {
         FabricSounds.register();
@@ -220,6 +232,40 @@ public final class FabricContent {
                 BlockEntityType.Builder.of(
                         (pos, state) -> new NodeBlockEntity(NODE_TYPE, NODE_MENU, pos, state),
                         nodeBasic, nodeStandard, nodeAdvanced).build(null));
+
+        // --- Machines a phase liquide ---
+        register("matter_unit", new Item(new Item.Properties()));
+        register("matter_unit_phase_liquid", new Item(new Item.Properties()));
+
+        IMAG_FUSOR_MENU = Registry.register(BuiltInRegistries.MENU, id("imag_fusor"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new ImagFusorMenu(FabricContent.IMAG_FUSOR_MENU, syncId, inventory, buf)));
+        Block imagFusor = new ImagFusorBlock(
+                BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(5.0f).sound(SoundType.METAL)
+                        .lightLevel(state -> state.getValue(ImagFusorBlock.LIT) ? 12 : 0),
+                () -> IMAG_FUSOR_TYPE,
+                (pos, state) -> new ImagFusorBlockEntity(IMAG_FUSOR_TYPE, IMAG_FUSOR_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("imag_fusor"), imagFusor);
+        IMAG_FUSOR_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("imag_fusor"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new ImagFusorBlockEntity(IMAG_FUSOR_TYPE, IMAG_FUSOR_MENU, pos, state),
+                        imagFusor).build(null));
+        register("imag_fusor", new BlockItem(imagFusor, new Item.Properties()));
+
+        PHASE_GEN_MENU = Registry.register(BuiltInRegistries.MENU, id("phase_gen"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new PhaseGeneratorMenu(FabricContent.PHASE_GEN_MENU, syncId, inventory, buf)));
+        Block phaseGen = new PhaseGeneratorBlock(
+                BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(4.0f).sound(SoundType.METAL)
+                        .lightLevel(state -> state.getValue(PhaseGeneratorBlock.LEVEL) > 0 ? 12 : 0),
+                () -> PHASE_GEN_TYPE,
+                (pos, state) -> new PhaseGeneratorBlockEntity(PHASE_GEN_TYPE, PHASE_GEN_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("phase_gen"), phaseGen);
+        PHASE_GEN_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("phase_gen"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new PhaseGeneratorBlockEntity(PHASE_GEN_TYPE, PHASE_GEN_MENU, pos, state),
+                        phaseGen).build(null));
+        register("phase_gen", new BlockItem(phaseGen, new Item.Properties()));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()

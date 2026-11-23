@@ -1,6 +1,6 @@
 package cn.academy;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.energy.NodeFinder;
 import net.minecraft.core.BlockPos;
@@ -39,8 +39,15 @@ public class ImagFusorBlock extends Block implements EntityBlock {
     /** Allume pendant la fusion, pour que la machine se voie de loin. */
     public static final BooleanProperty LIT = BlockStateProperties.LIT;
 
-    public ImagFusorBlock(Properties properties) {
+    private final java.util.function.Supplier<BlockEntityType<? extends ImagFusorBlockEntity>> type;
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public ImagFusorBlock(Properties properties,
+                          java.util.function.Supplier<BlockEntityType<? extends ImagFusorBlockEntity>> type,
+                          java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
+        this.type = type;
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(LIT, false));
@@ -64,7 +71,7 @@ public class ImagFusorBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new ImagFusorBlockEntity(pos, state);
+        return blockEntities.apply(pos, state);
     }
 
     @Nullable
@@ -74,7 +81,7 @@ public class ImagFusorBlock extends Block implements EntityBlock {
         // Le ticker est pose des DEUX cotes : le serveur fait fondre, et le client fait
         // tourner la boucle sonore de la machine. C'est le block entity qui trie, au debut
         // de son tick.
-        if (type != ModBlockEntities.IMAG_FUSOR.get()) return null;
+        if (type != this.type.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof ImagFusorBlockEntity fusor) ImagFusorBlockEntity.tick(lvl, pos, st, fusor);
         };

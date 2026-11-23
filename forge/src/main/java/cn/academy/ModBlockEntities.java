@@ -62,7 +62,10 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<ImagFusorBlockEntity>> IMAG_FUSOR =
             BLOCK_ENTITIES.register("imag_fusor", () ->
-                    BlockEntityType.Builder.of(ImagFusorBlockEntity::new, ModBlocks.IMAG_FUSOR.get()).build(null));
+                    BlockEntityType.Builder.<ImagFusorBlockEntity>of(
+                            (pos, state) -> new ForgeImagFusorBlockEntity(
+                                    ModBlockEntities.IMAG_FUSOR.get(), ModMenus.IMAG_FUSOR.get(), pos, state),
+                            ModBlocks.IMAG_FUSOR.get()).build(null));
 
     /**
      * L'eolienne a deux block entities : la base qui produit, et le rotor qui
@@ -105,7 +108,9 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<PhaseGeneratorBlockEntity>> PHASE_GENERATOR =
             BLOCK_ENTITIES.register("phase_gen", () ->
-                    BlockEntityType.Builder.of(PhaseGeneratorBlockEntity::new,
+                    BlockEntityType.Builder.<PhaseGeneratorBlockEntity>of(
+                            (pos, state) -> new ForgePhaseGeneratorBlockEntity(
+                                    ModBlockEntities.PHASE_GENERATOR.get(), ModMenus.PHASE_GENERATOR.get(), pos, state),
                             ModBlocks.PHASE_GENERATOR.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<AbilityInterfererBlockEntity>> ABILITY_INTERFERER =

@@ -53,7 +53,10 @@ public class ModBlocks {
                     .sound(SoundType.METAL)
                     // Sécurité pour la propriété LIT
                     .lightLevel(state -> state.hasProperty(BlockStateProperties.LIT) &&
-                            state.getValue(BlockStateProperties.LIT) ? 12 : 0)));
+                            state.getValue(BlockStateProperties.LIT) ? 12 : 0),
+                    () -> ModBlockEntities.IMAG_FUSOR.get(),
+                    (pos, state) -> new ForgeImagFusorBlockEntity(ModBlockEntities.IMAG_FUSOR.get(),
+                            ModMenus.IMAG_FUSOR.get(), pos, state)));
 
     public static final RegistryObject<Block> METAL_FORMER = BLOCKS.register("metal_former",
             () -> new MetalFormerBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
@@ -71,7 +74,10 @@ public class ModBlocks {
                     .sound(SoundType.METAL)
                     // Sécurité : on vérifie si la propriété existe avant de demander la valeur
                     .lightLevel(state -> state.hasProperty(PhaseGeneratorBlock.LEVEL) ?
-                            (state.getValue(PhaseGeneratorBlock.LEVEL) > 0 ? 12 : 0) : 0)));
+                            (state.getValue(PhaseGeneratorBlock.LEVEL) > 0 ? 12 : 0) : 0),
+                    () -> ModBlockEntities.PHASE_GENERATOR.get(),
+                    (pos, state) -> new ForgePhaseGeneratorBlockEntity(ModBlockEntities.PHASE_GENERATOR.get(),
+                            ModMenus.PHASE_GENERATOR.get(), pos, state)));
 
     public static final RegistryObject<SolarGenBlock> SOLAR_GEN = registerBlock("solar_gen",
             () -> new SolarGenBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL),

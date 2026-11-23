@@ -7,10 +7,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import cn.academy.platform.storage.StorageSlot;
 
 /**
@@ -44,8 +44,8 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
     private final SyncedInt producing;
     private final SyncedInt linked;
 
-    public PhaseGeneratorMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public PhaseGeneratorMenu(MenuType<PhaseGeneratorMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static PhaseGeneratorBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -54,8 +54,8 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
         throw new IllegalStateException("No PhaseGeneratorBlockEntity at " + pos);
     }
 
-    public PhaseGeneratorMenu(int containerId, Inventory playerInventory, PhaseGeneratorBlockEntity blockEntity) {
-        super(ModMenus.PHASE_GENERATOR.get(), containerId);
+    public PhaseGeneratorMenu(MenuType<PhaseGeneratorMenu> type, int containerId, Inventory playerInventory, PhaseGeneratorBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
@@ -63,7 +63,7 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
                 LIQUID_IN_X, TOP_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.is(ModItems.MATTER_UNIT_PHASE.get());
+                return stack.is(cn.academy.content.AcademyContent.item("matter_unit_phase_liquid"));
             }
         });
         addSlot(new StorageSlot(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_LIQUID_OUT,
@@ -150,7 +150,7 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
             // Du joueur vers la machine : une unite de phase va dans son
             // emplacement, un objet d'energie dans le sien, le reste ne bouge pas.
             boolean moved;
-            if (stackInSlot.is(ModItems.MATTER_UNIT_PHASE.get())) {
+            if (stackInSlot.is(cn.academy.content.AcademyContent.item("matter_unit_phase_liquid"))) {
                 moved = moveItemStackTo(stackInSlot, PhaseGeneratorBlockEntity.SLOT_LIQUID_IN,
                         PhaseGeneratorBlockEntity.SLOT_LIQUID_IN + 1, false);
             } else if (cn.academy.energy.EnergyItems.isEnergyItem(stackInSlot)) {
@@ -169,6 +169,6 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.PHASE_GENERATOR.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

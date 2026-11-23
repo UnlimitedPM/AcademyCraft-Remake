@@ -26,7 +26,9 @@
   identifiant (`AcademyContent`) au lieu de nommer les registres de Forge. L'éolienne (base,
   piliers, rotor) est également dans `common/` et enregistrée sur Fabric. Le Matrix et les trois
   nœuds sans fil le rejoignent, avec leurs menus ; les demandes de configuration d'écran passent
-  par deux nouveaux services `PlatformHooks`. Le raccordement au réseau passe par un crochet
+  par deux nouveaux services `PlatformHooks`. Les deux machines à phase liquide (fuseur Imag et
+  générateur de phase) sont communes elles aussi, avec une cuve neutre (`SimpleFluidTank`) et un
+  adaptateur `IFluidHandler` côté Forge. Le raccordement au réseau passe par un crochet
   `PlatformHooks` de plus. Le client Fabric démarre, charge un monde et installe son ouverture de
   menu. Le plan du reste est dans `FABRIC_PORT.md`.
 

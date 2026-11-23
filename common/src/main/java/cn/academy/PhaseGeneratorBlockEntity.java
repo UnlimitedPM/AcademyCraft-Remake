@@ -1,10 +1,13 @@
 package cn.academy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
+import cn.academy.content.AcademyContent;
 import cn.academy.energy.EnergyGenerator;
-import cn.academy.energy.NodeFinder;
+import cn.academy.platform.PlatformHooks;
+import cn.academy.platform.fluid.SimpleFluidTank;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -17,18 +20,11 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Generateur de phase : il brule de la phase liquide pour produire de l'energie.
@@ -81,32 +77,22 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
     private static final int SYNTH_INTERVAL = 10;
     private static final int NODE_SEARCH_INTERVAL = 100;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            if (stack.isEmpty()) return false;
-            return switch (slot) {
-                case SLOT_LIQUID_IN -> stack.is(ModItems.MATTER_UNIT_PHASE.get());
-                case SLOT_OUTPUT -> cn.academy.energy.EnergyItems.supports(stack)
-                        || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
-                // Les unites vides sont posees par la machine.
-                default -> false;
-            };
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final SimpleItemStorage inventory = new SimpleItemStorage(SLOT_COUNT, slot -> 64,
+            (slot, stack) -> {
+                if (stack.isEmpty()) return false;
+                return switch (slot) {
+                    case SLOT_LIQUID_IN -> stack.is(AcademyContent.item("matter_unit_phase_liquid"));
+                    case SLOT_OUTPUT -> cn.academy.energy.EnergyItems.supports(stack)
+                            || PlatformHooks.hasExternalEnergy(stack);
+                    // Les unites vides sont posees par la machine.
+                    default -> false;
+                };
+            },
+            this::setChanged);
 
     /** Cuve de phase liquide. Elle n'accepte que le fluide du mod. */
-    private final FluidTank tank = new FluidTank(TANK_SIZE) {
-        @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return ImagFusorBlockEntity.isPhaseLiquid(stack.getFluid());
-        }
-    };
+    private final SimpleFluidTank tank = new SimpleFluidTank(TANK_SIZE,
+            AcademyContent::isPhaseLiquid, this::setChanged);
 
     private double energy;
 
@@ -115,11 +101,18 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
     private int syncCounter;
     private int searchCounter;
 
-    private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
-    private final LazyOptional<IFluidHandler> fluidHandlerCap = LazyOptional.of(() -> tank);
+    private final MenuType<PhaseGeneratorMenu> menuType;
 
-    public PhaseGeneratorBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.PHASE_GENERATOR.get(), pos, state);
+    public PhaseGeneratorBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type,
+                                     MenuType<PhaseGeneratorMenu> menuType,
+                                     BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.menuType = menuType;
+    }
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public net.minecraft.world.level.block.entity.BlockEntityType<?> entityType() {
+        return getType();
     }
 
     // ------------------------------------------------------------------
@@ -135,7 +128,7 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
 
         if (++generator.searchCounter >= NODE_SEARCH_INTERVAL) {
             generator.searchCounter = 0;
-            boolean nowLinked = NodeFinder.ensureLinked(server, pos);
+            boolean nowLinked = PlatformHooks.ensureNodeLinked(server, pos);
             if (nowLinked != generator.linked) {
                 generator.linked = nowLinked;
                 generator.setChanged();
@@ -156,16 +149,15 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
         if (tank.getFluidAmount() + PER_UNIT > TANK_SIZE) return;
 
         ItemStack empties = inventory.getStackInSlot(SLOT_LIQUID_OUT);
-        if (!empties.isEmpty() && !empties.is(ModItems.MATTER_UNIT.get())) return;
+        if (!empties.isEmpty() && !empties.is(AcademyContent.item("matter_unit"))) return;
         if (!empties.isEmpty() && empties.getCount() >= empties.getMaxStackSize()) return;
 
-        FluidStack toMelt = new FluidStack(ModFluids.SOURCE_PHASE_LIQUID.get(), PER_UNIT);
-        if (tank.fill(toMelt, IFluidHandler.FluidAction.SIMULATE) < PER_UNIT) return;
-        tank.fill(toMelt, IFluidHandler.FluidAction.EXECUTE);
+        if (tank.fill(AcademyContent.fluid("phase_liquid"), PER_UNIT, true) < PER_UNIT) return;
+        tank.fill(AcademyContent.fluid("phase_liquid"), PER_UNIT, false);
 
         inventory.setStackInSlot(SLOT_LIQUID_IN, units.copyWithCount(units.getCount() - 1));
         inventory.setStackInSlot(SLOT_LIQUID_OUT, empties.isEmpty()
-                ? new ItemStack(ModItems.MATTER_UNIT.get())
+                ? new ItemStack(AcademyContent.item("matter_unit"))
                 : empties.copyWithCount(empties.getCount() + 1));
         setChanged();
     }
@@ -184,7 +176,7 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
         int maxDrain = (int) Math.min(CONSUME_PER_TICK, room / GEN_PER_MB);
         if (maxDrain <= 0) return;
 
-        int drained = tank.drain(maxDrain, IFluidHandler.FluidAction.EXECUTE).getAmount();
+        int drained = tank.drain(maxDrain, false);
         if (drained <= 0) return;
 
         energy = Math.min(BUFFER_SIZE, energy + drained * GEN_PER_MB);
@@ -207,13 +199,11 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
             return;
         }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
-            if (accepted > 0) {
-                energy -= accepted;
-                setChanged();
-            }
-        });
+        int accepted = PlatformHooks.chargeExternalItem(stack, (int) Math.min(BANDWIDTH, energy), false);
+        if (accepted > 0) {
+            energy -= accepted;
+            setChanged();
+        }
     }
 
     /**
@@ -280,8 +270,7 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
 
     /** Remplit la cuve directement (utilise par les tests). */
     public void setLiquidAmount(int amount) {
-        tank.setFluid(amount <= 0 ? FluidStack.EMPTY
-                : new FluidStack(ModFluids.SOURCE_PHASE_LIQUID.get(), Math.min(amount, TANK_SIZE)));
+        tank.set(AcademyContent.fluid("phase_liquid"), Math.min(amount, TANK_SIZE));
         setChanged();
     }
 
@@ -307,27 +296,13 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
         return linked;
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+    public ItemStorage getInventory() {
+        return inventory;
     }
 
-    // ------------------------------------------------------------------
-    // Capacites Forge
-    // ------------------------------------------------------------------
-
-    @Nonnull
-    @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER) return itemHandlerCap.cast();
-        if (cap == ForgeCapabilities.FLUID_HANDLER) return fluidHandlerCap.cast();
-        return super.getCapability(cap, side);
-    }
-
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        itemHandlerCap.invalidate();
-        fluidHandlerCap.invalidate();
+    /** Vue de la cuve, pour les tests et un futur affichage. */
+    public SimpleFluidTank getTank() {
+        return tank;
     }
 
     // ------------------------------------------------------------------
@@ -337,8 +312,12 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
-        tag.put("tank", tank.writeToNBT(new CompoundTag()));
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
+        CompoundTag tankTag = new CompoundTag();
+        tank.save(tankTag);
+        tag.put("tank", tankTag);
         tag.putDouble("energy", energy);
         tag.putBoolean("linked", linked);
     }
@@ -346,8 +325,8 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
-        tank.readFromNBT(tag.getCompound("tank"));
+        inventory.load(tag.getCompound("inventory"));
+        tank.load(tag.getCompound("tank"));
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         linked = tag.getBoolean("linked");
     }
@@ -369,11 +348,11 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new PhaseGeneratorMenu(containerId, playerInventory, this);
+        return new PhaseGeneratorMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.phase_gen");
+        return getBlockState().getBlock().getName();
     }
 }

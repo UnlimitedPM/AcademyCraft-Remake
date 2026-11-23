@@ -24,7 +24,8 @@ public class ModMenus {
                     (id, inventory, buf) -> new MetalFormerMenu(ModMenus.METAL_FORMER.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<ImagFusorMenu>> IMAG_FUSOR =
-            MENUS.register("imag_fusor", () -> IForgeMenuType.create(ImagFusorMenu::new));
+            MENUS.register("imag_fusor", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new ImagFusorMenu(ModMenus.IMAG_FUSOR.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<WindgenBaseMenu>> WINDGEN_BASE =
             MENUS.register("windgen_base", () -> IForgeMenuType.create(
@@ -38,7 +39,8 @@ public class ModMenus {
             MENUS.register("developer", () -> IForgeMenuType.create(DeveloperMenu::new));
 
     public static final RegistryObject<MenuType<PhaseGeneratorMenu>> PHASE_GENERATOR =
-            MENUS.register("phase_gen", () -> IForgeMenuType.create(PhaseGeneratorMenu::new));
+            MENUS.register("phase_gen", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new PhaseGeneratorMenu(ModMenus.PHASE_GENERATOR.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<AbilityInterfererMenu>> ABILITY_INTERFERER =
             MENUS.register("ability_interferer", () -> IForgeMenuType.create(AbilityInterfererMenu::new));

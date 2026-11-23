@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import cn.academy.ModItems;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -123,8 +122,8 @@ public final class ImagFusorRecipes {
 
     private static List<Recipe> buildDefaults() {
         List<Recipe> built = new ArrayList<>();
-        built.add(new Recipe(ModItems.CRYSTAL_LOW.get(), 1, 3000, ModItems.CRYSTAL_NORMAL.get(), 1));
-        built.add(new Recipe(ModItems.CRYSTAL_NORMAL.get(), 1, 8000, ModItems.CRYSTAL_PURE.get(), 1));
+        built.add(new Recipe(cn.academy.content.AcademyContent.item("crystal_low"), 1, 3000, cn.academy.content.AcademyContent.item("crystal_normal"), 1));
+        built.add(new Recipe(cn.academy.content.AcademyContent.item("crystal_normal"), 1, 8000, cn.academy.content.AcademyContent.item("crystal_pure"), 1));
         return built;
     }
 }

@@ -1,11 +1,15 @@
 package cn.academy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
+
+import cn.academy.content.AcademyContent;
+import cn.academy.platform.PlatformHooks;
+import cn.academy.platform.fluid.SimpleFluidTank;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 
 import cn.academy.crafting.ImagFusorRecipes;
 import cn.academy.energy.EnergyReceiver;
-import cn.academy.energy.NodeFinder;
 import cn.academy.sound.MachineLoops;
 import cn.academy.sound.MachineSounds;
 import net.minecraft.core.BlockPos;
@@ -20,19 +24,12 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.capability.IFluidHandler;
-import net.minecraftforge.fluids.capability.templates.FluidTank;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Fusor d'Imag : il affine les cristaux en les baignant dans de la phase liquide.
@@ -93,33 +90,23 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     /** Cadence de recherche d'un noeud, en ticks. */
     private static final int NODE_SEARCH_INTERVAL = 100;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            if (stack.isEmpty()) return false;
-            return switch (slot) {
-                case SLOT_INPUT -> true;
-                case SLOT_IMAG_INPUT -> stack.is(ModItems.MATTER_UNIT_PHASE.get());
-                case SLOT_ENERGY_INPUT -> cn.academy.energy.EnergyItems.supports(stack)
-                        || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
-                // La sortie et les unites vides sont remplies par la machine.
-                default -> false;
-            };
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final SimpleItemStorage inventory = new SimpleItemStorage(SLOT_COUNT, slot -> 64,
+            (slot, stack) -> {
+                if (stack.isEmpty()) return false;
+                return switch (slot) {
+                    case SLOT_INPUT -> true;
+                    case SLOT_IMAG_INPUT -> stack.is(AcademyContent.item("matter_unit_phase_liquid"));
+                    case SLOT_ENERGY_INPUT -> cn.academy.energy.EnergyItems.supports(stack)
+                            || PlatformHooks.hasExternalEnergy(stack);
+                    // La sortie et les unites vides sont remplies par la machine.
+                    default -> false;
+                };
+            },
+            this::setChanged);
 
     /** Cuve de phase liquide. Elle n'accepte que le fluide du mod. */
-    private final FluidTank tank = new FluidTank(TANK_SIZE) {
-        @Override
-        public boolean isFluidValid(FluidStack stack) {
-            return isPhaseLiquid(stack.getFluid());
-        }
-    };
+    private final SimpleFluidTank tank = new SimpleFluidTank(TANK_SIZE,
+            AcademyContent::isPhaseLiquid, this::setChanged);
 
     private double energy;
 
@@ -144,16 +131,22 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
      */
     private boolean syncedWorking;
 
-    private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
-    private final LazyOptional<IFluidHandler> fluidHandlerCap = LazyOptional.of(() -> tank);
+    private final MenuType<ImagFusorMenu> menuType;
 
-    public ImagFusorBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.IMAG_FUSOR.get(), pos, state);
+    public ImagFusorBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type,
+                                MenuType<ImagFusorMenu> menuType, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.menuType = menuType;
+    }
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public net.minecraft.world.level.block.entity.BlockEntityType<?> entityType() {
+        return getType();
     }
 
     /** Vrai si ce fluide est celui de la phase. Source et courant partagent le type. */
     public static boolean isPhaseLiquid(Fluid fluid) {
-        return fluid.getFluidType() == ModFluids.PHASE_LIQUID_TYPE.get();
+        return AcademyContent.isPhaseLiquid(fluid);
     }
 
     // ------------------------------------------------------------------
@@ -182,7 +175,7 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
 
         if (++fusor.searchCounter >= NODE_SEARCH_INTERVAL) {
             fusor.searchCounter = 0;
-            fusor.setLinked(NodeFinder.ensureLinked(server, pos));
+            fusor.setLinked(PlatformHooks.ensureNodeLinked(server, pos));
         }
 
         if (++fusor.syncCounter >= SYNC_INTERVAL) {
@@ -201,18 +194,17 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         if (tank.getFluidAmount() + PER_UNIT > TANK_SIZE) return;
 
         ItemStack empties = inventory.getStackInSlot(SLOT_IMAG_OUTPUT);
-        if (!empties.isEmpty() && !empties.is(ModItems.MATTER_UNIT.get())) return;
+        if (!empties.isEmpty() && !empties.is(AcademyContent.item("matter_unit"))) return;
         if (!empties.isEmpty() && empties.getCount() >= empties.getMaxStackSize()) return;
 
         // On simule avant de consommer l'unite : si la cuve n'accepte pas ce
         // fluide, il ne faut pas perdre l'unite pour rien.
-        FluidStack toMelt = new FluidStack(ModFluids.SOURCE_PHASE_LIQUID.get(), PER_UNIT);
-        if (tank.fill(toMelt, IFluidHandler.FluidAction.SIMULATE) < PER_UNIT) return;
-        tank.fill(toMelt, IFluidHandler.FluidAction.EXECUTE);
+        if (tank.fill(AcademyContent.fluid("phase_liquid"), PER_UNIT, true) < PER_UNIT) return;
+        tank.fill(AcademyContent.fluid("phase_liquid"), PER_UNIT, false);
 
         inventory.setStackInSlot(SLOT_IMAG_INPUT, units.copyWithCount(units.getCount() - 1));
         inventory.setStackInSlot(SLOT_IMAG_OUTPUT, empties.isEmpty()
-                ? new ItemStack(ModItems.MATTER_UNIT.get())
+                ? new ItemStack(AcademyContent.item("matter_unit"))
                 : empties.copyWithCount(empties.getCount() + 1));
         setChanged();
     }
@@ -234,14 +226,12 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
             return;
         }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);
-            int taken = cap.extractEnergy(wanted, false);
-            if (taken > 0) {
-                energy += taken;
-                setChanged();
-            }
-        });
+        int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);
+        int taken = PlatformHooks.extractExternalItem(stack, wanted, false);
+        if (taken > 0) {
+            energy += taken;
+            setChanged();
+        }
     }
 
     /**
@@ -293,7 +283,7 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
 
     /** Preleve la phase, consomme l'entree et depose le resultat. */
     private void finishWork(Level level, BlockPos pos) {
-        tank.drain(currentRecipe.liquid(), IFluidHandler.FluidAction.EXECUTE);
+        tank.drain(currentRecipe.liquid(), false);
 
         ItemStack input = inventory.getStackInSlot(SLOT_INPUT);
         int remaining = input.getCount() - currentRecipe.inputCount();
@@ -367,8 +357,7 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
 
     /** Remplit la cuve directement (utilise par les tests). */
     public void setLiquidAmount(int amount) {
-        tank.setFluid(amount <= 0 ? FluidStack.EMPTY
-                : new FluidStack(ModFluids.SOURCE_PHASE_LIQUID.get(), Math.min(amount, TANK_SIZE)));
+        tank.set(AcademyContent.fluid("phase_liquid"), Math.min(amount, TANK_SIZE));
         setChanged();
     }
 
@@ -394,8 +383,13 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         return linked;
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+    public ItemStorage getInventory() {
+        return inventory;
+    }
+
+    /** Vue de la cuve, pour les tests et un futur affichage. */
+    public SimpleFluidTank getTank() {
+        return tank;
     }
 
     private void setLinked(boolean value) {
@@ -443,33 +437,18 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     }
 
     // ------------------------------------------------------------------
-    // Capacites Forge
-    // ------------------------------------------------------------------
-
-    @Nonnull
-    @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER) return itemHandlerCap.cast();
-        if (cap == ForgeCapabilities.FLUID_HANDLER) return fluidHandlerCap.cast();
-        return super.getCapability(cap, side);
-    }
-
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        itemHandlerCap.invalidate();
-        fluidHandlerCap.invalidate();
-    }
-
-    // ------------------------------------------------------------------
     // Persistance
     // ------------------------------------------------------------------
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
-        tag.put("tank", tank.writeToNBT(new CompoundTag()));
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
+        CompoundTag tankTag = new CompoundTag();
+        tank.save(tankTag);
+        tag.put("tank", tankTag);
         tag.putDouble("energy", energy);
         tag.putInt("work", workCounter);
         tag.putBoolean("linked", linked);
@@ -481,8 +460,8 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
-        tank.readFromNBT(tag.getCompound("tank"));
+        inventory.load(tag.getCompound("inventory"));
+        tank.load(tag.getCompound("tank"));
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         workCounter = tag.getInt("work");
         linked = tag.getBoolean("linked");
@@ -510,11 +489,11 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new ImagFusorMenu(containerId, playerInventory, this);
+        return new ImagFusorMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.imag_fusor");
+        return getBlockState().getBlock().getName();
     }
 }

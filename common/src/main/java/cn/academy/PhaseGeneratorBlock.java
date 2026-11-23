@@ -33,8 +33,15 @@ public class PhaseGeneratorBlock extends Block implements EntityBlock {
     // Gestion des 5 niveaux de textures (ip_gen0 à ip_gen4)
     public static final IntegerProperty LEVEL = IntegerProperty.create("level", 0, 4);
 
-    public PhaseGeneratorBlock(Properties properties) {
+    private final java.util.function.Supplier<BlockEntityType<? extends PhaseGeneratorBlockEntity>> type;
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public PhaseGeneratorBlock(Properties properties,
+                              java.util.function.Supplier<BlockEntityType<? extends PhaseGeneratorBlockEntity>> type,
+                              java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
+        this.type = type;
+        this.blockEntities = blockEntities;
         // État par défaut : Face au Nord, Niveau 0
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
@@ -83,14 +90,14 @@ public class PhaseGeneratorBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new PhaseGeneratorBlockEntity(pos, state);
+        return blockEntities.apply(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                  BlockEntityType<T> type) {
-        if (level.isClientSide || type != ModBlockEntities.PHASE_GENERATOR.get()) return null;
+        if (level.isClientSide || type != this.type.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof PhaseGeneratorBlockEntity generator) {
                 PhaseGeneratorBlockEntity.tick(lvl, pos, st, generator);

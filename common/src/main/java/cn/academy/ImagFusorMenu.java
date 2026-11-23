@@ -7,10 +7,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import cn.academy.platform.storage.StorageSlot;
 
 /**
@@ -68,8 +68,8 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
     private final SyncedInt recipeEngaged;
     private final SyncedInt imagNeeded;
 
-    public ImagFusorMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public ImagFusorMenu(MenuType<ImagFusorMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static ImagFusorBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -78,8 +78,8 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
         throw new IllegalStateException("No ImagFusorBlockEntity at " + pos);
     }
 
-    public ImagFusorMenu(int containerId, Inventory playerInventory, ImagFusorBlockEntity blockEntity) {
-        super(ModMenus.IMAG_FUSOR.get(), containerId);
+    public ImagFusorMenu(MenuType<ImagFusorMenu> type, int containerId, Inventory playerInventory, ImagFusorBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
@@ -97,7 +97,7 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
                 IMAG_INPUT_X, IMAG_INPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
-                return stack.is(ModItems.MATTER_UNIT_PHASE.get());
+                return stack.is(cn.academy.content.AcademyContent.item("matter_unit_phase_liquid"));
             }
         });
         addSlot(new StorageSlot(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_ENERGY_INPUT,
@@ -207,7 +207,7 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
             // Du joueur vers la machine : chaque objet va a l'emplacement qui
             // l'accepte, sinon rien ne bouge.
             boolean moved;
-            if (stackInSlot.is(ModItems.MATTER_UNIT_PHASE.get())) {
+            if (stackInSlot.is(cn.academy.content.AcademyContent.item("matter_unit_phase_liquid"))) {
                 moved = moveItemStackTo(stackInSlot, ImagFusorBlockEntity.SLOT_IMAG_INPUT,
                         ImagFusorBlockEntity.SLOT_IMAG_INPUT + 1, false);
             } else if (cn.academy.energy.EnergyItems.isEnergyItem(stackInSlot)) {
@@ -227,6 +227,6 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.IMAG_FUSOR.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

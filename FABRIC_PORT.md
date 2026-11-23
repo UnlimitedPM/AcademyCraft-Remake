@@ -83,6 +83,10 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   d'écran (`MatrixConfigPacket`, `NodeConfigPacket`) restent côté Forge, `PlatformHooks` ne
   transporte que l'intention (`sendMatrixConfig`, `sendNodeConfig`). Fabric enregistre les quatre
   blocs, les deux types de block entity et les deux menus ;
+- machines à phase dans `common/` : fuseur Imag et générateur de phase (blocs, block entities,
+  menus, recettes du fuseur). La cuve est une `SimpleFluidTank` neutre (fluide + quantité +
+  sauvegarde NBT) ; Forge la réexpose en `IFluidHandler` avec `ForgeFluidHandlerAdapter`. Fabric
+  enregistre les deux machines et les objets `matter_unit`/`matter_unit_phase_liquid` ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;
