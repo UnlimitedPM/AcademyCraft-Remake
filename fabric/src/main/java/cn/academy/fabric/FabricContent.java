@@ -121,6 +121,17 @@ public final class FabricContent {
         plainItem("mat_core_1");
         plainItem("mat_core_2");
         plainItem("needle");
+        plainItem("coin");
+        plainItem("silbarn");
+        plainItem("imag_phase");
+        plainItem("logo");
+        plainItem("media_level5_judgelight");
+        plainItem("media_only_my_railgun");
+        plainItem("media_sisters_noise");
+        plainItem("app_freq_transmitter");
+        plainItem("app_media_player");
+        plainItem("app_settings");
+        plainItem("app_skill_tree");
 
         // --- Premier objet energetique porte depuis common/ ---
         register("energy_unit", new EnergyUnitItem());
