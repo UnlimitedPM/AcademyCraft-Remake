@@ -307,8 +307,8 @@ public class PhaseGeneratorBlockEntity extends net.minecraft.world.level.block.e
         return linked;
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 
     // ------------------------------------------------------------------

@@ -48,6 +48,9 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   `WirelessMachine`, `WirelessNode`, `BlockEntityScan`, `ConfigText` ;
 - utilitaires neutres passés dans `common/` : `CubicCurve`, `ImprovedNoise`, `Plotter`,
   `SyncedInt`, `StructureLootTables`, `RenderBounds`, `MatrixStructure`, `WindgenStructure` ;
+- stockage neutre : interfaces `ItemStorage` et `EnergyStorage`, `StorageSlot` commun,
+  adaptateurs `ForgeItemStorage`/`ForgeEnergyStorage`. Les 9 machines de `StoresItems` et les
+  10 menus n'importent plus `ItemStackHandler`/`SlotItemHandler` ; `MachineDrops` est commun ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

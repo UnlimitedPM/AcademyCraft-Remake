@@ -11,7 +11,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du generateur de phase.
@@ -59,21 +59,21 @@ public class PhaseGeneratorMenu extends AbstractContainerMenu implements Wireles
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_LIQUID_IN,
+        addSlot(new StorageSlot(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_LIQUID_IN,
                 LIQUID_IN_X, TOP_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(ModItems.MATTER_UNIT_PHASE.get());
             }
         });
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_LIQUID_OUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_LIQUID_OUT,
                 LIQUID_OUT_X, LIQUID_OUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
             }
         });
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_OUTPUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), PhaseGeneratorBlockEntity.SLOT_OUTPUT,
                 OUTPUT_X, OUTPUT_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {

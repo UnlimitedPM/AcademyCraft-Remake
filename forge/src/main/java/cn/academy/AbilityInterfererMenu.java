@@ -11,7 +11,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du brouilleur d'aptitudes.
@@ -68,7 +68,7 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), AbilityInterfererBlockEntity.SLOT_BATTERY,
+        addSlot(new StorageSlot(blockEntity.getInventory(), AbilityInterfererBlockEntity.SLOT_BATTERY,
                 SLOT_X, SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {

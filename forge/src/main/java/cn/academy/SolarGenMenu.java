@@ -11,7 +11,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachine {
 
@@ -50,7 +50,7 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
         // L'emplacement de la batterie : le `SlotIFItem(tile, SLOT_BATTERY, 42, 81)` de l'original.
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), SolarGenBlockEntity.SLOT_BATTERY, 42, 81) {
+        addSlot(new StorageSlot(blockEntity.getInventory(), SolarGenBlockEntity.SLOT_BATTERY, 42, 81) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return cn.academy.energy.EnergyItems.isEnergyItem(stack);

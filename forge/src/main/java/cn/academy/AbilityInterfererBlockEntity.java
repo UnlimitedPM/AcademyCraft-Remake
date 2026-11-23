@@ -414,8 +414,8 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
         return linked;
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 
     // ------------------------------------------------------------------

@@ -347,8 +347,8 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
         pollCounter = RECIPE_POLL_TICKS;
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 
     // ------------------------------------------------------------------

@@ -17,9 +17,9 @@
   `ac_gui.ttf` de 19,6 Mo, jamais référencée, avait été ajoutée par erreur au dépôt ; onze
   textures de modèle dupliquées à l'identique dans `textures/models` ont aussi été retirées.
 - Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs, 47 sons, l'unité d'énergie, le
-  moteur à chat, onze classes du réseau d'énergie et huit utilitaires portés dans `common/`, plus
-  un onglet créatif. Le client Fabric démarre et charge un monde. Le plan du reste est dans
-  `FABRIC_PORT.md`.
+  moteur à chat, onze classes du réseau d'énergie, huit utilitaires et le stockage objet neutre
+  portés dans `common/`, plus un onglet créatif. Le client Fabric démarre et charge un monde. Le
+  plan du reste est dans `FABRIC_PORT.md`.
 
 ### English
 
@@ -36,8 +36,9 @@
   `ac_gui.ttf` font had been committed by mistake; eleven byte-identical model textures duplicated
   in `textures/models` were removed too.
 - Fabric (and Quilt) got its first milestone: 20 items, 5 blocks, 47 sounds, the energy unit, the
-  cat engine, eleven energy-network classes and eight helpers moved to `common/`, plus a creative
-  tab. The Fabric client starts and loads a world. The rest of the plan is in `FABRIC_PORT.md`.
+  cat engine, eleven energy-network classes, eight helpers and the neutral item storage layer
+  moved to `common/`, plus a creative tab. The Fabric client starts and loads a world. The rest of
+  the plan is in `FABRIC_PORT.md`.
 
 ## 1.0.4 - la lumiere et les ombres / light and shadows
 

@@ -362,7 +362,7 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
         return Component.translatable("block.academy.solar_gen");
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 }

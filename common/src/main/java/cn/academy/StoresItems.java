@@ -1,11 +1,11 @@
 package cn.academy;
 
-import net.minecraftforge.items.ItemStackHandler;
+import cn.academy.platform.storage.ItemStorage;
 
 /**
  * Une machine qui range des objets dans un inventaire.
  *
- * <p>Les machines du port ont toutes la meme chose — un {@link ItemStackHandler} et un
+ * <p>Les machines du port ont toutes la meme chose — un inventaire et un
  * {@code getInventory()} public — mais aucune ne le disait a un type commun : rien ne pouvait donc
  * les traiter ensemble. C'est ce qui a laisse passer le bug vu par le joueur : casser une machine
  * pleine perdait tout ce qu'elle contenait, parce que personne ne savait lui demander son
@@ -17,5 +17,5 @@ import net.minecraftforge.items.ItemStackHandler;
 public interface StoresItems {
 
     /** L'inventaire de la machine, tel qu'il est. */
-    ItemStackHandler getInventory();
+    ItemStorage getInventory();
 }

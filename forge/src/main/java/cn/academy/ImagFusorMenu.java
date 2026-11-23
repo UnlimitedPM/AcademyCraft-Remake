@@ -11,7 +11,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du fusor d'Imag.
@@ -83,9 +83,9 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_INPUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_INPUT,
                 INPUT_X, INPUT_Y));
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_OUTPUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_OUTPUT,
                 OUTPUT_X, OUTPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -93,21 +93,21 @@ public class ImagFusorMenu extends AbstractContainerMenu implements WirelessMach
             }
         });
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_INPUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_INPUT,
                 IMAG_INPUT_X, IMAG_INPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return stack.is(ModItems.MATTER_UNIT_PHASE.get());
             }
         });
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_ENERGY_INPUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_ENERGY_INPUT,
                 ENERGY_INPUT_X, ENERGY_INPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return cn.academy.energy.EnergyItems.isEnergyItem(stack);
             }
         });
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_OUTPUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), ImagFusorBlockEntity.SLOT_IMAG_OUTPUT,
                 IMAG_OUTPUT_X, IMAG_OUTPUT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {

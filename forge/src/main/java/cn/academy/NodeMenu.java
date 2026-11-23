@@ -12,7 +12,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du noeud sans fil.
@@ -73,9 +73,9 @@ public class NodeMenu extends AbstractContainerMenu implements WirelessNode {
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
         this.playerName = playerInventory.player.getGameProfile().getName();
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), NodeBlockEntity.SLOT_CHARGE_IN,
+        addSlot(new StorageSlot(blockEntity.getInventory(), NodeBlockEntity.SLOT_CHARGE_IN,
                 CHARGE_IN_X, CHARGE_IN_Y));
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), NodeBlockEntity.SLOT_CHARGE_OUT,
+        addSlot(new StorageSlot(blockEntity.getInventory(), NodeBlockEntity.SLOT_CHARGE_OUT,
                 CHARGE_OUT_X, CHARGE_OUT_Y));
 
         // Les slots du joueur, aux positions de l'original : la barre rapide en bas, puis les trois

@@ -394,8 +394,8 @@ public class ImagFusorBlockEntity extends BlockEntity implements MenuProvider, E
         return linked;
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 
     private void setLinked(boolean value) {

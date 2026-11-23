@@ -152,8 +152,8 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
         return inventory.getStackInSlot(SLOT_FAN).is(ModItems.WINDGEN_FAN.get());
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 
     /** Vrai si rien ne gene la rotation des pales, d'apres la derniere revision. */

@@ -12,7 +12,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du formeur de metal.
@@ -77,14 +77,14 @@ public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMa
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_IN, IN_SLOT_X, SLOT_Y));
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_OUT, OUT_SLOT_X, SLOT_Y) {
+        addSlot(new StorageSlot(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_IN, IN_SLOT_X, SLOT_Y));
+        addSlot(new StorageSlot(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_OUT, OUT_SLOT_X, SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false;
             }
         });
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_BATTERY, BATTERY_SLOT_X, BATTERY_SLOT_Y) {
+        addSlot(new StorageSlot(blockEntity.getInventory(), MetalFormerBlockEntity.SLOT_BATTERY, BATTERY_SLOT_X, BATTERY_SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return cn.academy.energy.EnergyItems.isEnergyItem(stack);

@@ -10,7 +10,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du Matrix sans fil.
@@ -81,7 +81,7 @@ public class MatrixMenu extends AbstractContainerMenu {
         this.playerName = playerInventory.player.getGameProfile().getName();
 
         for (int slot = 0; slot < MatrixBlockEntity.SLOT_PLATE_COUNT; slot++) {
-            addSlot(new SlotItemHandler(blockEntity.getInventory(), slot, PLATE_X[slot], PLATE_Y[slot]) {
+            addSlot(new StorageSlot(blockEntity.getInventory(), slot, PLATE_X[slot], PLATE_Y[slot]) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
                     return stack.is(ModItems.CONSTRAINT_PLATE.get());
@@ -89,7 +89,7 @@ public class MatrixMenu extends AbstractContainerMenu {
             });
         }
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), MatrixBlockEntity.SLOT_CORE, CORE_X, CORE_Y) {
+        addSlot(new StorageSlot(blockEntity.getInventory(), MatrixBlockEntity.SLOT_CORE, CORE_X, CORE_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return MatrixBlockEntity.coreLevelOf(stack) > 0;

@@ -5,7 +5,7 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.items.ItemStackHandler;
+import cn.academy.platform.storage.ItemStorage;
 
 /**
  * Ce qu'une machine rend quand on la casse.
@@ -37,7 +37,7 @@ public final class MachineDrops {
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (!(blockEntity instanceof StoresItems machine)) return;
 
-        ItemStackHandler inventory = machine.getInventory();
+        ItemStorage inventory = machine.getInventory();
         for (int slot = 0; slot < inventory.getSlots(); slot++) {
             ItemStack stack = inventory.getStackInSlot(slot);
             if (stack.isEmpty()) continue;

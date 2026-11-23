@@ -9,7 +9,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran du rotor de l'eolienne : un seul emplacement, celui de l'helice.
@@ -44,7 +44,7 @@ public class WindgenMainMenu extends AbstractContainerMenu {
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), WindgenMainBlockEntity.SLOT_FAN,
+        addSlot(new StorageSlot(blockEntity.getInventory(), WindgenMainBlockEntity.SLOT_FAN,
                 SLOT_X, SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {

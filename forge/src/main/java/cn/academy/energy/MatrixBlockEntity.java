@@ -259,8 +259,8 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
         return reachSqr(nodePos) <= range * range;
     }
 
-    public ItemStackHandler getInventory() {
-        return inventory;
+    public cn.academy.platform.storage.ItemStorage getInventory() {
+        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
     }
 
     // ------------------------------------------------------------------

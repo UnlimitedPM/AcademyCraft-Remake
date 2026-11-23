@@ -11,7 +11,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.SlotItemHandler;
+import cn.academy.platform.storage.StorageSlot;
 
 /**
  * Ecran de la base de l'eolienne.
@@ -58,7 +58,7 @@ public class WindgenBaseMenu extends AbstractContainerMenu implements WirelessMa
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
-        addSlot(new SlotItemHandler(blockEntity.getInventory(), WindgenBaseBlockEntity.SLOT_CHARGE,
+        addSlot(new StorageSlot(blockEntity.getInventory(), WindgenBaseBlockEntity.SLOT_CHARGE,
                 SLOT_X, SLOT_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
