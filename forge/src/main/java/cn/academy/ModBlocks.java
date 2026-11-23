@@ -58,7 +58,10 @@ public class ModBlocks {
     public static final RegistryObject<Block> METAL_FORMER = BLOCKS.register("metal_former",
             () -> new MetalFormerBlock(BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK)
                     .strength(3.5f)
-                    .sound(SoundType.METAL)));
+                    .sound(SoundType.METAL),
+                    () -> ModBlockEntities.METAL_FORMER.get(),
+                    (pos, state) -> new MetalFormerBlockEntity(ModBlockEntities.METAL_FORMER.get(),
+                            ModMenus.METAL_FORMER.get(), pos, state)));
 
     // Les identifiants sont ceux de la 1.12.2 (`phase_gen`) : c'est ce que le jeu affiche
     // sous le nom de l'objet, et ce que les recettes, succes et tutoriels nomment.

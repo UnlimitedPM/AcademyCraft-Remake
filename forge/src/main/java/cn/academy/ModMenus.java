@@ -19,7 +19,8 @@ public class ModMenus {
             MENUS.register("matrix", () -> IForgeMenuType.create(MatrixMenu::new));
 
     public static final RegistryObject<MenuType<MetalFormerMenu>> METAL_FORMER =
-            MENUS.register("metal_former", () -> IForgeMenuType.create(MetalFormerMenu::new));
+            MENUS.register("metal_former", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new MetalFormerMenu(ModMenus.METAL_FORMER.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<ImagFusorMenu>> IMAG_FUSOR =
             MENUS.register("imag_fusor", () -> IForgeMenuType.create(ImagFusorMenu::new));

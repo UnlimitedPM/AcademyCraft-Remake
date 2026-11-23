@@ -4,6 +4,9 @@ import cn.academy.AcademyCraftCommon;
 import cn.academy.CatEngineBlock;
 import cn.academy.CatEngineBlockEntity;
 import cn.academy.EnergyUnitItem;
+import cn.academy.MetalFormerBlock;
+import cn.academy.MetalFormerBlockEntity;
+import cn.academy.MetalFormerMenu;
 import cn.academy.SolarGenBlock;
 import cn.academy.SolarGenBlockEntity;
 import cn.academy.SolarGenMenu;
@@ -50,6 +53,12 @@ public final class FabricContent {
 
     /** Menu du generateur solaire (donnees d'ouverture : position du bloc). */
     public static MenuType<SolarGenMenu> SOLAR_GEN_MENU;
+
+    /** Type de block entity du formeur de metal. */
+    public static BlockEntityType<MetalFormerBlockEntity> METAL_FORMER_TYPE;
+
+    /** Menu du formeur de metal. */
+    public static MenuType<MetalFormerMenu> METAL_FORMER_MENU;
 
     public static void register() {
         FabricSounds.register();
@@ -113,6 +122,21 @@ public final class FabricContent {
                         (pos, state) -> new SolarGenBlockEntity(SOLAR_GEN_TYPE, SOLAR_GEN_MENU, pos, state),
                         solarGen).build(null));
         register("solar_gen", new BlockItem(solarGen, new Item.Properties()));
+
+        // --- Formeur de metal : premier consommateur du reseau energetique ---
+        METAL_FORMER_MENU = Registry.register(BuiltInRegistries.MENU, id("metal_former"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new MetalFormerMenu(FabricContent.METAL_FORMER_MENU, syncId, inventory, buf)));
+        Block metalFormer = new MetalFormerBlock(
+                BlockBehaviour.Properties.copy(Blocks.IRON_BLOCK).strength(3.5f).sound(SoundType.METAL),
+                () -> METAL_FORMER_TYPE,
+                (pos, state) -> new MetalFormerBlockEntity(METAL_FORMER_TYPE, METAL_FORMER_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("metal_former"), metalFormer);
+        METAL_FORMER_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("metal_former"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new MetalFormerBlockEntity(METAL_FORMER_TYPE, METAL_FORMER_MENU, pos, state),
+                        metalFormer).build(null));
+        register("metal_former", new BlockItem(metalFormer, new Item.Properties()));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()

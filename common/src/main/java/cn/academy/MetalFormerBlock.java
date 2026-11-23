@@ -1,8 +1,7 @@
 package cn.academy;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
-import cn.academy.energy.NodeFinder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -23,6 +22,9 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
+
 /**
  * Formeur de metal.
  *
@@ -34,8 +36,15 @@ public class MetalFormerBlock extends Block implements EntityBlock {
 
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
-    public MetalFormerBlock(Properties properties) {
+    private final Supplier<BlockEntityType<? extends MetalFormerBlockEntity>> type;
+    private final BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public MetalFormerBlock(Properties properties,
+                            Supplier<BlockEntityType<? extends MetalFormerBlockEntity>> type,
+                            BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
+        this.type = type;
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
@@ -57,7 +66,7 @@ public class MetalFormerBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new MetalFormerBlockEntity(pos, state);
+        return blockEntities.apply(pos, state);
     }
 
     @Nullable
@@ -67,7 +76,7 @@ public class MetalFormerBlock extends Block implements EntityBlock {
         // Le ticker est pose des DEUX cotes : le serveur transforme, et le client fait
         // tourner la boucle sonore de la machine. C'est le block entity qui trie, au debut
         // de son tick.
-        if (type != ModBlockEntities.METAL_FORMER.get()) return null;
+        if (type != this.type.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof MetalFormerBlockEntity former) MetalFormerBlockEntity.tick(lvl, pos, st, former);
         };
@@ -97,7 +106,7 @@ public class MetalFormerBlock extends Block implements EntityBlock {
             // Ce que la machine contenait retombe au sol : sans ca, la casser perdait tout ce
             // qu'elle rangeait (le joueur l'a vu sur toutes les machines).
             MachineDrops.dropContents(level, pos);
-            NodeFinder.detach(server, pos);
+            cn.academy.platform.PlatformHooks.detachNode(server, pos);
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }

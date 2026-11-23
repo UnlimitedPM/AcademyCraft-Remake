@@ -8,10 +8,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import cn.academy.platform.storage.StorageSlot;
 
 /**
@@ -62,8 +62,8 @@ public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMa
     private final SyncedInt energyStored;
     private final SyncedInt working;
 
-    public MetalFormerMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public MetalFormerMenu(MenuType<MetalFormerMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static MetalFormerBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -72,8 +72,8 @@ public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMa
         throw new IllegalStateException("No MetalFormerBlockEntity at " + pos);
     }
 
-    public MetalFormerMenu(int containerId, Inventory playerInventory, MetalFormerBlockEntity blockEntity) {
-        super(ModMenus.METAL_FORMER.get(), containerId);
+    public MetalFormerMenu(MenuType<MetalFormerMenu> type, int containerId, Inventory playerInventory, MetalFormerBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
@@ -193,6 +193,6 @@ public class MetalFormerMenu extends AbstractContainerMenu implements WirelessMa
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.METAL_FORMER.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

@@ -25,7 +25,17 @@ public final class ForgePlatformHooks {
                 && stack.getCapability(ForgeCapabilities.ENERGY).isPresent());
         PlatformHooks.installMenuOpener((player, provider, writer) ->
                 NetworkHooks.openScreen(player, provider, writer));
-        PlatformHooks.installNodeLinker(cn.academy.energy.NodeFinder::ensureLinked);
+        PlatformHooks.installNodeLinker(new PlatformHooks.NodeLinker() {
+            @Override
+            public boolean ensureLinked(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+                return cn.academy.energy.NodeFinder.ensureLinked(level, pos);
+            }
+
+            @Override
+            public void detach(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+                cn.academy.energy.NodeFinder.detach(level, pos);
+            }
+        });
         PlatformHooks.installExternalEnergyIO(new PlatformHooks.ExternalEnergyIO() {
             @Override
             public int chargeItem(ItemStack stack, int amount, boolean simulate) {

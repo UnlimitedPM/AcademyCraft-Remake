@@ -42,16 +42,23 @@ public final class PlatformHooks {
     }
 
     /** Raccordement d'une machine a un noeud sans fil (le noeud lui-meme est cote chargeur). */
-    @FunctionalInterface
     public interface NodeLinker {
         boolean ensureLinked(ServerLevel level, BlockPos pos);
+
+        default void detach(ServerLevel level, BlockPos pos) {
+        }
     }
+
+    private static NodeLinker nodeLinker = new NodeLinker() {
+        @Override
+        public boolean ensureLinked(ServerLevel level, BlockPos pos) {
+            return false;
+        }
+    };
 
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
 
     private static MenuOpener menuOpener = (player, provider, writer) -> player.openMenu(provider);
-
-    private static NodeLinker nodeLinker = (level, pos) -> false;
 
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
         @Override
@@ -107,6 +114,10 @@ public final class PlatformHooks {
 
     public static boolean ensureNodeLinked(ServerLevel level, BlockPos pos) {
         return nodeLinker.ensureLinked(level, pos);
+    }
+
+    public static void detachNode(ServerLevel level, BlockPos pos) {
+        nodeLinker.detach(level, pos);
     }
 
     public static void openMenu(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer) {

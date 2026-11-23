@@ -50,7 +50,10 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<MetalFormerBlockEntity>> METAL_FORMER =
             BLOCK_ENTITIES.register("metal_former", () ->
-                    BlockEntityType.Builder.of(MetalFormerBlockEntity::new, ModBlocks.METAL_FORMER.get()).build(null));
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new MetalFormerBlockEntity(
+                                    ModBlockEntities.METAL_FORMER.get(), ModMenus.METAL_FORMER.get(), pos, state),
+                            ModBlocks.METAL_FORMER.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<ImagFusorBlockEntity>> IMAG_FUSOR =
             BLOCK_ENTITIES.register("imag_fusor", () ->

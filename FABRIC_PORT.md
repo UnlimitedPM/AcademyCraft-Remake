@@ -68,6 +68,11 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   adaptateur `EnergyStorage` → `IEnergyStorage`. Fabric l'enregistre avec un
   `ExtendedScreenHandlerType` (position du bloc en données d'ouverture). Le raccordement au
   réseau passe par `PlatformHooks.ensureNodeLinked`, que Forge branche sur `NodeFinder` ;
+- formeur de métal dans `common/` (`MetalFormerBlock`, `MetalFormerBlockEntity`,
+  `MetalFormerMenu`, `MetalFormerMode`, `MetalFormerRecipes`), enregistré sur Fabric. Ses recettes
+  ne nomment plus `ModItems`/`ModBlocks` : `AcademyContent.item("wafer")` les retrouve par
+  identifiant dans la registry vanilla, ce qui marche sur les trois chargeurs. Les sons de machine
+  (`MachineSounds`, `MachineLoops`) sont communs aussi ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

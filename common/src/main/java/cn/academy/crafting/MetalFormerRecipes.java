@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import cn.academy.ModBlocks;
-import cn.academy.ModItems;
+import cn.academy.content.AcademyContent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -237,32 +236,33 @@ public final class MetalFormerRecipes {
     private static List<Recipe> buildDefaults() {
         List<Recipe> built = new ArrayList<>();
 
-        built.add(new Recipe(ModItems.REINFORCED_IRON_PLATE.get(), 1, ModItems.NEEDLE.get(), 6,
-                MetalFormerMode.INCISE));
-        built.add(new Recipe(Items.RAIL, 1, ModItems.NEEDLE.get(), 2, MetalFormerMode.INCISE));
-        built.add(new Recipe(ModItems.REINFORCED_IRON_PLATE.get(), 2, ModItems.COIN.get(), 3,
-                MetalFormerMode.PLATE));
-        built.add(new Recipe(ModItems.WAFER.get(), 1, ModItems.SILBARN.get(), 1, MetalFormerMode.ETCH));
+        built.add(new Recipe(AcademyContent.item("reinforced_iron_plate"), 1,
+                AcademyContent.item("needle"), 6, MetalFormerMode.INCISE));
+        built.add(new Recipe(Items.RAIL, 1, AcademyContent.item("needle"), 2, MetalFormerMode.INCISE));
+        built.add(new Recipe(AcademyContent.item("reinforced_iron_plate"), 2,
+                AcademyContent.item("coin"), 3, MetalFormerMode.PLATE));
+        built.add(new Recipe(AcademyContent.item("wafer"), 1,
+                AcademyContent.item("silbarn"), 1, MetalFormerMode.ETCH));
 
-        built.add(new Recipe(ModItems.IMAG_SILICON_INGOT.get(), 1, ModItems.WAFER.get(), 2,
-                MetalFormerMode.INCISE));
-        built.add(new Recipe(ModItems.WAFER.get(), 1, ModItems.IMAG_SILICON_PIECE.get(), 4,
-                MetalFormerMode.INCISE));
-        built.add(new Recipe(ModItems.DATA_CHIP.get(), 1, ModItems.CALC_CHIP.get(), 1,
-                MetalFormerMode.ETCH));
-        built.add(new Recipe(Items.IRON_INGOT, 1, ModItems.REINFORCED_IRON_PLATE.get(), 1,
+        built.add(new Recipe(AcademyContent.item("imag_silicon_ingot"), 1,
+                AcademyContent.item("wafer"), 2, MetalFormerMode.INCISE));
+        built.add(new Recipe(AcademyContent.item("wafer"), 1,
+                AcademyContent.item("imag_silicon_piece"), 4, MetalFormerMode.INCISE));
+        built.add(new Recipe(AcademyContent.item("data_chip"), 1,
+                AcademyContent.item("calc_chip"), 1, MetalFormerMode.ETCH));
+        built.add(new Recipe(Items.IRON_INGOT, 1, AcademyContent.item("reinforced_iron_plate"), 1,
                 MetalFormerMode.PLATE));
-        built.add(new Recipe(ModItems.CONSTRAINT_INGOT.get(), 1, ModItems.CONSTRAINT_PLATE.get(), 1,
-                MetalFormerMode.PLATE));
+        built.add(new Recipe(AcademyContent.item("constraint_ingot"), 1,
+                AcademyContent.item("constraint_plate"), 1, MetalFormerMode.PLATE));
 
-        built.add(new Recipe(ModBlocks.IMAGSIL_ORE.get().asItem(), 1,
-                ModItems.IMAG_SILICON_INGOT.get(), 4, MetalFormerMode.REFINE));
-        built.add(new Recipe(ModBlocks.CONSTRAINT_METAL_ORE.get().asItem(), 1,
-                ModItems.CONSTRAINT_INGOT.get(), 2, MetalFormerMode.REFINE));
-        built.add(new Recipe(ModBlocks.RESO_ORE.get().asItem(), 1,
-                ModItems.RESO_CRYSTAL.get(), 3, MetalFormerMode.REFINE));
-        built.add(new Recipe(ModBlocks.CRYSTAL_ORE.get().asItem(), 1,
-                ModItems.CRYSTAL_LOW.get(), 4, MetalFormerMode.REFINE));
+        built.add(new Recipe(AcademyContent.blockItem("imagsil_ore"), 1,
+                AcademyContent.item("imag_silicon_ingot"), 4, MetalFormerMode.REFINE));
+        built.add(new Recipe(AcademyContent.blockItem("constraint_metal"), 1,
+                AcademyContent.item("constraint_ingot"), 2, MetalFormerMode.REFINE));
+        built.add(new Recipe(AcademyContent.blockItem("reso_ore"), 1,
+                AcademyContent.item("reso_crystal"), 3, MetalFormerMode.REFINE));
+        built.add(new Recipe(AcademyContent.blockItem("crystal_ore"), 1,
+                AcademyContent.item("crystal_low"), 4, MetalFormerMode.REFINE));
 
         // Les deux minerais que l'original ne doublait pas : le redstone donne un bloc, et le lapis en
         // donne douze. Le raffinage generique les prendrait autrement, donc ils passent avant lui.
@@ -278,11 +278,11 @@ public final class MetalFormerRecipes {
     /** Le jeu tient la liste des minerais dans ses etiquettes : ce sont elles qu'on interroge. */
     private static final net.minecraft.tags.TagKey<Item> FORGE_ORES =
             net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM,
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("forge", "ores"));
+                    new net.minecraft.resources.ResourceLocation("forge", "ores"));
 
     private static final net.minecraft.tags.TagKey<Item> VANILLA_ORES =
             net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM,
-                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("minecraft", "ores"));
+                    new net.minecraft.resources.ResourceLocation("minecraft", "ores"));
 
     /** La partie de recettes dont les recettes de raffinage ont ete tirees. */
     private static net.minecraft.world.item.crafting.RecipeManager cachedFor;

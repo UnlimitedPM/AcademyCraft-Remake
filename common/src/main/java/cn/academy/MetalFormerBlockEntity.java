@@ -1,12 +1,13 @@
 package cn.academy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.crafting.MetalFormerMode;
 import cn.academy.crafting.MetalFormerRecipes;
 import cn.academy.energy.EnergyReceiver;
-import cn.academy.energy.NodeFinder;
+import cn.academy.platform.PlatformHooks;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 import cn.academy.sound.MachineLoops;
 import cn.academy.sound.MachineSounds;
 import net.minecraft.core.BlockPos;
@@ -20,11 +21,10 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Formeur de metal : le premier consommateur du reseau energetique Imag.
@@ -101,26 +101,21 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
     /** Cadence de recherche d'un noeud, en ticks. */
     private static final int NODE_SEARCH_INTERVAL = 100;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // On refuse de mettre quoi que ce soit dans la sortie : c'est la
-            // machine qui la remplit.
-            if (slot == SLOT_OUT) return false;
-            // L'emplacement batterie etait un SlotIFItem : tout objet energetique
-            // y entrait, aucun autre.
-            if (slot == SLOT_BATTERY) {
-                return cn.academy.energy.EnergyItems.supports(stack)
-                        || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
-            }
-            return true;
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final SimpleItemStorage inventory = new SimpleItemStorage(SLOT_COUNT,
+            slot -> 64,
+            (slot, stack) -> {
+                // On refuse de mettre quoi que ce soit dans la sortie : c'est la
+                // machine qui la remplit.
+                if (slot == SLOT_OUT) return false;
+                // L'emplacement batterie etait un SlotIFItem : tout objet energetique
+                // y entrait, aucun autre.
+                if (slot == SLOT_BATTERY) {
+                    return cn.academy.energy.EnergyItems.supports(stack)
+                            || PlatformHooks.hasExternalEnergy(stack);
+                }
+                return true;
+            },
+            this::setChanged);
 
     private double energy;
 
@@ -145,8 +140,19 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
      */
     private boolean syncedWorking;
 
-    public MetalFormerBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.METAL_FORMER.get(), pos, state);
+    private final net.minecraft.world.level.block.entity.BlockEntityType<?> type;
+    private final MenuType<MetalFormerMenu> menuType;
+
+    public MetalFormerBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type,
+                                  MenuType<MetalFormerMenu> menuType, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.type = type;
+        this.menuType = menuType;
+    }
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public net.minecraft.world.level.block.entity.BlockEntityType<?> entityType() {
+        return type;
     }
 
     // ------------------------------------------------------------------
@@ -174,7 +180,7 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
 
         if (++former.searchCounter >= NODE_SEARCH_INTERVAL) {
             former.searchCounter = 0;
-            former.setLinked(NodeFinder.ensureLinked(server, pos));
+            former.setLinked(PlatformHooks.ensureNodeLinked(server, pos));
         }
 
         if (++former.syncCounter >= SYNC_INTERVAL) {
@@ -199,14 +205,12 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
             return;
         }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);
-            int taken = cap.extractEnergy(wanted, false);
-            if (taken > 0) {
-                energy += taken;
-                setChanged();
-            }
-        });
+        int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);
+        int taken = PlatformHooks.extractExternalItem(stack, wanted, false);
+        if (taken > 0) {
+            energy += taken;
+            setChanged();
+        }
     }
 
     /** Avance le travail d'un tick, ou abandonne la recette si l'energie manque. */
@@ -347,8 +351,8 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
         pollCounter = RECIPE_POLL_TICKS;
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+    public ItemStorage getInventory() {
+        return inventory;
     }
 
     // ------------------------------------------------------------------
@@ -386,7 +390,9 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
         tag.putDouble("energy", energy);
         tag.putInt("mode", mode.ordinal());
         tag.putInt("work", workCounter);
@@ -399,7 +405,7 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         mode = MetalFormerMode.byOrdinal(tag.getInt("mode"));
         workCounter = tag.getInt("work");
@@ -428,11 +434,11 @@ public class MetalFormerBlockEntity extends net.minecraft.world.level.block.enti
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new MetalFormerMenu(containerId, playerInventory, this);
+        return new MetalFormerMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.metal_former");
+        return getBlockState().getBlock().getName();
     }
 }
