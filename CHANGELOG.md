@@ -4,6 +4,15 @@
 
 ### Français
 
+- Cinq paquets d'effet passent par le réseau neutre : le sang de la chair arrachée, la traînée du
+  dépôt au loin, la gerbe du coup critique, l'onde de choc de vecmanip et la bouffée de fumée. Ils
+  sont déclarés dans `AcademyPackets` et partent aux joueurs qui voient la cible (`Network` gagne
+  `sendToTracking` : suivi d'entité sous Forge, joueurs du même monde sous Fabric, faute
+  d'équivalent). `sendToAll` Fabric existe à nouveau, grâce au serveur suivi par les événements de
+  cycle de vie. Leurs rendus (sang, formules, traînée, particules de téléportation, ondes, fumée)
+  passent en `common/` avec eux, et **tout le paquet `ability/teleporter`** est désormais commun.
+  Quatre copies périmées (deux dans `forge/`, deux dans `common/`) ont été supprimées au passage :
+  elles faisaient échouer la compilation en double classe.
 - Les aptitudes avancent vers `common/`. Les données par joueur passent par un service neutre
   (`PlatformHooks.installAbilityData`, `abilityData(Player)`), adossé à la capacité Forge et, sous
   Fabric, à une table en mémoire (non persistante, et documentée comme telle). Un crochet
@@ -51,6 +60,14 @@
 
 ### English
 
+- Five effect packets now travel through the neutral network: torn-flesh blood, the far-drop trail,
+  the critical-hit burst, the vecmanip shockwave and the smoke puff. They are declared in
+  `AcademyPackets` and go to the players who can see the target (`Network` gains `sendToTracking`:
+  entity tracking on Forge, same-level players on Fabric, which has no equivalent). Fabric
+  `sendToAll` works again through a server tracked by lifecycle events. Their visuals (blood,
+  formulas, trail, teleport particles, waves, smoke) moved to `common/` with them, and the whole
+  **`ability/teleporter` package** is common now. Four stale copies (two in `forge/`, two in
+  `common/`) were deleted on the way: they broke compilation as duplicate classes.
 - Abilities move closer to `common/`. Per-player state goes through a neutral service
   (`PlatformHooks.installAbilityData`, `abilityData(Player)`), backed by the Forge capability and,
   under Fabric, by an in-memory table (not persistent yet, and documented as such). A
