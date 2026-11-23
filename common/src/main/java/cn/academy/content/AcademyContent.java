@@ -9,6 +9,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.world.entity.EntityType;
 
 /**
  * Acces neutre au contenu du mod, par identifiant.
@@ -41,6 +43,26 @@ public final class AcademyContent {
     /** Le fluide du mod portant cet identifiant, ou {@link Fluids#EMPTY} s'il n'existe pas. */
     public static Fluid fluid(String path) {
         return BuiltInRegistries.FLUID.get(new ResourceLocation(AcademyCraftCommon.MOD_ID, path));
+    }
+
+    /**
+     * Le type d'entite du mod portant cet identifiant, ou {@code null} s'il n'existe pas.
+     *
+     * <p>Le cast est celui que le chargeur garantit : l'entite demandee est bien celle dont on
+     * declare le type au moment de le lire.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends net.minecraft.world.entity.Entity> EntityType<T> entityType(String path) {
+        ResourceLocation id = new ResourceLocation(AcademyCraftCommon.MOD_ID, path);
+        return BuiltInRegistries.ENTITY_TYPE.containsKey(id)
+                ? (EntityType<T>) BuiltInRegistries.ENTITY_TYPE.get(id) : null;
+    }
+
+    /** Le son du mod portant cet identifiant, ou {@code null} s'il n'existe pas. */
+    public static SoundEvent sound(String path) {
+        ResourceLocation id = new ResourceLocation(AcademyCraftCommon.MOD_ID, path);
+        return BuiltInRegistries.SOUND_EVENT.containsKey(id)
+                ? BuiltInRegistries.SOUND_EVENT.get(id) : null;
     }
 
     /**

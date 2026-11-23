@@ -100,7 +100,7 @@ public class ModItems {
 
     // --- OUTILS ET DIVERS ---[cite: 1]
     public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new CoinItem());
-    public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new SilbarnItem());
+    public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new cn.academy.SilbarnItem());
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new MagHookItem());
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",

@@ -100,6 +100,10 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   fois ; `ForgeNetworkTransport` les enregistre sur un `SimpleChannel`, `FabricNetworkTransport`
   sur un canal unique avec l'identifiant en tête. Quatre paquets sont déjà communs : onglet sans
   fil (demande + état), configuration du nœud et du Matrix ;
+- première entité : `EntitySilbarn`, `SilbarnVisuals` et `SilbarnItem` dans `common/` ; le type
+  d'entité est résolu par identifiant à la création du projectile, et le son de l'impact aussi
+  (`AcademyContent.entityType`/`sound`). Fabric enregistre le type d'entité ; il n'a pas encore
+  de rendu, la bille y est donc invisible pour l'instant ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

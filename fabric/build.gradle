@@ -48,6 +48,10 @@ processResources {
         exclude 'data/academy/structures/**'
         exclude 'data/academy/forge/**'
         exclude 'data/academy/damage_type/**'
+        // Les tables de butin des trois blocs qui attendent les aptitudes.
+        exclude 'data/academy/loot_tables/blocks/ability_interferer.json'
+        exclude 'data/academy/loot_tables/blocks/dev_normal.json'
+        exclude 'data/academy/loot_tables/blocks/dev_advanced.json'
     }
     from(rootProject.file('forge/src/generated/resources')) {
         exclude 'data/**'

@@ -1,7 +1,6 @@
 package cn.academy.entity;
 
-import cn.academy.ModEntities;
-import cn.academy.ModSounds;
+import cn.academy.content.AcademyContent;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -110,7 +109,7 @@ public class EntitySilbarn extends Projectile {
 
     /** La bille telle que l'objet la lance : au niveau des yeux, dans l'axe du regard. */
     public EntitySilbarn(Level level, Player thrower) {
-        this(ModEntities.SILBARN.get(), level);
+        this(AcademyContent.entityType("silbarn"), level);
         setOwner(thrower);
         setPos(thrower.getX(), thrower.getEyeY(), thrower.getZ());
         Vec3 look = thrower.getLookAngle();
@@ -161,9 +160,11 @@ public class EntitySilbarn extends Projectile {
         // Le son appartient au serveur — les deux billes de l'original s'entendaient de partout
         // — et se tait chez le client, qui le recevra du monde. Volume et hauteur de l'original.
         if (!level().isClientSide) {
-            level().playSound(null, getX(), getY(), getZ(),
-                    (heavy ? ModSounds.ENTITY_SILBARN_HEAVY : ModSounds.ENTITY_SILBARN_LIGHT).get(),
-                    SoundSource.NEUTRAL, 0.5f, 1.0f);
+            net.minecraft.sounds.SoundEvent sound = AcademyContent.sound(
+                    heavy ? "entity.silbarn_heavy" : "entity.silbarn_light");
+            if (sound != null) {
+                level().playSound(null, getX(), getY(), getZ(), sound, SoundSource.NEUTRAL, 0.5f, 1.0f);
+            }
         }
     }
 

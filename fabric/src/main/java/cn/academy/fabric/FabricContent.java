@@ -26,6 +26,7 @@ import cn.academy.WindgenMainBlock;
 import cn.academy.WindgenMainBlockEntity;
 import cn.academy.WindgenMainMenu;
 import cn.academy.NodeMenu;
+import cn.academy.SilbarnItem;
 import cn.academy.energy.MatrixBlockEntity;
 import cn.academy.energy.NodeBlock;
 import cn.academy.energy.NodeBlockEntity;
@@ -85,6 +86,9 @@ public final class FabricContent {
     public static MenuType<WindgenBaseMenu> WINDGEN_BASE_MENU;
     public static MenuType<WindgenMainMenu> WINDGEN_MAIN_MENU;
 
+    /** Entite de la bille de silicium. */
+    public static net.minecraft.world.entity.EntityType<cn.academy.entity.EntitySilbarn> SILBARN_TYPE;
+
     /** Matrix et noeuds sans fil. */
     public static BlockEntityType<MatrixBlockEntity> MATRIX_TYPE;
     public static MenuType<MatrixMenu> MATRIX_MENU;
@@ -122,7 +126,7 @@ public final class FabricContent {
         plainItem("mat_core_2");
         plainItem("needle");
         plainItem("coin");
-        plainItem("silbarn");
+        register("silbarn", new SilbarnItem());
         plainItem("imag_phase");
         plainItem("logo");
         plainItem("media_level5_judgelight");
@@ -277,6 +281,17 @@ public final class FabricContent {
                         (pos, state) -> new PhaseGeneratorBlockEntity(PHASE_GEN_TYPE, PHASE_GEN_MENU, pos, state),
                         phaseGen).build(null));
         register("phase_gen", new BlockItem(phaseGen, new Item.Properties()));
+
+        // --- Entites ---
+        SILBARN_TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("silbarn"),
+                net.minecraft.world.entity.EntityType.Builder
+                        .<cn.academy.entity.EntitySilbarn>of(cn.academy.entity.EntitySilbarn::new,
+                                net.minecraft.world.entity.MobCategory.MISC)
+                        .sized(cn.academy.entity.SilbarnVisuals.HIT_SIZE,
+                                cn.academy.entity.SilbarnVisuals.HIT_SIZE)
+                        .clientTrackingRange(4)
+                        .updateInterval(10)
+                        .build("silbarn"));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()
