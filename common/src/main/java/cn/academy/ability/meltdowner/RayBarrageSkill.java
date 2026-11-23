@@ -4,7 +4,6 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.md.MdRayKind;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
 import cn.academy.entity.EntitySilbarn;
 import cn.academy.sound.SoundLookup;
@@ -16,7 +15,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
 /**
  * Salve de rayons, portage de {@code RayBarrage} : deux competences en une, selon ce que le

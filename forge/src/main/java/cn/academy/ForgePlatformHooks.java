@@ -58,6 +58,11 @@ public final class ForgePlatformHooks {
         });
         PlatformHooks.installCategoryChangeHook(
                 cn.academy.ability.preset.PresetTracker::clearOnCategoryChange);
+        PlatformHooks.installHeldEnd(cn.academy.ability.AbilityEvents::endHeld);
+        PlatformHooks.installBlockBreakGuard((player, level, pos, state) ->
+                !net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                        new net.minecraftforge.event.level.BlockEvent.BreakEvent(
+                                level, pos, state, player)));
         PlatformHooks.installMobConversion(new PlatformHooks.MobConversion() {
             @Override
             @SuppressWarnings("unchecked")

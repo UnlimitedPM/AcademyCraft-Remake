@@ -2,9 +2,7 @@ package cn.academy.ability.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : le vol du reacteur commence, et voici sa trajectoire.
@@ -58,11 +56,8 @@ public class JetFlightPacket {
         return new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble());
     }
 
-    public static void handle(JetFlightPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.JetEngineEffect
-                .startFlight(msg.playerId, msg.start, msg.target));
-        ctx.setPacketHandled(true);
+    public static void handle(JetFlightPacket msg) {
+        cn.academy.ability.client.JetEngineEffect.startFlight(msg.playerId, msg.start, msg.target);
     }
 
     /** Le porteur du vol. Lisible par le test, qui relit l'aller-retour du paquet. */

@@ -2,7 +2,6 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdMissilePacket;
 import cn.academy.entity.EntityMdBall;
 import net.minecraft.server.level.ServerPlayer;
@@ -11,7 +10,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.List;
 
@@ -222,7 +220,7 @@ public class ElectronMissileSkill extends Skill {
      */
     private static void announce(Player player) {
         if (player instanceof ServerPlayer server) {
-            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+            cn.academy.platform.network.Network.sendToPlayer(server,
                     new MdMissilePacket(player.getId()));
         }
     }

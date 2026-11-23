@@ -3,8 +3,6 @@ package cn.academy.ability.client.md;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.Random;
 
@@ -31,7 +29,6 @@ import java.util.Random;
  * qui derive dans n'importe quel sens — ici le plasma s'eleve, et la silhouette du lanceur se
  * couvre de bas en haut.
  */
-@OnlyIn(Dist.CLIENT)
 public final class MdMissileSpray {
 
     /** Le nombre d'etincelles d'un tick : de 1 a 2, borne haute exclue. */

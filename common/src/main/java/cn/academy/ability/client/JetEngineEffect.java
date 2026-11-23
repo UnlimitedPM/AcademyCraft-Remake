@@ -7,8 +7,6 @@ import cn.academy.ability.meltdowner.JetEngineVisuals;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.Random;
 
@@ -43,7 +41,6 @@ import java.util.Random;
  * depasser. C'est le meme piege que le deplacement magnetique, et il se resout de la meme facon,
  * en posant la position et la quantite de mouvement des deux cotes.
  */
-@OnlyIn(Dist.CLIENT)
 public final class JetEngineEffect {
 
     /** Le point vise, relu a chaque tick — la ou les ondes se posent. Nul, rien a dessiner. */

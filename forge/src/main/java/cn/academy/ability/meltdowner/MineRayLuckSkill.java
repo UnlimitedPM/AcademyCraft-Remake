@@ -63,8 +63,8 @@ public class MineRayLuckSkill extends MineRaySkill {
     }
 
     @Override
-    public net.minecraftforge.registries.RegistryObject<net.minecraft.sounds.SoundEvent> startupSound() {
-        return cn.academy.ModSounds.MD_MINE_LUCK_STARTUP;
+    public String startupSound() {
+        return "md.mine_luck_startup";
     }
 
     /** Surcout : de 350 a 300, comme l'original. */

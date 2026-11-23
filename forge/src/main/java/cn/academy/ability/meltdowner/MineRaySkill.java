@@ -2,7 +2,6 @@ package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MineRaySightPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
@@ -11,7 +10,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
-import net.minecraftforge.registries.RegistryObject;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,9 +22,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
@@ -97,7 +94,7 @@ public abstract class MineRaySkill extends Skill {
      * ({@code "md.mine_" + postfix + "_startup"}) ; le port demande a chaque rayon lequel
      * est le sien, ce qui revient au meme sans construire de nom a la volee.
      */
-    public abstract RegistryObject<SoundEvent> startupSound();
+    public abstract String startupSound();
 
     @Override
     public int getCooldownTicks(AbilityData data) {
@@ -142,8 +139,7 @@ public abstract class MineRaySkill extends Skill {
      */
     private void announce(Player player, boolean open) {
         if (!(player instanceof ServerPlayer server)) return;
-        AbilityNetwork.CHANNEL.send(
-                PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
+        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> server),
                 new MineRaySightPacket(getName(), server.getId(), open));
     }
 

@@ -140,6 +140,32 @@ public final class PlatformHooks {
         void onConverted(net.minecraft.world.entity.Mob source, net.minecraft.world.entity.Mob result);
     }
 
+    /**
+     * Le refus d'une protection de terrain, avant qu'un bloc ne parte.
+     *
+     * <p>Forge poste un {@code BlockEvent.BreakEvent} pour chaque bloc casse par un joueur, et
+     * c'est par lui que les plugins de protection disent non. Sans ce crochet, une competence qui
+     * creuse en area passerait a travers. Sans installation, tout est permis.
+     */
+    @FunctionalInterface
+    public interface BlockBreakGuard {
+        boolean allow(net.minecraft.world.entity.player.Player player,
+                      net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                      net.minecraft.world.level.block.state.BlockState state);
+    }
+
+    /**
+     * Termine un maintien, par la fin ordinaire.
+     *
+     * <p>C'est la sortie qui rend ce que le maintien avait emprunte, pose sa recharge et previent
+     * le client ({@code HoldOverPacket}). Elle vit dans l'evenement Forge, qui la partage avec le
+     * relachement de touche : on la demande donc au chargeur.
+     */
+    public interface HeldEnd {
+        void end(net.minecraft.server.level.ServerPlayer player,
+                 cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill);
+    }
+
     /** Les succes du mod, que seule la logique des aptitudes declenche. */
     public enum Advancement {
         OVERLOAD, LEARNING_SKILL, EXP_FULL, CONVERT_CATEGORY
@@ -221,6 +247,11 @@ public final class PlatformHooks {
         }
     };
 
+    private static HeldEnd heldEnd = (player, data, skill) -> {
+    };
+
+    private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
+
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
         @Override
         public int chargeItem(ItemStack stack, int amount, boolean simulate) {
@@ -291,6 +322,28 @@ public final class PlatformHooks {
 
     public static void installMobConversion(MobConversion conversion) {
         mobConversion = conversion;
+    }
+
+    public static void installHeldEnd(HeldEnd end) {
+        heldEnd = end;
+    }
+
+    public static void installBlockBreakGuard(BlockBreakGuard guard) {
+        blockBreakGuard = guard;
+    }
+
+    /** Une protection de terrain permet-elle cette casse ? */
+    public static boolean allowsBlockBreak(net.minecraft.world.entity.player.Player player,
+                                           net.minecraft.world.level.Level level,
+                                           net.minecraft.core.BlockPos pos,
+                                           net.minecraft.world.level.block.state.BlockState state) {
+        return blockBreakGuard.allow(player, level, pos, state);
+    }
+
+    /** Termine un maintien par la fin ordinaire. */
+    public static void endHeld(net.minecraft.server.level.ServerPlayer player,
+                               cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill) {
+        heldEnd.end(player, data, skill);
     }
 
     /** La conversion d'une creature est-elle permise ? */

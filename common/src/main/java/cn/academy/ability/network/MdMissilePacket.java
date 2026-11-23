@@ -1,9 +1,7 @@
 package cn.academy.ability.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : le missile electronique tient, et voici son porteur.
@@ -36,10 +34,8 @@ public class MdMissilePacket {
         return new MdMissilePacket(buf.readVarInt());
     }
 
-    public static void handle(MdMissilePacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.md.MdMissileSpray.apply(msg.entityId));
-        ctx.setPacketHandled(true);
+    public static void handle(MdMissilePacket msg) {
+        cn.academy.ability.client.md.MdMissileSpray.apply(msg.entityId);
     }
 
     /** Le porteur de l'anneau. Lisible par le test, qui relit l'aller-retour du paquet. */

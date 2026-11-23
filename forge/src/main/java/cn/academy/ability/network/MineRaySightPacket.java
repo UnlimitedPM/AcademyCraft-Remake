@@ -1,9 +1,8 @@
 package cn.academy.ability.network;
 
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : un rayon minier vient de s'ouvrir ou de s'arreter, chez son tireur.
@@ -51,7 +50,8 @@ public class MineRaySightPacket {
         return new MineRaySightPacket(buf.readUtf(), buf.readVarInt(), buf.readBoolean());
     }
 
-    public static void handle(MineRaySightPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+    public static void handle(MineRaySightPacket msg,
+                              java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> cn.academy.ability.client.md.MineRaySight.see(
                 msg.skill, msg.ownerId, msg.open));

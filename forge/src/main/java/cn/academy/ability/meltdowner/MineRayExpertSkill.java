@@ -52,8 +52,8 @@ public class MineRayExpertSkill extends MineRaySkill {
     }
 
     @Override
-    public net.minecraftforge.registries.RegistryObject<net.minecraft.sounds.SoundEvent> startupSound() {
-        return cn.academy.ModSounds.MD_MINE_EXPERT_STARTUP;
+    public String startupSound() {
+        return "md.mine_expert_startup";
     }
 
     /** Surcout : de 300 a 200, comme l'original. */

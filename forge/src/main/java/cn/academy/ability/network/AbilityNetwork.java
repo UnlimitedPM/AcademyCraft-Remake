@@ -52,19 +52,12 @@ public class AbilityNetwork {
         // La marque de radiation et son fumee sont communes desormais : voir AcademyPackets.
         // Les sept effets d'onde, de trainee, de critique, de sang, de fumee, de taches et de tir
         // de plasma sont communs desormais : voir AcademyPackets.
-        // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
-        // Voir MdMissilePacket.
-        CHANNEL.registerMessage(nextId++, MdMissilePacket.class,
-                MdMissilePacket::encode, MdMissilePacket::decode, MdMissilePacket::handle);
+        // L'anneau de plasma du missile et le depart du reacteur sont communs : voir
+        // AcademyPackets (md_missile, jet_flight).
         // Et la fin d'un maintien, refusee ou terminee : le client tenait le sien depuis l'appui
         // de la touche, il doit le fermer. Voir HoldOverPacket.
         CHANNEL.registerMessage(nextId++, HoldOverPacket.class,
                 HoldOverPacket::encode, HoldOverPacket::decode, HoldOverPacket::handle);
-        // Le depart du reacteur : son maintien a lui s'arrete au relachement, alors que celui
-        // du serveur vole quinze ticks encore. C'est ce qui ouvre le bouclier. Voir
-        // JetFlightPacket.
-        CHANNEL.registerMessage(nextId++, JetFlightPacket.class,
-                JetFlightPacket::encode, JetFlightPacket::decode, JetFlightPacket::handle);
         // Le terminal voyage sur le meme canal : c'est aussi une donnee de joueur,
         // et un second canal pour un drapeau et une liste de noms ne gagnerait rien.
         CHANNEL.registerMessage(nextId++, cn.academy.terminal.network.SyncTerminalDataPacket.class,

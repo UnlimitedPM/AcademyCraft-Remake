@@ -3,7 +3,6 @@ package cn.academy.ability.meltdowner;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.JetFlightPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -14,9 +13,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Reacteur, portage de {@code JetEngine} : viser un point a douze blocs, et s'y faire
@@ -196,7 +194,7 @@ public class JetEngineSkill extends Skill {
         data.protectFromFall();
 
         // Le bruitage du depart — le son de l'acceleration de vecteur, en attendant mieux.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_VEC_ACCEL, 0.35f);
+        cn.academy.sound.AcademySounds.playFor(player, "vecmanip.vec_accel", 0.35f);
 
         // 0,004 pour le vol, comme l'original. L'experience d'usage d'une competence tenue
         // se verse depuis son effet : le paquet ne voit pas ce qui s'est passe.
@@ -208,7 +206,7 @@ public class JetEngineSkill extends Skill {
         // permet au client de poser exactement la meme trajectoire, et donc de voler sans
         // attendre que le serveur le tire. Voir JetFlightPacket.
         if (player instanceof ServerPlayer server) {
-            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+            cn.academy.platform.network.Network.sendToPlayer(server,
                     new JetFlightPacket(player.getId(),
                             data.getHoldOrigin(this), data.getHoldPoint(this)));
         }

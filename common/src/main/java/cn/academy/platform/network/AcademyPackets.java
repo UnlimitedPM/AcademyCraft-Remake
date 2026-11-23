@@ -100,5 +100,15 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.MdRayPacket::encode,
                         cn.academy.ability.network.MdRayPacket::decode),
                 cn.academy.ability.network.MdRayPacket::handle);
+
+        Network.clientbound("md_missile", cn.academy.ability.network.MdMissilePacket.class,
+                Network.codec(cn.academy.ability.network.MdMissilePacket::encode,
+                        cn.academy.ability.network.MdMissilePacket::decode),
+                cn.academy.ability.network.MdMissilePacket::handle);
+
+        Network.clientbound("jet_flight", cn.academy.ability.network.JetFlightPacket.class,
+                Network.codec(cn.academy.ability.network.JetFlightPacket::encode,
+                        cn.academy.ability.network.JetFlightPacket::decode),
+                cn.academy.ability.network.JetFlightPacket::handle);
     }
 }

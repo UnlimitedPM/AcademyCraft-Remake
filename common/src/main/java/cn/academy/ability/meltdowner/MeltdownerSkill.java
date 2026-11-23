@@ -1,11 +1,9 @@
 package cn.academy.ability.meltdowner;
 
 import cn.academy.ability.AbilityData;
-import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.md.MdRayKind;
 import cn.academy.ability.electromaster.RailgunHit;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -16,7 +14,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
-import net.minecraftforge.network.PacketDistributor;
 
 /** Active skill, port of original Meltdowner: sustained plasma beam, single-target hitscan damage. */
 public class MeltdownerSkill extends Skill {
@@ -149,7 +146,7 @@ public class MeltdownerSkill extends Skill {
         if (held >= TICKS_TOLE) {
             onActivate(player, data);
             if (player instanceof ServerPlayer server) {
-                AbilityEvents.endHeld(server, data, this);
+                cn.academy.platform.PlatformHooks.endHeld(server, data, this);
             }
             return false;
         }
@@ -263,7 +260,7 @@ public class MeltdownerSkill extends Skill {
         // La seule competence du port qui se declare dans la categorie des joueurs :
         // c'est ce que l'original demandait, pour que le curseur des competences la
         // baisse avec le reste.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.MD_MELTDOWNER,
+        cn.academy.sound.AcademySounds.playFor(player, "md.meltdowner",
                 net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f);
 
         beam(player);
@@ -452,9 +449,8 @@ public class MeltdownerSkill extends Skill {
                 if (hardness < 0) break;
                 if (hardness > left) continue;
 
-                if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
-                        new net.minecraftforge.event.level.BlockEvent.BreakEvent(
-                                player.level(), pos, state, player))) {
+                if (!cn.academy.platform.PlatformHooks.allowsBlockBreak(
+                        player, player.level(), pos, state)) {
                     continue;
                 }
                 left -= hardness;
