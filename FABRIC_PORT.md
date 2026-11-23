@@ -49,8 +49,12 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 - utilitaires neutres passés dans `common/` : `CubicCurve`, `ImprovedNoise`, `Plotter`,
   `SyncedInt`, `StructureLootTables`, `RenderBounds`, `MatrixStructure`, `WindgenStructure` ;
 - stockage neutre : interfaces `ItemStorage` et `EnergyStorage`, `StorageSlot` commun,
-  adaptateurs `ForgeItemStorage`/`ForgeEnergyStorage`. Les 9 machines de `StoresItems` et les
-  10 menus n'importent plus `ItemStackHandler`/`SlotItemHandler` ; `MachineDrops` est commun ;
+  `SimpleItemStorage` (implementation sans Forge), adaptateurs `ForgeItemStorage`/`ForgeEnergyStorage`.
+  Les 9 machines de `StoresItems` et les 10 menus n'importent plus `ItemStackHandler`/`SlotItemHandler` ;
+  `MachineDrops` est commun ;
+- échanges d'énergie neutres : `PlatformHooks.chargeExternalItem`, `extractExternalItem` et
+  `pushEnergyToNeighbor` ; Forge les branche sur ses capabilities, Fabric renvoie 0 pour l'instant.
+  SolarGen passe déjà par ces crochets ;
 - `TooltipItem` extrait de `ModItems` vers `common/` ; Fabric enregistre `magnetic_coil` avec son
   infobulle ;
 - ouverture de menu neutralisée : `PlatformHooks.openMenu` remplace les 11 appels à

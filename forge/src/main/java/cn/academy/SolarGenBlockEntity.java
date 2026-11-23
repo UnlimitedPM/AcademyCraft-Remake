@@ -71,8 +71,7 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
         @Override
         public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
             // SlotIFItem de l'original : tout objet energetique, rien d'autre.
-            return stack.isEmpty() || cn.academy.energy.EnergyItems.supports(stack)
-                    || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
+            return stack.isEmpty() || cn.academy.energy.EnergyItems.isEnergyItem(stack);
         }
 
         @Override
@@ -176,29 +175,24 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
             return;
         }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
-            if (accepted > 0) {
-                energy -= accepted;
-                setChanged();
-            }
-        });
+        int accepted = cn.academy.platform.PlatformHooks.chargeExternalItem(
+                stack, (int) Math.min(BANDWIDTH, energy), false);
+        if (accepted > 0) {
+            energy -= accepted;
+            setChanged();
+        }
     }
 
     /** Pousse le surplus vers les blocs adjacents qui acceptent du Forge Energy. */
     private void pushToNeighbors(Level level, BlockPos pos) {
         for (Direction dir : Direction.values()) {
             if (energy <= 0.0d) return;
-            var neighbor = level.getBlockEntity(pos.relative(dir));
-            if (neighbor == null) continue;
-            neighbor.getCapability(ForgeCapabilities.ENERGY, dir.getOpposite()).ifPresent(cap -> {
-                if (!cap.canReceive()) return;
-                int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
-                if (accepted > 0) {
-                    energy -= accepted;
-                    setChanged();
-                }
-            });
+            int accepted = cn.academy.platform.PlatformHooks.pushEnergyToNeighbor(
+                    level, pos, dir, (int) Math.min(BANDWIDTH, energy), false);
+            if (accepted > 0) {
+                energy -= accepted;
+                setChanged();
+            }
         }
     }
 

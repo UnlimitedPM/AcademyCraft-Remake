@@ -1,9 +1,12 @@
 package cn.academy.platform;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 
 import java.util.function.Consumer;
 
@@ -28,8 +31,35 @@ public final class PlatformHooks {
         void open(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer);
     }
 
+    /** Echanges d'energie avec les objets et les blocs fournis par le chargeur. */
+    public interface ExternalEnergyIO {
+        int chargeItem(ItemStack stack, int amount, boolean simulate);
+
+        int extractItem(ItemStack stack, int amount, boolean simulate);
+
+        int pushToNeighbor(Level level, BlockPos pos, Direction side, int amount, boolean simulate);
+    }
+
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
+
     private static MenuOpener menuOpener = (player, provider, writer) -> player.openMenu(provider);
+
+    private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
+        @Override
+        public int chargeItem(ItemStack stack, int amount, boolean simulate) {
+            return 0;
+        }
+
+        @Override
+        public int extractItem(ItemStack stack, int amount, boolean simulate) {
+            return 0;
+        }
+
+        @Override
+        public int pushToNeighbor(Level level, BlockPos pos, Direction side, int amount, boolean simulate) {
+            return 0;
+        }
+    };
 
     private PlatformHooks() {
     }
@@ -42,8 +72,24 @@ public final class PlatformHooks {
         menuOpener = opener;
     }
 
+    public static void installExternalEnergyIO(ExternalEnergyIO io) {
+        externalEnergyIO = io;
+    }
+
     public static boolean hasExternalEnergy(ItemStack stack) {
         return !stack.isEmpty() && externalEnergyProbe.isExternalEnergyItem(stack);
+    }
+
+    public static int chargeExternalItem(ItemStack stack, int amount, boolean simulate) {
+        return externalEnergyIO.chargeItem(stack, amount, simulate);
+    }
+
+    public static int extractExternalItem(ItemStack stack, int amount, boolean simulate) {
+        return externalEnergyIO.extractItem(stack, amount, simulate);
+    }
+
+    public static int pushEnergyToNeighbor(Level level, BlockPos pos, Direction side, int amount, boolean simulate) {
+        return externalEnergyIO.pushToNeighbor(level, pos, side, amount, simulate);
     }
 
     public static void openMenu(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer) {
