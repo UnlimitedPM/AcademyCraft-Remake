@@ -64,18 +64,8 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
-        // Les cinq effets d'onde, de trainee, de critique, de sang et de fumee sont communs
-        // desormais : voir AcademyPackets.
-        // Et les taches de sang au sol : le serveur seul sait QUI a ete touche, donc lui seul sait
-        // s'il faut en semer. Voir BloodSprayPacket et BloodSprays.
-        CHANNEL.registerMessage(nextId++, BloodSprayPacket.class,
-                BloodSprayPacket::encode, BloodSprayPacket::decode,
-                BloodSprayPacket::handle);
-        // Et le tir du canon a plasma : son corps de plasma vit chez son porteur seul, et c'est le
-        // serveur qui sait ou la boule va. Voir PlasmaShotPacket et PlasmaBodies.
-        CHANNEL.registerMessage(nextId++, PlasmaShotPacket.class,
-                PlasmaShotPacket::encode, PlasmaShotPacket::decode,
-                PlasmaShotPacket::handle);
+        // Les sept effets d'onde, de trainee, de critique, de sang, de fumee, de taches et de tir
+        // de plasma sont communs desormais : voir AcademyPackets.
         // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.
         // Voir MdMissilePacket.
         CHANNEL.registerMessage(nextId++, MdMissilePacket.class,

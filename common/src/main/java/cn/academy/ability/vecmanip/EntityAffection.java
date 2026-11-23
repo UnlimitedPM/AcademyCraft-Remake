@@ -145,13 +145,18 @@ public final class EntityAffection {
     // Le repere
     // ------------------------------------------------------------------
 
-    /** Marque une entite comme deja deviee. Le repere suit l'entite, meme rechargee. */
+    /**
+     * Marque une entite comme deja deviee. Le repere suit l'entite, meme rechargee.
+     *
+     * <p>Les {@code tags} vanilla plutot que le {@code getPersistentData} de Forge : ils sont
+     * sauvegardes dans le NBT de l'entite comme lui, et ils existent sur les trois chargeurs.
+     */
     public static void mark(Entity entity) {
-        entity.getPersistentData().putBoolean(MARK, true);
+        entity.addTag(MARK);
     }
 
     public static boolean isMarked(Entity entity) {
-        return entity.getPersistentData().getBoolean(MARK);
+        return entity.getTags().contains(MARK);
     }
 
     /**

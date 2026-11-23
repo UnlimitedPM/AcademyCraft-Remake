@@ -175,7 +175,7 @@ public class DirectedShockSkill extends Skill {
         // Le son ne part que si le poing a trouve quelque chose : l'original le jouait sur
         // le message d'effet, que le vide ne produisait pas.
         cn.academy.sound.AcademySounds.playFor(player,
-                cn.academy.ModSounds.VECMANIP_DIRECTED_SHOCK, 0.5f);
+                "vecmanip.directed_shock", 0.5f);
     }
 
     /**

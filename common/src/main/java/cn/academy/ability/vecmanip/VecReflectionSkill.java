@@ -298,7 +298,7 @@ public class VecReflectionSkill extends Skill {
             // Le son se pose sur ce qui vient d'etre retourne, une seule fois par instant : un
             // coup rendu au meme tick joue deja le sien, et deux emissions superposees
             // s'entendaient comme un son deux fois trop fort. Voir VecmanipSounds.
-            VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_REFLECTION,
+            VecmanipSounds.play(level, player, "vecmanip.vec_reflection",
                     entity.position());
 
             // Et l'onde du renvoi : deux anneaux, plus grands que ceux de la deviation, sur la
@@ -437,7 +437,7 @@ public class VecReflectionSkill extends Skill {
             // se pose sur le porteur, la ou la veille est ouverte â€” et une seule fois par
             // instant, voir VecmanipSounds.
             if (player.level() instanceof ServerLevel level) {
-                VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_REFLECTION,
+                VecmanipSounds.play(level, player, "vecmanip.vec_reflection",
                         player.position());
             }
 

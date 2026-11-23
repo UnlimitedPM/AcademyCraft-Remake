@@ -5488,9 +5488,12 @@ public final class AcademyGameTests {
         cn.academy.ability.vecmanip.EntityAffection.mark(boat);
         assertTrue(helper, cn.academy.ability.vecmanip.EntityAffection.isMarked(boat),
                 "et le repere tient");
-        var tag = boat.getPersistentData().copy();
-        assertTrue(helper, tag.getBoolean("ac_vm_deviated"),
-                "le repere est bien le tag de l'original : " + tag);
+        var tag = boat.saveWithoutId(new net.minecraft.nbt.CompoundTag());
+        var tags = new java.util.ArrayList<String>();
+        var list = tag.getList("Tags", 8);
+        for (int i = 0; i < list.size(); i++) tags.add(list.getString(i));
+        assertTrue(helper, tags.contains("ac_vm_deviated"),
+                "le repere est bien le nom de l'original, et il part dans le NBT : " + tags);
 
         helper.succeed();
     }

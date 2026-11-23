@@ -261,7 +261,7 @@ public class VecDeviationSkill extends Skill {
             // c'est ce qui donne a la veille son rythme de petits claquements. Une seule fois par
             // instant, sinon deux entites d'un meme tick font un claquement deux fois plus fort
             // (voir VecmanipSounds).
-            VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_DEVIATION,
+            VecmanipSounds.play(level, player, "vecmanip.vec_deviation",
                     entity.position());
 
             // Et l'onde de l'arret : une seule, et petite, posee sur la tete de ce qui vient
@@ -329,7 +329,7 @@ public class VecDeviationSkill extends Skill {
         // l'entendait que sur les entites que la veille arretait, jamais quand un zombie le
         // frappait. Il se pose sur le porteur, la ou la veille est ouverte.
         if (player.level() instanceof ServerLevel level) {
-            VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_DEVIATION,
+            VecmanipSounds.play(level, player, "vecmanip.vec_deviation",
                     player.position());
         }
 

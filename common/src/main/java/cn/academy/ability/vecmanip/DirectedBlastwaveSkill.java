@@ -301,7 +301,7 @@ public class DirectedBlastwaveSkill extends Skill {
         // Le son part du centre de l'onde, comme dans l'original : c'est la seule des
         // competences de vecmanip qui se fait entendre dans le monde plutot qu'au joueur.
         cn.academy.sound.AcademySounds.playAt(level, point,
-                cn.academy.ModSounds.VECMANIP_DIRECTED_BLAST, 0.5f, 1.0f);
+                "vecmanip.directed_blast", 0.5f, 1.0f);
 
         // Et l'onde elle-meme : les deux anneaux de l'original, qui s'ouvrent a sept dixiemes du
         // chemin entre la tete et le point vise, legerement de travers. C'est le geste de

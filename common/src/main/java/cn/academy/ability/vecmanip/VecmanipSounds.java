@@ -62,7 +62,18 @@ public final class VecmanipSounds {
         AcademySounds.playAt(level, at, event, 0.5f, 1.0f);
     }
 
-    /** Un joueur par monde, la table reste petite : on oublie les entrees d'il y a plus de dix secondes. */
+    /**
+     * Le meme, par identifiant de son.
+     *
+     * <p>Les registres de sons appartiennent au chargeur : le code commun nomme donc le son par
+     * son identifiant, que {@code AcademyContent.sound} resout au moment de le jouer.
+     */
+    public static void play(ServerLevel level, Player player, String soundId, Vec3 at) {
+        play(level, player, () -> cn.academy.content.AcademyContent.sound(soundId), at);
+    }
+
+    /**
+     * Un joueur par monde, la table reste petite : on oublie les entrees d'il y a plus de dix secondes. */
     private static void prune(long now) {
         if (LAST.size() < 64) return;
         LAST.values().removeIf(tick -> now - tick > 200);

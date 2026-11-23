@@ -130,7 +130,7 @@ public class VecAccelSkill extends Skill {
         data.protectFromFall();
         player.hurtMarked = true;
 
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_VEC_ACCEL, 0.35f);
+        cn.academy.sound.AcademySounds.playFor(player, "vecmanip.vec_accel", 0.35f);
     }
 
     /**

@@ -390,7 +390,7 @@ public class PlasmaCannonSkill extends Skill {
         // Le son de la charge qui s'acheve : l'original le jouait au tick ou son compteur
         // atteignait le temps de charge, c'est-a-dire a ce moment precis.
         cn.academy.sound.AcademySounds.playFor(player,
-                cn.academy.ModSounds.VECMANIP_PLASMA_CANNON_T, 0.5f);
+                "vecmanip.plasma_cannon_t", 0.5f);
 
         data.addSkillExp(this, EXP_PER_SHOT);
         Vec3 destination = aim(level, player);

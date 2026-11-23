@@ -130,10 +130,23 @@ class BreakPrefsTest {
     @DisplayName("les cles de competence se relisent")
     void cles() {
         assertEquals("meltdowner.mine_ray_basic", BlockBreaking.key(MeltdownerCategory.MINE_RAY_BASIC));
-        assertSame(MeltdownerCategory.MINE_RAY_BASIC, BlockBreaking.byKey("meltdowner.mine_ray_basic"));
-        assertNull(BlockBreaking.byKey("meltdowner.inconnue"));
-        assertNull(BlockBreaking.byKey(""));
-        assertNull(BlockBreaking.byKey(null));
+
+        // La resolution passe par les categories enregistrees, et le serveur ne les enregistre
+        // qu'au demarrage : on donne donc un registre neuf, avec une competence de meme nom.
+        Skill mineRay = new Skill("mine_ray_basic") { };
+        CategoryManager manager = new CategoryManager();
+        Category meltdowner = new Category("meltdowner");
+        meltdowner.addSkill(mineRay);
+        manager.register(meltdowner);
+
+        assertSame(mineRay, BlockBreaking.byKey(manager, "meltdowner.mine_ray_basic"));
+        assertNotNull(BlockBreaking.byKey(manager, BlockBreaking.key(mineRay)));
+        assertNull(BlockBreaking.byKey(manager, "meltdowner.inconnue"));
+        assertNull(BlockBreaking.byKey(manager, "inconnue.mine_ray_basic"));
+        assertNull(BlockBreaking.byKey(manager, ""));
+        assertNull(BlockBreaking.byKey(manager, null));
+        // Sans registre garni, rien n'est resolu : c'est l'etat d'un test unitaire.
+        assertNull(BlockBreaking.byKey("meltdowner.mine_ray_basic"));
     }
 
     /** Le verrou du serveur passe avant celui du joueur, et il n'est jamais contournable. */

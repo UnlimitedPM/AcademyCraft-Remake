@@ -4,12 +4,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
 /**
  * S2C : voici les faces de blocs que le sang du retour de sang a tachees.
@@ -41,8 +38,8 @@ public class BloodSprayPacket {
     /** Annonce les taches a ceux qui voient la victime, et a elle. */
     public static void send(Entity target, List<BlockPos> positions, List<Direction> faces) {
         if (target == null || positions.isEmpty()) return;
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target),
-                new BloodSprayPacket(positions, faces));
+        cn.academy.platform.network.Network.sendToTracking(
+                new BloodSprayPacket(positions, faces), target);
     }
 
     public static void encode(BloodSprayPacket msg, FriendlyByteBuf buf) {
@@ -64,11 +61,8 @@ public class BloodSprayPacket {
         return new BloodSprayPacket(positions, faces);
     }
 
-    public static void handle(BloodSprayPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.tp.BloodSprays.poseAll(
-                msg.positions, msg.faces));
-        ctx.setPacketHandled(true);
+    public static void handle(BloodSprayPacket msg) {
+        cn.academy.ability.client.tp.BloodSprays.poseAll(msg.positions, msg.faces);
     }
 
     /** Les blocs taches. Lisible par le test, qui relit l'aller-retour du paquet. */

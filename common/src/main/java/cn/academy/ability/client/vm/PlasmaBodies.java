@@ -9,8 +9,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.List;
 
@@ -44,7 +42,6 @@ import java.util.List;
  *
  * <p>Rien de tout cela n'a de sens hors du client : la classe ne se charge que la.
  */
-@OnlyIn(Dist.CLIENT)
 public final class PlasmaBodies {
 
     /** Les quatre temps du corps : rien, la charge, le vol, et l'effacement. */

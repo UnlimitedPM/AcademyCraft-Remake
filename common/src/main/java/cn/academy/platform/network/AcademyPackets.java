@@ -64,5 +64,15 @@ public final class AcademyPackets {
         Network.clientbound("smoke_puff", SmokePuffPacket.class,
                 Network.codec(SmokePuffPacket::encode, SmokePuffPacket::decode),
                 SmokePuffPacket::handle);
+
+        Network.clientbound("blood_spray", cn.academy.ability.network.BloodSprayPacket.class,
+                Network.codec(cn.academy.ability.network.BloodSprayPacket::encode,
+                        cn.academy.ability.network.BloodSprayPacket::decode),
+                cn.academy.ability.network.BloodSprayPacket::handle);
+
+        Network.clientbound("plasma_shot", cn.academy.ability.network.PlasmaShotPacket.class,
+                Network.codec(cn.academy.ability.network.PlasmaShotPacket::encode,
+                        cn.academy.ability.network.PlasmaShotPacket::decode),
+                cn.academy.ability.network.PlasmaShotPacket::handle);
     }
 }

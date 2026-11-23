@@ -3,10 +3,6 @@ package cn.academy.ability.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
-
-import java.util.function.Supplier;
 
 /**
  * S2C : le tir du canon a plasma est parti, et voici ou il va.
@@ -37,7 +33,7 @@ public class PlasmaShotPacket {
     /** Annonce le tir a son lanceur, et a lui seul. */
     public static void send(ServerPlayer player, Vec3 position, Vec3 destination) {
         if (player == null) return;
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        cn.academy.platform.network.Network.sendToPlayer(player,
                 new PlasmaShotPacket(position, destination));
     }
 
@@ -50,11 +46,8 @@ public class PlasmaShotPacket {
         return new PlasmaShotPacket(read(buf), read(buf));
     }
 
-    public static void handle(PlasmaShotPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() ->
-                cn.academy.ability.client.vm.PlasmaBodies.shot(msg.position, msg.destination));
-        ctx.setPacketHandled(true);
+    public static void handle(PlasmaShotPacket msg) {
+        cn.academy.ability.client.vm.PlasmaBodies.shot(msg.position, msg.destination);
     }
 
     /** La boule, telle que le serveur la voit. Lisible par le test, qui relit l'aller-retour. */
