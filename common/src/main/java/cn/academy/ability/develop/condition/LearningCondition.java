@@ -6,7 +6,7 @@ import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Une condition a remplir pour apprendre une competence.

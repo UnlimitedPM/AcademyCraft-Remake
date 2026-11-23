@@ -6,7 +6,7 @@ import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Le joueur doit avoir atteint le niveau de la competence dans sa categorie.

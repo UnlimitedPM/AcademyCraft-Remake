@@ -39,6 +39,26 @@ public final class ForgePlatformHooks {
         cn.academy.platform.network.Network.install(
                 new cn.academy.platform.network.ForgeNetworkTransport());
         cn.academy.platform.network.AcademyPackets.register();
+        PlatformHooks.installAdvancementHooks(new PlatformHooks.AdvancementHooks() {
+            @Override
+            public void award(net.minecraft.world.entity.player.Player player,
+                              PlatformHooks.Advancement advancement) {
+                if (!(player instanceof net.minecraft.server.level.ServerPlayer server)) return;
+                String name = switch (advancement) {
+                    case OVERLOAD -> cn.academy.advancements.AcademyAdvancements.AC_OVERLOAD;
+                    case LEARNING_SKILL -> cn.academy.advancements.AcademyAdvancements.AC_LEARNING_SKILL;
+                    case EXP_FULL -> cn.academy.advancements.AcademyAdvancements.AC_EXP_FULL;
+                };
+                cn.academy.advancements.AcademyAdvancements.award(server, name);
+            }
+
+            @Override
+            public void onCategoryLevel(net.minecraft.world.entity.player.Player player, int level) {
+                if (player instanceof net.minecraft.server.level.ServerPlayer server) {
+                    cn.academy.advancements.AcademyAdvancements.onCategoryLevel(server, level);
+                }
+            }
+        });
         PlatformHooks.installExternalEnergyIO(new PlatformHooks.ExternalEnergyIO() {
             @Override
             public int chargeItem(ItemStack stack, int amount, boolean simulate) {

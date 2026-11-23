@@ -1,6 +1,6 @@
 package cn.academy.ability;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.develop.DeveloperType;
 import cn.academy.ability.develop.condition.ConditionDependency;
 import cn.academy.ability.develop.condition.ConditionDeveloperType;
@@ -12,7 +12,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -158,7 +158,7 @@ public abstract class Skill {
      */
     public ResourceLocation getHintIcon() {
         String categoryName = category == null ? "generic" : category.getName();
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/abilities/" + categoryName + "/skills/" + name + ".png");
     }
 

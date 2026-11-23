@@ -100,7 +100,7 @@ public class Category {
      * toutes dans la meme boite, comme lui.
      */
     public ResourceLocation getOverlayIcon() {
-        return ResourceLocation.fromNamespaceAndPath("academy",
+        return new ResourceLocation("academy",
                 "textures/abilities/" + name + "/icon_overlay.png");
     }
 

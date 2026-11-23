@@ -5,9 +5,8 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.common.util.INBTSerializable;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,7 +21,10 @@ import java.util.function.BooleanSupplier;
  * Per-player ability state: learning progress per category and the Control Point resource
  * consumed by active skills. Port of original DevelopData/AbilityData, simplified.
  */
-public class AbilityData implements INBTSerializable<CompoundTag> {
+public class AbilityData {
+
+    /** Niveau maximal d'une categorie, repris de DevelopActionLevel. */
+    public static final int MAX_LEVEL = 5;
 
     private static final String TAG_SKILLS = "skills";
     private static final String TAG_SKILL_EXPS = "skillExps";
@@ -379,7 +381,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // est accorde, donc `level 5` donne aussi ceux des niveaux 1 et 3 qu'il enjambe.
         // `owner` est nul cote client et en test : `award` ne fait alors rien.
         for (int reached = previous + 1; reached <= level; reached++) {
-            cn.academy.advancements.AcademyAdvancements.onCategoryLevel(owner, reached);
+            cn.academy.platform.PlatformHooks.categoryLevelReached(owner, reached);
         }
     }
 
@@ -856,8 +858,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         if (overload >= max) {
             // Le franchissement du maximum, et non l'etat : le succes ne tombe qu'une fois.
             if (overloadFine) {
-                cn.academy.advancements.AcademyAdvancements.award(owner,
-                        cn.academy.advancements.AcademyAdvancements.AC_OVERLOAD);
+                cn.academy.platform.PlatformHooks.awardAdvancement(owner,
+                        cn.academy.platform.PlatformHooks.Advancement.OVERLOAD);
             }
             overloadFine = false;
         }
@@ -1170,8 +1172,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         if (skill == null || skill.getCategory() == null) return false;
         boolean changed = learnedSkills.add(skillKey(skill));
         if (changed) {
-            cn.academy.advancements.AcademyAdvancements.award(owner,
-                    cn.academy.advancements.AcademyAdvancements.AC_LEARNING_SKILL);
+            cn.academy.platform.PlatformHooks.awardAdvancement(owner,
+                    cn.academy.platform.PlatformHooks.Advancement.LEARNING_SKILL);
         }
         return changed;
     }
@@ -1250,8 +1252,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // « Combien de fois as-tu fait ca ? » — le succes tombe quand une competence
         // atteint son maximum d'experience, pas a chaque emploi.
         if (current < 1f && reached >= 1f) {
-            cn.academy.advancements.AcademyAdvancements.award(owner,
-                    cn.academy.advancements.AcademyAdvancements.AC_EXP_FULL);
+            cn.academy.platform.PlatformHooks.awardAdvancement(owner,
+                    cn.academy.platform.PlatformHooks.Advancement.EXP_FULL);
         }
 
         addLevelProgress(skill.getCategory(), effective);
@@ -1275,8 +1277,8 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         // Meme succes que `addSkillExp` : une competence qui atteint 100 %, quel que soit le chemin
         // (la commande de debogage passe ici).
         if (previous < 1f && reached >= 1f) {
-            cn.academy.advancements.AcademyAdvancements.award(owner,
-                    cn.academy.advancements.AcademyAdvancements.AC_EXP_FULL);
+            cn.academy.platform.PlatformHooks.awardAdvancement(owner,
+                    cn.academy.platform.PlatformHooks.Advancement.EXP_FULL);
         }
     }
 
@@ -1335,7 +1337,7 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
      */
     public boolean canLevelUp(Category category) {
         if (category == null) return false;
-        if (getCategoryLevel(category) >= cn.academy.ability.develop.DevelopActionLevel.MAX_LEVEL) return false;
+        if (getCategoryLevel(category) >= MAX_LEVEL) return false;
         return getLevelProgress(category) >= 1f;
     }
 
@@ -1695,7 +1697,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return skill.getCategory().getName() + "." + skill.getName();
     }
 
-    @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
         CompoundTag levels = new CompoundTag();
@@ -1765,7 +1766,6 @@ public class AbilityData implements INBTSerializable<CompoundTag> {
         return tag;
     }
 
-    @Override
     public void deserializeNBT(CompoundTag tag) {
         categoryLevels.clear();
         CompoundTag levels = tag.getCompound("levels");

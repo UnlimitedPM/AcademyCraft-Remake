@@ -1,6 +1,6 @@
 package cn.academy.ability.develop;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -121,11 +121,11 @@ public enum DeveloperType {
      */
     public ResourceLocation getIcon() {
         return switch (this) {
-            case PORTABLE -> ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+            case PORTABLE -> new ResourceLocation(AcademyCraftCommon.MOD_ID,
                     "textures/item/developer_portable_empty.png");
-            case NORMAL -> ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+            case NORMAL -> new ResourceLocation(AcademyCraftCommon.MOD_ID,
                     "textures/block/dev_normal.png");
-            case ADVANCED -> ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+            case ADVANCED -> new ResourceLocation(AcademyCraftCommon.MOD_ID,
                     "textures/block/dev_advanced.png");
         };
     }

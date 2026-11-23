@@ -6,7 +6,7 @@ import cn.academy.ability.develop.DeveloperType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Le joueur doit avoir appris <b>au moins une</b> competence d'un niveau donne.
@@ -52,7 +52,7 @@ public final class ConditionAnySkillOfLevel implements LearningCondition {
     @Nullable
     @Override
     public ResourceLocation getIcon() {
-        return ResourceLocation.fromNamespaceAndPath(cn.academy.AcademyCraft.MOD_ID,
+        return new ResourceLocation(cn.academy.AcademyCraftCommon.MOD_ID,
                 "textures/abilities/condition/any" + level + ".png");
     }
 

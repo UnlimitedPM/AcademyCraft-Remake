@@ -84,6 +84,18 @@ public final class PlatformHooks {
         void spawn(net.minecraft.world.phys.Vec3 position);
     }
 
+    /** Les succes du mod, que seule la logique des aptitudes declenche. */
+    public enum Advancement {
+        OVERLOAD, LEARNING_SKILL, EXP_FULL
+    }
+
+    /** Attribution des succes (les criteres sont propres au chargeur). */
+    public interface AdvancementHooks {
+        void award(net.minecraft.world.entity.player.Player player, Advancement advancement);
+
+        void onCategoryLevel(net.minecraft.world.entity.player.Player player, int level);
+    }
+
     private static NodeLinker nodeLinker = new NodeLinker() {
         @Override
         public boolean ensureLinked(ServerLevel level, BlockPos pos) {
@@ -108,6 +120,16 @@ public final class PlatformHooks {
     };
 
     private static SilbarnFragments silbarnFragments = position -> {
+    };
+
+    private static AdvancementHooks advancementHooks = new AdvancementHooks() {
+        @Override
+        public void award(net.minecraft.world.entity.player.Player player, Advancement advancement) {
+        }
+
+        @Override
+        public void onCategoryLevel(net.minecraft.world.entity.player.Player player, int level) {
+        }
     };
 
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
@@ -164,6 +186,18 @@ public final class PlatformHooks {
 
     public static void installSilbarnFragments(SilbarnFragments fragments) {
         silbarnFragments = fragments;
+    }
+
+    public static void installAdvancementHooks(AdvancementHooks hooks) {
+        advancementHooks = hooks;
+    }
+
+    public static void awardAdvancement(net.minecraft.world.entity.player.Player player, Advancement advancement) {
+        advancementHooks.award(player, advancement);
+    }
+
+    public static void categoryLevelReached(net.minecraft.world.entity.player.Player player, int level) {
+        advancementHooks.onCategoryLevel(player, level);
     }
 
     public static boolean hasExternalEnergy(ItemStack stack) {
