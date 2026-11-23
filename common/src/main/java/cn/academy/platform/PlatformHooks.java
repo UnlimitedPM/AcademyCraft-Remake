@@ -78,6 +78,12 @@ public final class PlatformHooks {
         void send(WirelessAction action, BlockPos node, String password);
     }
 
+    /** Les eclats d'une bille de silicium qui vient de se poser (rendu client). */
+    @FunctionalInterface
+    public interface SilbarnFragments {
+        void spawn(net.minecraft.world.phys.Vec3 position);
+    }
+
     private static NodeLinker nodeLinker = new NodeLinker() {
         @Override
         public boolean ensureLinked(ServerLevel level, BlockPos pos) {
@@ -93,13 +99,15 @@ public final class PlatformHooks {
     private static NodeConfigSender nodeConfigSender = (pos, password, value) ->
             Network.sendToServer(new cn.academy.energy.network.NodeConfigPacket(pos, password, value));
 
-    private static WirelessRequestSender wirelessRequestSender = (action, node, password) -> {
-        cn.academy.energy.network.WirelessRequestPacket packet = switch (action) {
+    private static WirelessRequestSender wirelessRequestSender = (action, node, password) -> {        cn.academy.energy.network.WirelessRequestPacket packet = switch (action) {
             case FIND -> cn.academy.energy.network.WirelessRequestPacket.find();
             case DISCONNECT -> cn.academy.energy.network.WirelessRequestPacket.disconnect();
             case CONNECT -> cn.academy.energy.network.WirelessRequestPacket.connect(node, password);
         };
         Network.sendToServer(packet);
+    };
+
+    private static SilbarnFragments silbarnFragments = position -> {
     };
 
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
@@ -154,6 +162,10 @@ public final class PlatformHooks {
         wirelessRequestSender = sender;
     }
 
+    public static void installSilbarnFragments(SilbarnFragments fragments) {
+        silbarnFragments = fragments;
+    }
+
     public static boolean hasExternalEnergy(ItemStack stack) {
         return !stack.isEmpty() && externalEnergyProbe.isExternalEnergyItem(stack);
     }
@@ -188,6 +200,10 @@ public final class PlatformHooks {
 
     public static void sendWirelessRequest(WirelessAction action, BlockPos node, String password) {
         wirelessRequestSender.send(action, node, password);
+    }
+
+    public static void spawnSilbarnFragments(net.minecraft.world.phys.Vec3 position) {
+        silbarnFragments.spawn(position);
     }
 
     public static void openMenu(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer) {

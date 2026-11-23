@@ -1,6 +1,6 @@
 package cn.academy.client.render;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -39,7 +39,7 @@ public final class ObjModels {
 
     /** Le fichier OBJ d'un modele, tel que les modeles de bloc le nomment. */
     public static ResourceLocation model(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "models/" + name + ".obj");
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "models/" + name + ".obj");
     }
 
     /**
@@ -54,7 +54,7 @@ public final class ObjModels {
      * pour les rendus qui lisent un fichier directement, jamais pour un modele de bloc.
      */
     public static ResourceLocation texture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/block/" + name + ".png");
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/block/" + name + ".png");
     }
 
     /**
@@ -118,6 +118,24 @@ public final class ObjModels {
         return RenderType.entityTranslucent(texture);
     }
 
+    /** Construit un type de rendu dont vanilla garde la fabrique privee (voir CGuiShaders). */
+    private static RenderType createRenderType(String name, com.mojang.blaze3d.vertex.VertexFormat format,
+                                               com.mojang.blaze3d.vertex.VertexFormat.Mode mode, int size,
+                                               boolean affectsCrumbling, boolean sortOnUpload,
+                                               RenderType.CompositeState state) {
+        try {
+            java.lang.reflect.Method create = RenderType.class.getDeclaredMethod("create",
+                    String.class, com.mojang.blaze3d.vertex.VertexFormat.class,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.class, int.class,
+                    boolean.class, boolean.class, RenderType.CompositeState.class);
+            create.setAccessible(true);
+            return (RenderType) create.invoke(null, name, format, mode, size,
+                    affectsCrumbling, sortOnUpload, state);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return RenderType.entityTranslucent(new net.minecraft.resources.ResourceLocation("minecraft", "textures/misc/white.png"));
+        }
+    }
+
     private static RenderType createBehind(ResourceLocation texture) {
         RenderType.CompositeState states = RenderType.CompositeState.builder()
                 .setShaderState(new RenderStateShard.ShaderStateShard(
@@ -133,7 +151,7 @@ public final class ObjModels {
                         () -> { RenderSystem.polygonOffset(0.0f, 0.0f); RenderSystem.disablePolygonOffset(); }))
                 .createCompositeState(true);
 
-        return RenderType.create("academy_obj_behind",
+        return createRenderType("academy_obj_behind",
                 DefaultVertexFormat.NEW_ENTITY,
                 VertexFormat.Mode.QUADS,
                 256,

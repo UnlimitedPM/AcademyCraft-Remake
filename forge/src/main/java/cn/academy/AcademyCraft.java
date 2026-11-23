@@ -142,8 +142,9 @@ public class AcademyCraft {
         }
 
         @SubscribeEvent
-        public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
-            event.enqueueWork(() -> {
+        public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {            event.enqueueWork(() -> {
+                cn.academy.platform.PlatformHooks.installSilbarnFragments(
+                        cn.academy.client.SilbarnFrags::spawn);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.SOLAR_GEN.get(), SolarGenScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.MATRIX.get(), MatrixScreen::new);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.METAL_FORMER.get(), MetalFormerScreen::new);

@@ -1,6 +1,6 @@
 package cn.academy.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.client.render.ObjModels;
 import cn.academy.entity.EntitySilbarn;
 import cn.academy.entity.SilbarnVisuals;
@@ -43,11 +43,11 @@ import org.joml.Quaternionf;
  */
 public class SilbarnRenderer extends EntityRenderer<EntitySilbarn> {
 
-    private static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "models/silbarn.obj");
+    private static final ResourceLocation MODEL = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "models/silbarn.obj");
 
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/models/silbarn_model.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/models/silbarn_model.png");
 
     /** Le seul groupe du modele : {@code g pCube1}. */
     private static final String GROUP = "pCube1";
@@ -64,7 +64,7 @@ public class SilbarnRenderer extends EntityRenderer<EntitySilbarn> {
             // Elle vient de se casser : les eclats, une fois.
             if (!entity.fragsDone()) {
                 entity.markFragsDone();
-                SilbarnFrags.spawn(entity.position());
+                cn.academy.platform.PlatformHooks.spawnSilbarnFragments(entity.position());
             }
             // Et elle ne se dessine plus : elle est deja « plantee », comme l'original la
             // cachait. Sans cela, elle resterait visible pendant ses dix derniers ticks.

@@ -28,6 +28,8 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         cn.academy.fabric.FabricNetworkTransport.installClient();
         BlockEntityRenderers.register(FabricContent.CAT_ENGINE_TYPE, CatEngineRenderer::new);
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+                FabricContent.SILBARN_TYPE, cn.academy.client.SilbarnRenderer::new);
 
         MenuScreens.register(FabricContent.SOLAR_GEN_MENU, SolarGenScreen::new);
         MenuScreens.register(FabricContent.METAL_FORMER_MENU, MetalFormerScreen::new);

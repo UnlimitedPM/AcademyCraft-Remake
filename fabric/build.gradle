@@ -47,7 +47,6 @@ processResources {
         exclude 'data/academy/recipes/**'
         exclude 'data/academy/structures/**'
         exclude 'data/academy/forge/**'
-        exclude 'data/academy/damage_type/**'
         // Les tables de butin des trois blocs qui attendent les aptitudes.
         exclude 'data/academy/loot_tables/blocks/ability_interferer.json'
         exclude 'data/academy/loot_tables/blocks/dev_normal.json'
