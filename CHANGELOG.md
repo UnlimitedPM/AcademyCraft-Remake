@@ -4,6 +4,21 @@
 
 ### Français
 
+- Les aptitudes d'électromaster et de meltdowner passent à `common/`, avec les crochets qui leur
+  manquaient : `PlatformHooks.endHeld` (Forge garde `AbilityEvents.endHeld` comme sortie unique),
+  `PlatformHooks.allowsBlockBreak` (Forge poste `BlockEvent.BreakEvent`, donc les protections de
+  terrain refusent toujours) et `PlatformHooks.spawnRayBeam` (le moteur des rayons reste un dessin
+  de client). `ArcRenderer` perd ses deux événements Forge au profit d'`ArcRendererEvents` côté
+  Forge, et `RenderTypes` centralise la fabrique `RenderType.create` par réflexion. Sont communs :
+  les arcs (`ArcRenderer`, `ArcFrame`, `ArcMesh`, `ArcPattern(s)`, `ArcView`, `ArcWiggle`,
+  `ClientArcs`, `SurroundArcs`, `SustainedArcs`, `GroundArcs`, `EffectClock`, `ClientPause`),
+  l'électromaster (`ArcGen`, `BodyIntensify`, `MagManip`, `MagMovement`, `ThunderBolt`,
+  `ThunderClap`, `WitchConversion`, `EntityCoinThrowing`), le meltdowner (`Meltdowner`,
+  `RayBarrage`, `JetEngine`, `ElectronMissile`, `ElectronBomb`, `EntityMdBall`) et six paquets de
+  plus (`ArcEffect`, `BodyIntensify`, `ThunderClapGround`, `MdRay`, `MdMissile`, `JetFlight`).
+  `WitchConversion` passe par un crochet de conversion de créature, et
+  `EntityAffection`/`RadiationMarks` rangent leurs repères dans les tags vanilla plutôt que dans les
+  données persistantes de Forge.
 - Les entités de l'électromaster passent en `common/` : `EntityMagHook` (le grappin),
   `EntityMagManipBlock` (le bloc manipulé) et `MagHookVisuals`. Elles ne nomment plus
   `ModEntities`/`ModItems` mais retrouvent leur type et leur objet par identifiant
@@ -75,6 +90,20 @@
 
 ### English
 
+- The electromaster and meltdowner abilities move to `common/`, with the hooks they were missing:
+  `PlatformHooks.endHeld` (Forge keeps `AbilityEvents.endHeld` as the single exit),
+  `PlatformHooks.allowsBlockBreak` (Forge posts `BlockEvent.BreakEvent`, so terrain protection
+  still refuses) and `PlatformHooks.spawnRayBeam` (the ray engine stays a client-side drawing).
+  `ArcRenderer` loses its two Forge events to a Forge-side `ArcRendererEvents`, and `RenderTypes`
+  centralises the reflective `RenderType.create` factory. Common now: the arc stack
+  (`ArcRenderer`, `ArcFrame`, `ArcMesh`, `ArcPattern(s)`, `ArcView`, `ArcWiggle`, `ClientArcs`,
+  `SurroundArcs`, `SustainedArcs`, `GroundArcs`, `EffectClock`, `ClientPause`), electromaster
+  (`ArcGen`, `BodyIntensify`, `MagManip`, `MagMovement`, `ThunderBolt`, `ThunderClap`,
+  `WitchConversion`, `EntityCoinThrowing`), meltdowner (`Meltdowner`, `RayBarrage`, `JetEngine`,
+  `ElectronMissile`, `ElectronBomb`, `EntityMdBall`) and six more packets (`ArcEffect`,
+  `BodyIntensify`, `ThunderClapGround`, `MdRay`, `MdMissile`, `JetFlight`). `WitchConversion` goes
+  through a creature-conversion hook, and `EntityAffection`/`RadiationMarks` store their markers in
+  vanilla tags instead of Forge persistent data.
 - The electromaster entities move to `common/`: `EntityMagHook` (the hook), `EntityMagManipBlock`
   (the held block) and `MagHookVisuals`. They no longer name `ModEntities`/`ModItems` but resolve
   their type and item by id (`AcademyContent`), the way the silbarn does; `MetalTargets` also loses
