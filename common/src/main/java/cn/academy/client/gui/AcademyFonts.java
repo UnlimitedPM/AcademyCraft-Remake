@@ -8,8 +8,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL30;
@@ -28,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 /** AWT system-font renderer, matching LambdaLib2's oversampled glyph atlas. */
-@OnlyIn(Dist.CLIENT)
 public final class AcademyFonts {
     private static final String[] FONT_FAMILIES = {
             "Microsoft YaHei", "SimHei", "Adobe Heiti Std R", "Arial"

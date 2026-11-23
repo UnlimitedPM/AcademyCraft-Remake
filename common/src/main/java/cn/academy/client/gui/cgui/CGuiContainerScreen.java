@@ -5,8 +5,6 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +38,6 @@ import java.util.function.Consumer;
  * fait deja 172 et les onglets sont deja poses a −20 et tous les 22 pixels, comme chez l'original,
  * donc ce qui manque est <b>dedans</b> et non autour.
  */
-@OnlyIn(Dist.CLIENT)
 public abstract class CGuiContainerScreen<T extends AbstractContainerMenu>
         extends AbstractContainerScreen<T> {
 

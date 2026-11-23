@@ -11,6 +11,10 @@ plugins {
 
 apply from: rootProject.file('gradle/minecraft-module.gradle')
 
+loom {
+    accessWidenerPath = file('src/main/resources/academy.accesswidener')
+}
+
 base {
     archivesName = "${rootProject.mod_id}-common"
 }

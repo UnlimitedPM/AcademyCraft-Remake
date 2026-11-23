@@ -66,6 +66,17 @@ public final class PlatformHooks {
         void send(BlockPos pos, boolean password, String value);
     }
 
+    /** Ce que l'onglet sans fil demande au serveur. */
+    public enum WirelessAction {
+        FIND, CONNECT, DISCONNECT
+    }
+
+    /** Envoi d'une demande de l'onglet sans fil (recherche, raccordement, detachement). */
+    @FunctionalInterface
+    public interface WirelessRequestSender {
+        void send(WirelessAction action, BlockPos node, String password);
+    }
+
     private static NodeLinker nodeLinker = new NodeLinker() {
         @Override
         public boolean ensureLinked(ServerLevel level, BlockPos pos) {
@@ -77,6 +88,9 @@ public final class PlatformHooks {
     };
 
     private static NodeConfigSender nodeConfigSender = (pos, password, value) -> {
+    };
+
+    private static WirelessRequestSender wirelessRequestSender = (action, node, password) -> {
     };
 
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
@@ -127,6 +141,10 @@ public final class PlatformHooks {
         nodeConfigSender = sender;
     }
 
+    public static void installWirelessRequestSender(WirelessRequestSender sender) {
+        wirelessRequestSender = sender;
+    }
+
     public static boolean hasExternalEnergy(ItemStack stack) {
         return !stack.isEmpty() && externalEnergyProbe.isExternalEnergyItem(stack);
     }
@@ -157,6 +175,10 @@ public final class PlatformHooks {
 
     public static void sendNodeConfig(BlockPos pos, boolean password, String value) {
         nodeConfigSender.send(pos, password, value);
+    }
+
+    public static void sendWirelessRequest(WirelessAction action, BlockPos node, String password) {
+        wirelessRequestSender.send(action, node, password);
     }
 
     public static void openMenu(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer) {

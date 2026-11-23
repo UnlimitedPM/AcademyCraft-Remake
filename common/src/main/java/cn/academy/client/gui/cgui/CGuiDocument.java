@@ -1,6 +1,6 @@
 package cn.academy.client.gui.cgui;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -35,7 +35,7 @@ public final class CGuiDocument {
 
     /** Lit le document {@code assets/academy/guis/<nom>.xml}. */
     public static CWidget read(String name) {
-        String path = "assets/" + AcademyCraft.MOD_ID + "/guis/" + name + ".xml";
+        String path = "assets/" + AcademyCraftCommon.MOD_ID + "/guis/" + name + ".xml";
         try (InputStream in = CGuiDocument.class.getClassLoader().getResourceAsStream(path)) {
             if (in == null) throw new IllegalStateException("Document CGui introuvable : " + path);
             return parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));

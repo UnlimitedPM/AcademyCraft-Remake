@@ -5,8 +5,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import java.util.IdentityHashMap;
@@ -35,7 +33,6 @@ import java.util.Map;
  * est etiree dans le widget, et non son coin : le port dessinait son coin haut-gauche, ce qui
  * donnait a ses icones un air de tache.
  */
-@OnlyIn(Dist.CLIENT)
 public abstract class CGuiScreen extends Screen {
 
     /** La taille des textures d'interface du mod, en pixels : voir le commentaire de la classe. */

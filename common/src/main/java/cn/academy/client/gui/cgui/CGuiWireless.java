@@ -2,10 +2,9 @@ package cn.academy.client.gui.cgui;
 
 import java.util.List;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
-import cn.academy.ability.network.AbilityNetwork;
-import cn.academy.energy.network.WirelessRequestPacket;
+import cn.academy.platform.PlatformHooks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -153,7 +152,7 @@ public final class CGuiWireless {
         // Ce que la page montrait est remis tout de suite : un ecran qui se rouvre ne doit pas avoir
         // l'air vide le temps que le serveur reponde.
         apply(linked, shown);
-        request(WirelessRequestPacket.find());
+        request(PlatformHooks.WirelessAction.FIND, null, "");
     }
 
     /** Le prefixe des textes de l'onglet : ils vivent avec les autres textes d'interface du port. */
@@ -167,12 +166,12 @@ public final class CGuiWireless {
         if (widget != null && widget.text != null) widget.text.content = content;
     }
 
-    private void request(WirelessRequestPacket packet) {
-        AbilityNetwork.CHANNEL.sendToServer(packet);
+    private void request(PlatformHooks.WirelessAction action, net.minecraft.core.BlockPos node, String password) {
+        PlatformHooks.sendWirelessRequest(action, node, password);
     }
 
     private void disconnect() {
-        request(WirelessRequestPacket.disconnect());
+        request(PlatformHooks.WirelessAction.DISCONNECT, null, "");
     }
 
     /** Une ligne plus haut ou plus bas, sans sortir de la liste. */
@@ -241,7 +240,7 @@ public final class CGuiWireless {
             if (row.encrypted()) {
                 passwordField = field;
                 screen.onConfirm(field, password -> {
-                    request(WirelessRequestPacket.connect(row.pos(), password));
+                    request(PlatformHooks.WirelessAction.CONNECT, row.pos(), password);
                     if (field.text != null) field.text.content = "";
                 });
             }
@@ -251,8 +250,8 @@ public final class CGuiWireless {
         // sur la ligne entiere se declencherait avant que le champ prenne le clavier.
         CWidget connect = widget.child("icon_connect");
         if (connect != null) {
-            screen.onClick(connect, () -> request(WirelessRequestPacket.connect(row.pos(),
-                    field != null && field.text != null ? field.text.content : "")));
+            screen.onClick(connect, () -> request(PlatformHooks.WirelessAction.CONNECT, row.pos(),
+                    field != null && field.text != null ? field.text.content : ""));
         }
         return widget;
     }

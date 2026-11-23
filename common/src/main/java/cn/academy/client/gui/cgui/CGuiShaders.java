@@ -1,6 +1,6 @@
 package cn.academy.client.gui.cgui;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import com.mojang.blaze3d.platform.GlStateManager.DestFactor;
 import com.mojang.blaze3d.platform.GlStateManager.SourceFactor;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -13,15 +13,11 @@ import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterShadersEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,8 +51,6 @@ import java.util.Map;
  * garde dans un cache — c'est deja ce que font les effets du plasma. Le premier sampler vient du type,
  * le second est lie a la main, juste avant le dessin.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD,
-        value = Dist.CLIENT)
 public final class CGuiShaders {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("academy-cgui");
@@ -157,7 +151,7 @@ public final class CGuiShaders {
                             int alpha) {
         if (length <= 0 || thickness <= 0 || alpha <= 0) return;
 
-        RenderType type = LINE_TYPES.computeIfAbsent(texture, key -> RenderType.create(
+        RenderType type = LINE_TYPES.computeIfAbsent(texture, key -> createRenderType(
                 "academy_cgui_line", DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
@@ -207,11 +201,16 @@ public final class CGuiShaders {
                 .color(red, green, blue, alphaTo).uv((float) u1, 0f).endVertex();
     }
 
-    /** Charge les deux programmes, chacun de son cote : voir le commentaire de la classe. */
-    @SubscribeEvent
-    public static void register(RegisterShadersEvent event) {
-        // Un rechargement de ressources repasse par ici : les types gardes tiendraient le programme
-        // precedent, il faut donc les refaire.
+    /** Les quatre programmes du moteur, dans l'ordre ou ils se chargent. */
+    public static final java.util.List<String> PROGRAMS =
+            java.util.List.of(RING_PROGRAM, MONO_PROGRAM, CLIP_PROGRAM, EMBLEM_PROGRAM);
+
+    /**
+     * Debut d'un chargement de programmes : les types gardes tiendraient le programme precedent.
+     *
+     * <p>Appele par le chargeur au debut de son evenement d'enregistrement des programmes.
+     */
+    public static void resetPrograms() {
         ring = null;
         mono = null;
         clip = null;
@@ -221,50 +220,19 @@ public final class CGuiShaders {
         CLIP_TYPES.clear();
         LINE_TYPES.clear();
         EMBLEM_TYPES.clear();
-
-        try {
-            ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
-                    program(RING_PROGRAM), DefaultVertexFormat.POSITION_COLOR_TEX);
-            ring = shader;
-            event.registerShader(shader, loaded -> ring = loaded);
-        } catch (Exception e) {
-            LOGGER.warn("Le programme {} n'a pas pu etre compile : les anneaux ne se dessineront pas",
-                    RING_PROGRAM, e);
-        }
-
-        try {
-            ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
-                    program(MONO_PROGRAM), DefaultVertexFormat.POSITION_COLOR_TEX);
-            mono = shader;
-            event.registerShader(shader, loaded -> mono = loaded);
-        } catch (Exception e) {
-            LOGGER.warn("Le programme {} n'a pas pu etre compile : les icones ne seront pas eteintes",
-                    MONO_PROGRAM, e);
-        }
-
-        try {
-            ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
-                    program(CLIP_PROGRAM), DefaultVertexFormat.POSITION_COLOR_TEX);
-            clip = shader;
-            event.registerShader(shader, loaded -> clip = loaded);
-        } catch (Exception e) {
-            LOGGER.warn("Le programme {} n'a pas pu etre compile : les icones deborderont du disque",
-                    CLIP_PROGRAM, e);
-        }
-
-        try {
-            ShaderInstance shader = new ShaderInstance(event.getResourceProvider(),
-                    program(EMBLEM_PROGRAM), DefaultVertexFormat.POSITION_COLOR_TEX);
-            emblem = shader;
-            event.registerShader(shader, loaded -> emblem = loaded);
-        } catch (Exception e) {
-            LOGGER.warn("Le programme {} n'a pas pu etre compile : l'embleme du pouvoir "
-                    + "s'ecrira en gris au lieu de percer la barre", EMBLEM_PROGRAM, e);
-        }
     }
 
-    private static ResourceLocation program(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, name);
+    /** Le chargeur depose ici le programme qu'il vient de compiler. */
+    public static void install(String name, @Nullable ShaderInstance shader) {
+        if (RING_PROGRAM.equals(name)) ring = shader;
+        else if (MONO_PROGRAM.equals(name)) mono = shader;
+        else if (CLIP_PROGRAM.equals(name)) clip = shader;
+        else if (EMBLEM_PROGRAM.equals(name)) emblem = shader;
+    }
+
+    /** L'identifiant complet d'un programme, celui du fichier dans {@code shaders/core}. */
+    public static ResourceLocation programId(String name) {
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, name);
     }
 
     /**
@@ -445,7 +413,7 @@ public final class CGuiShaders {
      * <p>Le type se garde par texture, comme les deux autres : c'est la texture qui porte le filtre.
      */
     public static RenderType smooth(ResourceLocation texture) {
-        return SMOOTH_TYPES.computeIfAbsent(texture, key -> RenderType.create("cgui_smooth",
+        return SMOOTH_TYPES.computeIfAbsent(texture, key -> createRenderType("cgui_smooth",
                 DefaultVertexFormat.POSITION_COLOR_TEX, VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
@@ -461,6 +429,30 @@ public final class CGuiShaders {
     private static final Map<ResourceLocation, RenderType> SMOOTH_TYPES = new HashMap<>();
 
     /**
+     * Construit un type de rendu, par reflexion.
+     *
+     * <p>Vanilla garde {@code RenderType.create} prive ; Forge l'ouvre par ses access transformers et
+     * Fabric le laisse prive. La reflexion marche sur les deux, et un echec laisse simplement le type
+     * absent au lieu d'empecher le client de demarrer.
+     */
+    private static RenderType createRenderType(String name, VertexFormat format,
+                                               VertexFormat.Mode mode, int size,
+                                               boolean affectsCrumbling, boolean sortOnUpload,
+                                               RenderType.CompositeState state) {
+        try {
+            java.lang.reflect.Method create = RenderType.class.getDeclaredMethod("create",
+                    String.class, VertexFormat.class, VertexFormat.Mode.class, int.class,
+                    boolean.class, boolean.class, RenderType.CompositeState.class);
+            create.setAccessible(true);
+            return (RenderType) create.invoke(null, name, format, mode, size,
+                    affectsCrumbling, sortOnUpload, state);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            LOGGER.warn("Type de rendu {} indisponible : {}", name, e.toString());
+            return null;
+        }
+    }
+
+    /**
      * Un type de rendu qui dessine une texture avec un programme a nous.
      *
      * <p>Pas de tri des faces arriere — une interface n'a qu'une face — le melange des interfaces, et la
@@ -469,7 +461,7 @@ public final class CGuiShaders {
      */
     private static RenderType type(String name, java.util.function.Supplier<ShaderInstance> program,
                                    ResourceLocation texture) {
-        return RenderType.create(name, DefaultVertexFormat.POSITION_COLOR_TEX,
+        return createRenderType(name, DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(program))

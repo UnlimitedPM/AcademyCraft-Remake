@@ -87,6 +87,11 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   menus, recettes du fuseur). La cuve est une `SimpleFluidTank` neutre (fluide + quantité +
   sauvegarde NBT) ; Forge la réexpose en `IFluidHandler` avec `ForgeFluidHandlerAdapter`. Fabric
   enregistre les deux machines et les objets `matter_unit`/`matter_unit_phase_liquid` ;
+- moteur d'interface dans `common/` : `CGui*`, `CWidget`, `AcademyFonts`, `MarqueeText` et les
+  huit écrans de machines. L'enregistrement des programmes de rendu reste par chargeur
+  (`ForgeCGuiShaders`), et un access widener commun ouvre les états de rendu protégés de vanilla
+  (`RenderType.create` est appelé par réflexion). Fabric enregistre les huit écrans avec
+  `MenuScreens` ; sans programmes, les anneaux et icônes grisées s'abstiennent ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

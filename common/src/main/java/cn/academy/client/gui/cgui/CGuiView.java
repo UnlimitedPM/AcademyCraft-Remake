@@ -7,8 +7,6 @@ import com.mojang.math.Axis;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
 import java.util.Collections;
@@ -33,7 +31,6 @@ import java.util.function.Consumer;
  * les deux ont en commun. C'est tout le mystere du {@code +31 / +20} de l'original : une seule
  * trame pour les deux, et un demi-pixel qui tombe juste.
  */
-@OnlyIn(Dist.CLIENT)
 public final class CGuiView {
 
     /**
@@ -831,7 +828,7 @@ public final class CGuiView {
         int cell = AcademyFonts.cell(box.fontSize * widget.absScale);
 
         int colour = argb(box.alpha, box.red, box.green, box.blue);
-        var font = screen.getMinecraft().font;
+        var font = net.minecraft.client.Minecraft.getInstance().font;
         int textWidth = AcademyFonts.width(font, content, cell);
         int textX = switch (box.align.toUpperCase(java.util.Locale.ROOT)) {
             case "CENTER" -> x + (w - textWidth) / 2;
