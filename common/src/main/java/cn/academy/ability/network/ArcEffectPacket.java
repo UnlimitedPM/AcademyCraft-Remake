@@ -2,9 +2,7 @@ package cn.academy.ability.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : un eclair est parti, et voici ses deux bouts.
@@ -78,18 +76,14 @@ public class ArcEffectPacket {
                 buf.readBoolean());
     }
 
-    public static void handle(ArcEffectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            if (msg.beam) {
-                cn.academy.ability.client.arc.ArcRenderer.spawnBeam(
-                        msg.from, msg.to, msg.lifeTicks, msg.ownerId);
-            } else {
-                cn.academy.ability.client.arc.ArcRenderer.spawn(
-                        msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed, msg.ownerId);
-            }
-        });
-        ctx.setPacketHandled(true);
+    public static void handle(ArcEffectPacket msg) {
+        if (msg.beam) {
+            cn.academy.ability.client.arc.ArcRenderer.spawnBeam(
+                    msg.from, msg.to, msg.lifeTicks, msg.ownerId);
+        } else {
+            cn.academy.ability.client.arc.ArcRenderer.spawn(
+                    msg.pattern, msg.from, msg.to, msg.lifeTicks, msg.lengthFixed, msg.ownerId);
+        }
     }
 
     private static void writePoint(FriendlyByteBuf buf, Vec3 point) {

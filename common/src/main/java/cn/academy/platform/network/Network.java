@@ -136,6 +136,11 @@ public final class Network {
         transport.sendToTracking(message, entity);
     }
 
+    /** Le meme, dans l'ordre de Forge : l'entite d'abord, le message ensuite. */
+    public static void sendToTracking(net.minecraft.world.entity.Entity entity, Object message) {
+        sendToTracking(message, entity);
+    }
+
     // ------------------------------------------------------------------
     // Ce dont le transport a besoin pour (de)serialiser
     // ------------------------------------------------------------------

@@ -2,15 +2,12 @@ package cn.academy.ability.client;
 
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.arc.SurroundArcs;
-import cn.academy.ability.electromaster.ElectromasterCategory;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +54,6 @@ import java.util.List;
  * l'attaque ». C'est aussi ce que fait l'original, dont le seul effet de monde est
  * {@code EntityIntensifyEffect}, ne a l'activation.
  */
-@OnlyIn(Dist.CLIENT)
 public final class BodyIntensifyEffect {
 
     // --- L'ONDE, AUTOUR DU CORPS ---
@@ -242,7 +238,7 @@ public final class BodyIntensifyEffect {
      * l'attaque — voir l'en-tete de cette classe.
      */
     public static void tickCharge(Skill skill) {
-        if (skill != ElectromasterCategory.BODY_INTENSIFY) return;
+        if (skill != cn.academy.ability.BlockBreaking.byKey("electromaster.body_intensify")) return;
         if (hudActive) return;
 
         hudActive = true;
@@ -331,8 +327,7 @@ public final class BodyIntensifyEffect {
     private static ResourceLocation[] frames() {
         ResourceLocation[] frames = new ResourceLocation[10];
         for (int i = 0; i < frames.length; i++) {
-            frames[i] = ResourceLocation.fromNamespaceAndPath("academy",
-                    "textures/effects/arcs/" + i + ".png");
+            frames[i] = new ResourceLocation("academy", "textures/effects/arcs/" + i + ".png");
         }
         return frames;
     }

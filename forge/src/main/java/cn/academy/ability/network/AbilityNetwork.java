@@ -44,16 +44,9 @@ public class AbilityNetwork {
                 cn.academy.ability.network.MineDetectStopPacket::encode,
                 cn.academy.ability.network.MineDetectStopPacket::decode,
                 cn.academy.ability.network.MineDetectStopPacket::handle);
-        // Les eclairs des competences : le serveur sait ou ils sont partis et jusqu'ou, et
-        // il le dit a ceux qui voient le tireur. Sans ce paquet, un arc ne se dessinerait
-        // que chez celui qui appuie sur la touche.
-        CHANNEL.registerMessage(nextId++, ArcEffectPacket.class,
-                ArcEffectPacket::encode, ArcEffectPacket::decode, ArcEffectPacket::handle);
-        // Le renfort du corps : un seul message, et pas un arc — ses sept hauteurs et leurs
-        // delais sont une affaire d'image, que le client rejoue seul. Voir BodyIntensifyEffect.
-        CHANNEL.registerMessage(nextId++, BodyIntensifyPacket.class,
-                BodyIntensifyPacket::encode, BodyIntensifyPacket::decode,
-                BodyIntensifyPacket::handle);
+        // Les eclairs, le renfort du corps et les eclairs du sol sont communs desormais : voir
+        // AcademyPackets. Ce qui reste ici est Forge : les rayons du meltdowner, l'anneau du
+        // missile, les maintiens.
         // Les rayons du meltdowner : le serveur sait d'ou ils partent et jusqu'ou, et il le dit
         // a ceux qui voient le tireur. Le genre du rayon voyage par son nom, comme le motif des
         // eclairs, et c'est lui qui porte le son a jouer. Voir MdRayPacket.
@@ -110,12 +103,8 @@ public class AbilityNetwork {
                 cn.academy.ability.network.RailgunHandPacket::encode,
                 cn.academy.ability.network.RailgunHandPacket::decode,
                 cn.academy.ability.network.RailgunHandPacket::handle);
-        // Et les eclairs qui sortent du sol apres un claquement d'orage : le serveur seul sait ou
-        // la foudre est tombee et jusqu'ou elle emporte, et c'est tout ce que le client a besoin
-        // de savoir — il tire le reste au sort. Voir ThunderClapGroundPacket et GroundArcs.
-        CHANNEL.registerMessage(nextId++, ThunderClapGroundPacket.class,
-                ThunderClapGroundPacket::encode, ThunderClapGroundPacket::decode,
-                ThunderClapGroundPacket::handle);
+        // Et les eclairs qui sortent du sol apres un claquement d'orage vivent desormais dans
+        // AcademyPackets, avec le reste des effets communs.
         // Le nom et le mot de passe d'un noeud sans fil, la configuration du Matrix et l'onglet
         // sans fil vivent maintenant dans common/ : leur transport est installe par le chargeur
         // (voir AcademyPackets), pas ici.

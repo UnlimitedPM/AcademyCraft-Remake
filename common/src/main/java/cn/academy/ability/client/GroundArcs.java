@@ -10,8 +10,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +73,6 @@ import java.util.Random;
  * partie de cet effet qu'un test puisse relire, et c'est aussi celle qui porte les deux regles — la
  * grille, et la vague qui part du centre.
  */
-@OnlyIn(Dist.CLIENT)
 public final class GroundArcs {
 
     /**

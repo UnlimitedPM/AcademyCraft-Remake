@@ -2,13 +2,11 @@ package cn.academy.ability.electromaster;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MineDetectPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 
 /**
  * La detection de minerais, portage de {@code MineDetect} : un eclat, l'oeil voit a travers
@@ -316,7 +314,7 @@ public class MineDetectSkill extends Skill {
             // `hold` : l'eclat peut durer au-dela des cent ticks, contre la reserve. A 0 %
             // d'experience l'entretien vaut zero, et le client se contente donc des cent ticks —
             // c'est l'eclat de l'original, au tick pres.
-            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+            cn.academy.ability.network.AbilityNetwork.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> server),
                     new MineDetectPacket(range(data),
                             advanced(data, data.getCategoryLevel(getCategory())), TIME,
                             extensionTicks(data) > 0));
@@ -366,7 +364,7 @@ public class MineDetectSkill extends Skill {
         data.setHeldOverload(this, 0f);
         player.removeEffect(MobEffects.BLINDNESS);
         if (player instanceof ServerPlayer server) {
-            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> server),
+            cn.academy.ability.network.AbilityNetwork.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> server),
                     new cn.academy.ability.network.MineDetectStopPacket());
         }
     }

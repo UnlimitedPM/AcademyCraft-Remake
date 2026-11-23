@@ -79,5 +79,21 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.RadiationMarkPacket::encode,
                         cn.academy.ability.network.RadiationMarkPacket::decode),
                 cn.academy.ability.network.RadiationMarkPacket::handle);
+
+        Network.clientbound("arc_effect", cn.academy.ability.network.ArcEffectPacket.class,
+                Network.codec(cn.academy.ability.network.ArcEffectPacket::encode,
+                        cn.academy.ability.network.ArcEffectPacket::decode),
+                cn.academy.ability.network.ArcEffectPacket::handle);
+
+        Network.clientbound("body_intensify", cn.academy.ability.network.BodyIntensifyPacket.class,
+                Network.codec(cn.academy.ability.network.BodyIntensifyPacket::encode,
+                        cn.academy.ability.network.BodyIntensifyPacket::decode),
+                cn.academy.ability.network.BodyIntensifyPacket::handle);
+
+        Network.clientbound("thunder_clap_ground",
+                cn.academy.ability.network.ThunderClapGroundPacket.class,
+                Network.codec(cn.academy.ability.network.ThunderClapGroundPacket::encode,
+                        cn.academy.ability.network.ThunderClapGroundPacket::decode),
+                cn.academy.ability.network.ThunderClapGroundPacket::handle);
     }
 }

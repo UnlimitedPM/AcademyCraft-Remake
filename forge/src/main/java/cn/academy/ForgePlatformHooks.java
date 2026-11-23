@@ -58,6 +58,12 @@ public final class ForgePlatformHooks {
         });
         PlatformHooks.installCategoryChangeHook(
                 cn.academy.ability.preset.PresetTracker::clearOnCategoryChange);
+        // Le moteur des rayons est un dessin d'effet : il n'existe que chez le client.
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
+            PlatformHooks.installRayBeamSpawner((kind, from, to, ownerId) ->
+                    cn.academy.ability.client.md.MdRayView.spawn(
+                            cn.academy.ability.client.md.MdRayKind.byName(kind), from, to, ownerId));
+        }
         PlatformHooks.installAdvancementHooks(new PlatformHooks.AdvancementHooks() {
             @Override
             public void award(net.minecraft.world.entity.player.Player player,

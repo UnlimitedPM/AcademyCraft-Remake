@@ -317,9 +317,7 @@ public class BodyIntensifySkill extends Skill {
      * les autres joueurs ne verraient rien du tout.
      */
     private static void sendEffect(Player player) {
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
-                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
-                        .with(() -> player),
+        cn.academy.platform.network.Network.sendToTracking(player,
                 new cn.academy.ability.network.BodyIntensifyPacket(player.getId()));
     }
 }

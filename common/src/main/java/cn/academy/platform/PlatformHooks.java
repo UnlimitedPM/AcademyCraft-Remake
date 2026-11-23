@@ -110,6 +110,20 @@ public final class PlatformHooks {
         void afterCategoryChange(net.minecraft.world.entity.player.Player player);
     }
 
+    /**
+     * Pose un rayon du moteur des rayons chez le client.
+     *
+     * <p>Le moteur lui-meme ({@code MdRayView}, ses mine ray, ses rubans) reste cote Forge : c'est
+     * un dessin d'effet, branche sur les evenements de rendu du chargeur. Ce que le code commun a
+     * besoin de faire, c'est de DEMANDER le rayon — le railgun, par exemple, se dessine avec ce
+     * moteur et non avec un dessin a lui.
+     */
+    @FunctionalInterface
+    public interface RayBeamSpawner {
+        void spawn(String kind, net.minecraft.world.phys.Vec3 from,
+                   net.minecraft.world.phys.Vec3 to, int ownerId);
+    }
+
     /** Les succes du mod, que seule la logique des aptitudes declenche. */
     public enum Advancement {
         OVERLOAD, LEARNING_SKILL, EXP_FULL, CONVERT_CATEGORY
@@ -175,6 +189,9 @@ public final class PlatformHooks {
     private static CategoryChangeHook categoryChangeHook = player -> {
     };
 
+    private static RayBeamSpawner rayBeamSpawner = (kind, from, to, ownerId) -> {
+    };
+
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
         @Override
         public int chargeItem(ItemStack stack, int amount, boolean simulate) {
@@ -237,6 +254,16 @@ public final class PlatformHooks {
 
     public static void installCategoryChangeHook(CategoryChangeHook hook) {
         categoryChangeHook = hook;
+    }
+
+    public static void installRayBeamSpawner(RayBeamSpawner spawner) {
+        rayBeamSpawner = spawner;
+    }
+
+    /** Demande un rayon du moteur des rayons (cote client). */
+    public static void spawnRayBeam(String kind, net.minecraft.world.phys.Vec3 from,
+                                    net.minecraft.world.phys.Vec3 to, int ownerId) {
+        rayBeamSpawner.spawn(kind, from, to, ownerId);
     }
 
     /** A appeler une fois la categorie du joueur changee. */

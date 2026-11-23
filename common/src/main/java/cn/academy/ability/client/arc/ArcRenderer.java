@@ -1,6 +1,6 @@
 package cn.academy.ability.client.arc;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.client.arc.ArcMesh.Quad;
 import com.mojang.blaze3d.platform.GlStateManager.DestFactor;
 import com.mojang.blaze3d.platform.GlStateManager.SourceFactor;
@@ -16,11 +16,6 @@ import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 import java.util.HashMap;
@@ -70,22 +65,23 @@ import java.util.Random;
  * {@code position_color_tex} a ete essaye d'abord, et n'affichait rien du tout — d'ou le
  * format de sommet, qui ne porte plus que la position, la couleur et la texture.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class ArcRenderer {
 
     /** La texture d'un bout de trait : celle de l'original, inchangee. */
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/arc/line_segment.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/arc/line_segment.png");
 
     /** Un type de rendu par texture : le construire a chaque image allouerait pour rien. */
     private static final Map<ResourceLocation, RenderType> TYPES = new HashMap<>();
 
     private static final Random RANDOM = new Random();
 
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-
+    /**
+     * Un tick de client : les eclairs avancent, et meurent.
+     *
+     * <p>Le chargeur appelle ceci depuis son propre crochet de tick ; la classe ne connait plus
+     * l'evenement.
+     */
+    public static void tick() {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             // Quitter un monde emporte ses eclairs : ils appartiennent au monde, pas au jeu.
@@ -112,8 +108,9 @@ public class ArcRenderer {
      * le paquet emploie encore.
      */
     public static void spawnBeam(Vec3 from, Vec3 to, int lifeTicks, int ownerId) {
-        cn.academy.ability.client.md.MdRayView.spawn(cn.academy.ability.client.md.MdRayKind.RAILGUN,
-                from, to, ownerId);
+        // Le dessin lui-meme appartient a un moteur Forge : on le demande au chargeur.
+        cn.academy.platform.PlatformHooks.spawnRayBeam(
+                cn.academy.ability.client.md.MdRayKind.RAILGUN.name(), from, to, ownerId);
     }
 
     /**
@@ -161,19 +158,19 @@ public class ArcRenderer {
                 new double[] { to.x, to.y, to.z },
                 lifeTicks, ownerId, gameTime, RANDOM);
     }
-
-    @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+    /**
+     * Dessine les eclairs vivants, apres les particules.
+     *
+     * <p>Les trois ingredients viennent de l'evenement de rendu du monde, que le chargeur lit
+     * pour nous : la pose, la position de la camera et son vecteur « haut ».
+     */
+    public static void render(PoseStack pose, Vec3 camera, org.joml.Vector3f aboveIsUp) {
         if (ClientArcs.live().isEmpty()) return;
 
         // Les sommets se posent relativement a la camera : c'est ce que fait la pose du
         // rendu du monde, et un eclair pose en coordonnees du monde partirait a la derive
         // des qu'on s'eloigne de l'origine.
-        Vec3 camera = event.getCamera().getPosition();
-        org.joml.Vector3f aboveIsUp = event.getCamera().getUpVector();
         double[] above = { aboveIsUp.x, aboveIsUp.y, aboveIsUp.z };
-        PoseStack pose = event.getPoseStack();
         MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
 
         VertexConsumer out = buffers.getBuffer(arc(TEXTURE));
@@ -263,7 +260,7 @@ public class ArcRenderer {
      * balise, qui ne connait ni normale ni lumiere.
      */
     private static RenderType arc(ResourceLocation texture) {
-        return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_arc",
+        return TYPES.computeIfAbsent(texture, tex -> cn.academy.client.render.RenderTypes.create("academy_arc",
                 DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,
                 256,

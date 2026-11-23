@@ -1,9 +1,7 @@
 package cn.academy.ability.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : le renfort du corps a pris, et voici qui l'a lance.
@@ -33,10 +31,8 @@ public class BodyIntensifyPacket {
         return new BodyIntensifyPacket(buf.readVarInt());
     }
 
-    public static void handle(BodyIntensifyPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.BodyIntensifyEffect.start(msg.ownerId));
-        ctx.setPacketHandled(true);
+    public static void handle(BodyIntensifyPacket msg) {
+        cn.academy.ability.client.BodyIntensifyEffect.start(msg.ownerId);
     }
 
     /** Le porteur du renfort. Lisible par le test, qui relit l'aller-retour du paquet. */

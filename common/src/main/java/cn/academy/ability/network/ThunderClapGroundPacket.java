@@ -4,10 +4,7 @@ import cn.academy.ability.client.GroundArcs;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : la foudre du claquement d'orage vient de tomber, et voici ou — et jusqu'ou.
@@ -36,8 +33,8 @@ public class ThunderClapGroundPacket {
 
     /** Annonce la chute a ceux qui voient le lanceur, et a lui. */
     public static void send(Player player, Vec3 impact, double radius) {
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new ThunderClapGroundPacket(impact, radius));
+        cn.academy.platform.network.Network.sendToTracking(
+                new ThunderClapGroundPacket(impact, radius), player);
     }
 
     public static void encode(ThunderClapGroundPacket msg, FriendlyByteBuf buf) {
@@ -52,10 +49,8 @@ public class ThunderClapGroundPacket {
                 new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()), buf.readDouble());
     }
 
-    public static void handle(ThunderClapGroundPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> GroundArcs.burst(msg.impact, msg.radius));
-        ctx.setPacketHandled(true);
+    public static void handle(ThunderClapGroundPacket msg) {
+        GroundArcs.burst(msg.impact, msg.radius);
     }
 
     /** Ou la foudre est tombee. Lisible par le test, qui relit l'aller-retour du paquet. */

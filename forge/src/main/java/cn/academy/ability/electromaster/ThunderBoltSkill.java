@@ -175,9 +175,7 @@ public class ThunderBoltSkill extends Skill {
      * sur la touche, et les autres joueurs prendraient les degats sans rien voir venir.
      */
     private static void sendArc(Player player, String pattern, Vec3 from, Vec3 to, int ticks) {
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
-                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
-                        .with(() -> player),
+        cn.academy.platform.network.Network.sendToTracking(player,
                 new cn.academy.ability.network.ArcEffectPacket(pattern, from, to, ticks, false,
                         player.getId()));
     }

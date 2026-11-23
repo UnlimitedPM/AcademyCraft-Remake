@@ -4,7 +4,6 @@ import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.client.arc.ArcPattern;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ArcEffectPacket;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
@@ -13,7 +12,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.Random;
 
@@ -141,7 +139,7 @@ public class ArcGenSkill extends Skill {
         // l'attaque venir. Les motifs d'arcs sont purs — aucun type de Minecraft — donc le
         // serveur peut les nommer sans rien connaitre du rendu.
         // Le tireur voyage avec l'arc : c'est sa vue qui se recolle a sa camera.
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
+        cn.academy.platform.network.Network.sendToTracking(player,
                 new ArcEffectPacket(ArcPattern.WEAK.name(), eye, eye.add(look.scale(range)),
                         ARC_TICKS, false, player.getId()));
 
