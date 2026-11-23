@@ -30,7 +30,6 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
 public class WindgenBaseBlock extends Block implements EntityBlock {
@@ -153,7 +152,7 @@ public class WindgenBaseBlock extends Block implements EntityBlock {
         // Le clic peut tomber sur la moitie haute : l'ecran est sur la basse.
         BlockPos origin = state.getValue(HALF) == DoubleBlockHalf.LOWER ? pos : pos.below();
         if (level.getBlockEntity(origin) instanceof WindgenBaseBlockEntity base) {
-            NetworkHooks.openScreen(serverPlayer, base, buf -> buf.writeBlockPos(origin));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, base, buf -> buf.writeBlockPos(origin));
         }
         return InteractionResult.CONSUME;
     }

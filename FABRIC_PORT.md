@@ -53,6 +53,8 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   10 menus n'importent plus `ItemStackHandler`/`SlotItemHandler` ; `MachineDrops` est commun ;
 - `TooltipItem` extrait de `ModItems` vers `common/` ; Fabric enregistre `magnetic_coil` avec son
   infobulle ;
+- ouverture de menu neutralisée : `PlatformHooks.openMenu` remplace les 11 appels à
+  `NetworkHooks.openScreen` ; Forge installe l'implémentation, Fabric branchera la sienne ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

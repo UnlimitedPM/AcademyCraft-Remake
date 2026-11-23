@@ -2,6 +2,7 @@ package cn.academy;
 
 import cn.academy.platform.PlatformHooks;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
+import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Installation des crochets Forge/NeoForge pour le code de common/.
@@ -17,5 +18,7 @@ public final class ForgePlatformHooks {
     public static void install() {
         PlatformHooks.installExternalEnergyProbe(stack -> !stack.isEmpty()
                 && stack.getCapability(ForgeCapabilities.ENERGY).isPresent());
+        PlatformHooks.installMenuOpener((player, provider, writer) ->
+                NetworkHooks.openScreen(player, provider, writer));
     }
 }

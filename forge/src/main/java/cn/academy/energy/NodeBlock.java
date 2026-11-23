@@ -21,7 +21,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Bloc de noeud sans fil, commun aux trois qualites.
@@ -93,7 +92,7 @@ public class NodeBlock extends Block implements EntityBlock {
             // leur mot de passe resteraient hors de portee pour toujours.
             if (node.getPlacer().isEmpty()) node.setPlacer(player);
 
-            NetworkHooks.openScreen(serverPlayer, node, buf -> buf.writeBlockPos(pos));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, node, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

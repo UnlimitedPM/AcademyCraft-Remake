@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
 public class SolarGenBlock extends Block implements EntityBlock {
@@ -74,7 +73,7 @@ public class SolarGenBlock extends Block implements EntityBlock {
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof SolarGenBlockEntity blockEntity) {
-            NetworkHooks.openScreen(serverPlayer, blockEntity, buf -> buf.writeBlockPos(pos));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, blockEntity, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

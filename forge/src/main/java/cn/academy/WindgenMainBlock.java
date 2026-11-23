@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
 public class WindgenMainBlock extends HorizontalDirectionalBlock implements EntityBlock {
@@ -173,7 +172,7 @@ public class WindgenMainBlock extends HorizontalDirectionalBlock implements Enti
         // Le clic peut tomber sur un bout du rotor : l'ecran est sur le centre.
         BlockPos center = centerOf(pos, state);
         if (level.getBlockEntity(center) instanceof WindgenMainBlockEntity rotor) {
-            NetworkHooks.openScreen(serverPlayer, rotor, buf -> buf.writeBlockPos(center));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, rotor, buf -> buf.writeBlockPos(center));
         }
         return InteractionResult.CONSUME;
     }

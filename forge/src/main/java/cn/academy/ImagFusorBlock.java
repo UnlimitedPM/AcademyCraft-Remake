@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Fusor d'Imag.
@@ -90,7 +89,7 @@ public class ImagFusorBlock extends Block implements EntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof ImagFusorBlockEntity fusor) {
-            NetworkHooks.openScreen(serverPlayer, fusor, buf -> buf.writeBlockPos(pos));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, fusor, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

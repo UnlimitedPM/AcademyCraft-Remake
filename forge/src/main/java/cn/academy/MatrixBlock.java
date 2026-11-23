@@ -25,7 +25,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 
 public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlock {
@@ -118,7 +117,7 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
                 // poseur — ou pose par une commande — n'aurait jamais de reseau a lui.
                 if (matrix.getPlacer().isEmpty()) matrix.setPlacer(player);
 
-                NetworkHooks.openScreen(serverPlayer, matrix, buf -> buf.writeBlockPos(anchor));
+                cn.academy.platform.PlatformHooks.openMenu(serverPlayer, matrix, buf -> buf.writeBlockPos(anchor));
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

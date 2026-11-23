@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Formeur de metal.
@@ -83,7 +82,7 @@ public class MetalFormerBlock extends Block implements EntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof MetalFormerBlockEntity former) {
-            NetworkHooks.openScreen(serverPlayer, former, buf -> buf.writeBlockPos(pos));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, former, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

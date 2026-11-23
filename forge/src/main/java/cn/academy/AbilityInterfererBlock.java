@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 
 /**
  * Brouilleur d'aptitudes.
@@ -56,7 +55,7 @@ public class AbilityInterfererBlock extends Block implements EntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer serverPlayer
                 && level.getBlockEntity(pos) instanceof AbilityInterfererBlockEntity machine) {
-            NetworkHooks.openScreen(serverPlayer, machine, buf -> buf.writeBlockPos(pos));
+            cn.academy.platform.PlatformHooks.openMenu(serverPlayer, machine, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.sidedSuccess(level.isClientSide);
     }

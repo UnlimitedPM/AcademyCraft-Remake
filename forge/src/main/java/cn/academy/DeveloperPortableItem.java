@@ -13,7 +13,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.network.NetworkHooks;
 
 import javax.annotation.Nullable;
 
@@ -103,7 +102,7 @@ public class DeveloperPortableItem extends Item implements ImagEnergyItem {
             // L'ecran est celui de la machine : seule la source de l'energie change, et
             // c'est le drapeau du paquet qui le dira au client.
             server.getCapability(PortableDevCapability.PORTABLE_DEV).ifPresent(data ->
-                    NetworkHooks.openScreen(server,
+                    cn.academy.platform.PlatformHooks.openMenu(server,
                             new SimpleMenuProvider(
                                     (id, inventory, p) -> new DeveloperMenu(id, inventory, data),
                                     stack.getHoverName()),
