@@ -75,6 +75,6 @@ public class FlashingPacket {
 
         // Le saut a depense des points : le client doit le voir tout de suite, sinon il
         // croit pouvoir enchainer alors que sa reserve est vide.
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
     }
 }

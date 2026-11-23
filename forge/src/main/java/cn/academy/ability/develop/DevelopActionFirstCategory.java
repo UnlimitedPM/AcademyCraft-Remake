@@ -119,8 +119,7 @@ public class DevelopActionFirstCategory implements DevelopAction {
         if (granted == null) return null;
 
         player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
-                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new SyncAbilityDataPacket(data)));
+                cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data)));
         return granted;
     }
 

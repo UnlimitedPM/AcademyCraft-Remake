@@ -47,7 +47,7 @@ public class AbilityEvents {
     public static void onLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
-                    AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data)));
+                    cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data)));
         }
     }
 
@@ -116,7 +116,7 @@ public class AbilityEvents {
             // AbilityData.syncInterval). C'est ce qui fait qu'on voit ses points partir :
             // la reserve, elle, attend encore son delai de 15 ticks avant de remonter.
             if (data.tickSync()) {
-                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+                cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
             }
         });
     }
@@ -177,8 +177,7 @@ public class AbilityEvents {
             // Le reveil est un evenement rare : on pousse l'etat tout de suite plutot que
             // d'attendre la cadence de synchronisation, sinon la barre du client resterait
             // vide quelques ticks apres que le joueur a ouvert les yeux.
-            AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                    new SyncAbilityDataPacket(data));
+            cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
         });
     }
 
@@ -415,7 +414,7 @@ public class AbilityEvents {
         int cooldown = skill.getCooldownTicks(data);
         data.endCharge(skill);
         data.setCooldown(skill, cooldown);
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
         // Et on le DIT au client, qui tient son propre temoin depuis l'appui : sans cela son
         // animation continuerait toute seule alors que le maintien est fini chez le serveur —
         // le joueur l'a vu, « a la fin de la competence, si on ne relache pas le clic, le

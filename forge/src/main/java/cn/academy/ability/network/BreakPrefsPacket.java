@@ -57,8 +57,7 @@ public class BreakPrefsPacket {
                     if (target == null) return;
                     data.setBreaksBlocks(target, msg.value);
                 }
-                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new SyncAbilityDataPacket(data));
+                cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
             });
         });
         ctx.setPacketHandled(true);

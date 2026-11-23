@@ -490,8 +490,7 @@ public final class AimCommands {
     }
 
     private static void sync(ServerPlayer player, AbilityData data) {
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new SyncAbilityDataPacket(data));
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
     }
 
     private static void send(CommandSourceStack source, String key, Object... args) {

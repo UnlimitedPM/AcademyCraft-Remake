@@ -36,8 +36,6 @@ public class AbilityNetwork {
         // fait disparaitre les blocs. Voir BreakPrefsPacket.
         CHANNEL.registerMessage(nextId++, BreakPrefsPacket.class,
                 BreakPrefsPacket::encode, BreakPrefsPacket::decode, BreakPrefsPacket::handle);
-        CHANNEL.registerMessage(nextId++, SyncAbilityDataPacket.class,
-                SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode, SyncAbilityDataPacket::handle);
         // La detection de minerais est la seule competence qui ait besoin de dire quelque
         // chose au client : c'est lui qui balaie le monde et l'allume.
         CHANNEL.registerMessage(nextId++, MineDetectPacket.class,

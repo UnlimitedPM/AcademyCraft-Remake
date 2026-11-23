@@ -51,8 +51,7 @@ public class ToggleAbilityPacket {
                     cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
                 }
                 data.setActivated(msg.activated);
-                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new SyncAbilityDataPacket(data));
+                cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
             });
         });
         ctx.setPacketHandled(true);

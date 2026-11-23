@@ -103,7 +103,6 @@ public class LocationTeleportPacket {
         }
 
         // La liste a change, ou la reserve a ete depensee : le client doit le voir.
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new SyncAbilityDataPacket(data));
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
     }
 }

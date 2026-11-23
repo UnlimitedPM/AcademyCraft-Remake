@@ -170,7 +170,7 @@ public class ActivateSkillPacket {
         if (!data.perform(skill.getCpCost(data), skill.getOverloadCost(data))) return false;
         data.beginCharge(skill);
         skill.onStart(player, data);
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAbilityDataPacket(data));
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
         return true;
     }
 
@@ -273,7 +273,6 @@ public class ActivateSkillPacket {
         // ici ils sont verses a l'activation, au montant de base de la
         // competence — l'ecart est note dans Skill#getExpGain.
         data.addSkillExp(skill, skill.getExpGain(data));
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new SyncAbilityDataPacket(data));
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
     }
 }

@@ -4,6 +4,7 @@ import cn.academy.energy.network.MatrixConfigPacket;
 import cn.academy.energy.network.NodeConfigPacket;
 import cn.academy.energy.network.WirelessNodesPacket;
 import cn.academy.energy.network.WirelessRequestPacket;
+import cn.academy.ability.network.SyncAbilityDataPacket;
 
 /**
  * Declarations des paquets communs.
@@ -32,5 +33,9 @@ public final class AcademyPackets {
         Network.serverbound("matrix_config", MatrixConfigPacket.class,
                 Network.codec(MatrixConfigPacket::encode, MatrixConfigPacket::decode),
                 MatrixConfigPacket::handle);
+
+        Network.clientbound("sync_ability_data", SyncAbilityDataPacket.class,
+                Network.codec(SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode),
+                SyncAbilityDataPacket::handle);
     }
 }
