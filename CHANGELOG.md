@@ -4,6 +4,15 @@
 
 ### Français
 
+- **Tout le paquet `ability/vecmanip` est commun**, avec les trois barrières qui le retenaient :
+  `BlockBreaking` ne nomme plus les statiques des catégories mais retrouve ses compétences par clé
+  dans `CategoryManager` (avec une surcharge `byKey(manager, clé)` pour que les tests partent d'un
+  registre neuf) ; `EntityAffection` marque les entités avec les **tags vanilla** au lieu du
+  `getPersistentData` de Forge — même nom de repère, même sauvegarde dans le NBT ; et les deux
+  derniers paquets (`BloodSprayPacket`, `PlasmaShotPacket`) passent par `Network` avec leurs
+  rendus (`BloodSprays`, `PlasmaBodies`, `PlasmaBodyVisuals`, `TornadoVisuals`, `ClientCharge`).
+  Un GameTest vérifiait la clé du repère dans le NBT Forge : il lit maintenant la liste `Tags`
+  sauvegardée, ce qui teste la même chose sans le chargeur.
 - Cinq paquets d'effet passent par le réseau neutre : le sang de la chair arrachée, la traînée du
   dépôt au loin, la gerbe du coup critique, l'onde de choc de vecmanip et la bouffée de fumée. Ils
   sont déclarés dans `AcademyPackets` et partent aux joueurs qui voient la cible (`Network` gagne
@@ -60,6 +69,14 @@
 
 ### English
 
+- **The whole `ability/vecmanip` package is common**, along with the three barriers that held it:
+  `BlockBreaking` no longer names the category statics but resolves its skills by key through
+  `CategoryManager` (with a `byKey(manager, key)` overload so tests start from a fresh registry);
+  `EntityAffection` marks entities with **vanilla tags** instead of Forge's `getPersistentData` —
+  same marker name, same NBT persistence; and the last two packets (`BloodSprayPacket`,
+  `PlasmaShotPacket`) go through `Network` with their visuals (`BloodSprays`, `PlasmaBodies`,
+  `PlasmaBodyVisuals`, `TornadoVisuals`, `ClientCharge`). One GameTest checked the marker key in
+  Forge's NBT: it now reads the saved `Tags` list, which tests the same thing without the loader.
 - Five effect packets now travel through the neutral network: torn-flesh blood, the far-drop trail,
   the critical-hit burst, the vecmanip shockwave and the smoke puff. They are declared in
   `AcademyPackets` and go to the players who can see the target (`Network` gains `sendToTracking`:
