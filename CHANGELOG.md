@@ -29,8 +29,9 @@
   par deux nouveaux services `PlatformHooks`. Les deux machines à phase liquide (fuseur Imag et
   générateur de phase) sont communes elles aussi, avec une cuve neutre (`SimpleFluidTank`) et un
   adaptateur `IFluidHandler` côté Forge. Le moteur d'interface (`CGui*`, `CWidget`, polices) est
-  commun lui aussi, et les écrans des huit machines sont enregistrés sous Fabric. Le raccordement
-  au réseau passe par un crochet
+  commun lui aussi, et les écrans des huit machines sont enregistrés sous Fabric. Les minerais du
+  mod sont générés sous Fabric par `FabricWorldgen` (mêmes placed features que Forge), avec
+  leurs tables de butin. Le raccordement au réseau passe par un crochet
   `PlatformHooks` de plus. Le client Fabric démarre, charge un monde et installe son ouverture de
   menu. Le plan du reste est dans `FABRIC_PORT.md`.
 

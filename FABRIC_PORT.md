@@ -92,6 +92,10 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   (`ForgeCGuiShaders`), et un access widener commun ouvre les états de rendu protégés de vanilla
   (`RenderType.create` est appelé par réflexion). Fabric enregistre les huit écrans avec
   `MenuScreens` ; sans programmes, les anneaux et icônes grisées s'abstiennent ;
+- génération du monde : les `data/academy/worldgen/**` (configured/placed features) et les tables
+  de butin des blocs sont partagées ; `FabricWorldgen` ajoute les quatre minerais à toutes les
+  biomes de l'overworld avec `BiomeModifications`, comme le biome modifier Forge. Le lac de phase
+  liquide attend le bloc de fluide ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

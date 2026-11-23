@@ -40,9 +40,14 @@ processResources {
     // restent propres au module (fabric.mod.json ici).
     from(rootProject.file('forge/src/main/resources')) {
         exclude 'META-INF/**'
-        // Le palier Fabric ne contient pas encore les machines, outils et item tags : leurs
-        // recettes/succes referenceraient des objets absents. On les ajoutera avec le contenu.
-        exclude 'data/**'
+        // Le palier Fabric n'a pas encore tous les objets, outils et item tags : recettes, succes
+        // et structures referenceraient des objets absents. La generation du monde et les tables
+        // de butin des blocs existants, elles, sont deja utilisables.
+        exclude 'data/academy/advancements/**'
+        exclude 'data/academy/recipes/**'
+        exclude 'data/academy/structures/**'
+        exclude 'data/academy/forge/**'
+        exclude 'data/academy/damage_type/**'
     }
     from(rootProject.file('forge/src/generated/resources')) {
         exclude 'data/**'
