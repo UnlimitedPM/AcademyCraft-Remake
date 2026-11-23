@@ -1,10 +1,8 @@
 package cn.academy.ability.client.vm;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +29,6 @@ import java.util.Random;
  * <p>Quatre images, tirees a la naissance : l'atlas en porte un carre de deux sur deux, et une
  * bouffee garde la sienne toute sa vie.
  */
-@OnlyIn(Dist.CLIENT)
 public final class Smokes {
 
     /** L'echelle de la bouffee : ses quads vont de -1 a 1, donc deux blocs. */
@@ -60,8 +57,7 @@ public final class Smokes {
     public static final double TOP = 0.2;
 
     /** Son image : la fumee de l'original, telle quelle. */
-    public static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/smokes.png");
+    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/smokes.png");
 
     /** Une bouffee vivante. */
     public static final class Puff {

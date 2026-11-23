@@ -124,7 +124,7 @@ public class MarkTeleportSkill extends Skill {
         // Et la chute qui suit n'est pas comptee, jusqu'au premier bloc touche : voir
         // AbilityData.protectFromFall.
         data.protectFromFall();
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
+        cn.academy.sound.AcademySounds.playFor(player, "tp.tp", 0.5f);
 
         // 0,00018 par bloc, comme l'original : c'est la distance qui compte, pas le geste.
         data.addSkillExp(this, 0.00018f * (float) distance);

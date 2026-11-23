@@ -165,7 +165,7 @@ public class PenetrateTeleportSkill extends Skill {
         // AbilityData.protectFromFall.
         data.protectFromFall();
         // Le son part au relachement dans l'original, juste avant le saut : c'est le meme instant.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
+        cn.academy.sound.AcademySounds.playFor(player, "tp.tp", 0.5f);
 
         // 0,00014 par bloc parcouru, comme l'original : c'est la distance qui compte.
         data.addSkillExp(this, 0.00014f * (float) distance);

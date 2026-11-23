@@ -32,10 +32,17 @@ public final class FabricNetworkTransport implements Network.Transport {
 
     private static final FabricNetworkTransport INSTANCE = new FabricNetworkTransport();
 
+    /** Le serveur en cours, pour les envois qui n'ont pas de destinataire precis. */
+    private static net.minecraft.server.MinecraftServer server;
+
     /** Cote serveur : recoit les messages des joueurs. */
     static void installServer() {
         Network.install(INSTANCE);
         INSTANCE.receiveServerbound();
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING
+                .register(started -> server = started);
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPED
+                .register(stopped -> server = null);
     }
 
     /** Cote client : recoit les messages du serveur et sait lui en envoyer. */
@@ -101,7 +108,30 @@ public final class FabricNetworkTransport implements Network.Transport {
 
     @Override
     public void sendToAll(Object message) {
-        throw new UnsupportedOperationException(
-                "sendToAll n'a pas encore d'equivalent Fabric dans ce transport");
+        if (server == null) return;
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUtf(Network.idOf(message));
+        Network.encode(message, buf);
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            ServerPlayNetworking.send(player, CHANNEL, buf);
+        }
+    }
+
+    /**
+     * Aux joueurs du meme monde que l'entite.
+     *
+     * <p>Fabric n'expose pas le suivi d'entite de Forge : on approche en prenant les joueurs du
+     * meme niveau. Les paquets concernes sont des effets ponctuels, et le client sait deja ignorer
+     * un effet trop loin de lui.
+     */
+    @Override
+    public void sendToTracking(Object message, net.minecraft.world.entity.Entity entity) {
+        if (!(entity.level() instanceof net.minecraft.server.level.ServerLevel level)) return;
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUtf(Network.idOf(message));
+        Network.encode(message, buf);
+        for (ServerPlayer player : level.players()) {
+            ServerPlayNetworking.send(player, CHANNEL, buf);
+        }
     }
 }

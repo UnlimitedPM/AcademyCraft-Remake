@@ -236,7 +236,7 @@ public class LocationTeleportSkill extends Skill {
         // Et la chute qui suit n'est pas comptee, jusqu'au premier bloc touche : voir
         // AbilityData.protectFromFall.
         data.protectFromFall();
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
+        cn.academy.sound.AcademySounds.playFor(player, "tp.tp", 0.5f);
 
         data.addSkillExp(this, expFor(distance));
         data.setCooldown(this, cooldown(data));

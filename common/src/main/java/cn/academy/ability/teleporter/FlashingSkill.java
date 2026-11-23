@@ -187,7 +187,7 @@ public class FlashingSkill extends Skill {
         player.setDeltaMovement(Vec3.ZERO);
         player.teleportTo(destination.x, destination.y, destination.z);
         player.fallDistance = 0.0f;
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_FLASHING, 1.0f);
+        cn.academy.sound.AcademySounds.playFor(player, "tp.tp_flashing", 1.0f);
 
         // Et la retombee est LENTE, mais chez le CLIENT : le port a deja appris deux fois qu'une
         // vitesse posee par le serveur est reprise au tick suivant. C'est le

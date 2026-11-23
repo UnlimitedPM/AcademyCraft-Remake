@@ -59,4 +59,9 @@ public final class ForgeNetworkTransport implements Network.Transport {
     public void sendToAll(Object message) {
         CHANNEL.send(PacketDistributor.ALL.noArg(), message);
     }
+
+    @Override
+    public void sendToTracking(Object message, net.minecraft.world.entity.Entity entity) {
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> entity), message);
+    }
 }

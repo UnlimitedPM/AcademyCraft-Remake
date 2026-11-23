@@ -1,6 +1,6 @@
 package cn.academy.ability.client.tp;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
@@ -44,8 +44,7 @@ public final class TpParticles {
     public static final double SIZE_MAX = 0.2;
 
     /** L'image de l'original, tel quel. */
-    public static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/tp_particle.png");
+    public static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/tp_particle.png");
 
     /** Une etincelle vivante. */
     public static final class Spark {

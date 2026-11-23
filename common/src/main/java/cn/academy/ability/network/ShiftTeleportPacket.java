@@ -1,14 +1,9 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.client.tp.ShiftTrail;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
-
-import java.util.function.Supplier;
 
 /**
  * S2C : le depose au loin vient de partir, et voici son trajet.
@@ -43,8 +38,9 @@ public class ShiftTeleportPacket {
 
     /** Annonce la trainee a ceux qui voient le lanceur, et a lui. */
     public static void send(Player player, Vec3 feet, BlockPos cell) {
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new ShiftTeleportPacket(feet, cell));
+        if (player == null) return;
+        cn.academy.platform.network.Network.sendToTracking(
+                new ShiftTeleportPacket(feet, cell), player);
     }
 
     public static void encode(ShiftTeleportPacket msg, FriendlyByteBuf buf) {
@@ -59,10 +55,8 @@ public class ShiftTeleportPacket {
                 buf.readBlockPos());
     }
 
-    public static void handle(ShiftTeleportPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> ShiftTrail.play(msg.feet, msg.cell));
-        ctx.setPacketHandled(true);
+    public static void handle(ShiftTeleportPacket msg) {
+        cn.academy.ability.client.tp.ShiftTrail.play(msg.feet, msg.cell);
     }
 
     /** Les pieds du lanceur. Lisible par le test, qui relit l'aller-retour du paquet. */

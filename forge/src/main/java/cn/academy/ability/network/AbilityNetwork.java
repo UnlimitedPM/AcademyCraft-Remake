@@ -64,38 +64,13 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
                 RadiationMarkPacket::encode, RadiationMarkPacket::decode,
                 RadiationMarkPacket::handle);
-        // Et l'onde de choc de vecmanip : trois competences en posent une, et aucune ne se voit
-        // sans ce message. Voir VecWavePacket et VecWaves.
-        CHANNEL.registerMessage(nextId++, VecWavePacket.class,
-                VecWavePacket::encode, VecWavePacket::decode,
-                VecWavePacket::handle);
-        // Et la trainee du depose au loin : le serveur seul sait que le geste a eu lieu, et c'est
-        // la seule chose qu'il donne a voir — il ne deplace personne, il pose un bloc au loin.
-        // Voir ShiftTeleportPacket et ShiftTrail.
-        CHANNEL.registerMessage(nextId++, ShiftTeleportPacket.class,
-                ShiftTeleportPacket::encode, ShiftTeleportPacket::decode,
-                ShiftTeleportPacket::handle);
-        // Et la gerbe de formule du coup critique : le serveur seul sait qui a ete frappe, et
-        // c'est la seule chose que les deux passives du teleporteur montrent. Voir
-        // TeleportCritPacket et FormulaParticles.
-        CHANNEL.registerMessage(nextId++, TeleportCritPacket.class,
-                TeleportCritPacket::encode, TeleportCritPacket::decode,
-                TeleportCritPacket::handle);
-        // Et le sang de la chair arrachee : le serveur seul sait qui a ete touche, donc c'est lui
-        // qui seme la gerbe autour de la victime. Voir BloodSplashPacket.
-        CHANNEL.registerMessage(nextId++, BloodSplashPacket.class,
-                BloodSplashPacket::encode, BloodSplashPacket::decode,
-                BloodSplashPacket::handle);
+        // Les cinq effets d'onde, de trainee, de critique, de sang et de fumee sont communs
+        // desormais : voir AcademyPackets.
         // Et les taches de sang au sol : le serveur seul sait QUI a ete touche, donc lui seul sait
         // s'il faut en semer. Voir BloodSprayPacket et BloodSprays.
         CHANNEL.registerMessage(nextId++, BloodSprayPacket.class,
                 BloodSprayPacket::encode, BloodSprayPacket::decode,
                 BloodSprayPacket::handle);
-        // Et les bouffees de fumee du choc au sol : le serveur dit ou, le client allume la bouffee.
-        // Voir SmokePuffPacket et Smokes.
-        CHANNEL.registerMessage(nextId++, SmokePuffPacket.class,
-                SmokePuffPacket::encode, SmokePuffPacket::decode,
-                SmokePuffPacket::handle);
         // Et le tir du canon a plasma : son corps de plasma vit chez son porteur seul, et c'est le
         // serveur qui sait ou la boule va. Voir PlasmaShotPacket et PlasmaBodies.
         CHANNEL.registerMessage(nextId++, PlasmaShotPacket.class,

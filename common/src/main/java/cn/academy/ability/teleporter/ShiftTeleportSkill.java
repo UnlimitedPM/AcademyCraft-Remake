@@ -244,7 +244,7 @@ public class ShiftTeleportSkill extends Skill {
                 destination.cell());
 
         // Le son part toujours, comme chez l'original : il annonce le geste, pas ses victimes.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP_SHIFT, 0.5f);
+        cn.academy.sound.AcademySounds.playFor(player, "tp.tp_shift", 0.5f);
         // 0,002 par creature traversee, plus la part de base : l'original, au chiffre pres.
         data.addSkillExp(this, (1 + hit.size()) * EXP_PER_TARGET);
 

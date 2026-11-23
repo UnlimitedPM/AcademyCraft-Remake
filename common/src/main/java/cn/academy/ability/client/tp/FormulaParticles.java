@@ -1,6 +1,6 @@
 package cn.academy.ability.client.tp;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.Util;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
@@ -84,8 +84,7 @@ public final class FormulaParticles {
 
     /** L'image d'un rang, dans le dossier de l'original. */
     public static ResourceLocation texture(int index) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
-                "textures/effects/formula/" + index + ".png");
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/formula/" + index + ".png");
     }
 
     /**

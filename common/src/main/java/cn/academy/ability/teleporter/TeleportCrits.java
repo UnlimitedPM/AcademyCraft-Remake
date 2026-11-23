@@ -58,7 +58,7 @@ public final class TeleportCrits {
     public static ResourceKey<DamageType> type() {
         if (type == null) {
             type = ResourceKey.create(Registries.DAMAGE_TYPE,
-                    ResourceLocation.fromNamespaceAndPath("academy", "teleport"));
+                    new ResourceLocation("academy", "teleport"));
         }
         return type;
     }

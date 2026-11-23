@@ -3,10 +3,6 @@ package cn.academy.ability.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
-
-import java.util.function.Supplier;
 
 /**
  * S2C : un coup de teleporteur vient de porter un critique, et voici sur qui.
@@ -23,9 +19,6 @@ import java.util.function.Supplier;
  *
  * <p>Les deux passives du teleporteur ne s'activent jamais : ce message est la seule chose qu'elles
  * donnent a voir, et c'est pour cela qu'il existe.
- *
- * <p>Comme les autres paquets de ce genre, seul {@code handle} nomme une classe de client, et il ne
- * s'execute que la : un serveur dedie ne connait ni la formule ni son rendu.
  */
 public class TeleportCritPacket {
 
@@ -42,9 +35,8 @@ public class TeleportCritPacket {
     /** Annonce la gerbe a ceux qui voient la victime, et a elle. */
     public static void send(Entity target) {
         if (target == null) return;
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target),
-                new TeleportCritPacket(target.position(), target.getBbWidth(),
-                        target.getBbHeight()));
+        cn.academy.platform.network.Network.sendToTracking(new TeleportCritPacket(
+                target.position(), target.getBbWidth(), target.getBbHeight()), target);
     }
 
     public static void encode(TeleportCritPacket msg, FriendlyByteBuf buf) {
@@ -60,11 +52,8 @@ public class TeleportCritPacket {
                 buf.readFloat(), buf.readFloat());
     }
 
-    public static void handle(TeleportCritPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.tp.FormulaParticles.burst(
-                msg.feet, msg.width, msg.height));
-        ctx.setPacketHandled(true);
+    public static void handle(TeleportCritPacket msg) {
+        cn.academy.ability.client.tp.FormulaParticles.burst(msg.feet, msg.width, msg.height);
     }
 
     /** Les pieds de la victime. Lisible par le test, qui relit l'aller-retour du paquet. */

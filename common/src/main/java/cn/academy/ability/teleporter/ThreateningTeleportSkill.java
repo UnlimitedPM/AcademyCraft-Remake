@@ -185,7 +185,7 @@ public class ThreateningTeleportSkill extends Skill {
             TeleportCrits.strike(player, data, living, scaled(damage(data, stack)));
             // Le son ne part que si l'objet a frappe : l'original le jouait sous un
             // `if(attacked)`, un lancer dans le vide restant muet.
-            cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.TP_TP, 0.5f);
+            cn.academy.sound.AcademySounds.playFor(player, "tp.tp", 0.5f);
         }
 
         if (!player.isCreative()) {

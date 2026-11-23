@@ -3,10 +3,6 @@ package cn.academy.ability.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
-
-import java.util.function.Supplier;
 
 /**
  * S2C : une creature vient d'avoir les chairs arrachees, et voici ou.
@@ -39,9 +35,8 @@ public class BloodSplashPacket {
     /** Annonce la gerbe a ceux qui voient la victime, et a elle. */
     public static void send(Entity target) {
         if (target == null) return;
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> target),
-                new BloodSplashPacket(target.position(), target.getBbWidth(),
-                        target.getBbHeight()));
+        cn.academy.platform.network.Network.sendToTracking(new BloodSplashPacket(
+                target.position(), target.getBbWidth(), target.getBbHeight()), target);
     }
 
     public static void encode(BloodSplashPacket msg, FriendlyByteBuf buf) {
@@ -57,11 +52,8 @@ public class BloodSplashPacket {
                 buf.readFloat(), buf.readFloat());
     }
 
-    public static void handle(BloodSplashPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.tp.BloodSplashes.burst(
-                msg.feet, msg.width, msg.height));
-        ctx.setPacketHandled(true);
+    public static void handle(BloodSplashPacket msg) {
+        cn.academy.ability.client.tp.BloodSplashes.burst(msg.feet, msg.width, msg.height);
     }
 
     /** Les pieds de la victime. Lisible par le test, qui relit l'aller-retour du paquet. */

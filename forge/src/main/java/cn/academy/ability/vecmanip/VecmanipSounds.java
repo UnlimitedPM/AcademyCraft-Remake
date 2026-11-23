@@ -5,11 +5,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.RegistryObject;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Le son des deux veilles de vecmanip, avec un garde-fou : <b>une seule emission par joueur et
@@ -48,7 +48,7 @@ public final class VecmanipSounds {
      *
      * @param at ou poser le son — l'entite renvoyee ou arretee, ou le porteur pour un coup
      */
-    public static void play(ServerLevel level, Player player, RegistryObject<SoundEvent> event, Vec3 at) {
+    public static void play(ServerLevel level, Player player, Supplier<SoundEvent> event, Vec3 at) {
         long now = level.getGameTime();
         Long last = LAST.get(player.getUUID());
         if (last != null) {

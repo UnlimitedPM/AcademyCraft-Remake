@@ -1,29 +1,18 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.client.vm.VecWaves;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
-
-import java.util.function.Supplier;
 
 /**
- * S2C : une onde de choc de vecmanip vient de s'ouvrir, et voici ou.
+ * S2C : une onde de choc vient de s'ouvrir, a cet endroit et dans cette direction.
  *
- * <p>Trois competences en posent une, et aucune ne se voit sans ce message : le <b>choc dirige</b>
- * a l'endroit de son explosion, la <b>deviation</b> sur chaque objet qu'elle fige, et le
- * <b>renvoi</b> sur tout ce qu'il retourne. Chez l'original, chacune vivait dans le contexte client
- * de son lanceur — d'ou trois chemins differents pour un meme effet, et un effet que le lanceur
- * <b>seul</b> voyait.
+ * <p>Trois competences de vecmanip en posent une, et aucune ne se voit sans ce message : l'onde
+ * naissait dans le contexte client du lanceur chez l'original, donc personne d'autre ne la voyait.
+ * Le port la dit a tous ceux qui voient le lanceur.
  *
- * <p>Le port les reunit : un seul message, qui dit ou l'onde s'ouvre, de quel cote, de combien
- * d'anneaux et de quelle taille — et qui part a tous ceux qui <b>voient</b> le lanceur. Un combat
- * a deux se lit mieux quand les deux voient les ondes.
- *
- * <p>Le client, lui, tire ses anneaux au sort : le serveur ne dit que le nombre et la taille, comme
- * il le fait pour les rayons du meltdowner. Voir {@code VecWaves}.
+ * <p>Le client seme ses propres particules a partir de ces nombres — voir {@code VecWaves} — et
+ * seul {@code handle} nomme une classe de client.
  */
 public class VecWavePacket {
 
@@ -44,8 +33,9 @@ public class VecWavePacket {
     /** Annonce l'onde a ceux qui voient le lanceur, et a lui. */
     public static void send(Player player, Vec3 position, float yaw, float pitch, int rings,
                             double size) {
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player),
-                new VecWavePacket(position, yaw, pitch, rings, size));
+        if (player == null) return;
+        cn.academy.platform.network.Network.sendToTracking(
+                new VecWavePacket(position, yaw, pitch, rings, size), player);
     }
 
     public static void encode(VecWavePacket msg, FriendlyByteBuf buf) {
@@ -64,10 +54,9 @@ public class VecWavePacket {
                 buf.readFloat(), buf.readFloat(), buf.readVarInt(), buf.readDouble());
     }
 
-    public static void handle(VecWavePacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> VecWaves.play(msg.position, msg.yaw, msg.pitch, msg.rings, msg.size));
-        ctx.setPacketHandled(true);
+    public static void handle(VecWavePacket msg) {
+        cn.academy.ability.client.vm.VecWaves.play(msg.position, msg.yaw, msg.pitch, msg.rings,
+                msg.size);
     }
 
     /** Ou l'onde s'ouvre. Lisible par le test, qui relit l'aller-retour du paquet. */

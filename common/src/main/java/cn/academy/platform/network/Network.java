@@ -51,6 +51,14 @@ public final class Network {
         void sendToPlayer(ServerPlayer player, Object message);
 
         void sendToAll(Object message);
+
+        /**
+         * Aux joueurs qui voient cette entite, plus elle-meme s'il s'agit d'un joueur.
+         *
+         * <p>C'est le {@code TRACKING_ENTITY_AND_SELF} de Forge. Un effet qui nait autour d'une
+         * victime doit se voir la ou elle est, pas dans tout le serveur.
+         */
+        void sendToTracking(Object message, net.minecraft.world.entity.Entity entity);
     }
 
     /** Une declaration, pour retrouver l'identifiant et le codec d'un message a l'envoi. */
@@ -80,6 +88,10 @@ public final class Network {
 
         @Override
         public void sendToAll(Object message) {
+        }
+
+        @Override
+        public void sendToTracking(Object message, net.minecraft.world.entity.Entity entity) {
         }
     };
 
@@ -116,6 +128,12 @@ public final class Network {
 
     public static void sendToAll(Object message) {
         transport.sendToAll(message);
+    }
+
+    /** Aux joueurs qui voient l'entite (et a elle, si c'est un joueur). */
+    public static void sendToTracking(Object message, net.minecraft.world.entity.Entity entity) {
+        if (entity == null) return;
+        transport.sendToTracking(message, entity);
     }
 
     // ------------------------------------------------------------------

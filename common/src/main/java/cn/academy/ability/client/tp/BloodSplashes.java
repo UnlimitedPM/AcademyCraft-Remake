@@ -3,8 +3,6 @@ package cn.academy.ability.client.tp;
 import net.minecraft.Util;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +23,6 @@ import java.util.List;
  * naissent chez le client qui les voit, et le serveur ne fait que dire a qui elles appartiennent —
  * voir {@code BloodSplashPacket}.
  */
-@OnlyIn(Dist.CLIENT)
 public final class BloodSplashes {
 
     /** Les dix images de {@code effects/blood_splash}. */
