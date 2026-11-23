@@ -13,6 +13,7 @@ public final class AcademyCraftFabric implements ModInitializer {
     @Override
     public void onInitialize() {
         AcademyCraftCommon.init();
+        cn.academy.Config.load(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir());
         FabricPlatformHooks.install();
         FabricNetworkTransport.installServer();
         cn.academy.platform.network.AcademyPackets.register();

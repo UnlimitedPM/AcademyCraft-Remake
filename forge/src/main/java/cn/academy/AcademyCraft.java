@@ -44,11 +44,8 @@ public class AcademyCraft {
         modEventBus.addListener(cn.academy.ability.AbilityInit::init);
         modEventBus.addListener(cn.academy.terminal.TerminalInit::init);
 
-        // Sans cette ligne, le fichier config/academy-common.toml n'est jamais cree.
-        // ModLoadingContext.get() marche sur Forge 47 comme sur NeoForge 47 ; l'instance
-        // FMLJavaModLoadingContext expose registerConfig chez Forge mais pas chez NeoForge.
-        net.minecraftforge.fml.ModLoadingContext.get()
-                .registerConfig(net.minecraftforge.fml.config.ModConfig.Type.COMMON, Config.SPEC);
+        // La config commune est neutre : chaque chargeur lui donne son dossier et la lit ici.
+        Config.load(net.minecraftforge.fml.loading.FMLPaths.CONFIGDIR.get());
         // La place des elements du HUD est une affaire de client : elle vit donc dans une
         // config de type CLIENT, comme l'original la rangeait chez lui. Sur un serveur
         // dedie, Forge ignore simplement cette config.
@@ -80,18 +77,12 @@ public class AcademyCraft {
             if (event.getConfig().getSpec() == cn.academy.client.hud.HudConfig.SPEC) {
                 cn.academy.client.hud.HudConfig.capture(event.getConfig());
             }
-            if (event.getConfig().getSpec() == Config.SPEC) {
-                Config.capture(event.getConfig());
-            }
         }
 
         @SubscribeEvent
         public static void onConfigReloading(net.minecraftforge.fml.event.config.ModConfigEvent.Reloading event) {
             if (event.getConfig().getSpec() == cn.academy.client.hud.HudConfig.SPEC) {
                 cn.academy.client.hud.HudConfig.capture(event.getConfig());
-            }
-            if (event.getConfig().getSpec() == Config.SPEC) {
-                Config.capture(event.getConfig());
             }
         }
 

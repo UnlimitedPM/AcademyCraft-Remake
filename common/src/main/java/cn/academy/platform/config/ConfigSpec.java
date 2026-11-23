@@ -278,6 +278,10 @@ public final class ConfigSpec {
             return new ConfigSpec(file, List.copyOf(values));
         }
 
+        public ConfigSpec build() {
+            return new ConfigSpec(null, List.copyOf(values));
+        }
+
         private String full(String name) {
             return path.isEmpty() ? name : String.join(".", path) + "." + name;
         }
@@ -303,12 +307,24 @@ public final class ConfigSpec {
         return file;
     }
 
+    /** Installe le fichier, quand l'emplacement depend du chargeur. */
+    public void setFile(Path newFile) {
+        this.filePath = newFile;
+    }
+
+    private Path filePath;
+
+    private Path activeFile() {
+        return filePath != null ? filePath : file;
+    }
+
     /** Lit le fichier ; un fichier absent ou illisible laisse tous les defauts. */
     public void load() {
-        if (file == null || !Files.isRegularFile(file)) return;
+        Path target = activeFile();
+        if (target == null || !Files.isRegularFile(target)) return;
         List<String> lines;
         try {
-            lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+            lines = Files.readAllLines(target, StandardCharsets.UTF_8);
         } catch (IOException e) {
             return;
         }
@@ -332,7 +348,8 @@ public final class ConfigSpec {
 
     /** Reecrit le fichier, sections et commentaires compris. Un echec ne fait pas tomber le jeu. */
     public void save() {
-        if (file == null) return;
+        Path target = activeFile();
+        if (target == null) return;
         StringBuilder out = new StringBuilder();
         out.append("# AcademyCraft - configuration\n\n");
 
@@ -352,8 +369,8 @@ public final class ConfigSpec {
         }
 
         try {
-            if (file.getParent() != null) Files.createDirectories(file.getParent());
-            Files.writeString(file, out.toString(), StandardCharsets.UTF_8);
+            if (target.getParent() != null) Files.createDirectories(target.getParent());
+            Files.writeString(target, out.toString(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             // Disque plein, fichier verrouille : les valeurs restent en memoire.
         }
