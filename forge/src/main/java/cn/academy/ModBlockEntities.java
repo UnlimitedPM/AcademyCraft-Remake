@@ -34,8 +34,8 @@ public class ModBlockEntities {
      */
     public static final RegistryObject<BlockEntityType<NodeBlockEntity>> WIRELESS_NODE =
             BLOCK_ENTITIES.register("wireless_node", () ->
-                    BlockEntityType.Builder.of(
-                            (pos, state) -> new NodeBlockEntity(
+                    BlockEntityType.Builder.<NodeBlockEntity>of(
+                            (pos, state) -> new ForgeNodeBlockEntity(
                                     ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state),
                             ModBlocks.NODE_BASIC.get(),
                             ModBlocks.NODE_STANDARD.get(),

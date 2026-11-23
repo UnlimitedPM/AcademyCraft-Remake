@@ -94,7 +94,7 @@ public class ModBlocks {
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL) // Optionnel: pour le bruit de métal comme les autres
             ,
-                    (pos, state) -> new cn.academy.energy.NodeBlockEntity(
+                    (pos, state) -> new ForgeNodeBlockEntity(
                             ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state)));
 
     public static final RegistryObject<Block> NODE_STANDARD = BLOCKS.register("node_standard",
@@ -103,7 +103,7 @@ public class ModBlocks {
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL)
             ,
-                    (pos, state) -> new cn.academy.energy.NodeBlockEntity(
+                    (pos, state) -> new ForgeNodeBlockEntity(
                             ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state)));
 
     public static final RegistryObject<Block> NODE_ADVANCED = BLOCKS.register("node_advanced",
@@ -112,7 +112,7 @@ public class ModBlocks {
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL)
             ,
-                    (pos, state) -> new cn.academy.energy.NodeBlockEntity(
+                    (pos, state) -> new ForgeNodeBlockEntity(
                             ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state)));
 
     // --- ÉOLIENNE ---
