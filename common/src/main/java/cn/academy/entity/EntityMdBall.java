@@ -1,11 +1,8 @@
 package cn.academy.entity;
 
-import cn.academy.ModEntities;
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.TargetingUtil;
 import cn.academy.ability.meltdowner.MdBallVisuals;
 import cn.academy.ability.meltdowner.RadiationMarks;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.MdRayPacket;
 import cn.academy.ability.client.md.MdRayKind;
 import cn.academy.sound.SoundLookup;
@@ -26,7 +23,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
 
 /**
  * La bille de plasma, portage d'{@code EntityMdBall} : le projectile du meltdowner.
@@ -128,7 +124,7 @@ public class EntityMdBall extends Entity {
      * @param damage    les degats du trait qu'elle tirera
      */
     public EntityMdBall(Level level, Player spawner, int lifeTicks, float damage) {
-        this(ModEntities.MD_BALL.get(), level);
+        this(cn.academy.content.AcademyContent.entityType("md_ball"), level);
         this.direct = spawner;
         this.damage = damage;
 
@@ -365,8 +361,7 @@ public class EntityMdBall extends Entity {
         Player shooter = spawner();
         int ownerId = shooter == null ? -1 : shooter.getId();
 
-        AbilityNetwork.CHANNEL.send(
-                PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> this),
+        cn.academy.platform.network.Network.sendToTracking(this,
                 new MdRayPacket(MdRayKind.SMALL.name(), from, to, ownerId));
 
         SoundEvent sound = SoundLookup.event(MdRayKind.SMALL.sound());

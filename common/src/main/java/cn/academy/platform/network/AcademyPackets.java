@@ -95,5 +95,10 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.ThunderClapGroundPacket::encode,
                         cn.academy.ability.network.ThunderClapGroundPacket::decode),
                 cn.academy.ability.network.ThunderClapGroundPacket::handle);
+
+        Network.clientbound("md_ray", cn.academy.ability.network.MdRayPacket.class,
+                Network.codec(cn.academy.ability.network.MdRayPacket::encode,
+                        cn.academy.ability.network.MdRayPacket::decode),
+                cn.academy.ability.network.MdRayPacket::handle);
     }
 }

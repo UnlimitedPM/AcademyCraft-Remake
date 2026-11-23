@@ -210,7 +210,7 @@ public class RayBarrageSkill extends Skill {
      */
     private void ray(Player player, MdRayKind kind, Vec3 from, Vec3 to) {
         if (!(player instanceof ServerPlayer server)) return;
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
+        cn.academy.platform.network.Network.sendToTracking(server,
                 new MdRayPacket(kind.name(), from, to, player.getId()));
 
         SoundEvent sound = SoundLookup.event(kind.sound());

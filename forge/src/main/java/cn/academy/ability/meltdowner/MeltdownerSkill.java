@@ -480,7 +480,7 @@ public class MeltdownerSkill extends Skill {
         if (!(player instanceof ServerPlayer server)) return;
 
         Vec3 look = player.getViewVector(1f);
-        AbilityNetwork.CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> server),
+        cn.academy.platform.network.Network.sendToTracking(server,
                 new MdRayPacket(MdRayKind.MELTDOWNER.name(),
                         MeltdownerVisuals.beamFrom(player.getEyePosition(1f), look),
                         MeltdownerVisuals.beamTo(player.position(), look,

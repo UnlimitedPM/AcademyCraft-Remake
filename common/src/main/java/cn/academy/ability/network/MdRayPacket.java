@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
 
@@ -58,12 +57,9 @@ public class MdRayPacket {
         return new MdRayPacket(kind, from, to, buf.readInt());
     }
 
-    public static void handle(MdRayPacket msg, java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.md.MdRayView.spawn(
-                cn.academy.ability.client.md.MdRayKind.byName(msg.kind),
-                msg.from, msg.to, msg.ownerId));
-        ctx.setPacketHandled(true);
+    public static void handle(MdRayPacket msg) {
+        // Le dessin appartient au chargeur : on lui demande le rayon, il le pose.
+        cn.academy.platform.PlatformHooks.spawnRayBeam(msg.kind, msg.from, msg.to, msg.ownerId);
     }
 
     private static void writePoint(FriendlyByteBuf buf, Vec3 point) {

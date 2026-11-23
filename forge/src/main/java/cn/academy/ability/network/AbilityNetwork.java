@@ -47,11 +47,8 @@ public class AbilityNetwork {
         // Les eclairs, le renfort du corps et les eclairs du sol sont communs desormais : voir
         // AcademyPackets. Ce qui reste ici est Forge : les rayons du meltdowner, l'anneau du
         // missile, les maintiens.
-        // Les rayons du meltdowner : le serveur sait d'ou ils partent et jusqu'ou, et il le dit
-        // a ceux qui voient le tireur. Le genre du rayon voyage par son nom, comme le motif des
-        // eclairs, et c'est lui qui porte le son a jouer. Voir MdRayPacket.
-        CHANNEL.registerMessage(nextId++, MdRayPacket.class,
-                MdRayPacket::encode, MdRayPacket::decode, MdRayPacket::handle);
+        // Les rayons du meltdowner, comme les arcs et le reste des effets, sont communs : voir
+        // AcademyPackets. Leur dessin reste cote client, derriere PlatformHooks.spawnRayBeam.
         // La marque de radiation et son fumee sont communes desormais : voir AcademyPackets.
         // Les sept effets d'onde, de trainee, de critique, de sang, de fumee, de taches et de tir
         // de plasma sont communs desormais : voir AcademyPackets.
