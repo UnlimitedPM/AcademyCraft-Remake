@@ -1,7 +1,5 @@
 package cn.academy.entity;
 
-import cn.academy.ModEntities;
-import cn.academy.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -100,7 +98,7 @@ public class EntityMagHook extends Projectile {
      * etant justement la direction de la vitesse.
      */
     public EntityMagHook(Level level, Player thrower) {
-        this(ModEntities.MAG_HOOK.get(), level);
+        this(cn.academy.content.AcademyContent.entityType("mag_hook"), level);
         setOwner(thrower);
         setPos(thrower.getX(), thrower.getEyeY(), thrower.getZ());
         Vec3 look = thrower.getLookAngle();
@@ -260,7 +258,7 @@ public class EntityMagHook extends Projectile {
     /** Il redevient l'objet qu'on avait lance. */
     private void dropAsItem() {
         level().addFreshEntity(new ItemEntity(level(), getX(), getY(), getZ(),
-                new ItemStack(ModItems.MAG_HOOK.get())));
+                new ItemStack(cn.academy.content.AcademyContent.item("mag_hook"))));
         discard();
     }
 

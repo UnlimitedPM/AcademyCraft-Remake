@@ -63,8 +63,8 @@ public final class MetalTargets {
      * </ul>
      */
     private static final List<ResourceLocation> UNNAMED_ORES = List.of(
-            ResourceLocation.fromNamespaceAndPath("academy", "constraint_metal"),
-            ResourceLocation.withDefaultNamespace("ancient_debris"));
+            new ResourceLocation("academy", "constraint_metal"),
+            new ResourceLocation("minecraft", "ancient_debris"));
 
     private static Set<Block> normal = Set.of();
     private static Set<Block> weak = Set.of();

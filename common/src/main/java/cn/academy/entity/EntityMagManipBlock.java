@@ -1,6 +1,5 @@
 package cn.academy.entity;
 
-import cn.academy.ModEntities;
 import cn.academy.ability.electromaster.MagManipVisuals;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -176,7 +175,7 @@ public class EntityMagManipBlock extends Projectile {
      */
     public EntityMagManipBlock(Level level, Player holder, BlockState state, Vec3 position,
                                BlockState companion, int companionDy) {
-        this(ModEntities.MAG_MANIP_BLOCK.get(), level);
+        this(cn.academy.content.AcademyContent.entityType("mag_manip_block"), level);
         setOwner(holder);
         setBlockState(state);
         if (companion != null) setCompanion(companion, companionDy);
