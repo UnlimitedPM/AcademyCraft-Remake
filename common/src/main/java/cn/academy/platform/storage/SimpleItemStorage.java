@@ -1,6 +1,8 @@
 package cn.academy.platform.storage;
 
 import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.function.BiPredicate;
@@ -103,5 +105,15 @@ public class SimpleItemStorage implements ItemStorage {
     @Override
     public void setChanged() {
         onChanged.run();
+    }
+
+    /** Ecrit les piles dans un tag, sous la meme forme que le vanilla. */
+    public void save(CompoundTag tag) {
+        ContainerHelper.saveAllItems(tag, stacks);
+    }
+
+    /** Relit les piles ecrites par {@link #save(CompoundTag)}. */
+    public void load(CompoundTag tag) {
+        ContainerHelper.loadAllItems(tag, stacks);
     }
 }

@@ -18,9 +18,10 @@
   textures de modèle dupliquées à l'identique dans `textures/models` ont aussi été retirées.
 - Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs, 47 sons, l'unité d'énergie, le
   moteur à chat, onze classes du réseau d'énergie, huit utilitaires, le stockage objet neutre
-  (`SimpleItemStorage` compris), `TooltipItem` et les crochets menu/énergie portés dans `common/`,
-  plus un onglet créatif. Le client Fabric démarre, charge un monde et installe son ouverture de
-  menu. Le plan du reste est dans `FABRIC_PORT.md`.
+  (`SimpleItemStorage` avec sauvegarde NBT), `TooltipItem` et les crochets menu/énergie portés
+  dans `common/`, plus un onglet créatif. SolarGen utilise déjà le stockage commun. Le client
+  Fabric démarre, charge un monde et installe son ouverture de menu. Le plan du reste est dans
+  `FABRIC_PORT.md`.
 
 ### English
 
@@ -38,9 +39,10 @@
   in `textures/models` were removed too.
 - Fabric (and Quilt) got its first milestone: 20 items, 5 blocks, 47 sounds, the energy unit, the
   cat engine, eleven energy-network classes, eight helpers, the neutral item storage layer
-  (including `SimpleItemStorage`), `TooltipItem` and the menu/energy hooks moved to `common/`, plus
-  a creative tab. The Fabric client starts, loads a world and installs its menu opener. The rest of
-  the plan is in `FABRIC_PORT.md`.
+  (`SimpleItemStorage` with NBT persistence), `TooltipItem` and the menu/energy hooks moved to
+  `common/`, plus a creative tab. SolarGen already uses the common storage. The Fabric client
+  starts, loads a world and installs its menu opener. The rest of the plan is in
+  `FABRIC_PORT.md`.
 
 ## 1.0.4 - la lumiere et les ombres / light and shadows
 

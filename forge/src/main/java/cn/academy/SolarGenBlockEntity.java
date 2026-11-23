@@ -67,18 +67,10 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     /** Cadence de verification du raccordement, en ticks. */
     private static final int LINK_CHECK_INTERVAL = 100;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(1) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // SlotIFItem de l'original : tout objet energetique, rien d'autre.
-            return stack.isEmpty() || cn.academy.energy.EnergyItems.isEnergyItem(stack);
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final cn.academy.platform.storage.SimpleItemStorage inventory =
+            new cn.academy.platform.storage.SimpleItemStorage(1, slot -> 64,
+                    (slot, stack) -> stack.isEmpty() || cn.academy.energy.EnergyItems.isEnergyItem(stack),
+                    this::setChanged);
 
     private double energy;
 
@@ -87,7 +79,8 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
 
     private int searchTicker;
 
-    private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
+    private final LazyOptional<IItemHandler> itemHandlerCap =
+            LazyOptional.of(() -> new cn.academy.platform.storage.ForgeItemHandlerAdapter(inventory));
     private final LazyOptional<IEnergyStorage> energyCap = LazyOptional.of(ForgeEnergyAdapter::new);
 
     public SolarGenBlockEntity(BlockPos pos, BlockState state) {
@@ -322,15 +315,21 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        tag.put("inventory", inventoryTag());
         tag.putDouble("energy", energy);
         tag.putBoolean("linked", linked);
+    }
+
+    private CompoundTag inventoryTag() {
+        CompoundTag tag = new CompoundTag();
+        inventory.save(tag);
+        return tag;
     }
 
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         linked = tag.getBoolean("linked");
     }
@@ -357,6 +356,6 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     }
 
     public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+        return inventory;
     }
 }

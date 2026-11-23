@@ -55,6 +55,8 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 - échanges d'énergie neutres : `PlatformHooks.chargeExternalItem`, `extractExternalItem` et
   `pushEnergyToNeighbor` ; Forge les branche sur ses capabilities, Fabric renvoie 0 pour l'instant.
   SolarGen passe déjà par ces crochets ;
+- `SimpleItemStorage` sait se sauvegarder en NBT ; `ForgeItemHandlerAdapter` expose un stockage
+  commun comme `IItemHandler`. SolarGen n'utilise plus `ItemStackHandler` en interne ;
 - `TooltipItem` extrait de `ModItems` vers `common/` ; Fabric enregistre `magnetic_coil` avec son
   infobulle ;
 - ouverture de menu neutralisée : `PlatformHooks.openMenu` remplace les 11 appels à
