@@ -23,7 +23,8 @@
   `common/` (bloc, block entity, menu) : Forge et NeoForge n'ajoutent que les capabilities via une
   sous-classe, Fabric l'enregistre avec son menu à données d'ouverture. Le formeur de métal suit
   le même chemin, avec ses recettes et ses trois modes ; les recettes retrouvent le contenu par
-  identifiant (`AcademyContent`) au lieu de nommer les registres de Forge. Le raccordement au réseau
+  identifiant (`AcademyContent`) au lieu de nommer les registres de Forge. L'éolienne (base,
+  piliers, rotor) est également dans `common/` et enregistrée sur Fabric. Le raccordement au réseau
   passe par un crochet `PlatformHooks` de plus. Le client Fabric démarre, charge un monde et
   installe son ouverture de menu. Le plan du reste est dans `FABRIC_PORT.md`.
 

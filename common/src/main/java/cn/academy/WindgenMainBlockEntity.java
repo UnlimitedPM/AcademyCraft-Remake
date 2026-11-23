@@ -1,8 +1,8 @@
 package cn.academy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
+import cn.academy.content.AcademyContent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -14,10 +14,12 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Tete de l'eolienne : les pales.
@@ -57,7 +59,8 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
      * infinie ; celle-ci fait la taille des pales, ce qui garde l'elimination quand l'eolienne est
      * vraiment derriere soi. Voir {@link RenderBounds#windgenRotor}.
      */
-    @Override
+    // Pas de @Override : la methode de BlockEntity est cote client seulement, et le jar commun
+    // d'Architectury ne la porte pas. La signature reste la bonne, donc le client l'appelle.
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
         double[] b = RenderBounds.windgenRotor(BLADE_RADIUS);
         return new net.minecraft.world.phys.AABB(
@@ -80,21 +83,16 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
      */
     private static final int OBSTACLE_CHECK_INTERVAL = 2;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(1) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            return stack.isEmpty() || stack.is(ModItems.WINDGEN_FAN.get());
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-            // L'helice change ce que la base doit produire : il faut la prevenir.
-            if (level != null && !level.isClientSide) {
-                level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
-            }
-        }
-    };
+    private final cn.academy.platform.storage.SimpleItemStorage inventory =
+            new cn.academy.platform.storage.SimpleItemStorage(1, slot -> 64,
+                    (slot, stack) -> stack.isEmpty() || stack.is(AcademyContent.item("windgen_fan")),
+                    () -> {
+                        setChanged();
+                        // L'helice change ce que la base doit produire : il faut la prevenir.
+                        if (level != null && !level.isClientSide) {
+                            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                        }
+                    });
 
     /** Dernier resultat connu de la verification de la zone balayee. */
     private boolean noObstacle;
@@ -129,8 +127,17 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     private float fanAnchorAngle;
     private boolean fanSpinning;
 
-    public WindgenMainBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.WINDGEN_MAIN.get(), pos, state);
+    public WindgenMainBlockEntity(BlockEntityType<?> type, MenuType<WindgenMainMenu> menuType,
+                                 BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.menuType = menuType;
+    }
+
+    private final MenuType<WindgenMainMenu> menuType;
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public BlockEntityType<?> entityType() {
+        return getType();
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state, WindgenMainBlockEntity rotor) {
@@ -149,11 +156,11 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     }
 
     public boolean isFanInstalled() {
-        return inventory.getStackInSlot(SLOT_FAN).is(ModItems.WINDGEN_FAN.get());
+        return inventory.getStackInSlot(SLOT_FAN).is(AcademyContent.item("windgen_fan"));
     }
 
     public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+        return inventory;
     }
 
     /** Vrai si rien ne gene la rotation des pales, d'apres la derniere revision. */
@@ -242,12 +249,12 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
         BlockPos probe = pos.below();
         while (level.isLoaded(probe)) {
             BlockState below = level.getBlockState(probe);
-            if (below.is(ModBlocks.WINDGEN_PILLAR.get())) {
+            if (below.is(AcademyContent.block("windgen_pillar"))) {
                 if (++pillars > WindgenStructure.MAX_PILLARS) return false;
                 probe = probe.below();
                 continue;
             }
-            return WindgenStructure.isComplete(pillars, below.is(ModBlocks.WINDGEN_BASE.get()));
+            return WindgenStructure.isComplete(pillars, below.is(AcademyContent.block("windgen_base")));
         }
         return false;
     }
@@ -259,7 +266,9 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
         tag.putBoolean("no_obstacle", noObstacle);
         tag.putBoolean("complete", complete);
     }
@@ -267,7 +276,7 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         noObstacle = tag.getBoolean("no_obstacle");
         complete = tag.getBoolean("complete");
     }
@@ -289,11 +298,11 @@ public class WindgenMainBlockEntity extends net.minecraft.world.level.block.enti
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new WindgenMainMenu(containerId, playerInventory, this);
+        return new WindgenMainMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.windgen_main");
+        return getBlockState().getBlock().getName();
     }
 }

@@ -26,10 +26,12 @@ public class ModMenus {
             MENUS.register("imag_fusor", () -> IForgeMenuType.create(ImagFusorMenu::new));
 
     public static final RegistryObject<MenuType<WindgenBaseMenu>> WINDGEN_BASE =
-            MENUS.register("windgen_base", () -> IForgeMenuType.create(WindgenBaseMenu::new));
+            MENUS.register("windgen_base", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new WindgenBaseMenu(ModMenus.WINDGEN_BASE.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<WindgenMainMenu>> WINDGEN_MAIN =
-            MENUS.register("windgen_main", () -> IForgeMenuType.create(WindgenMainMenu::new));
+            MENUS.register("windgen_main", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new WindgenMainMenu(ModMenus.WINDGEN_MAIN.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<DeveloperMenu>> DEVELOPER =
             MENUS.register("developer", () -> IForgeMenuType.create(DeveloperMenu::new));

@@ -1,10 +1,12 @@
 package cn.academy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
+import cn.academy.content.AcademyContent;
 import cn.academy.energy.EnergyGenerator;
-import cn.academy.energy.NodeFinder;
+import cn.academy.platform.PlatformHooks;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -17,12 +19,12 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Base de l'eolienne : c'est elle qui produit.
@@ -92,19 +94,10 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
         COMPLETE
     }
 
-    private final ItemStackHandler inventory = new ItemStackHandler(1) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // SlotIFItem de l'original : tout objet energetique, rien d'autre.
-            return stack.isEmpty() || cn.academy.energy.EnergyItems.supports(stack)
-                    || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final SimpleItemStorage inventory = new SimpleItemStorage(1, slot -> 64,
+            (slot, stack) -> stack.isEmpty() || cn.academy.energy.EnergyItems.supports(stack)
+                    || PlatformHooks.hasExternalEnergy(stack),
+            this::setChanged);
 
     private double energy;
 
@@ -120,8 +113,19 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     private int searchCounter;
     private int syncCounter;
 
-    public WindgenBaseBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.WINDGEN_BASE.get(), pos, state);
+    private final BlockEntityType<?> type;
+    private final MenuType<WindgenBaseMenu> menuType;
+
+    public WindgenBaseBlockEntity(BlockEntityType<?> type, MenuType<WindgenBaseMenu> menuType,
+                                  BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.type = type;
+        this.menuType = menuType;
+    }
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public BlockEntityType<?> entityType() {
+        return type;
     }
 
     // ------------------------------------------------------------------
@@ -147,7 +151,7 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
 
         if (++base.searchCounter >= NODE_SEARCH_INTERVAL) {
             base.searchCounter = 0;
-            boolean nowLinked = NodeFinder.ensureLinked(server, pos);
+            boolean nowLinked = PlatformHooks.ensureNodeLinked(server, pos);
             // Un generateur raccorde mais qui ne produit rien n'a pas besoin
             // d'etre signale : c'est le rotor qui compte pour l'affichage.
             if (nowLinked != base.linked) {
@@ -176,12 +180,12 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
             if (!level.isLoaded(probe)) return Completeness.NO_TOP;
 
             BlockState state = level.getBlockState(probe);
-            if (state.is(ModBlocks.WINDGEN_PILLAR.get())) {
+            if (state.is(AcademyContent.block("windgen_pillar"))) {
                 if (++pillars > MAX_PILLARS) return Completeness.NO_TOP;
                 continue;
             }
 
-            if (state.is(ModBlocks.WINDGEN_MAIN.get())) {
+            if (state.is(AcademyContent.block("windgen_main"))) {
                 if (!(level.getBlockEntity(probe) instanceof WindgenMainBlockEntity rotor)) {
                     return Completeness.NO_TOP;
                 }
@@ -240,13 +244,11 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
             return;
         }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int accepted = cap.receiveEnergy((int) Math.min(BANDWIDTH, energy), false);
-            if (accepted > 0) {
-                energy -= accepted;
-                setChanged();
-            }
-        });
+        int accepted = PlatformHooks.chargeExternalItem(stack, (int) Math.min(BANDWIDTH, energy), false);
+        if (accepted > 0) {
+            energy -= accepted;
+            setChanged();
+        }
     }
 
     /** Allume la base quand elle produit, pour que cela se voie. */
@@ -309,8 +311,8 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
         return linked;
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+    public ItemStorage getInventory() {
+        return inventory;
     }
 
     @Nullable
@@ -325,7 +327,9 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
         tag.putDouble("energy", energy);
         tag.putBoolean("linked", linked);
         tag.putInt("completeness", completeness.ordinal());
@@ -334,7 +338,7 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         linked = tag.getBoolean("linked");
         completeness = completenessOf(tag.getInt("completeness"));
@@ -366,11 +370,11 @@ public class WindgenBaseBlockEntity extends net.minecraft.world.level.block.enti
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new WindgenBaseMenu(containerId, playerInventory, this);
+        return new WindgenBaseMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.windgen_base");
+        return getBlockState().getBlock().getName();
     }
 }

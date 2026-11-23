@@ -11,6 +11,12 @@ import cn.academy.SolarGenBlock;
 import cn.academy.SolarGenBlockEntity;
 import cn.academy.SolarGenMenu;
 import cn.academy.TooltipItem;
+import cn.academy.WindgenBaseBlock;
+import cn.academy.WindgenBaseBlockEntity;
+import cn.academy.WindgenBaseMenu;
+import cn.academy.WindgenMainBlock;
+import cn.academy.WindgenMainBlockEntity;
+import cn.academy.WindgenMainMenu;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.core.Registry;
@@ -59,6 +65,12 @@ public final class FabricContent {
 
     /** Menu du formeur de metal. */
     public static MenuType<MetalFormerMenu> METAL_FORMER_MENU;
+
+    /** Eolienne : base et rotor ont chacun leur type et leur menu. */
+    public static BlockEntityType<WindgenBaseBlockEntity> WINDGEN_BASE_TYPE;
+    public static BlockEntityType<WindgenMainBlockEntity> WINDGEN_MAIN_TYPE;
+    public static MenuType<WindgenBaseMenu> WINDGEN_BASE_MENU;
+    public static MenuType<WindgenMainMenu> WINDGEN_MAIN_MENU;
 
     public static void register() {
         FabricSounds.register();
@@ -137,6 +149,39 @@ public final class FabricContent {
                         (pos, state) -> new MetalFormerBlockEntity(METAL_FORMER_TYPE, METAL_FORMER_MENU, pos, state),
                         metalFormer).build(null));
         register("metal_former", new BlockItem(metalFormer, new Item.Properties()));
+
+        // --- Eolienne : base productrice, piliers, rotor ---
+        register("windgen_fan", new Item(new Item.Properties().stacksTo(1)));
+        plainBlock("windgen_pillar", BlockBehaviour.Properties.of()
+                .strength(3.5f).sound(SoundType.METAL).noOcclusion());
+
+        WINDGEN_BASE_MENU = Registry.register(BuiltInRegistries.MENU, id("windgen_base"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new WindgenBaseMenu(FabricContent.WINDGEN_BASE_MENU, syncId, inventory, buf)));
+        Block windgenBase = new WindgenBaseBlock(
+                BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL),
+                () -> WINDGEN_BASE_TYPE,
+                (pos, state) -> new WindgenBaseBlockEntity(WINDGEN_BASE_TYPE, WINDGEN_BASE_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("windgen_base"), windgenBase);
+        WINDGEN_BASE_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("windgen_base"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new WindgenBaseBlockEntity(WINDGEN_BASE_TYPE, WINDGEN_BASE_MENU, pos, state),
+                        windgenBase).build(null));
+        register("windgen_base", new BlockItem(windgenBase, new Item.Properties()));
+
+        WINDGEN_MAIN_MENU = Registry.register(BuiltInRegistries.MENU, id("windgen_main"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new WindgenMainMenu(FabricContent.WINDGEN_MAIN_MENU, syncId, inventory, buf)));
+        Block windgenMain = new WindgenMainBlock(
+                BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL).noOcclusion(),
+                () -> WINDGEN_MAIN_TYPE,
+                (pos, state) -> new WindgenMainBlockEntity(WINDGEN_MAIN_TYPE, WINDGEN_MAIN_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("windgen_main"), windgenMain);
+        WINDGEN_MAIN_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("windgen_main"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new WindgenMainBlockEntity(WINDGEN_MAIN_TYPE, WINDGEN_MAIN_MENU, pos, state),
+                        windgenMain).build(null));
+        register("windgen_main", new BlockItem(windgenMain, new Item.Properties()));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()

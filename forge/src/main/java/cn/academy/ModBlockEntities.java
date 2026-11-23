@@ -67,11 +67,17 @@ public class ModBlockEntities {
      */
     public static final RegistryObject<BlockEntityType<WindgenBaseBlockEntity>> WINDGEN_BASE =
             BLOCK_ENTITIES.register("windgen_base", () ->
-                    BlockEntityType.Builder.of(WindgenBaseBlockEntity::new, ModBlocks.WINDGEN_BASE.get()).build(null));
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new WindgenBaseBlockEntity(
+                                    ModBlockEntities.WINDGEN_BASE.get(), ModMenus.WINDGEN_BASE.get(), pos, state),
+                            ModBlocks.WINDGEN_BASE.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<WindgenMainBlockEntity>> WINDGEN_MAIN =
             BLOCK_ENTITIES.register("windgen_main", () ->
-                    BlockEntityType.Builder.of(WindgenMainBlockEntity::new, ModBlocks.WINDGEN_MAIN.get()).build(null));
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new WindgenMainBlockEntity(
+                                    ModBlockEntities.WINDGEN_MAIN.get(), ModMenus.WINDGEN_MAIN.get(), pos, state),
+                            ModBlocks.WINDGEN_MAIN.get()).build(null));
 
     /**
      * Les deux developeurs ont chacun leur type de block entity, parce que la

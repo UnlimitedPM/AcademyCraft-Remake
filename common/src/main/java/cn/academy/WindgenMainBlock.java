@@ -27,8 +27,15 @@ import org.jetbrains.annotations.Nullable;
 public class WindgenMainBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
 
-    public WindgenMainBlock(Properties props) {
+    private final java.util.function.Supplier<BlockEntityType<? extends WindgenMainBlockEntity>> type;
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public WindgenMainBlock(Properties props,
+                            java.util.function.Supplier<BlockEntityType<? extends WindgenMainBlockEntity>> type,
+                            java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(props);
+        this.type = type;
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(PART, Part.CENTER));
@@ -145,7 +152,7 @@ public class WindgenMainBlock extends HorizontalDirectionalBlock implements Enti
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return state.getValue(PART) == Part.CENTER ? new WindgenMainBlockEntity(pos, state) : null;
+        return state.getValue(PART) == Part.CENTER ? blockEntities.apply(pos, state) : null;
     }
 
     @Nullable
@@ -153,7 +160,7 @@ public class WindgenMainBlock extends HorizontalDirectionalBlock implements Enti
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                  BlockEntityType<T> type) {
         if (level.isClientSide || state.getValue(PART) != Part.CENTER) return null;
-        if (type != ModBlockEntities.WINDGEN_MAIN.get()) return null;
+        if (type != this.type.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof WindgenMainBlockEntity rotor) WindgenMainBlockEntity.tick(lvl, pos, st, rotor);
         };

@@ -7,10 +7,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import cn.academy.platform.storage.StorageSlot;
 
 /**
@@ -43,8 +43,8 @@ public class WindgenBaseMenu extends AbstractContainerMenu implements WirelessMa
     private final SyncedInt completeness;
     private final SyncedInt linked;
 
-    public WindgenBaseMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public WindgenBaseMenu(MenuType<WindgenBaseMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static WindgenBaseBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -53,8 +53,8 @@ public class WindgenBaseMenu extends AbstractContainerMenu implements WirelessMa
         throw new IllegalStateException("No WindgenBaseBlockEntity at " + pos);
     }
 
-    public WindgenBaseMenu(int containerId, Inventory playerInventory, WindgenBaseBlockEntity blockEntity) {
-        super(ModMenus.WINDGEN_BASE.get(), containerId);
+    public WindgenBaseMenu(MenuType<WindgenBaseMenu> type, int containerId, Inventory playerInventory, WindgenBaseBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
@@ -140,6 +140,6 @@ public class WindgenBaseMenu extends AbstractContainerMenu implements WirelessMa
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.WINDGEN_BASE.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

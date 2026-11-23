@@ -73,6 +73,11 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   ne nomment plus `ModItems`/`ModBlocks` : `AcademyContent.item("wafer")` les retrouve par
   identifiant dans la registry vanilla, ce qui marche sur les trois chargeurs. Les sons de machine
   (`MachineSounds`, `MachineLoops`) sont communs aussi ;
+- éolienne dans `common/` : base productrice (altitude, colonne, bloc de chargement), rotor
+  (hélice, zone balayée, colonne) et leurs menus. Les blocs voisins (`windgen_pillar`,
+  `windgen_main`, `windgen_base`) se comparent par identifiant, plus par registre Forge. Fabric
+  enregistre les trois blocs, les deux block entities, les deux menus et l'objet `windgen_fan`.
+  Le rendu des pales reste côté Forge pour l'instant ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

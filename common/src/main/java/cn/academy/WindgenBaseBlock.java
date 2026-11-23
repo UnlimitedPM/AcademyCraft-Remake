@@ -37,8 +37,15 @@ public class WindgenBaseBlock extends Block implements EntityBlock {
     public static final BooleanProperty POWERED = BooleanProperty.create("powered");
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
 
-    public WindgenBaseBlock(Properties properties) {
+    private final java.util.function.Supplier<BlockEntityType<? extends WindgenBaseBlockEntity>> type;
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public WindgenBaseBlock(Properties properties,
+                            java.util.function.Supplier<BlockEntityType<? extends WindgenBaseBlockEntity>> type,
+                            java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
+        this.type = type;
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(POWERED, false)
@@ -125,7 +132,7 @@ public class WindgenBaseBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return state.getValue(HALF) == DoubleBlockHalf.LOWER ? new WindgenBaseBlockEntity(pos, state) : null;
+        return state.getValue(HALF) == DoubleBlockHalf.LOWER ? blockEntities.apply(pos, state) : null;
     }
 
     @Nullable
@@ -133,7 +140,7 @@ public class WindgenBaseBlock extends Block implements EntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                  BlockEntityType<T> type) {
         if (level.isClientSide || state.getValue(HALF) != DoubleBlockHalf.LOWER) return null;
-        if (type != ModBlockEntities.WINDGEN_BASE.get()) return null;
+        if (type != this.type.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof WindgenBaseBlockEntity base) WindgenBaseBlockEntity.tick(lvl, pos, st, base);
         };
@@ -166,7 +173,7 @@ public class WindgenBaseBlock extends Block implements EntityBlock {
         if (!state.is(newState.getBlock()) && state.getValue(HALF) == DoubleBlockHalf.LOWER
                 && level instanceof ServerLevel server) {
             MachineDrops.dropContents(level, pos);
-            cn.academy.energy.NodeFinder.detach(server, pos);
+            cn.academy.platform.PlatformHooks.detachNode(server, pos);
         }
         super.onRemove(state, level, pos, newState, isMoving);
     }

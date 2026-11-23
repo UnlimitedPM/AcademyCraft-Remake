@@ -109,7 +109,10 @@ public class ModBlocks {
 
     // --- ÉOLIENNE ---
     public static final RegistryObject<WindgenBaseBlock> WINDGEN_BASE = BLOCKS.register("windgen_base",
-            () -> new WindgenBaseBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL)));
+            () -> new WindgenBaseBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL),
+                    () -> ModBlockEntities.WINDGEN_BASE.get(),
+                    (pos, state) -> new WindgenBaseBlockEntity(ModBlockEntities.WINDGEN_BASE.get(),
+                            ModMenus.WINDGEN_BASE.get(), pos, state)));
     public static final RegistryObject<Block> WINDGEN_PILLAR = registerBlock("windgen_pillar",
             () -> new Block(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL).noOcclusion()) {
                 @Override
@@ -118,7 +121,10 @@ public class ModBlocks {
                 }
             });
     public static final RegistryObject<Block> WINDGEN_MAIN = BLOCKS.register("windgen_main",
-            () -> new WindgenMainBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL).noOcclusion()));
+            () -> new WindgenMainBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL).noOcclusion(),
+                    () -> ModBlockEntities.WINDGEN_MAIN.get(),
+                    (pos, state) -> new WindgenMainBlockEntity(ModBlockEntities.WINDGEN_MAIN.get(),
+                            ModMenus.WINDGEN_MAIN.get(), pos, state)));
 
     // --- DEVELOPPEMENT D'APPLICATIONS ---
     public static final RegistryObject<Block> DEV_NORMAL = BLOCKS.register("dev_normal",
