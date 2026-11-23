@@ -112,6 +112,6 @@ public final class StructureLootTables {
     }
 
     private static ResourceLocation chest(String name) {
-        return ResourceLocation.fromNamespaceAndPath("minecraft", "chests/" + name);
+        return new ResourceLocation("minecraft", "chests/" + name);
     }
 }

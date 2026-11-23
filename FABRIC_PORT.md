@@ -46,6 +46,8 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 - onze classes du réseau d'énergie passées dans `common/` : `EnergyNode`, `EnergyGenerator`,
   `EnergyReceiver`, `ImagNetworkData`, `NodeConnection`, `NodeType`, `WirelessBalancer`,
   `WirelessMachine`, `WirelessNode`, `BlockEntityScan`, `ConfigText` ;
+- utilitaires neutres passés dans `common/` : `CubicCurve`, `ImprovedNoise`, `Plotter`,
+  `SyncedInt`, `StructureLootTables`, `RenderBounds`, `MatrixStructure`, `WindgenStructure` ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;
