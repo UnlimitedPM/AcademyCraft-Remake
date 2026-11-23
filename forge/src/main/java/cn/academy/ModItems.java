@@ -414,26 +414,6 @@ public class ModItems {
     }
 
     // Classe générique pour les items avec un nom simple et une description au survol
-    public static class TooltipItem extends Item {
-        private final String tooltipKey;
-        public TooltipItem(String tooltipKey) {
-            this(tooltipKey, new Item.Properties());
-        }
-        public TooltipItem(String tooltipKey, Item.Properties properties) {
-            super(properties);
-            this.tooltipKey = tooltipKey;
-        }
-        @Override
-        public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-            // L'original portait sa description sur une seule ligne et la coupait sur `<br>`
-            // (ItemMagneticCoil) : ici la ligne se coupe sur un retour a la ligne, que
-            // Minecraft dessine tel quel. Une description d'une seule ligne ne change pas.
-            for (String line : Component.translatable(tooltipKey).getString().split("\n")) {
-                tooltip.add(Component.literal(line).withStyle(ChatFormatting.GRAY));
-            }
-        }
-    }
-
     /**
      * L'objet qui installe le terminal de donnees.
      *

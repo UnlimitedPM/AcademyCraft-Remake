@@ -4,6 +4,7 @@ import cn.academy.AcademyCraftCommon;
 import cn.academy.CatEngineBlock;
 import cn.academy.CatEngineBlockEntity;
 import cn.academy.EnergyUnitItem;
+import cn.academy.TooltipItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -66,6 +67,7 @@ public final class FabricContent {
 
         // --- Premier objet energetique porte depuis common/ ---
         register("energy_unit", new EnergyUnitItem());
+        register("magnetic_coil", new TooltipItem("item.academy.magnetic_coil.desc"));
 
         // --- Blocs vanilla (minerais et cadre de machine) ---
         plainBlock("constraint_metal", BlockBehaviour.Properties.copy(Blocks.IRON_ORE).sound(SoundType.STONE));

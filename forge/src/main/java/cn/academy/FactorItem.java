@@ -17,7 +17,7 @@ import javax.annotation.Nullable;
  * retient laquelle. Le nom de la categorie est resolu <b>a la demande</b>, parce que les
  * objets se declarent avant que les categories soient enregistrees.
  */
-public class FactorItem extends ModItems.TooltipItem {
+public class FactorItem extends TooltipItem {
 
     private final String categoryName;
 
