@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import cn.academy.platform.network.Network;
 
 import java.util.function.Consumer;
 
@@ -84,13 +85,21 @@ public final class PlatformHooks {
         }
     };
 
-    private static MatrixConfigSender matrixConfigSender = (pos, action, ssid, password) -> {
-    };
+    private static MatrixConfigSender matrixConfigSender = (pos, action, ssid, password) ->
+            Network.sendToServer(new cn.academy.energy.network.MatrixConfigPacket(pos,
+                    cn.academy.energy.network.MatrixConfigPacket.Action.valueOf(action.name()),
+                    ssid, password));
 
-    private static NodeConfigSender nodeConfigSender = (pos, password, value) -> {
-    };
+    private static NodeConfigSender nodeConfigSender = (pos, password, value) ->
+            Network.sendToServer(new cn.academy.energy.network.NodeConfigPacket(pos, password, value));
 
     private static WirelessRequestSender wirelessRequestSender = (action, node, password) -> {
+        cn.academy.energy.network.WirelessRequestPacket packet = switch (action) {
+            case FIND -> cn.academy.energy.network.WirelessRequestPacket.find();
+            case DISCONNECT -> cn.academy.energy.network.WirelessRequestPacket.disconnect();
+            case CONNECT -> cn.academy.energy.network.WirelessRequestPacket.connect(node, password);
+        };
+        Network.sendToServer(packet);
     };
 
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;

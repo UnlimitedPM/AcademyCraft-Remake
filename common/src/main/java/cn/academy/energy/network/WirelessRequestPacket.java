@@ -1,7 +1,5 @@
 package cn.academy.energy.network;
 
-import java.util.function.Supplier;
-
 import cn.academy.energy.NodeFinder;
 import cn.academy.energy.WirelessMachine;
 import cn.academy.energy.WirelessNode;
@@ -9,7 +7,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
 /**
  * Ce que le joueur demande depuis l'onglet sans fil d'une machine ou d'un noeud : la liste, un
@@ -71,25 +68,21 @@ public class WirelessRequestPacket {
                 buf.readUtf(16));
     }
 
-    public static void handle(WirelessRequestPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            if (sender == null) return;
-            if (!(sender.level() instanceof ServerLevel level)) return;
+    public static void handle(WirelessRequestPacket msg, ServerPlayer sender) {
+        if (sender == null) return;
+        if (!(sender.level() instanceof ServerLevel level)) return;
 
-            // De quoi parle-t-on ? Du conteneur ouvert, et de rien d'autre : un paquet ne porte
-            // aucune position, donc un client ne peut pas agir sur du materiel devant lequel il
-            // n'est pas. Une machine cherche un noeud, un noeud cherche un Matrix — c'est la seule
-            // difference entre les deux moities de l'onglet.
-            if (sender.containerMenu instanceof WirelessMachine machine) {
-                BlockPos pos = machine.machinePos();
-                // Un conteneur sans machine — le developpeur portable — n'a rien a demander.
-                if (pos != null) machineRequest(level, sender, pos, msg);
-            } else if (sender.containerMenu instanceof WirelessNode node) {
-                nodeRequest(level, sender, node.nodePos(), msg);
-            }
-        });
-        ctx.get().setPacketHandled(true);
+        // De quoi parle-t-on ? Du conteneur ouvert, et de rien d'autre : un paquet ne porte
+        // aucune position, donc un client ne peut pas agir sur du materiel devant lequel il
+        // n'est pas. Une machine cherche un noeud, un noeud cherche un Matrix — c'est la seule
+        // difference entre les deux moities de l'onglet.
+        if (sender.containerMenu instanceof WirelessMachine machine) {
+            BlockPos pos = machine.machinePos();
+            // Un conteneur sans machine — le developpeur portable — n'a rien a demander.
+            if (pos != null) machineRequest(level, sender, pos, msg);
+        } else if (sender.containerMenu instanceof WirelessNode node) {
+            nodeRequest(level, sender, node.nodePos(), msg);
+        }
     }
 
     /** Une machine qui cherche son noeud : la liste, le raccordement, le detachement. */

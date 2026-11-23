@@ -2,17 +2,14 @@ package cn.academy.energy.network;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.client.gui.cgui.CGuiWireless;
 import cn.academy.energy.NodeFinder;
+import cn.academy.platform.network.Network;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 /**
  * L'etat d'un onglet sans fil, envoye a son joueur : le noeud lie, et les noeuds joignables.
@@ -83,8 +80,7 @@ public class WirelessNodesPacket {
     }
 
     private static void send(ServerPlayer player, String linked, List<Entry> entries) {
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new WirelessNodesPacket(linked, entries));
+        Network.sendToPlayer(player, new WirelessNodesPacket(linked, entries));
     }
 
     public static void encode(WirelessNodesPacket msg, FriendlyByteBuf buf) {
@@ -109,15 +105,12 @@ public class WirelessNodesPacket {
         return new WirelessNodesPacket(linked, nodes);
     }
 
-    public static void handle(WirelessNodesPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            List<CGuiWireless.Row> rows = new ArrayList<>(msg.nodes.size());
-            for (Entry entry : msg.nodes) {
-                rows.add(new CGuiWireless.Row(entry.pos(), entry.name(), entry.encrypted(),
-                        entry.room()));
-            }
-            CGuiWireless.deliver(msg.linked, rows);
-        });
-        ctx.get().setPacketHandled(true);
+    public static void handle(WirelessNodesPacket msg) {
+        List<CGuiWireless.Row> rows = new ArrayList<>(msg.nodes.size());
+        for (Entry entry : msg.nodes) {
+            rows.add(new CGuiWireless.Row(entry.pos(), entry.name(), entry.encrypted(),
+                    entry.room()));
+        }
+        CGuiWireless.deliver(msg.linked, rows);
     }
 }

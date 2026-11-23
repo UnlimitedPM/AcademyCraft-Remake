@@ -26,6 +26,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 public final class AcademyCraftFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        cn.academy.fabric.FabricNetworkTransport.installClient();
         BlockEntityRenderers.register(FabricContent.CAT_ENGINE_TYPE, CatEngineRenderer::new);
 
         MenuScreens.register(FabricContent.SOLAR_GEN_MENU, SolarGenScreen::new);

@@ -4,9 +4,6 @@ import cn.academy.energy.MatrixBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
 
 /**
  * Ce qu'un joueur demande au Matrix depuis son interface : creer le reseau, le renommer, ou changer
@@ -61,20 +58,16 @@ public class MatrixConfigPacket {
                 buf.readUtf(cn.academy.energy.ConfigText.MAX_LENGTH));
     }
 
-    public static void handle(MatrixConfigPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            if (sender == null) return;
+    public static void handle(MatrixConfigPacket msg, ServerPlayer sender) {
+        if (sender == null) return;
 
-            if (!(sender.level().getBlockEntity(msg.pos) instanceof MatrixBlockEntity matrix)) return;
-            if (!matrix.isOwner(sender.getGameProfile().getName())) return;
+        if (!(sender.level().getBlockEntity(msg.pos) instanceof MatrixBlockEntity matrix)) return;
+        if (!matrix.isOwner(sender.getGameProfile().getName())) return;
 
-            switch (msg.action) {
-                case INIT -> matrix.initNetwork(msg.ssid, msg.password);
-                case SSID -> matrix.setSsid(msg.ssid);
-                case PASSWORD -> matrix.setPassword(msg.password);
-            }
-        });
-        ctx.get().setPacketHandled(true);
+        switch (msg.action) {
+            case INIT -> matrix.initNetwork(msg.ssid, msg.password);
+            case SSID -> matrix.setSsid(msg.ssid);
+            case PASSWORD -> matrix.setPassword(msg.password);
+        }
     }
 }

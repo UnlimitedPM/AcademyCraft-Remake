@@ -96,6 +96,10 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
   de butin des blocs sont partagées ; `FabricWorldgen` ajoute les quatre minerais à toutes les
   biomes de l'overworld avec `BiomeModifications`, comme le biome modifier Forge. Le lac de phase
   liquide attend le bloc de fluide ;
+- réseau neutre : `Network` (codec + gestionnaires) et `AcademyPackets` déclarent les paquets une
+  fois ; `ForgeNetworkTransport` les enregistre sur un `SimpleChannel`, `FabricNetworkTransport`
+  sur un canal unique avec l'identifiant en tête. Quatre paquets sont déjà communs : onglet sans
+  fil (demande + état), configuration du nœud et du Matrix ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

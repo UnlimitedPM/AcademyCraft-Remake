@@ -4,9 +4,6 @@ import cn.academy.energy.NodeBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
 
 /**
  * Ce qu'un joueur demande au noeud depuis son interface : un nouveau nom, ou un nouveau mot de passe.
@@ -49,17 +46,13 @@ public class NodeConfigPacket {
         return new NodeConfigPacket(buf.readBlockPos(), buf.readBoolean(), buf.readUtf(16));
     }
 
-    public static void handle(NodeConfigPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            if (sender == null) return;
+    public static void handle(NodeConfigPacket msg, ServerPlayer sender) {
+        if (sender == null) return;
 
-            if (sender.level().getBlockEntity(msg.pos) instanceof NodeBlockEntity node
-                    && node.isOwner(sender.getGameProfile().getName())) {
-                if (msg.password) node.setPassword(msg.value);
-                else node.setNodeName(msg.value);
-            }
-        });
-        ctx.get().setPacketHandled(true);
+        if (sender.level().getBlockEntity(msg.pos) instanceof NodeBlockEntity node
+                && node.isOwner(sender.getGameProfile().getName())) {
+            if (msg.password) node.setPassword(msg.value);
+            else node.setNodeName(msg.value);
+        }
     }
 }

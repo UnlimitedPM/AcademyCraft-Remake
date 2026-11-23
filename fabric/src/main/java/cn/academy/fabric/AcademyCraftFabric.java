@@ -14,6 +14,8 @@ public final class AcademyCraftFabric implements ModInitializer {
     public void onInitialize() {
         AcademyCraftCommon.init();
         FabricPlatformHooks.install();
+        FabricNetworkTransport.installServer();
+        cn.academy.platform.network.AcademyPackets.register();
         FabricContent.register();
         FabricWorldgen.register();
     }

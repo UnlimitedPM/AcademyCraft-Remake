@@ -157,37 +157,16 @@ public class AbilityNetwork {
         CHANNEL.registerMessage(nextId++, ThunderClapGroundPacket.class,
                 ThunderClapGroundPacket::encode, ThunderClapGroundPacket::decode,
                 ThunderClapGroundPacket::handle);
-        // Le nom et le mot de passe d'un noeud sans fil : le client les tape, le serveur les ecrit
-        // — et c'est lui qui decide, puisque le noeud appartient a celui qui l'a pose. Le canal est
-        // celui du mod, ou vivent deja les paquets du terminal, du media player et des presets.
-        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.NodeConfigPacket.class,
-                cn.academy.energy.network.NodeConfigPacket::encode,
-                cn.academy.energy.network.NodeConfigPacket::decode,
-                cn.academy.energy.network.NodeConfigPacket::handle);
-        // Et la meme chose pour le Matrix, dont le reseau porte un nom et un mot de passe : creer,
-        // renommer, changer le mot de passe — les trois messages de l'original.
-        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.MatrixConfigPacket.class,
-                cn.academy.energy.network.MatrixConfigPacket::encode,
-                cn.academy.energy.network.MatrixConfigPacket::decode,
-                cn.academy.energy.network.MatrixConfigPacket::handle);
+        // Le nom et le mot de passe d'un noeud sans fil, la configuration du Matrix et l'onglet
+        // sans fil vivent maintenant dans common/ : leur transport est installe par le chargeur
+        // (voir AcademyPackets), pas ici.
         // Et la liste blanche du brouilleur : la seule chose de cette machine qu'un identifiant de
         // bouton ne peut pas porter, parce que c'est un nom de joueur et non un nombre.
         CHANNEL.registerMessage(nextId++, cn.academy.energy.network.InterfererWhitelistPacket.class,
                 cn.academy.energy.network.InterfererWhitelistPacket::encode,
                 cn.academy.energy.network.InterfererWhitelistPacket::decode,
                 cn.academy.energy.network.InterfererWhitelistPacket::handle);
-        // L'onglet sans fil d'une machine : une demande qui monte — la liste, un raccordement, un
-        // detachement — et l'etat qui redescend. Le paquet qui monte ne porte aucune position de
-        // machine : le serveur prend celle du conteneur ouvert, donc un client ne peut pas raccorder
-        // une machine devant laquelle il n'est pas.
-        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.WirelessRequestPacket.class,
-                cn.academy.energy.network.WirelessRequestPacket::encode,
-                cn.academy.energy.network.WirelessRequestPacket::decode,
-                cn.academy.energy.network.WirelessRequestPacket::handle);
-        CHANNEL.registerMessage(nextId++, cn.academy.energy.network.WirelessNodesPacket.class,
-                cn.academy.energy.network.WirelessNodesPacket::encode,
-                cn.academy.energy.network.WirelessNodesPacket::decode,
-                cn.academy.energy.network.WirelessNodesPacket::handle);
+        // L'onglet sans fil d'une machine et son etat redescendant sont communs aussi.
         // L'Emetteur de frequence : ses demandes montent, ses reponses redescendent. Ajoutes a la
         // fin, parce que l'identifiant d'un paquet est sa place.
         CHANNEL.registerMessage(nextId++, cn.academy.energy.network.FreqTransmitterRequestPacket.class,

@@ -36,22 +36,9 @@ public final class ForgePlatformHooks {
                 cn.academy.energy.NodeFinder.detach(level, pos);
             }
         });
-        PlatformHooks.installMatrixConfigSender((pos, action, ssid, password) ->
-                cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
-                        new cn.academy.energy.network.MatrixConfigPacket(pos,
-                                cn.academy.energy.network.MatrixConfigPacket.Action.valueOf(action.name()),
-                                ssid, password)));
-        PlatformHooks.installNodeConfigSender((pos, password, value) ->
-                cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
-                        new cn.academy.energy.network.NodeConfigPacket(pos, password, value)));
-        PlatformHooks.installWirelessRequestSender((action, node, password) -> {
-            cn.academy.energy.network.WirelessRequestPacket packet = switch (action) {
-                case FIND -> cn.academy.energy.network.WirelessRequestPacket.find();
-                case DISCONNECT -> cn.academy.energy.network.WirelessRequestPacket.disconnect();
-                case CONNECT -> cn.academy.energy.network.WirelessRequestPacket.connect(node, password);
-            };
-            cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(packet);
-        });
+        cn.academy.platform.network.Network.install(
+                new cn.academy.platform.network.ForgeNetworkTransport());
+        cn.academy.platform.network.AcademyPackets.register();
         PlatformHooks.installExternalEnergyIO(new PlatformHooks.ExternalEnergyIO() {
             @Override
             public int chargeItem(ItemStack stack, int amount, boolean simulate) {
