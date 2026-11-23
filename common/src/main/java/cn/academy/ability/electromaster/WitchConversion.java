@@ -7,7 +7,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.entity.npc.Villager;
-import net.minecraftforge.event.ForgeEventFactory;
 
 import java.lang.reflect.Method;
 
@@ -103,8 +102,7 @@ public final class WitchConversion {
         // parametre est le consommateur VIDE de vanilla — un autre mod y mettrait l'identifiant
         // d'une bete qu'il aurait fabriquee lui-meme — et le crochet NE L'APPELLE PAS : la
         // conversion se fait donc APRES lui, jamais dedans.
-        if (!ForgeEventFactory.canLivingConvert(villager, EntityType.WITCH, ignoredId -> {
-        })) {
+        if (!cn.academy.platform.PlatformHooks.canConvertMob(villager, EntityType.WITCH)) {
             return false;
         }
         Witch witch = EntityType.WITCH.create(level);
@@ -127,7 +125,7 @@ public final class WitchConversion {
             witch.setCustomNameVisible(villager.isCustomNameVisible());
         }
         witch.setPersistenceRequired();
-        ForgeEventFactory.onLivingConvert(villager, witch);
+        cn.academy.platform.PlatformHooks.mobConverted(villager, witch);
         level.addFreshEntityWithPassengers(witch);
         releasePois(villager);
         villager.discard();

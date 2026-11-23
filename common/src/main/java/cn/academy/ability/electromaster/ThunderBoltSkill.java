@@ -98,7 +98,7 @@ public class ThunderBoltSkill extends Skill {
     public void onActivate(Player player, AbilityData data) {
         // L'eclair s'annonce a l'appui, plus fort que l'arc faible du premier degre :
         // l'original jouait 0,6 contre 0,5.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_ARC_STRONG, 0.6f);
+        cn.academy.sound.AcademySounds.playFor(player, "em.arc_strong", 0.6f);
 
         // L'eclair se dessine, et chez tous ceux qui voient le tireur : c'est le message
         // d'effet de l'original, qui faisait naitre ses trois arcs chez chaque client. Ils

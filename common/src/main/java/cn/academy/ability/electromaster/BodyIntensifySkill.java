@@ -261,7 +261,7 @@ public class BodyIntensifySkill extends Skill {
         applyBuffs(player, data);
 
         cn.academy.sound.AcademySounds.playFor(player,
-                cn.academy.ModSounds.EM_INTENSIFY_ACTIVATE, 0.5f);
+                "em.intensify_activate", 0.5f);
 
         sendEffect(player);
     }

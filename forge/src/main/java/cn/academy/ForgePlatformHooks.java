@@ -58,6 +58,23 @@ public final class ForgePlatformHooks {
         });
         PlatformHooks.installCategoryChangeHook(
                 cn.academy.ability.preset.PresetTracker::clearOnCategoryChange);
+        PlatformHooks.installMobConversion(new PlatformHooks.MobConversion() {
+            @Override
+            @SuppressWarnings("unchecked")
+            public boolean canConvert(net.minecraft.world.entity.Mob source,
+                                      net.minecraft.world.entity.EntityType<?> result) {
+                return net.minecraftforge.event.ForgeEventFactory.canLivingConvert(source,
+                        (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.LivingEntity>) result,
+                        ignored -> {
+                        });
+            }
+
+            @Override
+            public void onConverted(net.minecraft.world.entity.Mob source,
+                                    net.minecraft.world.entity.Mob result) {
+                net.minecraftforge.event.ForgeEventFactory.onLivingConvert(source, result);
+            }
+        });
         // Le moteur des rayons est un dessin d'effet : il n'existe que chez le client.
         if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
             PlatformHooks.installRayBeamSpawner((kind, from, to, ownerId) ->

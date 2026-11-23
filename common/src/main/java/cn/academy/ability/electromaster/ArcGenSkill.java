@@ -113,7 +113,7 @@ public class ArcGenSkill extends Skill {
     public void onActivate(Player player, AbilityData data) {
         // L'arc claque meme s'il ne trouve rien : l'original le jouait a l'appui, avant de
         // savoir sur quoi son rayon tomberait.
-        cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.EM_ARC_WEAK, 0.5f);
+        cn.academy.sound.AcademySounds.playFor(player, "em.arc_weak", 0.5f);
 
         double range = range(data);
         Vec3 eye = player.getEyePosition(1.0f);

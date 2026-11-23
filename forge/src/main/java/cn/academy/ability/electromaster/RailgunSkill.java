@@ -263,7 +263,7 @@ public class RailgunSkill extends Skill {
      * suppose la competence apprise : il n'y a pas d'autre verrou a poser.
      */
     public static boolean isCombo(AbilityData data) {
-        return data.isCharging(ElectromasterCategory.MAG_MANIP);
+        return data.isCharging(magManip());
     }
 
     /** Recharge reprise de l'original : de 300 a 160 ticks, soit 15 a 8 secondes. */
@@ -434,8 +434,8 @@ public class RailgunSkill extends Skill {
      */
     public static boolean canThrowBlock(AbilityData data) {
         if (data == null) return false;
-        return data.getSkillExp(ElectromasterCategory.RAILGUN) >= BLOCK_RAILGUN_EXP
-                && data.getSkillExp(ElectromasterCategory.MAG_MANIP) >= BLOCK_MAG_MANIP_EXP;
+        return data.getSkillExp(railgun()) >= BLOCK_RAILGUN_EXP
+                && data.getSkillExp(magManip()) >= BLOCK_MAG_MANIP_EXP;
     }
 
     /** La main qui porte la munition : la principale d'abord, comme {@link #ammo}. */
@@ -454,7 +454,7 @@ public class RailgunSkill extends Skill {
     public static cn.academy.entity.EntityMagManipBlock carriedBlock(Player player, AbilityData data) {
         if (player == null || data == null) return null;
         net.minecraft.world.entity.Entity entity = player.level().getEntity(
-                data.getHoldTargetId(ElectromasterCategory.MAG_MANIP));
+                data.getHoldTargetId(magManip()));
         return entity instanceof cn.academy.entity.EntityMagManipBlock block && block.isAlive()
                 ? block : null;
     }
@@ -480,6 +480,16 @@ public class RailgunSkill extends Skill {
         // Les deux mains, comme la munition elle-meme : un bloc en main secondaire s'arme pareil.
         return isAccepted(player.getMainHandItem()) || isAccepted(player.getOffhandItem())
                 ? IRON_ARMING_TICKS : 0;
+    }
+
+    /**
+     * La competence mag_manip, retrouvee par cle.
+     *
+     * <p>La constante de la categorie ne se nomme pas ici : ce fichier est commun aux trois
+     * chargeurs, et c'est la categorie qui connait ses competences, pas l'inverse.
+     */
+    private static cn.academy.ability.Skill magManip() {
+        return cn.academy.ability.BlockBreaking.byKey("electromaster.mag_manip");
     }
 
     /**
@@ -526,8 +536,16 @@ public class RailgunSkill extends Skill {
         if (data == null) return;
         cn.academy.ability.preset.PresetData presets = cn.academy.ability.preset.PresetTracker.of(player);
         if (presets == null) return;
-        if (!ElectromasterCategory.RAILGUN.allowsHandEffect(data, presets.getCurrent())) return;
-        ElectromasterCategory.RAILGUN.announceHandEffect(player);
+        RailgunSkill railgun = railgun();
+        if (railgun == null) return;
+        if (!railgun.allowsHandEffect(data, presets.getCurrent())) return;
+        railgun.announceHandEffect(player);
+    }
+
+    /** Le railgun lui-meme, retrouve par cle, comme mag_manip. */
+    private static RailgunSkill railgun() {
+        return cn.academy.ability.BlockBreaking.byKey("electromaster.railgun") instanceof RailgunSkill r
+                ? r : null;
     }
 
     /**
@@ -564,10 +582,10 @@ public class RailgunSkill extends Skill {
                 // sa recharge — le meme chemin qu'un second appui.
                 if (player instanceof net.minecraft.server.level.ServerPlayer server) {
                     cn.academy.ability.AbilityEvents.endHeld(server, data,
-                            ElectromasterCategory.MAG_MANIP);
+                            magManip());
                     // Et une recharge, puisqu'elle n'en declare pas : sans elle, elle se rallume
                     // au tick suivant et arrache un autre bloc (voir MAGNET_COOLDOWN_TICKS).
-                    data.setCooldown(ElectromasterCategory.MAG_MANIP, MAGNET_COOLDOWN_TICKS);
+                    data.setCooldown(magManip(), MAGNET_COOLDOWN_TICKS);
                 }
             }
             case NONE -> { }
@@ -608,7 +626,7 @@ public class RailgunSkill extends Skill {
         // railgun s'entend de loin. Il part a CHAQUE tir — le port ne le jouait qu'en touchant,
         // ce qui rendait muet le tir qui manque.
         cn.academy.sound.AcademySounds.playAt(player.level(), player.position(),
-                cn.academy.ModSounds.EM_RAILGUN, 0.5f, 1.0f);
+                "em.railgun", 0.5f, 1.0f);
 
         shootBeam(player, length, arcs);
 
@@ -690,7 +708,7 @@ public class RailgunSkill extends Skill {
      */
     private static void digBeam(Player player, AbilityData data, Vec3 eye, Vec3 look, double length,
                                 double radius, float perColumn) {
-        if (!cn.academy.ability.BlockBreaking.allowed(data, ElectromasterCategory.RAILGUN)) return;
+        if (!cn.academy.ability.BlockBreaking.allowed(data, railgun())) return;
         if (player.level().isClientSide) return;
 
         // Les deux axes du disque : la largeur du regard, puis sa hauteur. Un tir vertical n'a pas

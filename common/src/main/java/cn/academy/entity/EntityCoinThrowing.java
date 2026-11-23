@@ -1,7 +1,5 @@
 package cn.academy.entity;
 
-import cn.academy.ModEntities;
-import cn.academy.ModItems;
 import cn.academy.ability.electromaster.CoinToss;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -164,7 +162,7 @@ public class EntityCoinThrowing extends Entity {
 
     /** La piece telle que l'objet la jette : dans la main, vers le haut. */
     public EntityCoinThrowing(Level level, Player thrower) {
-        this(ModEntities.COIN.get(), level);
+        this(cn.academy.content.AcademyContent.entityType("coin"), level);
         this.direct = thrower;
         this.entityData.set(DATA_THROWER, thrower.getId());
         // Ce que le vol demande : d'ou elle part, avec quel elan, et a quelle heure du monde. L'elan
@@ -372,7 +370,7 @@ public class EntityCoinThrowing extends Entity {
     private void returnCoin(Player thrower) {
         if (thrower.getAbilities().instabuild) return;
 
-        ItemStack coin = new ItemStack(ModItems.COIN.get());
+        ItemStack coin = new ItemStack(cn.academy.content.AcademyContent.item("coin"));
         ItemStack main = thrower.getMainHandItem();
         if (main.isEmpty()) {
             thrower.setItemInHand(InteractionHand.MAIN_HAND, coin);
@@ -422,7 +420,7 @@ public class EntityCoinThrowing extends Entity {
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         if (!this.level().isClientSide) {
-            spawnAtLocation(new ItemStack(ModItems.COIN.get()));
+            spawnAtLocation(new ItemStack(cn.academy.content.AcademyContent.item("coin")));
         }
         discard();
     }

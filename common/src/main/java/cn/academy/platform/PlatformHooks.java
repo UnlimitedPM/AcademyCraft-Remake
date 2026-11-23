@@ -124,6 +124,22 @@ public final class PlatformHooks {
                    net.minecraft.world.phys.Vec3 to, int ownerId);
     }
 
+    /**
+     * Les deux crochets de conversion d'une creature vivante.
+     *
+     * <p>Forge les poste autour de {@code Villager.thunderHit} : un mod peut refuser la
+     * transformation, et il recoit celle qui a eu lieu. Le code commun ne connait que ces deux
+     * questions ; sans installation, tout est permis et personne n'est prevenu.
+     */
+    public interface MobConversion {
+        /** La conversion est-elle permise ? */
+        boolean canConvert(net.minecraft.world.entity.Mob source,
+                           net.minecraft.world.entity.EntityType<?> result);
+
+        /** La conversion vient d'avoir lieu. */
+        void onConverted(net.minecraft.world.entity.Mob source, net.minecraft.world.entity.Mob result);
+    }
+
     /** Les succes du mod, que seule la logique des aptitudes declenche. */
     public enum Advancement {
         OVERLOAD, LEARNING_SKILL, EXP_FULL, CONVERT_CATEGORY
@@ -192,6 +208,19 @@ public final class PlatformHooks {
     private static RayBeamSpawner rayBeamSpawner = (kind, from, to, ownerId) -> {
     };
 
+    private static MobConversion mobConversion = new MobConversion() {
+        @Override
+        public boolean canConvert(net.minecraft.world.entity.Mob source,
+                                  net.minecraft.world.entity.EntityType<?> result) {
+            return true;
+        }
+
+        @Override
+        public void onConverted(net.minecraft.world.entity.Mob source,
+                                net.minecraft.world.entity.Mob result) {
+        }
+    };
+
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
         @Override
         public int chargeItem(ItemStack stack, int amount, boolean simulate) {
@@ -258,6 +287,22 @@ public final class PlatformHooks {
 
     public static void installRayBeamSpawner(RayBeamSpawner spawner) {
         rayBeamSpawner = spawner;
+    }
+
+    public static void installMobConversion(MobConversion conversion) {
+        mobConversion = conversion;
+    }
+
+    /** La conversion d'une creature est-elle permise ? */
+    public static boolean canConvertMob(net.minecraft.world.entity.Mob source,
+                                        net.minecraft.world.entity.EntityType<?> result) {
+        return mobConversion.canConvert(source, result);
+    }
+
+    /** La conversion vient d'avoir lieu. */
+    public static void mobConverted(net.minecraft.world.entity.Mob source,
+                                    net.minecraft.world.entity.Mob result) {
+        mobConversion.onConverted(source, result);
     }
 
     /** Demande un rayon du moteur des rayons (cote client). */
