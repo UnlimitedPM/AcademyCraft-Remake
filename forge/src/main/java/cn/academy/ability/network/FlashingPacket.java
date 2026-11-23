@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -60,7 +59,8 @@ public class FlashingPacket {
             // de la laisser atteindre la competence.
             if (!FlashingSkill.isDirection(msg.direction)) return;
 
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> handle(player, data, skill, msg.direction));
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) handle(player, data, skill, msg.direction);
         });
         ctx.setPacketHandled(true);
     }

@@ -342,8 +342,7 @@ public class EntityMdBall extends Entity {
     public void strike(Player owner, Entity target, float attack, boolean ignoreInvulnerability) {
         if (ignoreInvulnerability) target.invulnerableTime = 0;
         target.hurt(owner.damageSources().indirectMagic(owner, owner), attack);
-        RadiationMarks.mark(target, owner.getCapability(AbilityCapability.ABILITY_DATA)
-                .orElse(null));
+        RadiationMarks.mark(target, cn.academy.platform.PlatformHooks.abilityData(owner));
     }
 
     /**

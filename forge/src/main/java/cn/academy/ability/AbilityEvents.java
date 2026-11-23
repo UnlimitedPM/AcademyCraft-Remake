@@ -46,8 +46,10 @@ public class AbilityEvents {
     @SubscribeEvent
     public static void onLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
-                    cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data)));
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) {
+                cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
+            }
         }
     }
 
@@ -55,7 +57,8 @@ public class AbilityEvents {
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         if (!(event.player instanceof ServerPlayer player)) return;
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data != null) {
             // Les sources d'interference sont evaluees ici, une fois par tick : une
             // source qui ne brouille plus disparait d'elle-meme.
             data.refreshInterference();
@@ -118,7 +121,7 @@ public class AbilityEvents {
             if (data.tickSync()) {
                 cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
             }
-        });
+        }
     }
 
     /**
@@ -130,22 +133,22 @@ public class AbilityEvents {
     @SubscribeEvent
     public static void onDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            player.getCapability(AbilityCapability.ABILITY_DATA)
-                    .ifPresent(data -> {
-                        // Les maintiens se TERMINENT, un par un, avant d'etre oublies : c'est ce
-                        // qui rend ce qu'ils ont emprunte (les ailes rendent le vol), ce qui pose
-                        // leur recharge — effacee juste apres — et surtout ce qui le DIT au client.
-                        // Le joueur : « si on meurt avec le deviation activer, quand on reapparait
-                        // on a encore l'animation d'actif alors que le pouvoir ne l'est plus ».
-                        // `clearCharges` seul vidait la table du serveur en laissant le temoin du
-                        // client allume — la fin d'un maintien, elle, envoie `HoldOverPacket`.
-                        endAllHolds(player, data);
-                        data.clearCooldowns();
-                        data.clearCharges();
-                        // L'original eteignait l'aptitude a la mort, et la rallumait a la main :
-                        // repartir avec son pouvoir allume n'est pas ce qu'il faisait.
-                        data.setActivated(false);
-                    });
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) {
+                // Les maintiens se TERMINENT, un par un, avant d'etre oublies : c'est ce
+                // qui rend ce qu'ils ont emprunte (les ailes rendent le vol), ce qui pose
+                // leur recharge — effacee juste apres — et surtout ce qui le DIT au client.
+                // Le joueur : « si on meurt avec le deviation activer, quand on reapparait
+                // on a encore l'animation d'actif alors que le pouvoir ne l'est plus ».
+                // `clearCharges` seul vidait la table du serveur en laissant le temoin du
+                // client allume — la fin d'un maintien, elle, envoie `HoldOverPacket`.
+                endAllHolds(player, data);
+                data.clearCooldowns();
+                data.clearCharges();
+                // L'original eteignait l'aptitude a la mort, et la rallumait a la main :
+                // repartir avec son pouvoir allume n'est pas ce qu'il faisait.
+                data.setActivated(false);
+            }
         }
     }
 
@@ -172,13 +175,13 @@ public class AbilityEvents {
     public static void onWakeUp(net.minecraftforge.event.entity.player.PlayerWakeUpEvent event) {
         if (event.wakeImmediately() || event.updateLevel()) return;
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            data.recoverAll();
-            // Le reveil est un evenement rare : on pousse l'etat tout de suite plutot que
-            // d'attendre la cadence de synchronisation, sinon la barre du client resterait
-            // vide quelques ticks apres que le joueur a ouvert les yeux.
-            cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
-        });
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data == null) return;
+        data.recoverAll();
+        // Le reveil est un evenement rare : on pousse l'etat tout de suite plutot que
+        // d'attendre la cadence de synchronisation, sinon la barre du client resterait
+        // vide quelques ticks apres que le joueur a ouvert les yeux.
+        cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
     }
 
     /**
@@ -251,13 +254,13 @@ public class AbilityEvents {
         var presets = cn.academy.ability.preset.PresetTracker.of(player);
         if (presets == null) return;
         var current = presets.getCurrent();
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
-                if (!current.contains(skill.getName())) {
-                    endHeld(player, data, skill);
-                }
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data == null) return;
+        for (Skill skill : new java.util.ArrayList<>(data.getChargingSkills())) {
+            if (!current.contains(skill.getName())) {
+                endHeld(player, data, skill);
             }
-        });
+        }
     }
 
     /**
@@ -286,9 +289,8 @@ public class AbilityEvents {
     @SubscribeEvent
     public static void onFall(LivingFallEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            if (data.isProtectedFromFall()) event.setCanceled(true);
-        });
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data != null && data.isProtectedFromFall()) event.setCanceled(true);
     }
 
     /**
@@ -306,21 +308,21 @@ public class AbilityEvents {
     @SubscribeEvent
     public static void onLivingAttack(LivingAttackEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            for (Category category : CategoryManager.INSTANCE.getCategories()) {
-                if (!data.hasLearned(category)) continue;
-                for (Skill skill : category.getSkills()) {
-                    // Meme regle que pour les degats : une passive est toujours la, une tenue
-                    // seulement pendant son maintien.
-                    if (skill.isPassive() || data.isCharging(skill)) {
-                        if (skill.onAttacked(player, data, event.getSource(), event.getAmount())) {
-                            event.setCanceled(true);
-                            return;
-                        }
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data == null) return;
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            if (!data.hasLearned(category)) continue;
+            for (Skill skill : category.getSkills()) {
+                // Meme regle que pour les degats : une passive est toujours la, une tenue
+                // seulement pendant son maintien.
+                if (skill.isPassive() || data.isCharging(skill)) {
+                    if (skill.onAttacked(player, data, event.getSource(), event.getAmount())) {
+                        event.setCanceled(true);
+                        return;
                     }
                 }
             }
-        });
+        }
     }
 
     /**
@@ -356,18 +358,18 @@ public class AbilityEvents {
         // que les crochets des competences partent des degats deja augmentes.
         cn.academy.ability.meltdowner.RadiationMarks.apply(event);
         if (!(event.getEntity() instanceof Player player)) return;
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
-            for (Category category : CategoryManager.INSTANCE.getCategories()) {
-                if (!data.hasLearned(category)) continue;
-                for (Skill skill : category.getSkills()) {
-                    // Une passive est toujours la ; une competence tenue ne l'est que
-                    // pendant son maintien, sinon le bouclier absorberait sans etre tenu.
-                    if (skill.isPassive() || data.isCharging(skill)) {
-                        event.setAmount(skill.onDamaged(player, data, event.getSource(), event.getAmount()));
-                    }
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data == null) return;
+        for (Category category : CategoryManager.INSTANCE.getCategories()) {
+            if (!data.hasLearned(category)) continue;
+            for (Skill skill : category.getSkills()) {
+                // Une passive est toujours la ; une competence tenue ne l'est que
+                // pendant son maintien, sinon le bouclier absorberait sans etre tenu.
+                if (skill.isPassive() || data.isCharging(skill)) {
+                    event.setAmount(skill.onDamaged(player, data, event.getSource(), event.getAmount()));
                 }
             }
-        });
+        }
     }
 
     /**

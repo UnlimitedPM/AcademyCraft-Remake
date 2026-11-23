@@ -1,8 +1,6 @@
 package cn.academy.ability.develop;
 
 import cn.academy.FactorItem;
-import cn.academy.ModItems;
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -10,7 +8,7 @@ import cn.academy.ability.Skill;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Changer de categorie : oublier tout ce qu'on sait, et repartir dans une autre.
@@ -108,7 +106,7 @@ public class DevelopActionReset implements DevelopAction {
 
         // Les prereglages ranges les allumaient : ils ne veulent plus rien dire. L'original
         // les effacait sur le meme evenement.
-        cn.academy.ability.preset.PresetTracker.clearOnCategoryChange(player);
+        cn.academy.platform.PlatformHooks.categoryChanged(player);
 
         // La bobine et le facteur y passent, comme dans l'original — mais UNE bobine, pas la pile.
         //
@@ -118,11 +116,8 @@ public class DevelopActionReset implements DevelopAction {
         // quand meme les 64 au lieu d'en consommer qu'un seul ».
         player.getMainHandItem().shrink(1);
         FactorItem.consume(player);
-
-        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-            cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
-                    cn.academy.advancements.AcademyAdvancements.CONVERT_CATEGORY);
-        }
+        cn.academy.platform.PlatformHooks.awardAdvancement(player,
+                cn.academy.platform.PlatformHooks.Advancement.CONVERT_CATEGORY);
     }
 
     /**
@@ -142,7 +137,7 @@ public class DevelopActionReset implements DevelopAction {
         Category abandoned = abandonedCategory(data, MIN_LEVEL);
         if (abandoned == null) return null;
 
-        if (!player.getMainHandItem().is(ModItems.MAGNETIC_COIL.get())) return null;
+        if (!player.getMainHandItem().is(cn.academy.content.AcademyContent.item("magnetic_coil"))) return null;
 
         Category adopted = FactorItem.otherCategoryIn(player, abandoned);
         if (adopted == null) return null;
@@ -188,7 +183,7 @@ public class DevelopActionReset implements DevelopAction {
 
     @Nullable
     private static AbilityData dataOf(Player player) {
-        return player.getCapability(AbilityCapability.ABILITY_DATA).resolve().orElse(null);
+        return cn.academy.platform.PlatformHooks.abilityData(player);
     }
 
     /** Le prix d'un changement annonce a l'ecran, sans construire l'action. */

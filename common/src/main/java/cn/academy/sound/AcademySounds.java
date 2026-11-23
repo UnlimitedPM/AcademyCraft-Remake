@@ -5,7 +5,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.registries.RegistryObject;
+
+import java.util.function.Supplier;
 
 /**
  * Jouer un son du mod, portage de {@code ACSounds}.
@@ -35,17 +36,21 @@ public final class AcademySounds {
 
     private AcademySounds() {}
 
-    /** Un son dans le monde, a une position : tous ceux qui passent l'entendent. */
-    public static void playAt(Level level, Vec3 pos, RegistryObject<SoundEvent> event,
+    /**
+     * Le type du son est un {@link Supplier} et non un {@code RegistryObject} : Forge comme
+     * Fabric en fournissent un, et le code commun n'a pas a savoir lequel.
+     */
+    public static void playAt(Level level, Vec3 pos, Supplier<SoundEvent> event,
                               float volume, float pitch) {
         playAt(level, pos, event, DEFAULT_SOURCE, volume, pitch);
     }
 
     /** Le meme, avec la categorie de l'original. */
-    public static void playAt(Level level, Vec3 pos, RegistryObject<SoundEvent> event,
+    public static void playAt(Level level, Vec3 pos, Supplier<SoundEvent> event,
                               SoundSource source, float volume, float pitch) {
-        if (event == null || !event.isPresent()) return;
-        level.playSound(null, pos.x, pos.y, pos.z, event.get(), source, volume, pitch);
+        SoundEvent sound = event == null ? null : event.get();
+        if (sound == null) return;
+        level.playSound(null, pos.x, pos.y, pos.z, sound, source, volume, pitch);
     }
 
     /**
@@ -55,18 +60,49 @@ public final class AcademySounds {
      * competence se servaient : un son de 0,5 de volume que le joueur entend comme s'il
      * venait de lui-meme, sans que ses voisins en sachent rien.
      */
-    public static void playFor(Player player, RegistryObject<SoundEvent> event, float volume) {
+    public static void playFor(Player player, Supplier<SoundEvent> event, float volume) {
         playFor(player, event, volume, 1.0f);
     }
 
-    public static void playFor(Player player, RegistryObject<SoundEvent> event, float volume,
+    public static void playFor(Player player, Supplier<SoundEvent> event, float volume,
                                float pitch) {
         playFor(player, event, DEFAULT_SOURCE, volume, pitch);
     }
 
-    public static void playFor(Player player, RegistryObject<SoundEvent> event,
+    public static void playFor(Player player, Supplier<SoundEvent> event,
                                SoundSource source, float volume, float pitch) {
-        if (player == null || event == null || !event.isPresent()) return;
-        player.playNotifySound(event.get(), source, volume, pitch);
+        SoundEvent sound = event == null ? null : event.get();
+        if (player == null || sound == null) return;
+        player.playNotifySound(sound, source, volume, pitch);
+    }
+
+    /**
+     * Les memes gestes, par identifiant de son.
+     *
+     * <p>Les registres de sons sont propres au chargeur ({@code ModSounds} cote Forge) : le code
+     * commun nomme donc le son par son identifiant, comme pour les objets, et le registre le
+     * retrouve au moment de le jouer.
+     */
+    public static void playFor(Player player, String soundId, float volume) {
+        playFor(player, soundId, volume, 1.0f);
+    }
+
+    public static void playFor(Player player, String soundId, float volume, float pitch) {
+        playFor(player, soundId, DEFAULT_SOURCE, volume, pitch);
+    }
+
+    public static void playFor(Player player, String soundId, SoundSource source,
+                               float volume, float pitch) {
+        if (player == null || soundId == null) return;
+        SoundEvent sound = cn.academy.content.AcademyContent.sound(soundId);
+        if (sound == null) return;
+        player.playNotifySound(sound, source, volume, pitch);
+    }
+
+    public static void playAt(Level level, Vec3 pos, String soundId, float volume, float pitch) {
+        if (level == null || soundId == null) return;
+        SoundEvent sound = cn.academy.content.AcademyContent.sound(soundId);
+        if (sound == null) return;
+        level.playSound(null, pos.x, pos.y, pos.z, sound, DEFAULT_SOURCE, volume, pitch);
     }
 }

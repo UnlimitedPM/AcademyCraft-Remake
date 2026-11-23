@@ -9,7 +9,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /** Shared hitscan targeting helper for skills that fire in the direction the player looks. */
 public final class TargetingUtil {

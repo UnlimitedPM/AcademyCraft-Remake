@@ -113,6 +113,26 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 
 Vérifié : le client Fabric démarre, un monde se charge, le contenu est enregistré.
 
+### Aptitudes, deuxième palier
+
+- les données par joueur passent par `PlatformHooks.installAbilityData` /
+  `PlatformHooks.abilityData(Player)`. Forge répond avec sa capacité (`AbilityCapability`),
+  Fabric avec `FabricAbilityData`, une table en mémoire dont les entrées tombent à la
+  déconnexion. **Limite assumée** : rien n'est encore sauvegardé sous Fabric ; l'étape suivante est
+  un attachement persistant, et le système d'aptitudes n'est pas encore branché côté Fabric, donc
+  aucun joueur n'en dépend aujourd'hui ;
+- un crochet `categoryChanged` remplace l'appel direct au pré-réglage Forge dans le changement de
+  catégorie ;
+- `AcademySounds` est commun : il prend un `Supplier<SoundEvent>` (Forge lui passe son
+  `RegistryObject`, qui en est un) ou un identifiant de son résolu par `AcademyContent.sound` ;
+- `CONVERT_CATEGORY` rejoint les succès neutres, donc attribuables par `PlatformHooks` ;
+- passent en `common/` : `develop/` (actions, niveaux, apprentissage), `preset/` (modèle, sans le
+  `PresetTracker` Forge), `generic/`, `FactorItem`, `TargetingUtil`, et les compétences
+  électromaster, meltdowner et téléporteur qui n'envoient aucun paquet de chargeur ;
+- restent côté Forge les compétences liées à un paquet encore Forge (`BloodSplashPacket`,
+  `ShiftTeleportPacket`, `TeleportCritPacket`, `VecWavePacket`, `SmokePuffPacket`) ou à une entité
+  Forge (`EntityMdBall`, `EntityMagHook`). Les porter débloque le reste : c'est l'étape suivante.
+
 ## Ordre de portage
 
 1. **Socle de plateforme dans `common/`**

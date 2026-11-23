@@ -2,7 +2,6 @@ package cn.academy.ability.network;
 
 import java.util.function.Supplier;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.BlockBreaking;
 import cn.academy.ability.Skill;
 import net.minecraft.network.FriendlyByteBuf;
@@ -47,7 +46,8 @@ public class BreakPrefsPacket {
             ServerPlayer player = ctx.getSender();
             if (player == null) return;
 
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            cn.academy.ability.AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) {
                 if (msg.skill.isEmpty()) {
                     data.setPlayerBreaksBlocks(msg.value);
                 } else {
@@ -58,7 +58,7 @@ public class BreakPrefsPacket {
                     data.setBreaksBlocks(target, msg.value);
                 }
                 cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
-            });
+            }
         });
         ctx.setPacketHandled(true);
     }

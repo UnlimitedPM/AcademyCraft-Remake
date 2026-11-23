@@ -1,7 +1,6 @@
 package cn.academy.ability.develop;
 
 import cn.academy.FactorItem;
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -118,8 +117,10 @@ public class DevelopActionFirstCategory implements DevelopAction {
         Category granted = grantIfNone(player);
         if (granted == null) return null;
 
-        player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
-                cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data)));
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data != null) {
+            cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
+        }
         return granted;
     }
 
@@ -163,6 +164,6 @@ public class DevelopActionFirstCategory implements DevelopAction {
     }
 
     private static AbilityData dataOf(Player player) {
-        return player.getCapability(AbilityCapability.ABILITY_DATA).resolve().orElse(null);
+        return cn.academy.platform.PlatformHooks.abilityData(player);
     }
 }

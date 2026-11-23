@@ -148,14 +148,14 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
         this.categoryProgress = new SyncedInt[categories.size()];
         for (int i = 0; i < categories.size(); i++) {
             Category category = categories.get(i);
-            categoryLevels[i] = new SyncedInt(() ->
-                    player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
-                            .map(data -> data.getCategoryLevel(category))
-                            .orElse(0));
-            categoryProgress[i] = new SyncedInt(() ->
-                    player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
-                            .map(data -> Math.round(data.getLevelProgress(category) * 1000f))
-                            .orElse(0));
+            categoryLevels[i] = new SyncedInt(() -> {
+                AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+                return data == null ? 0 : data.getCategoryLevel(category);
+            });
+            categoryProgress[i] = new SyncedInt(() -> {
+                AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+                return data == null ? 0 : Math.round(data.getLevelProgress(category) * 1000f);
+            });
             addDataSlot(categoryLevels[i]);
             addDataSlot(categoryProgress[i]);
         }

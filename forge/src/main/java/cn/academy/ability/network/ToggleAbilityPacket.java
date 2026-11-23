@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
@@ -41,7 +40,8 @@ public class ToggleAbilityPacket {
             ServerPlayer player = ctx.getSender();
             if (player == null) return;
 
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> {
+            cn.academy.ability.AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) {
                 // Eteindre l'aptitude FERME ce qui est ouvert : sans cela un maintien a bascule
                 // survivait a la touche V tout en rendant les nouvelles competences impossibles,
                 // ce que le joueur a signale le 22/10. La fin passe par le geste du brouillage
@@ -52,7 +52,7 @@ public class ToggleAbilityPacket {
                 }
                 data.setActivated(msg.activated);
                 cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
-            });
+            }
         });
         ctx.setPacketHandled(true);
     }

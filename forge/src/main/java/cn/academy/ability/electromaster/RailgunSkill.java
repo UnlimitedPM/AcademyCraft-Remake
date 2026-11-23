@@ -521,8 +521,7 @@ public class RailgunSkill extends Skill {
      * {@link #allowsHandEffect}.
      */
     public static void announceHandEffectIfAllowed(Player player) {
-        AbilityData data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
-                .resolve().orElse(null);
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
         if (data == null) return;
         cn.academy.ability.preset.PresetData presets = cn.academy.ability.preset.PresetTracker.of(player);
         if (presets == null) return;

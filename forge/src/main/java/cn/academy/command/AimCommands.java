@@ -251,7 +251,7 @@ public final class AimCommands {
 
     private static int run(CommandSourceStack source, ServerPlayer player, boolean personal,
                            String sub, String first, String second) {
-        AbilityData data = player.getCapability(AbilityCapability.ABILITY_DATA).orElse(null);
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
         if (data == null) return 0;
         List<Category> all = CategoryManager.INSTANCE.getCategories();
         Category power = AimCommandSpec.activePower(data, all);

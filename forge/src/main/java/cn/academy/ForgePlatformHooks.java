@@ -39,6 +39,25 @@ public final class ForgePlatformHooks {
         cn.academy.platform.network.Network.install(
                 new cn.academy.platform.network.ForgeNetworkTransport());
         cn.academy.platform.network.AcademyPackets.register();
+        PlatformHooks.installAbilityData(new PlatformHooks.AbilityDataAccess() {
+            @Override
+            public cn.academy.ability.AbilityData get(net.minecraft.world.entity.player.Player player) {
+                return player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
+                        .resolve().orElse(null);
+            }
+
+            @Override
+            public void set(net.minecraft.world.entity.player.Player player,
+                            cn.academy.ability.AbilityData data) {
+                player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA).ifPresent(current -> {
+                    // La capacite tient une instance fixe : on la remplit au lieu de la remplacer,
+                    // sinon tous les LazyOptional deja distribues pointeraient sur du vide.
+                    if (current != data) current.copyFrom(data);
+                });
+            }
+        });
+        PlatformHooks.installCategoryChangeHook(
+                cn.academy.ability.preset.PresetTracker::clearOnCategoryChange);
         PlatformHooks.installAdvancementHooks(new PlatformHooks.AdvancementHooks() {
             @Override
             public void award(net.minecraft.world.entity.player.Player player,
@@ -48,6 +67,7 @@ public final class ForgePlatformHooks {
                     case OVERLOAD -> cn.academy.advancements.AcademyAdvancements.AC_OVERLOAD;
                     case LEARNING_SKILL -> cn.academy.advancements.AcademyAdvancements.AC_LEARNING_SKILL;
                     case EXP_FULL -> cn.academy.advancements.AcademyAdvancements.AC_EXP_FULL;
+                    case CONVERT_CATEGORY -> cn.academy.advancements.AcademyAdvancements.CONVERT_CATEGORY;
                 };
                 cn.academy.advancements.AcademyAdvancements.award(server, name);
             }

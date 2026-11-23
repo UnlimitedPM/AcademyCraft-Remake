@@ -4,6 +4,17 @@
 
 ### Français
 
+- Les aptitudes avancent vers `common/`. Les données par joueur passent par un service neutre
+  (`PlatformHooks.installAbilityData`, `abilityData(Player)`), adossé à la capacité Forge et, sous
+  Fabric, à une table en mémoire (non persistante, et documentée comme telle). Un crochet
+  `categoryChanged` remplace l'appel direct au pré-réglage Forge, `AcademySounds` devient commun
+  (un son se nomme par identifiant, et son `Supplier` accepte aussi bien un `RegistryObject` Forge
+  qu'un son Fabric), et `CONVERT_CATEGORY` rejoint les succès neutres. Passe en `common/` : tout le
+  développement (actions, niveaux, apprentissage), le modèle de pré-réglage, les compétences
+  génériques, `FactorItem`, `TargetingUtil` et la plupart des compétences électromaster, meltdowner
+  et téléporteur qui ne parlent pas au réseau Forge. Restent côté Forge celles qui envoient encore
+  un paquet propre au chargeur ou touchent une entité Forge : leurs paquets doivent d'abord passer
+  par `Network`. 27 fichiers déplacés ; les quatre modules compilent et les 182 GameTests sont verts.
 - Nouvelle branche `feat/multiloader` : le dépôt est découpé en modules `common`, `forge`,
   `neoforge` et `fabric`, avec un build Gradle unique. Le jar Fabric sert aussi pour Quilt.
 - Le code du portage 1.12.2 → 1.20.1 est déplacé dans `forge/` sans changement de comportement.
@@ -40,6 +51,17 @@
 
 ### English
 
+- Abilities move closer to `common/`. Per-player state goes through a neutral service
+  (`PlatformHooks.installAbilityData`, `abilityData(Player)`), backed by the Forge capability and,
+  under Fabric, by an in-memory table (not persistent yet, and documented as such). A
+  `categoryChanged` hook replaces the direct Forge preset call, `AcademySounds` becomes common (a
+  sound is named by id, and its `Supplier` accepts a Forge `RegistryObject` as well as a Fabric
+  sound), and `CONVERT_CATEGORY` joins the neutral advancements. Moved to `common/`: the whole
+  development flow (actions, levels, learning), the preset model, the generic skills,
+  `FactorItem`, `TargetingUtil` and most electromaster, meltdowner and teleporter skills that do
+  not talk to the Forge network. The ones that still send a loader-specific packet or touch a
+  Forge entity stay Forge until their packets go through `Network`. 27 files moved; all four
+  modules compile and the 182 GameTests are green.
 - New `feat/multiloader` branch: the repository is split into `common`, `forge`, `neoforge` and
   `fabric` modules with a single Gradle build. The Fabric jar also serves Quilt.
 - The 1.12.2 → 1.20.1 port code moved into `forge/` with no behaviour change. `run/` and

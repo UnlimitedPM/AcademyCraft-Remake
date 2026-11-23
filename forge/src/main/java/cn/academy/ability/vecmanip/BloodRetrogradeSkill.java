@@ -186,7 +186,7 @@ public class BloodRetrogradeSkill extends Skill {
         // passe par le meme paquet. Voir BloodSplashes.
         cn.academy.ability.network.BloodSplashPacket.send(target);
         // Le son du coup, entendu du seul joueur qui l'a porte : c'est le
-        // `playClient(player, "vecmanip.blood_retro", AMBIENT, 1.0f)` de l'original.
+        // `playClient(player, cn.academy.ModSounds.VECMANIP_BLOOD_RETRO, AMBIENT, 1.0f)` de l'original.
         cn.academy.sound.AcademySounds.playFor(player, cn.academy.ModSounds.VECMANIP_BLOOD_RETRO, 1f);
         // Et les taches au sol : l'original les tirait de la TETE de sa victime, neuf directions de
         // cinq blocs, deux par bloc rencontre. Le port les tire du meme endroit et avec les memes

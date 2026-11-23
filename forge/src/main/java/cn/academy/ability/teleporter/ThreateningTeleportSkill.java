@@ -1,6 +1,5 @@
 package cn.academy.ability.teleporter;
 
-import cn.academy.ModItems;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.TargetingUtil;
@@ -10,7 +9,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Competence chargee, portage de ThreateningTeleport : le joueur lance l'objet qu'il
@@ -39,7 +38,7 @@ public class ThreateningTeleportSkill extends Skill {
     /** Degats de l'objet tenu : une aiguille fait moitie plus mal, comme l'original. */
     public float damage(AbilityData data, ItemStack stack) {
         float base = damage(data);
-        return stack.is(ModItems.NEEDLE.get()) ? base * 1.5f : base;
+        return stack.is(cn.academy.content.AcademyContent.item("needle")) ? base * 1.5f : base;
     }
 
     /** Portee du lancer : de 8 a 15 blocs. */

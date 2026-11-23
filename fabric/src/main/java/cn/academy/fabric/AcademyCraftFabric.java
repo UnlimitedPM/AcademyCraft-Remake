@@ -15,6 +15,7 @@ public final class AcademyCraftFabric implements ModInitializer {
         AcademyCraftCommon.init();
         cn.academy.Config.load(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir());
         FabricPlatformHooks.install();
+        FabricAbilityData.install();
         FabricNetworkTransport.installServer();
         cn.academy.platform.network.AcademyPackets.register();
         FabricContent.register();

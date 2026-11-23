@@ -1,6 +1,6 @@
 package cn.academy.ability.generic;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.Skill;
@@ -91,7 +91,7 @@ public final class GenericSkills {
 
         @Override
         public ResourceLocation getHintIcon() {
-            return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+            return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                     "textures/abilities/generic/skills/" + getName() + ".png");
         }
     }

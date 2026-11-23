@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -76,8 +75,8 @@ public class TeleportDistancePacket {
             Skill skill = category.getSkill(msg.skillId);
             if (!(skill instanceof PenetrateTeleportSkill)) return;
 
-            player.getCapability(AbilityCapability.ABILITY_DATA)
-                    .ifPresent(data -> handle(data, skill, msg.distance));
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) handle(data, skill, msg.distance);
         });
         ctx.setPacketHandled(true);
     }

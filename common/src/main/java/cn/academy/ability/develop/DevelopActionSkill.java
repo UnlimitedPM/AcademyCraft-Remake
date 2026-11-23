@@ -1,6 +1,5 @@
 package cn.academy.ability.develop;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import net.minecraft.world.entity.player.Player;
@@ -51,15 +50,15 @@ public class DevelopActionSkill implements DevelopAction {
 
     @Override
     public boolean validate(Player player, DeveloperType developer) {
-        Optional<AbilityData> data = player.getCapability(AbilityCapability.ABILITY_DATA).resolve();
-        if (data.isEmpty()) return false;
-        if (data.get().isSkillLearned(skill)) return false;
-        return LearningHelper.canLearn(data.get(), skill, developer);
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data == null) return false;
+        if (data.isSkillLearned(skill)) return false;
+        return LearningHelper.canLearn(data, skill, developer);
     }
 
     @Override
     public void onLearned(Player player) {
-        player.getCapability(AbilityCapability.ABILITY_DATA)
-                .ifPresent(data -> data.learnSkill(skill));
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data != null) data.learnSkill(skill);
     }
 }

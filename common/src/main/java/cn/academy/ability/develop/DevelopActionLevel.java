@@ -1,6 +1,5 @@
 package cn.academy.ability.develop;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import net.minecraft.world.entity.player.Player;
@@ -89,6 +88,6 @@ public class DevelopActionLevel implements DevelopAction {
     }
 
     private static AbilityData dataOf(Player player) {
-        return player.getCapability(AbilityCapability.ABILITY_DATA).resolve().orElse(null);
+        return cn.academy.platform.PlatformHooks.abilityData(player);
     }
 }

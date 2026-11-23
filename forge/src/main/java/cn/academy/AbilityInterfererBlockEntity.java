@@ -11,7 +11,7 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import cn.academy.ability.AbilityCapability;
+import cn.academy.ability.AbilityData;
 import cn.academy.energy.ConfigText;
 import cn.academy.energy.EnergyReceiver;
 import cn.academy.energy.NodeFinder;
@@ -203,8 +203,8 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
 
             stillAffected.add(player.getUUID());
             affected.put(player.getUUID(), serverPlayer);
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data ->
-                    data.addInterference(key, this::isStillInterfering));
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) data.addInterference(key, this::isStillInterfering);
         }
 
         // Les joueurs sortis du rayon ne doivent plus etre brouilles.
@@ -268,8 +268,8 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     private void release(ServerLevel level, UUID uuid) {
         ServerPlayer player = affected.remove(uuid);
         if (player == null) return;
-        player.getCapability(AbilityCapability.ABILITY_DATA)
-                .ifPresent(data -> data.removeInterference(sourceKey(level)));
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+        if (data != null) data.removeInterference(sourceKey(level));
     }
 
     /** Detache la source de tous les joueurs brouilles. */

@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Category;
@@ -68,7 +67,8 @@ public class ActivateSkillPacket {
             if (category == null) return;
             Skill skill = category.getSkill(msg.skillId);
             if (skill == null) return;
-            player.getCapability(AbilityCapability.ABILITY_DATA).ifPresent(data -> handle(player, data, skill, msg.phase));
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) handle(player, data, skill, msg.phase);
         });
         ctx.setPacketHandled(true);
     }

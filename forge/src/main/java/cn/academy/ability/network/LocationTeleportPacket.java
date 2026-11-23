@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -83,8 +82,8 @@ public class LocationTeleportPacket {
             Skill skill = category.getSkill(msg.skillId);
             if (!(skill instanceof LocationTeleportSkill teleport)) return;
 
-            player.getCapability(AbilityCapability.ABILITY_DATA)
-                    .ifPresent(data -> handle(player, data, teleport, msg));
+            AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
+            if (data != null) handle(player, data, teleport, msg);
         });
         ctx.setPacketHandled(true);
     }
