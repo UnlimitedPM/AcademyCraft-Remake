@@ -356,7 +356,8 @@ public class AbilityEvents {
         // La marque de radiation multiplie les degats recus, d'ou qu'ils viennent : c'est ce
         // que faisait l'original dans son propre evenement. Le port l'applique en premier, pour
         // que les crochets des competences partent des degats deja augmentes.
-        cn.academy.ability.meltdowner.RadiationMarks.apply(event);
+        event.setAmount(cn.academy.ability.meltdowner.RadiationMarks.applyAmount(
+                event.getEntity(), event.getAmount()));
         if (!(event.getEntity() instanceof Player player)) return;
         AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
         if (data == null) return;

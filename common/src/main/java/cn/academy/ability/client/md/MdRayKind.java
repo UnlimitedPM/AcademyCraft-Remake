@@ -1,6 +1,6 @@
 package cn.academy.ability.client.md;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -359,7 +359,6 @@ public record MdRayKind(String name,
     }
 
     private static ResourceLocation texture(String ray, String part) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
-                "textures/effects/" + ray + "/" + part + ".png");
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/" + ray + "/" + part + ".png");
     }
 }

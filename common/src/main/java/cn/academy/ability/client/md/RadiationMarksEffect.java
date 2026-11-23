@@ -4,8 +4,6 @@ import cn.academy.ability.meltdowner.RadiationMarks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.Random;
 
@@ -42,7 +40,6 @@ import java.util.Random;
  * <p>Elle se joue chez <b>chaque</b> joueur qui voit la cible, et pas seulement chez le tireur :
  * c'est ce que le paquet de la marque annonce. Voir {@code RadiationMarkPacket}.
  */
-@OnlyIn(Dist.CLIENT)
 public final class RadiationMarksEffect {
 
     /** Le nombre d'etincelles d'un tick : de 0 a 2, borne haute exclue. */

@@ -59,11 +59,7 @@ public class AbilityNetwork {
         // eclairs, et c'est lui qui porte le son a jouer. Voir MdRayPacket.
         CHANNEL.registerMessage(nextId++, MdRayPacket.class,
                 MdRayPacket::encode, MdRayPacket::decode, MdRayPacket::handle);
-        // La marque de radiation : c'est elle qui fait fumer le plasma autour d'une cible, chez
-        // tous ceux qui la voient. Voir RadiationMarkPacket.
-        CHANNEL.registerMessage(nextId++, RadiationMarkPacket.class,
-                RadiationMarkPacket::encode, RadiationMarkPacket::decode,
-                RadiationMarkPacket::handle);
+        // La marque de radiation et son fumee sont communes desormais : voir AcademyPackets.
         // Les sept effets d'onde, de trainee, de critique, de sang, de fumee, de taches et de tir
         // de plasma sont communs desormais : voir AcademyPackets.
         // L'anneau de plasma du missile electronique : un tick de plus, chez son lanceur seul.

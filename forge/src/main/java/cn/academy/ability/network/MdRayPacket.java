@@ -1,10 +1,9 @@
 package cn.academy.ability.network;
 
+import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : un rayon du meltdowner est parti, et voici ses deux bouts.
@@ -59,7 +58,7 @@ public class MdRayPacket {
         return new MdRayPacket(kind, from, to, buf.readInt());
     }
 
-    public static void handle(MdRayPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+    public static void handle(MdRayPacket msg, java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> cn.academy.ability.client.md.MdRayView.spawn(
                 cn.academy.ability.client.md.MdRayKind.byName(msg.kind),

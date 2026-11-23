@@ -1,8 +1,6 @@
 package cn.academy.ability.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * La pause du jeu, telle que les crochets clients doivent la lire.
@@ -33,7 +31,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * non publie), et c'est voulu : la-bas le monde continue de tourner, donc les effets doivent
  * suivre.
  */
-@OnlyIn(Dist.CLIENT)
 public final class ClientPause {
 
     private ClientPause() {}

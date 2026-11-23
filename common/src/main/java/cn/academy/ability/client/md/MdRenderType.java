@@ -84,7 +84,7 @@ public final class MdRenderType {
     }
 
     private static RenderType createEmissive(ResourceLocation texture) {
-        return RenderType.create("academy_md_emissive", DefaultVertexFormat.NEW_ENTITY,
+        return cn.academy.client.render.RenderTypes.create("academy_md_emissive", DefaultVertexFormat.NEW_ENTITY,
                 VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(
@@ -116,7 +116,7 @@ public final class MdRenderType {
      */
     public static RenderType flat() {
         if (flat == null) {
-            flat = RenderType.create("academy_md_flat", DefaultVertexFormat.POSITION_COLOR,
+            flat = cn.academy.client.render.RenderTypes.create("academy_md_flat", DefaultVertexFormat.POSITION_COLOR,
                     VertexFormat.Mode.QUADS, 256, false, true,
                     RenderType.CompositeState.builder()
                             .setShaderState(new RenderStateShard.ShaderStateShard(
@@ -142,7 +142,7 @@ public final class MdRenderType {
      */
     public static RenderType caps() {
         if (caps == null) {
-            caps = RenderType.create("academy_md_caps", DefaultVertexFormat.POSITION_COLOR,
+            caps = cn.academy.client.render.RenderTypes.create("academy_md_caps", DefaultVertexFormat.POSITION_COLOR,
                     VertexFormat.Mode.QUADS, 256, false, true,
                     RenderType.CompositeState.builder()
                             .setShaderState(new RenderStateShard.ShaderStateShard(
@@ -156,7 +156,7 @@ public final class MdRenderType {
     }
 
     private static RenderType create(ResourceLocation texture) {
-        return RenderType.create("academy_md", DefaultVertexFormat.POSITION_COLOR_TEX,
+        return cn.academy.client.render.RenderTypes.create("academy_md", DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS, 256, false, true,
                 RenderType.CompositeState.builder()
                         .setShaderState(new RenderStateShard.ShaderStateShard(

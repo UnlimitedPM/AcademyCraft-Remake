@@ -1,9 +1,7 @@
 package cn.academy.ability.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * S2C : une cible vient d'etre marquee par la radiation, et voici pour combien de temps.
@@ -39,11 +37,8 @@ public class RadiationMarkPacket {
         return new RadiationMarkPacket(buf.readVarInt(), buf.readVarInt());
     }
 
-    public static void handle(RadiationMarkPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.md.RadiationMarksEffect.apply(
-                msg.entityId, msg.ticks));
-        ctx.setPacketHandled(true);
+    public static void handle(RadiationMarkPacket msg) {
+        cn.academy.ability.client.md.RadiationMarksEffect.apply(msg.entityId, msg.ticks);
     }
 
     /** La cible marquee. Lisible par le test, qui relit l'aller-retour du paquet. */

@@ -1,8 +1,6 @@
 package cn.academy.ability.client;
 
 import net.minecraft.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * L'horloge des effets du client : le temps reel, <b>moins les pauses</b>.
@@ -42,7 +40,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * ({@code level.getGameTime()}, qui porte la vie des eclairs) ni le tick du client. Les effets qui
  * vieillissent au tick continuent de le faire — voir {@code ArcRenderer} et {@code ClientArcs}.
  */
-@OnlyIn(Dist.CLIENT)
 public final class EffectClock {
 
     /** L'instant ou la pause en cours s'est ouverte, ou zero s'il n'y en a pas. */

@@ -1,6 +1,6 @@
 package cn.academy.ability.client.md;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
@@ -53,8 +53,7 @@ public final class MdSparks {
     public static final double SIZE_MAX = 0.07;
 
     /** L'image de la bille de plasma, celle de toutes les etincelles du plasma. */
-    public static final ResourceLocation PLAIN = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/md_particle.png");
+    public static final ResourceLocation PLAIN = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/md_particle.png");
 
     /**
      * Et l'etoile de la chance, que l'original ne donnait qu'a un seul rayon.
@@ -63,8 +62,7 @@ public final class MdSparks {
      * {@code md_particle_luck}, une etoile a quatre branches. C'est la seule entite de tout le
      * plasma a le faire : les deux autres rayons miniers crachaient la bille ordinaire.
      */
-    public static final ResourceLocation LUCK = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/md_particle_luck.png");
+    public static final ResourceLocation LUCK = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/effects/md_particle_luck.png");
 
     /** Une etincelle vivante. */
     public static final class Spark {

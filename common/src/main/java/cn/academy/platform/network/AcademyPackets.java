@@ -74,5 +74,10 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.PlasmaShotPacket::encode,
                         cn.academy.ability.network.PlasmaShotPacket::decode),
                 cn.academy.ability.network.PlasmaShotPacket::handle);
+
+        Network.clientbound("radiation_mark", cn.academy.ability.network.RadiationMarkPacket.class,
+                Network.codec(cn.academy.ability.network.RadiationMarkPacket::encode,
+                        cn.academy.ability.network.RadiationMarkPacket::decode),
+                cn.academy.ability.network.RadiationMarkPacket::handle);
     }
 }
