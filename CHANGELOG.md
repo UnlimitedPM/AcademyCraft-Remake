@@ -4,6 +4,12 @@
 
 ### Français
 
+- Les entités de l'électromaster passent en `common/` : `EntityMagHook` (le grappin),
+  `EntityMagManipBlock` (le bloc manipulé) et `MagHookVisuals`. Elles ne nomment plus
+  `ModEntities`/`ModItems` mais retrouvent leur type et leur objet par identifiant
+  (`AcademyContent`), comme la bille de silicium ; `MetalTargets` perd aussi ses deux fabriques de
+  `ResourceLocation` propres à NeoForge. Quatre copies périmées dans `forge/` ont été supprimées au
+  passage.
 - **Tout le paquet `ability/vecmanip` est commun**, avec les trois barrières qui le retenaient :
   `BlockBreaking` ne nomme plus les statiques des catégories mais retrouve ses compétences par clé
   dans `CategoryManager` (avec une surcharge `byKey(manager, clé)` pour que les tests partent d'un
@@ -69,6 +75,11 @@
 
 ### English
 
+- The electromaster entities move to `common/`: `EntityMagHook` (the hook), `EntityMagManipBlock`
+  (the held block) and `MagHookVisuals`. They no longer name `ModEntities`/`ModItems` but resolve
+  their type and item by id (`AcademyContent`), the way the silbarn does; `MetalTargets` also loses
+  its two NeoForge-only `ResourceLocation` factories. Four stale copies in `forge/` were removed on
+  the way.
 - **The whole `ability/vecmanip` package is common**, along with the three barriers that held it:
   `BlockBreaking` no longer names the category statics but resolves its skills by key through
   `CategoryManager` (with a `byKey(manager, key)` overload so tests start from a fresh registry);
