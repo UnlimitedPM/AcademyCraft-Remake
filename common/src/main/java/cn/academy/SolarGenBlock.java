@@ -24,12 +24,22 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.function.BiFunction;
+import java.util.function.Supplier;
+
 public class SolarGenBlock extends Block implements EntityBlock {
 
     public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
 
-    public SolarGenBlock(Properties properties) {
+    private final Supplier<BlockEntityType<? extends SolarGenBlockEntity>> type;
+    private final BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public SolarGenBlock(Properties properties,
+                         Supplier<BlockEntityType<? extends SolarGenBlockEntity>> type,
+                         BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
+        this.type = type;
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH));
     }
@@ -58,13 +68,13 @@ public class SolarGenBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new SolarGenBlockEntity(pos, state);
+        return blockEntities.apply(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return type == ModBlockEntities.SOLAR_GEN.get()
+        return type == this.type.get()
                 ? (lvl, pos, st, be) -> SolarGenBlockEntity.tick(lvl, pos, st, (SolarGenBlockEntity) be)
                 : null;
     }

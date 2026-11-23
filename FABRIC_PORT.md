@@ -62,6 +62,12 @@ qui, elles, touchent Forge. Le portage doit donc se faire par domaine, pas par f
 - ouverture de menu neutralisée : `PlatformHooks.openMenu` remplace les 11 appels à
   `NetworkHooks.openScreen` ; Forge installe l'implémentation, Fabric branche la sienne
   (`FabricPlatformHooks`, via `ExtendedScreenHandlerFactory`) ;
+- générateur solaire entièrement dans `common/` (`SolarGenBlock`, `SolarGenBlockEntity`,
+  `SolarGenMenu`) : le type de block entity et le type de menu sont injectés par le chargeur,
+  Forge/NeoForge n'ajoutent qu'une sous-classe à capabilities (`ForgeSolarGenBlockEntity`) et un
+  adaptateur `EnergyStorage` → `IEnergyStorage`. Fabric l'enregistre avec un
+  `ExtendedScreenHandlerType` (position du bloc en données d'ouverture). Le raccordement au
+  réseau passe par `PlatformHooks.ensureNodeLinked`, que Forge branche sur `NodeFinder` ;
 - les 47 événements sonores de `ModSounds`, mêmes identifiants que `sounds.json` ;
 - un onglet créatif `itemGroup.academy_tab` ;
 - les assets du mod (textures, modèles, langues) sont repris de `forge/src/main/resources` ;

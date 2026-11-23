@@ -12,7 +12,8 @@ public class ModMenus {
             DeferredRegister.create(ForgeRegistries.MENU_TYPES, AcademyCraft.MOD_ID);
 
     public static final RegistryObject<MenuType<SolarGenMenu>> SOLAR_GEN =
-            MENUS.register("solar_gen", () -> IForgeMenuType.create(SolarGenMenu::new));
+            MENUS.register("solar_gen", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new SolarGenMenu(ModMenus.SOLAR_GEN.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<MatrixMenu>> MATRIX =
             MENUS.register("matrix", () -> IForgeMenuType.create(MatrixMenu::new));

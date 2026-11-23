@@ -3,6 +3,7 @@ package cn.academy.platform;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
@@ -40,9 +41,17 @@ public final class PlatformHooks {
         int pushToNeighbor(Level level, BlockPos pos, Direction side, int amount, boolean simulate);
     }
 
+    /** Raccordement d'une machine a un noeud sans fil (le noeud lui-meme est cote chargeur). */
+    @FunctionalInterface
+    public interface NodeLinker {
+        boolean ensureLinked(ServerLevel level, BlockPos pos);
+    }
+
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
 
     private static MenuOpener menuOpener = (player, provider, writer) -> player.openMenu(provider);
+
+    private static NodeLinker nodeLinker = (level, pos) -> false;
 
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
         @Override
@@ -76,6 +85,10 @@ public final class PlatformHooks {
         externalEnergyIO = io;
     }
 
+    public static void installNodeLinker(NodeLinker linker) {
+        nodeLinker = linker;
+    }
+
     public static boolean hasExternalEnergy(ItemStack stack) {
         return !stack.isEmpty() && externalEnergyProbe.isExternalEnergyItem(stack);
     }
@@ -90,6 +103,10 @@ public final class PlatformHooks {
 
     public static int pushEnergyToNeighbor(Level level, BlockPos pos, Direction side, int amount, boolean simulate) {
         return externalEnergyIO.pushToNeighbor(level, pos, side, amount, simulate);
+    }
+
+    public static boolean ensureNodeLinked(ServerLevel level, BlockPos pos) {
+        return nodeLinker.ensureLinked(level, pos);
     }
 
     public static void openMenu(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer) {

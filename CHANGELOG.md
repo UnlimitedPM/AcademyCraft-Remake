@@ -19,9 +19,11 @@
 - Fabric (et Quilt) a son premier palier : 20 objets, 5 blocs, 47 sons, l'unité d'énergie, le
   moteur à chat, onze classes du réseau d'énergie, huit utilitaires, le stockage objet neutre
   (`SimpleItemStorage` avec sauvegarde NBT), `TooltipItem` et les crochets menu/énergie portés
-  dans `common/`, plus un onglet créatif. SolarGen utilise déjà le stockage commun. Le client
-  Fabric démarre, charge un monde et installe son ouverture de menu. Le plan du reste est dans
-  `FABRIC_PORT.md`.
+  dans `common/`, plus un onglet créatif. Le générateur solaire est maintenant entièrement dans
+  `common/` (bloc, block entity, menu) : Forge et NeoForge n'ajoutent que les capabilities via une
+  sous-classe, Fabric l'enregistre avec son menu à données d'ouverture. Le raccordement au réseau
+  passe par un crochet `PlatformHooks` de plus. Le client Fabric démarre, charge un monde et
+  installe son ouverture de menu. Le plan du reste est dans `FABRIC_PORT.md`.
 
 ### English
 
@@ -40,9 +42,11 @@
 - Fabric (and Quilt) got its first milestone: 20 items, 5 blocks, 47 sounds, the energy unit, the
   cat engine, eleven energy-network classes, eight helpers, the neutral item storage layer
   (`SimpleItemStorage` with NBT persistence), `TooltipItem` and the menu/energy hooks moved to
-  `common/`, plus a creative tab. SolarGen already uses the common storage. The Fabric client
-  starts, loads a world and installs its menu opener. The rest of the plan is in
-  `FABRIC_PORT.md`.
+  `common/`, plus a creative tab. The solar generator now lives entirely in `common/` (block,
+  block entity, menu): Forge and NeoForge only add capabilities through a subclass, while Fabric
+  registers it with its extended screen handler menu. Node linking goes through one more
+  `PlatformHooks` service. The Fabric client starts, loads a world and installs its menu opener.
+  The rest of the plan is in `FABRIC_PORT.md`.
 
 ## 1.0.4 - la lumiere et les ombres / light and shadows
 

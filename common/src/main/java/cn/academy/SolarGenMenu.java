@@ -7,10 +7,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import cn.academy.platform.storage.StorageSlot;
 
 public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachine {
@@ -34,8 +34,8 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
         return blockEntity.getBlockPos();
     }
 
-    public SolarGenMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public SolarGenMenu(MenuType<SolarGenMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static SolarGenBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -44,8 +44,8 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
         throw new IllegalStateException("No SolarGenBlockEntity at " + pos);
     }
 
-    public SolarGenMenu(int containerId, Inventory playerInventory, SolarGenBlockEntity blockEntity) {
-        super(ModMenus.SOLAR_GEN.get(), containerId);
+    public SolarGenMenu(MenuType<SolarGenMenu> type, int containerId, Inventory playerInventory, SolarGenBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
@@ -122,6 +122,6 @@ public class SolarGenMenu extends AbstractContainerMenu implements WirelessMachi
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.SOLAR_GEN.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

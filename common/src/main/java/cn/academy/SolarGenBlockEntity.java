@@ -1,9 +1,11 @@
 package cn.academy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.energy.EnergyGenerator;
+import cn.academy.platform.storage.EnergyStorage;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -16,16 +18,11 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.IEnergyStorage;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Generateur solaire. Portage de {@code TileSolarGen} et de {@code TileGeneratorBase}.
@@ -67,8 +64,8 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     /** Cadence de verification du raccordement, en ticks. */
     private static final int LINK_CHECK_INTERVAL = 100;
 
-    private final cn.academy.platform.storage.SimpleItemStorage inventory =
-            new cn.academy.platform.storage.SimpleItemStorage(1, slot -> 64,
+    private final SimpleItemStorage inventory =
+            new SimpleItemStorage(1, slot -> 64,
                     (slot, stack) -> stack.isEmpty() || cn.academy.energy.EnergyItems.isEnergyItem(stack),
                     this::setChanged);
 
@@ -79,12 +76,19 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
 
     private int searchTicker;
 
-    private final LazyOptional<IItemHandler> itemHandlerCap =
-            LazyOptional.of(() -> new cn.academy.platform.storage.ForgeItemHandlerAdapter(inventory));
-    private final LazyOptional<IEnergyStorage> energyCap = LazyOptional.of(ForgeEnergyAdapter::new);
+    private final BlockEntityType<?> type;
+    private final MenuType<SolarGenMenu> menuType;
 
-    public SolarGenBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.SOLAR_GEN.get(), pos, state);
+    public SolarGenBlockEntity(BlockEntityType<?> type, MenuType<SolarGenMenu> menuType,
+                               BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.type = type;
+        this.menuType = menuType;
+    }
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public BlockEntityType<?> entityType() {
+        return type;
     }
 
     // ------------------------------------------------------------------
@@ -223,7 +227,7 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
      * machines du reseau.
      */
     private void ensureLinked(ServerLevel level) {
-        setLinked(cn.academy.energy.NodeFinder.ensureLinked(level, worldPosition));
+        setLinked(cn.academy.platform.PlatformHooks.ensureNodeLinked(level, worldPosition));
     }
 
     /**
@@ -243,7 +247,7 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     }
 
     // ------------------------------------------------------------------
-    // Capacites Forge
+    // Energie neutre
     // ------------------------------------------------------------------
 
     public int getEnergyStored() {
@@ -254,58 +258,45 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
         return (int) BUFFER_SIZE;
     }
 
-    /** Vue Forge Energy du tampon : les machines voisines peuvent venir y puiser. */
-    private final class ForgeEnergyAdapter implements IEnergyStorage {
-        @Override
-        public int receiveEnergy(int toReceive, boolean simulate) {
-            return 0; // un generateur ne se recharge pas par ce chemin
-        }
-
-        @Override
-        public int extractEnergy(int toExtract, boolean simulate) {
-            if (toExtract <= 0) return 0;
-            double given = Math.min(toExtract, energy);
-            if (!simulate && given > 0.0d) {
-                energy -= given;
-                setChanged();
+    /** Vue neutre du tampon : les machines voisines peuvent venir y puiser. */
+    public EnergyStorage energyStorage() {
+        return new EnergyStorage() {
+            @Override
+            public int receiveEnergy(int toReceive, boolean simulate) {
+                return 0; // un generateur ne se recharge pas par ce chemin
             }
-            return (int) given;
-        }
 
-        @Override
-        public int getEnergyStored() {
-            return (int) energy;
-        }
+            @Override
+            public int extractEnergy(int toExtract, boolean simulate) {
+                if (toExtract <= 0) return 0;
+                double given = Math.min(toExtract, energy);
+                if (!simulate && given > 0.0d) {
+                    energy -= given;
+                    setChanged();
+                }
+                return (int) given;
+            }
 
-        @Override
-        public int getMaxEnergyStored() {
-            return (int) BUFFER_SIZE;
-        }
+            @Override
+            public int getEnergyStored() {
+                return (int) energy;
+            }
 
-        @Override
-        public boolean canExtract() {
-            return true;
-        }
+            @Override
+            public int getMaxEnergyStored() {
+                return (int) BUFFER_SIZE;
+            }
 
-        @Override
-        public boolean canReceive() {
-            return false;
-        }
-    }
+            @Override
+            public boolean canExtract() {
+                return true;
+            }
 
-    @Nonnull
-    @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER) return itemHandlerCap.cast();
-        if (cap == ForgeCapabilities.ENERGY) return energyCap.cast();
-        return super.getCapability(cap, side);
-    }
-
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        itemHandlerCap.invalidate();
-        energyCap.invalidate();
+            @Override
+            public boolean canReceive() {
+                return false;
+            }
+        };
     }
 
     // ------------------------------------------------------------------
@@ -347,15 +338,15 @@ public class SolarGenBlockEntity extends BlockEntity implements MenuProvider, En
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new SolarGenMenu(containerId, playerInventory, this);
+        return new SolarGenMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("block.academy.solar_gen");
+        return getBlockState().getBlock().getName();
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
+    public ItemStorage getInventory() {
         return inventory;
     }
 }

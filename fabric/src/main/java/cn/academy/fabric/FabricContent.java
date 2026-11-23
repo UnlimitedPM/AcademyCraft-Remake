@@ -4,13 +4,18 @@ import cn.academy.AcademyCraftCommon;
 import cn.academy.CatEngineBlock;
 import cn.academy.CatEngineBlockEntity;
 import cn.academy.EnergyUnitItem;
+import cn.academy.SolarGenBlock;
+import cn.academy.SolarGenBlockEntity;
+import cn.academy.SolarGenMenu;
 import cn.academy.TooltipItem;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
+import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -39,6 +44,12 @@ public final class FabricContent {
 
     /** Type de block entity du moteur a chat ; expose pour le rendu client. */
     public static BlockEntityType<CatEngineBlockEntity> CAT_ENGINE_TYPE;
+
+    /** Type de block entity du generateur solaire, partage avec Forge/NeoForge. */
+    public static BlockEntityType<SolarGenBlockEntity> SOLAR_GEN_TYPE;
+
+    /** Menu du generateur solaire (donnees d'ouverture : position du bloc). */
+    public static MenuType<SolarGenMenu> SOLAR_GEN_MENU;
 
     public static void register() {
         FabricSounds.register();
@@ -87,6 +98,21 @@ public final class FabricContent {
                         (pos, state) -> new CatEngineBlockEntity(CAT_ENGINE_TYPE, pos, state),
                         catEngine).build(null));
         register("cat_engine", new BlockItem(catEngine, new Item.Properties()));
+
+        // --- Generateur solaire : premiere machine complete portee depuis common/ ---
+        SOLAR_GEN_MENU = Registry.register(BuiltInRegistries.MENU, id("solar_gen"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new SolarGenMenu(FabricContent.SOLAR_GEN_MENU, syncId, inventory, buf)));
+        Block solarGen = new SolarGenBlock(
+                BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL),
+                () -> SOLAR_GEN_TYPE,
+                (pos, state) -> new SolarGenBlockEntity(SOLAR_GEN_TYPE, SOLAR_GEN_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("solar_gen"), solarGen);
+        SOLAR_GEN_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("solar_gen"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new SolarGenBlockEntity(SOLAR_GEN_TYPE, SOLAR_GEN_MENU, pos, state),
+                        solarGen).build(null));
+        register("solar_gen", new BlockItem(solarGen, new Item.Properties()));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()

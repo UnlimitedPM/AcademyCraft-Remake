@@ -23,7 +23,10 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<SolarGenBlockEntity>> SOLAR_GEN =
             BLOCK_ENTITIES.register("solar_gen", () ->
-                    BlockEntityType.Builder.of(SolarGenBlockEntity::new, ModBlocks.SOLAR_GEN.get()).build(null));
+                    BlockEntityType.Builder.<SolarGenBlockEntity>of(
+                            (pos, state) -> new ForgeSolarGenBlockEntity(
+                                    ModBlockEntities.SOLAR_GEN.get(), ModMenus.SOLAR_GEN.get(), pos, state),
+                            ModBlocks.SOLAR_GEN.get()).build(null));
 
     /**
      * Un seul type pour les trois qualites de noeud : la qualite se deduit du

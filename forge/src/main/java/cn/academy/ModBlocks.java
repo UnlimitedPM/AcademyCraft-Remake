@@ -71,7 +71,10 @@ public class ModBlocks {
                             (state.getValue(PhaseGeneratorBlock.LEVEL) > 0 ? 12 : 0) : 0)));
 
     public static final RegistryObject<SolarGenBlock> SOLAR_GEN = registerBlock("solar_gen",
-            () -> new SolarGenBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL)));
+            () -> new SolarGenBlock(BlockBehaviour.Properties.of().strength(3.5f).sound(SoundType.METAL),
+                    () -> ModBlockEntities.SOLAR_GEN.get(),
+                    (pos, state) -> new ForgeSolarGenBlockEntity(ModBlockEntities.SOLAR_GEN.get(),
+                            ModMenus.SOLAR_GEN.get(), pos, state)));
 
     public static final RegistryObject<Block> CAT_ENGINE = BLOCKS.register("cat_engine",
             () -> new CatEngineBlock(BlockBehaviour.Properties.of().noOcclusion(),

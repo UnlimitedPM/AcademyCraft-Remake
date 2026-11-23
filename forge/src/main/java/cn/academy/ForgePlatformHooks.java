@@ -25,6 +25,7 @@ public final class ForgePlatformHooks {
                 && stack.getCapability(ForgeCapabilities.ENERGY).isPresent());
         PlatformHooks.installMenuOpener((player, provider, writer) ->
                 NetworkHooks.openScreen(player, provider, writer));
+        PlatformHooks.installNodeLinker(cn.academy.energy.NodeFinder::ensureLinked);
         PlatformHooks.installExternalEnergyIO(new PlatformHooks.ExternalEnergyIO() {
             @Override
             public int chargeItem(ItemStack stack, int amount, boolean simulate) {
