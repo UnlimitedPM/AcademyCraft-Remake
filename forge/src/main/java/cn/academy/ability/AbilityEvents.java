@@ -314,7 +314,7 @@ public class AbilityEvents {
                     // Meme regle que pour les degats : une passive est toujours la, une tenue
                     // seulement pendant son maintien.
                     if (skill.isPassive() || data.isCharging(skill)) {
-                        if (skill.onAttacked(player, data, event)) {
+                        if (skill.onAttacked(player, data, event.getSource(), event.getAmount())) {
                             event.setCanceled(true);
                             return;
                         }
@@ -364,7 +364,7 @@ public class AbilityEvents {
                     // Une passive est toujours la ; une competence tenue ne l'est que
                     // pendant son maintien, sinon le bouclier absorberait sans etre tenu.
                     if (skill.isPassive() || data.isCharging(skill)) {
-                        event.setAmount(skill.onDamaged(player, data, event));
+                        event.setAmount(skill.onDamaged(player, data, event.getSource(), event.getAmount()));
                     }
                 }
             }

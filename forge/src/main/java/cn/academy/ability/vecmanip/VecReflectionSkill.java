@@ -14,8 +14,8 @@ import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraft.world.damagesource.DamageSource;
+
 
 /**
  * La reflexion de vecteur, portage de {@code VecReflection} : tant qu'on la tient, ce qui
@@ -24,17 +24,17 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *
  * <p>C'est la seconde competence de vecmanip a s'appuyer sur {@link EntityAffection}, et la
  * soeur de {@code vec_deviation} : meme veille, meme marque, meme exclusion de tout ce qui vit
- * — mais quatre blocs au lieu de cinq (l'original : {@code range = 4}), et un sort tres
+ * â€” mais quatre blocs au lieu de cinq (l'original : {@code range = 4}), et un sort tres
  * different pour ce qu'elle trouve. La deviation <b>arrete</b>, la reflexion <b>retourne</b> :
  *
  * <ul>
  * <li>une entite ordinaire repart vers le point que le regard touche a vingt blocs, <b>a sa
- *     propre vitesse</b> — une fleche rapide repart vite, une bille posee ne part pas ;</li>
+ *     propre vitesse</b> â€” une fleche rapide repart vite, une bille posee ne part pas ;</li>
  * <li>une <b>boule de feu</b> ne se contente pas de repartir : l'original la tuait et posait
  *     une boule neuve au meme endroit, marquee, lancee vers ce point. C'est le renvoi d'un
  *     projectile au sens propre, le tir change de camp ;</li>
  * <li>et les coups recus sont renvoyes a leur auteur : 60 % des degats au depart, jusqu'a
- *     120 % au maximum — si bien qu'a la fin une reflexion rend plus qu'elle n'a pris, et que
+ *     120 % au maximum â€” si bien qu'a la fin une reflexion rend plus qu'elle n'a pris, et que
  *     le coup est <b>annule</b> plutot que reduit.</li>
  * </ul>
  *
@@ -42,7 +42,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *
  * Ouvrir la veille charge le surcout a {@code overloadToKeep} (350, puis 250) et l'<b>epingle</b> :
  * l'original la repoussait a cette valeur a chaque tick, sans quoi tenir la veille remboursait
- * son propre prix. L'entretien, lui, se paie en <b>reserve</b> — 13 a 5 CP par tick — chaque
+ * son propre prix. L'entretien, lui, se paie en <b>reserve</b> â€” 13 a 5 CP par tick â€” chaque
  * entite renvoyee se paie <b>sans verification</b> (15 a 12, sans compter ce qu'elle vaut) et un
  * coup recu se paie de ce que la reserve peut donner, borne par le prix du palier (15 a 12) :
  * refuser laisserait passer ce qu'on a promis de renvoyer.
@@ -50,14 +50,14 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * <h2>Les nombres de la deviation</h2>
  *
  * <p>Le joueur a demande que les deux veilles echangent leurs couts en CP : le renvoi se paie
- * donc exactement ce que la deviation payait autrefois — 13 a 5 par tick, 15 a 12 par entite
- * renvoyee, 15 a 12 par coup amorti — et la deviation, ce que le renvoi payait. La <b>surcharge</b>
+ * donc exactement ce que la deviation payait autrefois â€” 13 a 5 par tick, 15 a 12 par entite
+ * renvoyee, 15 a 12 par coup amorti â€” et la deviation, ce que le renvoi payait. La <b>surcharge</b>
  * ne bouge pas : le renvoi epingle toujours 350 a 250 a l'ouverture, la deviation 80 a 50.
  *
  * <h2>Deux coquilles de l'original corrigees</h2>
  *
  * <p>La premiere est un <b>garde-fou mort</b> : {@code handleAttack} posait {@code _isAttacking
- * = true} puis testait {@code if (!_isAttacking)} — donc jamais vrai, et le renvoi, son paiement
+ * = true} puis testait {@code if (!_isAttacking)} â€” donc jamais vrai, et le renvoi, son paiement
  * et son experience ne se produisaient <b>jamais</b>. Seule la reduction de degats restait, et
  * l'intention est ecrite juste au-dessus, dans le commentaire de l'original : un renvoi ne se
  * renvoie pas, ce qui evite qu'un gardien et ses epines, ou deux joueurs qui se renvoient un
@@ -65,25 +65,25 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *
  * <p>La seconde est la partie de l'original que le port avait crue fausse, et qui ne l'est pas :
  * le <b>test anticipe</b> sur {@code LivingAttackEvent}. Le code prevoyait {@code reflectDamage >=
- * 1}, ce que le port jugeait trop large — un renvoi atteint 1 des qu'un coup depasse un point et
+ * 1}, ce que le port jugeait trop large â€” un renvoi atteint 1 des qu'un coup depasse un point et
  * demi. Le joueur a tranche, et sa derniere parole (22/10) est la plus simple :
  *
  * <ul>
  *   <li><b>tant que la veille est tenue, RIEN ne passe</b>, et cela des la premiere utilisation :
- *       « normalement on ne doit pas pouvoir prendre des degats et ce meme des le depart ». C'est
+ *       Â« normalement on ne doit pas pouvoir prendre des degats et ce meme des le depart Â». C'est
  *       un retournement du 22/10 : il avait d'abord demande le contraire pour 0 % d'experience
- *       (« je prends bien aucun degats a 100 %, mais il ne faut pas que ce soit le cas quand le
- *       pouvoir est a 0 % »). Le renvoi rend toujours 60 % a zero et 120 % au maximum, mais cela
+ *       (Â« je prends bien aucun degats a 100 %, mais il ne faut pas que ce soit le cas quand le
+ *       pouvoir est a 0 % Â»). Le renvoi rend toujours 60 % a zero et 120 % au maximum, mais cela
  *       ne decide plus de ce que le porteur encaisse. D'ou le test anticipe, qui annule le coup
  *       avant meme qu'il ne soit porte, donc sans recul ni rouge ;</li>
- *   <li>et ce qui n'a pas <b>d'auteur</b> — la lave, le feu, une chute — est absorbe aussi, mais
+ *   <li>et ce qui n'a pas <b>d'auteur</b> â€” la lave, le feu, une chute â€” est absorbe aussi, mais
  *       ne se paie pas : il n'y a personne a qui rendre le coup. Sans cette regle, la reserve
- *       fondait dans la lave, « comme si la reflexion essayait de renvoyer les degats a la lave, ce
- *       qui n'a pas de sens ».</li>
+ *       fondait dans la lave, Â« comme si la reflexion essayait de renvoyer les degats a la lave, ce
+ *       qui n'a pas de sens Â».</li>
  * </ul>
  *
  * <p>Un detail de l'original, en revanche, n'est pas suivi : il lisait l'auteur du coup avec
- * {@code getImmediateSource} — la fleche, pas l'archer — et renvoyer sur une fleche ne faisait
+ * {@code getImmediateSource} â€” la fleche, pas l'archer â€” et renvoyer sur une fleche ne faisait
  * rien, puisqu'une fleche ne se blesse pas. Le port renvoie a qui a frappe, ce qui est ce que
  * l'original voulait dire.
  *
@@ -99,7 +99,7 @@ public class VecReflectionSkill extends Skill {
     public static final double AIM_RANGE = 20.0;
 
     /**
-     * L'entretien : 13 a 5 CP par tick — les nombres de la deviation, echanges par le joueur.
+     * L'entretien : 13 a 5 CP par tick â€” les nombres de la deviation, echanges par le joueur.
      *
      * <p>L'original donnait 15 a 11 au renvoi et 13 a 5 a la deviation. Les deux veilles ont
      * echange leurs couts : voir le commentaire de la classe.
@@ -108,7 +108,7 @@ public class VecReflectionSkill extends Skill {
     public static final float TICK_CP_MAX = 5f;
 
     /**
-     * Ce que coute chaque entite renvoyee : 15 a 12, quel que soit ce qu'elle vaut — les nombres
+     * Ce que coute chaque entite renvoyee : 15 a 12, quel que soit ce qu'elle vaut â€” les nombres
      * de la deviation.
      *
      * <p>Le renvoi les payait 300 a 160 par point de difficulte. Ce qu'il retourne, il le
@@ -122,7 +122,7 @@ public class VecReflectionSkill extends Skill {
     public static final float PIN_MAX = 250f;
 
     /**
-     * Ce qu'un coup encaisse coute au plus : 15 a 12 CP — les nombres de la deviation.
+     * Ce qu'un coup encaisse coute au plus : 15 a 12 CP â€” les nombres de la deviation.
      *
      * <p>Le renvoi payait 20 a 15 par point de degats, sans plafond. Il paie maintenant ce qu'un
      * coup lui demande, borne par ce que la reserve peut donner : c'est la forme de la deviation.
@@ -315,7 +315,7 @@ public class VecReflectionSkill extends Skill {
      * Renvoyer une boule de feu.
      *
      * <p>L'original la tuait et posait une boule neuve a sa place, marquee, lancee vers le
-     * point vise et a la vitesse de l'ancienne. Une grosse boule reste une grosse boule — elle
+     * point vise et a la vitesse de l'ancienne. Une grosse boule reste une grosse boule â€” elle
      * garde son pouvoir explosif, celui que l'original recopiait et que le port repose a sa
      * valeur par defaut, la 1.20.1 ne laissant plus le lire. Une petite suit son tireur si
      * elle en a un, et se pose sinon par sa position : ce sont les deux constructeurs que
@@ -360,23 +360,21 @@ public class VecReflectionSkill extends Skill {
      * dans l'original : un coup ne se renforce donc pas de l'experience qu'il vient de donner.
      */
     @Override
-    public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
-        float amount = event.getAmount();
+    public float onDamaged(Player player, AbilityData data, DamageSource source, float amount) {
         if (amount > BIG_HIT) return amount;
 
         // Une teleportation n'a pas de vecteur : le coup du teleporteur n'est ni absorbe ni
         // renvoye. Voir {@code TeleportCrits.source(Player)}.
-        if (event.getSource().is(TeleportCrits.type())) return amount;
+        if (source.is(TeleportCrits.type())) return amount;
 
         // Meme regle que sur `onAttacked`, en second filet : tant que la veille est tenue, rien ne
-        // passe. Le renvoi d'un renvoi ne se paie pas et ne se renvoie pas — c'est le garde-fou de
+        // passe. Le renvoi d'un renvoi ne se paie pas et ne se renvoie pas â€” c'est le garde-fou de
         // l'original, celui qui evite la boucle entre deux reflets ou avec les epines d'un
-        // gardien —, mais il ne blesse pas davantage son porteur.
+        // gardien â€”, mais il ne blesse pas davantage son porteur.
         if (!reflecting) {
-            reflect(player, data, event.getSource(), amount);
+            reflect(player, data, source, amount);
         }
-        event.setCanceled(true);
-        return 0f;
+        return amount;
     }
 
     /**
@@ -384,31 +382,30 @@ public class VecReflectionSkill extends Skill {
      *
      * <p>C'est le second crochet de l'original, et il porte sa raison en commentaire : annuler
      * l'evenement de degats provoque quand meme le recul, donc il testait d'abord sur
-     * {@code LivingAttackEvent} — le tout premier crochet de {@code LivingEntity.hurt} — et
+     * {@code LivingAttackEvent} â€” le tout premier crochet de {@code LivingEntity.hurt} â€” et
      * annulait le coup la quand il etait absorbe en entier. Le port ne faisait que la seconde
-     * moitie, d'ou ce que le joueur voyait : « on prend des degats visuellement » — le rouge et le
+     * moitie, d'ou ce que le joueur voyait : Â« on prend des degats visuellement Â» â€” le rouge et le
      * recul d'un coup qui ne coutait rien.
      *
      * <p>Le refus ne depend pas de l'experience : le 22/10 le joueur a demande de ne prendre
-     * <b>aucun</b> degat « meme des le depart », ce qui retire le seuil de couverture que le port
+     * <b>aucun</b> degat Â« meme des le depart Â», ce qui retire le seuil de couverture que le port
      * comparait a la part renvoyee. Le renvoi continue de rendre 60 a 120 % selon l'experience ;
      * c'est ce qu'il rend, pas ce qu'il laisse passer.
      */
     @Override
-    public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
-        float amount = event.getAmount();
+    public boolean onAttacked(Player player, AbilityData data, DamageSource source, float amount) {
         if (amount > BIG_HIT) return false;
 
         // Meme regle ici, et c'est le crochet qui compte : c'est lui qui annule le coup AVANT
         // qu'il ne soit porte. Une teleportation n'a pas de vecteur a manipuler, elle passe donc
         // la veille sans etre renvoyee. Voir {@code TeleportCrits.source(Player)}.
-        if (event.getSource().is(TeleportCrits.type())) return false;
+        if (source.is(TeleportCrits.type())) return false;
 
         // Le renvoi d'un renvoi ne se renvoie pas, mais il ne passe pas non plus : c'est le
         // garde-fou de l'original, celui qui evite la boucle entre deux reflets ou avec les epines
         // d'un gardien.
         if (!reflecting) {
-            reflect(player, data, event.getSource(), amount);
+            reflect(player, data, source, amount);
         }
         return true;
     }
@@ -421,10 +418,10 @@ public class VecReflectionSkill extends Skill {
      *
      * <p>Et rien de tout cela n'a lieu quand le coup n'a pas <b>d'auteur</b> : la lave, le feu, une
      * chute se heurtent a la veille, qui les amortit ou les absorbe, mais il n'y a personne a qui
-     * rendre le coup — et donc rien a payer. Sans cette regle, la reserve fondait dans la lave :
-     * « mes cp fondent quand je vais dans la lave, comme si la reflexion essayait de renvoyer les
-     * degats a la lave, ce qui n'a pas de sens ». C'est aussi ce que faisait le vrai mod, dont le
-     * corps du renvoi ne s'executait jamais — voir la note sur le garde-fou de l'original.
+     * rendre le coup â€” et donc rien a payer. Sans cette regle, la reserve fondait dans la lave :
+     * Â« mes cp fondent quand je vais dans la lave, comme si la reflexion essayait de renvoyer les
+     * degats a la lave, ce qui n'a pas de sens Â». C'est aussi ce que faisait le vrai mod, dont le
+     * corps du renvoi ne s'executait jamais â€” voir la note sur le garde-fou de l'original.
      */
     private void reflect(Player player, AbilityData data, DamageSource source, float amount) {
         Entity attacker = source.getEntity();
@@ -437,7 +434,7 @@ public class VecReflectionSkill extends Skill {
 
             // Le son de la veille, A CHAQUE COUP rendu (22/10) : le joueur ne l'entendait que sur
             // les entites renvoyees par le tick de la veille, jamais sur les coups encaisses. Il
-            // se pose sur le porteur, la ou la veille est ouverte — et une seule fois par
+            // se pose sur le porteur, la ou la veille est ouverte â€” et une seule fois par
             // instant, voir VecmanipSounds.
             if (player.level() instanceof ServerLevel level) {
                 VecmanipSounds.play(level, player, cn.academy.ModSounds.VECMANIP_VEC_REFLECTION,

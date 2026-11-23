@@ -8,10 +8,9 @@ import cn.academy.ability.develop.condition.ConditionLevel;
 import cn.academy.ability.develop.condition.LearningCondition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -774,7 +773,7 @@ public abstract class Skill {
      *
      * <p>Defaut : rien. Seule competence concernee : {@code vec_reflection}.
      */
-    public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
+    public boolean onAttacked(Player player, AbilityData data, DamageSource source, float amount) {
         return false;
     }
 
@@ -886,8 +885,8 @@ public abstract class Skill {
      * Called server-side for every passive skill of every learned category when the
      * owning player takes damage. Return the (possibly modified) damage amount.
      */
-    public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
-        return event.getAmount();
+    public float onDamaged(Player player, AbilityData data, DamageSource source, float amount) {
+        return amount;
     }
 
     /**

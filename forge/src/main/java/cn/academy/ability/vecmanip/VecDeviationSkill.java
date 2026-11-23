@@ -10,8 +10,9 @@ import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+
 
 /**
  * La deviation de vecteur, portage de {@code VecDeviation} : tant qu'on la tient, ce qui vole
@@ -23,7 +24,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * <ul>
  * <li>a chaque tick, elle paie son entretien puis <b>arrete</b> tout ce qui entre dans les
  *     cinq blocs : les projectiles voient leur mouvement remis a zero, et les boules de feu
- *     sont eteintes — la grosse explose sur place, comme l'original ;</li>
+ *     sont eteintes â€” la grosse explose sur place, comme l'original ;</li>
  * <li>tant qu'elle tient, les degats recus sont <b>reduits</b> de 40 % a 90 %, payes sur la
  *     reserve a proportion de ce qu'on encaisse.</li>
  * </ul>
@@ -32,19 +33,19 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  *
  * <p>Le joueur a demande que les deux veilles de vecmanip <b>echangent leurs couts en CP</b> :
  * la deviation se paie donc 15 a 11 par tick, 300 a 160 par point de difficulte d'une entite
- * arretee et 20 a 15 par point de degats amorti — exactement ce que le renvoi payait autrefois.
+ * arretee et 20 a 15 par point de degats amorti â€” exactement ce que le renvoi payait autrefois.
  * Le renvoi, lui, a repris les anciens nombres de la deviation. La <b>surcharge</b> ne bouge pas :
  * la deviation epingle toujours 80 a 50 a l'ouverture, le renvoi 350 a 250.
  *
  * <p>Le surcout d'ouverture est <b>epingle</b> : il ne redescend pas tant que la competence
  * tient, sinon la tenir rembourserait son propre prix. L'original le reposait a la main a
  * chaque tick ; le port s'en remet a l'epingle des maintiens, qui dit exactement la meme
- * chose — voir {@code AbilityData#setHeldOverload}.
+ * chose â€” voir {@code AbilityData#setHeldOverload}.
  *
  * <h2>Ce qu'elle n'arrete pas</h2>
  *
  * Tout n'est pas deviable : {@link EntityAffection} decide, et sa config par defaut exclut
- * <b>tout ce qui vit</b> — les creatures comme on les connait, et les objets au sol. On arrete
+ * <b>tout ce qui vit</b> â€” les creatures comme on les connait, et les objets au sol. On arrete
  * ce qui vole, pas ce qui marche. Une entite deviee est <b>marquee</b> : elle ne sera plus
  * touchee, ce qui empeche une cible immobile de rapporter de l'experience a chaque tick.
  *
@@ -53,7 +54,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
  * Le port a d'abord cru que sa reduction de degats appelait {@code ctx.consume} avec ses
  * arguments inverses, comme le fait le bouclier de lumiere. Il n'en est rien : la signature
  * de l'original est {@code consume(overload, cp)}, donc {@code ctx.consume(0, consumption)}
- * paie bien la <b>reserve</b> et rien d'autre — ce que le port fait aussi, par
+ * paie bien la <b>reserve</b> et rien d'autre â€” ce que le port fait aussi, par
  * {@code consumeControlPoint}. Le piege existe pourtant, et il vaut la peine d'etre note : le
  * port range ses deux ressources dans l'autre ordre, {@code perform(cp, overload)}, si bien
  * que la meme ligne recopiee telle quelle paierait la surcharge a la place de la reserve.
@@ -66,7 +67,7 @@ public class VecDeviationSkill extends Skill {
     public static final double RANGE = 5.0;
 
     /**
-     * L'entretien : 15 a 11 CP par tick — les nombres du renvoi, echanges par le joueur.
+     * L'entretien : 15 a 11 CP par tick â€” les nombres du renvoi, echanges par le joueur.
      *
      * <p>L'original donnait 13 a 5 a la deviation et 15 a 11 au renvoi. Le joueur a demande que les
      * deux veilles echangent leurs couts, pour que celle qu'il considere comme la plus forte soit
@@ -81,7 +82,7 @@ public class VecDeviationSkill extends Skill {
     public static final float PIN_MAX = 50f;
 
     /**
-     * Ce que coute chaque entite arretee : 300 a 160 par point de difficulte — les nombres du renvoi.
+     * Ce que coute chaque entite arretee : 300 a 160 par point de difficulte â€” les nombres du renvoi.
      *
      * <p>La deviation les payait 15 a 12, sans compter ce que valait l'entite. C'est l'autre moitie
      * de l'echange demande par le joueur : ce que le renvoi payait pour retourner une fleche, la
@@ -91,7 +92,7 @@ public class VecDeviationSkill extends Skill {
     public static final float ENTITY_CP_MAX = 160f;
 
     /**
-     * Ce qu'un coup encaisse coute : 20 a 15 CP par point de degats — les nombres du renvoi.
+     * Ce qu'un coup encaisse coute : 20 a 15 CP par point de degats â€” les nombres du renvoi.
      *
      * <p>La deviation payait 15 a 12 au plus par coup, quelle que soit sa force. Elle suit
      * maintenant ce qu'elle amortit, comme le renvoi suit ce qu'il renvoie.
@@ -227,7 +228,7 @@ public class VecDeviationSkill extends Skill {
      *
      * L'original lisait la surcharge juste apres l'avoir payee, et la repoussait a cette
      * valeur a chaque tick : elle ne pouvait donc que monter. L'epingle du port dit la meme
-     * chose — plus rien ne redescend pendant le maintien — d'ou l'equivalent, en une ligne.
+     * chose â€” plus rien ne redescend pendant le maintien â€” d'ou l'equivalent, en une ligne.
      */
     @Override
     public void onStart(Player player, AbilityData data) {
@@ -251,7 +252,7 @@ public class VecDeviationSkill extends Skill {
 
             // Chaque entite arretee se paie sans verification : la veille est deja ouverte, et
             // refuser la laisserait passer ce qu'on a promis d'arreter. Et c'est la RESERVE
-            // qu'elle coute, comme le `consumeWithForce(0, comsumption)` de l'original — voir
+            // qu'elle coute, comme le `consumeWithForce(0, comsumption)` de l'original â€” voir
             // ENTITY_CP_MIN. Son prix suit ce que l'entite vaut, comme chez le renvoi.
             data.performForced(entityCost(data, affect.difficulty()), 0f);
             stop(level, entity);
@@ -264,7 +265,7 @@ public class VecDeviationSkill extends Skill {
                     entity.position());
 
             // Et l'onde de l'arret : une seule, et petite, posee sur la tete de ce qui vient
-            // d'etre fige — l'original en posait une ici meme. Voir VecWaves.
+            // d'etre fige â€” l'original en posait une ici meme. Voir VecWaves.
             cn.academy.ability.network.VecWavePacket.send(player, entity.getEyePosition(),
                     player.getYRot(), player.getXRot(), 1, 0.6);
 
@@ -278,7 +279,7 @@ public class VecDeviationSkill extends Skill {
      *
      * <p>Trois cas, comme l'original : la grosse boule de feu explose sur place (en respectant
      * la regle du monde sur le grief), la petite s'eteint simplement, et tout le reste voit son
-     * mouvement remis a zero — une fleche y perd en plus ses degats, car elle reste dans le
+     * mouvement remis a zero â€” une fleche y perd en plus ses degats, car elle reste dans le
      * monde et pourrait retomber sur quelqu'un.
      */
     private void stop(ServerLevel level, Entity entity) {
@@ -316,14 +317,13 @@ public class VecDeviationSkill extends Skill {
      * rechargement.
      */
     @Override
-    public float onDamaged(Player player, AbilityData data, LivingHurtEvent event) {
-        float amount = event.getAmount();
+    public float onDamaged(Player player, AbilityData data, DamageSource source, float amount) {
         if (amount > BIG_HIT) return amount;
 
         // Une teleportation n'a pas de vecteur a devier : le coup du teleporteur passe entier.
         // C'est la meme regle que la reflexion, et la meme source : voir
         // {@code TeleportCrits.source(Player)}.
-        if (event.getSource().is(cn.academy.ability.teleporter.TeleportCrits.type())) return amount;
+        if (source.is(cn.academy.ability.teleporter.TeleportCrits.type())) return amount;
 
         // Le claquement de la veille, AUSSI sur un coup encaisse (22/10) : le joueur ne
         // l'entendait que sur les entites que la veille arretait, jamais quand un zombie le

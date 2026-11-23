@@ -15,7 +15,7 @@ import net.minecraft.world.entity.projectile.ThrownTrident;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraft.world.damagesource.DamageSource;
 
 /**
  * Competence tenue, portage de LightShield : un bouclier qui absorbe les coups et
@@ -24,7 +24,7 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
  * <p>Le port en faisait une passive qui absorbait la moitie de tout, en permanence.
  * L'original etait un maintien : il fallait le tenir, il avait une duree maximale, il
  * s'entretenait par tick, et l'absorber coutait une seconde fois. C'est cette version-la
- * qui est portee ici — ce qui lui rend au passage sa recharge et son surcout, qui
+ * qui est portee ici â€” ce qui lui rend au passage sa recharge et son surcout, qui
  * attendaient tous les deux ce mecanisme.
  *
  * <h2>Deux echelles</h2>
@@ -37,42 +37,42 @@ import net.minecraftforge.event.entity.living.LivingAttackEvent;
  *
  * L'original bornait le maintien dans le temps ({@code MAX_TIME}) et n'<b>absorbait</b> qu'une
  * part du coup : quinze a cinquante points, au plus une fois toutes les dix-huit ticks. Le joueur
- * a demande autre chose, en deux temps : « j'aimerais que tant qu'on a des cp, on puisse garder le
- * bouclier actif (qu'il ne soit pas limite avec du temps) », puis « la maintenant le "bouclier" n'a
+ * a demande autre chose, en deux temps : Â« j'aimerais que tant qu'on a des cp, on puisse garder le
+ * bouclier actif (qu'il ne soit pas limite avec du temps) Â», puis Â« la maintenant le "bouclier" n'a
  * plus ou moins RIEN d'un bouclier puisque on se prend quand meme tous les coups. J'aimerais que
  * tant qu'on a ce bouclier d'active, on ne prenne pas de degats (du genre que ca ne se montre meme
  * pas qu'on ait ete touche) et du cote ou on regarde bien sur, on peut quand meme se faire toucher
- * par l'arriere ».
+ * par l'arriere Â».
  *
- * <p>Donc : <b>aucune duree maximale</b> — c'est la reserve qui borne, par l'entretien de chaque
- * tick et par le prix de chaque coup refuse —, et <b>le coup de face ne passe pas du tout</b>,
+ * <p>Donc : <b>aucune duree maximale</b> â€” c'est la reserve qui borne, par l'entretien de chaque
+ * tick et par le prix de chaque coup refuse â€”, et <b>le coup de face ne passe pas du tout</b>,
  * refus sur {@code LivingAttackEvent} comme le renvoi de vecteur : pas de degats, pas de recul,
  * pas de rouge. Derriere, en revanche, le joueur encaisse tout, exactement comme avant.
  *
- * <p>Et une fleche arretée de face <b>fond dans le bouclier</b> au lieu de retomber intacte : voir
+ * <p>Et une fleche arretÃ©e de face <b>fond dans le bouclier</b> au lieu de retomber intacte : voir
  * {@link #melt}. Un balayage qui detruisait aussi les fleches passant devant lui a existe le temps
- * d'une version : le joueur l'a fait retirer — « le balayage des fleches avec les 3 blocs devant moi,
- * remets-le comme avant » —, donc seules celles qui LE touchent fondent.
+ * d'une version : le joueur l'a fait retirer â€” Â« le balayage des fleches avec les 3 blocs devant moi,
+ * remets-le comme avant Â» â€”, donc seules celles qui LE touchent fondent.
  *
  * <p>L'eventail est celui de l'original : soixante degres de part et d'autre du regard, mesures a
- * plat, pour frapper comme pour proteger — « la protection est trop large : ramene-la a l'eventail de
- * l'original (±60°) ». Sa <b>portee</b>, elle, est plus courte que la sienne : voir {@link #REACH}.
+ * plat, pour frapper comme pour proteger â€” Â« la protection est trop large : ramene-la a l'eventail de
+ * l'original (Â±60Â°) Â». Sa <b>portee</b>, elle, est plus courte que la sienne : voir {@link #REACH}.
  */
 public class LightShieldSkill extends Skill {
 
     /**
      * Rayon d'action du bouclier : <b>1,5 bloc</b>.
      *
-     * <p>L'original en demandait trois — son {@code WorldUtils.getEntities(player, 3, ...)} — et c'est
-     * un ecart assume : le joueur, qui trouvait le champ d'action bizarre, a choisi « la portee
-     * d'action : 3 blocs -> 1,5 bloc ». C'est la seule chose qui bouge : les degats de contact touchent
+     * <p>L'original en demandait trois â€” son {@code WorldUtils.getEntities(player, 3, ...)} â€” et c'est
+     * un ecart assume : le joueur, qui trouvait le champ d'action bizarre, a choisi Â« la portee
+     * d'action : 3 blocs -> 1,5 bloc Â». C'est la seule chose qui bouge : les degats de contact touchent
      * donc plus pres qu'avant, dans l'eventail de soixante degres qui, lui, reste celui de l'original.
      */
     private static final double REACH = 1.5;
 
     /**
      * Demi-angle du bouclier : l'original frappait sur soixante degres, et c'est aussi ce qu'il
-     * protegeait — sa {@code isEntityReachable} servait aux deux. Le port n'a plus qu'un chiffre pour
+     * protegeait â€” sa {@code isEntityReachable} servait aux deux. Le port n'a plus qu'un chiffre pour
      * les trois usages : frapper, fondre les fleches, et refuser les coups.
      */
     private static final double HALF_ANGLE = 60.0;
@@ -84,7 +84,7 @@ public class LightShieldSkill extends Skill {
     /**
      * Duree de <b>reference</b> : {@code MAX_TIME} de l'original, de 120 a 180 ticks.
      *
-     * <p>Elle ne borne plus le maintien — le joueur a demande que seuls les CP l'arretent — mais
+     * <p>Elle ne borne plus le maintien â€” le joueur a demande que seuls les CP l'arretent â€” mais
      * elle compte encore la recharge : sans elle, un bouclier tenu un quart d'heure imposerait une
      * demi-heure d'attente, ce qui n'etait pas demande et punirait l'usage qu'il vient de decrire.
      */
@@ -183,46 +183,46 @@ public class LightShieldSkill extends Skill {
      * <p>Le refus est fait ici, sur {@code LivingAttackEvent}, et non dans {@code onDamaged} : c'est
      * le tout premier crochet de {@code LivingEntity.hurt}, l'annuler en fait sortir la methode
      * sur-le-champ. C'est la meme raison que pour le renvoi de vecteur, et la meme demande du
-     * joueur : « que ca ne se montre meme pas qu'on ait ete touche ». Une reduction partielle, elle,
-     * se ferait dans {@code onDamaged} — le port n'en fait plus, le bouclier refuse ou laisse tout
+     * joueur : Â« que ca ne se montre meme pas qu'on ait ete touche Â». Une reduction partielle, elle,
+     * se ferait dans {@code onDamaged} â€” le port n'en fait plus, le bouclier refuse ou laisse tout
      * passer.
      *
      * <p>Le coup se paie quand meme, en CP et en surcout : c'est ce prix, avec l'entretien de chaque
      * tick, qui borne le bouclier maintenant qu'il n'a plus de duree. S'il ne peut pas payer, le coup
-     * passe — et l'entretien du tick suivant fera tomber le bouclier de toute facon.
+     * passe â€” et l'entretien du tick suivant fera tomber le bouclier de toute facon.
      *
-     * <p>Ce qui n'a <b>pas d'auteur</b> — la lave, le feu, une chute — n'a pas de cote : le bouclier
+     * <p>Ce qui n'a <b>pas d'auteur</b> â€” la lave, le feu, une chute â€” n'a pas de cote : le bouclier
      * ne s'en mele pas. Devant ou derriere n'a de sens que pour un coup porte par quelqu'un.
      */
     @Override
-    public boolean onAttacked(Player player, AbilityData data, LivingAttackEvent event) {
+    public boolean onAttacked(Player player, AbilityData data, DamageSource source, float amount) {
         if (!data.isCharging(this)) return false;
-        if (!comesFromTheFront(player, event.getSource())) return false;
+        if (!comesFromTheFront(player, source)) return false;
         if (!data.perform(cpPerHit(data), overloadPerHit(data))) return false;
-        if (melts(event.getSource().getDirectEntity())) {
-            melt(player, (AbstractArrow) event.getSource().getDirectEntity());
+        if (melts(source.getDirectEntity())) {
+            melt(player, (AbstractArrow) source.getDirectEntity());
         }
         data.addSkillExp(this, 0.001f);
         return true;
     }
 
     /**
-     * La fleche arretée par le bouclier <b>fond</b> : elle est detruite, et non renvoyee.
+     * La fleche arretÃ©e par le bouclier <b>fond</b> : elle est detruite, et non renvoyee.
      *
-     * <p>Le joueur : « j'aimerais que quand je me prend une fleche, au lieu de la renvoyer ca la
-     * detruise, comme si elle fondait dans mon bouclier ». Une fleche dont le coup est annule
-     * retombait en effet par terre, intacte et ramassable — elle ne repartait pas vers son tireur,
+     * <p>Le joueur : Â« j'aimerais que quand je me prend une fleche, au lieu de la renvoyer ca la
+     * detruise, comme si elle fondait dans mon bouclier Â». Une fleche dont le coup est annule
+     * retombait en effet par terre, intacte et ramassable â€” elle ne repartait pas vers son tireur,
      * mais elle restait la, alors que rien de ce qui touche un bouclier de plasma ne devrait y
      * survivre.
      *
      * <p>Le test est celui de <b>l'entite</b>, et non d'une liste : tout ce qui est un
-     * {@code AbstractArrow} y passe — la fleche ordinaire, la spectrale, l'enduite, et toutes celles
-     * des autres mods —, ce qui est exactement ce que le joueur a demande : « je veux que toutes les
-     * fleches se fassent bruler ». La seule exception est le <b>trident</b>, aussi un
-     * {@code AbstractArrow} : « mais pas un trident non plus ». Le detruire ferait perdre son arme au
+     * {@code AbstractArrow} y passe â€” la fleche ordinaire, la spectrale, l'enduite, et toutes celles
+     * des autres mods â€”, ce qui est exactement ce que le joueur a demande : Â« je veux que toutes les
+     * fleches se fassent bruler Â». La seule exception est le <b>trident</b>, aussi un
+     * {@code AbstractArrow} : Â« mais pas un trident non plus Â». Le detruire ferait perdre son arme au
      * tireur, ce que le bouclier du jeu ne fait pas davantage.
      *
-     * <p>Le gresillement est celui d'un feu qu'on eteint, et il se joue <b>cote serveur</b> — c'est
+     * <p>Le gresillement est celui d'un feu qu'on eteint, et il se joue <b>cote serveur</b> â€” c'est
      * le seul chemin qui marche pour un son, voir {@code EntityMdBall.flash}.
      */
     private static void melt(Player player, AbstractArrow arrow) {
@@ -237,12 +237,12 @@ public class LightShieldSkill extends Skill {
     }
 
     /**
-     * Vrai si le coup vient du cote que le joueur regarde : l'eventail de l'original, ±60° a plat.
+     * Vrai si le coup vient du cote que le joueur regarde : l'eventail de l'original, Â±60Â° a plat.
      *
      * <p>C'est le meme chiffre que celui des degats de contact et de la fonte des fleches, parce que
      * c'est le meme chez l'original : sa {@code isEntityReachable} servait a la fois a choisir qui le
      * bouclier frappait et a decider si un coup etait absorbe. Le port avait ouvert la protection a
-     * un demi-plan de 180° ; le joueur l'a trouve bizarre et a demande le retour aux 60°.
+     * un demi-plan de 180Â° ; le joueur l'a trouve bizarre et a demande le retour aux 60Â°.
      *
      * <p>Le plan se lit a plat, comme pour le cone : regarder le ciel ne doit pas rendre invulnerable
      * a ce qui monte des pieds.
