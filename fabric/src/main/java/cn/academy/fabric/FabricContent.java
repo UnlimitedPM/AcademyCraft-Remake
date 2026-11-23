@@ -4,6 +4,8 @@ import cn.academy.AcademyCraftCommon;
 import cn.academy.CatEngineBlock;
 import cn.academy.CatEngineBlockEntity;
 import cn.academy.EnergyUnitItem;
+import cn.academy.MatrixBlock;
+import cn.academy.MatrixMenu;
 import cn.academy.MetalFormerBlock;
 import cn.academy.MetalFormerBlockEntity;
 import cn.academy.MetalFormerMenu;
@@ -17,6 +19,11 @@ import cn.academy.WindgenBaseMenu;
 import cn.academy.WindgenMainBlock;
 import cn.academy.WindgenMainBlockEntity;
 import cn.academy.WindgenMainMenu;
+import cn.academy.NodeMenu;
+import cn.academy.energy.MatrixBlockEntity;
+import cn.academy.energy.NodeBlock;
+import cn.academy.energy.NodeBlockEntity;
+import cn.academy.energy.NodeType;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType;
 import net.minecraft.core.Registry;
@@ -71,6 +78,12 @@ public final class FabricContent {
     public static BlockEntityType<WindgenMainBlockEntity> WINDGEN_MAIN_TYPE;
     public static MenuType<WindgenBaseMenu> WINDGEN_BASE_MENU;
     public static MenuType<WindgenMainMenu> WINDGEN_MAIN_MENU;
+
+    /** Matrix et noeuds sans fil. */
+    public static BlockEntityType<MatrixBlockEntity> MATRIX_TYPE;
+    public static MenuType<MatrixMenu> MATRIX_MENU;
+    public static BlockEntityType<NodeBlockEntity> NODE_TYPE;
+    public static MenuType<NodeMenu> NODE_MENU;
 
     public static void register() {
         FabricSounds.register();
@@ -183,6 +196,31 @@ public final class FabricContent {
                         windgenMain).build(null));
         register("windgen_main", new BlockItem(windgenMain, new Item.Properties()));
 
+        // --- Matrix et noeuds sans fil ---
+        MATRIX_MENU = Registry.register(BuiltInRegistries.MENU, id("matrix"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new MatrixMenu(FabricContent.MATRIX_MENU, syncId, inventory, buf)));
+        Block matrix = new MatrixBlock(
+                BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).noOcclusion(),
+                (pos, state) -> new MatrixBlockEntity(MATRIX_TYPE, MATRIX_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("matrix"), matrix);
+        MATRIX_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("matrix"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new MatrixBlockEntity(MATRIX_TYPE, MATRIX_MENU, pos, state),
+                        matrix).build(null));
+        register("matrix", new BlockItem(matrix, new Item.Properties()));
+
+        NODE_MENU = Registry.register(BuiltInRegistries.MENU, id("node"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new NodeMenu(FabricContent.NODE_MENU, syncId, inventory, buf)));
+        Block nodeBasic = nodeBlock(NodeType.BASIC, "node_basic");
+        Block nodeStandard = nodeBlock(NodeType.STANDARD, "node_standard");
+        Block nodeAdvanced = nodeBlock(NodeType.ADVANCED, "node_advanced");
+        NODE_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("wireless_node"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new NodeBlockEntity(NODE_TYPE, NODE_MENU, pos, state),
+                        nodeBasic, nodeStandard, nodeAdvanced).build(null));
+
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()
                         .title(Component.translatable("itemGroup.academy_tab"))
@@ -200,8 +238,17 @@ public final class FabricContent {
         TAB_ITEMS.add(item);
     }
 
-    private static void plainBlock(String name, BlockBehaviour.Properties properties) {
-        Block block = new Block(properties);
+    /** Un noeud sans fil d'une qualite donnee : meme bloc, memes proprietes, type different. */
+    private static Block nodeBlock(NodeType type, String name) {
+        Block block = new NodeBlock(type, BlockBehaviour.Properties.of()
+                .strength(3.0f).requiresCorrectToolForDrops().sound(SoundType.METAL),
+                (pos, state) -> new NodeBlockEntity(NODE_TYPE, NODE_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id(name), block);
+        register(name, new BlockItem(block, new Item.Properties()));
+        return block;
+    }
+
+    private static void plainBlock(String name, BlockBehaviour.Properties properties) {        Block block = new Block(properties);
         Registry.register(BuiltInRegistries.BLOCK, id(name), block);
         BlockItem item = new BlockItem(block, new Item.Properties());
         Registry.register(BuiltInRegistries.ITEM, id(name), item);

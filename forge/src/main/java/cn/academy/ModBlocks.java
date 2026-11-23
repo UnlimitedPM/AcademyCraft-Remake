@@ -85,27 +85,35 @@ public class ModBlocks {
 
     // --- RÉSEAU SANS FIL ---
     public static final RegistryObject<Block> MATRIX = BLOCKS.register("matrix",
-            () -> new MatrixBlock(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).noOcclusion()));
+            () -> new MatrixBlock(BlockBehaviour.Properties.of().strength(4.0f).sound(SoundType.METAL).noOcclusion(),
+                    (pos, state) -> new cn.academy.energy.MatrixBlockEntity(ModBlockEntities.MATRIX.get(),
+                            ModMenus.MATRIX.get(), pos, state)));
     public static final RegistryObject<Block> NODE_BASIC = BLOCKS.register("node_basic",
             () -> new NodeBlock(NodeType.BASIC, BlockBehaviour.Properties.of()
                     .strength(3.0f)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL) // Optionnel: pour le bruit de métal comme les autres
-            ));
+            ,
+                    (pos, state) -> new cn.academy.energy.NodeBlockEntity(
+                            ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state)));
 
     public static final RegistryObject<Block> NODE_STANDARD = BLOCKS.register("node_standard",
             () -> new NodeBlock(NodeType.STANDARD, BlockBehaviour.Properties.of()
                     .strength(3.0f)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL)
-            ));
+            ,
+                    (pos, state) -> new cn.academy.energy.NodeBlockEntity(
+                            ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state)));
 
     public static final RegistryObject<Block> NODE_ADVANCED = BLOCKS.register("node_advanced",
             () -> new NodeBlock(NodeType.ADVANCED, BlockBehaviour.Properties.of()
                     .strength(3.0f)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.METAL)
-            ));
+            ,
+                    (pos, state) -> new cn.academy.energy.NodeBlockEntity(
+                            ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state)));
 
     // --- ÉOLIENNE ---
     public static final RegistryObject<WindgenBaseBlock> WINDGEN_BASE = BLOCKS.register("windgen_base",

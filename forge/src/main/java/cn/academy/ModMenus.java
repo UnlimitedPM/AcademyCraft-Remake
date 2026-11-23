@@ -16,7 +16,8 @@ public class ModMenus {
                     (id, inventory, buf) -> new SolarGenMenu(ModMenus.SOLAR_GEN.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<MatrixMenu>> MATRIX =
-            MENUS.register("matrix", () -> IForgeMenuType.create(MatrixMenu::new));
+            MENUS.register("matrix", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new MatrixMenu(ModMenus.MATRIX.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<MetalFormerMenu>> METAL_FORMER =
             MENUS.register("metal_former", () -> IForgeMenuType.create(
@@ -43,7 +44,8 @@ public class ModMenus {
             MENUS.register("ability_interferer", () -> IForgeMenuType.create(AbilityInterfererMenu::new));
 
     public static final RegistryObject<MenuType<NodeMenu>> NODE =
-            MENUS.register("node", () -> IForgeMenuType.create(NodeMenu::new));
+            MENUS.register("node", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new NodeMenu(ModMenus.NODE.get(), id, inventory, buf)));
 
     public static void register(IEventBus eventBus) {
         MENUS.register(eventBus);

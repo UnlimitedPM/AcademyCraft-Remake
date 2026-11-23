@@ -1,6 +1,6 @@
 package cn.academy.energy;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -41,10 +41,13 @@ public class NodeBlock extends Block implements EntityBlock {
     public static final BooleanProperty CONNECTED = BooleanProperty.create("connected");
 
     private final NodeType type;
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
 
-    public NodeBlock(NodeType type, Properties properties) {
+    public NodeBlock(NodeType type, Properties properties,
+                     java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
         this.type = type;
+        this.blockEntities = blockEntities;
         registerDefaultState(stateDefinition.any()
                 .setValue(ENERGY_LEVEL, 0)
                 .setValue(CONNECTED, false));
@@ -62,7 +65,7 @@ public class NodeBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new NodeBlockEntity(pos, state);
+        return blockEntities.apply(pos, state);
     }
 
     @Nullable

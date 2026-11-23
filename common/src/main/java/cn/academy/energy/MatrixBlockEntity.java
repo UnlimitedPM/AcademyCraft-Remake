@@ -8,11 +8,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
-import cn.academy.ModBlockEntities;
-import cn.academy.ModItems;
 import cn.academy.MatrixBlock;
 import cn.academy.MatrixMenu;
 import cn.academy.MatrixStructure;
@@ -32,7 +29,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.ItemStackHandler;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 
 /**
  * Matrix sans fil : le coeur du reseau energetique Imag.
@@ -87,7 +85,8 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
      * surchargeait deja cette boite ({@code BlockMulti.getRenderBB}). Voir
      * {@link cn.academy.RenderBounds#matrix}.
      */
-    @Override
+    // Pas de @Override : la methode de BlockEntity est cote client seulement, et le jar commun
+    // d'Architectury ne la porte pas. La signature reste la bonne, donc le client l'appelle.
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
         double[] b = cn.academy.RenderBounds.matrix(getBlockState().getValue(cn.academy.MatrixBlock.FACING));
         return new net.minecraft.world.phys.AABB(
@@ -95,29 +94,21 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
                 worldPosition.getX() + b[3], worldPosition.getY() + b[4], worldPosition.getZ() + b[5]);
     }
 
-    private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public int getSlotLimit(int slot) {
+    private final SimpleItemStorage inventory = new SimpleItemStorage(SLOT_COUNT,
             // L'original limitait chaque emplacement a un objet.
-            return 1;
-        }
-
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            if (stack.isEmpty()) return true;
-            return slot == SLOT_CORE
-                    ? coreLevelOf(stack) > 0
-                    : stack.is(ModItems.CONSTRAINT_PLATE.get());
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            // Changer le coeur ou les plaques change la portee et la capacite :
-            // il faut reviser les liens sans attendre la prochaine verification.
-            needsRelink = true;
-            setChanged();
-        }
-    };
+            slot -> 1,
+            (slot, stack) -> {
+                if (stack.isEmpty()) return true;
+                return slot == SLOT_CORE
+                        ? coreLevelOf(stack) > 0
+                        : stack.is(cn.academy.content.AcademyContent.item("constraint_plate"));
+            },
+            () -> {
+                // Changer le coeur ou les plaques change la portee et la capacite :
+                // il faut reviser les liens sans attendre la prochaine verification.
+                needsRelink = true;
+                setChanged();
+            });
 
     /** Energie en transit entre deux ticks. Repris de {@code WirelessNet.buffer}. */
     private double buffer;
@@ -154,9 +145,14 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
     private String pushedPlacer = "";
     private int pushedLoad = -1;
 
-    public MatrixBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.MATRIX.get(), pos, state);
+    public MatrixBlockEntity(net.minecraft.world.level.block.entity.BlockEntityType<?> type,
+                             net.minecraft.world.inventory.MenuType<MatrixMenu> menuType,
+                             BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.menuType = menuType;
     }
+
+    private final net.minecraft.world.inventory.MenuType<MatrixMenu> menuType;
 
     // ------------------------------------------------------------------
     // Etat derive de l'inventaire
@@ -171,9 +167,9 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
      * objets distincts, d'ou cette correspondance explicite.
      */
     public static int coreLevelOf(ItemStack stack) {
-        if (stack.is(ModItems.MAT_CORE_0.get())) return 1;
-        if (stack.is(ModItems.MAT_CORE_1.get())) return 2;
-        if (stack.is(ModItems.MAT_CORE_2.get())) return 3;
+        if (stack.is(cn.academy.content.AcademyContent.item("mat_core_0"))) return 1;
+        if (stack.is(cn.academy.content.AcademyContent.item("mat_core_1"))) return 2;
+        if (stack.is(cn.academy.content.AcademyContent.item("mat_core_2"))) return 3;
         return 0;
     }
 
@@ -259,8 +255,8 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
         return reachSqr(nodePos) <= range * range;
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+    public ItemStorage getInventory() {
+        return inventory;
     }
 
     // ------------------------------------------------------------------
@@ -463,7 +459,9 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
         tag.putDouble("buffer", buffer);
         tag.putString("ssid", ssid);
         tag.putString("password", password);
@@ -474,7 +472,7 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         buffer = tag.getDouble("buffer");
         ssid = tag.getString("ssid");
         password = tag.getString("password");
@@ -489,13 +487,13 @@ public class MatrixBlockEntity extends BlockEntity implements MenuProvider, cn.a
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable("container.academy.matrix");
+        return getBlockState().getBlock().getName();
     }
 
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new MatrixMenu(containerId, playerInventory, this);
+        return new MatrixMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override

@@ -370,8 +370,8 @@ public final class AcademyGameTests {
         node.setEnergy(12345.0d);
         node.setConnected(true);
 
-        var reloaded = new cn.academy.energy.NodeBlockEntity(helper.absolutePos(rel),
-                helper.getBlockState(rel));
+        var reloaded = new cn.academy.energy.NodeBlockEntity(cn.academy.ModBlockEntities.WIRELESS_NODE.get(),
+                cn.academy.ModMenus.NODE.get(), helper.absolutePos(rel), helper.getBlockState(rel));
         reloaded.load(node.saveWithoutMetadata());
 
         assertClose(helper, 12345.0d, reloaded.getEnergy(), "energie apres rechargement");
@@ -407,8 +407,8 @@ public final class AcademyGameTests {
 
         assertValue(helper, "Cuisine", node.getNodeName(), "le nom est nettoye");
 
-        var reloaded = new cn.academy.energy.NodeBlockEntity(helper.absolutePos(rel),
-                helper.getBlockState(rel));
+        var reloaded = new cn.academy.energy.NodeBlockEntity(cn.academy.ModBlockEntities.WIRELESS_NODE.get(),
+                cn.academy.ModMenus.NODE.get(), helper.absolutePos(rel), helper.getBlockState(rel));
         reloaded.load(node.saveWithoutMetadata());
 
         assertValue(helper, "Cuisine", reloaded.getNodeName(), "nom apres rechargement");
@@ -669,7 +669,8 @@ public final class AcademyGameTests {
         matrix.setPlacer(owner);
         matrix.setSsid("Atelier");
 
-        var reloaded = new MatrixBlockEntity(helper.absolutePos(new BlockPos(1, 1, 1)),
+        var reloaded = new MatrixBlockEntity(cn.academy.ModBlockEntities.MATRIX.get(),
+                cn.academy.ModMenus.MATRIX.get(), helper.absolutePos(new BlockPos(1, 1, 1)),
                 helper.getBlockState(new BlockPos(1, 1, 1)));
         reloaded.load(matrix.saveWithoutMetadata());
 

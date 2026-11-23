@@ -34,7 +34,9 @@ public class ModBlockEntities {
      */
     public static final RegistryObject<BlockEntityType<NodeBlockEntity>> WIRELESS_NODE =
             BLOCK_ENTITIES.register("wireless_node", () ->
-                    BlockEntityType.Builder.of(NodeBlockEntity::new,
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new NodeBlockEntity(
+                                    ModBlockEntities.WIRELESS_NODE.get(), ModMenus.NODE.get(), pos, state),
                             ModBlocks.NODE_BASIC.get(),
                             ModBlocks.NODE_STANDARD.get(),
                             ModBlocks.NODE_ADVANCED.get()).build(null));
@@ -46,7 +48,10 @@ public class ModBlockEntities {
      */
     public static final RegistryObject<BlockEntityType<MatrixBlockEntity>> MATRIX =
             BLOCK_ENTITIES.register("matrix", () ->
-                    BlockEntityType.Builder.of(MatrixBlockEntity::new, ModBlocks.MATRIX.get()).build(null));
+                    BlockEntityType.Builder.of(
+                            (pos, state) -> new MatrixBlockEntity(
+                                    ModBlockEntities.MATRIX.get(), ModMenus.MATRIX.get(), pos, state),
+                            ModBlocks.MATRIX.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<MetalFormerBlockEntity>> METAL_FORMER =
             BLOCK_ENTITIES.register("metal_former", () ->

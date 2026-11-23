@@ -7,6 +7,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -64,8 +65,8 @@ public class MatrixMenu extends AbstractContainerMenu {
     private final SyncedInt plateCount;
     private final SyncedInt buffer;
 
-    public MatrixMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public MatrixMenu(MenuType<MatrixMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static MatrixBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -74,8 +75,8 @@ public class MatrixMenu extends AbstractContainerMenu {
         throw new IllegalStateException("No MatrixBlockEntity at " + pos);
     }
 
-    public MatrixMenu(int containerId, Inventory playerInventory, MatrixBlockEntity blockEntity) {
-        super(ModMenus.MATRIX.get(), containerId);
+    public MatrixMenu(MenuType<MatrixMenu> type, int containerId, Inventory playerInventory, MatrixBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
         this.playerName = playerInventory.player.getGameProfile().getName();
@@ -84,7 +85,7 @@ public class MatrixMenu extends AbstractContainerMenu {
             addSlot(new StorageSlot(blockEntity.getInventory(), slot, PLATE_X[slot], PLATE_Y[slot]) {
                 @Override
                 public boolean mayPlace(ItemStack stack) {
-                    return stack.is(ModItems.CONSTRAINT_PLATE.get());
+                    return stack.is(cn.academy.content.AcademyContent.item("constraint_plate"));
                 }
             });
         }
@@ -189,24 +190,22 @@ public class MatrixMenu extends AbstractContainerMenu {
 
     /** Cree le reseau : le bouton « INIT », qui n'arrive qu'une fois. */
     public void initNetwork(String ssid, String password) {
-        send(cn.academy.energy.network.MatrixConfigPacket.Action.INIT, ssid, password);
+        send(cn.academy.platform.PlatformHooks.MatrixConfigAction.INIT, ssid, password);
     }
 
     /** Renomme le reseau — vide, il ne se renomme pas : un reseau sans nom n'existe pas. */
     public void rename(String ssid) {
-        send(cn.academy.energy.network.MatrixConfigPacket.Action.SSID, ssid, "");
+        send(cn.academy.platform.PlatformHooks.MatrixConfigAction.SSID, ssid, "");
     }
 
     /** Et change son mot de passe : vide pour l'enlever. */
     public void repassword(String password) {
-        send(cn.academy.energy.network.MatrixConfigPacket.Action.PASSWORD, "", password);
+        send(cn.academy.platform.PlatformHooks.MatrixConfigAction.PASSWORD, "", password);
     }
 
-    private void send(cn.academy.energy.network.MatrixConfigPacket.Action action,
+    private void send(cn.academy.platform.PlatformHooks.MatrixConfigAction action,
                       String ssid, String password) {
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
-                new cn.academy.energy.network.MatrixConfigPacket(
-                        blockEntity.getBlockPos(), action, ssid, password));
+        cn.academy.platform.PlatformHooks.sendMatrixConfig(blockEntity.getBlockPos(), action, ssid, password);
     }
 
     // ------------------------------------------------------------------
@@ -228,7 +227,7 @@ public class MatrixMenu extends AbstractContainerMenu {
         } else {
             // Du joueur vers le Matrix : une plaque va aux emplacements de
             // plaques, un coeur au sien, le reste repart d'ou il vient.
-            boolean moved = stackInSlot.is(ModItems.CONSTRAINT_PLATE.get())
+            boolean moved = stackInSlot.is(cn.academy.content.AcademyContent.item("constraint_plate"))
                     ? moveItemStackTo(stackInSlot, 0, MatrixBlockEntity.SLOT_PLATE_COUNT, false)
                     : moveItemStackTo(stackInSlot, MatrixBlockEntity.SLOT_CORE, MACHINE_SLOTS, false);
             if (!moved) return ItemStack.EMPTY;
@@ -241,6 +240,6 @@ public class MatrixMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.MATRIX.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

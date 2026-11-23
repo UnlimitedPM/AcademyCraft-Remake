@@ -30,8 +30,11 @@ import org.jetbrains.annotations.Nullable;
 public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlock {
     public static final EnumProperty<MatrixPart> PART = EnumProperty.create("part", MatrixPart.class);
 
-    public MatrixBlock(Properties props) {
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public MatrixBlock(Properties props, java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(props);
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(PART, MatrixPart.B_F_R));
     }
 
@@ -209,7 +212,7 @@ public class MatrixBlock extends HorizontalDirectionalBlock implements EntityBlo
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return state.getValue(PART) == MatrixPart.B_F_R ? new MatrixBlockEntity(pos, state) : null;
+        return state.getValue(PART) == MatrixPart.B_F_R ? blockEntities.apply(pos, state) : null;
     }
 
     @Nullable

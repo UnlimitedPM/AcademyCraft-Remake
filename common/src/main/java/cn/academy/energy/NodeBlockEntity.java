@@ -1,7 +1,6 @@
 package cn.academy.energy;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,8 +9,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
-import cn.academy.ModBlockEntities;
 import cn.academy.NodeMenu;
+import cn.academy.platform.storage.ItemStorage;
+import cn.academy.platform.storage.SimpleItemStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -24,17 +24,13 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.energy.IEnergyStorage;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Noeud sans fil : stocke l'energie du reseau Imag et sert de point d'acces.
@@ -80,19 +76,13 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     /** Energie maximale qu'un generateur ou recepteur peut echanger par tick. */
     private static final int USER_CHECK_INTERVAL = 20;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(SLOT_COUNT) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // Tout objet energetique : unite d'energie ET developpeur portable, comme
-            // le SlotIFItem de l'original qui testait l'interface et pas la classe.
-            return stack.isEmpty() || EnergyItems.supports(stack);
-        }
-
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    private final SimpleItemStorage inventory = new SimpleItemStorage(SLOT_COUNT, slot -> 64,
+            (slot, stack) -> {
+                // Tout objet energetique : unite d'energie ET developpeur portable, comme
+                // le SlotIFItem de l'original qui testait l'interface et pas la classe.
+                return stack.isEmpty() || EnergyItems.supports(stack);
+            },
+            this::setChanged);
 
     private double energy;
 
@@ -148,11 +138,16 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     /** Melange generateurs et recepteurs, comme le shuffle de l'original. */
     private final Random shuffleRandom = new Random();
 
-    private final LazyOptional<IItemHandler> itemHandlerCap = LazyOptional.of(() -> inventory);
-    private final LazyOptional<IEnergyStorage> energyCap = LazyOptional.of(ForgeEnergyAdapter::new);
+    private final MenuType<NodeMenu> menuType;
 
-    public NodeBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.WIRELESS_NODE.get(), pos, state);
+    public NodeBlockEntity(BlockEntityType<?> type, MenuType<NodeMenu> menuType, BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.menuType = menuType;
+    }
+
+    /** Le type, pour que le bloc puisse comparer celui qu'on lui donne au tick. */
+    public BlockEntityType<?> entityType() {
+        return getType();
     }
 
     /** Qualite du noeud, deduite du bloc qui le porte. */
@@ -487,77 +482,8 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
         }
     }
 
-    public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
-    }
-
-    // ------------------------------------------------------------------
-    // Capacites Forge
-    // ------------------------------------------------------------------
-
-    /**
-     * Vue Forge Energy du noeud, pour que les generateurs et les autres mods
-     * puissent l'alimenter. Conversion 1:1 avec l'unite du reseau Imag.
-     */
-    private final class ForgeEnergyAdapter implements IEnergyStorage {
-        @Override
-        public int receiveEnergy(int toReceive, boolean simulate) {
-            if (toReceive <= 0) return 0;
-            double accepted = Math.min(toReceive, getMaxEnergy() - energy);
-            if (accepted <= 0.0d) return 0;
-            if (!simulate) {
-                setEnergy(energy + accepted);
-                setChanged();
-            }
-            return (int) accepted;
-        }
-
-        @Override
-        public int extractEnergy(int toExtract, boolean simulate) {
-            if (toExtract <= 0) return 0;
-            double given = Math.min(toExtract, energy);
-            if (given <= 0.0d) return 0;
-            if (!simulate) {
-                setEnergy(energy - given);
-                setChanged();
-            }
-            return (int) given;
-        }
-
-        @Override
-        public int getEnergyStored() {
-            return (int) energy;
-        }
-
-        @Override
-        public int getMaxEnergyStored() {
-            return (int) getMaxEnergy();
-        }
-
-        @Override
-        public boolean canExtract() {
-            return true;
-        }
-
-        @Override
-        public boolean canReceive() {
-            return true;
-        }
-    }
-
-    @Nonnull
-    @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ForgeCapabilities.ITEM_HANDLER) return itemHandlerCap.cast();
-        if (cap == ForgeCapabilities.ENERGY) return energyCap.cast();
-        return super.getCapability(cap, side);
-    }
-
-    @Override
-    public void invalidateCaps() {
-        super.invalidateCaps();
-        itemHandlerCap.invalidate();
-        energyCap.invalidate();
+    public ItemStorage getInventory() {
+        return inventory;
     }
 
     // ------------------------------------------------------------------
@@ -567,7 +493,9 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        CompoundTag inv = new CompoundTag();
+        inventory.save(inv);
+        tag.put("inventory", inv);
         tag.putDouble("energy", energy);
         tag.putBoolean("connected", connected);
         tag.putInt("load", load);
@@ -579,7 +507,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         energy = clamp(tag.getDouble("energy"));
         connected = tag.getBoolean("connected");
         load = tag.getInt("load");
@@ -601,7 +529,7 @@ public class NodeBlockEntity extends BlockEntity implements EnergyNode, MenuProv
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new NodeMenu(containerId, playerInventory, this);
+        return new NodeMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override

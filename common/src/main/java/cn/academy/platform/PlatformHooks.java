@@ -49,11 +49,34 @@ public final class PlatformHooks {
         }
     }
 
+    /** Ce qu'un ecran de Matrix demande au serveur. */
+    public enum MatrixConfigAction {
+        INIT, SSID, PASSWORD
+    }
+
+    /** Envoi d'une demande de configuration du Matrix au serveur. */
+    @FunctionalInterface
+    public interface MatrixConfigSender {
+        void send(BlockPos pos, MatrixConfigAction action, String ssid, String password);
+    }
+
+    /** Envoi d'un nouveau nom ou mot de passe de noeud au serveur. */
+    @FunctionalInterface
+    public interface NodeConfigSender {
+        void send(BlockPos pos, boolean password, String value);
+    }
+
     private static NodeLinker nodeLinker = new NodeLinker() {
         @Override
         public boolean ensureLinked(ServerLevel level, BlockPos pos) {
             return false;
         }
+    };
+
+    private static MatrixConfigSender matrixConfigSender = (pos, action, ssid, password) -> {
+    };
+
+    private static NodeConfigSender nodeConfigSender = (pos, password, value) -> {
     };
 
     private static ExternalEnergyProbe externalEnergyProbe = stack -> false;
@@ -96,6 +119,14 @@ public final class PlatformHooks {
         nodeLinker = linker;
     }
 
+    public static void installMatrixConfigSender(MatrixConfigSender sender) {
+        matrixConfigSender = sender;
+    }
+
+    public static void installNodeConfigSender(NodeConfigSender sender) {
+        nodeConfigSender = sender;
+    }
+
     public static boolean hasExternalEnergy(ItemStack stack) {
         return !stack.isEmpty() && externalEnergyProbe.isExternalEnergyItem(stack);
     }
@@ -118,6 +149,14 @@ public final class PlatformHooks {
 
     public static void detachNode(ServerLevel level, BlockPos pos) {
         nodeLinker.detach(level, pos);
+    }
+
+    public static void sendMatrixConfig(BlockPos pos, MatrixConfigAction action, String ssid, String password) {
+        matrixConfigSender.send(pos, action, ssid, password);
+    }
+
+    public static void sendNodeConfig(BlockPos pos, boolean password, String value) {
+        nodeConfigSender.send(pos, password, value);
     }
 
     public static void openMenu(ServerPlayer player, MenuProvider provider, Consumer<FriendlyByteBuf> writer) {

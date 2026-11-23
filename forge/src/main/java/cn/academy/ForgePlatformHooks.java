@@ -36,6 +36,14 @@ public final class ForgePlatformHooks {
                 cn.academy.energy.NodeFinder.detach(level, pos);
             }
         });
+        PlatformHooks.installMatrixConfigSender((pos, action, ssid, password) ->
+                cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+                        new cn.academy.energy.network.MatrixConfigPacket(pos,
+                                cn.academy.energy.network.MatrixConfigPacket.Action.valueOf(action.name()),
+                                ssid, password)));
+        PlatformHooks.installNodeConfigSender((pos, password, value) ->
+                cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+                        new cn.academy.energy.network.NodeConfigPacket(pos, password, value)));
         PlatformHooks.installExternalEnergyIO(new PlatformHooks.ExternalEnergyIO() {
             @Override
             public int chargeItem(ItemStack stack, int amount, boolean simulate) {

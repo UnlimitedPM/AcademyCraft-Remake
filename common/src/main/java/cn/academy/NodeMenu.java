@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -57,8 +58,8 @@ public class NodeMenu extends AbstractContainerMenu implements WirelessNode {
         return blockEntity.getBlockPos();
     }
 
-    public NodeMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public NodeMenu(MenuType<NodeMenu> type, int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static NodeBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -67,8 +68,8 @@ public class NodeMenu extends AbstractContainerMenu implements WirelessNode {
         throw new IllegalStateException("No NodeBlockEntity at " + pos);
     }
 
-    public NodeMenu(int containerId, Inventory playerInventory, NodeBlockEntity blockEntity) {
-        super(ModMenus.NODE.get(), containerId);
+    public NodeMenu(MenuType<NodeMenu> type, int containerId, Inventory playerInventory, NodeBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
         this.playerName = playerInventory.player.getGameProfile().getName();
@@ -172,9 +173,7 @@ public class NodeMenu extends AbstractContainerMenu implements WirelessNode {
     }
 
     private void send(boolean password, String value) {
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
-                new cn.academy.energy.network.NodeConfigPacket(
-                        blockEntity.getBlockPos(), password, value));
+        cn.academy.platform.PlatformHooks.sendNodeConfig(blockEntity.getBlockPos(), password, value);
     }
 
     // ------------------------------------------------------------------
