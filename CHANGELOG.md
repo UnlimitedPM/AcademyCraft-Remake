@@ -4,6 +4,18 @@
 
 ### Français
 
+- **Les trous de Fabric se referment.** Un audit des identifiants enregistrés de part et d'autre n'en
+  laissait qu'un d'écart — le porteur d'ombre, qui n'a de sens qu'avec un moteur de shaders — mais
+  plusieurs objets existaient sous Fabric **sans leur comportement** : la pièce du railgun, les trois
+  morceaux du lecteur média, les quatre installeurs d'application et `imag_phase` étaient des objets
+  décoratifs, donc le railgun ne s'armait pas, aucun morceau ne s'acquérait, aucune application ne
+  s'installait et le liquide ne se posait pas. Quatre entités manquaient aussi, celles que les
+  compétences créent par leur type de contenu (bille de plasma, pièce lancée, bloc arraché, grappin) :
+  le type était nul et rien ne partait. `CoinItem`, `MediaItem` et `AppInstallerItem` sont maintenant
+  communs (Forge ne garde que les rendus en main), `imag_phase` est le `BlockItem` du liquide, et les
+  quatre entités sont déclarées avec leur rendu. Le développeur, enfin, se dessine sous Fabric :
+  `DeveloperRenderer` y est enregistré pour ses deux qualités, au lieu d'être un bloc invisible avec
+  un écran qui marche.
 - **Les derniers écrans de client passent en `common/`.** L'animation d'installation du terminal
   (sa barre, son étiquette, son ouverture automatique) et le porteur d'ombre — l'entité invisible
   qui fait dessiner les machines dans la carte d'ombre d'un shader — n'ont plus d'abonnement propre :
@@ -229,6 +241,17 @@
 
 ### English
 
+- **The Fabric gaps are closed.** An audit of the registered ids on both sides left a single
+difference — the shadow caster, which only means something with a shader engine — but several items
+existed on Fabric **without their behaviour**: the railgun coin, the three media tracks, the four
+app installers and `imag_phase` were decorative items, so the railgun could not be armed, no track
+could be acquired, no app installed and the liquid could not be placed. Four entities were missing
+too, the ones the skills create by content type (plasma ball, thrown coin, grabbed block, mag hook):
+the type was null and nothing left. `CoinItem`, `MediaItem` and `AppInstallerItem` are common now
+(Forge keeps only the in-hand renderers), `imag_phase` is the liquid's `BlockItem`, and the four
+entities are declared with their renderer. The developer machine, finally, draws on Fabric:
+`DeveloperRenderer` is registered for both tiers, instead of being an invisible block with a
+working screen.
 - **The last client screens move to `common/`.** The terminal install animation (its bar, its label,
   its automatic opening) and the shadow caster — the invisible entity that makes machines draw in a
   shader's shadow map — no longer carry their own subscriptions: `render` and `tick` are common,
