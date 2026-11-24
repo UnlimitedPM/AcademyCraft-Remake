@@ -168,6 +168,25 @@ public final class PlatformHooks {
         /** Tout ce qui est ouvert se ferme : eteindre l'aptitude, ou un brouillage. */
         void endAll(net.minecraft.server.level.ServerPlayer player,
                     cn.academy.ability.AbilityData data);
+
+        /**
+         * Ferme ce qui n'est plus dans la barre courante.
+         *
+         * <p>Appele apres un changement de prereglage : ce qui n'y figure plus ne reste pas
+         * allume. La boucle vit chez Forge, avec le reste de la fin des maintiens.
+         */
+        void endOutsidePreset(net.minecraft.server.level.ServerPlayer player);
+    }
+
+    /**
+     * Les prereglages d'un joueur, tels que le serveur les tient.
+     *
+     * <p>Chez Forge ils vivent dans une capacite attachee au joueur ; le code commun demande
+     * donc l'objet au chargeur, l'ouvre, et c'est le chargeur qui le sauvegarde.
+     */
+    @FunctionalInterface
+    public interface PresetAccess {
+        cn.academy.ability.preset.PresetData get(net.minecraft.world.entity.player.Player player);
     }
 
     /**
@@ -294,7 +313,13 @@ public final class PlatformHooks {
         public void endAll(net.minecraft.server.level.ServerPlayer player,
                            cn.academy.ability.AbilityData data) {
         }
+
+        @Override
+        public void endOutsidePreset(net.minecraft.server.level.ServerPlayer player) {
+        }
     };
+
+    private static PresetAccess presetAccess = player -> null;
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
 
@@ -390,6 +415,16 @@ public final class PlatformHooks {
         presetQuery = query;
     }
 
+    public static void installPresetAccess(PresetAccess access) {
+        presetAccess = access;
+    }
+
+    /** Les prereglages du joueur, ou {@code null} s'il n'en a pas. */
+    public static cn.academy.ability.preset.PresetData presetData(
+            net.minecraft.world.entity.player.Player player) {
+        return player == null ? null : presetAccess.get(player);
+    }
+
     public static void installHandEffectAnnouncer(HandEffectAnnouncer announcer) {
         handEffectAnnouncer = announcer;
     }
@@ -432,6 +467,11 @@ public final class PlatformHooks {
     public static void endAllHeld(net.minecraft.server.level.ServerPlayer player,
                                   cn.academy.ability.AbilityData data) {
         heldEnd.endAll(player, data);
+    }
+
+    /** Ferme ce qui n'est plus dans la barre courante du joueur. */
+    public static void endHoldsOutsidePreset(net.minecraft.server.level.ServerPlayer player) {
+        heldEnd.endOutsidePreset(player);
     }
 
     /** La conversion d'une creature est-elle permise ? */

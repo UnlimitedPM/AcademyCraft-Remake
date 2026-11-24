@@ -70,6 +70,11 @@ public final class ForgePlatformHooks {
                                cn.academy.ability.AbilityData data) {
                 cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
             }
+
+            @Override
+            public void endOutsidePreset(net.minecraft.server.level.ServerPlayer player) {
+                cn.academy.ability.AbilityEvents.endHoldsOutsideCurrentPreset(player);
+            }
         });
         // Le client tient ses touches : c'est lui qui ferme le bon maintien.
         // Le garde de dist est obligatoire : la reference de methode charge la classe, et
@@ -87,6 +92,10 @@ public final class ForgePlatformHooks {
                     cn.academy.ability.preset.PresetTracker.of(player);
             return presets != null && presets.getCurrent().contains(skillName);
         });
+        PlatformHooks.installPresetAccess(player -> player
+                .getCapability(cn.academy.ability.preset.PresetCapability.PRESET_DATA)
+                .map(cn.academy.ability.preset.PresetCapability.Holder::get)
+                .orElse(null));
         PlatformHooks.installHandEffectAnnouncer(player ->
                 cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
                         net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF

@@ -165,5 +165,19 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.HoldOverPacket::encode,
                         cn.academy.ability.network.HoldOverPacket::decode),
                 cn.academy.ability.network.HoldOverPacket::handle);
+
+        // Les prereglages : le serveur pousse les quatre barres, le client demande d'en changer ou
+        // d'y poser une competence.
+        Network.clientbound("sync_preset",
+                cn.academy.ability.preset.network.SyncPresetPacket.class,
+                Network.codec(cn.academy.ability.preset.network.SyncPresetPacket::encode,
+                        cn.academy.ability.preset.network.SyncPresetPacket::decode),
+                cn.academy.ability.preset.network.SyncPresetPacket::handle);
+
+        Network.serverbound("preset_action",
+                cn.academy.ability.preset.network.PresetActionPacket.class,
+                Network.codec(cn.academy.ability.preset.network.PresetActionPacket::encode,
+                        cn.academy.ability.preset.network.PresetActionPacket::decode),
+                cn.academy.ability.preset.network.PresetActionPacket::handle);
     }
 }

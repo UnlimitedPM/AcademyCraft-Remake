@@ -5,7 +5,7 @@ import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.ClientAbilityData;
-import cn.academy.ability.network.AbilityNetwork;
+import cn.academy.platform.network.Network;
 import cn.academy.ability.preset.AbilityPreset;
 import cn.academy.ability.preset.PresetData;
 import cn.academy.ability.preset.network.PresetActionPacket;
@@ -14,10 +14,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +42,6 @@ import java.util.List;
  * l'etat complet. L'ecran ne fait donc que lire {@code ClientPresetData}, ce qui rend une
  * divergence impossible.
  */
-@OnlyIn(Dist.CLIENT)
 public class PresetEditScreen extends Screen {
 
     // ------------------------------------------------------------------
@@ -137,7 +134,7 @@ public class PresetEditScreen extends Screen {
     }
 
     private static ResourceLocation presetTexture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(cn.academy.AcademyCraft.MOD_ID,
+        return new ResourceLocation(cn.academy.AcademyCraftCommon.MOD_ID,
                 "textures/guis/preset_settings/" + name + ".png");
     }
 
@@ -522,7 +519,7 @@ public class PresetEditScreen extends Screen {
 
     /** Le serveur range et renvoie l'etat : l'ecran ne decide rien. */
     private static void send(PresetActionPacket packet) {
-        AbilityNetwork.CHANNEL.sendToServer(packet);
+        Network.sendToServer(packet);
     }
 
     @Nullable

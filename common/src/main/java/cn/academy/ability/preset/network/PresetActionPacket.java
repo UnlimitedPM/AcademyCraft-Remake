@@ -2,19 +2,17 @@ package cn.academy.ability.preset.network;
 
 import cn.academy.ability.preset.PresetData;
 import cn.academy.ability.preset.PresetTracker;
+import cn.academy.platform.PlatformHooks;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-
-import javax.annotation.Nullable;
-import java.util.function.Supplier;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * C2S : ce que le client demande aux préréglages.
+ * C2S : ce que le client demande aux prereglages.
  *
  * <p>Deux gestes seulement, et ils viennent tous les deux des touches : changer de
- * préréglage, et poser une compétence sur une touche. Le serveur reste seul maître de la
- * donnée : il range ce qu'on lui demande, puis renvoie l'état complet — le client ne
+ * prereglage, et poser une competence sur une touche. Le serveur reste seul maitre de la
+ * donnee : il range ce qu'on lui demande, puis renvoie l'etat complet — le client ne
  * modifie jamais son propre exemplaire.
  */
 public class PresetActionPacket {
@@ -28,7 +26,7 @@ public class PresetActionPacket {
     private final int presetId;
     private final int key;
 
-    /** Le nom de la compétence à poser, ou {@code null} pour libérer la touche. */
+    /** Le nom de la competence a poser, ou {@code null} pour liberer la touche. */
     @Nullable
     private final String skillName;
 
@@ -63,11 +61,8 @@ public class PresetActionPacket {
         return new PresetActionPacket(action, presetId, key, skill);
     }
 
-    public static void handle(PresetActionPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ServerPlayer player = ctx.getSender();
-        ctx.enqueueWork(() -> apply(player, msg.action, msg.presetId, msg.key, msg.skillName));
-        ctx.setPacketHandled(true);
+    public static void handle(PresetActionPacket msg, ServerPlayer player) {
+        apply(player, msg.action, msg.presetId, msg.key, msg.skillName);
     }
 
     /**
@@ -93,7 +88,7 @@ public class PresetActionPacket {
         // prereglage qui l'a ouverte : le joueur l'a demande — « si je le retire de ma barre des
         // competences, il continue toujours de fonctionner, alors que ca devrais faire en sorte de
         // le desactiver par defaut si il n'est pas present dans ma barre ». Voir AbilityEvents.
-        cn.academy.ability.AbilityEvents.endHoldsOutsideCurrentPreset(player);
+        PlatformHooks.endHoldsOutsidePreset(player);
 
         // Le client ne se contente pas de suivre : il pourrait se tromper. On lui renvoie
         // donc l'etat, et c'est lui qui fait foi.

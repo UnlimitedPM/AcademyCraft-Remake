@@ -53,16 +53,8 @@ public class AbilityNetwork {
                 cn.academy.misc.media.network.SyncMediaPacket::decode,
                 cn.academy.misc.media.network.SyncMediaPacket::handle);
 
-        // Les prereglages : leur etat descend au client, et les deux gestes qui les
-        // modifient remontent — changer de prereglage, poser une competence sur une touche.
-        CHANNEL.registerMessage(nextId++, cn.academy.ability.preset.network.SyncPresetPacket.class,
-                cn.academy.ability.preset.network.SyncPresetPacket::encode,
-                cn.academy.ability.preset.network.SyncPresetPacket::decode,
-                cn.academy.ability.preset.network.SyncPresetPacket::handle);
-        CHANNEL.registerMessage(nextId++, cn.academy.ability.preset.network.PresetActionPacket.class,
-                cn.academy.ability.preset.network.PresetActionPacket::encode,
-                cn.academy.ability.preset.network.PresetActionPacket::decode,
-                cn.academy.ability.preset.network.PresetActionPacket::handle);
+        // Les prereglages, le terminal, les tutoriels et les medias : leurs paquets sont maintenant
+        // communs et voyagent par AcademyPackets.
 
         // Et la liste blanche du brouilleur : la seule chose de cette machine qu'un identifiant de
         // bouton ne peut pas porter, parce que c'est un nom de joueur et non un nombre.
