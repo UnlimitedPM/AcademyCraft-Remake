@@ -1,6 +1,6 @@
 package cn.academy.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.client.md.MdRenderType;
 import cn.academy.entity.SilbarnVisuals;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -9,10 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
@@ -42,12 +38,11 @@ import java.util.Random;
  * C'est l'idee de la {@code customRotation} de l'original, qui faisait tourner ses fragments sur
  * deux axes ; le port n'en garde qu'un, celui qui se voit.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class SilbarnFrags {
 
     /** L'image des eclats, celle de l'original. */
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/entities/silbarn_frag.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/entities/silbarn_frag.png");
 
     /** Un eclat vivant. */
     public static final class Frag {
@@ -137,19 +132,16 @@ public final class SilbarnFrags {
     public static void clear() {
         FRAGS.clear();
     }
-
-    @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+    public static void render(net.minecraft.client.Camera cam, com.mojang.blaze3d.vertex.PoseStack poseStack) {
         if (FRAGS.isEmpty()) return;
 
-        Vec3 camera = event.getCamera().getPosition();
-        Vector3f upVector = event.getCamera().getUpVector();
-        Vector3f leftVector = event.getCamera().getLeftVector();
+        Vec3 camera = cam.getPosition();
+        Vector3f upVector = cam.getUpVector();
+        Vector3f leftVector = cam.getLeftVector();
         double[][] screen = { { leftVector.x, leftVector.y, leftVector.z },
                               { upVector.x, upVector.y, upVector.z } };
 
-        PoseStack pose = event.getPoseStack();
+        PoseStack pose = poseStack;
         MultiBufferSource.BufferSource buffers =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         VertexConsumer out = buffers.getBuffer(MdRenderType.of(TEXTURE));

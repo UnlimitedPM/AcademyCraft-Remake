@@ -5,8 +5,6 @@ import cn.academy.sound.SoundLookup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * La boucle sonore du maintien en cours, chez le joueur.
@@ -19,7 +17,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <p>La table des boucles vit dans {@link HeldLoops}, qui ne connait pas Minecraft et se
  * relit en JUnit ; ici on ne fait que traduire un nom en son, et le faire tourner.
  */
-@OnlyIn(Dist.CLIENT)
 public final class LoopSounds {
 
     private static PlayerLoopSound running;

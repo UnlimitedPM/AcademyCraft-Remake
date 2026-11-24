@@ -67,5 +67,17 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
                         new com.mojang.blaze3d.vertex.PoseStack(),
                         context.camera().getPosition(),
                         context.frustum()));
+
+        // Les entrees de l'aptitude : touches, presets, charges du client. Tout le cablage est
+        // commun (AbilityClientEvents) ; Fabric n'a qu'a lui donner son tick.
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(
+                client -> cn.academy.ability.client.AbilityClientEvents.tick());
+
+        // Les eclats de la bille. Forge les dessine apres les particules du monde ; Fabric n'a pas
+        // ce stade, et le plus proche est « apres les entites » : les blocs sont peints, et rien
+        // n'est encore passe par-dessus.
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(
+                context -> cn.academy.client.SilbarnFrags.render(context.camera(),
+                        new com.mojang.blaze3d.vertex.PoseStack()));
     }
 }

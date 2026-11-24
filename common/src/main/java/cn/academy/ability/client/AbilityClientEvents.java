@@ -1,6 +1,5 @@
 package cn.academy.ability.client;
 
-import cn.academy.AcademyCraft;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
@@ -10,7 +9,6 @@ import cn.academy.ability.client.md.MineRayEffect;
 import cn.academy.ability.client.tp.TeleportAim;
 import cn.academy.ability.client.tp.TeleportMark;
 import cn.academy.ability.network.TeleportDistancePacket;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.ActivateSkillPacket;
 import cn.academy.ability.network.ActivateSkillPacket.Phase;
 import cn.academy.ability.network.FlashingPacket;
@@ -20,17 +18,10 @@ import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.player.Input;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.MovementInputUpdateEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class AbilityClientEvents {
 
     /**
@@ -95,14 +86,8 @@ public class AbilityClientEvents {
      * que si l'aptitude est allumee et qu'une competence occupe ce rang du prereglage —
      * sinon le clic reste un clic.
      */
-    @SubscribeEvent
-    public static void onInteraction(InputEvent.InteractionKeyMappingTriggered event) {
-        if (!event.isAttack() && !event.isUseItem()) return;
-        if (skillOnSameKey(event.getKeyMapping()) == null) return;
-
-        // Rien d'autre que la competence : le bras ne frappe pas, et l'objet ne part pas.
-        event.setSwingHand(false);
-        event.setCanceled(true);
+    public static boolean takesInteraction(KeyMapping base) {
+        return skillOnSameKey(base) != null;
     }
 
     /** La competence qui occupe la meme touche que cette action de base, s'il y en a une. */
@@ -110,7 +95,7 @@ public class AbilityClientEvents {
     private static Skill skillOnSameKey(KeyMapping base) {
         if (!ClientAbilityData.get().isActivated()) return null;
         for (Binding binding : BINDINGS) {
-            if (binding.key.getKey().equals(base.getKey())) return skillOf(binding);
+            if (cn.academy.platform.client.KeyState.sameKey(binding.key, base)) return skillOf(binding);
         }
         return null;
     }
@@ -130,24 +115,10 @@ public class AbilityClientEvents {
      * d'une demi-seconde : c'est ce qu'il a vu. Ici la touche reste celle du jeu — l'original la
      * lit pour viser — et seule la marche est refusee. Voir {@link #tickDirections}.
      */
-    @SubscribeEvent
-    public static void onMovementInput(MovementInputUpdateEvent event) {
-        if (!directionsTaken) return;
-        var player = minecraftPlayer();
-        if (player == null || event.getEntity() != player) return;
-
-        Input input = event.getInput();
-        input.up = false;
-        input.down = false;
-        input.left = false;
-        input.right = false;
-        input.forwardImpulse = 0f;
-        input.leftImpulse = 0f;
+    public static boolean takesDirections() {
+        return directionsTaken;
     }
-
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void tick() {
 
         // Les rayons du plasma et leurs etincelles : leur forme se lit en millisecondes et se
         // dessine a chaque image, mais c'est bien au tick qu'ils meurent et que les etincelles
@@ -497,7 +468,7 @@ public class AbilityClientEvents {
         // La file est videe dans tous les cas : c'est ce qui empeche les clics en trop de
         // ressortir plus tard. Un appui bref (touche enfoncee ET relachee entre deux ticks)
         // reste vu, puisque `wasDown` etait faux.
-        boolean down = binding.key.isDown();
+        boolean down = cn.academy.platform.client.KeyState.isDown(binding.key);
         boolean clicked = binding.key.consumeClick();
         boolean pressed = clicked && !binding.wasDown;
         binding.wasDown = down;
@@ -599,7 +570,7 @@ public class AbilityClientEvents {
         // clavier. Ses effets continuent donc de suivre son porteur jusqu'a ce qu'un second appui
         // la ferme — c'est ainsi que les ailes de tempete s'ouvrent et se ferment, et que les deux
         // veilles tiennent.
-        if (binding.key.isDown() || skill.isToggle()) {
+        if (cn.academy.platform.client.KeyState.isDown(binding.key) || skill.isToggle()) {
             // L'ARMEMENT COURT ICI, et il n'y a rien d'autre a faire pendant qu'il court : la
             // touche tient, le compte descend, et c'est son echeance qui envoie l'appui — le seul
             // envoi de tout le geste. Une competence qui s'arme n'est ni chargee ni tenue, donc
@@ -800,17 +771,16 @@ public class AbilityClientEvents {
      * <p>C'est un <b>nombre de degres</b> ajoute au champ du joueur, donc il se voit quel que soit
      * son reglage, et il grandit avec la charge.
      */
-    @SubscribeEvent
-    public static void onComputeFov(net.minecraftforge.client.event.ComputeFovModifierEvent event) {
+    public static float fovDelta(float currentModifier) {
         float degrees = ThunderClapEffect.fovDegrees() + MeltdownerCharge.fovDegrees()
                 + BloodRetroCharge.fovDegrees();
-        if (degrees <= 0f) return;
+        if (degrees <= 0f) return currentModifier;
 
         // Le facteur attendu est un rapport au champ de BASE — celui du reglage, pas celui de
         // l'image en cours — donc les degres se divisent par lui.
         int base = net.minecraft.client.Minecraft.getInstance().options.fov().get();
-        if (base <= 0) return;
-        event.setNewFovModifier(event.getFovModifier() + degrees / base);
+        if (base <= 0) return currentModifier;
+        return currentModifier + degrees / base;
     }
 
     /**
@@ -827,20 +797,19 @@ public class AbilityClientEvents {
      * <p>Et la distance part au serveur a chaque cran : c'est lui qui fait le saut, et il n'a pas
      * de molette pour la connaitre autrement. Voir {@code TeleportDistancePacket}.
      */
-    @SubscribeEvent
-    public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        if (!cn.academy.Config.useMouseWheel) return;
-        if (!TeleportAim.active()) return;
-        event.setCanceled(true);
+    public static boolean scroll(double delta) {
+        if (!cn.academy.Config.useMouseWheel) return false;
+        if (!TeleportAim.active()) return false;
 
         Skill skill = TeleporterCategory.PENETRATE_TELEPORT;
-        TeleportAim.scroll(event.getScrollDelta(),
+        TeleportAim.scroll(delta,
                 ((PenetrateTeleportSkill) skill).maxDistance(ClientAbilityData.get()));
 
         Category category = skill.getCategory();
-        if (category == null) return;
+        if (category == null) return true;
         cn.academy.platform.network.Network.sendToServer(new TeleportDistancePacket(category.getCategoryId(),
                 skill.getId(), (float) TeleportAim.distance()));
+        return true;
     }
 
     /**
@@ -860,7 +829,7 @@ public class AbilityClientEvents {
     private static void tickDirections(Category category, Skill skill) {
         KeyMapping[] keys = movementKeys();
         for (int i = 0; i < keys.length; i++) {
-            boolean down = keys[i].isDown();
+            boolean down = cn.academy.platform.client.KeyState.isDown(keys[i]);
             if (down && !directionHeld[i]) {
                 aimed = i + 1;
             } else if (!down && directionHeld[i] && aimed == i + 1) {
@@ -899,9 +868,9 @@ public class AbilityClientEvents {
     private static Vec3 wishDirection() {
         net.minecraft.client.Options options = net.minecraft.client.Minecraft.getInstance().options;
         return cn.academy.ability.vecmanip.StormWingSkill.localWish(
-                options.keyUp.isDown(), options.keyDown.isDown(),
-                options.keyLeft.isDown(), options.keyRight.isDown(),
-                options.keyJump.isDown(), options.keyShift.isDown());
+                cn.academy.platform.client.KeyState.isDown(options.keyUp), cn.academy.platform.client.KeyState.isDown(options.keyDown),
+                cn.academy.platform.client.KeyState.isDown(options.keyLeft), cn.academy.platform.client.KeyState.isDown(options.keyRight),
+                cn.academy.platform.client.KeyState.isDown(options.keyJump), cn.academy.platform.client.KeyState.isDown(options.keyShift));
     }
 
     /**
