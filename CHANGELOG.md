@@ -4,6 +4,24 @@
 
 ### Français
 
+- **L'aptitude tourne des deux côtés.** `AbilityTicker` est commun : le tick du joueur (interférence,
+  recharges, charges, surcoût, protection de chute, maintiens, réserve, synchronisation), la mort,
+  le réveil, les dégâts et les trois sorties des maintiens. `AbilityEvents` ne garde que la capacité
+  Forge et ses événements ; `FabricAbilityEvents` donne les mêmes au tick du serveur, à `AFTER_DEATH`
+  et à `ALLOW_DAMAGE`. **Limites assumées côté Fabric** : `ALLOW_DAMAGE` ne laisse pas réécrire le
+  montant, donc les marques de radiation et les veilles qui réduisent les dégâts ne s'appliquent pas
+  encore ; le réveil dans un lit, la protection de chute et le tick des vivants n'ont pas
+  d'événement équivalent.
+- **Les effets se dessinent sous Fabric.** `FabricClientRenders` tient la liste : un tick de client
+  pour les arcs, la détection de minerais, la rafale du railgun, les éclaboussures, le piquage de
+  regard et le geste de main ; un rendu après les entités pour les dix-sept dessins communs. C'est
+  le pendant de la classe d'événements par effet de Forge.
+- **Le contenu arrive sous Fabric.** Le palier n'avait ni recettes ni succès : 46 recettes et
+  13 succès sont désormais servis, et les trois objets à comportement qui leur manquaient passent en
+  `common/` — le grappin, l'installeur de terminal et le tutoriel — ainsi que l'unité vide, qui
+  reconnaît le liquide par le crochet `PlatformHooks.isPhaseLiquid` (un `FluidType` chez Forge, une
+  des deux variantes chez Fabric). Ne restent exclus que ce qui n'existe pas encore ici : le
+  brouilleur, les deux machines développeur et le développeur portable.
 - **Les touches d'aptitude répondent sous Fabric.** `AbilityClientEvents` est commun : il lit les
   touches, envoie ses demandes par `Network`, tient les charges du client et les boucles de son.
   Ce qui reste côté Forge est dans `AbilityInputEvents` — les deux événements qui **prennent** une
@@ -179,6 +197,21 @@
 
 ### English
 
+- **The ability runs on both sides.** `AbilityTicker` is common: the player tick (interference,
+  cooldowns, charges, overload, fall protection, holds, reserve, sync), death, waking up, damage and
+  the three hold exits. `AbilityEvents` keeps only the Forge capability and its events;
+  `FabricAbilityEvents` wires the same onto the server tick, `AFTER_DEATH` and `ALLOW_DAMAGE`.
+  **Assumed limits on Fabric**: `ALLOW_DAMAGE` cannot rewrite the amount, so radiation marks and the
+  wards that reduce damage do not apply yet; waking in a bed, fall protection and the living tick
+  have no equivalent event.
+- **The effects draw on Fabric.** `FabricClientRenders` keeps the list: a client tick for the arcs,
+  the mine detector, the railgun burst, the splashes, the gaze nudge and the hand gesture; a render
+  after entities for the seventeen common drawings.
+- **Content lands on Fabric.** The tier had neither recipes nor advancements: 46 recipes and
+  13 advancements are now served, and the three behaviour items they were missing move to `common/`
+  — the grapnel, the terminal installer and the tutorial — along with the empty unit, which
+  recognises the liquid through the `PlatformHooks.isPhaseLiquid` hook. Only what still does not
+  exist here stays excluded: the interferer, the two developer machines and the portable developer.
 - **The ability keys answer on Fabric.** `AbilityClientEvents` is common: it reads the keys, sends
   its requests through `Network`, keeps the client's charges and the sound loops. What stays Forge
   is in `AbilityInputEvents` — the two events that **take** a key from the game (the click that no
