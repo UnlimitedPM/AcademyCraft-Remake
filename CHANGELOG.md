@@ -4,6 +4,19 @@
 
 ### Français
 
+- **Les données de joueur passent par un service neutre.** `TerminalTracker`, `TutorialTracker`
+  (balayage compris), `MediaTracker` et `ClientTerminalData` sont communs : ils lisent leur donnée par
+  `PlatformHooks` (`DataAccess<T>`, installé par Forge sur les capacités) et l'envoient par `Network`.
+  Le câblage des capacités reste côté chargeur — `TerminalCapabilityEvents`, `TutorialCapabilityEvents`
+  (avec le tick de balayage), `MediaCapabilityEvents` — et les trois paquets de synchronisation sont
+  dans `AcademyPackets`. L'animation d'installation du terminal est un calque de client : elle passe
+  par le crochet `TerminalInstallBanner`, installé côté client seulement.
+- **Les touches du mod sont communes.** `AbilityKeyBindings` construit ses touches avec le
+  constructeur vanilla et expose `register(Consumer<KeyMapping>)` : Forge l'appelle depuis son
+  événement de touches (`AbilityKeyBindingsEvents`), Fabric depuis son initialiseur client
+  (`KeyBindingHelper`). Avec elles passent `RippleOverlay`, `GlowSprites`, `CpBarHud`,
+  `BodyIntensifyHud` et `AimCommandSpec`, les deux overlays devenant des méthodes statiques que
+  Forge pose depuis son événement de HUD.
 - **Les rendus d'aptitude sont communs.** Le tick et le dessin passent en `common/` : `HandSwing`
   (geste de main), `GroundshockCamera` (piquage de regard), `BloodSprayRenderer`, `RailgunHandEffect`,
   puis la vague des quatorze renderers de monde (JetEngine, MagManip, MineDetect, Shield,
@@ -130,6 +143,18 @@
 
 ### English
 
+- **Player data goes through a neutral service.** `TerminalTracker`, `TutorialTracker` (scan
+  included), `MediaTracker` and `ClientTerminalData` are common: they read their data through
+  `PlatformHooks` (`DataAccess<T>`, installed by Forge on the capabilities) and send it through
+  `Network`. The capability wiring stays loader-side — `TerminalCapabilityEvents`,
+  `TutorialCapabilityEvents` (with the scan tick), `MediaCapabilityEvents` — and the three sync
+  packets live in `AcademyPackets`. The terminal install animation is a client layer: it goes
+  through the `TerminalInstallBanner` hook, installed client-side only.
+- **The mod's keys are common.** `AbilityKeyBindings` builds its keys with the vanilla constructor
+  and exposes `register(Consumer<KeyMapping>)`: Forge calls it from its key event
+  (`AbilityKeyBindingsEvents`), Fabric from its client initializer (`KeyBindingHelper`). Along with
+  them go `RippleOverlay`, `GlowSprites`, `CpBarHud`, `BodyIntensifyHud` and `AimCommandSpec`, both
+  overlays becoming static methods that Forge places from its HUD event.
 - **The ability renders are common.** The tick and the drawing move to `common/`: `HandSwing`,
   `GroundshockCamera`, `BloodSprayRenderer`, `RailgunHandEffect`, then the wave of fourteen world
   renderers (JetEngine, MagManip, MineDetect, Shield, ThunderClap, MdEffects, BloodSplash,
