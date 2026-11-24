@@ -1,10 +1,9 @@
 package cn.academy.ability.network;
 
 import cn.academy.ability.client.MineDetectOverlay;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
 
-import java.util.function.Supplier;
 
 /**
  * S2C: l'eclat de la detection de minerais a eu lieu, et voici ce qu'il faut allumer.
@@ -60,7 +59,7 @@ public class MineDetectPacket {
                 buf.readBoolean());
     }
 
-    public static void handle(MineDetectPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+    public static void handle(MineDetectPacket msg, java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(() -> MineDetectOverlay.begin(msg.range, msg.advanced, msg.ticks, msg.hold));
         ctx.setPacketHandled(true);

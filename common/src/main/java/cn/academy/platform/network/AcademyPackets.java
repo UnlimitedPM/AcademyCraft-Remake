@@ -110,5 +110,10 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.JetFlightPacket::encode,
                         cn.academy.ability.network.JetFlightPacket::decode),
                 cn.academy.ability.network.JetFlightPacket::handle);
+
+        Network.clientbound("mine_ray_sight", cn.academy.ability.network.MineRaySightPacket.class,
+                Network.codec(cn.academy.ability.network.MineRaySightPacket::encode,
+                        cn.academy.ability.network.MineRaySightPacket::decode),
+                cn.academy.ability.network.MineRaySightPacket::handle);
     }
 }

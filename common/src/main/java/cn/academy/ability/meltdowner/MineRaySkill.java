@@ -139,7 +139,7 @@ public abstract class MineRaySkill extends Skill {
      */
     private void announce(Player player, boolean open) {
         if (!(player instanceof ServerPlayer server)) return;
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(() -> server),
+        cn.academy.platform.network.Network.sendToPlayer(server,
                 new MineRaySightPacket(getName(), server.getId(), open));
     }
 

@@ -1,10 +1,9 @@
 package cn.academy.ability.network;
 
 import cn.academy.ability.client.MineDetectOverlay;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
+import net.minecraft.network.FriendlyByteBuf;
 
-import java.util.function.Supplier;
 
 /**
  * S2C: l'eclat de la detection de minerais s'arrete.
@@ -26,7 +25,7 @@ public class MineDetectStopPacket {
         return new MineDetectStopPacket();
     }
 
-    public static void handle(MineDetectStopPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
+    public static void handle(MineDetectStopPacket msg, java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
         NetworkEvent.Context ctx = ctxSupplier.get();
         ctx.enqueueWork(MineDetectOverlay::stop);
         ctx.setPacketHandled(true);

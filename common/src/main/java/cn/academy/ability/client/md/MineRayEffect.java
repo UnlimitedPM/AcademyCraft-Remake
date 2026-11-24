@@ -12,10 +12,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Les trois rayons miniers, chez le client : le rayon tenu, et les etincelles.
@@ -60,7 +58,6 @@ import javax.annotation.Nullable;
  * de montrer des etincelles la ou le serveur a refuse, ce qui n'arrive que si la reserve du
  * joueur s'epuise, et le paquet de fin de maintien s'en charge alors.
  */
-@OnlyIn(Dist.CLIENT)
 public final class MineRayEffect {
 
     /** La portee du rayon DESSINE, en blocs : les quinze de l'entite de l'original. */

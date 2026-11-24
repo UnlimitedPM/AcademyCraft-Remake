@@ -1,6 +1,5 @@
 package cn.academy.ability.network;
 
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
 
 
@@ -50,12 +49,8 @@ public class MineRaySightPacket {
         return new MineRaySightPacket(buf.readUtf(), buf.readVarInt(), buf.readBoolean());
     }
 
-    public static void handle(MineRaySightPacket msg,
-                              java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.md.MineRaySight.see(
-                msg.skill, msg.ownerId, msg.open));
-        ctx.setPacketHandled(true);
+    public static void handle(MineRaySightPacket msg) {
+        cn.academy.ability.client.md.MineRaySight.see(msg.skill, msg.ownerId, msg.open);
     }
 
     /** La competence annoncee. Lisible par le test, qui relit l'aller-retour du paquet. */

@@ -3,7 +3,7 @@ package cn.academy.ability.client;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.electromaster.MetalTargets;
 import cn.academy.ability.electromaster.MineDetectSkill;
 import cn.academy.sound.client.FollowSound;
@@ -15,10 +15,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 /**
  * L'eclat de la detection de minerais, chez le joueur : le temps qu'il dure, et les minerais
@@ -32,7 +28,6 @@ import net.minecraftforge.fml.common.Mod;
  * cents minerais : c'est le rythme et la borne de l'original, et sans eux un rayon de
  * vingt-huit blocs se relirait cent quatre-vingt mille fois par seconde.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class MineDetectOverlay {
 
     /** Un minerai allume : ou il est, le palier de couleur qu'il a gagne, et s'il est le CHOIX. */
@@ -102,13 +97,13 @@ public final class MineDetectOverlay {
     /**
      * Joue le grondement de l'eclat, et retient de quoi l'eteindre et le relancer.
      *
-     * <p>Appele a l'ouverture, puis par {@link #onClientTick} quand le fichier est arrive a son
+     * <p>Appele a l'ouverture, puis par {@link #tick()} quand le fichier est arrive a son
      * terme : c'est le meme son qui repart, sur le joueur, sans coupure notable.
      */
     private static void playSound(LocalPlayer player) {
         // Un eclat precedent peut gronder encore : un seul grondement a la fois.
         stopSound();
-        sound = FollowSound.play(player, cn.academy.ModSounds.EM_MINEDETECT.get(),
+        sound = FollowSound.play(player, cn.academy.content.AcademyContent.sound("em.minedetect"),
                 SoundSource.AMBIENT, 0.5f, 1.0f);
         soundTicks = SOUND_TICKS;
     }
@@ -163,9 +158,12 @@ public final class MineDetectOverlay {
         return ores;
     }
 
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    /**
+     * Un tick de client : le son se relance, et la sphere se balaie.
+     *
+     * <p>C'est le chargeur qui appelle ceci depuis son propre crochet de tick.
+     */
+    public static void tick() {
         // Les compteurs, quand le joueur les a demandes : voir MineDetectStats.
         MineDetectStats.tick();
         LocalPlayer player = Minecraft.getInstance().player;

@@ -6,8 +6,6 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Un son qui SUIT une entite pendant toute sa duree, au lieu de rester ou il a commence.
@@ -26,7 +24,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <p>Client seulement, comme tout ce qui touche au {@code SoundManager} : un son joue chez celui qui
  * le demande, jamais chez les autres.
  */
-@OnlyIn(Dist.CLIENT)
 public final class FollowSound {
 
     private FollowSound() {}
