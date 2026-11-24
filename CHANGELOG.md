@@ -4,6 +4,18 @@
 
 ### Français
 
+- **Les quatre cursus d'aptitude sont en `common/` et enregistrés sur les trois chargeurs.**
+  `AbilityCategories` tient la liste, appelée par `AbilityInit` (Forge) et par l'initialiseur
+  Fabric. Le dernier verrou était `RailgunSkill` : deux crochets l'ont libéré —
+  `PlatformHooks.presetContains` (Forge lit `PresetTracker`) et `PlatformHooks.announceHandEffect`
+  (Forge envoie son `RailgunHandPacket`) — et `allowsHandEffect` prend maintenant un
+  `Predicate<String>` plutôt qu'un type de pré-réglage. Avec lui passent `ElectromasterCategory`,
+  `MeltdownerCategory`, la chaîne mine-ray complète (`MineRaySkill`, `MineRay{Basic,Expert,Luck}`,
+  `MineRaySight`, `MineRayEffect`, paquet compris) et le moteur des rayons (`MdRays`,
+  `MdRayView`). `HudConfig` passe au lecteur TOML neutre (`academy-client.toml`) et emmène
+  `HudElement`/`HudLayout` ; la détection de minerais (overlay, visuels, statistiques, filtre,
+  paquets, compétence) le suit, avec un `MineDetectEvents` côté Forge pour le tick de client.
+  Vérifié en jeu : le client Fabric démarre, enregistre les cursus et quitte proprement.
 - Les aptitudes d'électromaster et de meltdowner passent à `common/`, avec les crochets qui leur
   manquaient : `PlatformHooks.endHeld` (Forge garde `AbilityEvents.endHeld` comme sortie unique),
   `PlatformHooks.allowsBlockBreak` (Forge poste `BlockEvent.BreakEvent`, donc les protections de
@@ -90,6 +102,18 @@
 
 ### English
 
+- **All four ability categories live in `common/` and are registered by every loader.**
+  `AbilityCategories` holds the list, called from `AbilityInit` (Forge) and from the Fabric
+  initializer. The last lock was `RailgunSkill`: two hooks freed it —
+  `PlatformHooks.presetContains` (Forge reads `PresetTracker`) and
+  `PlatformHooks.announceHandEffect` (Forge sends its `RailgunHandPacket`) — and
+  `allowsHandEffect` now takes a `Predicate<String>` instead of a preset type. `ElectromasterCategory`,
+  `MeltdownerCategory`, the whole mine-ray chain (`MineRaySkill`, `MineRay{Basic,Expert,Luck}`,
+  `MineRaySight`, `MineRayEffect`, packet included) and the ray engine (`MdRays`, `MdRayView`)
+  follow. `HudConfig` moves to the neutral TOML reader (`academy-client.toml`) and brings
+  `HudElement`/`HudLayout`; the mine detector (overlay, visuals, stats, filter, packets, skill)
+  follows, with a forge-side `MineDetectEvents` for the client tick. Checked in game: the Fabric
+  client starts, registers the categories and shuts down cleanly.
 - The electromaster and meltdowner abilities move to `common/`, with the hooks they were missing:
   `PlatformHooks.endHeld` (Forge keeps `AbilityEvents.endHeld` as the single exit),
   `PlatformHooks.allowsBlockBreak` (Forge posts `BlockEvent.BreakEvent`, so terrain protection
