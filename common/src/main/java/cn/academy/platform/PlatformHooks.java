@@ -258,6 +258,19 @@ public final class PlatformHooks {
     }
 
     /**
+     * Reconnaitre l'imag phase liquide.
+     *
+     * <p>Le fluide est declare par chaque chargeur (Forge lui donne un {@code FluidType}, Fabric une
+     * sous-classe de {@code FlowingFluid}), et rien de cela n'existe dans le code commun. Or
+     * l'unite vide doit savoir si ce qu'elle regarde est <b>notre</b> liquide : elle le demande donc
+     * au chargeur.
+     */
+    @FunctionalInterface
+    public interface PhaseLiquidProbe {
+        boolean isPhaseLiquid(net.minecraft.world.level.material.FluidState state);
+    }
+
+    /**
      * Une piece mobile signalee au rendu d'ombres du chargeur.
      *
      * <p>Les shaders ne voient pas les block entities d'eux-memes : chez Forge c'est un mod de
@@ -365,6 +378,8 @@ public final class PlatformHooks {
 
     private static ShadowCasterTracker shadowCasterTracker = pos -> {
     };
+
+    private static PhaseLiquidProbe phaseLiquidProbe = state -> false;
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
 
@@ -514,6 +529,15 @@ public final class PlatformHooks {
 
     public static void installShadowCasterTracker(ShadowCasterTracker tracker) {
         shadowCasterTracker = tracker;
+    }
+
+    public static void installPhaseLiquidProbe(PhaseLiquidProbe probe) {
+        phaseLiquidProbe = probe;
+    }
+
+    /** Ce fluide est-il l'imag phase liquide du mod ? */
+    public static boolean isPhaseLiquid(net.minecraft.world.level.material.FluidState state) {
+        return state != null && !state.isEmpty() && phaseLiquidProbe.isPhaseLiquid(state);
     }
 
     /** Cette piece mobile doit-elle projeter une ombre ? Voir le rendu de l'eolienne. */

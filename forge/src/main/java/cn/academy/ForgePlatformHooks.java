@@ -87,6 +87,10 @@ public final class ForgePlatformHooks {
                 !net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
                         new net.minecraftforge.event.level.BlockEvent.BreakEvent(
                                 level, pos, state, player)));
+        // L'unite vide reconnait notre liquide a son type : c'est une declaration de Forge, donc le
+        // code commun ne peut pas la lire lui-meme.
+        PlatformHooks.installPhaseLiquidProbe(
+                state -> state.getFluidType() == cn.academy.ModFluids.PHASE_LIQUID_TYPE.get());
         PlatformHooks.installPresetQuery((player, skillName) -> {
             cn.academy.ability.preset.PresetData presets =
                     cn.academy.ability.preset.PresetTracker.of(player);

@@ -76,7 +76,7 @@ public class ModItems {
     // UNE SEULE FOIS MATTER_UNIT ICI
     // 1. L'unité vide bridée à 16
     public static final RegistryObject<Item> MATTER_UNIT = ITEMS.register("matter_unit",
-            () -> new EmptyUnitItem(new Item.Properties().stacksTo(16)));
+            () -> new cn.academy.EmptyUnitItem(new Item.Properties().stacksTo(16)));
 
     // 2. L'unité de phase bridée à 16
     public static final RegistryObject<Item> MATTER_UNIT_PHASE = ITEMS.register("matter_unit_phase_liquid",
@@ -266,46 +266,6 @@ public class ModItems {
         }
     }
 
-    // --- CLASSE : L'UNITÉ VIDE (Capture corrigée) ---
-    public static class EmptyUnitItem extends Item {
-        public EmptyUnitItem(Properties props) { super(props); }
-
-        @Override
-        public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand) {
-            ItemStack itemstack = player.getItemInHand(hand);
-
-            // On cherche le liquide sous le regard du joueur
-            net.minecraft.world.phys.BlockHitResult hitResult = getPlayerPOVHitResult(world, player, net.minecraft.world.level.ClipContext.Fluid.SOURCE_ONLY);
-
-            if (hitResult.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
-                BlockPos pos = hitResult.getBlockPos();
-
-                // Si le fluide visé est notre liquide de phase
-                if (world.getFluidState(pos).getFluidType() == ModFluids.PHASE_LIQUID_TYPE.get()) {
-                    if (!world.isClientSide) {
-                        world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-                        itemstack.shrink(1);
-
-                        ItemStack filled = new ItemStack(ModItems.MATTER_UNIT_PHASE.get());
-                        if (!player.getInventory().add(filled)) {
-                            player.drop(filled, false);
-                        }
-
-                        // « Une unite de matiere remplie de phase » : c'est le succes que
-                        // l'original accordait ici meme, en postant son evenement de
-                        // moisson. L'unite va directement dans l'inventaire, donc aucun
-                        // ramassage n'aura lieu : le succes se donne a la source.
-                        if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                            cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
-                                    cn.academy.advancements.AcademyAdvancements.GETTING_PHASE);
-                        }
-                    }
-                    return InteractionResultHolder.sidedSuccess(itemstack, world.isClientSide());
-                }
-            }
-            return InteractionResultHolder.pass(itemstack);
-        }
-    }
 
     // --- CLASSE : L'UNITÉ DE PHASE ---
     // Elle vit maintenant dans common/ (cn.academy.PhaseUnitItem) : les deux chargeurs la posent,

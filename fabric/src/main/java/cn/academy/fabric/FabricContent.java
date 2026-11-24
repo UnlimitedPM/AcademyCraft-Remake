@@ -256,7 +256,8 @@ public final class FabricContent {
                         nodeBasic, nodeStandard, nodeAdvanced).build(null));
 
         // --- Machines a phase liquide ---
-        register("matter_unit", new Item(new Item.Properties()));
+        // L'unite vide se remplit du liquide pose ; l'unite de phase le repose (voir FabricFluids).
+        register("matter_unit", new cn.academy.EmptyUnitItem(new Item.Properties().stacksTo(16)));
         // Le liquide lui-meme : le bloc, les deux variantes du fluide et l'unite qui le pose. Voir
         // FabricFluids — c'est ce qui manquait pour qu'on puisse le poser par terre.
         FabricFluids.register();

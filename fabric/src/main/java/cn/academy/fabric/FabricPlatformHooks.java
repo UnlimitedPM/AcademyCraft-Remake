@@ -24,6 +24,11 @@ final class FabricPlatformHooks {
 
     static void install() {
         PlatformHooks.installMenuOpener(FabricPlatformHooks::openMenu);
+        // L'unite vide reconnait notre liquide a ses deux variantes : c'est une declaration du
+        // chargeur, donc le code commun ne peut pas la lire lui-meme.
+        PlatformHooks.installPhaseLiquidProbe(state ->
+                state.getType() == cn.academy.fabric.FabricFluids.SOURCE
+                        || state.getType() == cn.academy.fabric.FabricFluids.FLOWING);
     }
 
     private static void openMenu(ServerPlayer player, MenuProvider provider,
