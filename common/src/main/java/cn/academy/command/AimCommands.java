@@ -1,11 +1,9 @@
 package cn.academy.command;
 
-import cn.academy.ability.AbilityCapability;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.SyncAbilityDataPacket;
 import cn.academy.ability.preset.PresetTracker;
 import com.mojang.brigadier.CommandDispatcher;
@@ -21,7 +19,6 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +53,6 @@ public final class AimCommands {
      * la mort).
      */
     private static final String CHEATS_TAG = "academy.aim_cheats";
-
     private AimCommands() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -198,12 +194,24 @@ public final class AimCommands {
         return false;
     }
 
+    /**
+     * Le drapeau « armé » du joueur, rangé dans ses <b>tags vanilla</b>.
+     *
+     * <p>L'original le posait dans les données persistantes de Forge ({@code getPersistentData}),
+     * qui n'existent pas dans le code commun. Les tags d'entité sont l'équivalent vanilla : ils
+     * sont sauvegardés avec le joueur, survivent à la déconnexion, et se lisent sans le chargeur —
+     * c'est le même choix que pour les repères de {@code EntityAffection}.
+     */
     private static boolean cheats(ServerPlayer player) {
-        return player.getPersistentData().getBoolean(CHEATS_TAG);
+        return player.getTags().contains(CHEATS_TAG);
     }
 
     private static void setCheats(ServerPlayer player, boolean value) {
-        player.getPersistentData().putBoolean(CHEATS_TAG, value);
+        if (value) {
+            player.addTag(CHEATS_TAG);
+        } else {
+            player.removeTag(CHEATS_TAG);
+        }
     }
 
     private static int cheats(CommandSourceStack source, boolean value) {
@@ -456,13 +464,13 @@ public final class AimCommands {
                 if ("all".equals(token)) {
                     // Les tutoriels s'ouvrent normalement en possedant un objet : `all` les ouvre
                     // tous d'un coup, pour tester sans rien fabriquer.
-                    player.getCapability(cn.academy.terminal.tutorial.TutorialCapability.TUTORIAL_DATA)
-                            .ifPresent(tutorials -> {
-                                for (var entry : cn.academy.terminal.tutorial.TutorialLibrary.entries()) {
-                                    tutorials.unlock(entry.id());
-                                }
-                                cn.academy.terminal.tutorial.TutorialTracker.sync(player);
-                            });
+                    var tutorials = cn.academy.platform.PlatformHooks.tutorialData(player);
+                    if (tutorials != null) {
+                        for (var entry : cn.academy.terminal.tutorial.TutorialLibrary.entries()) {
+                            tutorials.unlock(entry.id());
+                        }
+                        cn.academy.terminal.tutorial.TutorialTracker.sync(player);
+                    }
                 }
                 send(source, "ac.command.successful");
             }
@@ -562,7 +570,7 @@ public final class AimCommands {
     private static final SuggestionProvider<CommandSourceStack> SKILLS = (ctx, builder) -> {
         ServerPlayer player = suggestionTarget(ctx);
         if (player == null) return builder.buildFuture();
-        AbilityData data = player.getCapability(AbilityCapability.ABILITY_DATA).orElse(null);
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
         Category power = data == null
                 ? null
                 : AimCommandSpec.activePower(data, CategoryManager.INSTANCE.getCategories());

@@ -36,7 +36,8 @@ public class AcademyCraft {
         // Les declencheurs de succes vivent dans la table de CriteriaTriggers, pas dans un
         // registre : ils s'enregistrent donc au demarrage, avant que le premier monde ne
         // lise ses fichiers de succes.
-        modEventBus.addListener(cn.academy.advancements.AcademyAdvancements::setup);
+        modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event)
+                -> cn.academy.advancements.AcademyAdvancements.register());
         ModCreativeTabs.register(modEventBus);
         ModMenus.register(modEventBus);
         // Types de biome modifier du mod (honore les options de generation de la config).

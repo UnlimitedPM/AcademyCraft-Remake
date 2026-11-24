@@ -1,11 +1,11 @@
 package cn.academy.advancements;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -65,18 +65,33 @@ public final class AcademyAdvancements {
 
     private AcademyAdvancements() {}
 
-    /** Enregistre les quinze declencheurs. Appele une fois, au demarrage du mod. */
+    /**
+     * Enregistre les quinze declencheurs. Appele une fois, au demarrage du mod.
+     *
+     * <p>{@code CriteriaTriggers.register} est <b>prive</b> dans le code de vanilla : Forge le rend
+     * public, Fabric non. Le port l'appelle donc par reflexion, comme il le fait deja pour la
+     * fabrique de {@code RenderType}. Si la methode change de nom ou de signature, les declencheurs
+     * ne sont simplement pas enregistres : {@link #award} ne fait alors rien, et les succes accordes
+     * par {@link #grant} continuent de fonctionner — c'est du contenu, pas du code, et le jeu ne
+     * doit pas tomber pour cela.
+     */
     public static void register() {
         for (String name : NAMES) {
             AcademyTrigger trigger = new AcademyTrigger(id(name));
-            CriteriaTriggers.register(trigger);
+            registerTrigger(trigger);
             TRIGGERS.put(name, trigger);
         }
     }
 
-    /** Enregistre les declencheurs quand Forge en donne le signal. */
-    public static void setup(net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) {
-        register();
+    private static void registerTrigger(AcademyTrigger trigger) {
+        try {
+            java.lang.reflect.Method register = CriteriaTriggers.class.getDeclaredMethod("register",
+                    net.minecraft.advancements.CriterionTrigger.class);
+            register.setAccessible(true);
+            register.invoke(null, trigger);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // Voir le commentaire de register() : sans declencheur, les succes restent accordables.
+        }
     }
 
     /** Le declencheur d'un nom, ou {@code null} s'il n'a pas ete enregistre. */
@@ -150,6 +165,6 @@ public final class AcademyAdvancements {
 
     /** L'identifiant complet d'un succes du mod, pour les tests. */
     public static ResourceLocation id(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, name);
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, name);
     }
 }

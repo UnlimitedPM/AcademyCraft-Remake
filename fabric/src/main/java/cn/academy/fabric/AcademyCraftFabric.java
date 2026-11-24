@@ -22,5 +22,14 @@ public final class AcademyCraftFabric implements ModInitializer {
         cn.academy.ability.AbilityCategories.registerAll();
         FabricContent.register();
         FabricWorldgen.register();
+
+        // Les declencheurs de succes sont communs ; Fabric n'a pas d'evenement de « setup », donc
+        // ils se posent ici, une fois, au demarrage.
+        cn.academy.advancements.AcademyAdvancements.register();
+
+        // /aim et /aimp : les memes commandes que Forge, posees sur le repartiteur de Fabric.
+        net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
+                (dispatcher, registryAccess, environment) ->
+                        cn.academy.command.Commands.register(dispatcher));
     }
 }
