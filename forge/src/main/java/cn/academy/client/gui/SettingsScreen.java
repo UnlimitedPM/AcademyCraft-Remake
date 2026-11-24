@@ -337,7 +337,7 @@ public class SettingsScreen extends Screen {
      */
     private static void sendBreakPrefs(cn.academy.ability.Skill skill, boolean value) {
         String key = skill == null ? "" : cn.academy.ability.BlockBreaking.key(skill);
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+        cn.academy.platform.network.Network.sendToServer(
                 new cn.academy.ability.network.BreakPrefsPacket(key, value));
     }
 

@@ -7,9 +7,7 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.teleporter.PenetrateTeleportSkill;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
 
-import java.util.function.Supplier;
 
 /**
  * C2S : la distance que le joueur vient de donner a son saut traversant.
@@ -65,11 +63,7 @@ public class TeleportDistancePacket {
         return distance;
     }
 
-    public static void handle(TeleportDistancePacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+    public static void handle(TeleportDistancePacket msg, ServerPlayer player) {
             Category category = CategoryManager.INSTANCE.getCategory(msg.categoryId);
             if (category == null) return;
             Skill skill = category.getSkill(msg.skillId);
@@ -77,9 +71,7 @@ public class TeleportDistancePacket {
 
             AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
             if (data != null) handle(data, skill, msg.distance);
-        });
-        ctx.setPacketHandled(true);
-    }
+            }
 
     private static void handle(AbilityData data, Skill skill, float distance) {
         // Sans maintien ouvert, il n'y a personne pour lire ce nombre — et c'est aussi ce qui

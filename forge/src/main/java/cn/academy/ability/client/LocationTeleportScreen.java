@@ -355,7 +355,7 @@ public class LocationTeleportScreen extends CGuiScreen {
     }
 
     private static void send(LocationTeleportPacket.Action action, int markId, String name) {
-        AbilityNetwork.CHANNEL.sendToServer(new LocationTeleportPacket(
+        cn.academy.platform.network.Network.sendToServer(new LocationTeleportPacket(
                 teleport().getCategory().getCategoryId(), teleport().getId(), action, markId, name));
     }
 

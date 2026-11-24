@@ -1,10 +1,8 @@
 package cn.academy.ability.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * S2C : ce maintien n'existe plus, chez le serveur.
@@ -45,10 +43,9 @@ public class HoldOverPacket {
         return new HoldOverPacket(buf.readUtf());
     }
 
-    public static void handle(HoldOverPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> cn.academy.ability.client.AbilityClientEvents.onHoldOver(msg.skill));
-        ctx.setPacketHandled(true);
+    public static void handle(HoldOverPacket msg) {
+        // Le client tient ses touches : on lui dit seulement laquelle se ferme.
+        cn.academy.platform.PlatformHooks.holdOver(msg.skill);
     }
 
     /** Le nom de la competence terminee. Lisible par le test, qui relit l'aller-retour. */

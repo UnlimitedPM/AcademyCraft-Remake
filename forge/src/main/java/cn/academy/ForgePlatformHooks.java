@@ -58,7 +58,26 @@ public final class ForgePlatformHooks {
         });
         PlatformHooks.installCategoryChangeHook(
                 cn.academy.ability.preset.PresetTracker::clearOnCategoryChange);
-        PlatformHooks.installHeldEnd(cn.academy.ability.AbilityEvents::endHeld);
+        PlatformHooks.installHeldEnd(new PlatformHooks.HeldEnd() {
+            @Override
+            public void end(net.minecraft.server.level.ServerPlayer player,
+                            cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill) {
+                cn.academy.ability.AbilityEvents.endHeld(player, data, skill);
+            }
+
+            @Override
+            public void endAll(net.minecraft.server.level.ServerPlayer player,
+                               cn.academy.ability.AbilityData data) {
+                cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
+            }
+        });
+        // Le client tient ses touches : c'est lui qui ferme le bon maintien.
+        // Le garde de dist est obligatoire : la reference de methode charge la classe, et
+        // AbilityClientEvents touche LocalPlayer -> plantage sur serveur dedie.
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
+            PlatformHooks.installHoldOverListener(
+                    cn.academy.ability.client.AbilityClientEvents::onHoldOver);
+        }
         PlatformHooks.installBlockBreakGuard((player, level, pos, state) ->
                 !net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
                         new net.minecraftforge.event.level.BlockEvent.BreakEvent(

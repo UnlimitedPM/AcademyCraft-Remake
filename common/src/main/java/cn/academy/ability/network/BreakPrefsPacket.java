@@ -1,13 +1,10 @@
 package cn.academy.ability.network;
 
-import java.util.function.Supplier;
 
 import cn.academy.ability.BlockBreaking;
 import cn.academy.ability.Skill;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
 /**
  * Le choix du joueur sur la casse des blocs.
@@ -40,11 +37,7 @@ public class BreakPrefsPacket {
         return new BreakPrefsPacket(buf.readUtf(), buf.readBoolean());
     }
 
-    public static void handle(BreakPrefsPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+    public static void handle(BreakPrefsPacket msg, ServerPlayer player) {
 
             cn.academy.ability.AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
             if (data != null) {
@@ -59,7 +52,5 @@ public class BreakPrefsPacket {
                 }
                 cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
             }
-        });
-        ctx.setPacketHandled(true);
-    }
+            }
 }

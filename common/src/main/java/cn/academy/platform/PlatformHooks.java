@@ -164,6 +164,10 @@ public final class PlatformHooks {
     public interface HeldEnd {
         void end(net.minecraft.server.level.ServerPlayer player,
                  cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill);
+
+        /** Tout ce qui est ouvert se ferme : eteindre l'aptitude, ou un brouillage. */
+        void endAll(net.minecraft.server.level.ServerPlayer player,
+                    cn.academy.ability.AbilityData data);
     }
 
     /**
@@ -186,6 +190,17 @@ public final class PlatformHooks {
     @FunctionalInterface
     public interface HandEffectAnnouncer {
         void announce(net.minecraft.world.entity.player.Player player);
+    }
+
+    /**
+     * Le client vient d'apprendre qu'un maintien est termine.
+     *
+     * <p>Il tient ses touches et ses charges : c'est a lui de fermer la bonne. Le code commun dit
+     * seulement le nom de la competence.
+     */
+    @FunctionalInterface
+    public interface HoldOverListener {
+        void onHoldOver(String skillName);
     }
 
     /** Les succes du mod, que seule la logique des aptitudes declenche. */
@@ -269,7 +284,16 @@ public final class PlatformHooks {
         }
     };
 
-    private static HeldEnd heldEnd = (player, data, skill) -> {
+    private static HeldEnd heldEnd = new HeldEnd() {
+        @Override
+        public void end(net.minecraft.server.level.ServerPlayer player,
+                        cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill) {
+        }
+
+        @Override
+        public void endAll(net.minecraft.server.level.ServerPlayer player,
+                           cn.academy.ability.AbilityData data) {
+        }
     };
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
@@ -277,6 +301,9 @@ public final class PlatformHooks {
     private static PresetQuery presetQuery = (player, skillName) -> false;
 
     private static HandEffectAnnouncer handEffectAnnouncer = player -> {
+    };
+
+    private static HoldOverListener holdOverListener = skillName -> {
     };
 
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
@@ -367,6 +394,15 @@ public final class PlatformHooks {
         handEffectAnnouncer = announcer;
     }
 
+    public static void installHoldOverListener(HoldOverListener listener) {
+        holdOverListener = listener;
+    }
+
+    /** Le client ferme le maintien nomme. */
+    public static void holdOver(String skillName) {
+        holdOverListener.onHoldOver(skillName);
+    }
+
     /** La competence est-elle dans le prereglage en service de ce joueur ? */
     public static boolean presetContains(net.minecraft.world.entity.player.Player player,
                                          String skillName) {
@@ -390,6 +426,12 @@ public final class PlatformHooks {
     public static void endHeld(net.minecraft.server.level.ServerPlayer player,
                                cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill) {
         heldEnd.end(player, data, skill);
+    }
+
+    /** Ferme tout ce qui est ouvert pour ce joueur. */
+    public static void endAllHeld(net.minecraft.server.level.ServerPlayer player,
+                                  cn.academy.ability.AbilityData data) {
+        heldEnd.endAll(player, data);
     }
 
     /** La conversion d'une creature est-elle permise ? */

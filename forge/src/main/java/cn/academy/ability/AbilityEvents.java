@@ -1,9 +1,9 @@
 package cn.academy.ability;
 
 import cn.academy.AcademyCraft;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.HoldOverPacket;
 import cn.academy.ability.network.SyncAbilityDataPacket;
+import cn.academy.platform.network.Network;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -218,8 +218,7 @@ public class AbilityEvents {
                 data.cancelCharge(skill);
                 // Le client tient sa propre charge des l'appui, donc sans ce message il
                 // continuerait son animation sur un pouvoir que le serveur vient d'abandonner.
-                AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new HoldOverPacket(skill.getName()));
+                Network.sendToPlayer(player, new HoldOverPacket(skill.getName()));
             }
         }
     }
@@ -424,7 +423,6 @@ public class AbilityEvents {
         // bouclier est toujours visible alors que la competence est finie ». C'est la meme
         // chose pour une fin de duree maximale et pour une reserve qui s'epuise : les trois
         // passent par ici. Voir HoldOverPacket.
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                new HoldOverPacket(skill.getName()));
+        Network.sendToPlayer(player, new HoldOverPacket(skill.getName()));
     }
 }

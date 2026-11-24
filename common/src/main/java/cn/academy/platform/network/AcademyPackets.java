@@ -126,5 +126,44 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.MineDetectStopPacket::encode,
                         cn.academy.ability.network.MineDetectStopPacket::decode),
                 cn.academy.ability.network.MineDetectStopPacket::handle);
+
+        // Les demandes du client d'aptitude : activer une competence, ouvrir ou fermer l'aptitude,
+        // refuser la casse, sauter, regler un saut, poser une marque.
+        Network.serverbound("activate_skill", cn.academy.ability.network.ActivateSkillPacket.class,
+                Network.codec(cn.academy.ability.network.ActivateSkillPacket::encode,
+                        cn.academy.ability.network.ActivateSkillPacket::decode),
+                cn.academy.ability.network.ActivateSkillPacket::handle);
+
+        Network.serverbound("toggle_ability", cn.academy.ability.network.ToggleAbilityPacket.class,
+                Network.codec(cn.academy.ability.network.ToggleAbilityPacket::encode,
+                        cn.academy.ability.network.ToggleAbilityPacket::decode),
+                cn.academy.ability.network.ToggleAbilityPacket::handle);
+
+        Network.serverbound("break_prefs", cn.academy.ability.network.BreakPrefsPacket.class,
+                Network.codec(cn.academy.ability.network.BreakPrefsPacket::encode,
+                        cn.academy.ability.network.BreakPrefsPacket::decode),
+                cn.academy.ability.network.BreakPrefsPacket::handle);
+
+        Network.serverbound("flashing", cn.academy.ability.network.FlashingPacket.class,
+                Network.codec(cn.academy.ability.network.FlashingPacket::encode,
+                        cn.academy.ability.network.FlashingPacket::decode),
+                cn.academy.ability.network.FlashingPacket::handle);
+
+        Network.serverbound("location_teleport",
+                cn.academy.ability.network.LocationTeleportPacket.class,
+                Network.codec(cn.academy.ability.network.LocationTeleportPacket::encode,
+                        cn.academy.ability.network.LocationTeleportPacket::decode),
+                cn.academy.ability.network.LocationTeleportPacket::handle);
+
+        Network.serverbound("teleport_distance",
+                cn.academy.ability.network.TeleportDistancePacket.class,
+                Network.codec(cn.academy.ability.network.TeleportDistancePacket::encode,
+                        cn.academy.ability.network.TeleportDistancePacket::decode),
+                cn.academy.ability.network.TeleportDistancePacket::handle);
+
+        Network.clientbound("hold_over", cn.academy.ability.network.HoldOverPacket.class,
+                Network.codec(cn.academy.ability.network.HoldOverPacket::encode,
+                        cn.academy.ability.network.HoldOverPacket::decode),
+                cn.academy.ability.network.HoldOverPacket::handle);
     }
 }

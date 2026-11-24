@@ -1,16 +1,12 @@
 package cn.academy.ability.network;
 
 import cn.academy.ability.AbilityData;
-import cn.academy.ability.AbilityEvents;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
 import cn.academy.ability.Skill;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
-import java.util.function.Supplier;
 
 /** C2S: the player pressed or released the key bound to a given skill. */
 public class ActivateSkillPacket {
@@ -58,20 +54,14 @@ public class ActivateSkillPacket {
                 phase >= 0 && phase < values.length ? values[phase] : Phase.PRESS);
     }
 
-    public static void handle(ActivateSkillPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+    public static void handle(ActivateSkillPacket msg, ServerPlayer player) {
             Category category = CategoryManager.INSTANCE.getCategory(msg.categoryId);
             if (category == null) return;
             Skill skill = category.getSkill(msg.skillId);
             if (skill == null) return;
             AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
             if (data != null) handle(player, data, skill, msg.phase);
-        });
-        ctx.setPacketHandled(true);
-    }
+            }
 
     private static void handle(ServerPlayer player, AbilityData data, Skill skill, Phase phase) {
         // Apprendre une competence passe par le developpeur : tant qu'elle ne l'est pas, la touche
@@ -86,7 +76,7 @@ public class ActivateSkillPacket {
             // l'original — son gestionnaire d'activation terminait le contexte vivant —, et c'est
             // teste AVANT les refus : fermer ne se refuse pas.
             if (skill.isToggle() && data.isCharging(skill)) {
-                AbilityEvents.endHeld(player, data, skill);
+                cn.academy.platform.PlatformHooks.endHeld(player, data, skill);
                 return;
             }
 
@@ -138,7 +128,7 @@ public class ActivateSkillPacket {
         // reste alors ouvert, et c'est son propre tick qui appellera la fin.
         if (skill.isHeld()) {
             if (skill.onRelease(player, data, data.getChargeTicks(skill))) return;
-            AbilityEvents.endHeld(player, data, skill);
+            cn.academy.platform.PlatformHooks.endHeld(player, data, skill);
             return;
         }
 
@@ -184,7 +174,7 @@ public class ActivateSkillPacket {
      * fonctionner ».
      */
     private static void refuse(ServerPlayer player, Skill skill) {
-        AbilityNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+        cn.academy.platform.network.Network.sendToPlayer(player,
                 new HoldOverPacket(skill.getName()));
     }
 

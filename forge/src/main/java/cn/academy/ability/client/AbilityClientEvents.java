@@ -277,7 +277,7 @@ public class AbilityClientEvents {
         // L'allumage et l'extinction de l'aptitude : le serveur decide, et renvoie l'etat
         // complet. Rien ne part tant qu'elle est eteinte, et le HUD reste cache.
         if (AbilityKeyBindings.TOGGLE_ABILITY.consumeClick()) {
-            AbilityNetwork.CHANNEL.sendToServer(new cn.academy.ability.network.ToggleAbilityPacket(
+            cn.academy.platform.network.Network.sendToServer(new cn.academy.ability.network.ToggleAbilityPacket(
                     !ClientAbilityData.get().isActivatedRaw()));
         }
 
@@ -377,7 +377,7 @@ public class AbilityClientEvents {
 
         if (AbilityKeyBindings.PRESET_NEXT.consumeClick()) {
             var data = cn.academy.ability.preset.client.ClientPresetData.get();
-            AbilityNetwork.CHANNEL.sendToServer(
+            cn.academy.platform.network.Network.sendToServer(
                     cn.academy.ability.preset.network.PresetActionPacket
                             .switchTo(data.getCurrentId() + 1));
         }
@@ -839,7 +839,7 @@ public class AbilityClientEvents {
 
         Category category = skill.getCategory();
         if (category == null) return;
-        AbilityNetwork.CHANNEL.sendToServer(new TeleportDistancePacket(category.getCategoryId(),
+        cn.academy.platform.network.Network.sendToServer(new TeleportDistancePacket(category.getCategoryId(),
                 skill.getId(), (float) TeleportAim.distance()));
     }
 
@@ -870,7 +870,7 @@ public class AbilityClientEvents {
                 // garde-fou, marcher avec les ailes ouvertes enverrait un paquet pour chaque
                 // touche relachee.
                 if (skill instanceof cn.academy.ability.teleporter.FlashingSkill) {
-                    AbilityNetwork.CHANNEL.sendToServer(new FlashingPacket(
+                    cn.academy.platform.network.Network.sendToServer(new FlashingPacket(
                             category.getCategoryId(), skill.getId(), i + 1));
                     // Et la retombee du scintillement se voit chez son porteur : une gerbe au
                     // depart, puis quelques etincelles pendant la descente lente. C'est un effet
@@ -963,7 +963,7 @@ public class AbilityClientEvents {
     }
 
     private static void send(Category category, Skill skill, Phase phase) {
-        AbilityNetwork.CHANNEL.sendToServer(
+        cn.academy.platform.network.Network.sendToServer(
                 new ActivateSkillPacket(category.getCategoryId(), skill.getId(), phase));
     }
 }

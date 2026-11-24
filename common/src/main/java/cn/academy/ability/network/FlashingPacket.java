@@ -7,10 +7,7 @@ import cn.academy.ability.Skill;
 import cn.academy.ability.teleporter.FlashingSkill;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
-import java.util.function.Supplier;
 
 /**
  * C2S: une touche de deplacement a ete relachee pendant un maintien qui les ecoute.
@@ -46,11 +43,7 @@ public class FlashingPacket {
         return new FlashingPacket(buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
     }
 
-    public static void handle(FlashingPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+    public static void handle(FlashingPacket msg, ServerPlayer player) {
             Category category = CategoryManager.INSTANCE.getCategory(msg.categoryId);
             if (category == null) return;
             Skill skill = category.getSkill(msg.skillId);
@@ -61,9 +54,7 @@ public class FlashingPacket {
 
             AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
             if (data != null) handle(player, data, skill, msg.direction);
-        });
-        ctx.setPacketHandled(true);
-    }
+            }
 
     private static void handle(ServerPlayer player, AbilityData data, Skill skill, int direction) {
         // Le message de l'original n'existait que pour un contexte vivant : sans maintien

@@ -3,10 +3,7 @@ package cn.academy.ability.network;
 import cn.academy.ability.AbilityData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraftforge.network.PacketDistributor;
 
-import java.util.function.Supplier;
 
 /**
  * L'allumage et l'extinction de l'aptitude.
@@ -34,11 +31,7 @@ public class ToggleAbilityPacket {
         return new ToggleAbilityPacket(buf.readBoolean());
     }
 
-    public static void handle(ToggleAbilityPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> {
-            ServerPlayer player = ctx.getSender();
-            if (player == null) return;
+    public static void handle(ToggleAbilityPacket msg, ServerPlayer player) {
 
             cn.academy.ability.AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
             if (data != null) {
@@ -48,12 +41,10 @@ public class ToggleAbilityPacket {
                 // (fin ordinaire des maintiens, annulation des charges, message au client), et
                 // elle a lieu AVANT l'extinction pour que les effets de fin lisent encore l'etat.
                 if (!msg.activated) {
-                    cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
+                    cn.academy.platform.PlatformHooks.endAllHeld(player, data);
                 }
                 data.setActivated(msg.activated);
                 cn.academy.platform.network.Network.sendToPlayer(player, new SyncAbilityDataPacket(data));
             }
-        });
-        ctx.setPacketHandled(true);
     }
 }
