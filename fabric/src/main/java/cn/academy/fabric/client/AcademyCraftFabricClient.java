@@ -57,5 +57,15 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
         net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putFluids(
                 net.minecraft.client.renderer.RenderType.translucent(),
                 cn.academy.fabric.FabricFluids.SOURCE, cn.academy.fabric.FabricFluids.FLOWING);
+
+        // Les nappes de l'imag phase liquide : Forge les dessine une fois la couche translucide du
+        // monde peinte (voir ClientRenderEvents). C'est la seule place ou elles se voient — un bloc
+        // de fluide est peint dans cette couche, donc un rendu de block entity passerait dessous.
+        // Sans elles le liquide n'est qu'un aplat noir.
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(
+                context -> cn.academy.client.render.ImagPhaseLiquidRenderer.draw(
+                        new com.mojang.blaze3d.vertex.PoseStack(),
+                        context.camera().getPosition(),
+                        context.frustum()));
     }
 }

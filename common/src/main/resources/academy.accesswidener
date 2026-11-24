@@ -14,3 +14,5 @@ accessible method net/minecraft/world/entity/projectile/Projectile <init> (Lnet/
 accessible class net/minecraft/client/renderer/RenderStateShard$LightmapStateShard
 accessible class net/minecraft/client/renderer/RenderStateShard$OverlayStateShard
 accessible class net/minecraft/client/renderer/RenderStateShard$LayeringStateShard
+
+accessible class net/minecraft/client/renderer/RenderStateShard$DepthTestStateShard

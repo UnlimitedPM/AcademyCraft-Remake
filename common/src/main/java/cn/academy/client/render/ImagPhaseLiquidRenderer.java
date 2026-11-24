@@ -1,7 +1,5 @@
 package cn.academy.client.render;
 
-import cn.academy.AcademyCraft;
-import cn.academy.ModBlocks;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -171,7 +169,7 @@ public final class ImagPhaseLiquidRenderer {
      * pas la profondeur.
      */
     private static RenderType layer(ResourceLocation texture) {
-        return RenderType.create("academy_imag_phase_layer",
+        return RenderTypes.create("academy_imag_phase_layer",
                 DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,
                 256,
@@ -296,7 +294,7 @@ public final class ImagPhaseLiquidRenderer {
         // Sans block entity, les blocs se retrouvent par la PALETTE du chunk : `findBlocks` saute
         // d'un coup les sections qui ne contiennent pas le bloc, la ou une boucle de 16x16x16 les
         // lirait une par une. C'est la lecture la moins chere qui donne quand meme chaque position.
-        chunk.findBlocks(state -> state.is(ModBlocks.PHASE_LIQUID_BLOCK.get()), (pos, state) -> {
+        chunk.findBlocks(state -> state.is(cn.academy.content.AcademyContent.block("phase_liquid")), (pos, state) -> {
             if (distanceSqr(camera, pos) > MAX_DISTANCE_SQR) return;
             float[] corners = cornerHeights(level, pos);
             found.add(new Sheet(pos.immutable(), corners,
@@ -411,7 +409,7 @@ public final class ImagPhaseLiquidRenderer {
     }
 
     private static ResourceLocation texture(String frame) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(cn.academy.AcademyCraftCommon.MOD_ID,
                 "textures/effects/imag_proj_liquid/" + frame + ".png");
     }
 }
