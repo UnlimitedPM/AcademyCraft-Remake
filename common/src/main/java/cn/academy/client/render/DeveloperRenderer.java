@@ -69,7 +69,7 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
 
         // Les shaders ne voient pas les block entities d'eux-memes (voir OculusShadowCompat) :
         // on signale celle-ci pour qu'elle projette son ombre.
-        cn.academy.compat.oculus.OculusShadowCompat.track(developer.getBlockPos());
+        cn.academy.platform.PlatformHooks.trackShadowCaster(developer.getBlockPos());
 
         boolean advanced = block.getDeveloperType() == DeveloperType.ADVANCED;
         ResourceLocation model = advanced ? ADVANCED_MODEL : NORMAL_MODEL;
@@ -90,7 +90,7 @@ public class DeveloperRenderer implements BlockEntityRenderer<DeveloperBlockEnti
 
         // A l'ecran, la vitre se melange et la profondeur s'ecrit (translucent) ; dans la carte
         // d'ombre, il faut une surface opaque, sinon la vitre ne projette aucune ombre.
-        net.minecraft.client.renderer.RenderType type = cn.academy.compat.oculus.OculusShadowCompat.inShadowPass()
+        net.minecraft.client.renderer.RenderType type = cn.academy.platform.PlatformHooks.inShadowPass()
                 ? net.minecraft.client.renderer.RenderType.entitySolid(texture)
                 : ObjModels.translucent(texture);
         ObjModels.draw(ObjModels.get(model).all(), pose, buffers.getBuffer(type), light, overlay);

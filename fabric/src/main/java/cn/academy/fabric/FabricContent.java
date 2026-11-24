@@ -89,6 +89,15 @@ public final class FabricContent {
     /** Entite de la bille de silicium. */
     public static net.minecraft.world.entity.EntityType<cn.academy.entity.EntitySilbarn> SILBARN_TYPE;
 
+    /** Entite du grappin magnetique. */
+    public static net.minecraft.world.entity.EntityType<cn.academy.entity.EntityMagHook> MAG_HOOK_TYPE;
+
+    /** La bille de plasma du meltdowner, la piece du railgun, le bloc arrache. */
+    public static net.minecraft.world.entity.EntityType<cn.academy.entity.EntityMdBall> MD_BALL_TYPE;
+    public static net.minecraft.world.entity.EntityType<cn.academy.entity.EntityCoinThrowing> COIN_TYPE;
+    public static net.minecraft.world.entity.EntityType<cn.academy.entity.EntityMagManipBlock>
+            MAG_MANIP_BLOCK_TYPE;
+
     /** Matrix et noeuds sans fil. */
     public static BlockEntityType<MatrixBlockEntity> MATRIX_TYPE;
     public static MenuType<MatrixMenu> MATRIX_MENU;
@@ -377,6 +386,52 @@ public final class FabricContent {
                         .clientTrackingRange(4)
                         .updateInterval(10)
                         .build("silbarn"));
+
+        // Le grappin : l'objet le lance par le type de contenu, donc le type doit exister ici aussi,
+        // sans quoi un clic droit le trouvait nul. Cadence d'un tick, comme chez Forge : a deux blocs
+        // par tick le crochet bondirait sinon d'un bond a chaque image.
+        MAG_HOOK_TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("mag_hook"),
+                net.minecraft.world.entity.EntityType.Builder
+                        .<cn.academy.entity.EntityMagHook>of(cn.academy.entity.EntityMagHook::new,
+                                net.minecraft.world.entity.MobCategory.MISC)
+                        .sized(cn.academy.entity.MagHookVisuals.FLY_SIZE,
+                                cn.academy.entity.MagHookVisuals.FLY_SIZE)
+                        .clientTrackingRange(4)
+                        .updateInterval(1)
+                        .build("mag_hook"));
+
+        // La bille de plasma du meltdowner, la piece du railgun et le bloc arrache par la
+        // manipulation magnetique : trois entites que les competences creent par leur type de
+        // contenu. Sans elles, la competence trouvait un type nul et rien ne partait.
+        MD_BALL_TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("md_ball"),
+                net.minecraft.world.entity.EntityType.Builder
+                        .<cn.academy.entity.EntityMdBall>of(cn.academy.entity.EntityMdBall::new,
+                                net.minecraft.world.entity.MobCategory.MISC)
+                        .sized(0.25f, 0.25f)
+                        .clientTrackingRange(10)
+                        .updateInterval(1)
+                        .build("md_ball"));
+
+        COIN_TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("coin"),
+                net.minecraft.world.entity.EntityType.Builder
+                        .<cn.academy.entity.EntityCoinThrowing>of(
+                                cn.academy.entity.EntityCoinThrowing::new,
+                                net.minecraft.world.entity.MobCategory.MISC)
+                        .sized(0.25f, 0.25f)
+                        .clientTrackingRange(8)
+                        .updateInterval(1)
+                        .build("coin"));
+
+        MAG_MANIP_BLOCK_TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE,
+                id("mag_manip_block"),
+                net.minecraft.world.entity.EntityType.Builder
+                        .<cn.academy.entity.EntityMagManipBlock>of(
+                                cn.academy.entity.EntityMagManipBlock::new,
+                                net.minecraft.world.entity.MobCategory.MISC)
+                        .sized(1f, 1f)
+                        .clientTrackingRange(8)
+                        .updateInterval(2)
+                        .build("mag_manip_block"));
 
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, id("academy_tab"),
                 FabricItemGroup.builder()

@@ -1,6 +1,6 @@
 package cn.academy.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -12,8 +12,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * La piece du railgun dans la main, portage du {@code TileEntityItemStackRenderer} de l'original.
@@ -44,13 +42,10 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * centre sur l'origine (une unite = 1/16 de bloc dans un modele JSON, un bloc ici). Les echelles de
  * main vivent dans {@code coin.json}, et c'est lui qui les pose avant d'arriver ici.
  */
-@OnlyIn(Dist.CLIENT)
 public class CoinItemRenderer extends BlockEntityWithoutLevelRenderer {
 
-    private static final ResourceLocation FRONT = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/item/coin_front.png");
-    private static final ResourceLocation BACK = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/item/coin_back.png");
+    private static final ResourceLocation FRONT = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/item/coin_front.png");
+    private static final ResourceLocation BACK = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/item/coin_back.png");
 
     /** Le rayon du disque : la piece remplit le cube du modele, ses coins sont transparents. */
     private static final float RADIUS = 0.5f;

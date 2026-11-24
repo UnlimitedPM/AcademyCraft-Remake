@@ -1,6 +1,6 @@
 package cn.academy.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.client.render.ObjMesh;
 import cn.academy.client.render.ObjModels;
 import cn.academy.entity.EntityMagHook;
@@ -14,8 +14,6 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Le crochet magnetique en vol et plante, portage de {@code RendererMagHook}.
@@ -41,7 +39,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  *       {@code EntityMagHook.recreateFromPacket}, ou vit le piege de vanilla.</li>
  * </ul>
  */
-@OnlyIn(Dist.CLIENT)
 public class MagHookRenderer extends EntityRenderer<EntityMagHook> {
 
     /** Le crochet ferme, en vol. */
@@ -54,8 +51,7 @@ public class MagHookRenderer extends EntityRenderer<EntityMagHook> {
      * Sa texture, dans {@code textures/models}, comme celle de la bille de silicium : un rendu
      * d'entite la lit lui-meme, il ne passe pas par l'atlas des blocs.
      */
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/models/maghook_model.png");
+    private static final ResourceLocation TEXTURE = new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/models/maghook_model.png");
 
     public MagHookRenderer(EntityRendererProvider.Context context) {
         super(context);

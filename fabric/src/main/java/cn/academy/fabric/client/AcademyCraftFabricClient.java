@@ -33,6 +33,19 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
         FabricMachineModels.register();
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
                 FabricContent.SILBARN_TYPE, cn.academy.client.SilbarnRenderer::new);
+        // Le grappin : son rendu lit le meme modele OBJ que chez Forge.
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+                FabricContent.MAG_HOOK_TYPE, cn.academy.client.MagHookRenderer::new);
+        // La bille de plasma du meltdowner, et la piece du railgun.
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+                FabricContent.MD_BALL_TYPE, cn.academy.ability.client.md.MdBallRenderer::new);
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+                FabricContent.COIN_TYPE, cn.academy.client.CoinRenderer::new);
+        // Le bloc arrache par la manipulation magnetique : le dessin du monde s'en charge, mais le
+        // jeu lit le rendu de chaque entite visible, et plante quand il n'en trouve pas.
+        net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
+                FabricContent.MAG_MANIP_BLOCK_TYPE,
+                net.minecraft.client.renderer.entity.NoopRenderer::new);
 
         MenuScreens.register(FabricContent.SOLAR_GEN_MENU, SolarGenScreen::new);
         MenuScreens.register(FabricContent.METAL_FORMER_MENU, MetalFormerScreen::new);
