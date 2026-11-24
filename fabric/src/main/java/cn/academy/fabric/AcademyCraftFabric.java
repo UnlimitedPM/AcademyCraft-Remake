@@ -18,6 +18,8 @@ public final class AcademyCraftFabric implements ModInitializer {
         FabricAbilityData.install();
         FabricNetworkTransport.installServer();
         cn.academy.platform.network.AcademyPackets.register();
+        // Les quatre cursus d'aptitude sont communs : Fabric les enregistre comme Forge.
+        cn.academy.ability.AbilityCategories.registerAll();
         FabricContent.register();
         FabricWorldgen.register();
     }
