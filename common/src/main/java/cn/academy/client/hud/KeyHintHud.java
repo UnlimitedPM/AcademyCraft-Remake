@@ -186,7 +186,7 @@ public final class KeyHintHud {
             String path = KeyHintVisuals.directionIcon(skillName, i);
             ResourceLocation icon = path == null
                     ? skill.getHintIcon()
-                    : ResourceLocation.fromNamespaceAndPath("academy", path);
+                    : new ResourceLocation("academy", path);
             KeyHintVisuals.State state = cn.academy.ability.client.AbilityClientEvents.directionHeld(i)
                     ? KeyHintVisuals.State.ACTIVE
                     : KeyHintVisuals.State.IDLE;
@@ -252,8 +252,10 @@ public final class KeyHintHud {
         blit(graphics, nearest(PLATE), 0, y, KeyHintVisuals.PLATE_W, KeyHintVisuals.PLATE_H,
                 0, 0, PLATE_TEX_W, PLATE_TEX_H, PLATE_TEX_W, PLATE_TEX_H, 0xFFFFFF, fade);
 
-        boolean mouse = key.getKey().getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE;
-        int button = key.getKey().getValue();
+        com.mojang.blaze3d.platform.InputConstants.Key bound = cn.academy.platform.client.KeyState.bound(key);
+            boolean mouse = bound != null
+                    && bound.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE;
+        int button = bound == null ? -1 : bound.getValue();
         String label = key.getTranslatedKeyMessage().getString();
         KeyHintVisuals.Cap cap = KeyHintVisuals.cap(mouse, button);
 
@@ -416,6 +418,6 @@ public final class KeyHintHud {
     }
 
     private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/key_hint/" + path + ".png");
+        return new ResourceLocation("academy", "textures/guis/key_hint/" + path + ".png");
     }
 }

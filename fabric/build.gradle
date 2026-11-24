@@ -40,13 +40,25 @@ processResources {
     // restent propres au module (fabric.mod.json ici).
     from(rootProject.file('forge/src/main/resources')) {
         exclude 'META-INF/**'
-        // Le palier Fabric n'a pas encore tous les objets, outils et item tags : recettes, succes
-        // et structures referenceraient des objets absents. La generation du monde et les tables
-        // de butin des blocs existants, elles, sont deja utilisables.
-        exclude 'data/academy/advancements/**'
-        exclude 'data/academy/recipes/**'
+        // Les structures restent dehors : elles portent des tables de butin pour des blocs qui
+        // n'existent pas encore ici. Les recettes et les succes, eux, sont servis tels quels ; les
+        // quelques-uns qui nomment un objet absent sont exclus un par un, pour que le journal reste
+        // lisible.
         exclude 'data/academy/structures/**'
         exclude 'data/academy/forge/**'
+        // Les objets qui n'existent pas encore sous Fabric : le brouilleur, les deux machines
+        // developeur, le developpeur portable, le grappin, l'installeur de terminal et le tutoriel.
+        exclude 'data/academy/recipes/ability_interferer.json'
+        exclude 'data/academy/recipes/dev_normal.json'
+        exclude 'data/academy/recipes/dev_normal2.json'
+        exclude 'data/academy/recipes/dev_advanced.json'
+        exclude 'data/academy/recipes/developer_portable.json'
+        exclude 'data/academy/recipes/mag_hook.json'
+        exclude 'data/academy/recipes/misaka_cloud.json'
+        exclude 'data/academy/recipes/terminal_installer.json'
+        exclude 'data/academy/advancements/ac_developer.json'
+        exclude 'data/academy/advancements/open_misaka_cloud.json'
+        exclude 'data/academy/advancements/terminal_installed.json'
         // Les tables de butin des trois blocs qui attendent les aptitudes.
         exclude 'data/academy/loot_tables/blocks/ability_interferer.json'
         exclude 'data/academy/loot_tables/blocks/dev_normal.json'
