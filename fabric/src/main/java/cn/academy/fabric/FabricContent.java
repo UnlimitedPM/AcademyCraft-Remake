@@ -250,7 +250,10 @@ public final class FabricContent {
 
         // --- Machines a phase liquide ---
         register("matter_unit", new Item(new Item.Properties()));
-        register("matter_unit_phase_liquid", new Item(new Item.Properties()));
+        // Le liquide lui-meme : le bloc, les deux variantes du fluide et l'unite qui le pose. Voir
+        // FabricFluids — c'est ce qui manquait pour qu'on puisse le poser par terre.
+        FabricFluids.register();
+        TAB_ITEMS.add(FabricFluids.UNIT);
 
         IMAG_FUSOR_MENU = Registry.register(BuiltInRegistries.MENU, id("imag_fusor"),
                 new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->

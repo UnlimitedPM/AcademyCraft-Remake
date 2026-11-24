@@ -28,6 +28,9 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         cn.academy.fabric.FabricNetworkTransport.installClient();
         BlockEntityRenderers.register(FabricContent.CAT_ENGINE_TYPE, CatEngineRenderer::new);
+        // Les machines dessinees par un fichier OBJ : Forge les posait par son chargeur de modele,
+        // qui n'existe pas ici — voir FabricMachineModels.
+        FabricMachineModels.register();
         net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry.register(
                 FabricContent.SILBARN_TYPE, cn.academy.client.SilbarnRenderer::new);
 
@@ -43,5 +46,16 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
         // Les touches d'aptitude sont communes ; Fabric les declare par son propre registre.
         cn.academy.ability.client.AbilityKeyBindings.register(
                 net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper::registerKeyBinding);
+
+        // Le rendu de l'imag phase liquide : sans cela le jeu ne sait pas quelle image poser sur
+        // ses faces, et Fabric refuse de dessiner le fluide du tout.
+        net.minecraft.resources.ResourceLocation black = new net.minecraft.resources.ResourceLocation(
+                cn.academy.AcademyCraftCommon.MOD_ID, "block/black");
+        net.fabricmc.fabric.api.client.render.fluid.v1.FluidRenderHandlerRegistry.INSTANCE.register(
+                cn.academy.fabric.FabricFluids.SOURCE, cn.academy.fabric.FabricFluids.FLOWING,
+                new net.fabricmc.fabric.api.client.render.fluid.v1.SimpleFluidRenderHandler(black, black));
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putFluids(
+                net.minecraft.client.renderer.RenderType.translucent(),
+                cn.academy.fabric.FabricFluids.SOURCE, cn.academy.fabric.FabricFluids.FLOWING);
     }
 }

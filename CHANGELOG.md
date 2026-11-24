@@ -4,6 +4,17 @@
 
 ### Français
 
+- **Sous Fabric, les machines et l'imag phase liquide existent enfin.** Les quatre machines dessinées
+  par un fichier OBJ (génératrice solaire, machine à phase, pied et nacelle de l'éolienne) étaient
+  invisibles : Forge les posait par son **chargeur de modèle** `forge:obj`, qui n'existe pas chez
+  Fabric. Elles passent maintenant par un rendu de block entity (`FabricObjRenderer`) qui relit le
+  même `.obj` avec `ObjModels` et le pose aux mêmes coordonnées, relevées dans les fichiers de
+  modèle ; le matrix, qui était déjà un rendu de block entity commun, est simplement déclaré.
+  Et le liquide n'était **pas déclaré du tout** : l'unité de phase se posait comme un objet inerte.
+  `FabricFluids` déclare le fluide (ses deux variantes), son bloc, et l'unité qui le pose ; le
+  comportement du bloc — éteindre le feu — passe en commun (`PhaseLiquidDousing`), chaque chargeur
+  n'ayant plus que sa classe de bloc, puisque Forge lui donne un fournisseur de fluide et Fabric le
+  fluide lui-même.
 - **Les données de joueur passent par un service neutre.** `TerminalTracker`, `TutorialTracker`
   (balayage compris), `MediaTracker` et `ClientTerminalData` sont communs : ils lisent leur donnée par
   `PlatformHooks` (`DataAccess<T>`, installé par Forge sur les capacités) et l'envoient par `Network`.
@@ -143,6 +154,16 @@
 
 ### English
 
+- **On Fabric, the machines and the imag phase liquid finally exist.** The four machines drawn from
+  an OBJ file (solar generator, phase generator, wind turbine base and nacelle) were invisible:
+  Forge placed them with its **model loader** `forge:obj`, which Fabric does not have. They now go
+  through a block entity renderer (`FabricObjRenderer`) that re-reads the same `.obj` with
+  `ObjModels` and places it at the same coordinates, taken from the model files; the matrix, which
+  already was a common block entity renderer, is simply declared. And the liquid was **not declared
+  at all**: the phase unit placed like an inert item. `FabricFluids` declares the fluid (both
+  variants), its block, and the unit that places it; the block's behaviour — dousing fire — moves to
+  common (`PhaseLiquidDousing`), each loader keeping only its block class, since Forge gives it a
+  fluid supplier and Fabric the fluid itself.
 - **Player data goes through a neutral service.** `TerminalTracker`, `TutorialTracker` (scan
   included), `MediaTracker` and `ClientTerminalData` are common: they read their data through
   `PlatformHooks` (`DataAccess<T>`, installed by Forge on the capabilities) and send it through

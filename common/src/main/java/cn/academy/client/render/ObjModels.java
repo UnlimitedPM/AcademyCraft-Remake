@@ -190,6 +190,30 @@ public final class ObjModels {
         draw(mesh.front(group), pose, buffers.getBuffer(type(texture)), light, overlay);
     }
 
+    /**
+     * Dessine un modele <b>entier</b>, tous groupes confondus.
+     *
+     * <p>C'est ce qu'il faut a un modele de bloc : ceux du mod sont decoupes en groupes pour les
+     * pieces qui bougent (les plaques du matrix, les pales), mais le corps d'une machine est un
+     * seul morceau et n'a pas de groupe a nommer. Les faces recouvertes passent d'abord, en recul,
+     * comme partout ailleurs — voir {@link #behind}.
+     */
+    public static void drawAll(ObjMesh mesh, ResourceLocation texture, PoseStack pose,
+                               MultiBufferSource buffers, int light, int overlay) {
+        java.util.Set<ObjMesh.Face> behind = mesh.behind();
+        if (!behind.isEmpty()) {
+            draw(new java.util.ArrayList<>(behind), pose, buffers.getBuffer(behind(texture)),
+                    light, overlay);
+        }
+        List<ObjMesh.Face> front = new java.util.ArrayList<>();
+        for (ObjMesh.Face face : mesh.all()) {
+            if (!behind.contains(face)) front.add(face);
+        }
+        if (!front.isEmpty()) {
+            draw(front, pose, buffers.getBuffer(type(texture)), light, overlay);
+        }
+    }
+
     /** Le modele, lu la premiere fois qu'on le demande. */
     public static ObjMesh get(ResourceLocation model) {
         ObjMesh known = CACHE.get(model);

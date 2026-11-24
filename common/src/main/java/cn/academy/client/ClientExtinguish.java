@@ -4,8 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Le bruit du feu qui s'eteint, joue chez celui qui brule.
@@ -15,10 +13,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * bruler ». Le son est donc joue ici, en local, au moment ou le liquide eteint le corps : rien a
  * attendre du reseau, rien a perdre si un paquet passe mal.
  *
- * <p>Cette classe n'existe que cote client : elle est appelee par {@code DistExecutor}, depuis
- * {@code ImagPhaseLiquidBlock}, qui tourne des deux cotes.
+ * <p>Cette classe n'existe que cote client : elle est appelee depuis
+ * {@code ImagPhaseLiquidBlock}, quand le cote client est en train de tourner.
  */
-@OnlyIn(Dist.CLIENT)
 public final class ClientExtinguish {
 
     /** Le dernier tick et le dernier corps servis : un son par tick, pas un par bloc touche. */

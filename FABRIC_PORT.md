@@ -133,6 +133,25 @@ Vérifié : le client Fabric démarre, un monde se charge, le contenu est enregi
   `ShiftTeleportPacket`, `TeleportCritPacket`, `VecWavePacket`, `SmokePuffPacket`) ou à une entité
   Forge (`EntityMdBall`, `EntityMagHook`). Les porter débloque le reste : c'est l'étape suivante.
 
+### Machines et liquide, sous Fabric
+
+Deux manques qui se voyaient en jeu, et qui sont réglés :
+
+- **les modèles OBJ.** Quatre machines dessinées par un fichier `.obj` (génératrice solaire, machine
+  à phase, pied et nacelle de l'éolienne) étaient posées par le chargeur de modèle de Forge
+  (`"loader": "forge:obj"`), qui n'existe pas sous Fabric : elles ne se voyaient pas du tout.
+  `FabricMachineModels` les déclare comme rendus de block entity (`FabricObjRenderer`), qui relisent
+  le même fichier avec `ObjModels` et le posent aux coordonnées relevées dans les modèles de bloc.
+  Le matrix passe par `MatrixRenderer`, déjà commun. **Reste à faire** : les pales de l'éolienne, qui
+  tournent — le rendu existe côté Forge seulement (`WindgenMainRenderer`), donc la nacelle se voit
+  sans son hélice ;
+- **l'imag phase liquide** n'était pas déclaré du tout : l'unité de phase se posait comme un objet
+  inerte. `FabricFluids` déclare le fluide, ses deux variantes, son bloc et l'unité qui le pose, et
+  son rendu (l'image `block/black`) est enregistré dans l'initialiseur client. Le comportement du
+  bloc — éteindre le feu — est commun (`PhaseLiquidDousing`). **Limite assumée** : la viscosité, la
+  densité, la nage et la descente recopiée de la 1.12.2 sont des déclarations de `FluidType` Forge ;
+  sous Fabric le corps suit le déplacement de l'eau.
+
 ## Ordre de portage
 
 1. **Socle de plateforme dans `common/`**

@@ -80,7 +80,8 @@ public class ModItems {
 
     // 2. L'unité de phase bridée à 16
     public static final RegistryObject<Item> MATTER_UNIT_PHASE = ITEMS.register("matter_unit_phase_liquid",
-            () -> new PhaseUnitItem(ModBlocks.PHASE_LIQUID_BLOCK.get(), new Item.Properties().stacksTo(16)));
+            () -> new cn.academy.PhaseUnitItem(ModBlocks.PHASE_LIQUID_BLOCK.get(),
+                    new Item.Properties().stacksTo(16)));
     public static final RegistryObject<Item> MAT_CORE_0 = ITEMS.register("mat_core_0", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAT_CORE_1 = ITEMS.register("mat_core_1", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAT_CORE_2 = ITEMS.register("mat_core_2", () -> new Item(new Item.Properties()));
@@ -343,38 +344,10 @@ public class ModItems {
         }
     }
 
-    // --- CLASSE : L'UNITÉ DE PHASE (Pose + Recyclage) ---
-    public static class PhaseUnitItem extends BlockItem {
-        public PhaseUnitItem(net.minecraft.world.level.block.Block block, Properties props) {
-            super(block, props);
-        }
+    // --- CLASSE : L'UNITÉ DE PHASE ---
+    // Elle vit maintenant dans common/ (cn.academy.PhaseUnitItem) : les deux chargeurs la posent,
+    // seul le bloc de liquide change de provenance.
 
-        // Force l'item à utiliser "item.academy.matter_unit_phase_liquid"
-        @Override
-        public String getDescriptionId() {
-            return "item.academy.matter_unit_phase_liquid";
-        }
-
-        @Override
-        public InteractionResult useOn(UseOnContext context) {
-            // On enregistre l'item actuel pour savoir s'il faut le remplacer
-            ItemStack itemstack = context.getItemInHand();
-            InteractionResult result = super.useOn(context);
-
-            // Si la pose a réussi
-            if (result == InteractionResult.SUCCESS || result == InteractionResult.CONSUME) {
-                Player player = context.getPlayer();
-                if (player != null && !player.getAbilities().instabuild) {
-                    // On donne l'unité vide
-                    ItemStack emptyUnit = new ItemStack(ModItems.MATTER_UNIT.get());
-                    if (!player.getInventory().add(emptyUnit)) {
-                        player.drop(emptyUnit, false);
-                    }
-                }
-            }
-            return result;
-        }
-    }
 
     /**
      * Ancien point d'entree de l'unite d'energie, garde pour les appelants
