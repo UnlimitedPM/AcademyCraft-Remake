@@ -100,7 +100,7 @@ public class ModItems {
             () -> new BlockItem(ModBlocks.WINDGEN_MAIN.get(), new Item.Properties()));
 
     // --- OUTILS ET DIVERS ---[cite: 1]
-    public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new CoinItem());
+    public static final RegistryObject<Item> COIN = ITEMS.register("coin", ForgeCoinItem::new);
     public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new cn.academy.SilbarnItem());
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
     public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", cn.academy.MagHookItem::new);
@@ -156,81 +156,6 @@ public class ModItems {
             () -> new AppInstallerItem("freq_transmitter"));
     public static final RegistryObject<Item> APP_SETTINGS = ITEMS.register("app_settings",
             () -> new AppInstallerItem("settings"));
-
-    /**
-     * La piece : l'objet qu'on LANCE pour armer le railgun.
-     *
-     * <p>Portage d'{@code ItemCoin}, et c'est tout ce qu'il fait — une piece ne sert a rien
-     * d'autre. Le clic droit la jette en l'air, elle monte, retombe en suivant son lanceur, et
-     * revient dans l'inventaire si le railgun n'a pas tire a travers — voir
-     * {@code EntityCoinThrowing}. Le joueur n'en jette qu'une a la fois : l'original refusait le
-     * second lancer tant que la premiere vivait, et c'est cette piece-la que le tir consomme.
-     *
-     * <p>Le son ne se joue que chez le SERVEUR : {@code Item#use} est appele des deux cotes, et un
-     * son pose aux deux s'entendrait deux fois.
-     */
-    public static class CoinItem extends Item {
-        public CoinItem() {
-            super(new Item.Properties());
-        }
-
-        /**
-         * Le rendu de l'objet : l'image dans l'inventaire, la piece en volume dans la main.
-         *
-         * <p>Portage du {@code TileEntityItemStackRenderer} de l'original, par le moyen
-         * d'aujourd'hui : un modele JSON ne sait dessiner que des boites, donc sa tranche est un
-         * carre (le joueur l'a vu deux fois) et il ne peut pas montrer l'image telle quelle dans
-         * l'inventaire en montrant autre chose dans la main. Voir {@code CoinItemRenderer}.
-         */
-        @Override
-        public void initializeClient(java.util.function.Consumer<
-                net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-            consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
-                private cn.academy.client.CoinItemRenderer renderer;
-
-                @Override
-                public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                    if (renderer == null) {
-                        renderer = new cn.academy.client.CoinItemRenderer();
-                    }
-                    return renderer;
-                }
-            });
-        }
-
-        @Override
-        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-            ItemStack stack = player.getItemInHand(hand);
-
-            // Une seule piece par joueur, et le client le sait comme le serveur : sa propre piece
-            // est chez lui. Refuser ici evite le geste de main pour rien.
-            if (cn.academy.entity.EntityCoinThrowing.of(player) != null) {
-                return InteractionResultHolder.pass(stack);
-            }
-            if (level.isClientSide) {
-                // L'ANIMATION SPECIALE, et elle n'appartient qu'au client : la rafale d'arcs qui
-                // jaillit de la main d'un electromaster qui a son railgun pret. Voir
-                // RailgunHandEffect, ou vivent les deux verrous de l'original.
-                cn.academy.ability.client.RailgunHandEffect.onCoinThrown(player);
-                return InteractionResultHolder.success(stack);
-            }
-
-            level.addFreshEntity(new cn.academy.entity.EntityCoinThrowing(level, player));
-            // L'ANIMATION SPECIALE : le serveur l'annonce a ceux qui voient le lanceur, comme
-            // l'original (MSG_CHARGE_EFFECT, trente blocs a la ronde), et il relit pour cela ses
-            // deux verrous. Le lanceur la joue deja chez lui — voir le client, plus bas — et son
-            // client ignore l'annonce en vue de premiere personne : elle ne lui revient que s'il
-            // regarde son propre modele, ou il n'a pas de main a l'ecran.
-            cn.academy.ability.electromaster.RailgunSkill.announceHandEffectIfAllowed(player);
-            cn.academy.sound.AcademySounds.playAt(level, player.position(),
-                    ModSounds.ENTITY_FLIPCOIN, net.minecraft.sounds.SoundSource.PLAYERS, 0.5f, 1.0f);
-
-            if (!player.getAbilities().instabuild) {
-                stack.shrink(1);
-            }
-            return InteractionResultHolder.success(stack);
-        }
-    }
 
     /**
      * La bille de silicium : l'objet qu'on lance, portage de {@code ItemSilbarn}.

@@ -142,7 +142,8 @@ public final class FabricContent {
         plainItem("mat_core_1");
         plainItem("mat_core_2");
         plainItem("needle");
-        plainItem("coin");
+        // La piece n'est pas decorative : c'est elle qu'on jette pour armer le railgun.
+        register("coin", new cn.academy.CoinItem());
         register("silbarn", new SilbarnItem());
         plainItem("imag_phase");
         plainItem("logo");
