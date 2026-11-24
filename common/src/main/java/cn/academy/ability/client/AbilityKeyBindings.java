@@ -1,13 +1,8 @@
 package cn.academy.ability.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 /**
  * Les touches du mod : les quatre touches d'aptitude, et celles des prereglages.
@@ -19,7 +14,6 @@ import net.minecraftforge.fml.common.Mod;
  *
  * <p>Le cablage vit dans {@link AbilityClientEvents}.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class AbilityKeyBindings {
 
     /**
@@ -66,8 +60,8 @@ public class AbilityKeyBindings {
     public static final KeyMapping DEBUG_CONSOLE = abilityKey("key.academy.debug_console", InputConstants.KEY_F4);
 
     private static KeyMapping abilityKey(String description, int defaultKey) {
-        return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
-                defaultKey, "key.categories.academy");
+        return new KeyMapping(description, InputConstants.Type.KEYSYM, defaultKey,
+                "key.categories.academy");
     }
 
     /**
@@ -86,21 +80,26 @@ public class AbilityKeyBindings {
     }
 
     private static KeyMapping mouseKey(String description, int defaultButton) {
-        return new KeyMapping(description, KeyConflictContext.IN_GAME, InputConstants.Type.MOUSE,
-                defaultButton, "key.categories.academy");
+        return new KeyMapping(description, InputConstants.Type.MOUSE, defaultButton,
+                "key.categories.academy");
     }
 
-    @SubscribeEvent
-    public static void register(RegisterKeyMappingsEvent event) {
+    /**
+     * Declare les touches au chargeur, qui seul connait son registre.
+     *
+     * <p>Forge le fait depuis son evenement de touches, Fabric depuis son initialiseur : le code
+     * commun ne fait que nommer ce qu'il faut poser.
+     */
+    public static void register(java.util.function.Consumer<KeyMapping> sink) {
         // Les quatre touches d'aptitude, et rien d'autre : la competence de chacune vient du
         // prereglage en service, comme chez l'original.
-        event.register(ABILITY_1);
-        event.register(ABILITY_2);
-        event.register(ABILITY_3);
-        event.register(ABILITY_4);
-        event.register(PRESET_NEXT);
-        event.register(PRESET_EDIT);
-        event.register(DEBUG_CONSOLE);
-        event.register(TOGGLE_ABILITY);
+        sink.accept(ABILITY_1);
+        sink.accept(ABILITY_2);
+        sink.accept(ABILITY_3);
+        sink.accept(ABILITY_4);
+        sink.accept(PRESET_NEXT);
+        sink.accept(PRESET_EDIT);
+        sink.accept(DEBUG_CONSOLE);
+        sink.accept(TOGGLE_ABILITY);
     }
 }
