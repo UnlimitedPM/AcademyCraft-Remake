@@ -4,6 +4,13 @@
 
 ### Français
 
+- **`/aim` et `/aimp` existent sous Fabric, avec les succès.** `AimCommands` est commun : il lit
+  l'aptitude par `PlatformHooks.abilityData`, range son drapeau d'armement dans les **tags vanilla**
+  du joueur (les données persistantes de Forge n'existent pas ici) et lit les tutoriels par
+  `PlatformHooks`. `AcademyAdvancements` et `AcademyTrigger` le rejoignent — `CriteriaTriggers.register`
+  étant **privé** dans vanilla (Forge le rend public), il s'appelle par réflexion, comme la fabrique
+  de `RenderType`. `Commands.register` est le point d'entrée commun : Forge l'appelle depuis son
+  événement de commandes, Fabric depuis `CommandRegistrationCallback`.
 - **Sous Fabric, les machines et l'imag phase liquide existent enfin.** Les quatre machines dessinées
   par un fichier OBJ (génératrice solaire, machine à phase, pied et nacelle de l'éolienne) étaient
   invisibles : Forge les posait par son **chargeur de modèle** `forge:obj`, qui n'existe pas chez
@@ -157,6 +164,13 @@
 
 ### English
 
+- **`/aim` and `/aimp` exist on Fabric, with the advancements.** `AimCommands` is common: it reads
+  the ability through `PlatformHooks.abilityData`, stores its arming flag in the player's **vanilla
+  tags** (Forge persistent data does not exist here) and reads tutorials through `PlatformHooks`.
+  `AcademyAdvancements` and `AcademyTrigger` join it — `CriteriaTriggers.register` is **private** in
+  vanilla (Forge makes it public), so it is called reflectively, like the `RenderType` factory.
+  `Commands.register` is the shared entry point: Forge calls it from its command event, Fabric from
+  `CommandRegistrationCallback`.
 - **On Fabric, the machines and the imag phase liquid finally exist.** The four machines drawn from
   an OBJ file (solar generator, phase generator, wind turbine base and nacelle) were invisible:
   Forge placed them with its **model loader** `forge:obj`, which Fabric does not have. They now go
