@@ -4,6 +4,24 @@
 
 ### Français
 
+- **Les rendus d'aptitude sont communs.** Le tick et le dessin passent en `common/` : `HandSwing`
+  (geste de main), `GroundshockCamera` (piquage de regard), `BloodSprayRenderer`, `RailgunHandEffect`,
+  puis la vague des quatorze renderers de monde (JetEngine, MagManip, MineDetect, Shield,
+  ThunderClap, MdEffects, BloodSplash, FormulaParticle, TpMark, PlasmaBody, SmokePuff, Tornado,
+  VecAccelPreview, Wave) avec les effets, les écrans et l'état de client qu'ils lisent
+  (`ChargingEffect`, `MagManipEffect`, `MagMovementEffect`, `RippleMark`, `ShieldSparks`,
+  `ThunderClapEffect`, `FlashingFall`, `HoldRefusal`, `DebugConsole`, `AbilityScreens`,
+  `LocationTeleportScreen`, `MeltdownerCharge`, `BloodRetroCharge`, `VecAccelPreview`,
+  `VecmanipTornados`, `WaveRipples`, `HandAnim`, `WingDust`, `ShieldVisuals`, `Billboard`,
+  `TpRenderType`, `MdBallRenderer`). Chacun perd son abonnement Forge au profit d'une méthode
+  neutre — `tick()` ou `render(camera, poseStack, ticks)` — et l'événement, sa phase et l'étape de
+  rendu restent chez Forge dans un `<Nom>Events` voisin, comme `ArcRendererEvents` et
+  `MineDetectEvents`.
+- **Les pré-réglages sont communs.** `PresetTracker`, `ClientPresetData`, `PresetEditScreen` et les
+  deux paquets (`SyncPresetPacket`, `PresetActionPacket`) passent en `common/` ; le câblage de la
+  capacité Forge reste côté chargeur dans `PresetCapabilityEvents`. `PlatformHooks` gagne
+  `installPresetAccess`/`presetData` (le contenu vient du chargeur) et `HeldEnd.endOutsidePreset`
+  (fermer ce qui n'est plus dans la barre).
 - **Les requêtes de l'aptitude passent par le transport neutre.** Sept paquets de plus dans
   `common/` : activation d'un pouvoir, bascule de l'aptitude, préférences de minage, clignotement,
   téléportation par position, distance de téléportation et fin de maintien. Leurs gestionnaires
@@ -112,6 +130,22 @@
 
 ### English
 
+- **The ability renders are common.** The tick and the drawing move to `common/`: `HandSwing`,
+  `GroundshockCamera`, `BloodSprayRenderer`, `RailgunHandEffect`, then the wave of fourteen world
+  renderers (JetEngine, MagManip, MineDetect, Shield, ThunderClap, MdEffects, BloodSplash,
+  FormulaParticle, TpMark, PlasmaBody, SmokePuff, Tornado, VecAccelPreview, Wave) with the effects,
+  screens and client state they read (`ChargingEffect`, `MagManipEffect`, `MagMovementEffect`,
+  `RippleMark`, `ShieldSparks`, `ThunderClapEffect`, `FlashingFall`, `HoldRefusal`, `DebugConsole`,
+  `AbilityScreens`, `LocationTeleportScreen`, `MeltdownerCharge`, `BloodRetroCharge`,
+  `VecAccelPreview`, `VecmanipTornados`, `WaveRipples`, `HandAnim`, `WingDust`, `ShieldVisuals`,
+  `Billboard`, `TpRenderType`, `MdBallRenderer`). Each loses its Forge subscription for a neutral
+  method — `tick()` or `render(camera, poseStack, ticks)` — and the event, its phase and the render
+  stage stay Forge-side in a sibling `<Name>Events`, like `ArcRendererEvents` and
+  `MineDetectEvents`.
+- **The presets are common.** `PresetTracker`, `ClientPresetData`, `PresetEditScreen` and both
+  packets (`SyncPresetPacket`, `PresetActionPacket`) move to `common/`; the Forge capability wiring
+  stays loader-side in `PresetCapabilityEvents`. `PlatformHooks` gains
+  `installPresetAccess`/`presetData` and `HeldEnd.endOutsidePreset`.
 - **Ability requests travel the neutral transport.** Seven more packets land in `common/`: skill
   activation, ability toggle, mining preferences, flashing, position teleport, teleport distance
   and hold-over end. Their handlers take a `ServerPlayer` instead of a `NetworkEvent.Context`, and
