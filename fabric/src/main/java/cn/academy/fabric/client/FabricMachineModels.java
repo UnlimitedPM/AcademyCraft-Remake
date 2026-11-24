@@ -64,5 +64,12 @@ public final class FabricMachineModels {
         // Le matrix : ses neuf blocs, dessines par le rendu commun.
         BlockEntityRenderers.register(FabricContent.MATRIX_TYPE,
                 cn.academy.client.render.MatrixRenderer::new);
+
+        // Les deux developeurs : leur rendu est commun (le modele OBJ et ses deux textures), et il
+        // se declare par qualite, comme chez Forge ou chacun a son type de block entity.
+        BlockEntityRenderers.register(FabricContent.DEVELOPER_NORMAL_TYPE,
+                cn.academy.client.render.DeveloperRenderer::new);
+        BlockEntityRenderers.register(FabricContent.DEVELOPER_ADVANCED_TYPE,
+                cn.academy.client.render.DeveloperRenderer::new);
     }
 }
