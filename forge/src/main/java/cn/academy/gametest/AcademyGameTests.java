@@ -5842,7 +5842,7 @@ public final class AcademyGameTests {
         assertFalse(helper, wing.onHoldTick(player, data, 72), "la reserve vide termine le vol");
 
         // Et la fin ordinaire rend le vol, avec la recharge de l'original.
-        cn.academy.ability.AbilityEvents.endHeld(player, data, wing);
+        cn.academy.ability.AbilityTicker.endHeld(player, data, wing);
         assertFalse(helper, player.getAbilities().mayfly, "le vol est rendu a la fin");
         assertTrue(helper, data.isOnCooldown(wing), "et la recharge est posee");
 
@@ -5966,7 +5966,7 @@ public final class AcademyGameTests {
         assertTrue(helper, data.isCharging(wing), "et le maintien est ouvert");
 
         // La touche V, telle que le paquet la traite : la fin d'abord, l'extinction ensuite.
-        cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
+        cn.academy.ability.AbilityTicker.endAllOnDeactivate(player, data);
         data.setActivated(false);
 
         assertFalse(helper, data.isCharging(wing), "eteindre l'aptitude termine le maintien");
@@ -6294,7 +6294,7 @@ public final class AcademyGameTests {
                 "et le porteur, lui, n'est pas touche par sa propre explosion");
 
         // La fin ordinaire, avec la recharge la plus longue du port.
-        cn.academy.ability.AbilityEvents.endHeld(player, data, cannon);
+        cn.academy.ability.AbilityTicker.endHeld(player, data, cannon);
         assertTrue(helper, data.isOnCooldown(cannon), "et la recharge est posee");
 
         zombie.discard();
@@ -6390,7 +6390,7 @@ public final class AcademyGameTests {
                         + (renewed == null ? "aucun effet" : renewed.getDuration()));
 
         // La fermeture — ici la fin ordinaire, comme un second appui — pose la recharge.
-        cn.academy.ability.AbilityEvents.endHeld(player, data, detect);
+        cn.academy.ability.AbilityTicker.endHeld(player, data, detect);
         assertTrue(helper, data.isOnCooldown(detect), "la recharge tombe a la fermeture");
         // Quarante-cinq secondes au depart, moins l'experience que l'eclat vient de verser :
         // la recharge est lue APRES le gain, comme dans l'original, ou elle vaut donc 896 et

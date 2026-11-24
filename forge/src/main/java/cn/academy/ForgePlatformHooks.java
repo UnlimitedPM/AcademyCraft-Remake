@@ -62,18 +62,18 @@ public final class ForgePlatformHooks {
             @Override
             public void end(net.minecraft.server.level.ServerPlayer player,
                             cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill) {
-                cn.academy.ability.AbilityEvents.endHeld(player, data, skill);
+                cn.academy.ability.AbilityTicker.endHeld(player, data, skill);
             }
 
             @Override
             public void endAll(net.minecraft.server.level.ServerPlayer player,
                                cn.academy.ability.AbilityData data) {
-                cn.academy.ability.AbilityEvents.endAllOnDeactivate(player, data);
+                cn.academy.ability.AbilityTicker.endAllOnDeactivate(player, data);
             }
 
             @Override
             public void endOutsidePreset(net.minecraft.server.level.ServerPlayer player) {
-                cn.academy.ability.AbilityEvents.endHoldsOutsideCurrentPreset(player);
+                cn.academy.ability.AbilityTicker.endHoldsOutsideCurrentPreset(player);
             }
         });
         // Le client tient ses touches : c'est lui qui ferme le bon maintien.

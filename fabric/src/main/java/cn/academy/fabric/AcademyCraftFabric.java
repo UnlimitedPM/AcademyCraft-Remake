@@ -27,6 +27,9 @@ public final class AcademyCraftFabric implements ModInitializer {
         // ils se posent ici, une fois, au demarrage.
         cn.academy.advancements.AcademyAdvancements.register();
 
+        // Le cote serveur de l'aptitude : tick, mort, refus de degats.
+        FabricAbilityEvents.install();
+
         // /aim et /aimp : les memes commandes que Forge, posees sur le repartiteur de Fabric.
         net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback.EVENT.register(
                 (dispatcher, registryAccess, environment) ->
