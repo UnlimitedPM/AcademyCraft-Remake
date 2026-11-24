@@ -6,7 +6,6 @@ import cn.academy.WindgenBaseBlock;
 import cn.academy.client.render.ObjModels;
 import cn.academy.fabric.FabricContent;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
-import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 
 /**
  * Les machines qui n'ont pas de modele de bloc, cote Fabric.
@@ -58,14 +57,9 @@ public final class FabricMachineModels {
                         0.5d, -0.006d, 0.5d, 1.0f,
                         WindgenBaseBlock.FACING, true)));
 
-        // La nacelle : son corps seulement. Les pales tournent, et le rendu qui les fait tourner
-        // n'existe pour l'instant que cote Forge — voir FABRIC_PORT.md.
+        // La nacelle : le corps ET les pales — le rendu des pales est commun, il vient de Forge.
         BlockEntityRenderers.register(FabricContent.WINDGEN_MAIN_TYPE,
-                FabricObjRenderer.provider(new FabricObjRenderer.Placement(
-                        ObjModels.model("windgen_main"),
-                        state -> ObjModels.texture("windgen_main_model"),
-                        0.5d, 0.0d, 0.5d, 1.0f,
-                        HorizontalDirectionalBlock.FACING, true)));
+                FabricWindgenMainRenderer.provider());
 
         // Le matrix : ses neuf blocs, dessines par le rendu commun.
         BlockEntityRenderers.register(FabricContent.MATRIX_TYPE,

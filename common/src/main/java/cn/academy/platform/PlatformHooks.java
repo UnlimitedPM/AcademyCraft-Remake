@@ -257,6 +257,18 @@ public final class PlatformHooks {
         void start();
     }
 
+    /**
+     * Une piece mobile signalee au rendu d'ombres du chargeur.
+     *
+     * <p>Les shaders ne voient pas les block entities d'eux-memes : chez Forge c'est un mod de
+     * compatibilite (Oculus) qui a besoin qu'on lui nomme les blocs a ombrer. Le code commun appelle
+     * donc ce crochet, et ne sait rien de plus.
+     */
+    @FunctionalInterface
+    public interface ShadowCasterTracker {
+        void track(net.minecraft.core.BlockPos pos);
+    }
+
     private static NodeLinker nodeLinker = new NodeLinker() {
         @Override
         public boolean ensureLinked(ServerLevel level, BlockPos pos) {
@@ -349,6 +361,9 @@ public final class PlatformHooks {
     private static DataAccess<cn.academy.misc.media.MediaAcquireData> mediaAccess = player -> null;
 
     private static TerminalInstallBanner terminalInstallBanner = () -> {
+    };
+
+    private static ShadowCasterTracker shadowCasterTracker = pos -> {
     };
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
@@ -495,6 +510,15 @@ public final class PlatformHooks {
 
     public static void installTerminalInstallBanner(TerminalInstallBanner banner) {
         terminalInstallBanner = banner;
+    }
+
+    public static void installShadowCasterTracker(ShadowCasterTracker tracker) {
+        shadowCasterTracker = tracker;
+    }
+
+    /** Cette piece mobile doit-elle projeter une ombre ? Voir le rendu de l'eolienne. */
+    public static void trackShadowCaster(net.minecraft.core.BlockPos pos) {
+        shadowCasterTracker.track(pos);
     }
 
     /** Le terminal vient d'arriver : le client joue son animation. */

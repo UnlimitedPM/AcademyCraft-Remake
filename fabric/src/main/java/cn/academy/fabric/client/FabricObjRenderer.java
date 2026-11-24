@@ -63,7 +63,8 @@ public final class FabricObjRenderer implements BlockEntityRenderer<BlockEntity>
 
     private final Placement placement;
 
-    private FabricObjRenderer(Placement placement) {
+    /** Package-prive : l'eolienne compose ce rendu avec celui des pales. */
+    FabricObjRenderer(Placement placement) {
         this.placement = placement;
     }
 

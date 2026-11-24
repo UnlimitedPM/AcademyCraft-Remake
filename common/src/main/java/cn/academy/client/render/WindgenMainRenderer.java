@@ -64,7 +64,7 @@ public class WindgenMainRenderer implements BlockEntityRenderer<WindgenMainBlock
         if (rotor.isFanInstalled() && rotor.isNoObstacle()) {
             // Les shaders ne voient pas les block entities d'eux-memes (voir OculusShadowCompat) :
             // on signale celle-ci pour qu'elle projette son ombre.
-            cn.academy.compat.oculus.OculusShadowCompat.track(rotor.getBlockPos());
+            cn.academy.platform.PlatformHooks.trackShadowCaster(rotor.getBlockPos());
             // L'INSTANT SE LIT SUR UNE HORLOGE, en millisecondes, et non sur le temps du monde.
             //
             // Le port prenait `(gameTime + partialTick) / 20` : un temps qui n'avance qu'au tick,

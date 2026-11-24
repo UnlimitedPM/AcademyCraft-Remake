@@ -109,6 +109,10 @@ public final class ForgePlatformHooks {
         if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
             PlatformHooks.installTerminalInstallBanner(
                     cn.academy.terminal.client.TerminalInstallOverlay::start);
+            // Les shaders ne voient pas les block entities d'eux-memes : c'est le mod de
+            // compatibilite Oculus qui a besoin qu'on lui nomme les blocs a ombrer.
+            PlatformHooks.installShadowCasterTracker(
+                    cn.academy.compat.oculus.OculusShadowCompat::track);
         }
         PlatformHooks.installHandEffectAnnouncer(player ->
                 cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
