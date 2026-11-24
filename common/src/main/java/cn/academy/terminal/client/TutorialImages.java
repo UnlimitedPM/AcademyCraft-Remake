@@ -3,8 +3,6 @@ package cn.academy.terminal.client;
 import com.mojang.blaze3d.platform.NativeImage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +18,6 @@ import java.util.Map;
  * <p>Une image absente rend {@code null}, et l'ecran la saute : un tutoriel sans sa capture
  * reste lisible, plutot que de faire tomber l'ecran.
  */
-@OnlyIn(Dist.CLIENT)
 public final class TutorialImages {
 
     private static final Map<String, int[]> SIZES = new HashMap<>();

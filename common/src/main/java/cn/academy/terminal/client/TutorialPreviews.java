@@ -1,6 +1,6 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -12,8 +12,6 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.world.item.crafting.SmeltingRecipe;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,7 +32,6 @@ import java.util.Map;
  * dessin vit dans l'ecran ; cette classe ne fait que dire QUOI montrer, et retrouver la
  * pile d'un objet ou les ingredients d'une recette.
  */
-@OnlyIn(Dist.CLIENT)
 public final class TutorialPreviews {
 
     /** Ce qu'une vue montre, et donc l'etiquette qu'elle porte. */
@@ -122,7 +119,7 @@ public final class TutorialPreviews {
     /** La pile d'un bloc ou d'un objet, ou une pile vide si l'identifiant est inconnu. */
     public static ItemStack stack(String id) {
         ResourceLocation location = ResourceLocation.tryParse(
-                id.contains(":") ? id : AcademyCraft.MOD_ID + ":" + id);
+                id.contains(":") ? id : AcademyCraftCommon.MOD_ID + ":" + id);
         if (location == null) return ItemStack.EMPTY;
 
         Item item = BuiltInRegistries.ITEM.get(location);
@@ -230,7 +227,7 @@ public final class TutorialPreviews {
 
     /** L'icone de l'etiquette d'une vue. */
     public static ResourceLocation tagIcon(View view) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/guis/icons/icon_" + view.kind().icon + ".png");
     }
 }
