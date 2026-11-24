@@ -47,6 +47,8 @@ public final class FabricClientRenders {
             // Les entrees de l'aptitude d'abord : le relachement d'une touche doit couper sa boucle
             // de son au meme tick (voir AbilityClientEvents).
             cn.academy.ability.client.AbilityClientEvents.tick();
+            // La touche du terminal, au relachement — voir TerminalKeyBindings.
+            cn.academy.terminal.client.TerminalKeyBindings.tick();
             ArcRenderer.tick();
             MineDetectOverlay.tick();
             RailgunHandEffect.tick();

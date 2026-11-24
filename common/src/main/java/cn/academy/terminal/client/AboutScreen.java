@@ -1,6 +1,6 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.client.gui.AcademyFonts;
 import cn.academy.client.gui.GuiTextures;
 import cn.academy.terminal.about.AboutDocument;
@@ -10,8 +10,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +44,6 @@ import java.util.List;
  * fenetre — et ses liens ouvrent le navigateur du bureau : c'est le seul geste du jeu qui en
  * sorte, et il est explicite (un clic sur une ligne bleue).
  */
-@OnlyIn(Dist.CLIENT)
 public class AboutScreen extends Screen {
 
     // ------------------------------------------------------------------
@@ -167,7 +164,7 @@ public class AboutScreen extends Screen {
     }
 
     private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/guis/" + path);
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/guis/" + path);
     }
 
     private List<Line> lines() {

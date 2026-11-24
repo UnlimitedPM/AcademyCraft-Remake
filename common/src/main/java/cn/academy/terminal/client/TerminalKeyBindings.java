@@ -1,14 +1,8 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 /**
  * Ouverture du terminal par une touche.
@@ -34,28 +28,22 @@ import net.minecraftforge.fml.common.Mod;
  * L'etat est retenu d'un tick a l'autre, ce qui donne un appui et un relachement par
  * enfoncement, repetitions comprises.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public class TerminalKeyBindings {
 
     public static final KeyMapping OPEN_TERMINAL = new KeyMapping(
-            "key.academy.open_terminal", KeyConflictContext.IN_GAME, InputConstants.Type.KEYSYM,
+            "key.academy.open_terminal", InputConstants.Type.KEYSYM,
             InputConstants.KEY_LALT, "key.categories.academy");
 
     /** L'etat de la touche au tick precedent : c'est lui qui distingue un relachement. */
     private static boolean wasDown;
 
-    @Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static class Registration {
-        @SubscribeEvent
-        public static void register(RegisterKeyMappingsEvent event) {
-            event.register(OPEN_TERMINAL);
-        }
+    /** Les touches a declarer chez le chargeur, qui seul connait son registre. */
+    public static void register(java.util.function.Consumer<KeyMapping> sink) {
+        sink.accept(OPEN_TERMINAL);
     }
 
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
-
+    /** Un tick de client : l'ouverture et la fermeture, au relachement. */
+    public static void tick() {
         boolean down = isDown();
         boolean released = wasDown && !down;
         wasDown = down;
@@ -88,12 +76,6 @@ public class TerminalKeyBindings {
      * {@code isKeyDown} ne connait que des touches.
      */
     private static boolean isDown() {
-        var key = OPEN_TERMINAL.getKey();
-        long window = net.minecraft.client.Minecraft.getInstance().getWindow().getWindow();
-        if (key.getType() == InputConstants.Type.MOUSE) {
-            return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, key.getValue())
-                    == org.lwjgl.glfw.GLFW.GLFW_PRESS;
-        }
-        return InputConstants.isKeyDown(window, key.getValue());
+        return cn.academy.platform.client.KeyState.isDown(OPEN_TERMINAL);
     }
 }

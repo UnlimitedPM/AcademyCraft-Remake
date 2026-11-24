@@ -9,8 +9,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,7 +30,6 @@ import java.util.List;
  * vert de l'eclat pour le choix. Rien n'est emprunte a l'original, qui n'avait pas cet ecran — le
  * joueur l'a demande le 26/10, et c'est donc une piece du port.
  */
-@OnlyIn(Dist.CLIENT)
 public class OreFilterScreen extends Screen {
 
     /** La grille : cinq colonnes de quatre, vingt minerais par page. */

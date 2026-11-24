@@ -1,6 +1,6 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.client.AbilityKeyBindings;
 import cn.academy.client.gui.AcademyFonts;
 import cn.academy.client.gui.GuiTextures;
@@ -17,8 +17,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,8 +45,10 @@ import java.util.List;
  * reproches du joueur — « on ne voit pas les images » : elles se dessinent a la largeur de
  * la colonne, proportions gardees par {@link TutorialImages}.
  */
-@OnlyIn(Dist.CLIENT)
 public class TutorialScreen extends CGuiScreen {
+
+    /** L'etiquette posee au joueur au premier ouvrage du tutoriel. */
+    private static final String TUTORIAL_OPENED_TAG = "AC_Tutorial_Open";
 
     /** La largeur de reference du document : l'original mettait l'ecran a cette echelle. */
     private static final double REF_WIDTH = 480.0;
@@ -74,12 +74,12 @@ public class TutorialScreen extends CGuiScreen {
     private static final int[] ROW_HOVER = { 255, 255, 255, 76 };
 
     /** La planche de la grille d'artisanat : 196 x 128, posee a 60 %, comme l'original. */
-    private static final ResourceLocation CRAFTING_GRID = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/guis/tutorial/crafting_grid.png");
+    private static final ResourceLocation CRAFTING_GRID = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/guis/tutorial/crafting_grid.png");
 
     /** La planche du four : 192 x 128, posee a 60 %, une case de chaque cote. */
-    private static final ResourceLocation SMELTING_VIEW = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/guis/tutorial_smelting.png");
+    private static final ResourceLocation SMELTING_VIEW = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/guis/tutorial_smelting.png");
 
     private static final double SMELT_SCALE = 0.6;
     private static final double SMELT_IN_X = 30.0;
@@ -180,8 +180,11 @@ public class TutorialScreen extends CGuiScreen {
 
         if (openingStarted < 0) {
             var player = Minecraft.getInstance().player;
-            firstOpen = player == null || !player.getPersistentData().getBoolean("AC_Tutorial_Open");
-            if (player != null) player.getPersistentData().putBoolean("AC_Tutorial_Open", true);
+            // La marque du premier ouvrage vivait dans les donnees persistantes du joueur, que seul
+            // Forge attache a l'entite : une etiquette de scoreboard fait le meme office et voyage
+            // avec la sauvegarde.
+            firstOpen = player == null || !player.getTags().contains(TUTORIAL_OPENED_TAG);
+            if (player != null) player.addTag(TUTORIAL_OPENED_TAG);
             openingStarted = net.minecraft.Util.getMillis() / 1000.0;
             for (int index = 0; index < logoAlphas.length; index++) {
                 CWidget logo = find("logo" + index);

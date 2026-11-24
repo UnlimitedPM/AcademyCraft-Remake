@@ -1,6 +1,6 @@
 package cn.academy.client.gui;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.client.AbilityKeyBindings;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.terminal.client.TerminalKeyBindings;
@@ -10,8 +10,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +41,6 @@ import java.util.List;
  * pas de contenu) — un rectangle gris de 160 sur 40 qui ne dit pas ce qu'il fait. Le port y ecrit
  * le mot de l'action : un bouton muet se lit comme un bug.
  */
-@OnlyIn(Dist.CLIENT)
 public class SettingsScreen extends Screen {
 
     // ------------------------------------------------------------------
@@ -196,7 +193,7 @@ public class SettingsScreen extends Screen {
     }
 
     private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/" + path);
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/" + path);
     }
 
     /**

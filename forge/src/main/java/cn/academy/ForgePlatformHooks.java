@@ -122,6 +122,7 @@ public final class ForgePlatformHooks {
             PlatformHooks.installMediaHudPainter((graphics, width, height) ->
                     cn.academy.client.hud.MediaHud.render(
                             (net.minecraft.client.gui.GuiGraphics) graphics, width, height));
+            PlatformHooks.installMediaPauseReassert(cn.academy.misc.media.client.ClientMediaPlayer::reassertPause);
         }
         PlatformHooks.installHandEffectAnnouncer(player ->
                 cn.academy.ability.network.AbilityNetwork.CHANNEL.send(

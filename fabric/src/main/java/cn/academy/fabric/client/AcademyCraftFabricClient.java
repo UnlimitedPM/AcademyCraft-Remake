@@ -71,5 +71,11 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
         // Les effets du mod : leurs ticks et leurs rendus. Tous les dessins sont communs ; c'est ici
         // qu'on les declare a Fabric, qui n'a pas une classe d'evenements par effet comme Forge.
         FabricClientRenders.register();
+
+        // La touche du terminal et ses applications : sans ces deux lignes le terminal est
+        // inatteignable et ses icones restent mortes.
+        cn.academy.terminal.client.TerminalKeyBindings.register(
+                net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper::registerKeyBinding);
+        cn.academy.terminal.client.TerminalScreens.init();
     }
 }

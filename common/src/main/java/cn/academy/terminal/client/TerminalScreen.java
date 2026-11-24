@@ -1,7 +1,6 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
-import cn.academy.ModSounds;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.client.gui.AcademyFonts;
 import cn.academy.sound.AcademySounds;
 import cn.academy.terminal.App;
@@ -370,7 +369,9 @@ public class TerminalScreen extends Screen {
             return true;
         }
 
-        if (minecraft != null && keyCode == minecraft.options.keyChat.getKey().getValue()) {
+        var chatKey = cn.academy.platform.client.KeyState.bound(minecraft == null ? null
+                : minecraft.options.keyChat);
+        if (chatKey != null && keyCode == chatKey.getValue()) {
             // La touche qui ouvre le chat produit AUSSI son caractere (T ecrivait « t »). On avale
             // le premier caractere, et on note l'instant pour qu'une repetition de la meme touche
             // (Entree gardee enfoncee) ne referme pas la ligne tout de suite.
@@ -472,11 +473,11 @@ public class TerminalScreen extends Screen {
     @Override
     public void onClose() {
         super.onClose();
-        cn.academy.misc.media.client.ClientMediaPlayer.reassertPause();
+        cn.academy.platform.PlatformHooks.reassertMediaPause();
     }
 
     private static ResourceLocation texture(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/guis/data_terminal/" + name);
     }
 
@@ -742,7 +743,7 @@ public class TerminalScreen extends Screen {
         // Le son de selection se joue quand la case visee CHANGE, comme chez l'original.
         if (selected >= 0 && selected != lastSelected && minecraft != null
                 && minecraft.player != null) {
-            AcademySounds.playFor(minecraft.player, ModSounds.TERMINAL_SELECT,
+            AcademySounds.playFor(minecraft.player, "terminal.select",
                     SoundSource.MASTER, 0.2f, 1.0f);
         }
         lastSelected = selected;
@@ -883,7 +884,7 @@ public class TerminalScreen extends Screen {
                 // Le seul son de l'original qui se declare dans la categorie `master`, et le
                 // plus discret de tous : 0,2, un clic de selection.
                 if (minecraft.player != null) {
-                    AcademySounds.playFor(minecraft.player, ModSounds.TERMINAL_SELECT,
+                    AcademySounds.playFor(minecraft.player, "terminal.select",
                             SoundSource.MASTER, 0.2f, 1.0f);
                 }
                 // La page s'ouvre PAR-DESSUS le terminal, qui revient a sa fermeture.

@@ -9,8 +9,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.List;
 
@@ -34,7 +32,6 @@ import java.util.List;
  * <p>Les valeurs sont celles de l'original, bornes comprises : de -512 a 512. Hors bornes,
  * la saisie est refusee et le champ passe au rouge, exactement comme avant.
  */
-@OnlyIn(Dist.CLIENT)
 public class CustomizeUiScreen extends Screen {
 
     private static final int OUTLINE = 0xFFFFFFFF;
@@ -85,7 +82,7 @@ public class CustomizeUiScreen extends Screen {
     }
 
     private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/" + path + ".png");
+        return new ResourceLocation("academy", "textures/guis/" + path + ".png");
     }
 
     @Override

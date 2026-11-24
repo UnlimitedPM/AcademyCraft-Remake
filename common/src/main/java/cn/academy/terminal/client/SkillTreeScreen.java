@@ -1,6 +1,6 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.Skill;
@@ -17,10 +17,8 @@ import cn.academy.client.gui.cgui.SkillTreeView;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +47,6 @@ import java.util.List;
  *
  * <p>Comme l'original, la page <b>ne met pas le jeu en pause</b> ({@code doesGuiPauseGame = false}).
  */
-@OnlyIn(Dist.CLIENT)
 public class SkillTreeScreen extends Screen {
 
     /** La page de l'original, en unites de conception. */
@@ -535,7 +532,7 @@ public class SkillTreeScreen extends Screen {
 
     /** L'icone d'une categorie : celle de ses pages, sous {@code guis/icons}. */
     private static String categoryIcon(Category category) {
-        return AcademyCraft.MOD_ID + ":textures/guis/icons/icon_" + category.getName() + ".png";
+        return AcademyCraftCommon.MOD_ID + ":textures/guis/icons/icon_" + category.getName() + ".png";
     }
 
     // ------------------------------------------------------------------

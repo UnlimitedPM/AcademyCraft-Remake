@@ -2,8 +2,6 @@ package cn.academy.terminal.client;
 
 import cn.academy.terminal.App;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +18,6 @@ import java.util.function.Supplier;
  * Une application sans entree ici existe et s'installe, mais n'est pas cliquable
  * dans le terminal : c'est le cas de celles dont le contenu n'est pas encore porte.
  */
-@OnlyIn(Dist.CLIENT)
 public final class AppScreens {
 
     private static final Map<Integer, Supplier<Screen>> FACTORIES = new HashMap<>();
@@ -98,5 +95,6 @@ public final class AppScreens {
         Screen target = origin;
         origin = null;
         net.minecraft.client.Minecraft.getInstance().setScreen(target);
-        cn.academy.misc.media.client.ClientMediaPlayer.reassertPause();
-    }}
+        cn.academy.platform.PlatformHooks.reassertMediaPause();
+    }
+}

@@ -4,6 +4,18 @@
 
 ### Français
 
+- **Le terminal s'ouvre sous Fabric.** Les écrans d'application sont communs : la page du terminal,
+  l'arbre de compétences, l'à-propos, le tutoriel, les réglages et la personnalisation de l'interface.
+  `TerminalScreens` ne garde que les applications neutres et installe l'ouverture d'écran ; les deux
+  qui restent chez Forge — le lecteur média, qui tient à son moteur de son, et l'Émetteur de
+  fréquence — s'y ajoutent depuis l'initialisation client de Forge. La touche du terminal passe
+  aussi en `common/` (`TerminalKeyBindings`, avec `KeyState` pour lire l'appui physique), Forge
+  gardant son registre et son tick dans `TerminalKeyBindingsEvents`, Fabric les déclarant dans son
+  initialiseur. Le drapeau du premier ouvrage du tutoriel quitte les données persistantes du joueur
+  — Forge seul les attache à l'entité — pour une **étiquette de scoreboard**, comme le drapeau
+  d'armement de `/aim` ; et la pause du lecteur média, que le terminal et la sortie d'application
+  reposaient directement, passe par le crochet `PlatformHooks.reassertMediaPause` (sans effet hors
+  de Forge, où le lecteur n'existe pas).
 - **L'aptitude tourne des deux côtés.** `AbilityTicker` est commun : le tick du joueur (interférence,
   recharges, charges, surcoût, protection de chute, maintiens, réserve, synchronisation), la mort,
   le réveil, les dégâts et les trois sorties des maintiens. `AbilityEvents` ne garde que la capacité
@@ -197,6 +209,17 @@
 
 ### English
 
+- **The terminal opens on Fabric.** The application screens are common: the terminal page, the skill
+  tree, the about page, the tutorial, the settings and the interface customisation. `TerminalScreens`
+  now only holds the neutral applications and installs the screen opener; the two that stay Forge —
+  the media player, tied to its sound engine, and the Frequency Emitter — add themselves from the
+  Forge client setup. The terminal key also moves to `common/` (`TerminalKeyBindings`, reading the
+  physical press through `KeyState`), Forge keeping its registry and tick in
+  `TerminalKeyBindingsEvents` while Fabric declares both in its client initialiser. The tutorial's
+  "first open" flag leaves the player's persistent data — a Forge-only attachment — for a
+  **scoreboard tag**, like the arming flag of `/aim`; and the media player pause, re-asserted
+  directly by the terminal and by the app close, goes through the
+  `PlatformHooks.reassertMediaPause` hook (a no-op outside Forge, where the player does not exist).
 - **The ability runs on both sides.** `AbilityTicker` is common: the player tick (interference,
   cooldowns, charges, overload, fall protection, holds, reserve, sync), death, waking up, damage and
   the three hold exits. `AbilityEvents` keeps only the Forge capability and its events;

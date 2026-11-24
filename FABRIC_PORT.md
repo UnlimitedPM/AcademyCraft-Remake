@@ -161,6 +161,10 @@ Deux manques qui se voyaient en jeu, et qui sont réglés :
   est là (`AbilityHudOverlay`, sauf le lecteur média) ;
 - **le contenu** : 46 recettes et 13 succès, les quatre facteurs d'induction, le grappin,
   l'installeur de terminal, le tutoriel, l'unité vide et l'unité de phase, les machines et le liquide ;
+- **le terminal** : la page, l'arbre de compétences, l'à-propos, le tutoriel, les réglages et la
+  personnalisation de l'interface sont communs, la touche (Alt gauche) est déclarée par
+  `KeyBindingHelper` et lue au relâchement par `TerminalKeyBindings` ; deux applications manquent —
+  le lecteur média et l'Émetteur de fréquence, qui restent Forge ;
 - **`/aim` et `/aimp`**, et les succès (`AcademyAdvancements`, déclencheurs posés par réflexion).
 
 **Limites assumées, à traiter plus tard :**
@@ -169,8 +173,10 @@ Deux manques qui se voyaient en jeu, et qui sont réglés :
   veilles qui *réduisent* les dégâts ne s'appliquent pas encore (les refus, eux, passent) ;
 - pas d'événement pour le réveil dans un lit, la protection de chute, ni le tick des vivants ;
 - le **lecteur média** reste chez Forge : son moteur lit le flux sonore par
-  `Sound#getStream(SoundBufferLibrary, Sound, boolean)`, une méthode que seul Forge ajoute. Il en va
-  de même des écrans du terminal, qui l'utilisent ;
+  `Sound#getStream(SoundBufferLibrary, Sound, boolean)`, une méthode que seul Forge ajoute. Son
+  application et l'Émetteur de fréquence ne sont donc pas déclarés sous Fabric, et la page du
+  terminal n'en montre que les icônes mortes ; les écrans, eux, sont communs depuis le portage du
+  terminal ;
 - les **machines développeur**, le **brouilleur** et le **développeur portable** ne sont pas
   enregistrés sous Fabric : leurs recettes et leurs succès sont exclus du jar, et les deux tags
   vanilla `mineable/pickaxe` et `needs_iron_tool` se plaignent de les nommer (avertissements sans

@@ -400,6 +400,9 @@ public final class PlatformHooks {
     private static MediaHudPainter mediaHudPainter = (graphics, width, height) -> {
     };
 
+    private static Runnable mediaPauseReassert = () -> {
+    };
+
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
 
     private static PresetQuery presetQuery = (player, skillName) -> false;
@@ -556,6 +559,20 @@ public final class PlatformHooks {
 
     public static void installMediaHudPainter(MediaHudPainter painter) {
         mediaHudPainter = painter;
+    }
+
+    public static void installMediaPauseReassert(Runnable action) {
+        mediaPauseReassert = action;
+    }
+
+    /**
+     * Le lecteur media remet son morceau en attente.
+     *
+     * <p>Le terminal l'appelle quand il ouvre sa page : sans cela, le morceau repartirait pendant
+     * qu'un ecran est ouvert. Le lecteur n'existant que chez Forge, l'appel ne fait rien ailleurs.
+     */
+    public static void reassertMediaPause() {
+        mediaPauseReassert.run();
     }
 
     /** L'element du lecteur media, s'il existe chez ce chargeur. */

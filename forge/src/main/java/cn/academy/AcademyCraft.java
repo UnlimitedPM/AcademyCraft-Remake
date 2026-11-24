@@ -112,7 +112,8 @@ public class AcademyCraft {
         }
 
         @SubscribeEvent
-        public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {            event.enqueueWork(() -> {
+        public static void onClientSetup(net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) {
+            event.enqueueWork(() -> {
                 cn.academy.platform.PlatformHooks.installSilbarnFragments(
                         cn.academy.client.SilbarnFrags::spawn);
                 net.minecraft.client.gui.screens.MenuScreens.register(ModMenus.SOLAR_GEN.get(), SolarGenScreen::new);
@@ -131,6 +132,14 @@ public class AcademyCraft {
                 // du terminal. Sans cette ligne, l'arbre de competences s'installe
                 // mais reste une icone morte.
                 cn.academy.terminal.client.TerminalScreens.init();
+                // Les deux applications qui restent chez Forge : le lecteur media tient a son
+                // moteur de son, et l'Emetteur de frequence a son paquet de reseau.
+                cn.academy.terminal.client.AppScreens.register(
+                        cn.academy.terminal.app.AppMediaPlayer.INSTANCE,
+                        cn.academy.terminal.client.MediaPlayerScreen::new);
+                cn.academy.terminal.client.AppScreens.registerAction(
+                        cn.academy.terminal.app.AppFreqTransmitter.INSTANCE,
+                        cn.academy.terminal.client.FreqTransmitterClient::start);
                 // Les boucles sonores des machines : le block entity est une classe
                 // partagee, il ne peut donc pas nommer la sienne. C'est ici qu'on la lui
                 // installe — et sans cette ligne, les machines tournent en silence.
