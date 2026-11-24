@@ -4,6 +4,14 @@
 
 ### Français
 
+- **Les derniers écrans de client passent en `common/`.** L'animation d'installation du terminal
+  (sa barre, son étiquette, son ouverture automatique) et le porteur d'ombre — l'entité invisible
+  qui fait dessiner les machines dans la carte d'ombre d'un shader — n'ont plus d'abonnement propre :
+  `render` et `tick` sont communs, appelés par `AbilityHudOverlay` et par le tick de client de chaque
+  chargeur. La seule question qui reste au chargeur est « sommes-nous dans une carte d'ombre ? »,
+  et elle passe par `PlatformHooks.inShadowPass` (Oculus répond chez Forge, `false` ailleurs). Ce
+  qui reste chez Forge est désormais le **tail légitime** : registres, événements, intégrations (JEI,
+  CraftTweaker, Oculus) et le lecteur média.
 - **Le brouilleur et les développeurs passent en `common/`.** Le brouilleur d'aptitudes (bloc,
   block entity, menu, écran) et le développeur d'aptitudes dans ses deux qualités — plus le
   développeur portable — ne dépendent plus du chargeur. Trois crochets ont suffi :
@@ -221,6 +229,13 @@
 
 ### English
 
+- **The last client screens move to `common/`.** The terminal install animation (its bar, its label,
+  its automatic opening) and the shadow caster — the invisible entity that makes machines draw in a
+  shader's shadow map — no longer carry their own subscriptions: `render` and `tick` are common,
+  called by `AbilityHudOverlay` and by each loader's client tick. The only question left to the
+  loader is "are we in a shadow pass?", answered through `PlatformHooks.inShadowPass` (Oculus on
+  Forge, `false` elsewhere). What stays on Forge is now the **legitimate tail**: registries, events,
+  integrations (JEI, CraftTweaker, Oculus) and the media player.
 - **The interferer and the developers move to `common/`.** The ability interferer (block, block
   entity, menu, screen) and the ability developer in its two tiers — plus the portable developer —
   no longer depend on the loader. Three hooks were enough: `PlatformHooks.extractExternalItem`
