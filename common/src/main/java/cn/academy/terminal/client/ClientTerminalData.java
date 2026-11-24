@@ -34,7 +34,7 @@ public final class ClientTerminalData {
     public static void update(CompoundTag tag, boolean installedNow) {
         DATA.deserializeNBT(tag);
 
-        if (installedNow) TerminalInstallOverlay.start();
+        if (installedNow) cn.academy.platform.PlatformHooks.terminalInstalled();
     }
 
     public static TerminalData get() {

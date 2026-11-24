@@ -447,7 +447,7 @@ public class ModItems {
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
                 // Le drapeau allume l'animation d'installation cote client, et le message qui
                 // donne la touche part a la FIN de cette animation, comme dans l'original.
-                cn.academy.terminal.TerminalEvents.sync(serverPlayer, true);
+                cn.academy.terminal.TerminalTracker.sync(serverPlayer, true);
                 cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
                         cn.academy.advancements.AcademyAdvancements.TERMINAL_INSTALLED);
             }
@@ -592,7 +592,7 @@ public class ModItems {
             if (!player.getAbilities().instabuild) stack.shrink(1);
             data.installApp(app);
             if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                cn.academy.terminal.TerminalEvents.sync(serverPlayer);
+                cn.academy.terminal.TerminalTracker.sync(serverPlayer);
             }
             player.displayClientMessage(Component.translatable("ac.terminal.app_installed",
                     app.getDisplayName()), false);

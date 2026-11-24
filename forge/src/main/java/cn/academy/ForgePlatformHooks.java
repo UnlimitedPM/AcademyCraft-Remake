@@ -96,6 +96,20 @@ public final class ForgePlatformHooks {
                 .getCapability(cn.academy.ability.preset.PresetCapability.PRESET_DATA)
                 .map(cn.academy.ability.preset.PresetCapability.Holder::get)
                 .orElse(null));
+        PlatformHooks.installTerminalAccess(player -> player
+                .getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA)
+                .resolve().orElse(null));
+        PlatformHooks.installTutorialAccess(player -> player
+                .getCapability(cn.academy.terminal.tutorial.TutorialCapability.TUTORIAL_DATA)
+                .resolve().orElse(null));
+        PlatformHooks.installMediaAccess(player -> player
+                .getCapability(cn.academy.misc.media.MediaCapability.MEDIA_DATA)
+                .map(cn.academy.misc.media.MediaCapability.Holder::get)
+                .orElse(null));
+        if (net.minecraftforge.fml.loading.FMLEnvironment.dist.isClient()) {
+            PlatformHooks.installTerminalInstallBanner(
+                    cn.academy.terminal.client.TerminalInstallOverlay::start);
+        }
         PlatformHooks.installHandEffectAnnouncer(player ->
                 cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
                         net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF

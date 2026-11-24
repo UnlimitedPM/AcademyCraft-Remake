@@ -179,5 +179,25 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.preset.network.PresetActionPacket::encode,
                         cn.academy.ability.preset.network.PresetActionPacket::decode),
                 cn.academy.ability.preset.network.PresetActionPacket::handle);
+
+        // Les autres donnees de joueur : le terminal, les tutoriels ouverts et les morceaux
+        // possedes. Une seule direction, du serveur vers le client.
+        Network.clientbound("sync_terminal_data",
+                cn.academy.terminal.network.SyncTerminalDataPacket.class,
+                Network.codec(cn.academy.terminal.network.SyncTerminalDataPacket::encode,
+                        cn.academy.terminal.network.SyncTerminalDataPacket::decode),
+                cn.academy.terminal.network.SyncTerminalDataPacket::handle);
+
+        Network.clientbound("sync_tutorial_data",
+                cn.academy.terminal.tutorial.network.SyncTutorialDataPacket.class,
+                Network.codec(cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::encode,
+                        cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::decode),
+                cn.academy.terminal.tutorial.network.SyncTutorialDataPacket::handle);
+
+        Network.clientbound("sync_media",
+                cn.academy.misc.media.network.SyncMediaPacket.class,
+                Network.codec(cn.academy.misc.media.network.SyncMediaPacket::encode,
+                        cn.academy.misc.media.network.SyncMediaPacket::decode),
+                cn.academy.misc.media.network.SyncMediaPacket::handle);
     }
 }

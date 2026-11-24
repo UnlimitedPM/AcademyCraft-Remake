@@ -179,7 +179,7 @@ public final class PlatformHooks {
     }
 
     /**
-     * Les prereglages d'un joueur, tels que le serveur les tient.
+     * Les preglages d'un joueur, tels que le serveur les tient.
      *
      * <p>Chez Forge ils vivent dans une capacite attachee au joueur ; le code commun demande
      * donc l'objet au chargeur, l'ouvre, et c'est le chargeur qui le sauvegarde.
@@ -187,6 +187,18 @@ public final class PlatformHooks {
     @FunctionalInterface
     public interface PresetAccess {
         cn.academy.ability.preset.PresetData get(net.minecraft.world.entity.player.Player player);
+    }
+
+    /**
+     * Une donnee de joueur que le chargeur tient.
+     *
+     * <p>Meme idee que {@link PresetAccess}, mais generique : le terminal, les tutoriels et les
+     * morceaux du lecteur suivent tous la meme forme — une capacite attachee au joueur, ou le
+     * chargeur la sauvegarde.
+     */
+    @FunctionalInterface
+    public interface DataAccess<T> {
+        T get(net.minecraft.world.entity.player.Player player);
     }
 
     /**
@@ -232,6 +244,17 @@ public final class PlatformHooks {
         void award(net.minecraft.world.entity.player.Player player, Advancement advancement);
 
         void onCategoryLevel(net.minecraft.world.entity.player.Player player, int level);
+    }
+
+    /**
+     * L'animation d'installation du terminal, qui est un calque de client.
+     *
+     * <p>Le drapeau qui la declenche voyage avec l'etat du terminal ; le calque, lui, n'existe que
+     * chez le chargeur. Sans installation, il ne se passe rien.
+     */
+    @FunctionalInterface
+    public interface TerminalInstallBanner {
+        void start();
     }
 
     private static NodeLinker nodeLinker = new NodeLinker() {
@@ -320,6 +343,13 @@ public final class PlatformHooks {
     };
 
     private static PresetAccess presetAccess = player -> null;
+
+    private static DataAccess<cn.academy.terminal.TerminalData> terminalAccess = player -> null;
+    private static DataAccess<cn.academy.terminal.tutorial.TutorialData> tutorialAccess = player -> null;
+    private static DataAccess<cn.academy.misc.media.MediaAcquireData> mediaAccess = player -> null;
+
+    private static TerminalInstallBanner terminalInstallBanner = () -> {
+    };
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
 
@@ -425,12 +455,51 @@ public final class PlatformHooks {
         return player == null ? null : presetAccess.get(player);
     }
 
+    public static void installTerminalAccess(DataAccess<cn.academy.terminal.TerminalData> access) {
+        terminalAccess = access;
+    }
+
+    public static void installTutorialAccess(DataAccess<cn.academy.terminal.tutorial.TutorialData> access) {
+        tutorialAccess = access;
+    }
+
+    public static void installMediaAccess(DataAccess<cn.academy.misc.media.MediaAcquireData> access) {
+        mediaAccess = access;
+    }
+
+    /** Les applications installees du terminal, ou {@code null}. */
+    public static cn.academy.terminal.TerminalData terminalData(
+            net.minecraft.world.entity.player.Player player) {
+        return player == null ? null : terminalAccess.get(player);
+    }
+
+    /** Les tutoriels ouverts du joueur, ou {@code null}. */
+    public static cn.academy.terminal.tutorial.TutorialData tutorialData(
+            net.minecraft.world.entity.player.Player player) {
+        return player == null ? null : tutorialAccess.get(player);
+    }
+
+    /** Les morceaux que le joueur possede, ou {@code null}. */
+    public static cn.academy.misc.media.MediaAcquireData mediaData(
+            net.minecraft.world.entity.player.Player player) {
+        return player == null ? null : mediaAccess.get(player);
+    }
+
     public static void installHandEffectAnnouncer(HandEffectAnnouncer announcer) {
         handEffectAnnouncer = announcer;
     }
 
     public static void installHoldOverListener(HoldOverListener listener) {
         holdOverListener = listener;
+    }
+
+    public static void installTerminalInstallBanner(TerminalInstallBanner banner) {
+        terminalInstallBanner = banner;
+    }
+
+    /** Le terminal vient d'arriver : le client joue son animation. */
+    public static void terminalInstalled() {
+        terminalInstallBanner.start();
     }
 
     /** Le client ferme le maintien nomme. */

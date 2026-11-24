@@ -1,7 +1,6 @@
 package cn.academy.terminal.client;
 
 import cn.academy.AcademyCraft;
-import cn.academy.terminal.TerminalEvents;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.api.distmarker.Dist;

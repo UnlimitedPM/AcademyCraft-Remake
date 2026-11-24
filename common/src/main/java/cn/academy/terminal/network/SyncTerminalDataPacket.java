@@ -1,20 +1,15 @@
 package cn.academy.terminal.network;
 
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.terminal.TerminalData;
 import cn.academy.terminal.client.ClientTerminalData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
 
 /**
  * S2C : pousse l'etat du terminal au client qui le possede.
  *
- * Meme canal que les donnees d'aptitudes ({@link AbilityNetwork#CHANNEL}) : c'est
- * le canal des donnees de joueur du mod, et ouvrir un second canal pour un
- * drapeau et une liste de noms ne gagnerait rien.
+ * <p>C'est le canal des donnees de joueur du mod : ouvrir un second canal pour un drapeau et une
+ * liste de noms ne gagnerait rien.
  */
 public class SyncTerminalDataPacket {
 
@@ -47,9 +42,7 @@ public class SyncTerminalDataPacket {
         return new SyncTerminalDataPacket(tag, buf.readBoolean());
     }
 
-    public static void handle(SyncTerminalDataPacket msg, Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> ClientTerminalData.update(msg.data, msg.installedNow));
-        ctx.setPacketHandled(true);
+    public static void handle(SyncTerminalDataPacket msg) {
+        ClientTerminalData.update(msg.data, msg.installedNow);
     }
 }
