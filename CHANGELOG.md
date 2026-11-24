@@ -4,6 +4,16 @@
 
 ### Français
 
+- **Les requêtes de l'aptitude passent par le transport neutre.** Sept paquets de plus dans
+  `common/` : activation d'un pouvoir, bascule de l'aptitude, préférences de minage, clignotement,
+  téléportation par position, distance de téléportation et fin de maintien. Leurs gestionnaires
+  prennent un `ServerPlayer` au lieu d'un `NetworkEvent.Context`, et `AbilityNetwork` ne déclare
+  plus que les messages vraiment propres à Forge (barre d'aptitude, terminal, tutoriel, médias,
+  pré-réglages, brouilleur, émetteur de fréquence). `PlatformHooks` gagne `HeldEnd.endAll` — couper
+  d'un coup tous les maintiens, ce que fait `ToggleAbilityPacket` quand l'aptitude s'éteint — et un
+  `HoldOverListener`, que `ForgePlatformHooks` n'installe **que côté client** : la référence de
+  méthode chargeait `AbilityClientEvents`, donc `LocalPlayer`, et le serveur dédié refusait de
+  démarrer. `AbilityEvents` envoie ses deux `HoldOverPacket` par `Network`.
 - **Les quatre cursus d'aptitude sont en `common/` et enregistrés sur les trois chargeurs.**
   `AbilityCategories` tient la liste, appelée par `AbilityInit` (Forge) et par l'initialiseur
   Fabric. Le dernier verrou était `RailgunSkill` : deux crochets l'ont libéré —
@@ -102,6 +112,15 @@
 
 ### English
 
+- **Ability requests travel the neutral transport.** Seven more packets land in `common/`: skill
+  activation, ability toggle, mining preferences, flashing, position teleport, teleport distance
+  and hold-over end. Their handlers take a `ServerPlayer` instead of a `NetworkEvent.Context`, and
+  `AbilityNetwork` now only declares the genuinely Forge-specific messages (ability bar, terminal,
+  tutorial, media, presets, interferer, frequency transmitter). `PlatformHooks` gains
+  `HeldEnd.endAll` — cut every hold at once, which `ToggleAbilityPacket` does when the ability
+  switches off — and a `HoldOverListener` that `ForgePlatformHooks` only installs **client-side**:
+  the method reference loaded `AbilityClientEvents`, hence `LocalPlayer`, and the dedicated server
+  refused to boot. `AbilityEvents` sends its two `HoldOverPacket` through `Network`.
 - **All four ability categories live in `common/` and are registered by every loader.**
   `AbilityCategories` holds the list, called from `AbilityInit` (Forge) and from the Fabric
   initializer. The last lock was `RailgunSkill`: two hooks freed it —
