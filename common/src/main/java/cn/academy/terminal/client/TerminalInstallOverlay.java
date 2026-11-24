@@ -1,17 +1,11 @@
 package cn.academy.terminal.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.client.gui.AcademyFonts;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 /**
  * L'installation du terminal de donnees : la barre de progression de l'original.
@@ -33,7 +27,6 @@ import net.minecraftforge.fml.common.Mod;
  * <p>A la fin, elle ouvre le terminal — la, le jeu prend la main — et dit dans le chat quelle
  * touche l'ouvre, avec le nom <b>reel</b> de la touche du joueur.
  */
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class TerminalInstallOverlay {
 
     /** Les temps de l'original, en secondes. */
@@ -79,21 +72,19 @@ public final class TerminalInstallOverlay {
     /**
      * La barre, par-dessus le HUD.
      *
-     * <p>Le crochet est {@code Post} de la hotbar : c'est le dernier calque du jeu, donc la
-     * barre passe devant tout — et surtout, on continue de voir le monde et de marcher.
+     * <p>Chez Forge le crochet etait le {@code Post} de la hotbar : c'est le dernier calque du
+     * jeu, donc la barre passe devant tout — et surtout, on continue de voir le monde et de
+     * marcher. Le dessin se fait maintenant depuis {@code AbilityHudOverlay}, qui pose deja ses
+     * calques au meme endroit.
      */
-    @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Post event) {
+    public static void render(GuiGraphics graphics) {
         if (startNano < 0) return;
-        if (!event.getOverlay().id().equals(VanillaGuiOverlay.HOTBAR.id())) return;
-
-        draw(event.getGuiGraphics());
+        draw(graphics);
     }
 
     /** La fin de l'animation : le terminal s'ouvre, et le jeu reprend la main. */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || startNano < 0) return;
+    public static void tick() {
+        if (startNano < 0) return;
         if (elapsed() >= LENGTH + WAIT) finish();
     }
 

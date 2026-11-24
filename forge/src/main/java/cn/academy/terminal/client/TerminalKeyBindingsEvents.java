@@ -36,6 +36,9 @@ public final class TerminalKeyBindingsEvents {
         public static void onClientTick(TickEvent.ClientTickEvent event) {
             if (event.phase != TickEvent.Phase.END) return;
             TerminalKeyBindings.tick();
+            // L'animation d'installation du terminal avance et se termine ici : elle n'a plus
+            // d'abonnement a elle, son corps est commun.
+            TerminalInstallOverlay.tick();
         }
     }
 }

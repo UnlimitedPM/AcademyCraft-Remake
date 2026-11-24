@@ -38,5 +38,8 @@ public final class AbilityHudOverlay {
         // AuxGui, donc dessine apres le HUD — voir BodyIntensifyHud.
         BodyIntensifyHud.render(graphics, screenWidth, screenHeight);
         DebugConsole.render(graphics);
+        // La barre d'installation du terminal se pose en dernier, comme chez Forge ou elle
+        // attendait le calque {@code Post} de la barre d'objets.
+        cn.academy.terminal.client.TerminalInstallOverlay.render(graphics);
     }
 }

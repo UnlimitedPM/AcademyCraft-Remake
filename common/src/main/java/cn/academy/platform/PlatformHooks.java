@@ -406,6 +406,9 @@ public final class PlatformHooks {
 
     private static PhaseLiquidProbe phaseLiquidProbe = state -> false;
 
+    /** Le rendu est-il dans la carte d'ombre d'un shader ? Chez Forge, Oculus le dit. */
+    private static java.util.function.BooleanSupplier inShadowPass = () -> false;
+
     private static MediaHudPainter mediaHudPainter = (graphics, width, height) -> {
     };
 
@@ -590,6 +593,22 @@ public final class PlatformHooks {
 
     public static void installShadowCasterTracker(ShadowCasterTracker tracker) {
         shadowCasterTracker = tracker;
+    }
+
+    public static void installShadowPass(java.util.function.BooleanSupplier pass) {
+        inShadowPass = pass;
+    }
+
+    /**
+     * Sommes-nous dans la carte d'ombre d'un shader ?
+     *
+     * <p>Le porteur d'ombre ne dessine que la : hors d'une carte d'ombre, il ne doit rien poser du
+     * tout, sans quoi le monde afficherait deux fois ses machines. La question n'a de sens que chez
+     * un chargeur qui heberge un moteur de shaders — Forge avec Oculus — et vaut {@code false}
+     * ailleurs.
+     */
+    public static boolean inShadowPass() {
+        return inShadowPass.getAsBoolean();
     }
 
     public static void installPhaseLiquidProbe(PhaseLiquidProbe probe) {

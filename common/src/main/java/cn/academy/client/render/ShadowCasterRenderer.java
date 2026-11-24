@@ -1,6 +1,6 @@
 package cn.academy.client.render;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.entity.EntityShadowCaster;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
@@ -25,7 +25,7 @@ public class ShadowCasterRenderer extends EntityRenderer<EntityShadowCaster> {
 
     /** Jamais liee : ce rendu ne dessine aucune texture a lui. */
     private static final ResourceLocation NONE =
-            ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+            new ResourceLocation(AcademyCraftCommon.MOD_ID,
                     "textures/block/developer_normal_model.png");
 
     private static final org.slf4j.Logger LOGGER =
@@ -42,7 +42,7 @@ public class ShadowCasterRenderer extends EntityRenderer<EntityShadowCaster> {
     @Override
     public void render(EntityShadowCaster caster, float yaw, float partialTick, PoseStack pose,
                        MultiBufferSource buffers, int light) {
-        boolean shadowPass = cn.academy.compat.oculus.OculusShadowCompat.inShadowPass();
+        boolean shadowPass = cn.academy.platform.PlatformHooks.inShadowPass();
         report(shadowPass);
 
         if (!shadowPass) return;

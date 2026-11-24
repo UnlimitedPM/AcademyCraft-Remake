@@ -124,6 +124,10 @@ public final class ForgePlatformHooks {
             // compatibilite Oculus qui a besoin qu'on lui nomme les blocs a ombrer.
             PlatformHooks.installShadowCasterTracker(
                     cn.academy.compat.oculus.OculusShadowCompat::track);
+            // Le porteur d'ombre ne dessine que dans une carte d'ombre, et seule Oculus sait le
+            // dire : hors de la, il ne doit rien poser du tout.
+            PlatformHooks.installShadowPass(
+                    cn.academy.compat.oculus.OculusShadowCompat::inShadowPass);
             // Le lecteur media est le seul element de HUD qui reste chez Forge : son moteur lit le
             // flux sonore par une methode que seul Forge ajoute a `Sound`.
             PlatformHooks.installMediaHudPainter((graphics, width, height) ->

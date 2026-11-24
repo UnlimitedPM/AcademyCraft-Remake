@@ -49,6 +49,7 @@ public final class FabricClientRenders {
             cn.academy.ability.client.AbilityClientEvents.tick();
             // La touche du terminal, au relachement — voir TerminalKeyBindings.
             cn.academy.terminal.client.TerminalKeyBindings.tick();
+            cn.academy.terminal.client.TerminalInstallOverlay.tick();
             ArcRenderer.tick();
             MineDetectOverlay.tick();
             RailgunHandEffect.tick();
