@@ -153,6 +153,30 @@ Deux manques qui se voyaient en jeu, et qui sont réglés :
   densité, la nage et la descente recopiée de la 1.12.2 sont des déclarations de `FluidType` Forge ;
   sous Fabric le corps suit le déplacement de l'eau.
 
+### Ce qui tourne sous Fabric aujourd'hui
+
+- **les aptitudes**, des deux côtés du réseau : `AbilityTicker` (tick, mort, dégâts, maintiens) est
+  commun, `AbilityClientEvents` aussi (touches, présets, charges du client), et `FabricAbilityEvents`
+  donne au ticker les événements de Fabric. Les effets se dessinent (`FabricClientRenders`) et le HUD
+  est là (`AbilityHudOverlay`, sauf le lecteur média) ;
+- **le contenu** : 46 recettes et 13 succès, les quatre facteurs d'induction, le grappin,
+  l'installeur de terminal, le tutoriel, l'unité vide et l'unité de phase, les machines et le liquide ;
+- **`/aim` et `/aimp`**, et les succès (`AcademyAdvancements`, déclencheurs posés par réflexion).
+
+**Limites assumées, à traiter plus tard :**
+
+- `ALLOW_DAMAGE` de Fabric ne laisse pas réécrire le montant : les marques de radiation et les
+  veilles qui *réduisent* les dégâts ne s'appliquent pas encore (les refus, eux, passent) ;
+- pas d'événement pour le réveil dans un lit, la protection de chute, ni le tick des vivants ;
+- le **lecteur média** reste chez Forge : son moteur lit le flux sonore par
+  `Sound#getStream(SoundBufferLibrary, Sound, boolean)`, une méthode que seul Forge ajoute. Il en va
+  de même des écrans du terminal, qui l'utilisent ;
+- les **machines développeur**, le **brouilleur** et le **développeur portable** ne sont pas
+  enregistrés sous Fabric : leurs recettes et leurs succès sont exclus du jar, et les deux tags
+  vanilla `mineable/pickaxe` et `needs_iron_tool` se plaignent de les nommer (avertissements sans
+  conséquence) ;
+- JEI et CraftTweaker sont des intégrations Forge ; Fabric demanderait REI/EMI, hors périmètre.
+
 ## Ordre de portage
 
 1. **Socle de plateforme dans `common/`**
