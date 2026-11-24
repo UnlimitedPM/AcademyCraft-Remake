@@ -503,9 +503,9 @@ public class RailgunSkill extends Skill {
      * la donnee qu'il tient, le client celle de ses miroirs. Les deux lisent donc exactement la meme
      * regle, et un joueur ne peut pas voir chez lui un effet que les autres ne voient pas.
      */
-    public boolean allowsHandEffect(AbilityData data, cn.academy.ability.preset.AbilityPreset preset) {
+    public boolean allowsHandEffect(AbilityData data, java.util.function.Predicate<String> preset) {
         if (!data.isActivated() || data.isOverloadRecovering() || data.isInterfered()) return false;
-        return preset.contains(getName());
+        return preset.test(getName());
     }
 
     /**
@@ -517,11 +517,8 @@ public class RailgunSkill extends Skill {
      * aussi, parce qu'un joueur en vue de trois quarts doit la voir sur son propre modele.
      */
     public void announceHandEffect(Player player) {
-        // Ce paquet n'existe que cote Forge : il part donc par son canal, pas par le reseau commun.
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
-                net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
-                        .with(() -> player),
-                new cn.academy.ability.network.RailgunHandPacket(player.getId()));
+        // L'annonce est un paquet de chargeur : on la demande, on ne l'envoie pas.
+        cn.academy.platform.PlatformHooks.announceHandEffect(player);
     }
 
     /**
@@ -534,11 +531,10 @@ public class RailgunSkill extends Skill {
     public static void announceHandEffectIfAllowed(Player player) {
         AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
         if (data == null) return;
-        cn.academy.ability.preset.PresetData presets = cn.academy.ability.preset.PresetTracker.of(player);
-        if (presets == null) return;
         RailgunSkill railgun = railgun();
         if (railgun == null) return;
-        if (!railgun.allowsHandEffect(data, presets.getCurrent())) return;
+        if (!railgun.allowsHandEffect(data,
+                name -> cn.academy.platform.PlatformHooks.presetContains(player, name))) return;
         railgun.announceHandEffect(player);
     }
 
@@ -581,8 +577,7 @@ public class RailgunSkill extends Skill {
                 // utilisee et donc qu'elle s'arrete par defaut. » C'est endHeld qui le fait, avec
                 // sa recharge — le meme chemin qu'un second appui.
                 if (player instanceof net.minecraft.server.level.ServerPlayer server) {
-                    cn.academy.ability.AbilityEvents.endHeld(server, data,
-                            magManip());
+                    cn.academy.platform.PlatformHooks.endHeld(server, data, magManip());
                     // Et une recharge, puisqu'elle n'en declare pas : sans elle, elle se rallume
                     // au tick suivant et arrache un autre bloc (voir MAGNET_COOLDOWN_TICKS).
                     data.setCooldown(magManip(), MAGNET_COOLDOWN_TICKS);
@@ -758,9 +753,8 @@ public class RailgunSkill extends Skill {
             if (hardness < 0f) return;                        // indestructible : la colonne s'arrete
             if (hardness > left) return;                     // plus assez d'energie pour ce bloc
 
-            if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
-                    new net.minecraftforge.event.level.BlockEvent.BreakEvent(
-                            player.level(), pos, state, player))) {
+            if (!cn.academy.platform.PlatformHooks.allowsBlockBreak(
+                    player, player.level(), pos, state)) {
                 continue;
             }
             left -= hardness;

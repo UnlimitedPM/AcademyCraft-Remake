@@ -63,6 +63,16 @@ public final class ForgePlatformHooks {
                 !net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
                         new net.minecraftforge.event.level.BlockEvent.BreakEvent(
                                 level, pos, state, player)));
+        PlatformHooks.installPresetQuery((player, skillName) -> {
+            cn.academy.ability.preset.PresetData presets =
+                    cn.academy.ability.preset.PresetTracker.of(player);
+            return presets != null && presets.getCurrent().contains(skillName);
+        });
+        PlatformHooks.installHandEffectAnnouncer(player ->
+                cn.academy.ability.network.AbilityNetwork.CHANNEL.send(
+                        net.minecraftforge.network.PacketDistributor.TRACKING_ENTITY_AND_SELF
+                                .with(() -> player),
+                        new cn.academy.ability.network.RailgunHandPacket(player.getId())));
         PlatformHooks.installMobConversion(new PlatformHooks.MobConversion() {
             @Override
             @SuppressWarnings("unchecked")

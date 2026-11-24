@@ -166,6 +166,28 @@ public final class PlatformHooks {
                  cn.academy.ability.AbilityData data, cn.academy.ability.Skill skill);
     }
 
+    /**
+     * Le prereglage du joueur, qu'il tient cote serveur.
+     *
+     * <p>Il vit dans une capacite attachee au joueur chez Forge : le code commun ne peut que
+     * demander si une competence y figure.
+     */
+    @FunctionalInterface
+    public interface PresetQuery {
+        boolean contains(net.minecraft.world.entity.player.Player player, String skillName);
+    }
+
+    /**
+     * L'annonce du tir sur la main du lanceur (paquet de chargeur).
+     *
+     * <p>C'est un effet de client, et son paquet n'existe que chez Forge : le competence commune
+     * demande donc l'annonce au chargeur au lieu de l'envoyer elle-meme.
+     */
+    @FunctionalInterface
+    public interface HandEffectAnnouncer {
+        void announce(net.minecraft.world.entity.player.Player player);
+    }
+
     /** Les succes du mod, que seule la logique des aptitudes declenche. */
     public enum Advancement {
         OVERLOAD, LEARNING_SKILL, EXP_FULL, CONVERT_CATEGORY
@@ -252,6 +274,11 @@ public final class PlatformHooks {
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
 
+    private static PresetQuery presetQuery = (player, skillName) -> false;
+
+    private static HandEffectAnnouncer handEffectAnnouncer = player -> {
+    };
+
     private static ExternalEnergyIO externalEnergyIO = new ExternalEnergyIO() {
         @Override
         public int chargeItem(ItemStack stack, int amount, boolean simulate) {
@@ -330,6 +357,25 @@ public final class PlatformHooks {
 
     public static void installBlockBreakGuard(BlockBreakGuard guard) {
         blockBreakGuard = guard;
+    }
+
+    public static void installPresetQuery(PresetQuery query) {
+        presetQuery = query;
+    }
+
+    public static void installHandEffectAnnouncer(HandEffectAnnouncer announcer) {
+        handEffectAnnouncer = announcer;
+    }
+
+    /** La competence est-elle dans le prereglage en service de ce joueur ? */
+    public static boolean presetContains(net.minecraft.world.entity.player.Player player,
+                                         String skillName) {
+        return player != null && presetQuery.contains(player, skillName);
+    }
+
+    /** Demande l'annonce du tir sur la main du lanceur. */
+    public static void announceHandEffect(net.minecraft.world.entity.player.Player player) {
+        handEffectAnnouncer.announce(player);
     }
 
     /** Une protection de terrain permet-elle cette casse ? */
