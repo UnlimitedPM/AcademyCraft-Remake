@@ -1,6 +1,6 @@
 package cn.academy.client.hud;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.client.gui.CustomizeUiLayout;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -154,7 +154,7 @@ public final class NotificationHud {
     }
 
     private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/guis/" + path + ".png");
     }
 }

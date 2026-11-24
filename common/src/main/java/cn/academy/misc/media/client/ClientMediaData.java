@@ -3,8 +3,6 @@ package cn.academy.misc.media.client;
 import cn.academy.misc.media.Media;
 import cn.academy.misc.media.MediaAcquireData;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.List;
 
@@ -16,7 +14,6 @@ import java.util.List;
  * donnee que le serveur — {@link MediaAcquireData} — pour que la lecture d'un sac de NBT
  * n'existe qu'une fois dans le mod.
  */
-@OnlyIn(Dist.CLIENT)
 public final class ClientMediaData {
 
     private static final MediaAcquireData DATA = new MediaAcquireData();

@@ -1,6 +1,6 @@
 package cn.academy.misc.media;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.resources.ResourceLocation;
 
 /**
@@ -39,7 +39,7 @@ public record Media(String id, boolean internal) {
      * en memoire — et c'est leur identifiant qui les nomme.
      */
     public ResourceLocation sound() {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "media." + id);
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "media." + id);
     }
 
     /** L'objet qui donne ce morceau, tel qu'il est enregistre. */

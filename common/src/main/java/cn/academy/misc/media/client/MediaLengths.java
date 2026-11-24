@@ -1,10 +1,8 @@
 package cn.academy.misc.media.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.misc.media.Media;
 import cn.academy.misc.media.OggDuration;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.io.InputStream;
 import java.util.HashMap;
@@ -18,7 +16,6 @@ import java.util.Map;
  * sans table a tenir a jour. La lecture se fait une seule fois par morceau, et son echec rend
  * <b>0</b> plutot qu'une exception : un morceau sans duree s'affiche sans barre.
  */
-@OnlyIn(Dist.CLIENT)
 public final class MediaLengths {
 
     private static final Map<String, Float> CACHE = new HashMap<>();
@@ -34,7 +31,7 @@ public final class MediaLengths {
     private static float read(String id) {
         // Le meme chemin que les autres ressources du port (voir AboutDocument) : le fichier
         // se lit par le classpath, ce qui marche aussi bien dans le jeu qu'en test.
-        String path = "/assets/" + AcademyCraft.MOD_ID + "/sounds/media/" + id + ".ogg";
+        String path = "/assets/" + AcademyCraftCommon.MOD_ID + "/sounds/media/" + id + ".ogg";
         try (InputStream stream = MediaLengths.class.getResourceAsStream(path)) {
             if (stream == null) return 0f;
             return OggDuration.seconds(stream.readAllBytes());

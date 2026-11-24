@@ -1,6 +1,6 @@
 package cn.academy.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.entity.EntityCoinThrowing;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -36,10 +36,10 @@ import org.joml.Quaternionf;
  */
 public class CoinRenderer extends EntityRenderer<EntityCoinThrowing> {
 
-    private static final ResourceLocation FRONT = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/item/coin_front.png");
-    private static final ResourceLocation BACK = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/item/coin_back.png");
+    private static final ResourceLocation FRONT = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/item/coin_front.png");
+    private static final ResourceLocation BACK = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/item/coin_back.png");
 
     /**
      * Le rayon du disque : une piece de vingt-deux centimetres de diametre.

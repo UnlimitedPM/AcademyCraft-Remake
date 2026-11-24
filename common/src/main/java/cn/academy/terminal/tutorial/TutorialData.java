@@ -4,7 +4,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -23,7 +22,7 @@ import java.util.Set;
  * tutoriel. Sans cet ensemble, l'ecran regarderait ce que le joueur porte au moment ou
  * il l'ouvre — une simplification que le port avait prise, et que ceci remplace.
  */
-public class TutorialData implements INBTSerializable<CompoundTag> {
+public class TutorialData {
 
     private static final String TAG_UNLOCKED = "unlocked";
     private static final String TAG_TERMINAL = "terminal_given";
@@ -101,7 +100,7 @@ public class TutorialData implements INBTSerializable<CompoundTag> {
         misakaId = other.misakaId;
     }
 
-    @Override
+    /** La donnee, en NBT : le chargeur la pose telle quelle dans sa capacite. */
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
         tag.putBoolean(TAG_TERMINAL, terminalGiven);
@@ -114,7 +113,7 @@ public class TutorialData implements INBTSerializable<CompoundTag> {
         return tag;
     }
 
-    @Override
+    /** Relit ce que {@link #serializeNBT()} a ecrit. */
     public void deserializeNBT(CompoundTag tag) {
         unlocked.clear();
         terminalGiven = tag.getBoolean(TAG_TERMINAL);

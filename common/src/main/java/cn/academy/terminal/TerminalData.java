@@ -4,7 +4,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraftforge.common.util.INBTSerializable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -25,7 +24,7 @@ import java.util.Set;
  * lui-meme n'est pas plus gros a sauvegarder et ne pose pas la question. C'est le
  * seul ecart de comportement de cette classe, et il ne se voit pas en jeu.
  */
-public class TerminalData implements INBTSerializable<CompoundTag> {
+public class TerminalData {
 
     private static final String TAG_INSTALLED = "installed";
     private static final String TAG_APPS = "apps";
@@ -91,7 +90,7 @@ public class TerminalData implements INBTSerializable<CompoundTag> {
         installedApps.addAll(other.installedApps);
     }
 
-    @Override
+    /** La donnee, en NBT : le chargeur la pose telle quelle dans sa capacite. */
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
         tag.putBoolean(TAG_INSTALLED, installed);
@@ -103,7 +102,7 @@ public class TerminalData implements INBTSerializable<CompoundTag> {
         return tag;
     }
 
-    @Override
+    /** Relit ce que {@link #serializeNBT()} a ecrit. */
     public void deserializeNBT(CompoundTag tag) {
         installed = tag.getBoolean(TAG_INSTALLED);
         installedApps.clear();

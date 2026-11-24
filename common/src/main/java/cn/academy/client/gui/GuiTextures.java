@@ -3,8 +3,6 @@ package cn.academy.client.gui;
 import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL30;
@@ -34,7 +32,6 @@ import java.util.Set;
  * VIDE la texture (vecu sur {@code line.png}). Et le repliement est TOUJOURS bloque : GL repete
  * une texture par defaut, donc un filtrage lineaire au bord lit le cote oppose.
  */
-@OnlyIn(Dist.CLIENT)
 public final class GuiTextures {
 
     /** Les textures deja reglees, pour ne pas refaire le travail a chaque image. */

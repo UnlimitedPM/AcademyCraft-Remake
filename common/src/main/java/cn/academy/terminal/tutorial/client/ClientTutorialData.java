@@ -37,7 +37,7 @@ public final class ClientTutorialData {
     private static void notify(String id) {
         String title = TutorialLibrary.load(id, language()).title();
         cn.academy.client.hud.NotificationHud.show(
-                ResourceLocation.fromNamespaceAndPath(cn.academy.AcademyCraft.MOD_ID,
+                new ResourceLocation(cn.academy.AcademyCraftCommon.MOD_ID,
                         "textures/tutorial/update_notify.png"),
                 Component.translatable("ac.tutorial.update"),
                 Component.literal(title));

@@ -1,6 +1,6 @@
 package cn.academy.terminal.app;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.terminal.App;
 import net.minecraft.resources.ResourceLocation;
 
@@ -25,7 +25,7 @@ public final class AppMediaPlayer extends App {
 
     @Override
     public ResourceLocation getIcon() {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/guis/apps/media_player/icon.png");
     }
 

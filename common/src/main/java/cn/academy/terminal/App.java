@@ -1,6 +1,6 @@
 package cn.academy.terminal;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -94,7 +94,7 @@ public abstract class App {
     }
 
     public ResourceLocation getIcon() {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID, "textures/guis/apps/" + name + "/icon.png");
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID, "textures/guis/apps/" + name + "/icon.png");
     }
 
     /** Taille en pixels du fichier d'icone, qui varie d'une application a l'autre. */
