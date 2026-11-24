@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.Nullable;
 import cn.academy.platform.network.Network;
 
 import java.util.function.Consumer;
@@ -389,6 +390,14 @@ public final class PlatformHooks {
     private static DataAccess<cn.academy.terminal.tutorial.TutorialData> tutorialAccess = player -> null;
     private static DataAccess<cn.academy.misc.media.MediaAcquireData> mediaAccess = player -> null;
 
+    /** L'apprentissage porte par le developeur portable, attache au joueur. */
+    private static DataAccess<cn.academy.ability.develop.PortableDevData> portableDevAccess =
+            player -> null;
+
+    /** Le type de menu du developeur : le portable ouvre le meme ecran que la machine. */
+    private static java.util.function.Supplier<net.minecraft.world.inventory.MenuType<
+            cn.academy.DeveloperMenu>> developerMenuType = () -> null;
+
     private static TerminalInstallBanner terminalInstallBanner = () -> {
     };
 
@@ -511,6 +520,37 @@ public final class PlatformHooks {
         terminalAccess = access;
     }
 
+    public static void installPortableDevAccess(
+            DataAccess<cn.academy.ability.develop.PortableDevData> access) {
+        portableDevAccess = access;
+    }
+
+    public static void installDeveloperMenuType(
+            java.util.function.Supplier<net.minecraft.world.inventory.MenuType<
+                    cn.academy.DeveloperMenu>> type) {
+        developerMenuType = type;
+    }
+
+    /** Le type de menu du developeur, tel que le chargeur l'a declare. */
+    @Nullable
+    public static net.minecraft.world.inventory.MenuType<cn.academy.DeveloperMenu>
+            developerMenuType() {
+        return developerMenuType.get();
+    }
+
+    /**
+     * L'apprentissage que porte le developeur portable de ce joueur, ou {@code null}.
+     *
+     * <p>Elle vit dans une capacite attachee au joueur chez Forge ; le code commun ne fait que
+     * demander celle du joueur qu'il tient.
+     */
+    @Nullable
+    public static cn.academy.ability.develop.PortableDevData portableDevData(
+            net.minecraft.world.entity.player.Player player) {
+        return player == null ? null : portableDevAccess.get(player);
+    }
+
+
     public static void installTutorialAccess(DataAccess<cn.academy.terminal.tutorial.TutorialData> access) {
         tutorialAccess = access;
     }
@@ -526,8 +566,7 @@ public final class PlatformHooks {
     }
 
     /** Les tutoriels ouverts du joueur, ou {@code null}. */
-    public static cn.academy.terminal.tutorial.TutorialData tutorialData(
-            net.minecraft.world.entity.player.Player player) {
+    public static cn.academy.terminal.tutorial.TutorialData tutorialData(            net.minecraft.world.entity.player.Player player) {
         return player == null ? null : tutorialAccess.get(player);
     }
 

@@ -7,10 +7,10 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import cn.academy.platform.storage.StorageSlot;
 
 /**
@@ -53,8 +53,9 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
     private final SyncedInt affected;
     private final SyncedInt linked;
 
-    public AbilityInterfererMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
+    public AbilityInterfererMenu(MenuType<AbilityInterfererMenu> type, int containerId,
+                                 Inventory playerInventory, FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveBlockEntity(playerInventory, buf.readBlockPos()));
     }
 
     private static AbilityInterfererBlockEntity resolveBlockEntity(Inventory playerInventory, BlockPos pos) {
@@ -63,8 +64,9 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
         throw new IllegalStateException("No AbilityInterfererBlockEntity at " + pos);
     }
 
-    public AbilityInterfererMenu(int containerId, Inventory playerInventory, AbilityInterfererBlockEntity blockEntity) {
-        super(ModMenus.ABILITY_INTERFERER.get(), containerId);
+    public AbilityInterfererMenu(MenuType<AbilityInterfererMenu> type, int containerId,
+                                 Inventory playerInventory, AbilityInterfererBlockEntity blockEntity) {
+        super(type, containerId);
         this.blockEntity = blockEntity;
         this.access = ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos());
 
@@ -173,7 +175,7 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
     }
 
     private void send(String name, boolean remove) {
-        cn.academy.ability.network.AbilityNetwork.CHANNEL.sendToServer(
+        cn.academy.platform.network.Network.sendToServer(
                 new cn.academy.energy.network.InterfererWhitelistPacket(
                         blockEntity.getBlockPos(), name, remove));
     }
@@ -212,6 +214,6 @@ public class AbilityInterfererMenu extends AbstractContainerMenu implements Wire
 
     @Override
     public boolean stillValid(Player player) {
-        return stillValid(access, player, ModBlocks.ABILITY_INTERFERER.get());
+        return stillValid(access, player, blockEntity.getBlockState().getBlock());
     }
 }

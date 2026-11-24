@@ -42,6 +42,10 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
         MenuScreens.register(FabricContent.NODE_MENU, NodeScreen::new);
         MenuScreens.register(FabricContent.IMAG_FUSOR_MENU, ImagFusorScreen::new);
         MenuScreens.register(FabricContent.PHASE_GEN_MENU, PhaseGeneratorScreen::new);
+        MenuScreens.register(FabricContent.ABILITY_INTERFERER_MENU,
+                cn.academy.AbilityInterfererScreen::new);
+        // Le developeur : le meme ecran pour les deux machines et pour le portable.
+        MenuScreens.register(FabricContent.DEVELOPER_MENU, cn.academy.DeveloperScreen::new);
 
         // Les touches d'aptitude sont communes ; Fabric les declare par son propre registre.
         cn.academy.ability.client.AbilityKeyBindings.register(

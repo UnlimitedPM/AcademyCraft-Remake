@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.ability.AbilityData;
 import cn.academy.energy.ConfigText;
@@ -30,10 +30,9 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.items.ItemStackHandler;
 
 /**
  * Brouilleur d'aptitudes : dans son rayon, personne ne peut utiliser ses
@@ -85,20 +84,15 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     /** Cadence de recherche d'un noeud, en ticks. */
     private static final int NODE_SEARCH_INTERVAL = 100;
 
-    private final ItemStackHandler inventory = new ItemStackHandler(1) {
-        @Override
-        public boolean isItemValid(int slot, @Nonnull ItemStack stack) {
-            // SlotIFItem de l'original (qui ne prenait que l'unite d'energie), etendu
-            // a tout objet energetique du port.
-            return stack.isEmpty() || cn.academy.energy.EnergyItems.supports(stack)
-                    || stack.getCapability(ForgeCapabilities.ENERGY).isPresent();
-        }
+    private final cn.academy.platform.storage.SimpleItemStorage inventory =
+            new cn.academy.platform.storage.SimpleItemStorage(1, slot -> 64,
+                    // SlotIFItem de l'original (qui ne prenait que l'unite d'energie), etendu
+                    // a tout objet energetique du port.
+                    (slot, stack) -> stack.isEmpty() || cn.academy.energy.EnergyItems.isEnergyItem(stack),
+                    this::setChanged);
 
-        @Override
-        protected void onContentsChanged(int slot) {
-            setChanged();
-        }
-    };
+    /** Le type de menu, injecte par le chargeur : lui seul connait son registre. */
+    private final net.minecraft.world.inventory.MenuType<AbilityInterfererMenu> menuType;
 
     private double energy;
 
@@ -128,8 +122,11 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     private int searchCounter;
     private int syncCounter;
 
-    public AbilityInterfererBlockEntity(BlockPos pos, BlockState state) {
-        super(ModBlockEntities.ABILITY_INTERFERER.get(), pos, state);
+    public AbilityInterfererBlockEntity(BlockEntityType<?> type,
+                                        net.minecraft.world.inventory.MenuType<AbilityInterfererMenu> menuType,
+                                        BlockPos pos, BlockState state) {
+        super(type, pos, state);
+        this.menuType = menuType;
     }
 
     // ------------------------------------------------------------------
@@ -303,14 +300,14 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
             return;
         }
 
-        stack.getCapability(ForgeCapabilities.ENERGY).ifPresent(cap -> {
-            int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);
-            int taken = cap.extractEnergy(wanted, false);
-            if (taken > 0) {
-                energy += taken;
-                setChanged();
-            }
-        });
+        // Un objet energetique d'un autre mod : la capability n'existe que chez le chargeur, le
+        // crochet neutre la lit pour nous.
+        int wanted = (int) Math.min(BANDWIDTH, BUFFER_SIZE - energy);
+        int taken = cn.academy.platform.PlatformHooks.extractExternalItem(stack, wanted, false);
+        if (taken > 0) {
+            energy += taken;
+            setChanged();
+        }
     }
 
     /** Allume le bloc quand il brouille effectivement. */
@@ -415,7 +412,7 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     }
 
     public cn.academy.platform.storage.ItemStorage getInventory() {
-        return cn.academy.platform.storage.ForgeItemStorage.of(inventory);
+        return inventory;
     }
 
     // ------------------------------------------------------------------
@@ -449,7 +446,9 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.put("inventory", inventory.serializeNBT());
+        CompoundTag items = new CompoundTag();
+        inventory.save(items);
+        tag.put("inventory", items);
         tag.putDouble("energy", energy);
         tag.putBoolean("enabled", enabled);
         tag.putInt("range", range);
@@ -466,7 +465,7 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-        inventory.deserializeNBT(tag.getCompound("inventory"));
+        inventory.load(tag.getCompound("inventory"));
         energy = Math.min(BUFFER_SIZE, Math.max(0.0d, tag.getDouble("energy")));
         // Une machine rechargee repart a l'arret : elle doit de toute facon payer
         // son premier cycle, et personne n'a pu etre brouille pendant l'absence.
@@ -505,7 +504,7 @@ public class AbilityInterfererBlockEntity extends BlockEntity implements MenuPro
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new AbilityInterfererMenu(containerId, playerInventory, this);
+        return new AbilityInterfererMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override

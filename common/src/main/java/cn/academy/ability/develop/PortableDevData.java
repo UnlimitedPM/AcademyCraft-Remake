@@ -1,6 +1,5 @@
 package cn.academy.ability.develop;
 
-import cn.academy.ModItems;
 import cn.academy.DeveloperPortableItem;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -9,9 +8,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.common.util.INBTSerializable;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Le developpeur portable : l'objet tenu, et l'apprentissage qui va avec.
@@ -33,7 +31,7 @@ import javax.annotation.Nullable;
  * l'interrompt, comme l'original qui ne trouvait plus d'objet a qui demander l'energie. Le
  * savoir, lui, reste au joueur.
  */
-public class PortableDevData implements Developer, INBTSerializable<CompoundTag> {
+public class PortableDevData implements Developer {
 
     private final DevelopProgress progress = new DevelopProgress();
 
@@ -72,7 +70,9 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
     private ItemStack heldItem() {
         if (owner == null) return null;
         ItemStack stack = owner.getMainHandItem();
-        return stack.is(ModItems.DEVELOPER_PORTABLE.get()) ? stack : null;
+        net.minecraft.world.item.Item portable =
+                cn.academy.content.AcademyContent.item("developer_portable");
+        return portable != null && stack.is(portable) ? stack : null;
     }
 
     @Override
@@ -221,7 +221,6 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
     // Persistance
     // ------------------------------------------------------------------
 
-    @Override
     public CompoundTag serializeNBT() {
         CompoundTag tag = progress.serializeNBT();
         tag.putInt("category", categoryId);
@@ -229,7 +228,6 @@ public class PortableDevData implements Developer, INBTSerializable<CompoundTag>
         return tag;
     }
 
-    @Override
     public void deserializeNBT(CompoundTag tag) {
         progress.deserializeNBT(tag);
         categoryId = tag.getInt("category");

@@ -4,6 +4,18 @@
 
 ### Français
 
+- **Le brouilleur et les développeurs passent en `common/`.** Le brouilleur d'aptitudes (bloc,
+  block entity, menu, écran) et le développeur d'aptitudes dans ses deux qualités — plus le
+  développeur portable — ne dépendent plus du chargeur. Trois crochets ont suffi :
+  `PlatformHooks.extractExternalItem` remplace la lecture d'énergie Forge, le type de block entity
+  et de menu viennent du chargeur par le constructeur, et le paquet de la liste blanche du
+  brouilleur rejoint `AcademyPackets` au lieu du canal Forge. L'apprentissage du portable vit
+  derrière `PlatformHooks.portableDevData` — une capacité chez Forge, une table du serveur sous
+  Fabric (limite assumée : elle ne survit pas à un arrêt, mais ce qui est perdu est l'apprentissage
+  *en cours*, comme chez Forge où la capacité perd l'action décidée). Sous Fabric, ce palier
+  débloque du même coup **toute la chaîne des succès** : le succès `ac_developer` nommait le
+  développeur portable, alors absent, et faisait tomber avec lui `dev_category`, `ac_learning_skill`,
+  `ac_level_3`, `ac_level_5`, `ac_overload` et `ac_exp_full`.
 - **Le terminal s'ouvre sous Fabric.** Les écrans d'application sont communs : la page du terminal,
   l'arbre de compétences, l'à-propos, le tutoriel, les réglages et la personnalisation de l'interface.
   `TerminalScreens` ne garde que les applications neutres et installe l'ouverture d'écran ; les deux
@@ -209,6 +221,17 @@
 
 ### English
 
+- **The interferer and the developers move to `common/`.** The ability interferer (block, block
+  entity, menu, screen) and the ability developer in its two tiers — plus the portable developer —
+  no longer depend on the loader. Three hooks were enough: `PlatformHooks.extractExternalItem`
+  replaces the Forge energy read, the block entity and menu types come from the loader through the
+  constructor, and the interferer's whitelist packet joins `AcademyPackets` instead of the Forge
+  channel. The portable's learning lives behind `PlatformHooks.portableDevData` — a capability on
+  Forge, a server-side table on Fabric (an accepted limit: it does not survive a restart, but what
+  is lost is the *in-progress* learning, as on Forge where the capability loses the decided
+  action). On Fabric this tier also unblocks the **whole advancement chain**: `ac_developer` named
+  the portable developer, missing until now, and took `dev_category`, `ac_learning_skill`,
+  `ac_level_3`, `ac_level_5`, `ac_overload` and `ac_exp_full` down with it.
 - **The terminal opens on Fabric.** The application screens are common: the terminal page, the skill
   tree, the about page, the tutorial, the settings and the interface customisation. `TerminalScreens`
   now only holds the neutral applications and installs the screen opener; the two that stay Forge —

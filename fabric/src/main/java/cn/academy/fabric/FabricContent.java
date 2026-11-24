@@ -101,6 +101,14 @@ public final class FabricContent {
     public static BlockEntityType<PhaseGeneratorBlockEntity> PHASE_GEN_TYPE;
     public static MenuType<PhaseGeneratorMenu> PHASE_GEN_MENU;
 
+    public static BlockEntityType<cn.academy.AbilityInterfererBlockEntity> ABILITY_INTERFERER_TYPE;
+    public static MenuType<cn.academy.AbilityInterfererMenu> ABILITY_INTERFERER_MENU;
+
+    /** Les deux developeurs, et le portable qui ouvre le meme ecran. */
+    public static BlockEntityType<cn.academy.DeveloperBlockEntity> DEVELOPER_NORMAL_TYPE;
+    public static BlockEntityType<cn.academy.DeveloperBlockEntity> DEVELOPER_ADVANCED_TYPE;
+    public static MenuType<cn.academy.DeveloperMenu> DEVELOPER_MENU;
+
     public static void register() {
         FabricSounds.register();
 
@@ -298,6 +306,66 @@ public final class FabricContent {
                         (pos, state) -> new PhaseGeneratorBlockEntity(PHASE_GEN_TYPE, PHASE_GEN_MENU, pos, state),
                         phaseGen).build(null));
         register("phase_gen", new BlockItem(phaseGen, new Item.Properties()));
+
+        // --- Brouilleur d'aptitudes : il ne brouille que sur le serveur, mais son ecran est commun ---
+        ABILITY_INTERFERER_MENU = Registry.register(BuiltInRegistries.MENU, id("ability_interferer"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new cn.academy.AbilityInterfererMenu(
+                                FabricContent.ABILITY_INTERFERER_MENU, syncId, inventory, buf)));
+        Block interferer = new cn.academy.AbilityInterfererBlock(
+                BlockBehaviour.Properties.of().strength(4.0f).requiresCorrectToolForDrops()
+                        .sound(SoundType.METAL),
+                () -> ABILITY_INTERFERER_TYPE,
+                (pos, state) -> new cn.academy.AbilityInterfererBlockEntity(
+                        ABILITY_INTERFERER_TYPE, ABILITY_INTERFERER_MENU, pos, state));
+        Registry.register(BuiltInRegistries.BLOCK, id("ability_interferer"), interferer);
+        ABILITY_INTERFERER_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                id("ability_interferer"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new cn.academy.AbilityInterfererBlockEntity(
+                                ABILITY_INTERFERER_TYPE, ABILITY_INTERFERER_MENU, pos, state),
+                        interferer).build(null));
+        register("ability_interferer", new BlockItem(interferer, new Item.Properties()));
+
+        // --- Les deux developeurs : le meme bloc, deux qualites. Seul l'ancrage porte le block
+        // entity, donc le type se declare par qualite comme chez Forge. ---
+        DEVELOPER_MENU = Registry.register(BuiltInRegistries.MENU, id("developer"),
+                new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
+                        new cn.academy.DeveloperMenu(
+                                FabricContent.DEVELOPER_MENU, syncId, inventory, buf)));
+        Block devNormal = new cn.academy.DeveloperBlock(
+                BlockBehaviour.Properties.of().strength(4.0f).noOcclusion(),
+                () -> cn.academy.ability.develop.DeveloperType.NORMAL,
+                () -> DEVELOPER_NORMAL_TYPE,
+                () -> DEVELOPER_MENU);
+        Registry.register(BuiltInRegistries.BLOCK, id("dev_normal"), devNormal);
+        DEVELOPER_NORMAL_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                id("developer_normal"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new cn.academy.DeveloperBlockEntity(DEVELOPER_NORMAL_TYPE,
+                                DEVELOPER_MENU, pos, state,
+                                cn.academy.ability.develop.DeveloperType.NORMAL),
+                        devNormal).build(null));
+        register("dev_normal", new BlockItem(devNormal, new Item.Properties()));
+
+        Block devAdvanced = new cn.academy.DeveloperBlock(
+                BlockBehaviour.Properties.of().strength(4.5f).noOcclusion(),
+                () -> cn.academy.ability.develop.DeveloperType.ADVANCED,
+                () -> DEVELOPER_ADVANCED_TYPE,
+                () -> DEVELOPER_MENU);
+        Registry.register(BuiltInRegistries.BLOCK, id("dev_advanced"), devAdvanced);
+        DEVELOPER_ADVANCED_TYPE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE,
+                id("dev_advanced"),
+                BlockEntityType.Builder.of(
+                        (pos, state) -> new cn.academy.DeveloperBlockEntity(DEVELOPER_ADVANCED_TYPE,
+                                DEVELOPER_MENU, pos, state,
+                                cn.academy.ability.develop.DeveloperType.ADVANCED),
+                        devAdvanced).build(null));
+        register("dev_advanced", new BlockItem(devAdvanced, new Item.Properties()));
+
+        // Le developeur portable : meme ecran, dans la poche. Sans lui, le succes qui l'annonce
+        // nommait un objet absent et toute la chaine de succes tombait avec lui.
+        register("developer_portable", new cn.academy.DeveloperPortableItem());
 
         // --- Entites ---
         SILBARN_TYPE = Registry.register(BuiltInRegistries.ENTITY_TYPE, id("silbarn"),

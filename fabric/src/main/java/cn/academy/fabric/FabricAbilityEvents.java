@@ -36,6 +36,9 @@ public final class FabricAbilityEvents {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayer player : server.getPlayerList().getPlayers()) {
                 AbilityTicker.tick(player);
+                // L'apprentissage du developeur portable : l'objet ne tick pas, c'est le joueur
+                // qui le porte qui avance, comme le tick de joueur de Forge.
+                cn.academy.fabric.FabricPortableDevData.tick(player);
             }
         });
 

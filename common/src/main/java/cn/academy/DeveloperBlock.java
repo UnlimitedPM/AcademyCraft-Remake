@@ -2,7 +2,7 @@ package cn.academy;
 
 import java.util.function.Supplier;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.ability.develop.DeveloperType;
 import cn.academy.energy.NodeFinder;
@@ -47,9 +47,17 @@ public class DeveloperBlock extends HorizontalDirectionalBlock implements Entity
 
     private final Supplier<DeveloperType> type;
 
-    public DeveloperBlock(Properties props, Supplier<DeveloperType> type) {
+    /** Les types du chargeur : lui seul connait son registre, et il en a un par qualite. */
+    private final Supplier<BlockEntityType<? extends DeveloperBlockEntity>> blockEntityType;
+    private final Supplier<net.minecraft.world.inventory.MenuType<DeveloperMenu>> menuType;
+
+    public DeveloperBlock(Properties props, Supplier<DeveloperType> type,
+                          Supplier<BlockEntityType<? extends DeveloperBlockEntity>> blockEntityType,
+                          Supplier<net.minecraft.world.inventory.MenuType<DeveloperMenu>> menuType) {
         super(props);
         this.type = type;
+        this.blockEntityType = blockEntityType;
+        this.menuType = menuType;
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
                 .setValue(PART, DevPart.BASE));
@@ -177,7 +185,8 @@ public class DeveloperBlock extends HorizontalDirectionalBlock implements Entity
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return state.getValue(PART) == DevPart.BASE
-                ? new DeveloperBlockEntity(pos, state, getDeveloperType())
+                ? new DeveloperBlockEntity(blockEntityType.get(), menuType.get(), pos, state,
+                        getDeveloperType())
                 : null;
     }
 

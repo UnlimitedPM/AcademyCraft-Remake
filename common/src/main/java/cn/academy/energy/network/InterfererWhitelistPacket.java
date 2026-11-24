@@ -4,9 +4,6 @@ import cn.academy.AbilityInterfererBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
-
-import java.util.function.Supplier;
 
 /**
  * Ce qu'un joueur demande a la liste blanche du brouilleur : ajouter un nom, ou en retirer un.
@@ -55,19 +52,15 @@ public class InterfererWhitelistPacket {
         return new InterfererWhitelistPacket(pos, name, remove);
     }
 
-    public static void handle(InterfererWhitelistPacket msg, Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer sender = ctx.get().getSender();
-            if (sender == null) return;
+    public static void handle(InterfererWhitelistPacket msg, ServerPlayer sender) {
+        if (sender == null) return;
 
-            if (!(sender.level().getBlockEntity(msg.pos) instanceof AbilityInterfererBlockEntity machine)) {
-                return;
-            }
-            if (!sender.getGameProfile().getName().equals(machine.getPlacer())) return;
+        if (!(sender.level().getBlockEntity(msg.pos) instanceof AbilityInterfererBlockEntity machine)) {
+            return;
+        }
+        if (!sender.getGameProfile().getName().equals(machine.getPlacer())) return;
 
-            if (msg.remove) machine.removeFromWhitelist(msg.name);
-            else machine.addToWhitelist(msg.name);
-        });
-        ctx.get().setPacketHandled(true);
+        if (msg.remove) machine.removeFromWhitelist(msg.name);
+        else machine.addToWhitelist(msg.name);
     }
 }

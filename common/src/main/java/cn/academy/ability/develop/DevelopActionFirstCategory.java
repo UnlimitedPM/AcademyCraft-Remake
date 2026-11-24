@@ -4,13 +4,11 @@ import cn.academy.FactorItem;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
-import cn.academy.ability.network.AbilityNetwork;
 import cn.academy.ability.network.SyncAbilityDataPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.network.PacketDistributor;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * La PREMIERE aptitude : le joueur n'en a aucune, et le developpeur lui en donne une.

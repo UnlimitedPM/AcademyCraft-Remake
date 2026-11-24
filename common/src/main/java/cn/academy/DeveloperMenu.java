@@ -16,11 +16,12 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Ecran du developeur d'aptitudes.
@@ -100,8 +101,9 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
     private final SyncedInt developingSkill;
     private final SyncedInt energyStored;
 
-    public DeveloperMenu(int containerId, Inventory playerInventory, FriendlyByteBuf buf) {
-        this(containerId, playerInventory, resolveDeveloper(playerInventory, buf));
+    public DeveloperMenu(MenuType<DeveloperMenu> type, int containerId, Inventory playerInventory,
+                         FriendlyByteBuf buf) {
+        this(type, containerId, playerInventory, resolveDeveloper(playerInventory, buf));
     }
 
     /**
@@ -132,8 +134,9 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
      * pousse les valeurs par les emplacements de donnee, comme pour tous les autres
      * menus du port.
      */
-    public DeveloperMenu(int containerId, Inventory playerInventory, @Nullable Developer developer) {
-        super(ModMenus.DEVELOPER.get(), containerId);
+    public DeveloperMenu(MenuType<DeveloperMenu> type, int containerId, Inventory playerInventory,
+                         @Nullable Developer developer) {
+        super(type, containerId);
         this.developer = developer;
         this.player = playerInventory.player;
         this.portable = developer == null;
@@ -362,7 +365,8 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
 
         Category abandoned = abandonedCategory();
         if (abandoned == null) return false;
-        if (!player.getMainHandItem().is(ModItems.MAGNETIC_COIL.get())) return false;
+        if (!player.getMainHandItem().is(
+                cn.academy.content.AcademyContent.item("magnetic_coil"))) return false;
         return FactorItem.otherCategoryIn(player, abandoned) != null;
     }
 
@@ -392,8 +396,7 @@ public class DeveloperMenu extends AbstractContainerMenu implements cn.academy.e
 
     /** Le prix annonce du changement de categorie, en stimulations. */
     public int getResetStimulations() {
-        AbilityData data = player.getCapability(cn.academy.ability.AbilityCapability.ABILITY_DATA)
-                .resolve().orElse(null);
+        AbilityData data = cn.academy.platform.PlatformHooks.abilityData(player);
         return data == null ? 0 : DevelopActionReset.stimulationsFor(data);
     }
 

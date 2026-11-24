@@ -143,19 +143,26 @@ public class ModBlocks {
     // --- DEVELOPPEMENT D'APPLICATIONS ---
     public static final RegistryObject<Block> DEV_NORMAL = BLOCKS.register("dev_normal",
             () -> new DeveloperBlock(BlockBehaviour.Properties.of().strength(4.0f).noOcclusion(),
-                    () -> cn.academy.ability.develop.DeveloperType.NORMAL));
+                    () -> cn.academy.ability.develop.DeveloperType.NORMAL,
+                    () -> ModBlockEntities.DEVELOPER_NORMAL.get(),
+                    () -> ModMenus.DEVELOPER.get()));
     public static final RegistryObject<Block> DEV_ADVANCED = BLOCKS.register("dev_advanced",
             () -> new DeveloperBlock(BlockBehaviour.Properties.of()
                     .strength(4.5f) // Un peu plus rÃ©sistant que le normal
                     .noOcclusion(),
-                    () -> cn.academy.ability.develop.DeveloperType.ADVANCED));
+                    () -> cn.academy.ability.develop.DeveloperType.ADVANCED,
+                    () -> ModBlockEntities.DEVELOPER_ADVANCED.get(),
+                    () -> ModMenus.DEVELOPER.get()));
     // Dans ModBlocks.java, remplacez la section ABILITY_INTERFERER par celle-ci :
     public static final RegistryObject<Block> ABILITY_INTERFERER = BLOCKS.register("ability_interferer",
             () -> new AbilityInterfererBlock(BlockBehaviour.Properties.of()
                     .strength(4.0f)
                     .requiresCorrectToolForDrops()
-                    .sound(SoundType.METAL)
-            ));
+                    .sound(SoundType.METAL),
+                    () -> ModBlockEntities.ABILITY_INTERFERER.get(),
+                    (pos, state) -> new ForgeAbilityInterfererBlockEntity(
+                            ModBlockEntities.ABILITY_INTERFERER.get(), ModMenus.ABILITY_INTERFERER.get(),
+                            pos, state)));
 
     // Le bloc de fluide. Il n'a plus de block entity : un par bloc de liquide ne portait rien,
     // et le rendu des nappes retrouve les blocs par la palette du chunk.

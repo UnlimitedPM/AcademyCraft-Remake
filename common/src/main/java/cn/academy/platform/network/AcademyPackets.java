@@ -39,6 +39,13 @@ public final class AcademyPackets {
                 Network.codec(MatrixConfigPacket::encode, MatrixConfigPacket::decode),
                 MatrixConfigPacket::handle);
 
+        // La liste blanche du brouilleur : le seul reglage de la machine qui demande du texte.
+        Network.serverbound("interferer_whitelist",
+                cn.academy.energy.network.InterfererWhitelistPacket.class,
+                Network.codec(cn.academy.energy.network.InterfererWhitelistPacket::encode,
+                        cn.academy.energy.network.InterfererWhitelistPacket::decode),
+                cn.academy.energy.network.InterfererWhitelistPacket::handle);
+
         Network.clientbound("sync_ability_data", SyncAbilityDataPacket.class,
                 Network.codec(SyncAbilityDataPacket::encode, SyncAbilityDataPacket::decode),
                 SyncAbilityDataPacket::handle);

@@ -2,7 +2,7 @@ package cn.academy;
 
 import java.util.UUID;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.ability.Category;
 import cn.academy.ability.CategoryManager;
@@ -28,6 +28,8 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -83,7 +85,6 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
      * disparaissait des que ce pied sortait du champ. L'original surchargeait deja cette boite
      * ({@code BlockMulti.getRenderBB}). Voir {@link cn.academy.RenderBounds#developer}.
      */
-    @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
         double[] b = cn.academy.RenderBounds.developer(
                 getBlockState().getValue(cn.academy.DeveloperBlock.FACING));
@@ -144,11 +145,15 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     private int searchCounter;
     private int syncCounter;
 
-    public DeveloperBlockEntity(BlockPos pos, BlockState state, DeveloperType type) {
-        super(type == DeveloperType.ADVANCED
-                ? ModBlockEntities.DEVELOPER_ADVANCED.get()
-                : ModBlockEntities.DEVELOPER_NORMAL.get(), pos, state);
+    /** Le type de menu, injecte par le chargeur : lui seul connait son registre. */
+    private final net.minecraft.world.inventory.MenuType<DeveloperMenu> menuType;
+
+    public DeveloperBlockEntity(BlockEntityType<?> blockEntityType,
+                                net.minecraft.world.inventory.MenuType<DeveloperMenu> menuType,
+                                BlockPos pos, BlockState state, DeveloperType type) {
+        super(blockEntityType, pos, state);
         this.type = type;
+        this.menuType = menuType;
     }
 
     public DeveloperType getDeveloperType() {
@@ -496,7 +501,7 @@ public class DeveloperBlockEntity extends net.minecraft.world.level.block.entity
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new DeveloperMenu(containerId, playerInventory, this);
+        return new DeveloperMenu(menuType, containerId, playerInventory, this);
     }
 
     @Override

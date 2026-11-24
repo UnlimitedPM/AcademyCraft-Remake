@@ -103,6 +103,13 @@ public final class ForgePlatformHooks {
         PlatformHooks.installTerminalAccess(player -> player
                 .getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA)
                 .resolve().orElse(null));
+
+        // Le developeur portable : son apprentissage vit sur le joueur, comme les autres donnees du
+        // port, et le portable ouvre le meme menu que la machine.
+        PlatformHooks.installPortableDevAccess(player -> player
+                .getCapability(cn.academy.ability.develop.PortableDevCapability.PORTABLE_DEV)
+                .resolve().orElse(null));
+        PlatformHooks.installDeveloperMenuType(() -> cn.academy.ModMenus.DEVELOPER.get());
         PlatformHooks.installTutorialAccess(player -> player
                 .getCapability(cn.academy.terminal.tutorial.TutorialCapability.TUTORIAL_DATA)
                 .resolve().orElse(null));

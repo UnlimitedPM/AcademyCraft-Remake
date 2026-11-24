@@ -36,14 +36,18 @@ public class ModMenus {
                     (id, inventory, buf) -> new WindgenMainMenu(ModMenus.WINDGEN_MAIN.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<DeveloperMenu>> DEVELOPER =
-            MENUS.register("developer", () -> IForgeMenuType.create(DeveloperMenu::new));
+            MENUS.register("developer", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new DeveloperMenu(
+                            ModMenus.DEVELOPER.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<PhaseGeneratorMenu>> PHASE_GENERATOR =
             MENUS.register("phase_gen", () -> IForgeMenuType.create(
                     (id, inventory, buf) -> new PhaseGeneratorMenu(ModMenus.PHASE_GENERATOR.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<AbilityInterfererMenu>> ABILITY_INTERFERER =
-            MENUS.register("ability_interferer", () -> IForgeMenuType.create(AbilityInterfererMenu::new));
+            MENUS.register("ability_interferer", () -> IForgeMenuType.create(
+                    (id, inventory, buf) -> new AbilityInterfererMenu(
+                            ModMenus.ABILITY_INTERFERER.get(), id, inventory, buf)));
 
     public static final RegistryObject<MenuType<NodeMenu>> NODE =
             MENUS.register("node", () -> IForgeMenuType.create(

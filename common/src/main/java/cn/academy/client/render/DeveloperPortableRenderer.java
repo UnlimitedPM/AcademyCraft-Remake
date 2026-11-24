@@ -1,6 +1,6 @@
 package cn.academy.client.render;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.energy.EnergyItems;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -13,8 +13,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Le developeur portable dans la main, portage du TEISR de l'original ({@code ItemDeveloper}).
@@ -47,7 +45,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * c'est {@code -0,5} qui le remet dans le repere de l'original. Le modele JSON n'a donc AUCUNE
  * pose : elles sont toutes ici.
  */
-@OnlyIn(Dist.CLIENT)
 public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
 
     /** Le meme modele que la machine, dont le portable est la version de poche. */
@@ -196,7 +193,7 @@ public class DeveloperPortableRenderer extends BlockEntityWithoutLevelRenderer {
     }
 
     private static ResourceLocation icon(String name) {
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/item/" + name + ".png");
     }
 }

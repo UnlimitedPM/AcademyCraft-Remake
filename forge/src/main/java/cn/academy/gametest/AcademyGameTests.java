@@ -1953,7 +1953,8 @@ public final class AcademyGameTests {
         // ouverte : c'est la meme donnee qui alimente la barre de palier, le bouton
         // grise et son infobulle. Un ecran qui refuserait sans rien dire ferait croire
         // a une machine cassee.
-        var menu = new cn.academy.DeveloperMenu(0, player.getInventory(), developer);
+        var menu = new cn.academy.DeveloperMenu(cn.academy.ModMenus.DEVELOPER.get(), 0,
+                player.getInventory(), developer);
         assertValue(helper, 1f, menu.getLevelProgress(category.getCategoryId()),
                 "le palier doit apparaitre rempli sur l'ecran");
         assertTrue(helper, menu.canLevelUp(category.getCategoryId()),
@@ -7075,8 +7076,8 @@ public final class AcademyGameTests {
         machine.addToWhitelist("Ami");
         assertValue(helper, 1, machine.getWhitelist().size(), "deux fois le meme nom ne compte qu'une");
 
-        var reloaded = new AbilityInterfererBlockEntity(helper.absolutePos(rel),
-                helper.getBlockState(rel));
+        var reloaded = new AbilityInterfererBlockEntity(cn.academy.ModBlockEntities.ABILITY_INTERFERER.get(),
+                cn.academy.ModMenus.ABILITY_INTERFERER.get(), helper.absolutePos(rel), helper.getBlockState(rel));
         reloaded.load(machine.saveWithoutMetadata());
         assertValue(helper, java.util.List.of("Ami"), reloaded.getWhitelist(),
                 "liste apres rechargement");

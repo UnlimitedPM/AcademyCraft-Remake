@@ -29,6 +29,12 @@ final class FabricPlatformHooks {
         PlatformHooks.installPhaseLiquidProbe(state ->
                 state.getType() == cn.academy.fabric.FabricFluids.SOURCE
                         || state.getType() == cn.academy.fabric.FabricFluids.FLOWING);
+
+        // Le developeur portable : son apprentissage vit sur le joueur (ici une table du serveur),
+        // et le portable ouvre le meme menu que la machine.
+        PlatformHooks.installPortableDevAccess(FabricPortableDevData::of);
+        PlatformHooks.installDeveloperMenuType(
+                () -> cn.academy.fabric.FabricContent.DEVELOPER_MENU);
     }
 
     private static void openMenu(ServerPlayer player, MenuProvider provider,

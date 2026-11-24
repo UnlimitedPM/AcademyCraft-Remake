@@ -95,14 +95,16 @@ public class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<DeveloperBlockEntity>> DEVELOPER_NORMAL =
             BLOCK_ENTITIES.register("developer_normal", () ->
                     BlockEntityType.Builder.of(
-                            (pos, state) -> new DeveloperBlockEntity(pos, state,
+                            (pos, state) -> new DeveloperBlockEntity(ModBlockEntities.DEVELOPER_NORMAL.get(),
+                                    ModMenus.DEVELOPER.get(), pos, state,
                                     cn.academy.ability.develop.DeveloperType.NORMAL),
                             ModBlocks.DEV_NORMAL.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<DeveloperBlockEntity>> DEVELOPER_ADVANCED =
             BLOCK_ENTITIES.register("dev_advanced", () ->
                     BlockEntityType.Builder.of(
-                            (pos, state) -> new DeveloperBlockEntity(pos, state,
+                            (pos, state) -> new DeveloperBlockEntity(ModBlockEntities.DEVELOPER_ADVANCED.get(),
+                                    ModMenus.DEVELOPER.get(), pos, state,
                                     cn.academy.ability.develop.DeveloperType.ADVANCED),
                             ModBlocks.DEV_ADVANCED.get()).build(null));
 
@@ -115,7 +117,10 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<AbilityInterfererBlockEntity>> ABILITY_INTERFERER =
             BLOCK_ENTITIES.register("ability_interferer", () ->
-                    BlockEntityType.Builder.of(AbilityInterfererBlockEntity::new,
+                    BlockEntityType.Builder.<AbilityInterfererBlockEntity>of(
+                            (pos, state) -> new ForgeAbilityInterfererBlockEntity(
+                                    ModBlockEntities.ABILITY_INTERFERER.get(), ModMenus.ABILITY_INTERFERER.get(),
+                                    pos, state),
                             ModBlocks.ABILITY_INTERFERER.get()).build(null));
 
     public static void register(IEventBus eventBus) {

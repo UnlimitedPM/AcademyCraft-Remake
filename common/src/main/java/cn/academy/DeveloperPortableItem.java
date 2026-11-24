@@ -1,6 +1,5 @@
 package cn.academy;
 
-import cn.academy.ability.develop.PortableDevCapability;
 import cn.academy.energy.EnergyItems;
 import cn.academy.energy.ImagEnergyItem;
 import net.minecraft.network.chat.Component;
@@ -14,8 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 
-import javax.annotation.Nullable;
-
+import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
@@ -101,12 +99,17 @@ public class DeveloperPortableItem extends Item implements ImagEnergyItem {
         if (!level.isClientSide && player instanceof ServerPlayer server) {
             // L'ecran est celui de la machine : seule la source de l'energie change, et
             // c'est le drapeau du paquet qui le dira au client.
-            server.getCapability(PortableDevCapability.PORTABLE_DEV).ifPresent(data ->
-                    cn.academy.platform.PlatformHooks.openMenu(server,
-                            new SimpleMenuProvider(
-                                    (id, inventory, p) -> new DeveloperMenu(id, inventory, data),
-                                    stack.getHoverName()),
-                            buf -> buf.writeBoolean(true)));
+            cn.academy.ability.develop.PortableDevData data =
+                    cn.academy.platform.PlatformHooks.portableDevData(server);
+            if (data != null) {
+                cn.academy.platform.PlatformHooks.openMenu(server,
+                        new SimpleMenuProvider(
+                                (id, inventory, p) -> new DeveloperMenu(
+                                        cn.academy.platform.PlatformHooks.developerMenuType(),
+                                        id, inventory, data),
+                                stack.getHoverName()),
+                        buf -> buf.writeBoolean(true));
+            }
         }
 
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
@@ -141,21 +144,7 @@ public class DeveloperPortableItem extends Item implements ImagEnergyItem {
      *
      * <p>Portage du TEISR de l'original ({@code ItemDeveloper.initClient}). Le modele JSON ne
      * peut pas faire les deux — il montre la meme chose dans la case et en main — d'ou ce rendu
-     * en code. Voir {@code DeveloperPortableRenderer}, ou vivent aussi les poses de l'original.
+     * en code, qui vit chez le chargeur : voir {@code ForgeDeveloperPortableItem} et
+     * {@code DeveloperPortableRenderer}, ou sont aussi les poses de l'original.
      */
-    @Override
-    public void initializeClient(java.util.function.Consumer<
-            net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-        consumer.accept(new net.minecraftforge.client.extensions.common.IClientItemExtensions() {
-            private cn.academy.client.render.DeveloperPortableRenderer renderer;
-
-            @Override
-            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getCustomRenderer() {
-                if (renderer == null) {
-                    renderer = new cn.academy.client.render.DeveloperPortableRenderer();
-                }
-                return renderer;
-            }
-        });
-    }
 }

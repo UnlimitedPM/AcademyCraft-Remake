@@ -160,7 +160,8 @@ Deux manques qui se voyaient en jeu, et qui sont réglés :
   donne au ticker les événements de Fabric. Les effets se dessinent (`FabricClientRenders`) et le HUD
   est là (`AbilityHudOverlay`, sauf le lecteur média) ;
 - **le contenu** : 46 recettes et 13 succès, les quatre facteurs d'induction, le grappin,
-  l'installeur de terminal, le tutoriel, l'unité vide et l'unité de phase, les machines et le liquide ;
+  l'installeur de terminal, le tutoriel, l'unité vide et l'unité de phase, les machines et le liquide,
+  le **brouilleur d'aptitudes** et les **deux développeurs** avec le **développeur portable** ;
 - **le terminal** : la page, l'arbre de compétences, l'à-propos, le tutoriel, les réglages et la
   personnalisation de l'interface sont communs, la touche (Alt gauche) est déclarée par
   `KeyBindingHelper` et lue au relâchement par `TerminalKeyBindings` ; deux applications manquent —
@@ -177,10 +178,11 @@ Deux manques qui se voyaient en jeu, et qui sont réglés :
   application et l'Émetteur de fréquence ne sont donc pas déclarés sous Fabric, et la page du
   terminal n'en montre que les icônes mortes ; les écrans, eux, sont communs depuis le portage du
   terminal ;
-- les **machines développeur**, le **brouilleur** et le **développeur portable** ne sont pas
-  enregistrés sous Fabric : leurs recettes et leurs succès sont exclus du jar, et les deux tags
-  vanilla `mineable/pickaxe` et `needs_iron_tool` se plaignent de les nommer (avertissements sans
-  conséquence) ;
+- les **machines développeur**, le **brouilleur** et le **développeur portable** sont désormais
+  portés : leurs recettes, leurs succès et leurs tables de butin sont servis par le jar Fabric. Seule
+  différence assumée : l'apprentissage du portable vit dans une table du serveur (voir
+  `FabricPortableDevData`) et ne survit pas à un arrêt, et son rendu en main reste Forge — sous
+  Fabric l'objet se dessine avec son modèle JSON ;
 - JEI et CraftTweaker sont des intégrations Forge ; Fabric demanderait REI/EMI, hors périmètre.
 
 ## Ordre de portage

@@ -1,6 +1,6 @@
 package cn.academy;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 import cn.academy.energy.NodeFinder;
 import net.minecraft.core.BlockPos;
@@ -36,8 +36,15 @@ public class AbilityInterfererBlock extends Block implements EntityBlock {
 
     public static final BooleanProperty ON = BooleanProperty.create("on");
 
-    public AbilityInterfererBlock(Properties properties) {
+    private final java.util.function.Supplier<BlockEntityType<? extends AbilityInterfererBlockEntity>> type;
+    private final java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities;
+
+    public AbilityInterfererBlock(Properties properties,
+                                  java.util.function.Supplier<BlockEntityType<? extends AbilityInterfererBlockEntity>> type,
+                                  java.util.function.BiFunction<BlockPos, BlockState, BlockEntity> blockEntities) {
         super(properties);
+        this.type = type;
+        this.blockEntities = blockEntities;
         this.registerDefaultState(this.stateDefinition.any().setValue(ON, false));
     }
 
@@ -67,14 +74,14 @@ public class AbilityInterfererBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new AbilityInterfererBlockEntity(pos, state);
+        return blockEntities.apply(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
                                                                  BlockEntityType<T> type) {
-        if (level.isClientSide || type != ModBlockEntities.ABILITY_INTERFERER.get()) return null;
+        if (level.isClientSide || type != this.type.get()) return null;
         return (lvl, pos, st, be) -> {
             if (be instanceof AbilityInterfererBlockEntity machine) {
                 AbilityInterfererBlockEntity.tick(lvl, pos, st, machine);

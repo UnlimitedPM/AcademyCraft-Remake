@@ -21,7 +21,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -390,7 +390,8 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
     /** La bobine magnetique en main : c'est elle qui demande a changer d'aptitude. */
     private boolean holdsCoil() {
         return minecraft != null && minecraft.player != null
-                && minecraft.player.getMainHandItem().is(ModItems.MAGNETIC_COIL.get());
+                && minecraft.player.getMainHandItem().is(
+                        cn.academy.content.AcademyContent.item("magnetic_coil"));
     }
 
     /**
@@ -856,7 +857,7 @@ public class DeveloperScreen extends CGuiContainerScreen<DeveloperMenu> {
 
     /** L'icone d'une categorie : celle de ses pages, sous {@code guis/icons}. */
     private static String categoryIcon(Category category) {
-        return AcademyCraft.MOD_ID + ":textures/guis/icons/icon_" + category.getName() + ".png";
+        return AcademyCraftCommon.MOD_ID + ":textures/guis/icons/icon_" + category.getName() + ".png";
     }
 
     /**
