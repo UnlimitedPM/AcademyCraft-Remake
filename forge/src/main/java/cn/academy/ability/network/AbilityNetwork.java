@@ -36,24 +36,10 @@ public class AbilityNetwork {
         // fait disparaitre les blocs. Voir BreakPrefsPacket.
         CHANNEL.registerMessage(nextId++, BreakPrefsPacket.class,
                 BreakPrefsPacket::encode, BreakPrefsPacket::decode, BreakPrefsPacket::handle);
-        // La detection de minerais est la seule competence qui ait besoin de dire quelque
-        // chose au client : c'est lui qui balaie le monde et l'allume.
-        CHANNEL.registerMessage(nextId++, MineDetectPacket.class,
-                MineDetectPacket::encode, MineDetectPacket::decode, MineDetectPacket::handle);
-        CHANNEL.registerMessage(nextId++, cn.academy.ability.network.MineDetectStopPacket.class,
-                cn.academy.ability.network.MineDetectStopPacket::encode,
-                cn.academy.ability.network.MineDetectStopPacket::decode,
-                cn.academy.ability.network.MineDetectStopPacket::handle);
-        // Les eclairs, le renfort du corps et les eclairs du sol sont communs desormais : voir
-        // AcademyPackets. Ce qui reste ici est Forge : les rayons du meltdowner, l'anneau du
-        // missile, les maintiens.
-        // Les rayons du meltdowner, comme les arcs et le reste des effets, sont communs : voir
-        // AcademyPackets. Leur dessin reste cote client, derriere PlatformHooks.spawnRayBeam.
-        // La marque de radiation et son fumee sont communes desormais : voir AcademyPackets.
-        // Les sept effets d'onde, de trainee, de critique, de sang, de fumee, de taches et de tir
-        // de plasma sont communs desormais : voir AcademyPackets.
-        // L'anneau de plasma du missile et le depart du reacteur sont communs : voir
-        // AcademyPackets (md_missile, jet_flight).
+        // La detection de minerais, les eclairs, le renfort du corps, les eclairs du sol, les
+        // rayons du meltdowner, la marque de radiation, les effets de vecmanip, le tir du canon
+        // a plasma, l'anneau du missile et le depart du reacteur sont communs : voir
+        // AcademyPackets. Ce qui reste ici est Forge : les maintiens et le railgun.
         // Et la fin d'un maintien, refusee ou terminee : le client tenait le sien depuis l'appui
         // de la touche, il doit le fermer. Voir HoldOverPacket.
         CHANNEL.registerMessage(nextId++, HoldOverPacket.class,

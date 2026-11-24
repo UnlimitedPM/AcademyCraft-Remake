@@ -472,11 +472,8 @@ public final class ClientMediaPlayer {
 
         private Configuring() {}
 
-        @SubscribeEvent
-        public static void onLoad(net.minecraftforge.fml.event.config.ModConfigEvent event) {
-            if (event.getConfig().getSpec() != cn.academy.client.hud.HudConfig.SPEC) return;
-            volume = cn.academy.client.hud.HudConfig.mediaVolume();
-        }
+        // Le volume vit dans le fichier client neutre : plus d'evenement de config a ecouter.
+        // (Rien a faire ici : la valeur est lue au demarrage, voir le champ olume.)
     }
 
     /** Vrai quand un morceau est en attente. */

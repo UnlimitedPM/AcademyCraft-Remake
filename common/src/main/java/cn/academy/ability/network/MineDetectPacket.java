@@ -1,7 +1,6 @@
 package cn.academy.ability.network;
 
 import cn.academy.ability.client.MineDetectOverlay;
-import net.minecraftforge.network.NetworkEvent;
 import net.minecraft.network.FriendlyByteBuf;
 
 
@@ -59,9 +58,7 @@ public class MineDetectPacket {
                 buf.readBoolean());
     }
 
-    public static void handle(MineDetectPacket msg, java.util.function.Supplier<NetworkEvent.Context> ctxSupplier) {
-        NetworkEvent.Context ctx = ctxSupplier.get();
-        ctx.enqueueWork(() -> MineDetectOverlay.begin(msg.range, msg.advanced, msg.ticks, msg.hold));
-        ctx.setPacketHandled(true);
+    public static void handle(MineDetectPacket msg) {
+        MineDetectOverlay.begin(msg.range, msg.advanced, msg.ticks, msg.hold);
     }
 }

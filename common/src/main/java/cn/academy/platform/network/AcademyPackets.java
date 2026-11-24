@@ -115,5 +115,16 @@ public final class AcademyPackets {
                 Network.codec(cn.academy.ability.network.MineRaySightPacket::encode,
                         cn.academy.ability.network.MineRaySightPacket::decode),
                 cn.academy.ability.network.MineRaySightPacket::handle);
+
+        Network.clientbound("mine_detect", cn.academy.ability.network.MineDetectPacket.class,
+                Network.codec(cn.academy.ability.network.MineDetectPacket::encode,
+                        cn.academy.ability.network.MineDetectPacket::decode),
+                cn.academy.ability.network.MineDetectPacket::handle);
+
+        Network.clientbound("mine_detect_stop",
+                cn.academy.ability.network.MineDetectStopPacket.class,
+                Network.codec(cn.academy.ability.network.MineDetectStopPacket::encode,
+                        cn.academy.ability.network.MineDetectStopPacket::decode),
+                cn.academy.ability.network.MineDetectStopPacket::handle);
     }
 }
