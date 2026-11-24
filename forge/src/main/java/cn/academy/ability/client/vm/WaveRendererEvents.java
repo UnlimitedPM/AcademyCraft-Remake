@@ -1,0 +1,26 @@
+package cn.academy.ability.client.vm;
+
+import cn.academy.AcademyCraft;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+/**
+ * Branchement Forge du rendu de {@code WaveRenderer}.
+ *
+ * <p>Le dessin lui-meme est commun ; ce qui reste ici, c'est l'evenement du chargeur et son
+ * etape de rendu.
+ */
+@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
+public final class WaveRendererEvents {
+
+    private WaveRendererEvents() {
+    }
+
+    @SubscribeEvent
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+        WaveRenderer.render(event.getCamera(), event.getPoseStack(), event.getPartialTick());
+    }
+}
