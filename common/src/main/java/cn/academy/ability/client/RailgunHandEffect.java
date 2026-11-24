@@ -1,6 +1,6 @@
 package cn.academy.ability.client;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.AbilityData;
 import cn.academy.ability.Skill;
 import cn.academy.ability.electromaster.ElectromasterCategory;
@@ -24,12 +24,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -107,8 +101,6 @@ import java.util.Map;
  * <b>aucune</b> echelle de l'autre : le carre y fait ses deux unites, donc <b>deux blocs</b>, et
  * l'electricite deborde du bras et de l'epaule. Voir {@link #SCALE_HAND} et {@link #SCALE_WORLD}.
  */
-@OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class RailgunHandEffect {
 
     /** Les images de la rafale : quarante, comme le {@code COUNT} de l'original. */
@@ -251,9 +243,7 @@ public final class RailgunHandEffect {
     }
 
     /** Un tick : chaque rafale vieillit, et s'oublie quand ses images sont passees. */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void tick() {
         // Pause ouverte, l'electricite se fige : elle reprendra ou elle en etait. Voir ClientPause.
         if (cn.academy.ability.client.ClientPause.frozen()) return;
 
@@ -288,15 +278,13 @@ public final class RailgunHandEffect {
      * celles du mannequin, lacet puis tangage. En premiere personne c'est exactement la camera, ce
      * qui est bien la raison d'etre de cette branche-la.
      */
-    @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
+    public static void render(net.minecraft.client.Camera cam, com.mojang.blaze3d.vertex.PoseStack poseStack, float ticks) {
         if (PLAYING.isEmpty()) return;
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
         Level level = Minecraft.getInstance().level;
         if (level == null) return;
 
-        float partialTick = event.getPartialTick();
-        Vec3 camera = event.getCamera().getPosition();
+        float partialTick = ticks;
+        Vec3 camera = cam.getPosition();
         MultiBufferSource.BufferSource buffers =
                 Minecraft.getInstance().renderBuffers().bufferSource();
         boolean drawn = false;
@@ -313,7 +301,7 @@ public final class RailgunHandEffect {
             Vec3 at = anchorOf(player, partialTick, throughMyEyes);
             float scale = throughMyEyes ? SCALE_HAND : SCALE_WORLD;
 
-            PoseStack pose = event.getPoseStack();
+            PoseStack pose = poseStack;
             pose.pushPose();
             pose.translate(at.x - camera.x, at.y - camera.y, at.z - camera.z);
             // Et il oriente son carre COMME LE REGARD de son porteur — ses deux rotations sont
@@ -409,7 +397,7 @@ public final class RailgunHandEffect {
     private static ResourceLocation[] frames() {
         ResourceLocation[] result = new ResourceLocation[FRAME_COUNT];
         for (int i = 0; i < FRAME_COUNT; i++) {
-            result[i] = ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+            result[i] = new ResourceLocation(AcademyCraftCommon.MOD_ID,
                     "textures/effects/arc_burst/" + i + ".png");
         }
         return result;
@@ -434,7 +422,7 @@ public final class RailgunHandEffect {
      * plus la profondeur, les arcs se posent derriere la main et la main reste ou elle est.
      */
     private static RenderType type(ResourceLocation texture) {
-        return TYPES.computeIfAbsent(texture, tex -> RenderType.create("academy_railgun_hand",
+        return TYPES.computeIfAbsent(texture, tex -> cn.academy.client.render.RenderTypes.create("academy_railgun_hand",
                 DefaultVertexFormat.POSITION_COLOR_TEX,
                 VertexFormat.Mode.QUADS,
                 256,

@@ -1,6 +1,6 @@
 package cn.academy.ability.client.tp;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -13,12 +13,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 import org.joml.Matrix4f;
 
 /**
@@ -38,8 +32,6 @@ import org.joml.Matrix4f;
  * <p>Le monde est aussi ce qui les fait vivre : elles s'en vont au bout d'une minute, ou des que
  * le bloc qui les porte disparait — c'est le tick d'horloge, plus bas.
  */
-@OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class BloodSprayRenderer {
 
     /** Les deux familles d'images, et leurs trois tirages. */
@@ -48,15 +40,12 @@ public final class BloodSprayRenderer {
 
     private BloodSprayRenderer() {
     }
-
-    @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) return;
+    public static void render(net.minecraft.client.Camera cam, com.mojang.blaze3d.vertex.PoseStack poseStack) {
         if (BloodSprays.live().isEmpty()) return;
 
-        Vec3 camera = event.getCamera().getPosition();
-        Vec3 look = new Vec3(event.getCamera().getLookVector());
-        Matrix4f base = event.getPoseStack().last().pose();
+        Vec3 camera = cam.getPosition();
+        Vec3 look = new Vec3(cam.getLookVector());
+        Matrix4f base = poseStack.last().pose();
 
         RenderSystem.setShader(GameRenderer::getRendertypeBeaconBeamShader);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
@@ -93,9 +82,7 @@ public final class BloodSprayRenderer {
     }
 
     /** Un tick d'horloge : les taches vieillissent, et celles qui n'ont plus de bloc s'en vont. */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void tick() {
         // En pause, le sang ne vieillit pas : il ne se fane pas pendant qu'on regarde son menu.
         // Voir ClientPause.
         if (cn.academy.ability.client.ClientPause.frozen()) return;
@@ -106,7 +93,7 @@ public final class BloodSprayRenderer {
     /** L'image d'une tache : sa famille, et son tirage. */
     static ResourceLocation texture(BloodSprays.Spray spray) {
         String family = BloodSprays.family(spray);
-        return ResourceLocation.fromNamespaceAndPath(AcademyCraft.MOD_ID,
+        return new ResourceLocation(AcademyCraftCommon.MOD_ID,
                 "textures/effects/blood_spray/" + family + "/" + spray.frame() + ".png");
     }
 

@@ -1,15 +1,10 @@
 package cn.academy.ability.client.vm;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.Skill;
 import cn.academy.ability.vecmanip.VecmanipCategory;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 /**
  * Le coup de camera du choc au sol : le regard se leve pendant la charge, puis pique au coup.
@@ -36,8 +31,6 @@ import net.minecraftforge.fml.common.Mod;
  *
  * <p>Rien de tout cela n'a de sens hors du client : la classe ne se charge que la.
  */
-@OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class GroundshockCamera {
 
     /** La montee de la charge : vingt centiemes de degre par tick, au plus fort. */
@@ -90,9 +83,8 @@ public final class GroundshockCamera {
     }
 
     /** Un tick d'horloge : le piquage du coup porte, s'il est en cours. */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || slashTicks <= 0) return;
+    public static void tick() {
+        if (slashTicks <= 0) return;
         // En pause, la visee ne bouge plus d'elle-meme : c'est un effet du monde, pas du menu. Le
         // joueur lisait ce piquage continu comme le menu qui lui tire le regard. Voir ClientPause.
         if (cn.academy.ability.client.ClientPause.frozen()) return;

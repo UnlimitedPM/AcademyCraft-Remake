@@ -1,6 +1,6 @@
 package cn.academy.ability.client.vm;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.Skill;
 import cn.academy.ability.client.ClientAbilityData;
 import cn.academy.ability.client.ClientCharge;
@@ -8,12 +8,6 @@ import cn.academy.ability.vecmanip.VecmanipCategory;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.world.InteractionHand;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.event.RenderHandEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
 
 /**
  * Le poing qui frappe, pour le choc dirige et l'onde dirigee.
@@ -57,8 +51,6 @@ import net.minecraftforge.fml.common.Mod;
  *
  * <p>Rien de tout cela n'a de sens hors du client : la classe ne se charge que la.
  */
-@OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = AcademyCraft.MOD_ID, value = Dist.CLIENT)
 public final class HandSwing {
 
     /** Les trois temps du geste, et l'absence de geste. */
@@ -116,9 +108,7 @@ public final class HandSwing {
     }
 
     /** Un tick : le coup avance, et une charge abandonnee desarme le poing. */
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void tick() {
         // Pause ouverte, le geste se fige : il reprendra ou il en etait, au retour du monde. Voir
         // ClientPause.
         if (cn.academy.ability.client.ClientPause.frozen()) return;
@@ -153,20 +143,17 @@ public final class HandSwing {
     }
 
     /** Le geste, applique a l'empilement de poses de la main. */
-    @SubscribeEvent
-    public static void onRenderHand(RenderHandEvent event) {
+    public static void renderHand(InteractionHand hand, com.mojang.blaze3d.vertex.PoseStack stack, float ticks) {
         if (phase == Phase.NONE) return;
         // La main principale d'abord, et une seule fois : la main secondaire passe par le meme
         // evenement et le meme empilement, donc elle herite du geste sans qu'on le lui applique.
-        if (event.getHand() != InteractionHand.MAIN_HAND) return;
+        if (hand != InteractionHand.MAIN_HAND) return;
 
         boolean preparing = phase == Phase.PREPARE;
         double age = (preparing ? ClientCharge.getTicks(held.getName()) : punchTicks)
-                + event.getPartialTick();
+                + ticks;
         HandAnim.Pose pose = (preparing ? HandAnim.PREPARE : HandAnim.PUNCH)
                 .pose(preparing ? HandAnim.prepareTime(age) : HandAnim.punchTime(age));
-
-        PoseStack stack = event.getPoseStack();
         stack.translate(pose.x(), pose.y(), pose.z());
         stack.mulPose(Axis.XP.rotationDegrees((float) pose.rx()));
         stack.mulPose(Axis.YP.rotationDegrees((float) pose.ry()));
