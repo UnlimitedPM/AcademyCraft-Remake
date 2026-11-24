@@ -7817,7 +7817,7 @@ public final class AcademyGameTests {
 
         assertTrue(helper, terminalOf(player) != null,
                 "la capacite du terminal doit etre attachee au joueur");
-        assertTrue(helper, ModItems.TERMINAL_INSTALLER.get() instanceof ModItems.TerminalInstallerItem,
+        assertTrue(helper, ModItems.TERMINAL_INSTALLER.get() instanceof cn.academy.TerminalInstallerItem,
                 "l'objet doit etre celui qui installe, pas un objet inerte");
         assertFalse(helper, terminalInstalled(player), "un joueur sans terminal ne doit rien avoir");
 

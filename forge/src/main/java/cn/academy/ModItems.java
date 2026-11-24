@@ -103,11 +103,11 @@ public class ModItems {
     public static final RegistryObject<Item> COIN = ITEMS.register("coin", () -> new CoinItem());
     public static final RegistryObject<Item> SILBARN = ITEMS.register("silbarn", () -> new cn.academy.SilbarnItem());
     public static final RegistryObject<Item> NEEDLE = ITEMS.register("needle", () -> new Item(new Item.Properties()));
-    public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", () -> new MagHookItem());
+    public static final RegistryObject<Item> MAG_HOOK = ITEMS.register("mag_hook", cn.academy.MagHookItem::new);
     public static final RegistryObject<Item> TERMINAL_INSTALLER = ITEMS.register("terminal_installer",
-            () -> new TerminalInstallerItem(new Item.Properties().stacksTo(1)));
+            () -> new cn.academy.TerminalInstallerItem(new Item.Properties().stacksTo(1)));
     public static final RegistryObject<Item> DEVELOPER_PORTABLE = ITEMS.register("developer_portable", DeveloperPortableItem::new);
-    public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", () -> new TutorialItem());
+    public static final RegistryObject<Item> TUTORIAL = ITEMS.register("tutorial", cn.academy.TutorialItem::new);
     public static final RegistryObject<Item> DEV_NORMAL_ITEM = ITEMS.register("dev_normal",
             () -> new BlockItem(ModBlocks.DEV_NORMAL.get(), new Item.Properties()));
     public static final RegistryObject<Item> DEV_ADVANCED_ITEM = ITEMS.register("dev_advanced",
@@ -266,43 +266,6 @@ public class ModItems {
         }
     }
 
-    /**
-     * Le crochet magnetique : l'objet qu'on LANCE pour se donner une accroche, portage d'{@code
-     * ItemMagHook} — « Elec Move Support Hook ».
-     *
-     * <p>Le clic droit le jette devant, il vole a deux blocs par tick et se plante dans la premiere
-     * paroi ; le deplacement magnetique peut alors s'y accrocher, d'aussi loin que son regard porte.
-     * Il se recupere en frappant le crochet plante, et il se perd si son bloc disparait — voir
-     * {@code EntityMagHook}.
-     *
-     * <p>Le son est celui d'un oeuf lance, comme l'original au mot pres. L'original l'excluait pour
-     * le lanceur ({@code world.playSound(player, ...)}) : le port le fait entendre a tout le monde,
-     * celui qui lance compris — une main qui ne s'entend pas lancer est une main qui fait douter du
-     * clic. C'est la meme decision que pour la bille de silicium.
-     */
-    public static class MagHookItem extends Item {
-        public MagHookItem() {
-            super(new Item.Properties());
-        }
-
-        @Override
-        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-            ItemStack stack = player.getItemInHand(hand);
-
-            level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    net.minecraft.sounds.SoundEvents.EGG_THROW, net.minecraft.sounds.SoundSource.PLAYERS,
-                    0.5f, 0.4f / (level.getRandom().nextFloat() * 0.4f + 0.8f));
-
-            if (!level.isClientSide) {
-                level.addFreshEntity(new cn.academy.entity.EntityMagHook(level, player));
-            }
-            if (!player.getAbilities().instabuild) {
-                stack.shrink(1);
-            }
-            return InteractionResultHolder.success(stack);
-        }
-    }
-
     // --- CLASSE : L'UNITÉ VIDE (Capture corrigée) ---
     public static class EmptyUnitItem extends Item {
         public EmptyUnitItem(Properties props) { super(props); }
@@ -388,74 +351,6 @@ public class ModItems {
 
     // Classe générique pour les items avec un nom simple et une description au survol
     /**
-     * L'objet qui installe le terminal de donnees.
-     *
-     * Portage de {@code ItemTerminalInstaller}. Comme dans l'original, il est
-     * consomme sauf en creatif, refuse de s'appliquer deux fois, et confirme par un
-     * message dans le chat.
-     *
-     * L'original ajoutait aussi le nom de la touche a ce message, en la lisant
-     * depuis le gestionnaire de touches. Le serveur ne peut pas connaitre la touche
-     * du client : le message dit donc « Alt par defaut » plutot que d'inventer une
-     * touche que le joueur a peut-etre changee.
-     */
-    public static class TerminalInstallerItem extends Item {
-        public TerminalInstallerItem(Properties props) { super(props); }
-
-        @Override
-        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-            ItemStack stack = player.getItemInHand(hand);
-            if (level.isClientSide) return InteractionResultHolder.success(stack);
-
-            var data = player.getCapability(cn.academy.terminal.TerminalCapability.TERMINAL_DATA).orElse(null);
-            if (data == null) return InteractionResultHolder.pass(stack);
-
-            if (data.isTerminalInstalled()) {
-                player.displayClientMessage(Component.translatable("ac.terminal.alrdy_installed"), false);
-                return InteractionResultHolder.success(stack);
-            }
-
-            if (!player.getAbilities().instabuild) stack.shrink(1);
-            data.install();
-            if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                // Le drapeau allume l'animation d'installation cote client, et le message qui
-                // donne la touche part a la FIN de cette animation, comme dans l'original.
-                cn.academy.terminal.TerminalTracker.sync(serverPlayer, true);
-                cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
-                        cn.academy.advancements.AcademyAdvancements.TERMINAL_INSTALLED);
-            }
-            return InteractionResultHolder.success(stack);
-        }
-    }
-
-    /**
-     * L'objet MisakaCloud : les tutoriels du mod, ouverts directement.
-     *
-     * Portage de {@code ItemTutorial}. L'original l'attachait a l'application du meme
-     * nom, mais l'ouvrait sans passer par le terminal — et c'est ce que fait le port :
-     * l'application est installee d'office, donc l'objet ne sert qu'a l'ouvrir. L'ecran
-     * est atteint par {@code App.requestOpen}, qui ne nomme aucun type client.
-     */
-    public static class TutorialItem extends Item {
-
-        public TutorialItem() {
-            super(new Item.Properties());
-        }
-
-        @Override
-        public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-            ItemStack stack = player.getItemInHand(hand);
-            if (level.isClientSide) {
-                cn.academy.terminal.App.requestOpen(cn.academy.terminal.app.AppTutorial.INSTANCE);
-            } else if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                // L'original declenchait le succes ici aussi, sur le serveur : c'est
-                // l'usage de l'objet qui compte, pas l'ecran qui s'ouvre.
-                cn.academy.advancements.AcademyAdvancements.award(serverPlayer,
-                        cn.academy.advancements.AcademyAdvancements.OPEN_MISAKA_CLOUD);
-            }
-            return InteractionResultHolder.success(stack);
-        }
-    }
 
     /**
      * Un morceau du lecteur media, sous forme d'objet.

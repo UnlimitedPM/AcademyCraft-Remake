@@ -47,18 +47,13 @@ processResources {
         exclude 'data/academy/structures/**'
         exclude 'data/academy/forge/**'
         // Les objets qui n'existent pas encore sous Fabric : le brouilleur, les deux machines
-        // developeur, le developpeur portable, le grappin, l'installeur de terminal et le tutoriel.
+        // developeur et le developpeur portable.
         exclude 'data/academy/recipes/ability_interferer.json'
         exclude 'data/academy/recipes/dev_normal.json'
         exclude 'data/academy/recipes/dev_normal2.json'
         exclude 'data/academy/recipes/dev_advanced.json'
         exclude 'data/academy/recipes/developer_portable.json'
-        exclude 'data/academy/recipes/mag_hook.json'
-        exclude 'data/academy/recipes/misaka_cloud.json'
-        exclude 'data/academy/recipes/terminal_installer.json'
         exclude 'data/academy/advancements/ac_developer.json'
-        exclude 'data/academy/advancements/open_misaka_cloud.json'
-        exclude 'data/academy/advancements/terminal_installed.json'
         // Les tables de butin des trois blocs qui attendent les aptitudes.
         exclude 'data/academy/loot_tables/blocks/ability_interferer.json'
         exclude 'data/academy/loot_tables/blocks/dev_normal.json'

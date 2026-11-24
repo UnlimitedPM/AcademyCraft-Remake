@@ -137,6 +137,13 @@ public final class FabricContent {
         plainItem("app_settings");
         plainItem("app_skill_tree");
 
+        // Les trois objets qui ont un comportement commun : le grappin, l'installeur de terminal et
+        // le tutoriel. Ils ne dependent que du cote serveur ou d'un ecran deja commun.
+        register("mag_hook", new cn.academy.MagHookItem());
+        register("terminal_installer",
+                new cn.academy.TerminalInstallerItem(new Item.Properties().stacksTo(1)));
+        register("tutorial", new cn.academy.TutorialItem());
+
         // --- Premier objet energetique porte depuis common/ ---
         register("energy_unit", new EnergyUnitItem());
         register("magnetic_coil", new TooltipItem("item.academy.magnetic_coil.desc"));
