@@ -4,6 +4,14 @@
 
 ### Français
 
+- **Les touches d'aptitude répondent sous Fabric.** `AbilityClientEvents` est commun : il lit les
+  touches, envoie ses demandes par `Network`, tient les charges du client et les boucles de son.
+  Ce qui reste côté Forge est dans `AbilityInputEvents` — les deux événements qui **prennent** une
+  touche au jeu (le clic qui n'attaque plus, les directions qui ne font plus marcher), le champ de
+  vision, la molette du saut traversant et le tick. `KeyState` remplace `getKey()` et `isDown()`,
+  que seul Forge ajoute : la touche liée se lit par réflexion sur le champ privé, l'appui
+  physiquement sur la fenêtre. Avec lui passent `HeldLoops`, `LoopSounds`, `PlayerLoopSound` et
+  `SilbarnFrags` (rendu neutre, `SilbarnFragsEvents` côté Forge).
 - **Le liquide a retrouvé ses nappes.** Il venait d'être déclaré sous Fabric, mais il n'y avait qu'un
   aplat noir : le « particules » de l'original, ces nappes qui bougent à la surface, sont dessinées par
   `ImagPhaseLiquidRenderer`, qui est maintenant **commun**. Il retrouve son bloc par
@@ -171,6 +179,14 @@
 
 ### English
 
+- **The ability keys answer on Fabric.** `AbilityClientEvents` is common: it reads the keys, sends
+  its requests through `Network`, keeps the client's charges and the sound loops. What stays Forge
+  is in `AbilityInputEvents` — the two events that **take** a key from the game (the click that no
+  longer attacks, the directions that no longer walk), the field of view, the teleport-jump wheel
+  and the tick. `KeyState` replaces `getKey()` and `isDown()`, which only Forge adds: the bound key
+  is read reflectively from the private field, the press physically from the window. `HeldLoops`,
+  `LoopSounds`, `PlayerLoopSound` and `SilbarnFrags` come with it (neutral render,
+  `SilbarnFragsEvents` on the Forge side).
 - **The liquid got its sheets back.** It had just been declared on Fabric, but all it showed was a
   flat black: the original's "particles", the moving sheets on the surface, are drawn by
   `ImagPhaseLiquidRenderer`, which is now **common**. It finds its block through `AcademyContent`, its
