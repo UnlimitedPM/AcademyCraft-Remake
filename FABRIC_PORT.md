@@ -142,9 +142,10 @@ Deux manques qui se voyaient en jeu, et qui sont réglés :
   (`"loader": "forge:obj"`), qui n'existe pas sous Fabric : elles ne se voyaient pas du tout.
   `FabricMachineModels` les déclare comme rendus de block entity (`FabricObjRenderer`), qui relisent
   le même fichier avec `ObjModels` et le posent aux coordonnées relevées dans les modèles de bloc.
-  Le matrix passe par `MatrixRenderer`, déjà commun. **Reste à faire** : les pales de l'éolienne, qui
-  tournent — le rendu existe côté Forge seulement (`WindgenMainRenderer`), donc la nacelle se voit
-  sans son hélice ;
+  Le matrix passe par `MatrixRenderer`, déjà commun, et l'éolienne par `FabricWindgenMainRenderer`,
+  qui dessine le corps puis les pales : `WindgenMainRenderer` est passé en `common/` lui aussi, son
+  seul appel Forge (le signalement des blocs ombrés à Oculus) devenant le crochet
+  `PlatformHooks.trackShadowCaster` ;
 - **l'imag phase liquide** n'était pas déclaré du tout : l'unité de phase se posait comme un objet
   inerte. `FabricFluids` déclare le fluide, ses deux variantes, son bloc et l'unité qui le pose, et
   son rendu (l'image `block/black`) est enregistré dans l'initialiseur client. Le comportement du

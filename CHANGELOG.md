@@ -9,7 +9,10 @@
   invisibles : Forge les posait par son **chargeur de modèle** `forge:obj`, qui n'existe pas chez
   Fabric. Elles passent maintenant par un rendu de block entity (`FabricObjRenderer`) qui relit le
   même `.obj` avec `ObjModels` et le pose aux mêmes coordonnées, relevées dans les fichiers de
-  modèle ; le matrix, qui était déjà un rendu de block entity commun, est simplement déclaré.
+  modèle ; le matrix, qui était déjà un rendu de block entity commun, est simplement déclaré, et
+  l'éolienne dessine enfin son corps **et ses pales** — `WindgenMainRenderer` est passé en `common/`,
+  son unique appel Forge (signalement des blocs ombrés à Oculus) devenant le crochet
+  `PlatformHooks.trackShadowCaster`.
   Et le liquide n'était **pas déclaré du tout** : l'unité de phase se posait comme un objet inerte.
   `FabricFluids` déclare le fluide (ses deux variantes), son bloc, et l'unité qui le pose ; le
   comportement du bloc — éteindre le feu — passe en commun (`PhaseLiquidDousing`), chaque chargeur
