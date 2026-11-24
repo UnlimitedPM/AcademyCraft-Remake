@@ -13,8 +13,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Dessine le temoin de points de controle : la barre de CP, a sa place configuree.
@@ -39,7 +37,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * retire de l'opacite de la barre celle de l'icone de la categorie. Le fond de la barre — et le
  * monde derriere — se voient donc a travers la silhouette.
  */
-@OnlyIn(Dist.CLIENT)
 public final class CpBarHud {
 
     private static final ResourceLocation BACK_NORMAL = texture("cpbar/back_normal");
@@ -320,6 +317,6 @@ public final class CpBarHud {
     }
 
     private static ResourceLocation texture(String path) {
-        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/" + path + ".png");
+        return new ResourceLocation("academy", "textures/guis/" + path + ".png");
     }
 }

@@ -4,8 +4,6 @@ import cn.academy.ability.client.BodyIntensifyEffect;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.List;
 
@@ -28,10 +26,9 @@ import java.util.List;
  * <p>Les positions et les tailles des arcs sont en unites de demi-ecran et en pixels, comme chez
  * lui : voir {@code BodyIntensifyEffect.HudArc}.
  */
-@OnlyIn(Dist.CLIENT)
 public final class BodyIntensifyHud {
 
-    private static final ResourceLocation MASK = ResourceLocation.fromNamespaceAndPath(
+    private static final ResourceLocation MASK = new ResourceLocation(
             "academy", "textures/effects/em_intensify_mask.png");
 
     private BodyIntensifyHud() {

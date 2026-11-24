@@ -39,5 +39,9 @@ public final class AcademyCraftFabricClient implements ClientModInitializer {
         MenuScreens.register(FabricContent.NODE_MENU, NodeScreen::new);
         MenuScreens.register(FabricContent.IMAG_FUSOR_MENU, ImagFusorScreen::new);
         MenuScreens.register(FabricContent.PHASE_GEN_MENU, PhaseGeneratorScreen::new);
+
+        // Les touches d'aptitude sont communes ; Fabric les declare par son propre registre.
+        cn.academy.ability.client.AbilityKeyBindings.register(
+                net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper::registerKeyBinding);
     }
 }

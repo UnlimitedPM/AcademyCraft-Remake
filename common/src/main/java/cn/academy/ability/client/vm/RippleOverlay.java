@@ -1,6 +1,6 @@
 package cn.academy.ability.client.vm;
 
-import cn.academy.AcademyCraft;
+import cn.academy.AcademyCraftCommon;
 import cn.academy.ability.client.ClientCharge;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -11,10 +11,6 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.gui.overlay.ForgeGui;
-import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 import org.joml.Matrix4f;
 
 /**
@@ -41,16 +37,17 @@ import org.joml.Matrix4f;
  * et seule sa taille bouge. Le tampon du HUD se vide avant, sinon nos carres passeraient sous ce
  * qui a ete pose avant eux.
  */
-@OnlyIn(Dist.CLIENT)
-public class RippleOverlay implements IGuiOverlay {
+public final class RippleOverlay {
+
+    private RippleOverlay() {
+    }
 
     /** L'image de l'original, telle quelle : le meme disque de lueur que les ondes de choc. */
-    private static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(
-            AcademyCraft.MOD_ID, "textures/effects/glow_circle.png");
+    private static final ResourceLocation GLOW = new ResourceLocation(
+            AcademyCraftCommon.MOD_ID, "textures/effects/glow_circle.png");
 
-    @Override
-    public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth,
-                       int screenHeight) {
+    /** Le dessin, pose par le HUD du chargeur au-dessus du reticule. */
+    public static void render(GuiGraphics graphics, int screenWidth, int screenHeight) {
         // L'ondulation cherche SA competence dans les charges ouvertes, de la plus recente a la
         // plus ancienne : la veille qui la produit n'est pas forcement la derniere ouverte, puisque
         // le joueur peut tenir une veille et charger autre chose en meme temps. Voir ClientCharge.

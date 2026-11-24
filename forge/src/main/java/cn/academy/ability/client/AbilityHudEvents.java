@@ -27,6 +27,7 @@ public class AbilityHudEvents {
         // Et les ondulations du champ de vecmanip, posees au-dessus du reticule : l'original les
         // dessinait a cette etape-la. Voir WaveRipples et RippleOverlay.
         event.registerAbove(VanillaGuiOverlay.CROSSHAIR.id(), "academy_vm_ripples",
-                new cn.academy.ability.client.vm.RippleOverlay());
+                (gui, graphics, partialTick, width, height) ->
+                        cn.academy.ability.client.vm.RippleOverlay.render(graphics, width, height));
     }
 }

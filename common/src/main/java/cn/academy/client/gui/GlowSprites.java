@@ -3,8 +3,6 @@ package cn.academy.client.gui;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 /**
  * Le halo de l'original : huit images posees autour d'une boite.
@@ -23,7 +21,6 @@ import net.minecraftforge.api.distmarker.OnlyIn;
  * <p>La teinte passe par la couleur du shader, que {@code blit} laisse derriere lui : chaque
  * morceau la pose donc lui-meme, et c'est l'opacite demandee qui est ecrite.
  */
-@OnlyIn(Dist.CLIENT)
 public final class GlowSprites {
 
     private GlowSprites() {
@@ -77,6 +74,6 @@ public final class GlowSprites {
     }
 
     private static ResourceLocation texture(String part) {
-        return ResourceLocation.fromNamespaceAndPath("academy", "textures/guis/glow_" + part + ".png");
+        return new ResourceLocation("academy", "textures/guis/glow_" + part + ".png");
     }
 }
