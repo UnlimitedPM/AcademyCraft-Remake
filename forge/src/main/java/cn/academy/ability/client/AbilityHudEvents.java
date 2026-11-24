@@ -18,7 +18,9 @@ public class AbilityHudEvents {
         event.registerBelow(VanillaGuiOverlay.HOTBAR.id(), "academy_screen_mask",
                 new cn.academy.client.hud.BackgroundMask());
 
-        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "academy_cp", new AbilityHudOverlay());
+        event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "academy_cp",
+                (gui, graphics, partialTick, width, height) ->
+                        AbilityHudOverlay.render(graphics, width, height));
 
         // Le cadre de l'Emetteur de frequence, tant que son mode est arme.
         event.registerAbove(VanillaGuiOverlay.HOTBAR.id(), "academy_freq_transmitter",

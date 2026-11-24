@@ -84,5 +84,14 @@ public final class FabricClientRenders {
             // Et les eclats de la bille, qui ont leur propre pose et leur propre tampon.
             SilbarnFrags.render(camera, new PoseStack());
         });
+
+        // Le HUD des competences : le temoin de CP, le rappel des touches, les notifications et le
+        // voile du renfort. Le lecteur media manque — son moteur est chez Forge.
+        net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register(
+                (graphics, tickDelta) -> {
+                    var window = net.minecraft.client.Minecraft.getInstance().getWindow();
+                    cn.academy.ability.client.AbilityHudOverlay.render(graphics,
+                            window.getGuiScaledWidth(), window.getGuiScaledHeight());
+                });
     }
 }

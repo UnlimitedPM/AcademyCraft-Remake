@@ -117,6 +117,11 @@ public final class ForgePlatformHooks {
             // compatibilite Oculus qui a besoin qu'on lui nomme les blocs a ombrer.
             PlatformHooks.installShadowCasterTracker(
                     cn.academy.compat.oculus.OculusShadowCompat::track);
+            // Le lecteur media est le seul element de HUD qui reste chez Forge : son moteur lit le
+            // flux sonore par une methode que seul Forge ajoute a `Sound`.
+            PlatformHooks.installMediaHudPainter((graphics, width, height) ->
+                    cn.academy.client.hud.MediaHud.render(
+                            (net.minecraft.client.gui.GuiGraphics) graphics, width, height));
         }
         PlatformHooks.installHandEffectAnnouncer(player ->
                 cn.academy.ability.network.AbilityNetwork.CHANNEL.send(

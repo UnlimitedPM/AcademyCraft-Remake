@@ -258,6 +258,22 @@ public final class PlatformHooks {
     }
 
     /**
+     * Le lecteur media du HUD.
+     *
+     * <p>Son moteur n'existe que chez Forge — il lit le flux sonore par une methode que seul Forge
+     * ajoute a {@code Sound} — donc son element de HUD aussi. Le reste du HUD est commun et le
+     * demande par ce crochet ; sans installation, il ne se dessine pas.
+     *
+     * <p>Le contexte graphique est un {@code Object} et non un {@code GuiGraphics} : cette classe
+     * est chargee sur le serveur dedie, ou un type de client dans une signature fait tomber le jeu
+     * (« Attempted to load class net/minecraft/client/gui/GuiGraphics for invalid dist »).
+     */
+    @FunctionalInterface
+    public interface MediaHudPainter {
+        void render(Object graphics, int width, int height);
+    }
+
+    /**
      * Reconnaitre l'imag phase liquide.
      *
      * <p>Le fluide est declare par chaque chargeur (Forge lui donne un {@code FluidType}, Fabric une
@@ -380,6 +396,9 @@ public final class PlatformHooks {
     };
 
     private static PhaseLiquidProbe phaseLiquidProbe = state -> false;
+
+    private static MediaHudPainter mediaHudPainter = (graphics, width, height) -> {
+    };
 
     private static BlockBreakGuard blockBreakGuard = (player, level, pos, state) -> true;
 
@@ -533,6 +552,15 @@ public final class PlatformHooks {
 
     public static void installPhaseLiquidProbe(PhaseLiquidProbe probe) {
         phaseLiquidProbe = probe;
+    }
+
+    public static void installMediaHudPainter(MediaHudPainter painter) {
+        mediaHudPainter = painter;
+    }
+
+    /** L'element du lecteur media, s'il existe chez ce chargeur. */
+    public static void drawMediaHud(Object graphics, int width, int height) {
+        mediaHudPainter.render(graphics, width, height);
     }
 
     /** Ce fluide est-il l'imag phase liquide du mod ? */
