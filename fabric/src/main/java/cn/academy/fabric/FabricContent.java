@@ -145,15 +145,17 @@ public final class FabricContent {
         // La piece n'est pas decorative : c'est elle qu'on jette pour armer le railgun.
         register("coin", new cn.academy.CoinItem());
         register("silbarn", new SilbarnItem());
-        plainItem("imag_phase");
         plainItem("logo");
-        plainItem("media_level5_judgelight");
-        plainItem("media_only_my_railgun");
-        plainItem("media_sisters_noise");
-        plainItem("app_freq_transmitter");
-        plainItem("app_media_player");
-        plainItem("app_settings");
-        plainItem("app_skill_tree");
+        // Les morceaux du lecteur media : chacun donne son morceau au joueur, et refuse si
+        // l'application n'est pas installee.
+        register("media_only_my_railgun", new cn.academy.MediaItem("only_my_railgun"));
+        register("media_level5_judgelight", new cn.academy.MediaItem("level5_judgelight"));
+        register("media_sisters_noise", new cn.academy.MediaItem("sisters_noise"));
+        // Et les quatre applications du terminal, qui ne s'installent que par ces objets.
+        register("app_skill_tree", new cn.academy.AppInstallerItem("skill_tree"));
+        register("app_media_player", new cn.academy.AppInstallerItem("media_player"));
+        register("app_freq_transmitter", new cn.academy.AppInstallerItem("freq_transmitter"));
+        register("app_settings", new cn.academy.AppInstallerItem("settings"));
 
         // Les trois objets qui ont un comportement commun : le grappin, l'installeur de terminal et
         // le tutoriel. Ils ne dependent que du cote serveur ou d'un ecran deja commun.
@@ -286,6 +288,9 @@ public final class FabricContent {
         // FabricFluids — c'est ce qui manquait pour qu'on puisse le poser par terre.
         FabricFluids.register();
         TAB_ITEMS.add(FabricFluids.UNIT);
+        // Et l'objet imag_phase, qui est le bloc de liquide lui-meme : chez Forge c'est un BlockItem
+        // et il posait le liquide ; ici c'etait un objet decoratif qui ne posait rien.
+        register("imag_phase", new BlockItem(FabricFluids.PHASE_LIQUID_BLOCK, new Item.Properties()));
 
         IMAG_FUSOR_MENU = Registry.register(BuiltInRegistries.MENU, id("imag_fusor"),
                 new ExtendedScreenHandlerType<>((syncId, inventory, buf) ->
