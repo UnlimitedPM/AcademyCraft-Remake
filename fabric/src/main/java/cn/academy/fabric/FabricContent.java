@@ -144,6 +144,12 @@ public final class FabricContent {
                 new cn.academy.TerminalInstallerItem(new Item.Properties().stacksTo(1)));
         register("tutorial", new cn.academy.TutorialItem());
 
+        // Les quatre facteurs d'induction : ils disent quelle categorie le joueur veut apprendre.
+        register("factor_electromaster", new cn.academy.FactorItem("electromaster"));
+        register("factor_meltdowner", new cn.academy.FactorItem("meltdowner"));
+        register("factor_teleporter", new cn.academy.FactorItem("teleporter"));
+        register("factor_vecmanip", new cn.academy.FactorItem("vecmanip"));
+
         // --- Premier objet energetique porte depuis common/ ---
         register("energy_unit", new EnergyUnitItem());
         register("magnetic_coil", new TooltipItem("item.academy.magnetic_coil.desc"));
