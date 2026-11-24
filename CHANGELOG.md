@@ -4,6 +4,13 @@
 
 ### Français
 
+- **Le liquide a retrouvé ses nappes.** Il venait d'être déclaré sous Fabric, mais il n'y avait qu'un
+  aplat noir : le « particules » de l'original, ces nappes qui bougent à la surface, sont dessinées par
+  `ImagPhaseLiquidRenderer`, qui est maintenant **commun**. Il retrouve son bloc par
+  `AcademyContent`, ses types de rendu par la fabrique réflective (`RenderTypes`), et
+  `DepthTestStateShard` est ouvert dans l'access widener pour que la profondeur se coupe des deux
+  côtés. Fabric le dessine au même moment que Forge — après la couche translucide du monde, sans quoi
+  le bloc de fluide, peint dans cette couche, recouvrirait les nappes.
 - **`/aim` et `/aimp` existent sous Fabric, avec les succès.** `AimCommands` est commun : il lit
   l'aptitude par `PlatformHooks.abilityData`, range son drapeau d'armement dans les **tags vanilla**
   du joueur (les données persistantes de Forge n'existent pas ici) et lit les tutoriels par
@@ -164,6 +171,13 @@
 
 ### English
 
+- **The liquid got its sheets back.** It had just been declared on Fabric, but all it showed was a
+  flat black: the original's "particles", the moving sheets on the surface, are drawn by
+  `ImagPhaseLiquidRenderer`, which is now **common**. It finds its block through `AcademyContent`, its
+  render types through the reflective factory (`RenderTypes`), and `DepthTestStateShard` is opened in
+  the access widener so depth is cut on both sides. Fabric draws it at the same moment as Forge —
+  after the world's translucent layer, without which the fluid block, painted in that layer, would
+  cover the sheets.
 - **`/aim` and `/aimp` exist on Fabric, with the advancements.** `AimCommands` is common: it reads
   the ability through `PlatformHooks.abilityData`, stores its arming flag in the player's **vanilla
   tags** (Forge persistent data does not exist here) and reads tutorials through `PlatformHooks`.
